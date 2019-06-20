@@ -58,7 +58,7 @@ export class RouteHandler {
 	@auth
 	public static async set(res: express.Response, params: KeyVal, db: Database) {
 		await db.setVal(params.key, params.value);
-		res.status(200);
+		res.status(200).write(params.value);
 		res.end();
 	}
 
