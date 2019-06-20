@@ -3,6 +3,10 @@ import * as express from 'express';
 import { Database } from './db';
 
 export function initRoutes(app: express.Express, db: Database) {
+	app.use((req, _res, next) => {
+		console.log('Got request', req.url, 'from', req.ip);
+		next();
+	});
 	app.get('/:auth/:key', (req, res, _next) => {
 		RouteHandler.get(res, req.params, db);
 	});
