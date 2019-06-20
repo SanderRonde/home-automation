@@ -62,3 +62,4 @@ typings/
 database/
 secrets/
 app/**/*.js
+.vscode
