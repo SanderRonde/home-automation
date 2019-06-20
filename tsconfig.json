@@ -1,0 +1,27 @@
+{
+    "compilerOptions": {
+        "alwaysStrict": true,
+        "forceConsistentCasingInFileNames": true,
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "noImplicitAny": true,
+        "noImplicitThis": true,
+        "preserveConstEnums": false,
+        "listFiles": false,
+        "pretty": true,
+        "noFallthroughCasesInSwitch": true,
+        "noImplicitReturns": true,
+        "noUnusedLocals": true,
+        "target": "es6",
+        "noUnusedParameters": true,
+        "experimentalDecorators": true,
+        "strictPropertyInitialization": true,
+        "strictNullChecks": true,
+        "strictBindCallApply": true
+	},
+    "compileOnSave": true,
+    "allowJs": true,
+    "include": [
+        "app/"
+    ]
+}

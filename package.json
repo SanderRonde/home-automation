@@ -1,0 +1,26 @@
+{
+  "name": "home-automation",
+  "version": "1.0.0",
+  "main": "app/server/app.js",
+  "repository": "https://github.com/SanderRonde/home-automation",
+  "author": "Sander Ronde <awsdfgvhbjn@gmail.com>",
+  "license": "MIT",
+  "private": true,
+  "nodemonConfig": {
+    "ext": "js",
+    "exec": "node app/server/app.js --http 1270 --https 1271",
+    "watch": [
+      "app/"
+    ]
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.0",
+    "@types/fs-extra": "^7.0.0",
+    "@types/node": "^12.0.8",
+    "typescript": "^3.5.2"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "fs-extra": "^8.0.1"
+  }
+}
