@@ -1,6 +1,7 @@
 import { KeyError, AuthError } from './errors';
 import * as express from 'express';
 import { Database } from './db';
+import { authenticate } from './auth';
 
 interface KeyVal {
 	[key: string]: string;
@@ -21,6 +22,17 @@ function requireParams(...keys: string[]) {
     };
 }
 
+function auth(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
+	const original = descriptor.value;
+	descriptor.value = (res: express.Response, params: KeyVal, ...args: any[]) => {
+		if (!authenticate(params.auth)) {
+			throw new AuthError('Invalid auth key');
+		}
+
+		original(res, params, ...args);;
+	}
+}
+
 function errorHandle(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
 	const original = descriptor.value;
 	descriptor.value = (res: express.Response, ...args: any[]) => {
@@ -33,6 +45,7 @@ function errorHandle(_target: any, _propertyKey: string, descriptor: PropertyDes
 export class RouteHandler {
 	@errorHandle
 	@requireParams('auth', 'key')
+	@auth
 	public static get(res: express.Response, params: KeyVal, db: Database) {
 		const value = db.get(params.key);
 		res.status(200).write(value === undefined ?
@@ -42,6 +55,7 @@ export class RouteHandler {
 
 	@errorHandle
 	@requireParams('auth', 'key', 'value')
+	@auth
 	public static async set(res: express.Response, params: KeyVal, db: Database) {
 		await db.setVal(params.key, params.value);
 		res.status(200);

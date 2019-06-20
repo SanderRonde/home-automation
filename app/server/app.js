@@ -9,6 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const routes_1 = require("./lib/routes");
+const auth_1 = require("./lib/auth");
 const db_1 = require("./lib/db");
 const express = require("express");
 const http = require("http");
@@ -21,6 +22,7 @@ class WebServer {
     }
     init() {
         return __awaiter(this, void 0, void 0, function* () {
+            yield auth_1.readSecret();
             yield this._initVars();
             this._initRoutes();
             this._listen();

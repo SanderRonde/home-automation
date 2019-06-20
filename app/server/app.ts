@@ -1,4 +1,5 @@
 import { initRoutes } from './lib/routes';
+import { readSecret } from './lib/auth';
 import { Database } from './lib/db';
 import * as express from 'express';
 import * as http from 'http';
@@ -26,6 +27,7 @@ class WebServer {
 	}
 
 	public async init() {
+		await readSecret();
 		await this._initVars();
 		this._initRoutes();
 		this._listen();

@@ -15,6 +15,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const errors_1 = require("./errors");
+const auth_1 = require("./auth");
 function requireParams(...keys) {
     return function (_target, _propertyKey, descriptor) {
         const original = descriptor.value;
@@ -26,6 +27,16 @@ function requireParams(...keys) {
             }
             original(res, params, ...args);
         };
+    };
+}
+function auth(_target, _propertyKey, descriptor) {
+    const original = descriptor.value;
+    descriptor.value = (res, params, ...args) => {
+        if (!auth_1.authenticate(params.auth)) {
+            throw new errors_1.AuthError('Invalid auth key');
+        }
+        original(res, params, ...args);
+        ;
     };
 }
 function errorHandle(_target, _propertyKey, descriptor) {
@@ -71,10 +82,12 @@ class RouteHandler {
 }
 __decorate([
     errorHandle,
-    requireParams('auth', 'key')
+    requireParams('auth', 'key'),
+    auth
 ], RouteHandler, "get", null);
 __decorate([
     errorHandle,
-    requireParams('auth', 'key', 'value')
+    requireParams('auth', 'key', 'value'),
+    auth
 ], RouteHandler, "set", null);
 exports.RouteHandler = RouteHandler;
