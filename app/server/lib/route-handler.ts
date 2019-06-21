@@ -1,7 +1,10 @@
 import { KeyError, AuthError } from './errors';
+import * as childProcess from 'child_process';
+import { authenticate } from './auth';
 import * as express from 'express';
 import { Database } from './db';
-import { authenticate } from './auth';
+import * as path from 'path';
+import { SCRIPT_DIR } from './constants';
 
 interface KeyVal {
 	[key: string]: string;
@@ -135,6 +138,22 @@ export class RouteHandler {
 		await db.setVal(params.key, params.value);
 		GetSetListener.update(params.key);
 		res.status(200).write(params.value);
+		res.end();
+	}
+
+	@errorHandle
+	@requireParams('auth', 'name')
+	@auth
+	public static async script(res: express.Response, params: {
+		auth: string;
+		name: string;
+	}) {
+		if (params.name.indexOf('..') > -1) {
+			throw new AuthError('Going back dirs is not allowed');
+		}
+		console.log('running', path.join(SCRIPT_DIR, params.name));
+		res.write(childProcess.execFileSync(path.join(SCRIPT_DIR, params.name)).toString());
+		res.status(200);
 		res.end();
 	}
 

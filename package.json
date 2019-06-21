@@ -8,7 +8,7 @@
   "private": true,
   "nodemonConfig": {
     "ext": "js",
-    "exec": "node app/server/app.js --http 1270 --https 1271",
+    "exec": "node app/server/app.js --http 1272 --https 1273",
     "watch": [
       "app/"
     ]

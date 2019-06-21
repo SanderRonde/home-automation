@@ -13,6 +13,9 @@ export function initRoutes(app: express.Express, db: Database) {
 	app.get('/long/:maxtime/:auth/:key/:expected', (req, res, _next) => {
 		RouteHandler.getLongPoll(res, req.params, db);
 	});
+	app.get('/script/:auth/:name', (req, res, _next) => {
+		RouteHandler.script(res, req.params);
+	});
 	app.all('/:auth/:key/:value', (req, res, _next) => {
 		RouteHandler.set(res, req.params, db);
 	});
