@@ -3,8 +3,8 @@ import * as childProcess from 'child_process';
 import { authenticate } from './auth';
 import * as express from 'express';
 import { Database } from './db';
+import { Config } from '../app';
 import * as path from 'path';
-import { SCRIPT_DIR } from './constants';
 
 interface KeyVal {
 	[key: string]: string;
@@ -147,12 +147,11 @@ export class RouteHandler {
 	public static async script(res: express.Response, params: {
 		auth: string;
 		name: string;
-	}) {
-		if (params.name.indexOf('..') > -1) {
-			throw new AuthError('Going back dirs is not allowed');
+	}, config: Config) {
+		if (params.name.indexOf('..') > -1 || params.name.indexOf('/') > -1) {
+			throw new AuthError('Going up dirs is not allowed');
 		}
-		console.log('running', path.join(SCRIPT_DIR, params.name));
-		res.write(childProcess.execFileSync(path.join(SCRIPT_DIR, params.name)).toString());
+		res.write(childProcess.execFileSync(path.join(config.scriptDir, params.name)).toString());
 		res.status(200);
 		res.end();
 	}

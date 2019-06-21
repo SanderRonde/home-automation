@@ -1,29 +1,39 @@
+import { hasArg, getArg, getNumberArg } from './lib/io';
 import { initRoutes } from './lib/routes';
 import { readSecret } from './lib/auth';
 import { Database } from './lib/db';
 import * as express from 'express';
+import * as path from 'path';
 import * as http from 'http';
+
+interface PartialConfig {
+	ports?: {
+		http?: number|void;
+		https?: number|void;
+	}
+	scriptDir?: string|void;
+}
+
+export type Config = Required<PartialConfig>;
 
 class WebServer {
 	public app!: express.Express;
 	public db!: Database;
 
-	private _http: number;
+	private _config: Config;
 
-	constructor({
-		ports: {
-			http = 1234
-		} = {
-			http: 1234,
-			https: 1235
+	private _setConfigDefaults(config: PartialConfig): Config {
+		return {
+			ports: {
+				http: config.ports && config.ports.http || 1234,
+				https: config.ports && config.ports.https || 1235,
+			},
+			scriptDir: config.scriptDir || path.join(__dirname, '../../', 'scripts')
 		}
-	}: {
-		ports?: {
-			http?: number;
-			https?: number;
-		}
-	} = {}) {
-		this._http = http;
+	}
+
+	constructor(config: PartialConfig = {}) {
+		this._config = this._setConfigDefaults(config);
 	}
 
 	public async init() {
@@ -39,37 +49,33 @@ class WebServer {
 	}
 
 	private _initRoutes() {
-		initRoutes(this.app, this.db);
+		initRoutes(this.app, this.db, this._config);
 	}
 
 	private _listen() {
 		// HTTPS is unused for now
-		http.createServer(this.app).listen(this._http, () => {
-			console.log(`HTTP server listening on port ${this._http}`);
+		http.createServer(this.app).listen(this._config.ports.http, () => {
+			console.log(`HTTP server listening on port ${this._config.ports.http}`);
 		});
 	}
 }
 
-function getArg(name: string): string|void {
-	for (let i = 0; i < process.argv.length; i++) {
-		if (process.argv[i] === `--${name}`) {
-			return process.argv[i + 1];
-		} else if (process.argv[i].startsWith(`--${name}=`)) {
-			return process.argv[i].slice(3 + name.length);
-		}
-	}
-	return void 0;
+if (hasArg('help', 'h')) {
+	console.log('Usage:');
+	console.log('');
+	console.log('node app/server/app.js [-h | --help] [--http {port}] ');
+	console.log('						[--https {port}] [--scripts {dir}]');
+	console.log('');
+	console.log('-h, --help			print this help message');
+	console.log('--http 	{port}	The HTTP port to use');
+	console.log('--https 	{port}	The HTTP port to use');
+	console.log('--scripts 	{dir}	A directory of scripts to use for /script');
+	process.exit(0);
 }
-
-function getNumberArg(name: string): number|void {
-	const arg = getArg(name);
-	if (arg === void 0) return void 0;
-	return ~~arg;
-}
-
 new WebServer({
 	ports: {
-		http: getNumberArg('http') || undefined,
-		https: getNumberArg('https') || undefined
-	}
+		http: getNumberArg('http'),
+		https: getNumberArg('https')
+	},
+	scriptDir: getArg('scripts')
 }).init();
