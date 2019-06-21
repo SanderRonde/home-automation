@@ -151,7 +151,11 @@ export class RouteHandler {
 		if (params.name.indexOf('..') > -1 || params.name.indexOf('/') > -1) {
 			throw new AuthError('Going up dirs is not allowed');
 		}
-		res.write(childProcess.execFileSync(path.join(config.scriptDir, params.name)).toString());
+		res.write(childProcess.execFileSync(
+			path.join(config.scripts.scriptDir, params.name), {
+				uid: config.scripts.uid,
+				gid: config.scripts.uid
+			}).toString());
 		res.status(200);
 		res.end();
 	}

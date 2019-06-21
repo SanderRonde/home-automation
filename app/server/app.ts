@@ -11,10 +11,16 @@ interface PartialConfig {
 		http?: number|void;
 		https?: number|void;
 	}
-	scriptDir?: string|void;
+	scripts?: {
+		uid?: number|void;
+		scriptDir?: string|void;
+	}
 }
 
-export type Config = Required<PartialConfig>;
+type DeepRequired<T> = {
+    [P in keyof T]-?: DeepRequired<T[P]>;
+};
+export type Config = DeepRequired<PartialConfig>;
 
 class WebServer {
 	public app!: express.Express;
@@ -28,7 +34,11 @@ class WebServer {
 				http: config.ports && config.ports.http || 1234,
 				https: config.ports && config.ports.https || 1235,
 			},
-			scriptDir: config.scriptDir || path.join(__dirname, '../../', 'scripts')
+			scripts: {
+				uid: config.scripts && config.scripts.uid || 0,
+				scriptDir: config.scripts && config.scripts.scriptDir ||
+					path.join(__dirname, '../../', 'scripts')
+			}
 		}
 	}
 
@@ -65,10 +75,12 @@ if (hasArg('help', 'h')) {
 	console.log('');
 	console.log('node app/server/app.js [-h | --help] [--http {port}] ');
 	console.log('						[--https {port}] [--scripts {dir}]');
+	console.log('						[--uid	{uid}]');
 	console.log('');
 	console.log('-h, --help			print this help message');
 	console.log('--http 	{port}	The HTTP port to use');
 	console.log('--https 	{port}	The HTTP port to use');
+	console.log('--uid 		{uid}	The uid to use for scripts');
 	console.log('--scripts 	{dir}	A directory of scripts to use for /script');
 	process.exit(0);
 }
@@ -77,5 +89,8 @@ new WebServer({
 		http: getNumberArg('http'),
 		https: getNumberArg('https')
 	},
-	scriptDir: getArg('scripts')
+	scripts: {
+		scriptDir: getArg('scripts'),
+		uid: getNumberArg('uid')
+	}
 }).init();
