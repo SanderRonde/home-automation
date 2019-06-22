@@ -1,7 +1,7 @@
 import { initKeyValRoutes } from '../modules/keyval';
 import { initScriptRoutes } from '../modules/script';
 import * as express from 'express';
-import { sanitize } from './auth';
+import { sanitize, initAuthRoutes } from './auth';
 import { Database } from './db';
 import { Config } from '../app';
 import chalk from 'chalk';
@@ -26,7 +26,7 @@ function logReq(req: express.Request, res: express.Response) {
 	});
 }
 
-export function initRoutes(app: express.Express, db: Database, config: Config) {
+export async function initRoutes(app: express.Express, db: Database, config: Config) {
 	app.use((req, res, next) => {
 		logReq(req, res);
 		next();
@@ -34,6 +34,7 @@ export function initRoutes(app: express.Express, db: Database, config: Config) {
 	
 	initKeyValRoutes(app, db);
 	initScriptRoutes(app, db, config);
+	await initAuthRoutes(app);
 	
 	app.use((_req, res, _next) => {
 		res.status(404).send('404');

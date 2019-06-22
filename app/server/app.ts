@@ -1,6 +1,5 @@
 import { hasArg, getArg, getNumberArg } from './lib/io';
 import { initRoutes } from './lib/routes';
-import { readSecret } from './lib/auth';
 import { Database } from './lib/db';
 import * as express from 'express';
 import * as path from 'path';
@@ -47,19 +46,14 @@ class WebServer {
 	}
 
 	public async init() {
-		await readSecret();
 		await this._initVars();
-		this._initRoutes();
+		await initRoutes(this.app, this.db, this._config);
 		this._listen();
 	}
 
 	private async _initVars() {
 		this.app = express();
 		this.db = await new Database().init();
-	}
-
-	private _initRoutes() {
-		initRoutes(this.app, this.db, this._config);
 	}
 
 	private _listen() {
