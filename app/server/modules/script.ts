@@ -2,7 +2,6 @@ import { errorHandle, requireParams, auth } from "../lib/decorators";
 import * as childProcess from 'child_process';
 import { attachMessage } from "../lib/logger";
 import { AuthError } from "../lib/errors";
-import { Database } from "../lib/db";
 import * as express from 'express';
 import { Config } from "../app";
 import * as path from 'path';
@@ -32,7 +31,7 @@ class APIHandler {
 	}
 }
 
-export function initScriptRoutes(app: express.Express, _db: Database, config: Config) {
+export function initScriptRoutes(app: express.Express, config: Config) {
 	app.get('/script/:auth/:name', (req, res, _next) => {
 		APIHandler.script(res, req.params, config);
 	});

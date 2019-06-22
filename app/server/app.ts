@@ -1,7 +1,6 @@
 import { hasArg, getArg, getNumberArg } from './lib/io';
 import { setLogLevel } from './lib/logger';
 import { initRoutes } from './lib/routes';
-import { Database } from './lib/db';
 import * as express from 'express';
 import * as path from 'path';
 import * as http from 'http';
@@ -28,7 +27,6 @@ export type Config = DeepRequired<PartialConfig>;
 
 class WebServer {
 	public app!: express.Express;
-	public db!: Database;
 
 	private _config: Config;
 
@@ -56,14 +54,13 @@ class WebServer {
 
 	public async init() {
 		await this._initVars();
-		await initRoutes(this.app, this.db, this._config);
+		await initRoutes(this.app, this._config);
 		setLogLevel(this._config.log.level);
 		this._listen();
 	}
 
 	private async _initVars() {
 		this.app = express();
-		this.db = await new Database().init();
 	}
 
 	private _listen() {

@@ -330,6 +330,11 @@ jsonfile@^4.0.0:
   optionalDependencies:
     graceful-fs "^4.1.6"
 
+magic-home@^2.1.1:
+  version "2.1.1"
+  resolved "https://registry.yarnpkg.com/magic-home/-/magic-home-2.1.1.tgz#f7bb44ce6d8016374a5dcd168b6027360b9c6a22"
+  integrity sha512-+xT4c7lUUDnKsKmXCYu82P9Wjg65qbQig6Vep9L0TtJOhL5aZ4Wy9NtxcpHq7nSi9JeiDcSseR7wdgKK76xh+Q==
+
 media-typer@0.3.0:
   version "0.3.0"
   resolved "https://registry.yarnpkg.com/media-typer/-/media-typer-0.3.0.tgz#8710d7af0aa626f8fffa1ce00168545263255748"

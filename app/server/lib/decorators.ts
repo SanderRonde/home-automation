@@ -24,11 +24,11 @@ export function requireParams(...keys: string[]) {
 }
 
 export function auth(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-	requireParams('auth', 'id')(target, propertyKey, descriptor);
+	requireParams('auth')(target, propertyKey, descriptor);
 
 	const original = descriptor.value;
 	descriptor.value = function (res: express.Response, params: KeyVal, ...args: any[]) {
-		if (!Auth.ClientSecret.authenticate(params.auth, params.id)) {
+		if (!Auth.ClientSecret.authenticate(params.auth, params.id || '0')) {
 			throw new AuthError('Invalid auth key');
 		}
 

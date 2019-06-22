@@ -1,4 +1,4 @@
-import { DB_FILE } from './constants';
+import { DB_FOLDER } from './constants';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 
@@ -9,24 +9,25 @@ class DBFileManager {
 		}
 	}
 
-	public static async read() {
-		if (!(await fs.pathExists(DB_FILE))) {
+	public static async read(fileName: string) {
+		if (!(await fs.pathExists(DB_FOLDER))) {
 			// Create it
-			await fs.mkdirp(path.dirname(DB_FILE));
-			await fs.writeFile(DB_FILE, JSON.stringify(this.date, null, 4), {
-				encoding: 'utf8'
-			});
+			await fs.mkdirp(DB_FOLDER);
+			await fs.writeFile(path.join(DB_FOLDER, fileName), 
+				JSON.stringify(this.date, null, 4), {
+					encoding: 'utf8'
+				});
 			return this.date;
 		}
-		return JSON.parse(await fs.readFile(DB_FILE, {
+		return JSON.parse(await fs.readFile(path.join(DB_FOLDER, fileName), {
 			encoding: 'utf8'
 		}));
 	}
 
-	public static async write(data: {
+	public static async write(fileName: string, data: {
 		[key: string]: any;
 	}) {
-		await fs.writeFile(DB_FILE, JSON.stringify({
+		await fs.writeFile(path.join(DB_FOLDER, fileName), JSON.stringify({
 			...data,
 			...this.date
 		}, null, 4), {
@@ -39,9 +40,10 @@ export class Database {
 	private _data!: {
 		[key: string]: any;
 	};
+	constructor(private _fileName: string) { }
 
 	async init() {
-		this._data = await DBFileManager.read();
+		this._data = await DBFileManager.read(this._fileName);
 		return this;
 	}
 
@@ -74,7 +76,7 @@ export class Database {
 		}
 
 		if (!noWrite) {
-			await DBFileManager.write(this._data);
+			await DBFileManager.write(this._fileName, this._data);
 		}
 		return original;
 	}
@@ -95,7 +97,7 @@ export class Database {
 
 	async data(force: boolean = false) {
 		if (force) {
-			return (this._data = await DBFileManager.read());
+			return (this._data = await DBFileManager.read(this._fileName));
 		}
 		return this._data;
 	}

@@ -1,5 +1,7 @@
 {
     "compilerOptions": {
+		"baseUrl": ".",
+		"paths": { "*": ["types/*"] },
         "alwaysStrict": true,
         "forceConsistentCasingInFileNames": true,
         "module": "commonjs",

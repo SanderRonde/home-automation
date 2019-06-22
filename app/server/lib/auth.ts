@@ -39,6 +39,8 @@ export namespace Auth {
 		}
 
 		export function authenticate(authKey: string, id: string) {
+			if (authKey === Secret.getKeySync()) return true;
+
 			if (Number.isNaN(parseInt(id, 10))) return false;
 			return ClientSecret.getClientSecret(parseInt(id, 10)) === authKey;
 		}
@@ -59,6 +61,10 @@ export namespace Auth {
 
 		export function authenticate(authKey: string) {
 			return key === authKey;
+		}
+
+		export function getKeySync() {
+			return key;
 		}
 		
 		export async function getKey() {
