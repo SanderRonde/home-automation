@@ -73,11 +73,11 @@ class WebServer {
 if (hasArg('help', 'h')) {
 	console.log('Usage:');
 	console.log('');
-	console.log('node app/server/app.js [-h | --help] [--http {port}] ');
-	console.log('						[--https {port}] [--scripts {dir}]');
-	console.log('						[--uid	{uid}]');
+	console.log('node app/server/app.js 	[-h | --help] [--http {port}] ');
+	console.log('			[--https {port}] [--scripts {dir}]');
+	console.log('			[--uid	{uid}]');
 	console.log('');
-	console.log('-h, --help			print this help message');
+	console.log('-h, --help	print this help message');
 	console.log('--http 	{port}	The HTTP port to use');
 	console.log('--https 	{port}	The HTTP port to use');
 	console.log('--uid 		{uid}	The uid to use for scripts');
