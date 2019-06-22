@@ -6,7 +6,7 @@ import * as express from 'express';
 import { Config } from "../app";
 import * as path from 'path';
 
-class ScriptHandler {
+class APIHandler {
 	@errorHandle
 	@requireParams('auth', 'name')
 	@auth
@@ -29,6 +29,6 @@ class ScriptHandler {
 
 export function initScriptRoutes(app: express.Express, _db: Database, config: Config) {
 	app.get('/script/:auth/:name', (req, res, _next) => {
-		ScriptHandler.script(res, req.params, config);
+		APIHandler.script(res, req.params, config);
 	});
 }

@@ -36,7 +36,7 @@ class GetSetListener {
 	}
 }
 
-class KeyValHandler {
+class APIHandler {
 	@errorHandle
 	@requireParams('auth', 'key')
 	@auth
@@ -101,12 +101,12 @@ class KeyValHandler {
 
 export function initKeyValRoutes(app: express.Express, db: Database) {
 	app.get('/:auth/:key', (req, res, _next) => {
-		KeyValHandler.get(res, req.params, db);
+		APIHandler.get(res, req.params, db);
 	});
 	app.get('/long/:maxtime/:auth/:key/:expected', (req, res, _next) => {
-		KeyValHandler.getLongPoll(res, req.params, db);
+		APIHandler.getLongPoll(res, req.params, db);
 	});
 	app.all('/:auth/:key/:value', (req, res, _next) => {
-		KeyValHandler.set(res, req.params, db);
+		APIHandler.set(res, req.params, db);
 	});
 }
