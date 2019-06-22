@@ -1,12 +1,12 @@
 import { initKeyValRoutes } from '../modules/keyval';
 import { initScriptRoutes } from '../modules/script';
-import { initAuthRoutes } from './auth';
 import * as cookieParser from 'cookie-parser';
 import * as bodyParser from 'body-parser';
 import * as express from 'express';
+import { logReq } from './logger';
 import { Database } from './db';
 import { Config } from '../app';
-import { logReq } from './logger';
+import { Auth } from './auth';
 
 export async function initRoutes(app: express.Express, db: Database, config: Config) {
 	app.use(cookieParser());
@@ -23,7 +23,7 @@ export async function initRoutes(app: express.Express, db: Database, config: Con
 	
 	initKeyValRoutes(app, db);
 	initScriptRoutes(app, db, config);
-	await initAuthRoutes(app);
+	await Auth.initRoutes(app, config);
 	
 	app.use((_req, res, _next) => {
 		res.status(404).send('404');

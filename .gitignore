@@ -63,3 +63,4 @@ database/
 secrets/
 app/**/*.js
 .vscode
+scripts/**/*.js

@@ -17,6 +17,7 @@ interface PartialConfig {
 	}
 	log?: {
 		level?: number;
+		secrets: boolean;
 	}
 }
 
@@ -43,7 +44,8 @@ class WebServer {
 					path.join(__dirname, '../../', 'scripts')
 			},
 			log: {
-				level: (config.log && config.log.level) || 1
+				level: (config.log && config.log.level) || 1,
+				secrets: (config.log && config.log.secrets) || false
 			}
 		}
 	}
@@ -100,6 +102,7 @@ new WebServer({
 	},
 	log: {
 		level: hasArg('veryverbose', 'vv') ? 3 : 
-			hasArg('verbose', 'v') ? 2 : 1
+			hasArg('verbose', 'v') ? 2 : 1,
+		secrets: hasArg('log-secrets') || false
 	}
 }).init();

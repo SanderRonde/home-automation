@@ -1,8 +1,8 @@
-import { authenticate, checkCookie } from './auth';
 import { KeyError, AuthError } from './errors';
-import * as express from 'express';
-import chalk from 'chalk';
 import { attachMessage } from './logger';
+import * as express from 'express';
+import { Auth } from './auth';
+import chalk from 'chalk';
 
 interface KeyVal {
 	[key: string]: string;
@@ -18,16 +18,17 @@ export function requireParams(...keys: string[]) {
 				}
 			}
 
-			//TODO: "target" is not the "this" here. It's an instance not a static member
 			original.bind(this)(res, params, ...args);
 		}
     };
 }
 
-export function auth(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
+export function auth(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+	requireParams('auth', 'id')(target, propertyKey, descriptor);
+
 	const original = descriptor.value;
 	descriptor.value = function (res: express.Response, params: KeyVal, ...args: any[]) {
-		if (!authenticate(params.auth)) {
+		if (!Auth.ClientSecret.authenticate(params.auth, params.id)) {
 			throw new AuthError('Invalid auth key');
 		}
 
@@ -35,11 +36,13 @@ export function auth(_target: any, _propertyKey: string, descriptor: PropertyDes
 	}
 }
 
-export function authCookie(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
+export function authCookie(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+	requireParams('auth', 'id')(target, propertyKey, descriptor);
+
 	const original = descriptor.value;
 	descriptor.value = function (req: express.Request, ...args: any[]) {
-		if (!checkCookie(req)) {
-			throw new AuthError('Invalid or missing auth key');
+		if (!Auth.Cookie.checkCookie(req)) {
+			throw new AuthError('Invalid or missing auth cookie');
 		}
 
 		original.bind(this)(req, ...args);

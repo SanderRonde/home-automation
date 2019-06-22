@@ -56,7 +56,7 @@ class APIHandler {
 	}
 
 	@errorHandle
-	@requireParams('auth', 'key')
+	@requireParams('key')
 	@auth
 	public get(res: express.Response, { key }: {
 		key: string;
@@ -70,7 +70,7 @@ class APIHandler {
 	}
 
 	@errorHandle
-	@requireParams('auth', 'key', 'maxtime', 'expected')
+	@requireParams('key', 'maxtime', 'expected')
 	@auth
 	public getLongPoll(res: express.Response, { key, expected, maxtime }: {
 		key: string;
@@ -110,7 +110,7 @@ class APIHandler {
 	}
 
 	@errorHandle
-	@requireParams('auth', 'key', 'value')
+	@requireParams('key', 'value')
 	@auth
 	public async set(res: express.Response, { key, value }: {
 		key: string;
@@ -127,7 +127,6 @@ class APIHandler {
 	}
 
 	@errorHandle
-	@requireParams('auth')
 	@auth
 	public async all(res: express.Response, { force = false }: {
 		force?: boolean;
