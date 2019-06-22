@@ -1,4 +1,4 @@
-import { errorHandle, requireParams, auth } from "../lib/decorators";
+import { errorHandle, requireParams, auth, authCookie } from "../lib/decorators";
 import { Database } from "../lib/db";
 import * as express from "express";
 
@@ -99,6 +99,15 @@ class APIHandler {
 	}
 }
 
+export class WebpageHandler {
+	@errorHandle
+	@authCookie
+	public static index(_req: express.Request, res: express.Response) {
+		res.write('hi');
+		res.end();
+	}
+}
+
 export function initKeyValRoutes(app: express.Express, db: Database) {
 	app.get('/:auth/:key', (req, res, _next) => {
 		APIHandler.get(res, req.params, db);
@@ -108,5 +117,9 @@ export function initKeyValRoutes(app: express.Express, db: Database) {
 	});
 	app.all('/:auth/:key/:value', (req, res, _next) => {
 		APIHandler.set(res, req.params, db);
+	});
+
+	app.all('/keyval', (req, res, _next) => {
+		WebpageHandler.index(req, res);
 	});
 }

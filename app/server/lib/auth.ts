@@ -41,7 +41,7 @@ async function genCookie() {
 }
 
 export async function checkCookie(req: express.Request) {
-	return req.cookies['key'] && req.cookies['key'] === await genCookie();
+	return req.cookies && req.cookies['key'] && req.cookies['key'] === await genCookie();
 }
 
 export async function initAuthRoutes(app: express.Express) {

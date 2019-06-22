@@ -1,5 +1,5 @@
 import { KeyError, AuthError } from './errors';
-import { authenticate } from './auth';
+import { authenticate, checkCookie } from './auth';
 import * as express from 'express';
 
 interface KeyVal {
@@ -29,6 +29,17 @@ export function auth(_target: any, _propertyKey: string, descriptor: PropertyDes
 		}
 
 		original(res, params, ...args);;
+	}
+}
+
+export function authCookie(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
+	const original = descriptor.value;
+	descriptor.value = (req: express.Request, ...args: any[]) => {
+		if (!checkCookie(req)) {
+			throw new AuthError('Invalid or missing auth key');
+		}
+
+		original(req, ...args);
 	}
 }
 
