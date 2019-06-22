@@ -1,50 +1,69 @@
 import { errorHandle, requireParams, auth, authCookie } from "../lib/decorators";
+import { attachMessage } from "../lib/logger";
 import { Database } from "../lib/db";
 import * as express from "express";
 
-class GetSetListener {
-	private static _listeners: Map<number, {
+function str(value: any|undefined) {
+	return JSON.stringify(value || null);
+}
+
+namespace GetSetListener {
+	const _listeners: Map<number, {
 		key: string;
 		listener: () => void;
 	}> = new Map();
-	private static _lastIndex: number = 0;
+	let _lastIndex: number = 0;
 
-	public static addListener(key: string, listener: () => void) {
-		const index = this._lastIndex++;
-		this._listeners.set(index, {
+	export function addListener(key: string, listener: () => void) {
+		const index = _lastIndex++;
+		_listeners.set(index, {
 			key, listener
 		});
 		return index;
 	}
 
-	public static removeListener(index: number) {
-		this._listeners.delete(index);
+	export function removeListener(index: number) {
+		_listeners.delete(index);
 	}
 
-	public static update(key: string) {
+	export function update(key: string) {
+		let updated: number = 0;
 		const updatedKeyParts = key.split('.');
 
-		for (const [index, { key: listenerKey, listener }] of this._listeners) {
+		for (const [index, { key: listenerKey, listener }] of _listeners) {
 			const listenerParts = listenerKey.split('.');
 			for (let i = 0; i < Math.min(updatedKeyParts.length, listenerParts.length); i++) {
 				if (updatedKeyParts[i] !== listenerParts[i]) continue;
 			}
 
 			listener();
-			this._listeners.delete(index);
+			updated++;
+			_listeners.delete(index);
 		}
+		return updated;
 	}
 }
 
 class APIHandler {
+	private _db: Database;
+
+	constructor({
+		db
+	}: {
+		db: Database
+	}) {
+		this._db = db;
+	}
+
 	@errorHandle
 	@requireParams('auth', 'key')
 	@auth
-	public static get(res: express.Response, params: {
+	public get(res: express.Response, { key }: {
 		key: string;
 		auth: string;
-	}, db: Database) {
-		const value = db.get(params.key);
+	}) {
+		const value = this._db.get(key);
+		attachMessage(res, `Key: "${key}", val: "${str(value)}"`);
 		res.status(200).write(value === undefined ?
 			'' : value);
 		res.end();
@@ -53,14 +72,16 @@ class APIHandler {
 	@errorHandle
 	@requireParams('auth', 'key', 'maxtime', 'expected')
 	@auth
-	public static getLongPoll(res: express.Response, params: {
+	public getLongPoll(res: express.Response, { key, expected, maxtime }: {
 		key: string;
 		expected: string;
 		auth: string;
 		maxtime: string;
-	}, db: Database) {
-		const value = db.get(params.key);
-		if (value !== params.expected) {
+	}) {
+		const value = this._db.get(key);
+		if (value !== expected) {
+			const msg = attachMessage(res, `Key: "${key}", val: "${str(value)}"`);
+			attachMessage(msg, `(current) "${str(value)}" != (expected) "${expected}"`);
 			res.status(200).write(value === undefined ? '' : value);
 			res.end();
 			return;
@@ -68,58 +89,88 @@ class APIHandler {
 
 		// Wait for changes to this key
 		let triggered: boolean = false;
-		const id = GetSetListener.addListener(params.key, () => {
+		const id = GetSetListener.addListener(key, () => {
 			triggered = true;
-			const value = db.get(params.key);
+			const value = this._db.get(key);
+			const msg = attachMessage(res, `Key: "${key}", val: "${str(value)}"`);
+			attachMessage(msg, `Set to "${str(value)}". Expected "${expected}"`);
 			res.status(200).write(value === undefined ? '' : value);
 			res.end();
 		});
 		setTimeout(() => {
 			if (!triggered) {
 				GetSetListener.removeListener(id);
-				const value = db.get(params.key);
+				const value = this._db.get(key);
+				const msg = attachMessage(res, `Key: "${key}", val: "${str(value)}"`);
+				attachMessage(msg, `Timeout. Expected "${expected}"`);
 				res.status(200).write(value === undefined ? '' : value);
 				res.end();
 			}
-		}, parseInt(params.maxtime, 10) * 1000);
+		}, parseInt(maxtime, 10) * 1000);
 	}
 
 	@errorHandle
 	@requireParams('auth', 'key', 'value')
 	@auth
-	public static async set(res: express.Response, params: {
+	public async set(res: express.Response, { key, value }: {
 		key: string;
 		value: string;
 		auth: string;
-	}, db: Database) {
-		await db.setVal(params.key, params.value);
-		GetSetListener.update(params.key);
-		res.status(200).write(params.value);
+	}) {
+		const original = await this._db.setVal(key, value);
+		const msg = attachMessage(res, `Key: "${key}", val: "${str(value)}"`);
+		const nextMessage = attachMessage(msg, `"${str(value)}" -> "${str(original)}"`)
+		const updated = GetSetListener.update(key);
+		attachMessage(nextMessage, `Updated ${updated} listeners`);
+		res.status(200).write(value);
+		res.end();
+	}
+
+	@errorHandle
+	@requireParams('auth')
+	@auth
+	public async all(res: express.Response, { force = false }: {
+		force?: boolean;
+	}) {
+		const data = await this._db.json(force);
+		const msg = attachMessage(res, data);
+		attachMessage(msg, `Force? ${force ? 'true' : 'false'}`);
+		res.status(200).write(data);
 		res.end();
 	}
 }
 
 export class WebpageHandler {
+
+	constructor() {
+	}
+	
 	@errorHandle
 	@authCookie
-	public static index(_req: express.Request, res: express.Response) {
+	public index(_req: express.Request, res: express.Response) {
 		res.write('hi');
 		res.end();
 	}
 }
 
 export function initKeyValRoutes(app: express.Express, db: Database) {
-	app.get('/:auth/:key', (req, res, _next) => {
-		APIHandler.get(res, req.params, db);
+	const apiHandler = new APIHandler({ db });
+	const webpageHandler = new WebpageHandler();
+
+	app.post('/keyval/all', (req, res) => {
+		apiHandler.all(res, {...req.params, ...req.body});
 	});
-	app.get('/long/:maxtime/:auth/:key/:expected', (req, res, _next) => {
-		APIHandler.getLongPoll(res, req.params, db);
+	app.post('/keyval/long/:key', (req, res) => {
+		apiHandler.get(res, {...req.params, ...req.body});
 	});
-	app.all('/:auth/:key/:value', (req, res, _next) => {
-		APIHandler.set(res, req.params, db);
+	app.post('/keyval/:key', (req, res) => {
+		apiHandler.get(res, {...req.params, ...req.body});
+	});
+	app.post('/keyval/:key/:value', (req, res) => {
+		apiHandler.set(res, {...req.params, ...req.body});
 	});
 
 	app.all('/keyval', (req, res, _next) => {
-		WebpageHandler.index(req, res);
+		webpageHandler.index(req, res);
 	});
 }

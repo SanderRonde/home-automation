@@ -1,5 +1,6 @@
 import { errorHandle, requireParams, auth } from "../lib/decorators";
 import * as childProcess from 'child_process';
+import { attachMessage } from "../lib/logger";
 import { AuthError } from "../lib/errors";
 import { Database } from "../lib/db";
 import * as express from 'express';
@@ -17,11 +18,15 @@ class APIHandler {
 		if (params.name.indexOf('..') > -1 || params.name.indexOf('/') > -1) {
 			throw new AuthError('Going up dirs is not allowed');
 		}
-		res.write(childProcess.execFileSync(
+		const scriptPath = path.join(config.scripts.scriptDir, params.name);
+		attachMessage(res, `Script: "${scriptPath}"`);
+		const output = childProcess.execFileSync(
 			path.join(config.scripts.scriptDir, params.name), {
 				uid: config.scripts.uid,
 				gid: config.scripts.uid
-			}).toString());
+			}).toString();
+		attachMessage(res, `Output: "${output}"`);
+		res.write(output);
 		res.status(200);
 		res.end();
 	}

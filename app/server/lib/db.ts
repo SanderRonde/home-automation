@@ -45,10 +45,11 @@ export class Database {
 		return this;
 	}
 
-	async setVal(key: string, val: string|number) {
+	async setVal(key: string, val: string|number, noWrite: boolean = false) {
 		const parts = key.split('.');
 		let current = this._data;
 
+		let original: any;
 		for (let i = 0; i < parts.length - 1; i++) {
 			const part = parts[i];
 			if (typeof current !== 'object') return;
@@ -60,9 +61,22 @@ export class Database {
 			current = current[part];
 		}
 		if (typeof current !== 'object') return;
-		current[parts[parts.length - 1]] = val;
+		if (typeof current[parts[parts.length - 1]] === 'object') {
+			// Set every child of this object to that value
+			const final = current[parts[parts.length - 1]];
+			original = final;
+			for (const child in final) {
+				this.setVal(`${key}.${child}`, val, true);
+			}
+		} else {
+			original = current[parts[parts.length - 1]];
+			current[parts[parts.length - 1]] = val;
+		}
 
-		await DBFileManager.write(this._data);
+		if (!noWrite) {
+			await DBFileManager.write(this._data);
+		}
+		return original;
 	}
 
 	get<V>(key: string, defaultVal: V|undefined = undefined): V|undefined {
@@ -77,5 +91,16 @@ export class Database {
 			current = current[part];
 		}
 		return (current as any) || defaultVal;
+	}
+
+	async data(force: boolean = false) {
+		if (force) {
+			return (this._data = await DBFileManager.read());
+		}
+		return this._data;
+	}
+
+	async json(force: boolean = false) {
+		return JSON.stringify(await this.data(force));
 	}
 }

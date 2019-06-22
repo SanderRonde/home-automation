@@ -1,4 +1,5 @@
 import { hasArg, getArg, getNumberArg } from './lib/io';
+import { setLogLevel } from './lib/logger';
 import { initRoutes } from './lib/routes';
 import { Database } from './lib/db';
 import * as express from 'express';
@@ -13,6 +14,9 @@ interface PartialConfig {
 	scripts?: {
 		uid?: number|void;
 		scriptDir?: string|void;
+	}
+	log?: {
+		level?: number;
 	}
 }
 
@@ -37,6 +41,9 @@ class WebServer {
 				uid: config.scripts && config.scripts.uid || 0,
 				scriptDir: config.scripts && config.scripts.scriptDir ||
 					path.join(__dirname, '../../', 'scripts')
+			},
+			log: {
+				level: (config.log && config.log.level) || 1
 			}
 		}
 	}
@@ -48,6 +55,7 @@ class WebServer {
 	public async init() {
 		await this._initVars();
 		await initRoutes(this.app, this.db, this._config);
+		setLogLevel(this._config.log.level);
 		this._listen();
 	}
 
@@ -69,13 +77,16 @@ if (hasArg('help', 'h')) {
 	console.log('');
 	console.log('node app/server/app.js 	[-h | --help] [--http {port}] ');
 	console.log('			[--https {port}] [--scripts {dir}]');
-	console.log('			[--uid	{uid}]');
+	console.log('			[--uid	{uid}] [-v | --verbose]');
+	console.log('			[-vv | --veryverbose]');
 	console.log('');
-	console.log('-h, --help	print this help message');
-	console.log('--http 	{port}	The HTTP port to use');
+	console.log('-h, --help		Print this help message');
+	console.log('--http 		{port}	The HTTP port to use');
 	console.log('--https 	{port}	The HTTP port to use');
 	console.log('--uid 		{uid}	The uid to use for scripts');
 	console.log('--scripts 	{dir}	A directory of scripts to use for /script');
+	console.log('-v, --verbose		Log request-related data');
+	console.log('-vv, --veryverbose	Log even more request-related data');
 	process.exit(0);
 }
 new WebServer({
@@ -86,5 +97,9 @@ new WebServer({
 	scripts: {
 		scriptDir: getArg('scripts'),
 		uid: getNumberArg('uid')
+	},
+	log: {
+		level: hasArg('veryverbose', 'vv') ? 3 : 
+			hasArg('verbose', 'v') ? 2 : 1
 	}
 }).init();

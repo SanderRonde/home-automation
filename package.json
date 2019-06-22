@@ -8,12 +8,13 @@
   "private": true,
   "nodemonConfig": {
     "ext": "js",
-    "exec": "node app/server/app.js --http 1272 --https 1273",
+    "exec": "node app/server/app.js --http 1272 --https 1273 -vv",
     "watch": [
       "app/"
     ]
   },
   "devDependencies": {
+    "@types/body-parser": "^1.17.0",
     "@types/chalk": "^2.2.0",
     "@types/cookie-parser": "^1.4.1",
     "@types/express": "^4.17.0",
@@ -22,6 +23,7 @@
     "typescript": "^3.5.2"
   },
   "dependencies": {
+    "body-parser": "^1.19.0",
     "chalk": "^2.4.2",
     "cookie-parser": "^1.4.4",
     "express": "^4.17.1",
