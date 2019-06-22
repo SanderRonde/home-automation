@@ -16,3 +16,11 @@ export async function readSecret() {
 export function authenticate(authKey: string) {
 	return key === authKey;
 }
+
+export async function sanitize(data: string) {
+	return data.replace(await getKey(), '[redacted]');
+}
+
+export async function getKey() {
+	return key || await readSecret();
+}

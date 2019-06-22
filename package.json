@@ -14,12 +14,14 @@
     ]
   },
   "devDependencies": {
+    "@types/chalk": "^2.2.0",
     "@types/express": "^4.17.0",
     "@types/fs-extra": "^7.0.0",
     "@types/node": "^12.0.8",
     "typescript": "^3.5.2"
   },
   "dependencies": {
+    "chalk": "^2.4.2",
     "express": "^4.17.1",
     "fs-extra": "^8.0.1"
   }
