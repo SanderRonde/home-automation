@@ -1,49 +1,6 @@
-import { KeyError, AuthError } from './errors';
-import * as childProcess from 'child_process';
-import { authenticate } from './auth';
-import * as express from 'express';
-import { Database } from './db';
-import { Config } from '../app';
-import * as path from 'path';
-
-interface KeyVal {
-	[key: string]: string;
-}
-
-function requireParams(...keys: string[]) {
-    return function (_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
-		const original = descriptor.value;
-        descriptor.value = (res: express.Response, params: KeyVal, ...args: any[]) => {
-			for (const key of keys) {
-				if (!params[key]) {
-					throw new KeyError(`Missing key ${key}`);
-				}
-			}
-
-			original(res, params, ...args);
-		}
-    };
-}
-
-function auth(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
-	const original = descriptor.value;
-	descriptor.value = (res: express.Response, params: KeyVal, ...args: any[]) => {
-		if (!authenticate(params.auth)) {
-			throw new AuthError('Invalid auth key');
-		}
-
-		original(res, params, ...args);;
-	}
-}
-
-function errorHandle(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
-	const original = descriptor.value;
-	descriptor.value = (res: express.Response, ...args: any[]) => {
-		RouteHandler.errorHandler(res, () => {
-			original(res, ...args);;
-		});
-	}
-}
+import { errorHandle, requireParams, auth } from "../lib/decorators";
+import { Database } from "../lib/db";
+import * as express from "express";
 
 class GetSetListener {
 	private static _listeners: Map<number, {
@@ -79,7 +36,7 @@ class GetSetListener {
 	}
 }
 
-export class RouteHandler {
+class KeyValHandler {
 	@errorHandle
 	@requireParams('auth', 'key')
 	@auth
@@ -140,38 +97,16 @@ export class RouteHandler {
 		res.status(200).write(params.value);
 		res.end();
 	}
+}
 
-	@errorHandle
-	@requireParams('auth', 'name')
-	@auth
-	public static async script(res: express.Response, params: {
-		auth: string;
-		name: string;
-	}, config: Config) {
-		if (params.name.indexOf('..') > -1 || params.name.indexOf('/') > -1) {
-			throw new AuthError('Going up dirs is not allowed');
-		}
-		res.write(childProcess.execFileSync(
-			path.join(config.scripts.scriptDir, params.name), {
-				uid: config.scripts.uid,
-				gid: config.scripts.uid
-			}).toString());
-		res.status(200);
-		res.end();
-	}
-
-	public static errorHandler(res: express.Response, fn: () => void) {
-		try {
-			fn();
-		} catch(e) {
-			if (e instanceof KeyError) {
-				res.status(400).write(e.message)
-			} else if (e instanceof AuthError) {
-				res.status(403).write(e.message);
-			} else {
-				res.status(400).write('Internal server error');
-			}
-			res.end();
-		}
-	}
+export function initKeyValRoutes(app: express.Express, db: Database) {
+	app.get('/:auth/:key', (req, res, _next) => {
+		KeyValHandler.get(res, req.params, db);
+	});
+	app.get('/long/:maxtime/:auth/:key/:expected', (req, res, _next) => {
+		KeyValHandler.getLongPoll(res, req.params, db);
+	});
+	app.all('/:auth/:key/:value', (req, res, _next) => {
+		KeyValHandler.set(res, req.params, db);
+	});
 }
