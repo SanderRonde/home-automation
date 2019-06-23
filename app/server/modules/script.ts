@@ -5,6 +5,7 @@ import { AuthError } from "../lib/errors";
 import * as express from 'express';
 import { Config } from "../app";
 import * as path from 'path';
+import chalk from 'chalk';
 
 class APIHandler {
 	@errorHandle
@@ -19,20 +20,28 @@ class APIHandler {
 		}
 		const scriptPath = path.join(config.scripts.scriptDir, params.name);
 		attachMessage(res, `Script: "${scriptPath}"`);
-		const output = childProcess.execFileSync(
-			path.join(config.scripts.scriptDir, params.name), {
-				uid: config.scripts.uid,
-				gid: config.scripts.uid
-			}).toString();
-		attachMessage(res, `Output: "${output}"`);
-		res.write(output);
-		res.status(200);
-		res.end();
+		try {
+			const output = childProcess.execFileSync(
+				path.join(config.scripts.scriptDir, params.name), {
+					uid: config.scripts.uid,
+					gid: config.scripts.uid
+				}).toString();
+			attachMessage(res, `Output: "${output}"`);
+			res.write(output);
+			res.status(200);
+			res.end();
+		} catch(e) {
+			const errMsg = attachMessage(res, chalk.bgRed(chalk.black(`Error: ${e.message}`)));
+			for (const line of e.stack.split('\n')) {
+				attachMessage(errMsg, chalk.bgRed(chalk.black(line)));
+			}
+			res.status(400).end();
+		}
 	}
 }
 
 export function initScriptRoutes(app: express.Express, config: Config) {
-	app.get('/script/:auth/:name', (req, res, _next) => {
-		APIHandler.script(res, req.params, config);
+	app.post('/script/:name', (req, res, _next) => {
+		APIHandler.script(res, {...req.params, ...req.body}, config);
 	});
 }
