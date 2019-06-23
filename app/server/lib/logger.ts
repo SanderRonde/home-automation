@@ -1,4 +1,5 @@
 import * as express from 'express';
+import { Auth } from './auth';
 import chalk from 'chalk';
 
 interface AssociatedMessage {
@@ -36,13 +37,13 @@ export function logReq(req: express.Request, res: express.Response) {
 
 		const end = Date.now();
 		if (res.statusCode === 200) {
-			console.log(chalk.green(`[${res.statusCode}]`), chalk.bgGreen(chalk.black(req.url)), 'from ip', chalk.bold(req.ip), `(${end - start} ms)`);
+			console.log(chalk.green(`[${res.statusCode}]`), chalk.bgGreen(chalk.black(Auth.Secret.redact(req.url))), 'from ip', chalk.bold(req.ip), `(${end - start} ms)`);
 		}
 		else if (res.statusCode === 500) {
-			console.log(chalk.red(`[${res.statusCode}]`), chalk.bgRed(chalk.black(req.url)), 'from ip', chalk.bold(req.ip), `(${end - start} ms)`);
+			console.log(chalk.red(`[${res.statusCode}]`), chalk.bgRed(chalk.black(Auth.Secret.redact(req.url))), 'from ip', chalk.bold(req.ip), `(${end - start} ms)`);
 		}
 		else {
-			console.log(chalk.yellow(`[${res.statusCode}]`), chalk.bgYellow(chalk.black(req.url)), 'from ip', chalk.bold(req.ip), `(${end - start} ms)`);
+			console.log(chalk.yellow(`[${res.statusCode}]`), chalk.bgYellow(chalk.black(Auth.Secret.redact(req.url))), 'from ip', chalk.bold(req.ip), `(${end - start} ms)`);
 		}
 
 		// Log stuck messages

@@ -70,6 +70,10 @@ export namespace Auth {
 		export async function getKey() {
 			return key || await Auth.Secret.readSecret();
 		}
+
+		export function redact(msg: string) {
+			return msg.replace(key!, '[redacted]');
+		}
 	}
 
 	export namespace Cookie {
