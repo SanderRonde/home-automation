@@ -46,7 +46,7 @@ export function logReq(req: express.Request, res: express.Response) {
 			console.log(chalk.yellow(`[${res.statusCode}]`), chalk.bgYellow(chalk.black(Auth.Secret.redact(req.url))), 'from ip', chalk.bold(req.ip), `(${end - start} ms)`);
 		}
 
-		// Log stuck messages
+		// Log attached messages
 		if (logLevel < 2 || !msgMap.has(res)) return;
 
 		logAssociatedMessages(msgMap.get(res)!);
