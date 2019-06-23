@@ -139,22 +139,38 @@ class APIHandler {
 	}
 }
 
-export class WebpageHandler {
+function keyvalHTML(json: string) {
+	return `<html>
+		<head>
+			<title>KeyVal</title>
+		</head>
+		<body>
+			<json-switches json='${json}'></json-switches>
+			<script type="module" src="./keyval.js"></script>
+		</body>
+	</html>`;
+}
 
-	constructor() {
+export class WebpageHandler {
+	private _db: Database
+
+	constructor({ db }: { db: Database }) {
+		this._db = db;
 	}
 	
 	@errorHandle
 	@authCookie
-	public index(_req: express.Request, res: express.Response) {
-		res.write('hi');
+	public async index(res: express.Response, _req: express.Request) {
+		res.status(200);
+		res.contentType('.html');
+		res.write(keyvalHTML(await this._db.json(true)));
 		res.end();
 	}
 }
 
 export function initKeyValRoutes(app: express.Express, db: Database) {
 	const apiHandler = new APIHandler({ db });
-	const webpageHandler = new WebpageHandler();
+	const webpageHandler = new WebpageHandler({ db });
 
 	app.post('/keyval/all', (req, res) => {
 		apiHandler.all(res, {...req.params, ...req.body});
@@ -170,6 +186,6 @@ export function initKeyValRoutes(app: express.Express, db: Database) {
 	});
 
 	app.all('/keyval', (req, res, _next) => {
-		webpageHandler.index(req, res);
+		webpageHandler.index(res, req);
 	});
 }

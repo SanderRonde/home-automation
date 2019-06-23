@@ -2,12 +2,14 @@ import { initRGBRoutes, scanRGBControllers } from '../modules/rgb';
 import { initKeyValRoutes } from '../modules/keyval';
 import { initScriptRoutes } from '../modules/script';
 import * as cookieParser from 'cookie-parser';
+import * as serveStatic from 'serve-static';
 import * as bodyParser from 'body-parser';
 import * as express from 'express';
 import { logReq } from './logger';
 import { Database } from './db';
 import { Config } from '../app';
 import { Auth } from './auth';
+import * as path from 'path';
 
 export async function initRoutes(app: express.Express, config: Config) {
 	app.use(cookieParser());
@@ -17,6 +19,8 @@ export async function initRoutes(app: express.Express, config: Config) {
 	app.use(bodyParser.urlencoded({
 		extended: false
 	}));
+	app.use(serveStatic(
+		path.join(__dirname, '../../../', 'app/client/')));
 	app.use((req, res, next) => {
 		logReq(req, res);
 		next();

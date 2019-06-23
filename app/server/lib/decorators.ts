@@ -13,7 +13,7 @@ export function requireParams(...keys: string[]) {
 		const original = descriptor.value;
         descriptor.value = function (res: express.Response, params: KeyVal, ...args: any[]) {
 			for (const key of keys) {
-				if (!params[key]) {
+				if (!params || !params[key]) {
 					throw new KeyError(`Missing key ${key}`);
 				}
 			}
@@ -36,16 +36,14 @@ export function auth(target: any, propertyKey: string, descriptor: PropertyDescr
 	}
 }
 
-export function authCookie(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-	requireParams('auth', 'id')(target, propertyKey, descriptor);
-
+export function authCookie(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
 	const original = descriptor.value;
-	descriptor.value = function (req: express.Request, ...args: any[]) {
+	descriptor.value = function (res: express.Response, req: express.Request, ...args: any[]) {
 		if (!Auth.Cookie.checkCookie(req)) {
 			throw new AuthError('Invalid or missing auth cookie');
 		}
 
-		original.bind(this)(req, ...args);
+		original.bind(this)(res, req, ...args);
 	}
 }
 
@@ -61,7 +59,6 @@ export function errorHandle(_target: any, _propertyKey: string, descriptor: Prop
 				res.status(403).write(e.message);
 			} else {
 				const msg = attachMessage(res, chalk.red(chalk.bgBlack(e.message)));
-				console.log(e.stack.split('\n'));
 				for (const line of e.stack.split('\n')) {
 					attachMessage(msg, line);
 				}

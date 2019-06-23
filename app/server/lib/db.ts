@@ -10,16 +10,17 @@ class DBFileManager {
 	}
 
 	public static async read(fileName: string) {
-		if (!(await fs.pathExists(DB_FOLDER))) {
+		const filePath = path.join(DB_FOLDER, fileName);
+		if (!(await fs.pathExists(filePath))) {
 			// Create it
 			await fs.mkdirp(DB_FOLDER);
-			await fs.writeFile(path.join(DB_FOLDER, fileName), 
+			await fs.writeFile(filePath, 
 				JSON.stringify(this.date, null, 4), {
 					encoding: 'utf8'
 				});
 			return this.date;
 		}
-		return JSON.parse(await fs.readFile(path.join(DB_FOLDER, fileName), {
+		return JSON.parse(await fs.readFile(filePath, {
 			encoding: 'utf8'
 		}));
 	}
