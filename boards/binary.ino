@@ -1,4 +1,5 @@
 #define DEFAULT_VALUE 0
+//TODO: change
 #define SECRET_KEY String("e1a4a738825ebaa5a2e8e235526e471bb678f64b4ee7ece596cd265644de2e7d083f22f6406fa3e5f88da04d5ea735eabad81334f8538fb4c42c2f0a05fd2cf6")
 #define MAX_TIMEOUT 60
 #define KEY_NAME String("lights.room.0")
