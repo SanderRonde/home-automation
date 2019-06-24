@@ -1,32 +1,33 @@
 #define DEFAULT_VALUE 0
-//TODO: change
-#define SECRET_KEY String("e1a4a738825ebaa5a2e8e235526e471bb678f64b4ee7ece596cd265644de2e7d083f22f6406fa3e5f88da04d5ea735eabad81334f8538fb4c42c2f0a05fd2cf6")
-#define MAX_TIMEOUT 60
-#define KEY_NAME String("lights.room.0")
+#define SECRET_KEY String("SECRET_KEY")
+#define KEY_NAME "lights.room.0"
+#define OUT_PIN D1
+#define INVERT 0
 
 #include <Arduino.h>
 #include <string.h>
-
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiMulti.h>
-
 #include <ESP8266HTTPClient.h>
-
+#include <WebSocketsClient.h>
 #include <WiFiClient.h>
 
 using namespace std;
 
 ESP8266WiFiMulti WiFiMulti;
+WebSocketsClient webSocket;
+
 int value = DEFAULT_VALUE;
 String auth_id;
 String auth_key;
 
 void general_setup() {
 	pinMode(LED_BUILTIN, OUTPUT);
+	pinMode(OUT_PIN, OUTPUT);
 	digitalWrite(LED_BUILTIN, LOW);
+	digitalWrite(OUT_PIN, DEFAULT_VALUE ? HIGH : LOW);
 
 	Serial.begin(9600);
-	// Serial.setDebugOutput(true);
 
 	Serial.println();
 	Serial.println();
@@ -44,59 +45,16 @@ void wifi_setup() {
 	WiFiMulti.addAP("***REMOVED***", "***REMOVED***");
 }
 
+void ws_setup() {
+	webSocket.begin("***REMOVED***", 80, "/keyval");
+    webSocket.onEvent(ws_event);
+	webSocket.setReconnectInterval(5000);
+}
+
 void await_wifi() {
 	while (WiFiMulti.run() != WL_CONNECTED) {
 		delay(1000);
 	}
-}
-
-char* get(String url) {
-	await_wifi();
-
-	WiFiClient client;
-	HTTPClient http;
-	http.setTimeout((MAX_TIMEOUT + 10) * 1000);
-
-	Serial.printf("Doing get request: \"%s\"\n", url.c_str());
-	if (http.begin(client, url)) {
-		int httpCode = http.GET();
-		String result = http.getString();
-		if (httpCode > 0 && (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY)) {
-			Serial.printf("Result payload: %s\n", result.c_str());
-			http.end();
-			return strdup(result.c_str());
-		} else {
-			Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
-		}
-	} else {
-		Serial.printf("[HTTP} Unable to connect\n");
-	}
-	http.end();
-	return NULL;
-}
-
-char* post_json(String url, String payload) {
-	await_wifi();
-
-	WiFiClient client;
-	HTTPClient http;
-
-	Serial.printf("Doing post request: \"%s\" with payload \"%s\"\n", url.c_str(), payload.c_str());
-	if (http.begin(client, url)) {
-		http.addHeader("Content-Type", "application/json");
-		int httpCode = http.POST(payload);
-		String result = http.getString();
-		http.end();
-		if (httpCode > 0 && (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY)) {
-			Serial.printf("Result payload: %s\n", result.c_str());
-			return strdup(result.c_str());
-		} else {
-			Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
-		}
-	} else {
-		Serial.printf("[HTTP} Unable to connect\n");
-	}
-	return NULL;
 }
 
 int* str_to_nums(String str) {
@@ -108,7 +66,7 @@ int* str_to_nums(String str) {
 	return num_arr;
 }
 
-String createSecret(String id) {
+String create_secret(String id) {
 	String secret = String("");
 	int* id_arr = str_to_nums(id);
 
@@ -127,68 +85,120 @@ String createSecret(String id) {
 	return secret;
 }
 
-void get_key() {
-	char* id;
-	do {
-		id = post_json(String("http://***REMOVED***/authid"), String(""));
-	} while (id == NULL);
-	auth_id = String(id);
-	free(id);
-	auth_key = createSecret(auth_id);
-	Serial.printf("Auth id: %s, auth key: %s\n", auth_id.c_str(), auth_key.c_str());
-}
-
 void setup() {
 	general_setup();
 	wifi_setup();
-	get_key();
+	ws_setup();
 }
 
-int do_request(int last_value) {
-	// wait for WiFi connection
-	String url = String();
-	url += "http://***REMOVED***/keyval/long/req/";
-	url += KEY_NAME;
-
-	String payload = "{\"maxtime\": \"" + String(MAX_TIMEOUT) + "\",";
-	payload += "\"expected\": \"" + String(last_value) + "\",";
-	payload += "\"auth\": \"" + auth_key + "\",";
-	payload += "\"id\": \"" + auth_id + "\"}";
-
-	char* req_id = post_json(url, payload.c_str());
-	if (req_id == NULL) {
-		Serial.print("Getting new key because result was null\n");
-		get_key();
-		return last_value;
-	};
-
-	// Req id is valid, do long poll now
-	char* result = get(String("http://***REMOVED***/keyval/long/req/") + String(req_id));
-	if (result == NULL) {
-		Serial.print("Getting new key because result was null\n");
-		get_key();
-		return last_value;
-	};
-
-	int result_num = String(result).toInt();
-	free(result);
-	Serial.printf("Got result: %d\n", result_num);
-	return result_num;
+void set(int value) {
+	if (INVERT) {
+		value = !value;
+	}
+	digitalWrite(OUT_PIN, value ? HIGH : LOW);
+	digitalWrite(LED_BUILTIN, value ? LOW : HIGH);
 }
 
-void loop() {
+void on_value(int new_value) {
 	int old_value = value;
-	int new_value = do_request(value);
 	if (old_value != new_value) {
 		Serial.printf("Different values %d, %d\n", old_value, new_value);
-		if (new_value == 1) {
-			digitalWrite(LED_BUILTIN, LOW);
-		} else {
-			digitalWrite(LED_BUILTIN, HIGH);
-		}
+		set(new_value);
 	} else {
 		Serial.printf("Same values %d, %d\n", old_value, new_value);
 	}
 
 	value = new_value;
+}
+
+void send_data(const char* type, const char* data) {
+	char* buffer = (char*) malloc(sizeof(char) * 500);
+	strcpy(buffer, type);
+	strcat(buffer, " ");
+	strcat(buffer, data);
+
+	Serial.printf("Sending \"%s\"\n", buffer);
+	webSocket.sendTXT(buffer, strlen(buffer));
+	free(buffer);
+}
+
+void send_auth(String id) {
+	// Send auth key back
+	String secret = create_secret(id);
+	Serial.printf("Sending auth\n");
+	send_data("auth", secret.c_str());
+}
+
+char* get_type(char* payload) {
+	int i;
+	char* type = (char*) malloc(sizeof(char) * 500);
+	for (i = 0; i < strlen(payload); i++) {
+		if (payload[i] == ' ') {
+			break;
+		}
+		type[i] = payload[i];
+	}
+	type[i] = '\0';
+	return type;
+}
+
+char* get_data(char* payload) {
+	int i;
+	int j = 0;
+	bool found_space = false;
+	char* data = (char*) malloc(sizeof(char) * 500);
+	for (i = 0; i < strlen(payload); i++) {
+		if (found_space) {
+			data[j] = payload[i];
+			j++;
+		}
+		if (payload[i] == ' ') {
+			found_space = true;
+		}
+	}
+	data[j] = '\0';
+	return data;
+}
+
+void handle_msg(char* payload) {
+	char* type = get_type(payload);
+	char* data = get_data(payload);
+	if (strcmp(type, "authid") == 0) {
+		send_auth(String(data));
+	} else if (strcmp(type, "authfail") == 0) {
+		Serial.printf("Auth failed");
+		webSocket.disconnect();
+	} else if (strcmp(type, "authsuccess") == 0) {
+		Serial.printf("Auth success\n");
+		Serial.printf("Sending listen\n");
+		send_data("listen", KEY_NAME);
+	} else if (strcmp(type, "valChange") == 0) {
+		on_value(atoi(data));
+	} else {
+		Serial.printf("Unknown message %s, %s\n", type, data);
+	}
+	free(type);
+	free(data);
+}
+
+void ws_event(WStype_t type, uint8_t * payload, size_t length) {
+	switch(type) {
+		case WStype_DISCONNECTED:
+			Serial.printf("[WSc] Disconnected!\n");
+			break;
+		case WStype_CONNECTED:
+			Serial.printf("[WSc] Connected to url: %s\n", payload);
+			break;
+		case WStype_TEXT:
+			Serial.printf("[WSc] get text: %s\n", payload);
+			handle_msg((char*) payload);
+			break;
+		default:
+			Serial.printf("[WSc] Unknown msg");
+			break;
+    }
+}
+
+void loop() {
+	webSocket.loop();
 }
