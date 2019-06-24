@@ -1,6 +1,8 @@
 import { hasArg, getArg, getNumberArg } from './lib/io';
+import { server as WSServer } from 'websocket';
 import { setLogLevel } from './lib/logger';
 import { initRoutes } from './lib/routes';
+import { WSWrapper } from './lib/ws';
 import * as express from 'express';
 import * as path from 'path';
 import * as http from 'http';
@@ -27,6 +29,9 @@ export type Config = DeepRequired<PartialConfig>;
 
 class WebServer {
 	public app!: express.Express;
+	public websocket!: WSServer;
+	public websocketWrapper!: WSWrapper;
+	private _server!: http.Server;
 
 	private _config: Config;
 
@@ -54,18 +59,23 @@ class WebServer {
 
 	public async init() {
 		await this._initVars();
-		await initRoutes(this.app, this._config);
+		await initRoutes(this.app, this.websocketWrapper, this._config);
 		setLogLevel(this._config.log.level);
 		this._listen();
 	}
 
 	private async _initVars() {
 		this.app = express();
+		this._server = http.createServer(this.app);
+		this.websocket = new WSServer({
+			httpServer: this._server
+		});
+		this.websocketWrapper = new WSWrapper(this.websocket);
 	}
 
 	private _listen() {
 		// HTTPS is unused for now
-		http.createServer(this.app).listen(this._config.ports.http, () => {
+		this._server.listen(this._config.ports.http, () => {
 			console.log(`HTTP server listening on port ${this._config.ports.http}`);
 		});
 	}
@@ -98,7 +108,7 @@ new WebServer({
 		uid: getNumberArg('uid')
 	},
 	log: {
-		level: hasArg('veryverbose', 'vv') ? 3 : 
+		level: hasArg('veryverbose', 'vv') ? Infinity : 
 			hasArg('verbose', 'v') ? 2 : 1,
 		secrets: hasArg('log-secrets') || false
 	}

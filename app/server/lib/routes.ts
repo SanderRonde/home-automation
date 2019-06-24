@@ -6,12 +6,13 @@ import * as serveStatic from 'serve-static';
 import * as bodyParser from 'body-parser';
 import * as express from 'express';
 import { logReq } from './logger';
+import { WSWrapper } from './ws';
 import { Database } from './db';
 import { Config } from '../app';
 import { Auth } from './auth';
 import * as path from 'path';
 
-export async function initRoutes(app: express.Express, config: Config) {
+export async function initRoutes(app: express.Express, websocket: WSWrapper, config: Config) {
 	app.use(cookieParser());
 	app.use(bodyParser.json({
 		type: '*/json'
@@ -26,7 +27,7 @@ export async function initRoutes(app: express.Express, config: Config) {
 		next();
 	});
 	
-	initKeyValRoutes(app, new Database('keyval.json'));
+	initKeyValRoutes(app, websocket, await new Database('keyval.json').init());
 	initScriptRoutes(app, config);
 	await initRGBRoutes(app);
 	await Auth.initRoutes(app, config);

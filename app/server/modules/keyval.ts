@@ -1,5 +1,6 @@
 import { errorHandle, requireParams, auth, authCookie } from "../lib/decorators";
 import { attachMessage } from "../lib/logger";
+import { WSWrapper, WSInstance } from "../lib/ws";
 import { Database } from "../lib/db";
 import * as express from "express";
 import { Auth } from "../lib/auth";
@@ -12,13 +13,14 @@ namespace GetSetListener {
 	const _listeners: Map<number, {
 		key: string;
 		listener: () => void;
+		once: boolean;
 	}> = new Map();
 	let _lastIndex: number = 0;
 
-	export function addListener(key: string, listener: () => void) {
+	export function addListener(key: string, listener: () => void, once: boolean = false) {
 		const index = _lastIndex++;
 		_listeners.set(index, {
-			key, listener
+			key, listener, once
 		});
 		return index;
 	}
@@ -31,7 +33,7 @@ namespace GetSetListener {
 		let updated: number = 0;
 		const updatedKeyParts = key.split('.');
 
-		for (const [index, { key: listenerKey, listener }] of _listeners) {
+		for (const [index, { key: listenerKey, listener, once }] of _listeners) {
 			const listenerParts = listenerKey.split('.');
 			for (let i = 0; i < Math.min(updatedKeyParts.length, listenerParts.length); i++) {
 				if (updatedKeyParts[i] !== listenerParts[i]) continue;
@@ -39,7 +41,9 @@ namespace GetSetListener {
 
 			listener();
 			updated++;
-			_listeners.delete(index);
+			if (once) {
+				_listeners.delete(index);
+			}
 		}
 		return updated;
 	}
@@ -47,7 +51,6 @@ namespace GetSetListener {
 
 class APIHandler {
 	private _db: Database;
-	private _ongoingRequests: Map<string, any> = new Map();
 
 	constructor({
 		db
@@ -68,51 +71,6 @@ class APIHandler {
 		attachMessage(res, `Key: "${key}", val: "${str(value)}"`);
 		res.status(200).write(value === undefined ?
 			'' : value);
-		res.end();
-	}
-
-	public async executeLongRequest(res: express.Response, { id }: {
-		id: string;
-	}) {
-		if (!this._ongoingRequests.has(id)) {
-			res.status(400).write('Invalid req id');
-			res.end();
-			return;
-		}
-		const { key, expected, maxtime } = this._ongoingRequests.get(id)!;
-		attachMessage(attachMessage(res, `Executing long request with id ${id}`),
-			`Using data: ${JSON.stringify({
-				key, expected, maxtime
-			})}`);
-		this.getLongPoll(res, {
-			key, expected, maxtime, auth: await Auth.Secret.getKey()
-		});
-	}
-
-	@errorHandle
-	@requireParams('key', 'maxtime', 'expected')
-	@auth
-	public genLongRequest(res: express.Response, { key, expected, maxtime }: {
-		key: string;
-		expected: string;
-		auth: string;
-		maxtime: string;
-	}) {
-		let id = Math.floor(Math.random() * 10000000) + '';
-		while (this._ongoingRequests.has(id)) {
-			id = Math.floor(Math.random() * 10000000) + '';
-		}
-		this._ongoingRequests.set(id, {
-			key, expected, maxtime
-		});
-		attachMessage(attachMessage(res, `Created long request with id ${id}`),
-			`Using data: ${JSON.stringify({
-				key, expected, maxtime
-			})}`);
-		setTimeout(() => {
-			this._ongoingRequests.delete(id);
-		}, 1000 * 60 * 60);
-		res.status(200).write(id);
 		res.end();
 	}
 
@@ -143,7 +101,7 @@ class APIHandler {
 			attachMessage(msg, `Set to "${str(value)}". Expected "${expected}"`);
 			res.status(200).write(value === undefined ? '' : value);
 			res.end();
-		});
+		}, true);
 		setTimeout(() => {
 			if (!triggered) {
 				GetSetListener.removeListener(id);
@@ -164,9 +122,11 @@ class APIHandler {
 		value: string;
 		auth: string;
 	}) {
-		const original = await this._db.setVal(key, value);
+		debugger;
+		const original = this._db.get(key);
+		await this._db.setVal(key, value);
 		const msg = attachMessage(res, `Key: "${key}", val: "${str(value)}"`);
-		const nextMessage = attachMessage(msg, `"${str(value)}" -> "${str(original)}"`)
+		const nextMessage = attachMessage(msg, `"${str(original)}" -> "${str(value)}"`)
 		const updated = GetSetListener.update(key);
 		attachMessage(nextMessage, `Updated ${updated} listeners`);
 		res.status(200).write(value);
@@ -215,18 +175,17 @@ export class WebpageHandler {
 	}
 }
 
-export function initKeyValRoutes(app: express.Express, db: Database) {
+type WSMessages = {
+	send: "authid"|"authfail"|"authsuccess"|"valChange";
+	receive: "auth"|"listen";
+}
+
+export function initKeyValRoutes(app: express.Express, websocket: WSWrapper, db: Database) {
 	const apiHandler = new APIHandler({ db });
 	const webpageHandler = new WebpageHandler({ db });
 
 	app.post('/keyval/all', (req, res) => {
 		apiHandler.all(res, {...req.params, ...req.body});
-	});
-	app.get('/keyval/long/req/:id', (req, res) => {
-		apiHandler.executeLongRequest(res, {...req.params, ...req.body});
-	});
-	app.post('/keyval/long/req/:key', (req, res) => {
-		apiHandler.genLongRequest(res, {...req.params, ...req.body});
 	});
 	app.post('/keyval/long/:key', (req, res) => {
 		apiHandler.getLongPoll(res, {...req.params, ...req.body});
@@ -239,6 +198,31 @@ export function initKeyValRoutes(app: express.Express, db: Database) {
 	});
 	app.post('/keyval/:key/:value', (req, res) => {
 		apiHandler.set(res, {...req.params, ...req.body});
+	});
+
+	websocket.all('/keyval', async (instance: WSInstance<WSMessages>) => {
+		// Send auth ID first
+		const id = (await Auth.ClientSecret.genId()) + '';
+		instance.listen('auth', (authkey) => {
+			if (!Auth.ClientSecret.authenticate(authkey, id)) {
+				instance.send('authfail', id);
+				instance.close();
+			} else {
+				instance.listen('listen', (key) => {
+					const onChange = () => {
+						instance.send('valChange', db.get(key, '0'));
+					}
+					const listener = GetSetListener.addListener(key, onChange);
+					onChange();
+
+					instance.onClose = () => {
+						GetSetListener.removeListener(listener);
+					}
+				});
+				instance.send('authsuccess');
+			}
+		});
+		instance.send('authid', id);
 	});
 
 	app.all('/keyval', (req, res, _next) => {

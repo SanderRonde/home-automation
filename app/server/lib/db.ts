@@ -41,18 +41,28 @@ export class Database {
 	private _data!: {
 		[key: string]: any;
 	};
+	private _initialized: boolean = false;
 	constructor(private _fileName: string) { }
 
 	async init() {
 		this._data = await DBFileManager.read(this._fileName);
+		this._initialized = true;
 		return this;
 	}
 
+	private _assertInitialized() {
+		if (!this._initialized) {
+			console.warn(`DB ${this._fileName} not initialized`);
+			throw new Error('Not initialized');
+		}
+	}
+
 	async setVal(key: string, val: string|number, noWrite: boolean = false) {
+		this._assertInitialized();
+
 		const parts = key.split('.');
 		let current = this._data;
 
-		let original: any;
 		for (let i = 0; i < parts.length - 1; i++) {
 			const part = parts[i];
 			if (typeof current !== 'object') return;
@@ -67,22 +77,23 @@ export class Database {
 		if (typeof current[parts[parts.length - 1]] === 'object') {
 			// Set every child of this object to that value
 			const final = current[parts[parts.length - 1]];
-			original = final;
 			for (const child in final) {
 				this.setVal(`${key}.${child}`, val, true);
 			}
 		} else {
-			original = current[parts[parts.length - 1]];
 			current[parts[parts.length - 1]] = val;
 		}
 
 		if (!noWrite) {
 			await DBFileManager.write(this._fileName, this._data);
 		}
-		return original;
 	}
 
+	get<V>(key: string, defaultVal: V): V
+	get<V>(key: string): V|undefined
 	get<V>(key: string, defaultVal: V|undefined = undefined): V|undefined {
+		this._assertInitialized();
+
 		const parts = key.split('.');
 		let current = this._data;
 
@@ -97,6 +108,8 @@ export class Database {
 	}
 
 	async data(force: boolean = false) {
+		this._assertInitialized();
+
 		if (force) {
 			return (this._data = await DBFileManager.read(this._fileName));
 		}
