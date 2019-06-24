@@ -16,7 +16,6 @@ export class WSInstance< DATA extends {
 	constructor(private _request: request) { 
 		this._connection = this._request.accept(null as any, _request.origin);
 		this._connection.on('message', (msg) => {
-			console.log('Got msg', msg);
 			if (msg.type !== 'utf8') return;
 			try {
 				const [ msgType, msgData ] = msg.utf8Data!.split(' ');
