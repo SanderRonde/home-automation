@@ -2,7 +2,7 @@
 #define SECRET_KEY String("SECRET_KEY")
 #define KEY_NAME "lights.room.0"
 #define OUT_PIN D1
-#define INVERT 0
+#define INVERT 1
 
 #include <Arduino.h>
 #include <string.h>
@@ -24,7 +24,7 @@ String auth_key;
 void general_setup() {
 	pinMode(LED_BUILTIN, OUTPUT);
 	pinMode(OUT_PIN, OUTPUT);
-	digitalWrite(LED_BUILTIN, LOW);
+	digitalWrite(LED_BUILTIN, DEFAULT_VALUE ? LOW : HIGH);
 	digitalWrite(OUT_PIN, DEFAULT_VALUE ? HIGH : LOW);
 
 	Serial.begin(9600);
@@ -92,11 +92,11 @@ void setup() {
 }
 
 void set(int value) {
+	digitalWrite(LED_BUILTIN, value ? LOW : HIGH);
 	if (INVERT) {
 		value = !value;
 	}
 	digitalWrite(OUT_PIN, value ? HIGH : LOW);
-	digitalWrite(LED_BUILTIN, value ? LOW : HIGH);
 }
 
 void on_value(int new_value) {
@@ -167,6 +167,7 @@ void handle_msg(char* payload) {
 		send_auth(String(data));
 	} else if (strcmp(type, "authfail") == 0) {
 		Serial.printf("Auth failed");
+		delay(1000 * 15);
 		webSocket.disconnect();
 	} else if (strcmp(type, "authsuccess") == 0) {
 		Serial.printf("Auth success\n");
