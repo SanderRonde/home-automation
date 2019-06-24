@@ -100,7 +100,7 @@ export namespace Auth {
 	export async function initRoutes(app: express.Express, config: Config) {
 		await Secret.readSecret();
 		app.post('/authid', async (_req, res) => {
-			const id = await Auth.ClientSecret.genId() + '';
+			const id = (await Auth.ClientSecret.genId()) + '';
 			if (config.log.secrets) {
 				attachMessage(res, `{"id": "${
 					chalk.underline(id)

@@ -21,6 +21,7 @@
     "@types/fs-extra": "^7.0.0",
     "@types/node": "^12.0.8",
     "@types/serve-static": "^1.13.2",
+    "@types/websocket": "^0.0.40",
     "typescript": "^3.5.2"
   },
   "dependencies": {
@@ -32,6 +33,7 @@
     "lit-html": "^1.1.0",
     "magic-home": "^2.1.1",
     "serve-static": "^1.14.1",
-    "wclib": "https://github.com/SanderRonde/wc-lib"
+    "wclib": "https://github.com/SanderRonde/wc-lib",
+    "websocket": "^1.0.28"
   }
 }
