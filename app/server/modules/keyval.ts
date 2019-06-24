@@ -176,7 +176,7 @@ export function initKeyValRoutes(app: express.Express, db: Database) {
 		apiHandler.all(res, {...req.params, ...req.body});
 	});
 	app.post('/keyval/long/:key', (req, res) => {
-		apiHandler.get(res, {...req.params, ...req.body});
+		apiHandler.getLongPoll(res, {...req.params, ...req.body});
 	});
 	app.post('/keyval/:key', (req, res) => {
 		apiHandler.get(res, {...req.params, ...req.body});
