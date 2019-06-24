@@ -1,7 +1,8 @@
 import { errorHandle, requireParams, auth } from '../lib/decorators';
 import { Discovery, Control } from 'magic-home';
-import * as express from 'express';
 import { attachMessage } from '../lib/logger';
+import * as express from 'express';
+import chalk from 'chalk';
 
 let clients: Control[]|null = null;
 export async function scanRGBControllers() {
@@ -20,13 +21,16 @@ class APIHandler {
 		color: string;
 	}) {
 		if (!(color in colorList)) return;
-		const { r, g, b } = hexToRGB(colorList[color as keyof typeof colorList]);
+		const hexColor = colorList[color as keyof typeof colorList];
+		const { r, g, b } = hexToRGB(hexColor);
 
-		attachMessage(res, `rgb(${r}, ${g}, ${b})`);
+		attachMessage(attachMessage(res, `rgb(${r}, ${g}, ${b})`),
+			chalk.bgHex(hexColor)('   '));
+
 		await Promise.all(clients!.map(async (client) => {
 			return Promise.all([
-				client.turnOn(),
-				client.setColorWithBrightness(r, g, b, 100)
+				client.setColorWithBrightness(r, g, b, 100),
+				client.turnOn()
 			]);
 		}));
 
