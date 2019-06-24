@@ -2,6 +2,7 @@ import { errorHandle, requireParams, auth, authCookie } from "../lib/decorators"
 import { attachMessage } from "../lib/logger";
 import { Database } from "../lib/db";
 import * as express from "express";
+import { Auth } from "../lib/auth";
 
 function str(value: any|undefined) {
 	return JSON.stringify(value || null);
@@ -46,6 +47,7 @@ namespace GetSetListener {
 
 class APIHandler {
 	private _db: Database;
+	private _ongoingRequests: Map<string, any> = new Map();
 
 	constructor({
 		db
@@ -62,10 +64,55 @@ class APIHandler {
 		key: string;
 		auth: string;
 	}) {
-		const value = this._db.get(key);
+		const value = this._db.get(key, '0');
 		attachMessage(res, `Key: "${key}", val: "${str(value)}"`);
 		res.status(200).write(value === undefined ?
 			'' : value);
+		res.end();
+	}
+
+	public async executeLongRequest(res: express.Response, { id }: {
+		id: string;
+	}) {
+		if (!this._ongoingRequests.has(id)) {
+			res.status(400).write('Invalid req id');
+			res.end();
+			return;
+		}
+		const { key, expected, maxtime } = this._ongoingRequests.get(id)!;
+		attachMessage(attachMessage(res, `Executing long request with id ${id}`),
+			`Using data: ${JSON.stringify({
+				key, expected, maxtime
+			})}`);
+		this.getLongPoll(res, {
+			key, expected, maxtime, auth: await Auth.Secret.getKey()
+		});
+	}
+
+	@errorHandle
+	@requireParams('key', 'maxtime', 'expected')
+	@auth
+	public genLongRequest(res: express.Response, { key, expected, maxtime }: {
+		key: string;
+		expected: string;
+		auth: string;
+		maxtime: string;
+	}) {
+		let id = Math.floor(Math.random() * 10000000) + '';
+		while (this._ongoingRequests.has(id)) {
+			id = Math.floor(Math.random() * 10000000) + '';
+		}
+		this._ongoingRequests.set(id, {
+			key, expected, maxtime
+		});
+		attachMessage(attachMessage(res, `Created long request with id ${id}`),
+			`Using data: ${JSON.stringify({
+				key, expected, maxtime
+			})}`);
+		setTimeout(() => {
+			this._ongoingRequests.delete(id);
+		}, 1000 * 60 * 60);
+		res.status(200).write(id);
 		res.end();
 	}
 
@@ -78,7 +125,7 @@ class APIHandler {
 		auth: string;
 		maxtime: string;
 	}) {
-		const value = this._db.get(key);
+		const value = this._db.get(key, '0');
 		if (value !== expected) {
 			const msg = attachMessage(res, `Key: "${key}", val: "${str(value)}"`);
 			attachMessage(msg, `(current) "${str(value)}" != (expected) "${expected}"`);
@@ -91,7 +138,7 @@ class APIHandler {
 		let triggered: boolean = false;
 		const id = GetSetListener.addListener(key, () => {
 			triggered = true;
-			const value = this._db.get(key);
+			const value = this._db.get(key, '0');
 			const msg = attachMessage(res, `Key: "${key}", val: "${str(value)}"`);
 			attachMessage(msg, `Set to "${str(value)}". Expected "${expected}"`);
 			res.status(200).write(value === undefined ? '' : value);
@@ -100,7 +147,7 @@ class APIHandler {
 		setTimeout(() => {
 			if (!triggered) {
 				GetSetListener.removeListener(id);
-				const value = this._db.get(key);
+				const value = this._db.get(key, '0');
 				const msg = attachMessage(res, `Key: "${key}", val: "${str(value)}"`);
 				attachMessage(msg, `Timeout. Expected "${expected}"`);
 				res.status(200).write(value === undefined ? '' : value);
@@ -175,7 +222,16 @@ export function initKeyValRoutes(app: express.Express, db: Database) {
 	app.post('/keyval/all', (req, res) => {
 		apiHandler.all(res, {...req.params, ...req.body});
 	});
+	app.get('/keyval/long/req/:id', (req, res) => {
+		apiHandler.executeLongRequest(res, {...req.params, ...req.body});
+	});
+	app.post('/keyval/long/req/:key', (req, res) => {
+		apiHandler.genLongRequest(res, {...req.params, ...req.body});
+	});
 	app.post('/keyval/long/:key', (req, res) => {
+		apiHandler.getLongPoll(res, {...req.params, ...req.body});
+	});
+	app.get('/keyval/long/:maxtime/:auth/:key/:expected', (req, res) => {
 		apiHandler.getLongPoll(res, {...req.params, ...req.body});
 	});
 	app.post('/keyval/:key', (req, res) => {
