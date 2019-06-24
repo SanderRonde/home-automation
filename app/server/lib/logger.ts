@@ -32,18 +32,25 @@ function logAssociatedMessages(messages: AssociatedMessage[], indent: number = 0
 
 export function logReq(req: express.Request, res: express.Response) {
 	const start = Date.now();
+	const ip = req.ip;
 	res.on('finish', async () => {
 		if (logLevel < 1) return;
 
 		const end = Date.now();
 		if (res.statusCode === 200) {
-			console.log(chalk.green(`[${res.statusCode}]`), chalk.bgGreen(chalk.black(Auth.Secret.redact(req.url))), 'from ip', chalk.bold(req.ip), `(${end - start} ms)`);
+			console.log(chalk.green(`[${res.statusCode}]`), `[${req.method.toUpperCase()}]`, 
+				chalk.bgGreen(chalk.black(Auth.Secret.redact(req.url))), 
+					'from ip', chalk.bold(ip), `(${end - start} ms)`);
 		}
 		else if (res.statusCode === 500) {
-			console.log(chalk.red(`[${res.statusCode}]`), chalk.bgRed(chalk.black(Auth.Secret.redact(req.url))), 'from ip', chalk.bold(req.ip), `(${end - start} ms)`);
+			console.log(chalk.red(`[${res.statusCode}]`), `[${req.method.toUpperCase()}]`, 
+				chalk.bgRed(chalk.black(Auth.Secret.redact(req.url))), 
+					'from ip', chalk.bold(ip), `(${end - start} ms)`);
 		}
 		else {
-			console.log(chalk.yellow(`[${res.statusCode}]`), chalk.bgYellow(chalk.black(Auth.Secret.redact(req.url))), 'from ip', chalk.bold(req.ip), `(${end - start} ms)`);
+			console.log(chalk.yellow(`[${res.statusCode}]`), `[${req.method.toUpperCase()}]`, 
+				chalk.bgYellow(chalk.black(Auth.Secret.redact(req.url))), 
+					'from ip', chalk.bold(ip), `(${end - start} ms)`);
 		}
 
 		// Log attached messages

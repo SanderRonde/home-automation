@@ -103,10 +103,9 @@ export namespace Auth {
 			const id = await Auth.ClientSecret.genId() + '';
 			if (config.log.secrets) {
 				attachMessage(res, `{"id": "${
-					chalk.underline(chalk.bgRed(chalk.black(id)))
+					chalk.underline(id)
 				}", "auth": "${
-					chalk.underline(chalk.bgRed(
-						chalk.black(ClientSecret.getClientSecret(parseInt(id, 10))!)))
+					chalk.underline(ClientSecret.getClientSecret(parseInt(id, 10))!)
 				}" }`);
 			}
 			res.status(200).write(id);
