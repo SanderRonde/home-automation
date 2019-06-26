@@ -191,14 +191,14 @@ export function initKeyValRoutes(app: AppWrapper, websocket: WSWrapper, db: Data
 	app.post('/keyval/all', async (req, res) => {
 		await apiHandler.all(res, {...req.params, ...req.body});
 	});
-	app.post('/keyval/long/:key', (req, res) => {
-		apiHandler.getLongPoll(res, {...req.params, ...req.body});
+	app.post('/keyval/long/:key', async (req, res) => {
+		await apiHandler.getLongPoll(res, {...req.params, ...req.body});
 	});
-	app.get('/keyval/long/:maxtime/:auth/:key/:expected', (req, res) => {
-		apiHandler.getLongPoll(res, {...req.params, ...req.body});
+	app.get('/keyval/long/:maxtime/:auth/:key/:expected', async (req, res) => {
+		await apiHandler.getLongPoll(res, {...req.params, ...req.body});
 	});
-	app.post('/keyval/:key', (req, res) => {
-		apiHandler.get(res, {...req.params, ...req.body});
+	app.post('/keyval/:key', async (req, res) => {
+		await apiHandler.get(res, {...req.params, ...req.body});
 	});
 	app.post('/keyval/:key/:value', async (req, res) => {
 		await apiHandler.set(res, {...req.params, ...req.body});

@@ -35,15 +35,20 @@ export namespace Auth {
 			return id;
 		}
 
-		export function getClientSecret(id: number) {
-			return ids.get(id);
+		export async function getClientSecret(id: number) {
+			if (ids.has(id)) {
+				return ids.get(id)!;
+			}
+			const secret = await createClientSecret(id);
+			ids.set(id, secret);
+			return secret;
 		}
 
-		export function authenticate(authKey: string, id: string) {
+		export async function authenticate(authKey: string, id: string) {
 			if (authKey === Secret.getKeySync()) return true;
 
 			if (Number.isNaN(parseInt(id, 10))) return false;
-			return ClientSecret.getClientSecret(parseInt(id, 10)) === authKey;
+			return await ClientSecret.getClientSecret(parseInt(id, 10)) === authKey;
 		}
 	}
 
@@ -80,21 +85,21 @@ export namespace Auth {
 	export namespace Cookie {
 		export async function genCookie() {
 			const id = await ClientSecret.genId();
-			const clientSecret = ClientSecret.getClientSecret(id)!;
+			const clientSecret = await ClientSecret.getClientSecret(id)!;
 			
 			return JSON.stringify([id, clientSecret]);
 		}
 
-		function verifyCookie(cookie: string) {
-			const parsed = JSON.stringify(cookie);
+		async function verifyCookie(cookie: string) {
+			const parsed = JSON.parse(cookie);
 			if (!parsed || !Array.isArray(parsed) || parsed.length !== 2) return false;
 			if (typeof parsed[0] !== 'number' || typeof parsed[1] !== 'string') return false;
 
-			return ClientSecret.getClientSecret(parsed[0]) !== parsed[1];
+			return await ClientSecret.getClientSecret(parsed[0]) === parsed[1];
 		}
 
-		export function checkCookie(req: express.Request) {
-			return req.cookies && req.cookies['key'] && verifyCookie(req.cookies['req']);
+		export async function checkCookie(req: express.Request) {
+			return req.cookies && req.cookies['key'] && await verifyCookie(req.cookies['key']);
 		}
 	}
 
@@ -106,7 +111,7 @@ export namespace Auth {
 				attachMessage(res, `{"id": "${
 					chalk.underline(id)
 				}", "auth": "${
-					chalk.underline(ClientSecret.getClientSecret(parseInt(id, 10))!)
+					chalk.underline(await ClientSecret.getClientSecret(parseInt(id, 10))!)
 				}" }`);
 			}
 			res.status(200).write(id);
