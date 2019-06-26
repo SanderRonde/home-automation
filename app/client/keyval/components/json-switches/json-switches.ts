@@ -68,6 +68,7 @@ export class JSONSwitches extends ConfigurableWebComponent {
 				message: 'Failed to establish secure connection (network error)',
 				duration: 5000
 			});
+			this._connection = null;
 			return false;
 		}
 	}
@@ -92,6 +93,7 @@ export class JSONSwitches extends ConfigurableWebComponent {
 					message: `Failed to update value ${response.status}`,
 					duration: 5000
 				});
+				this._connection = null;
 				return false;
 			}
 			return true;
@@ -100,6 +102,7 @@ export class JSONSwitches extends ConfigurableWebComponent {
 				message: 'Failed to update value (network error)',
 				duration: 5000
 			});
+			this._connection = null;
 			return false;
 		}
 	}
@@ -195,6 +198,7 @@ export class JSONSwitches extends ConfigurableWebComponent {
 					message: `Failed to refresh. ${response.status}`,
 					duration: 5000
 				});
+				this._connection = null;
 				return false;
 			}
 			const json = await response.json();
@@ -207,6 +211,7 @@ export class JSONSwitches extends ConfigurableWebComponent {
 				message: 'Failed to refresh (network error)',
 				duration: 5000
 			});
+			this._connection = null;
 			return false;
 		}
 	}
