@@ -1,5 +1,5 @@
 import { errorHandle, requireParams, auth } from '../lib/decorators';
-import { Discovery, Control } from 'magic-home';
+import { Discovery, Control, CustomMode, TransitionTypes } from 'magic-home';
 import { attachMessage } from '../lib/logger';
 import { AppWrapper } from '../lib/routes';
 import { ResponseLike } from './multi';
@@ -12,6 +12,99 @@ export async function scanRGBControllers() {
 			wait_for_reply: false
 		});
 	});
+}
+
+type CustomPattern = 'rgb'|'rainbow'|'christmas'|'strobe'|'darkColors'|
+	'shittyFire'|'betterFire';
+
+const patterns: Object & {
+	[K in CustomPattern]: {
+		pattern: CustomMode;
+		defaultSpeed: number;
+	}
+}= {
+	rgb: {
+		pattern: new CustomMode()
+			.addColor(255, 0, 0)
+			.addColor(0, 255, 0)
+			.addColor(0, 0, 255)
+			.setTransitionType('fade'),
+		defaultSpeed: 100
+	},
+	rainbow: {
+		pattern: new CustomMode()
+			.addColor(255, 0, 0)
+			.addColor(255, 127, 0)
+			.addColor(255, 255, 0)
+			.addColor(0, 255, 0)
+			.addColor(0, 0, 255)
+			.addColor(75, 0, 130)
+			.addColor(143, 0, 255)
+			.setTransitionType('fade'),
+		defaultSpeed: 100
+	},
+	christmas: {
+		pattern: new CustomMode()
+			.addColor(255, 61, 42)
+			.addColor(0, 239, 0)
+			.setTransitionType('jump'),
+		defaultSpeed: 70
+	},
+	strobe: {
+		pattern: new CustomMode()
+			.addColor(255, 255, 255)
+			.addColor(255, 255, 255)
+			.addColor(255, 255, 255)
+			.setTransitionType('strobe'),
+		defaultSpeed: 100
+	},
+	darkColors: {
+		pattern: new CustomMode()
+			.addColor(255, 0, 0)
+			.addColor(255, 0, 85)
+			.addColor(255, 0, 170)
+			.addColor(255, 0, 255)
+			.addColor(170, 0, 255)
+			.addColor(85, 0, 255)
+			.addColor(25, 0, 255)
+			.addColor(0, 0, 255)
+			.addColor(25, 0, 255)
+			.addColor(85, 0, 255)
+			.addColor(170, 0, 255)
+			.addColor(255, 0, 255)
+			.addColor(255, 0, 170)
+			.addColor(255, 0, 85)
+			.setTransitionType('fade'),
+		defaultSpeed: 90
+	},
+	shittyFire: {
+		pattern: new CustomMode()
+			.addColor(255, 0, 0)
+			.addColor(255, 25, 0)
+			.addColor(255, 85, 0)
+			.addColor(255, 170, 0)
+			.addColor(255, 230, 0)
+			.addColor(255, 255, 0)
+			.addColor(255, 230, 0)
+			.addColor(255, 170, 0)
+			.addColor(255, 85, 0)
+			.addColor(255, 25, 0)
+			.addColor(255, 0, 0)
+			.setTransitionType('fade'),
+		defaultSpeed: 90
+	},
+	betterFire: {
+		pattern: new CustomMode()
+			.addColorList(new Array(15).fill('').map(() => {
+				return [
+					255 - (Math.random() * 90), 
+					200 - (Math.random() * 200), 
+					0
+				] as [number, number, number];
+			}))
+			.setTransitionType('fade'),
+		defaultSpeed: 100
+	}
 }
 
 class APIHandler {
@@ -48,6 +141,64 @@ class APIHandler {
 		await Promise.all(clients!.map(c => power === 'on' ? c.turnOn() : c.turnOff()));
 		res.status(200).end();
 	}
+
+	private static _overrideTransition(pattern: CustomMode, transition: 'fade'|'jump'|'strobe') {
+		return new CustomMode().addColorList(pattern.colors.map(({ red, green, blue }) => {
+			return [red, green, blue] as [number, number, number];
+		})).setTransitionType(transition);
+	}
+
+	@errorHandle
+	@requireParams('pattern')
+	@auth
+	public static async runPattern(res: ResponseLike, { pattern: patternName, speed, transition }: {
+		pattern: CustomPattern;
+		speed?: number;
+		transition?: string;
+	}) {
+		if (!patterns.hasOwnProperty(patternName)) {
+			attachMessage(res, `Pattern ${patternName} does not exist`);
+			res.status(400).write('Unknown pattern');
+			res.end();
+			return;
+		}
+
+		let { pattern, defaultSpeed } = patterns[patternName as CustomPattern];
+		if (transition) {
+			if (['fade', 'jump', 'strobe'].indexOf(transition) === -1) {
+				attachMessage(res, `Invalid transition mode ${transition}`);
+				res.status(400).write('Invalid transiton mode');
+				res.end();
+				return;
+			}
+
+			pattern = this._overrideTransition(pattern, transition as TransitionTypes);
+		}
+
+		attachMessage(res, `Running pattern ${patternName}`);
+		try {
+			await Promise.all(clients!.map((c) => {
+				return c.setCustomPattern(pattern, speed || defaultSpeed);
+			}));
+			res.status(200).end();
+		} catch(e) {
+			res.status(400).write('Failed to run pattern');
+			res.end();
+		}
+	}
+
+	@errorHandle
+	@requireParams('function')
+	@auth
+	public static async runFunction(res: ResponseLike, { function: fn }: {
+		function: string;
+	}) {
+		attachMessage(res, `Running function ${fn}`);
+		await Promise.all(clients!.map((c) => {
+			c.startEffectMode()
+		}));
+		res.status(200).end();
+	}
 }
 
 export async function initRGBRoutes(app: AppWrapper) {
@@ -60,8 +211,11 @@ export async function initRGBRoutes(app: AppWrapper) {
 	app.post('/rgb/power/:power', async (req, res) => {
 		await APIHandler.setPower(res, {...req.params, ...req.body});
 	});
-	app.post('/rgb/function/:function', () => {
-		//TODO:
+	app.post('/rgb/pattern/:pattern/:speed?/:transition?', async (req, res) => {
+		await APIHandler.runPattern(res, {...req.params, ...req.body});
+	});
+	app.post('/rgb/function/:function', async (req, res) => {
+		await APIHandler.runFunction(res, {...req.params, ...req.body});
 	});
 }
 

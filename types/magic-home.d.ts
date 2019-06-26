@@ -65,7 +65,11 @@ export class CustomMode {
 	setTransitionType(type: TransitionTypes): this;
 
 	transitionType: string;
-	colors: [number, number, number][];
+	colors: {
+		red: number;
+		green: number;
+		blue: number;
+	}[];
 }
 
 interface Client {

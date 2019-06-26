@@ -11,7 +11,7 @@ export interface ResponseLike {
 	cookie(name: string, value: string): void;
 }
 
-class SubDummy implements ResponseLike {
+export class SubDummy implements ResponseLike {
 	private _status: number = 200;
 	private _contentType: string|null = null;
 	private _cookies: [string, string][] = [];
