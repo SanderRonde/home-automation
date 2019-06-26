@@ -1,7 +1,6 @@
 {
     "compilerOptions": {
 		"baseUrl": ".",
-		"paths": { "*": ["types/*"] },
         "alwaysStrict": true,
         "forceConsistentCasingInFileNames": true,
         "module": "esnext",
@@ -24,6 +23,6 @@
     "compileOnSave": true,
     "allowJs": true,
     "include": [
-        "app/client/"
+        "./"
     ]
 }

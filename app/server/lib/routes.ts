@@ -13,6 +13,10 @@ import { Auth } from './auth';
 import * as path from 'path';
 
 export async function initRoutes(app: express.Express, websocket: WSWrapper, config: Config) {
+	app.use((req, res, next) => {
+		logReq(req, res);
+		next();
+	});
 	app.use(cookieParser());
 	app.use(bodyParser.json({
 		type: '*/json'
@@ -22,10 +26,14 @@ export async function initRoutes(app: express.Express, websocket: WSWrapper, con
 	}));
 	app.use(serveStatic(
 		path.join(__dirname, '../../../', 'app/client/')));
-	app.use((req, res, next) => {
-		logReq(req, res);
+	app.use('/node_modules/lit-html', (req, _res, next) => {
+		req.url = req.url.replace('/node_modules/lit-html', '');
 		next();
-	});
+	}, serveStatic(path.join(__dirname, '../../../', 'node_modules/lit-html')));
+	app.use('/node_modules/wclib', (req, _res, next) => {
+		req.url = req.url.replace('/node_modules/wclib', '');
+		next();
+	}, serveStatic(path.join(__dirname, '../../../', 'node_modules/wclib')));
 	
 	initKeyValRoutes(app, websocket, await new Database('keyval.json').init());
 	initScriptRoutes(app, config);

@@ -146,13 +146,16 @@ class APIHandler {
 	}
 }
 
-function keyvalHTML(json: string) {
-	return `<html>
+async function keyvalHTML(json: string) {
+	return `<html style="background-color: rgb(70,70,70);">
 		<head>
-			<title>KeyVal</title>
+			<link rel="icon" href="/keyval/favicon.ico" type="image/x-icon" />
+			<link rel="manifest" href="/keyval/static/manifest.json">
+			<meta name="viewport" content="width=device-width, initial-scale=1">
+			<title>KeyVal Switch</title>
 		</head>
-		<body>
-			<json-switches json='${json}'></json-switches>
+		<body style="margin: 0">
+			<json-switches json='${json}' key="${await Auth.Secret.getKey()}"></json-switches>
 			<script type="module" src="./keyval.js"></script>
 		</body>
 	</html>`;
@@ -170,7 +173,7 @@ export class WebpageHandler {
 	public async index(res: express.Response, _req: express.Request) {
 		res.status(200);
 		res.contentType('.html');
-		res.write(keyvalHTML(await this._db.json(true)));
+		res.write(await keyvalHTML(await this._db.json(true)));
 		res.end();
 	}
 }
