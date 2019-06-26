@@ -93,8 +93,8 @@ export namespace Auth {
 			return ClientSecret.getClientSecret(parsed[0]) !== parsed[1];
 		}
 
-		export async function checkCookie(req: express.Request) {
-			return req.cookies && req.cookies['key'] && req.cookies['key'] === verifyCookie(req.cookies['req']);
+		export function checkCookie(req: express.Request) {
+			return req.cookies && req.cookies['key'] && verifyCookie(req.cookies['req']);
 		}
 	}
 
