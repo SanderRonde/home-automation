@@ -19,7 +19,6 @@ export function initMultiRoutes(app: AppWrapper) {
 		}
 
 		// Validate them all
-		debugger;
 		for (const route of requests) {
 			if (typeof route !== 'object' || !route.path || typeof route.path !== 'string' ||
 				!route.body || typeof route.body !== 'object') {
