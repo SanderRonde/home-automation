@@ -9,25 +9,38 @@ interface AssociatedMessage {
 
 const msgMap: WeakMap<ResponseLike|AssociatedMessage|{}, AssociatedMessage[]> = new WeakMap();
 
-function leftpad(char: string, amount: number) {
-	return new Array(amount).fill(char).join('');
-}
-
 let logLevel: number = 1;
 export function setLogLevel(level: number) {
 	logLevel = level;
 }
 
-function logAssociatedMessages(messages: AssociatedMessage[], indent: number = 0) {
+function setDefaultArrValues<T>(arr: T[], len: number, value: T): T[] {
+	for (let i = 0; i < len; i++) {
+		arr[i] = arr[i] || value;
+	}
+	arr.splice(len);
+	return arr;
+}
+
+function logAssociatedMessages(messages: AssociatedMessage[], indent: number = 0, hasNextMessage: boolean[] = []) {
 	if (logLevel < indent + 2) return;
 
 	for (let i = 0; i < messages.length; i++) {
+		const padding = setDefaultArrValues(hasNextMessage, indent, false).map((next) => {
+			if (next) {
+				return ' |  ';
+			} else {
+				return '    ';
+			}
+		}).join('');
 		if (i === messages.length - 1) {
-			console.log(`${leftpad(' ', indent * 4)}\\-- `, ...messages[i].content);
+			console.log(`${padding} \\- `, ...messages[i].content);
+			hasNextMessage[indent] = false;
 		} else {
-			console.log(`${leftpad(' ', indent * 4)}|-- `, ...messages[i].content);
+			console.log(`${padding} |- `, ...messages[i].content);
+			hasNextMessage[indent] = true;
 		}
-		logAssociatedMessages(msgMap.get(messages[i]) || [], indent + 1);
+		logAssociatedMessages(msgMap.get(messages[i]) || [], indent + 1, hasNextMessage);
 	}
 }
 
