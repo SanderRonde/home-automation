@@ -1,7 +1,8 @@
 import { errorHandle, requireParams, auth } from '../lib/decorators';
-import { AppWrapper, ResponseLike } from '../lib/routes';
 import { Discovery, Control } from 'magic-home';
 import { attachMessage } from '../lib/logger';
+import { AppWrapper } from '../lib/routes';
+import { ResponseLike } from './multi';
 import chalk from 'chalk';
 
 let clients: Control[]|null = null;
