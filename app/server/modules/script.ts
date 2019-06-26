@@ -23,8 +23,10 @@ class APIHandler {
 		try {
 			const output = childProcess.execFileSync(
 				path.join(config.scripts.scriptDir, params.name), {
-					uid: config.scripts.uid,
-					gid: config.scripts.uid
+					// uid: config.scripts.uid,
+					// gid: config.scripts.uid
+					//TODO: this does not seem to work
+					//TODO: saying good night somehow clears keyval.json
 				}).toString();
 			attachMessage(res, `Output: "${output}"`);
 			res.write(output);

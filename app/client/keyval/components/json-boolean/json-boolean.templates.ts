@@ -1,5 +1,6 @@
 import { CHANGE_TYPE, TemplateFn } from '../../../../../node_modules/wclib/build/es/wclib.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
+import { clampWidthSelector } from '../css-util.js';
 import { JSONBoolean } from './json-boolean.js';
 
 export const JSONBooleanHTML = new TemplateFn<JSONBoolean>(function (html, props) {
@@ -27,21 +28,27 @@ export const JSONBooleanCSS = new TemplateFn<JSONBoolean>((html) => {
 	return html`
 		<style>
 			#container {
-				height: 14.5vw;
 				display: flex;
 				flex-direction: row;
 				justify-content: space-between;
 				background-color: rgb(92, 92, 92);
 				color: rgb(217, 217, 217);
-				margin-right: 2vw;
 				font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif
 			}
 
+			${clampWidthSelector('#container')(
+				['height', '14.5vw'],
+				['margin-right', '2vw']
+			)}
+
 			#name {
-				font-size: 10vw;
-				margin-left: 3.5vw;
 				text-align: center;
 			}
+
+			${clampWidthSelector('#name')(
+				['font-size', '10vw'],
+				['margin-left', '3.5vw']
+			)}
 
 			#switchContainer {
 				margin-left: -10px;

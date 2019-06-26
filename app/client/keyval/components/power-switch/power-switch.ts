@@ -49,7 +49,7 @@ export class PowerSwitch extends ConfigurableWebComponent<{
 	}
 
 	private _updateScale() {
-		this.props.scale = (window.innerWidth / 411) * 200;
+		this.props.scale = (Math.min(1000, window.innerWidth) / 411) * 200;
 	}
 
 	props = Props.define(this, {

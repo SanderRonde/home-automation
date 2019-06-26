@@ -1,5 +1,6 @@
 import { CHANGE_TYPE, bindToClass, TemplateFn, config, ConfigurableWebComponent, Props, PROP_TYPE, wait } from '../../../../../node_modules/wclib/build/es/wclib.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
+import { clampWidthSelector } from '../css-util.js';
 
 interface CreateConfig {
 	message: string;
@@ -38,14 +39,17 @@ interface CreateConfig {
 
 				#toast {
 					background-color: rgb(39, 39, 39);
-					padding: 3.6vw;
 					color: rgb(225, 225, 225);
-					font-size: 6vw;
 					display: flex;
 					flex-direction: row;
 					justify-content: flex-start;
 					font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif
 				}
+
+				${clampWidthSelector('#toast')(
+					['padding', '3.6vw'],
+					['font-size', '6vw']
+				)}
 
 				#button {
 					color: yellow;
@@ -53,6 +57,11 @@ interface CreateConfig {
 					cursor: pointer;
 					margin-right: 2vw;
 				}
+
+				${clampWidthSelector('#button')(
+					['margin-left', '4vw'],
+					['margin-right', '2vw']
+				)}
 			</style>
 		`;
 	}, CHANGE_TYPE.NEVER, render)

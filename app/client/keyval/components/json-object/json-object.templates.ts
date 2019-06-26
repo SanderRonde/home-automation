@@ -2,6 +2,7 @@ import { CHANGE_TYPE, TemplateFn } from '../../../../../node_modules/wclib/build
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { jsonValue } from '../json-value/json-value.templates.js';
 import { JSONObject } from './json-object.js';
+import { clampWidthSelector, clampWidth } from '../css-util.js';
 
 function getKeys(value: any): (string|number)[] {
 	if (Array.isArray(value)) {
@@ -60,6 +61,7 @@ export const JSONObjectCSS = new TemplateFn<JSONObject>((html) => {
 		<style>
 			#background {
 				width: 100vw;
+				max-width: 1000px;
 				height: 100vh;
 				background-color: rgb(70, 70, 70);
 			}
@@ -75,6 +77,11 @@ export const JSONObjectCSS = new TemplateFn<JSONObject>((html) => {
 				font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif
 			}
 
+			${clampWidthSelector('#header')(
+				['height', '14.5vw'],
+				['margin-right', '2vw']
+			)}
+
 			#name {
 				font-size: 10vw;
 				font-weight: bold;
@@ -82,19 +89,25 @@ export const JSONObjectCSS = new TemplateFn<JSONObject>((html) => {
 				text-align: center;
 			}
 
+			${clampWidthSelector('#name')(
+				['font-size', '10vw'],
+				['margin-left', '3.5vw']
+			)}
+
 			#groupToggle {
 				margin-left: -10px;
 				position: relative;
-				right: 33px;
 				display: flex;
 				flex-direction: column;
 				justify-content: center;
 			}
 
-			#subsection {
-				margin-left: 2vw;
-				margin-top: 2vw;
-			}
+			${clampWidth('#groupToggle', 'right', '5vw')}
+
+			${clampWidthSelector('#subsection')(
+				['margin-left', '2vw'],
+				['margin-top', '2vw']
+			)}
 		</style>
 	`;
 }, CHANGE_TYPE.NEVER, render);
