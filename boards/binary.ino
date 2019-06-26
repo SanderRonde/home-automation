@@ -1,4 +1,4 @@
-#define DEFAULT_VALUE 0
+#define DEFAULT_VALUE 1
 #define SECRET_KEY String("SECRET_KEY")
 #define KEY_NAME "lights.room.0"
 #define OUT_PIN D1
@@ -21,11 +21,18 @@ int value = DEFAULT_VALUE;
 String auth_id;
 String auth_key;
 
+void set(int value) {
+	digitalWrite(LED_BUILTIN, value ? LOW : HIGH);
+	if (INVERT) {
+		value = !value;
+	}
+	digitalWrite(OUT_PIN, value ? HIGH : LOW);
+}
+
 void general_setup() {
 	pinMode(LED_BUILTIN, OUTPUT);
 	pinMode(OUT_PIN, OUTPUT);
-	digitalWrite(LED_BUILTIN, DEFAULT_VALUE ? LOW : HIGH);
-	digitalWrite(OUT_PIN, DEFAULT_VALUE ? HIGH : LOW);
+	set(DEFAULT_VALUE);
 
 	Serial.begin(9600);
 
@@ -89,14 +96,6 @@ void setup() {
 	general_setup();
 	wifi_setup();
 	ws_setup();
-}
-
-void set(int value) {
-	digitalWrite(LED_BUILTIN, value ? LOW : HIGH);
-	if (INVERT) {
-		value = !value;
-	}
-	digitalWrite(OUT_PIN, value ? HIGH : LOW);
 }
 
 void on_value(int new_value) {
