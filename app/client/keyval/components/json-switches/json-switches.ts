@@ -122,6 +122,59 @@ export class JSONSwitches extends ConfigurableWebComponent {
 		});
 	}
 
+	private static _isValSame(a: unknown, b: unknown): boolean {
+		if (typeof a !== typeof b) return false;
+		if (typeof a === 'object') {
+			if (!a) {
+				if (b) return false;
+			} else if (!b) {
+				return false;
+			} else {
+				if (Array.isArray(a)) {
+					if (!this._isArrSame(a, b as unknown[])) return false;
+				} else {
+					if (!this._isObjSame(a as any, b as any)) return false;
+				}
+			}
+		} else if (typeof a === 'number' || typeof a === 'string' ||
+			typeof a === 'boolean') {
+				if (a !== b) return false;
+			} else {
+				return false;
+			}
+		return true;
+	}
+
+	private static _isArrSame(a: unknown[], b: unknown[]): boolean {
+		if (a.length !== b.length) return false;
+		for (let i = 0; i < a.length; i++) {
+			if (!this._isValSame(a[i], b[i])) return false;
+		}
+		return true;
+	}
+
+	private static _isObjSame(a: {
+		[key: string]: unknown;
+	}, b: {
+		[key: string]: unknown;
+	}): boolean {
+		const aKeys = Object.keys(a);
+		const bKeys = Object.keys(b);
+		if (aKeys.length !== bKeys.length) return false;
+
+		for (const keyA of aKeys) {
+			if (bKeys.indexOf(keyA) === -1) return false;
+		}
+		for (const keyB of bKeys) {
+			if (aKeys.indexOf(keyB) === -1) return false;
+		}
+
+		for (const key in a) {
+			if (!this._isValSame(a[key], b[key])) return false;			
+		}
+		return true;
+	}
+
 	private async _refreshJSON() {
 		await this._assertOnline();
 		if (!await this._assertConnection()) return false;
@@ -145,7 +198,9 @@ export class JSONSwitches extends ConfigurableWebComponent {
 				return false;
 			}
 			const json = await response.json();
-			this.props.json = json;
+			if (!JSONSwitches._isValSame(json, this.props.json)) {
+				this.props.json = json;
+			}
 			return true;
 		} catch(e) {
 			MessageToast.create({
