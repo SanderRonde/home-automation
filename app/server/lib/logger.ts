@@ -1,3 +1,4 @@
+import { ResponseLike } from './routes';
 import * as express from 'express';
 import { Auth } from './auth';
 import chalk from 'chalk';
@@ -6,7 +7,7 @@ interface AssociatedMessage {
 	content: string;
 }
 
-const msgMap: WeakMap<express.Response|AssociatedMessage, AssociatedMessage[]> = new WeakMap();
+const msgMap: WeakMap<ResponseLike|AssociatedMessage, AssociatedMessage[]> = new WeakMap();
 
 function leftpad(char: string, amount: number) {
 	return new Array(amount).fill(char).join('');
@@ -60,7 +61,19 @@ export function logReq(req: express.Request, res: express.Response) {
 	});
 }
 
-export function attachMessage(obj: express.Response|AssociatedMessage, message: string) {
+export function transferAttached(from: ResponseLike|AssociatedMessage, to: ResponseLike|AssociatedMessage) {
+	const attached = msgMap.get(from) || [];
+	if (!msgMap.has(to)) {
+		msgMap.set(to, []);
+	}
+
+	const messages = msgMap.get(to)!;
+	messages.push(...attached);
+
+	msgMap.set(to, messages);
+}
+
+export function attachMessage(obj: ResponseLike|AssociatedMessage, message: string) {
 	if (!msgMap.has(obj)) {
 		msgMap.set(obj, []);
 	}

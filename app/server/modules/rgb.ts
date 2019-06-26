@@ -1,7 +1,7 @@
 import { errorHandle, requireParams, auth } from '../lib/decorators';
+import { AppWrapper, ResponseLike } from '../lib/routes';
 import { Discovery, Control } from 'magic-home';
 import { attachMessage } from '../lib/logger';
-import * as express from 'express';
 import chalk from 'chalk';
 
 let clients: Control[]|null = null;
@@ -17,7 +17,7 @@ class APIHandler {
 	@errorHandle
 	@requireParams('color')
 	@auth
-	public static async setColor(res: express.Response, { color }: {
+	public static async setColor(res: ResponseLike, { color }: {
 		color: string;
 	}) {
 		if (!(color in colorList)) return;
@@ -40,7 +40,7 @@ class APIHandler {
 	@errorHandle
 	@requireParams('power')
 	@auth
-	public static async setPower(res: express.Response, { power }: {
+	public static async setPower(res: ResponseLike, { power }: {
 		power: string;
 	}) {
 		attachMessage(res, `Turned ${power}`);
@@ -49,15 +49,15 @@ class APIHandler {
 	}
 }
 
-export async function initRGBRoutes(app: express.Express) {
+export async function initRGBRoutes(app: AppWrapper) {
 	await scanRGBControllers();
 	setInterval(scanRGBControllers, 1000 * 60 * 60);
 
-	app.post('/rgb/color/:color', (req, res) => {
-		APIHandler.setColor(res, {...req.params, ...req.body});
+	app.post('/rgb/color/:color', async (req, res) => {
+		await APIHandler.setColor(res, {...req.params, ...req.body});
 	});
-	app.post('/rgb/power/:power', (req, res) => {
-		APIHandler.setPower(res, {...req.params, ...req.body});
+	app.post('/rgb/power/:power', async (req, res) => {
+		await APIHandler.setPower(res, {...req.params, ...req.body});
 	});
 	app.post('/rgb/function/:function', () => {
 		//TODO:

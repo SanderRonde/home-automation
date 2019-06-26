@@ -1,8 +1,8 @@
 import { errorHandle, requireParams, auth } from "../lib/decorators";
+import { AppWrapper, ResponseLike } from "../lib/routes";
 import * as childProcess from 'child_process';
 import { attachMessage } from "../lib/logger";
 import { AuthError } from "../lib/errors";
-import * as express from 'express';
 import { Config } from "../app";
 import * as path from 'path';
 import chalk from 'chalk';
@@ -11,7 +11,7 @@ class APIHandler {
 	@errorHandle
 	@requireParams('auth', 'name')
 	@auth
-	public static async script(res: express.Response, params: {
+	public static async script(res: ResponseLike, params: {
 		auth: string;
 		name: string;
 	}, config: Config) {
@@ -40,7 +40,7 @@ class APIHandler {
 	}
 }
 
-export function initScriptRoutes(app: express.Express, config: Config) {
+export function initScriptRoutes(app: AppWrapper, config: Config) {
 	app.post('/script/:name', (req, res, _next) => {
 		APIHandler.script(res, {...req.params, ...req.body}, config);
 	});

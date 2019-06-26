@@ -1,5 +1,6 @@
 import { SECRETS_FILE } from './constants';
 import { attachMessage } from './logger';
+import { AppWrapper } from './routes';
 import * as express from 'express';
 import { Config } from '../app';
 import * as fs from 'fs-extra';
@@ -97,7 +98,7 @@ export namespace Auth {
 		}
 	}
 
-	export async function initRoutes(app: express.Express, config: Config) {
+	export async function initRoutes(app: AppWrapper, config: Config) {
 		await Secret.readSecret();
 		app.post('/authid', async (_req, res) => {
 			const id = (await Auth.ClientSecret.genId()) + '';

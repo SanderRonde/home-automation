@@ -1,6 +1,7 @@
 import { errorHandle, requireParams, auth, authCookie } from "../lib/decorators";
-import { attachMessage } from "../lib/logger";
+import { AppWrapper, ResponseLike } from "../lib/routes";
 import { WSWrapper, WSInstance } from "../lib/ws";
+import { attachMessage } from "../lib/logger";
 import { Database } from "../lib/db";
 import * as express from "express";
 import { Auth } from "../lib/auth";
@@ -63,7 +64,7 @@ class APIHandler {
 	@errorHandle
 	@requireParams('key')
 	@auth
-	public get(res: express.Response, { key }: {
+	public get(res: ResponseLike, { key }: {
 		key: string;
 		auth: string;
 	}) {
@@ -77,7 +78,7 @@ class APIHandler {
 	@errorHandle
 	@requireParams('key', 'maxtime', 'expected')
 	@auth
-	public getLongPoll(res: express.Response, { key, expected, maxtime }: {
+	public getLongPoll(res: ResponseLike, { key, expected, maxtime }: {
 		key: string;
 		expected: string;
 		auth: string;
@@ -117,7 +118,7 @@ class APIHandler {
 	@errorHandle
 	@requireParams('key', 'value')
 	@auth
-	public async set(res: express.Response, { key, value }: {
+	public async set(res: ResponseLike, { key, value }: {
 		key: string;
 		value: string;
 		auth: string;
@@ -135,7 +136,7 @@ class APIHandler {
 
 	@errorHandle
 	@auth
-	public async all(res: express.Response, { force = false }: {
+	public async all(res: ResponseLike, { force = false }: {
 		force?: boolean;
 	}) {
 		const data = await this._db.json(force);
@@ -170,7 +171,7 @@ export class WebpageHandler {
 	
 	@errorHandle
 	@authCookie
-	public async index(res: express.Response, _req: express.Request) {
+	public async index(res: ResponseLike, _req: express.Request) {
 		res.status(200);
 		res.contentType('.html');
 		res.write(await keyvalHTML(await this._db.json(true)));
@@ -183,12 +184,12 @@ type WSMessages = {
 	receive: "auth"|"listen";
 }
 
-export function initKeyValRoutes(app: express.Express, websocket: WSWrapper, db: Database) {
+export function initKeyValRoutes(app: AppWrapper, websocket: WSWrapper, db: Database) {
 	const apiHandler = new APIHandler({ db });
 	const webpageHandler = new WebpageHandler({ db });
 
-	app.post('/keyval/all', (req, res) => {
-		apiHandler.all(res, {...req.params, ...req.body});
+	app.post('/keyval/all', async (req, res) => {
+		await apiHandler.all(res, {...req.params, ...req.body});
 	});
 	app.post('/keyval/long/:key', (req, res) => {
 		apiHandler.getLongPoll(res, {...req.params, ...req.body});
@@ -199,8 +200,8 @@ export function initKeyValRoutes(app: express.Express, websocket: WSWrapper, db:
 	app.post('/keyval/:key', (req, res) => {
 		apiHandler.get(res, {...req.params, ...req.body});
 	});
-	app.post('/keyval/:key/:value', (req, res) => {
-		apiHandler.set(res, {...req.params, ...req.body});
+	app.post('/keyval/:key/:value', async (req, res) => {
+		await apiHandler.set(res, {...req.params, ...req.body});
 	});
 
 	websocket.all('/keyval', async (instance: WSInstance<WSMessages>) => {
@@ -228,7 +229,7 @@ export function initKeyValRoutes(app: express.Express, websocket: WSWrapper, db:
 		instance.send('authid', id);
 	});
 
-	app.all('/keyval', (req, res, _next) => {
-		webpageHandler.index(res, req);
+	app.all('/keyval', async (req, res, _next) => {
+		await webpageHandler.index(res, req);
 	});
 }
