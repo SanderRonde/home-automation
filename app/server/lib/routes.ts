@@ -1,69 +1,19 @@
 import { initRGBRoutes, scanRGBControllers } from '../modules/rgb';
+import { initMultiRoutes, ResponseLike } from '../modules/multi';
 import { initKeyValRoutes } from '../modules/keyval';
 import { initScriptRoutes } from '../modules/script';
-import { initMultiRoutes } from '../modules/multi';
+import { logReq, attachMessage } from './logger';
 import * as pathToRegexp from 'path-to-regexp';
 import * as cookieParser from 'cookie-parser';
 import * as serveStatic from 'serve-static';
 import * as bodyParser from 'body-parser';
 import * as express from 'express';
-import { logReq, attachMessage } from './logger';
 import { WSWrapper } from './ws';
 import { Database } from './db';
 import { Config } from '../app';
 import { Auth } from './auth';
 import * as path from 'path';
 import chalk from 'chalk';
-
-export interface ResponseLike {
-	status(code: number): this;
-	write(str: string): void;
-	end(): void;
-	contentType(type: string): void;
-	cookie(name: string, value: string): void;
-}
-
-export class ResponseDummy implements ResponseLike {
-	private _status: number = 200;
-	private _written: string[] = [];
-	private _contentType: string|null = null;
-	private _cookies: [string, string][] = [];
-
-	constructor(private _res: express.Response) { }
-
-	status(code: number) {
-		if (code !== 200) {
-			this._status = code;
-		}
-		return this;
-	}
-
-	write(str: string) {
-		this._written.push(str);
-	}
-
-	end() {}
-
-	contentType(type: string) {
-		this._contentType = type;
-	}
-
-	cookie(name: string, value: string) {
-		this._cookies.push([name, value]);
-	}
-
-	apply() {
-		this._res.status(this._status);
-		this._res.write(JSON.stringify(this._written));
-		if (this._contentType) {
-			this._res.contentType(this._contentType);
-		}
-		for (const [ key, val ] of this._cookies) {
-			this._res.cookie(key, val);
-		}
-		this._res.end();
-	}
-}
 
 type Handler = (req: express.Request, res: ResponseLike, next: express.NextFunction) => any;
 
@@ -160,7 +110,7 @@ export class AppWrapper {
 		return params;
 	}
 
-	async triggerRoute(req: express.Request, res: ResponseDummy, method: string, 
+	async triggerRoute(req: express.Request, res: ResponseLike, method: string, 
 		actual: string, bodyParams: {
 			[key: string]: string;
 		}) {

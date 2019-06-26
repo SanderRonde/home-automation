@@ -1,7 +1,8 @@
 import { errorHandle, requireParams, auth, authCookie } from "../lib/decorators";
-import { AppWrapper, ResponseLike } from "../lib/routes";
 import { WSWrapper, WSInstance } from "../lib/ws";
 import { attachMessage } from "../lib/logger";
+import { AppWrapper } from "../lib/routes";
+import { ResponseLike } from "./multi";
 import { Database } from "../lib/db";
 import * as express from "express";
 import { Auth } from "../lib/auth";
@@ -123,7 +124,6 @@ class APIHandler {
 		value: string;
 		auth: string;
 	}) {
-		debugger;
 		const original = this._db.get(key);
 		await this._db.setVal(key, value);
 		const msg = attachMessage(res, `Key: "${key}", val: "${str(value)}"`);

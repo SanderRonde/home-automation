@@ -18,7 +18,7 @@ export function requireParams(...keys: string[]) {
 				}
 			}
 
-			original.bind(this)(res, params, ...args);
+			return original.bind(this)(res, params, ...args);
 		}
     };
 }
@@ -32,7 +32,7 @@ export function auth(target: any, propertyKey: string, descriptor: PropertyDescr
 			throw new AuthError('Invalid auth key');
 		}
 
-		original.bind(this)(res, params, ...args);;
+		return original.bind(this)(res, params, ...args);;
 	}
 }
 
@@ -43,7 +43,7 @@ export function authCookie(_target: any, _propertyKey: string, descriptor: Prope
 			throw new AuthError('Invalid or missing auth cookie');
 		}
 
-		original.bind(this)(res, req, ...args);
+		return original.bind(this)(res, req, ...args);
 	}
 }
 
@@ -51,7 +51,7 @@ export function errorHandle(_target: any, _propertyKey: string, descriptor: Prop
 	const original = descriptor.value;
 	descriptor.value = function (res: express.Response, ...args: any[]) {
 		try {
-			original.bind(this)(res, ...args);
+			return original.bind(this)(res, ...args);
 		} catch(e) {
 			if (e instanceof KeyError) {
 				res.status(400).write(e.message)

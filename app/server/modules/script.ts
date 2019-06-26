@@ -1,8 +1,9 @@
 import { errorHandle, requireParams, auth } from "../lib/decorators";
-import { AppWrapper, ResponseLike } from "../lib/routes";
 import * as childProcess from 'child_process';
 import { attachMessage } from "../lib/logger";
+import { AppWrapper } from "../lib/routes";
 import { AuthError } from "../lib/errors";
+import { ResponseLike } from "./multi";
 import { Config } from "../app";
 import * as path from 'path';
 import chalk from 'chalk';

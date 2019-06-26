@@ -1,13 +1,13 @@
-import { ResponseLike } from './routes';
+import { ResponseLike } from '../modules/multi';
 import * as express from 'express';
 import { Auth } from './auth';
 import chalk from 'chalk';
 
 interface AssociatedMessage {
-	content: string;
+	content: string[];
 }
 
-const msgMap: WeakMap<ResponseLike|AssociatedMessage, AssociatedMessage[]> = new WeakMap();
+const msgMap: WeakMap<ResponseLike|AssociatedMessage|{}, AssociatedMessage[]> = new WeakMap();
 
 function leftpad(char: string, amount: number) {
 	return new Array(amount).fill(char).join('');
@@ -23,11 +23,43 @@ function logAssociatedMessages(messages: AssociatedMessage[], indent: number = 0
 
 	for (let i = 0; i < messages.length; i++) {
 		if (i === messages.length - 1) {
-			console.log(`${leftpad(' ', indent * 4)}\\-- ${messages[i].content}`);
+			console.log(`${leftpad(' ', indent * 4)}\\-- `, ...messages[i].content);
 		} else {
-			console.log(`${leftpad(' ', indent * 4)}|-- ${messages[i].content}`);
+			console.log(`${leftpad(' ', indent * 4)}|-- `, ...messages[i].content);
 		}
 		logAssociatedMessages(msgMap.get(messages[i]) || [], indent + 1);
+	}
+}
+
+export function genURLLog({ 
+	req, 
+	url = req.url, 
+	method = req.method,
+	statusCode = 200, 
+	duration = '?', 
+	ip = req.ip 
+}: { 
+	req: express.Request; 
+	method?: string;
+	url?: string;
+	statusCode: number; 
+	duration: number | string; 
+	ip?: string; 
+}) {
+	if (statusCode === 200) {
+		return [chalk.green(`[${statusCode}]`), `[${method.toUpperCase()}]`, 
+			chalk.bgGreen(chalk.black(Auth.Secret.redact(url))), 
+				'from ip', chalk.bold(ip), `(${duration} ms)`];
+	}
+	else if (statusCode === 500) {
+		return [chalk.red(`[${statusCode}]`), `[${method.toUpperCase()}]`, 
+			chalk.bgRed(chalk.black(Auth.Secret.redact(url))), 
+				'from ip', chalk.bold(ip), `(${duration} ms)`];
+	}
+	else {
+		return [chalk.yellow(`[${statusCode}]`), `[${method.toUpperCase()}]`, 
+			chalk.bgYellow(chalk.black(Auth.Secret.redact(url))), 
+				'from ip', chalk.bold(ip), `(${duration} ms)`];
 	}
 }
 
@@ -38,21 +70,7 @@ export function logReq(req: express.Request, res: express.Response) {
 		if (logLevel < 1) return;
 
 		const end = Date.now();
-		if (res.statusCode === 200) {
-			console.log(chalk.green(`[${res.statusCode}]`), `[${req.method.toUpperCase()}]`, 
-				chalk.bgGreen(chalk.black(Auth.Secret.redact(req.url))), 
-					'from ip', chalk.bold(ip), `(${end - start} ms)`);
-		}
-		else if (res.statusCode === 500) {
-			console.log(chalk.red(`[${res.statusCode}]`), `[${req.method.toUpperCase()}]`, 
-				chalk.bgRed(chalk.black(Auth.Secret.redact(req.url))), 
-					'from ip', chalk.bold(ip), `(${end - start} ms)`);
-		}
-		else {
-			console.log(chalk.yellow(`[${res.statusCode}]`), `[${req.method.toUpperCase()}]`, 
-				chalk.bgYellow(chalk.black(Auth.Secret.redact(req.url))), 
-					'from ip', chalk.bold(ip), `(${end - start} ms)`);
-		}
+		console.log(...genURLLog({ req, statusCode: res.statusCode, duration: end - start, ip }));
 
 		// Log attached messages
 		if (logLevel < 2 || !msgMap.has(res)) return;
@@ -61,7 +79,7 @@ export function logReq(req: express.Request, res: express.Response) {
 	});
 }
 
-export function transferAttached(from: ResponseLike|AssociatedMessage, to: ResponseLike|AssociatedMessage) {
+export function transferAttached(from: ResponseLike|AssociatedMessage|{}, to: ResponseLike|AssociatedMessage|{}) {
 	const attached = msgMap.get(from) || [];
 	if (!msgMap.has(to)) {
 		msgMap.set(to, []);
@@ -71,19 +89,20 @@ export function transferAttached(from: ResponseLike|AssociatedMessage, to: Respo
 	messages.push(...attached);
 
 	msgMap.set(to, messages);
+	msgMap.delete(from);
 }
 
-export function attachMessage(obj: ResponseLike|AssociatedMessage, message: string) {
+export function attachMessage(obj: ResponseLike|AssociatedMessage|{}, ...messages: string[]) {
 	if (!msgMap.has(obj)) {
 		msgMap.set(obj, []);
 	}
 
-	const messages = msgMap.get(obj)!;
+	const prevMessages = msgMap.get(obj)!;
 	const msg = {
-		content: message,
+		content: messages,
 		children: []
 	};
-	messages.push(msg);
+	prevMessages.push(msg);
 
 	return msg;
 }
