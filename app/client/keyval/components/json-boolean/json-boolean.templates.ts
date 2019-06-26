@@ -1,6 +1,6 @@
 import { CHANGE_TYPE, TemplateFn } from '../../../../../node_modules/wclib/build/es/wclib.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
-import { clampWidthSelector } from '../css-util.js';
+import { clampWidthSelector, clampWidth } from '../css-util.js';
 import { JSONBoolean } from './json-boolean.js';
 
 export const JSONBooleanHTML = new TemplateFn<JSONBoolean>(function (html, props) {
@@ -53,11 +53,12 @@ export const JSONBooleanCSS = new TemplateFn<JSONBoolean>((html) => {
 			#switchContainer {
 				margin-left: -10px;
 				position: relative;
-				right: 33px;
 				display: flex;
 				flex-direction: column;
 				justify-content: center;
 			}
+
+			${clampWidth('#switchContainer', 'right', '5vw')}
 		</style>
 	`;
 }, CHANGE_TYPE.NEVER, render);
