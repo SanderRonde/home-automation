@@ -56,7 +56,7 @@ export declare class EffectInterface {
 	connected: boolean;
 }
 
-type TransitionTypes = 'fade'|'jump'|'strobe';
+export type TransitionTypes = 'fade'|'jump'|'strobe';
 
 export class CustomMode {
 	static transitionTypes: TransitionTypes[];
@@ -72,7 +72,7 @@ export class CustomMode {
 	}[];
 }
 
-interface Client {
+export interface Client {
 	address: string;
 	id: string;
 	model: string;
