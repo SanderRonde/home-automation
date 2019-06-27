@@ -39,7 +39,6 @@ export function auth(target: any, propertyKey: string, descriptor: PropertyDescr
 export function authCookie(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
 	const original = descriptor.value;
 	descriptor.value = async function (res: express.Response, req: express.Request, ...args: any[]) {
-		console.log(req.cookies);
 		if (!await Auth.Cookie.checkCookie(req)) {
 			throw new AuthError('Invalid or missing auth cookie');
 		}
