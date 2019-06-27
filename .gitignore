@@ -64,3 +64,6 @@ secrets/
 app/**/*.js
 .vscode
 scripts/**/*.js
+**/*.d.ts
+**/*.map
+!types/*.d.ts

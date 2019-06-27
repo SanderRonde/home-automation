@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
 		"baseUrl": ".",
-		"paths": { "*": ["types/*"] },
+		"paths": { "*": ["../../types/*"] },
         "alwaysStrict": true,
         "forceConsistentCasingInFileNames": true,
         "module": "commonjs",
@@ -19,13 +19,14 @@
         "experimentalDecorators": true,
         "strictPropertyInitialization": true,
         "strictNullChecks": true,
-        "strictBindCallApply": true
+        "strictBindCallApply": true,
+        "composite": true,
+        "declaration": true,
+        "declarationMap": true
 	},
     "compileOnSave": true,
     "allowJs": true,
-    "references": [{ 
-		"path": "app/server/tsconfig.json"
-	}, { 
-		"path": "app/client/tsconfig.json"
-	}]
+    "include": [
+        "./"
+    ]
 }

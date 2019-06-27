@@ -2,6 +2,9 @@
     "compilerOptions": {
 		"baseUrl": ".",
         "alwaysStrict": true,
+        "paths": {
+            "*": ["../../types/*"]
+        },
         "forceConsistentCasingInFileNames": true,
         "module": "esnext",
         "moduleResolution": "node",
@@ -18,7 +21,10 @@
         "experimentalDecorators": true,
         "strictPropertyInitialization": true,
         "strictNullChecks": true,
-        "strictBindCallApply": true
+        "strictBindCallApply": true,
+        "composite": true,
+        "declaration": true,
+        "declarationMap": true
 	},
     "compileOnSave": true,
     "allowJs": true,
