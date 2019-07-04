@@ -120,7 +120,8 @@ export namespace Auth {
 		app.all('/auth/:key', async (req, res) => {
 			if (Secret.authenticate(req.params.key)) {
 				res.cookie('key', await Cookie.genCookie(), {
-					expires: new Date(Date.now() + 1000000)
+					// Expires in quite a few years
+					expires: new Date(2147483647000)
 				});
 				res.status(200).write('Success');
 			} else {
