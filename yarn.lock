@@ -2977,7 +2977,7 @@ vinyl@^2.0.0:
 
 "wclib@https://github.com/SanderRonde/wc-lib":
   version "1.0.0"
-  resolved "https://github.com/SanderRonde/wc-lib#5f2dbe427065574a37cebcc6a816935fd1288fc1"
+  resolved "https://github.com/SanderRonde/wc-lib#0986cc36902343ae7b5babf863aacbee42fa5969"
   dependencies:
     "@types/fs-extra" "^7.0.0"
     "@types/glob" "^7.1.1"

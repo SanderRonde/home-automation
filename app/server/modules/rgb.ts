@@ -1,8 +1,10 @@
-import { errorHandle, requireParams, auth } from '../lib/decorators';
+import { errorHandle, requireParams, auth, authCookie } from '../lib/decorators';
 import { Discovery, Control, CustomMode, TransitionTypes } from 'magic-home';
 import { attachMessage } from '../lib/logger';
 import { AppWrapper } from '../lib/routes';
 import { ResponseLike } from './multi';
+import { Auth } from '../lib/auth';
+import * as express from 'express';
 import chalk from 'chalk';
 
 let clients: Control[]|null = null;
@@ -131,6 +133,47 @@ class APIHandler {
 		res.status(200).end();
 	}
 
+	private static _singleNumToHex(num: number) {
+		if (num < 10) {
+			return num + '';
+		}
+		return String.fromCharCode(97 + (num - 10));
+	}
+
+	private static _toHex(num: number) {
+		return this._singleNumToHex(Math.floor(num / 16)) + this._singleNumToHex(num % 16);
+	}
+
+	@errorHandle
+	@requireParams('red', 'green', 'blue')
+	@auth
+	public static async setRGB(res: ResponseLike, { red, green, blue }: {
+		red: string;
+		green: string;
+		blue: string;
+	}) {
+		const redNum = Math.min(255, Math.max(0, parseInt(red, 10)));
+		const greenNum = Math.min(255, Math.max(0, parseInt(green, 10)));
+		const blueNum = Math.min(255, Math.max(0, parseInt(blue, 10)));
+		attachMessage(attachMessage(res, `rgb(${red}, ${green}, ${blue})`),
+			chalk.bgHex(`#${
+				this._toHex(redNum)
+			}${
+				this._toHex(greenNum)
+			}${
+				this._toHex(blueNum)
+			}`)('   '));
+
+		await Promise.all(clients!.map(async (client) => {
+			return Promise.all([
+				client.setColorWithBrightness(redNum, greenNum, blueNum, 100),
+				client.turnOn()
+			]);
+		}));
+
+		res.status(200).end();
+	}
+
 	@errorHandle
 	@requireParams('power')
 	@auth
@@ -199,6 +242,49 @@ class APIHandler {
 		}));
 		res.status(200).end();
 	}
+
+	@errorHandle
+	@auth
+	public static async refresh(res: ResponseLike) {
+		await scanRGBControllers();
+		res.status(200);
+		res.end();
+	}
+}
+
+const patternPreviews = JSON.stringify(Object.keys(patterns).map((key) => {
+	const { pattern: { colors, transitionType}, defaultSpeed } = patterns[key as CustomPattern];
+	return {
+		defaultSpeed,
+		colors,
+		transitionType
+	}
+}));
+
+async function rgbHTML() {
+	return `<html style="background-color: rgb(70,70,70);">
+		<head>
+			<link rel="icon" href="/rgb/favicon.ico" type="image/x-icon" />
+			<link rel="manifest" href="/rgb/static/manifest.json">
+			<meta name="viewport" content="width=device-width, initial-scale=1">
+			<title>RGB controller</title>
+		</head>
+		<body style="margin: 0">
+			<rgb-controller key="${await Auth.Secret.getKey()}" patterns='${patternPreviews}'></rgb-controller>
+			<script type="module" src="/rgb/rgb.js"></script>
+		</body>
+	</html>`;
+}
+
+class WebpageHandler {
+	@errorHandle
+	@authCookie
+	public static async index(res: ResponseLike, _req: express.Request) {
+		res.status(200);
+		res.contentType('.html');
+		res.write(await rgbHTML());
+		res.end();
+	}
 }
 
 export async function initRGBRoutes(app: AppWrapper) {
@@ -208,6 +294,9 @@ export async function initRGBRoutes(app: AppWrapper) {
 	app.post('/rgb/color/:color', async (req, res) => {
 		await APIHandler.setColor(res, {...req.params, ...req.body});
 	});
+	app.post('/rgb/color/:red/:green/:blue', async (req, res) => {
+		await APIHandler.setRGB(res, {...req.params, ...req.body});
+	});
 	app.post('/rgb/power/:power', async (req, res) => {
 		await APIHandler.setPower(res, {...req.params, ...req.body});
 	});
@@ -216,6 +305,12 @@ export async function initRGBRoutes(app: AppWrapper) {
 	});
 	app.post('/rgb/function/:function', async (req, res) => {
 		await APIHandler.runFunction(res, {...req.params, ...req.body});
+	});
+	app.post('/rgb/refresh', async (_req, res) => {
+		await APIHandler.refresh(res);
+	});
+	app.all('/rgb', async (req, res) => {
+		await WebpageHandler.index(res, req);
 	});
 }
 

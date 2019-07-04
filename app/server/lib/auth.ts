@@ -119,7 +119,9 @@ export namespace Auth {
 		});
 		app.all('/auth/:key', async (req, res) => {
 			if (Secret.authenticate(req.params.key)) {
-				res.cookie('key', await Cookie.genCookie());
+				res.cookie('key', await Cookie.genCookie(), {
+					expires: new Date(Date.now() + 1000000)
+				});
 				res.status(200).write('Success');
 			} else {
 				res.status(403).write('Access denied');

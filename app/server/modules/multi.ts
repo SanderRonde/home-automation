@@ -8,7 +8,7 @@ export interface ResponseLike {
 	write(str: string): void;
 	end(): void;
 	contentType(type: string): void;
-	cookie(name: string, value: string): void;
+	cookie(name: string, value: string, options?: express.CookieOptions): void;
 }
 
 export class SubDummy implements ResponseLike {

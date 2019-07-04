@@ -10,7 +10,7 @@
     "ext": "js",
     "exec": "node app/server/app.js --http 1272 --https 1273 -vv --log-secrets",
     "watch": [
-      "app/"
+      "app/server/"
     ]
   },
   "devDependencies": {

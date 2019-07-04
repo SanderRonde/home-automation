@@ -157,7 +157,7 @@ async function keyvalHTML(json: string) {
 		</head>
 		<body style="margin: 0">
 			<json-switches json='${json}' key="${await Auth.Secret.getKey()}"></json-switches>
-			<script type="module" src="./keyval.js"></script>
+			<script type="module" src="/keyval/keyval.js"></script>
 		</body>
 	</html>`;
 }
@@ -229,7 +229,7 @@ export function initKeyValRoutes(app: AppWrapper, websocket: WSWrapper, db: Data
 		instance.send('authid', id);
 	});
 
-	app.all('/keyval', async (req, res, _next) => {
+	app.all('/keyval', async (req, res) => {
 		await webpageHandler.index(res, req);
 	});
 }
