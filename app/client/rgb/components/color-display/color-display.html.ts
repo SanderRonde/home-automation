@@ -2,8 +2,10 @@ import { TemplateFn, CHANGE_TYPE } from '../../../../../node_modules/wclib/build
 import { ColorDisplay } from './color-display.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 
-export const ColorDisplayHTML = new TemplateFn<ColorDisplay>(function (html, props) {
+export const ColorDisplayHTML = new TemplateFn<ColorDisplay>(function (html) {
 	return html`
-		<div id="display"></div>
+		<div id="display">
+			<div id="default"></div>
+		</div>
 	`
 }, CHANGE_TYPE.NEVER, render);

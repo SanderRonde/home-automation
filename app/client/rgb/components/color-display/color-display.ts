@@ -1,4 +1,4 @@
-import { ConfigurableWebComponent, Props, PROP_TYPE, config } from '../../../../../node_modules/wclib/build/es/wclib.js';
+import { ConfigurableWebComponent, config } from '../../../../../node_modules/wclib/build/es/wclib.js';
 import { ColorDisplayHTML } from './color-display.html.js';
 import { ColorDisplayCSS } from './color-display.css.js';
 
@@ -7,10 +7,17 @@ import { ColorDisplayCSS } from './color-display.css.js';
 	css: ColorDisplayCSS,
 	html: ColorDisplayHTML
 })
-export class ColorDisplay extends ConfigurableWebComponent {
-	props = Props.define(this, {
-		reflect: {
-			bgStyle: PROP_TYPE.STRING
-		}
-	});
+export class ColorDisplay extends ConfigurableWebComponent<{
+	IDS: {
+		display: HTMLElement;
+	};
+	CLASSES: {};
+}> {
+	appendElement(el: HTMLElement) {
+		Array.from(this.$.display.children).forEach((el) => {
+			el.remove();
+		});
+
+		this.$.display.appendChild(el);
+	}
 }

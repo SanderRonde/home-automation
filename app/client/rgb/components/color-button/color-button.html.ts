@@ -4,6 +4,8 @@ import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 
 export const ColorButtonHTML = new TemplateFn<ColorButton>(function (html, props) {
 	return html`
-		<div></div>
+		<div id="container" @click="${this.onClick}">
+			<div ?selected="${props.selected}" id="image"></div>
+		</div>
 	`
 }, CHANGE_TYPE.PROP, render);

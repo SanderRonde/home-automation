@@ -257,7 +257,8 @@ const patternPreviews = JSON.stringify(Object.keys(patterns).map((key) => {
 	return {
 		defaultSpeed,
 		colors,
-		transitionType
+		transitionType,
+		name: key
 	}
 }));
 

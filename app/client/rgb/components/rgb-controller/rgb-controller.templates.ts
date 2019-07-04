@@ -2,15 +2,16 @@ import { CHANGE_TYPE, TemplateFn } from '../../../../../node_modules/wclib/build
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { RGBController } from "./rgb-controller";
 
-export const RGBControllerHTML = new TemplateFn<RGBController>((html, props) => {
+export const RGBControllerHTML = new TemplateFn<RGBController>(function (html, props) {
 	return html`
 		<div id="background">
-			<color-display></color-display>
-			<color-controls></color-controls>
+			<color-display id="display"></color-display>
+			<color-controls id="controls"></color-controls>
 			<div id="buttons">
-				<color-button></color-button>
+				<color-button #parent="${this}" class="button"></color-button>
 				${props.patterns.map((pattern) => {
-					return html`<pattern-button class="pattern" #pattern="${pattern}"></pattern-button>`;
+					return html`<pattern-button #parent="${this}" class="pattern button" 
+						#pattern="${pattern}"></pattern-button>`;
 				})}
 			</div>
 		</div>
@@ -38,7 +39,7 @@ export const RGBControllerCSS = new TemplateFn<RGBController>((html) => {
 				flex-grow: 100;
 			}
 
-			.pattern {
+			.button {
 				display: flex;
 				flex-direction: column;
 			}
