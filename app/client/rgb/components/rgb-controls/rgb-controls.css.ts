@@ -12,7 +12,7 @@ export const RgbControlsCSS = new TemplateFn<RgbControls>(function (html) {
 		}
 	
 		#hueSlider {
-			width: 90%;
+			width: 95%;
 		}
 
 		input[type=range] {

@@ -1,6 +1,19 @@
 import { CHANGE_TYPE, TemplateFn } from '../../../../../node_modules/wclib/build/es/wclib.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
-import { RGBController } from "./rgb-controller";
+import { RGBController, PatternConfig } from "./rgb-controller";
+
+function fillPatterns(patterns: PatternConfig[]): PatternConfig[] {
+	const newPatterns = [...patterns];
+	while ((newPatterns.length + 1) % 3 !== 0) {
+		newPatterns.push({
+			colors: [],
+			defaultSpeed: 0,
+			name: 'empty',
+			transitionType: 'jump'
+		})
+	}
+	return newPatterns;
+}
 
 export const RGBControllerHTML = new TemplateFn<RGBController>(function (html, props) {
 	return html`
@@ -9,7 +22,7 @@ export const RGBControllerHTML = new TemplateFn<RGBController>(function (html, p
 			<color-controls id="controls"></color-controls>
 			<div id="buttons">
 				<color-button #parent="${this}" class="button"></color-button>
-				${props.patterns.map((pattern) => {
+				${fillPatterns(props.patterns).map((pattern) => {
 					return html`<pattern-button #parent="${this}" class="pattern button" 
 						#pattern="${pattern}"></pattern-button>`;
 				})}
@@ -37,6 +50,7 @@ export const RGBControllerCSS = new TemplateFn<RGBController>((html) => {
 				display: grid;
 				grid-template-columns: auto auto auto;
 				flex-grow: 100;
+				margin-top: 15px;
 			}
 
 			.button {

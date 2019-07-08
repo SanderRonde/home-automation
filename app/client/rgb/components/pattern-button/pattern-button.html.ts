@@ -5,7 +5,14 @@ import { PatternButton } from './pattern-button.js';
 export const PatternButtonHTML = new TemplateFn<PatternButton>(function (html, props) {
 	return html`
 		<div id="container" @click="${this.onClick}">
-			<div ?selected="${props.selected}" id="pattern"></div>
+			${props.pattern.colors.length === 0 ? html`
+				<div id="cross">
+					<div id="leftLine"></div>
+					<div id="rightLine"></div>
+				</div>
+			` : html`
+				<div ?selected="${props.selected}" id="pattern"></div>
+			`}
 		</div>
 	`
 }, CHANGE_TYPE.PROP, render);

@@ -27,6 +27,28 @@ export const PatternButtonCSS = [
 				display: flex;
 				flex-grow: 100;
 			}
+
+			#cross {
+				position: relative;
+				width: 100%;
+			}
+
+			#leftLine, #rightLine {
+				height: 7%;
+				background-color: rgb(0, 0, 0);
+				width: 10px;
+				width: 100%;
+				position: absolute;
+				margin-top: 50%;
+			}
+
+			#leftLine {
+				transform: rotate(45deg);
+			}
+
+			#rightLine {
+				transform: rotate(-45deg);
+			}
 		</style>`
 	}, CHANGE_TYPE.NEVER, render)
 ];

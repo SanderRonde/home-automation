@@ -1,10 +1,11 @@
-import { ConfigurableWebComponent, Props, config, ComplexType, PROP_TYPE, bindToClass } from '../../../../../node_modules/wclib/build/es/wclib.js';
+import { ConfigurableWebComponent, Props, config, ComplexType, PROP_TYPE, bindToClass, awaitConnected } from '../../../../../node_modules/wclib/build/es/wclib.js';
 import { PatternConfig, RGBController, ColorOption } from '../rgb-controller/rgb-controller.js';
 import { PatternControls } from '../pattern-controls/pattern-controls.js';
 import { ColorControls } from '../color-controls/color-controls.js';
 import { ColorDisplay } from '../color-display/color-display.js';
 import { PatternButtonHTML } from './pattern-button.html.js';
 import { PatternButtonCSS } from './pattern-button.css.js';
+import { TransitionTypes } from 'magic-home.js';
 
 @config({
 	is: 'pattern-button',
@@ -25,6 +26,9 @@ export class PatternButton extends ConfigurableWebComponent implements ColorOpti
 
 	@bindToClass
 	onClick() {
+		// Ignore clicks if this is an empty pattern
+		if (this.props.pattern.colors.length === 0) return;
+
 		this.props.parent.deselectAll();
 		this.props.parent.setSelected(this);
 		this.getRoot<RGBController>().setPattern(this.props.pattern.name,
@@ -41,15 +45,22 @@ export class PatternButton extends ConfigurableWebComponent implements ColorOpti
 	}
 
 	setControls(controls: ColorControls) {
-		const controller = document.createElement('pattern-controls');
+		const controller = document.createElement('pattern-controls') as PatternControls;
+		controller.setAttribute('defaultSpeed', this.props.pattern.defaultSpeed + '');
+		controller.setAttribute('defaultTransition', this.props.pattern.transitionType + '');
+		awaitConnected(controller).then(() => {
+			controller!.props.parent = this;
+		});
 		controls.appendElement(controller);
 	}
 
-	mounted() {
-		// ...
-	}
-
-	firstRender() {
-		// ...
+	updateParams({
+		speed, transitionType
+	}: { 
+		speed: number;
+		transitionType: TransitionTypes;
+	}) {
+		this.getRoot<RGBController>().setPattern(this.props.pattern.name,
+			speed, transitionType);
 	}
 }
