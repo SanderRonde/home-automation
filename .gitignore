@@ -68,3 +68,4 @@ scripts/**/*.js
 **/*.map
 !types/*.d.ts
 *.tsbuildinfo
+build/
