@@ -1,5 +1,5 @@
 import { errorHandle, requireParams, auth, authCookie } from "../lib/decorators";
-import { WSWrapper, WSInstance } from "../lib/ws";
+import { WSSimulator, WSInstance } from "../lib/ws";
 import { attachMessage } from "../lib/logger";
 import { AppWrapper } from "../lib/routes";
 import { ResponseLike } from "./multi";
@@ -184,7 +184,7 @@ type WSMessages = {
 	receive: "auth"|"listen";
 }
 
-export function initKeyValRoutes(app: AppWrapper, websocket: WSWrapper, db: Database) {
+export function initKeyValRoutes(app: AppWrapper, websocket: WSSimulator, db: Database) {
 	const apiHandler = new APIHandler({ db });
 	const webpageHandler = new WebpageHandler({ db });
 
@@ -204,29 +204,23 @@ export function initKeyValRoutes(app: AppWrapper, websocket: WSWrapper, db: Data
 		await apiHandler.set(res, {...req.params, ...req.body});
 	});
 
-	websocket.all('/keyval', async (instance: WSInstance<WSMessages>) => {
-		// Send auth ID first
-		const id = (await Auth.ClientSecret.genId()) + '';
-		instance.listen('auth', (authkey) => {
-			if (!Auth.ClientSecret.authenticate(authkey, id)) {
-				instance.send('authfail', id);
-				instance.close();
-			} else {
-				instance.listen('listen', (key) => {
-					const onChange = () => {
-						instance.send('valChange', db.get(key, '0'));
-					}
-					const listener = GetSetListener.addListener(key, onChange);
-					onChange();
+	websocket.all('/keyval/websocket', async (instance: WSInstance<WSMessages>) => {
+		instance.listen('listen', (key) => {
+			let lastVal: string|undefined = undefined;
+			const onChange = () => {
+				const val = db.get(key, '0');
+				if (val !== lastVal) {
+					lastVal = val;
+					instance.send('valChange', val);
+				}
+			}
+			const listener = GetSetListener.addListener(key, onChange);
+			onChange();
 
-					instance.onClose = () => {
-						GetSetListener.removeListener(listener);
-					}
-				});
-				instance.send('authsuccess');
+			instance.onClose = () => {
+				GetSetListener.removeListener(listener);
 			}
 		});
-		instance.send('authid', id);
 	});
 
 	app.all('/keyval', async (req, res) => {

@@ -1,6 +1,7 @@
 import { ResponseLike } from '../modules/multi';
 import * as express from 'express';
 import { Auth } from './auth';
+import * as http from 'http';
 import chalk from 'chalk';
 
 interface AssociatedMessage {
@@ -44,35 +45,43 @@ function logAssociatedMessages(messages: AssociatedMessage[], indent: number = 0
 	}
 }
 
+interface RequestLike {
+	url?: string;
+	method?: string;
+	ip?: string;
+}
+
 export function genURLLog({ 
-	req, 
-	url = req.url, 
-	method = req.method,
+	req = {}, 
+	url = req.url || '?', 
+	method = req.method || '?',
 	statusCode = 200, 
 	duration = '?', 
-	ip = req.ip 
+	ip = req.ip || '?' ,
+	isSend = true
 }: { 
-	req: express.Request; 
+	req?: RequestLike; 
 	method?: string;
 	url?: string;
-	statusCode: number; 
-	duration: number | string; 
+	statusCode?: number; 
+	duration?: number | string; 
 	ip?: string; 
+	isSend?: boolean;
 }) {
 	if (statusCode === 200) {
 		return [chalk.green(`[${statusCode}]`), `[${method.toUpperCase()}]`, 
 			chalk.bgGreen(chalk.black(Auth.Secret.redact(url))), 
-				'from ip', chalk.bold(ip), `(${duration} ms)`];
+				`${isSend ? '<-' : '->'}`, chalk.bold(ip), `(${duration} ms)`];
 	}
 	else if (statusCode === 500) {
 		return [chalk.red(`[${statusCode}]`), `[${method.toUpperCase()}]`, 
 			chalk.bgRed(chalk.black(Auth.Secret.redact(url))), 
-				'from ip', chalk.bold(ip), `(${duration} ms)`];
+				`${isSend ? '<-' : '->'}`, chalk.bold(ip), `(${duration} ms)`];
 	}
 	else {
 		return [chalk.yellow(`[${statusCode}]`), `[${method.toUpperCase()}]`, 
 			chalk.bgYellow(chalk.black(Auth.Secret.redact(url))), 
-				'from ip', chalk.bold(ip), `(${duration} ms)`];
+				`${isSend ? '<-' : '->'}`, chalk.bold(ip), `(${duration} ms)`];
 	}
 }
 
@@ -83,13 +92,37 @@ export function logReq(req: express.Request, res: express.Response) {
 		if (logLevel < 1) return;
 
 		const end = Date.now();
-		console.log(...genURLLog({ req, statusCode: res.statusCode, duration: end - start, ip }));
+		console.log(...genURLLog({ 
+			req, 
+			statusCode: res.statusCode, 
+			duration: end - start, 
+			ip 
+		}));
 
 		// Log attached messages
 		if (logLevel < 2 || !msgMap.has(res)) return;
 
 		logAssociatedMessages(msgMap.get(res)!);
 	});
+}
+
+export function logOutgoingReq(req: http.ClientRequest, data: {
+	method: string;
+}) {
+	const ip = req.path;
+
+	if (logLevel < 1) return;
+
+	console.log(...genURLLog({ 
+		ip: 'localhost',
+		method: data.method,
+		url: ip
+	}));
+
+	// Log attached messages
+	if (logLevel < 2 || !msgMap.has(req)) return;
+
+	logAssociatedMessages(msgMap.get(req)!);
 }
 
 export function transferAttached(from: ResponseLike|AssociatedMessage|{}, to: ResponseLike|AssociatedMessage|{}) {

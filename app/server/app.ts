@@ -1,8 +1,7 @@
+import { initRoutes, initMiddleware } from './lib/routes';
 import { hasArg, getArg, getNumberArg } from './lib/io';
-import { server as WSServer } from 'websocket';
 import { setLogLevel } from './lib/logger';
-import { initRoutes } from './lib/routes';
-import { WSWrapper } from './lib/ws';
+import { WSSimulator } from './lib/ws';
 import * as express from 'express';
 import * as path from 'path';
 import * as http from 'http';
@@ -29,8 +28,7 @@ export type Config = DeepRequired<PartialConfig>;
 
 class WebServer {
 	public app!: express.Express;
-	public websocket!: WSServer;
-	public websocketWrapper!: WSWrapper;
+	public websocket!: WSSimulator;
 	private _server!: http.Server;
 
 	private _config: Config;
@@ -58,19 +56,20 @@ class WebServer {
 	}
 
 	public async init() {
-		await this._initVars();
-		await initRoutes(this.app, this.websocketWrapper, this._config);
+		this.app = express();
+		await initMiddleware(this.app);
+		await this._initServers();
+		await initRoutes(this.app, this.websocket, this._config);
 		setLogLevel(this._config.log.level);
 		this._listen();
 	}
 
-	private async _initVars() {
-		this.app = express();
-		this._server = http.createServer(this.app);
-		this.websocket = new WSServer({
-			httpServer: this._server
+	private async _initServers() {
+		this.websocket = new WSSimulator();
+		this.app.use((req, res, next) => {
+			this.websocket.handler(req, res, next);
 		});
-		this.websocketWrapper = new WSWrapper(this.websocket);
+		this._server = http.createServer(this.app);
 	}
 
 	private _listen() {

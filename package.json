@@ -35,7 +35,6 @@
     "magic-home": "^2.1.1",
     "path-to-regexp": "^3.0.0",
     "serve-static": "^1.14.1",
-    "wclib": "https://github.com/SanderRonde/wc-lib",
-    "websocket": "^1.0.28"
+    "wclib": "https://github.com/SanderRonde/wc-lib"
   }
 }

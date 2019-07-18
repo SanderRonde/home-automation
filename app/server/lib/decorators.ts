@@ -54,7 +54,7 @@ export function errorHandle(_target: any, _propertyKey: string, descriptor: Prop
 			return await original.bind(this)(res, ...args);
 		} catch(e) {
 			if (e instanceof KeyError) {
-				res.status(400).write(e.message)
+				res.status(400).write(e.message);
 			} else if (e instanceof AuthError) {
 				res.status(403).write(e.message);
 			} else {

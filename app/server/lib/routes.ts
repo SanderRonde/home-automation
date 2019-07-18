@@ -8,7 +8,7 @@ import * as cookieParser from 'cookie-parser';
 import * as serveStatic from 'serve-static';
 import * as bodyParser from 'body-parser';
 import * as express from 'express';
-import { WSWrapper } from './ws';
+import { WSSimulator } from './ws';
 import { Database } from './db';
 import { Config } from '../app';
 import { Auth } from './auth';
@@ -126,7 +126,7 @@ export class AppWrapper {
 		}
 }
 
-export async function initRoutes(app: express.Express, websocket: WSWrapper, config: Config) {
+export async function initMiddleware(app: express.Express) {
 	app.use((req, res, next) => {
 		logReq(req, res);
 		next();
@@ -138,6 +138,7 @@ export async function initRoutes(app: express.Express, websocket: WSWrapper, con
 	app.use(bodyParser.urlencoded({
 		extended: true
 	}));
+	app.use(bodyParser.text());
 	app.use(serveStatic(
 		path.join(__dirname, '../../../', 'app/client/')));
 	app.use('/node_modules/lit-html', (req, _res, next) => {
@@ -148,7 +149,9 @@ export async function initRoutes(app: express.Express, websocket: WSWrapper, con
 		req.url = req.url.replace('/node_modules/wclib', '');
 		next();
 	}, serveStatic(path.join(__dirname, '../../../', 'node_modules/wclib')));
-	
+}
+
+export async function initRoutes(app: express.Express, websocket: WSSimulator, config: Config) {
 	const wrappedApp = new AppWrapper(app);
 	initKeyValRoutes(wrappedApp, websocket, await new Database('keyval.json').init());
 	initScriptRoutes(wrappedApp, config);
@@ -166,6 +169,11 @@ export async function initRoutes(app: express.Express, websocket: WSWrapper, con
 	});
 	app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
 		if (err && err.message) {
+			if (res.headersSent) {
+				console.log(chalk.bgRed(chalk.black('Got error after headers were sent',
+					err.message, err.stack!)));
+				return;
+			}
 			res.status(500).write('Internal server error');
 			for (const line of err.stack!.split('\n')) {
 				attachMessage(res, chalk.bgRed(chalk.black(line)));
