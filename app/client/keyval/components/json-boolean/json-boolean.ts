@@ -1,6 +1,6 @@
 import { bindToClass, ComplexType, config, ConfigurableWebComponent, Props, PROP_TYPE } from '../../../../../node_modules/wclib/build/es/wclib.js';
 import { JSONBooleanHTML, JSONBooleanCSS } from './json-boolean.templates.js';
-import { MessageToast } from '../message-toast/message-toast.js';
+import { MessageToast } from '../../../shared/message-toast/message-toast.js';
 import { JSONSwitches } from '../json-switches/json-switches.js';
 import { PowerSwitch } from '../power-switch/power-switch.js';
 

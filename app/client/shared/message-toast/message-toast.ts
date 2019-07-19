@@ -1,6 +1,6 @@
-import { CHANGE_TYPE, bindToClass, TemplateFn, config, ConfigurableWebComponent, Props, PROP_TYPE, wait } from '../../../../../node_modules/wclib/build/es/wclib.js';
-import { render } from '../../../../../node_modules/lit-html/lit-html.js';
-import { clampWidthSelector } from '../css-util.js';
+import { CHANGE_TYPE, bindToClass, TemplateFn, config, ConfigurableWebComponent, Props, PROP_TYPE, wait } from '../../../../node_modules/wclib/build/es/wclib.js';
+import { render } from '../../../../node_modules/lit-html/lit-html.js';
+import { clampWidthSelector } from '../css-utils/css-util.js';
 
 interface CreateConfig {
 	message: string;

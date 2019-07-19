@@ -1,8 +1,8 @@
 import { CHANGE_TYPE, TemplateFn } from '../../../../../node_modules/wclib/build/es/wclib.js';
+import { clampWidthSelector, clampWidth } from '../../../shared/css-utils/css-util.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { jsonValue } from '../json-value/json-value.templates.js';
 import { JSONObject } from './json-object.js';
-import { clampWidthSelector, clampWidth } from '../css-util.js';
 
 function getKeys(value: any): (string|number)[] {
 	if (Array.isArray(value)) {

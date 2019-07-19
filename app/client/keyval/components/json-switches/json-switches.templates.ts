@@ -1,6 +1,6 @@
 import { CHANGE_TYPE, TemplateFn } from '../../../../../node_modules/wclib/build/es/wclib.js';
+import { clampWidthSelector } from '../../../shared/css-utils/css-util.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
-import { clampWidthSelector } from '../css-util.js';
 import { JSONSwitches } from './json-switches.js';
 
 export const JSONSwitchesHTML = new TemplateFn<JSONSwitches>((html, props) => {
