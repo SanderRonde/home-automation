@@ -1,9 +1,12 @@
-import { ComplexType, config, ConfigurableWebComponent, Props, PROP_TYPE } from '../../../../../node_modules/wclib/build/es/wclib.js';
+import { ComplexType, config, Props } from '../../../../../node_modules/wclib/build/es/wclib.js';
 import { RGBControllerHTML, RGBControllerCSS } from './rgb-controller.templates.js';
+import { MessageToast } from '../../../shared/message-toast/message-toast.js';
+import { ServerComm } from '../../../shared/server-comm/server-comm.js';
 import { PatternButton } from '../pattern-button/pattern-button.js';
 import { ColorControls } from '../color-controls/color-controls.js';
 import { ColorDisplay } from '../color-display/color-display.js';
 import { ColorButton } from '../color-button/color-button.js';
+import { PowerButton } from '../power-button/power-button.js';
 import { TransitionTypes } from 'magic-home';
 
 export interface PatternConfig {
@@ -33,22 +36,24 @@ export interface ColorOption {
 		PatternButton,
 		ColorDisplay,
 		ColorButton,
-		ColorControls
+		ColorControls,
+		PowerButton,
+		MessageToast
 	]
 })
-export class RGBController extends ConfigurableWebComponent<{
+export class RGBController extends ServerComm<{
 	IDS: {
 		display: ColorDisplay;
 		controls: ColorControls;
+		power: PowerButton;
 	}
 	CLASSES: {};
 }> {
 	props = Props.define(this, {
 		reflect: {
-			key: PROP_TYPE.STRING,
 			patterns: ComplexType<PatternConfig[]>()
 		}
-	});
+	}, super.props);
 
 	deselectAll() {
 		(<ColorOption[]><unknown>this.$$('.button')).forEach((button) => {
@@ -62,12 +67,25 @@ export class RGBController extends ConfigurableWebComponent<{
 		selected.setControls(this.$.controls);
 	}
 
-	setColor(color: [number, number, number]) {
-		console.log('Setting color to', color);
+	async setColor([ red, green, blue ]: [number, number, number]) {
+		await this.request(`${location.origin}/rgb/color/${red}/${green}/${blue}`, {},
+			'Failed to set color');
+		this.$.power.setPower(true);
 	}
 
-	setPattern(patternName: string, speed: number, transitionType: TransitionTypes) {
-		console.log('Setting pattern to', patternName, 'with speed',
-			speed, 'and transition type', transitionType);
+	async setPattern(patternName: string, speed: number, transitionType: TransitionTypes) {
+		await this.request(`${location.origin}/rgb/pattern/${patternName}/${speed}/${transitionType}`, {},
+			'Failed to set pattern');
+		this.$.power.setPower(true);
+	}
+
+	async setPower(state: boolean) {
+		await this.request(`${location.origin}/rgb/power/${state ? 'on' : 'off'}`, {},
+			'Failed to set power');
+	}
+
+	mounted() {
+		this.props.patterns = this.props.patterns || JSON.parse(localStorage.getItem('patterns')!);
+		localStorage.setItem('patterns', JSON.stringify(this.props.patterns));
 	}
 }

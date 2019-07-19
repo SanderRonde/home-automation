@@ -1,5 +1,5 @@
 import { CHANGE_TYPE, TemplateFn } from '../../../../../node_modules/wclib/build/es/wclib.js';
-import { clampWidthSelector, clampWidth } from '../../../shared/css-utils/css-util.js';
+import { clampWidthSelector, clampWidth } from '../../../shared/css-util/css-util.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { JSONBoolean } from './json-boolean.js';
 

@@ -65,13 +65,19 @@ export class ColorButton extends ConfigurableWebComponent implements ColorOption
 		blackShade.addEventListener('touchmove', this.onDrag, {
 			passive: false
 		});
-		blackShade.addEventListener('touchstart', this.onDrag, {
+		blackShade.addEventListener('touchstart', (e) => {
+			this.onDrag(e, true);
+		}, {
 			passive: false
 		});
-		blackShade.addEventListener('touchend', this.onDrag, {
+		blackShade.addEventListener('touchend', (e) => {
+			this.onDrag(e, true);
+		}, {
 			passive: false
 		});
-		blackShade.addEventListener('click', this.onDrag, {
+		blackShade.addEventListener('click', (e) => {
+			this.onDrag(e, true);
+		}, {
 			passive: false
 		});
 		this._canvasContainer.appendChild(blackShade);
@@ -145,8 +151,38 @@ export class ColorButton extends ConfigurableWebComponent implements ColorOption
 		}).map(c => Math.round(c * yFactor)) as [number, number, number];
 	}
 
+	private static readonly _COLOR_UPDATE_INTERVAL = 100;
+	private _lastColorUpdate: number = Date.now();
+	private _lastQueuedColor: null|{
+		timeout: number;
+		color: [number, number, number]
+	 } = null; 
+	private _updateColor(color: [number, number, number]) {
+		this._lastColorUpdate = Date.now();
+		this._lastQueuedColor = null;
+		this.getRoot<RGBController>().setColor(color);
+	}
+	private _queueSetColor(color: [number, number, number]) {
+		if (this._lastQueuedColor) {
+			window.clearTimeout(this._lastQueuedColor.timeout);
+		}
+		if (Date.now() > this._lastColorUpdate + ColorButton._COLOR_UPDATE_INTERVAL) {
+			// Do it now
+			this._updateColor(color);
+			return;
+		}
+		
+		// Queue render
+		this._lastQueuedColor = {
+			timeout: window.setTimeout(() => {
+				this._updateColor(color);
+			}, ColorButton._COLOR_UPDATE_INTERVAL - (Date.now() - this._lastColorUpdate)),
+			color
+		};
+	}
+
 	@bindToClass
-	onDrag(e?: TouchEvent|MouseEvent) {
+	onDrag(e?: TouchEvent|MouseEvent, force: boolean = false) {
 		e && e.preventDefault();
 		const coords = this._getTouchPos(e);
 		if (!coords) return;
@@ -154,7 +190,11 @@ export class ColorButton extends ConfigurableWebComponent implements ColorOption
 		const offset = ColorButton._touchBallSize / 2;
 		this.touchBall.style.transform = `translate(${coords.x - offset}px, ${coords.y - offset}px)`;
 		const color = this._getColorAtCoord(coords);
-		this.getRoot<RGBController>().setColor(color);
+		if (force) {
+			this._updateColor(color);
+		} else {
+			this._queueSetColor(color);
+		}
 	}
 
 	@bindToClass

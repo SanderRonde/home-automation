@@ -4,7 +4,7 @@ import { RGBController, PatternConfig } from "./rgb-controller";
 
 function fillPatterns(patterns: PatternConfig[]): PatternConfig[] {
 	const newPatterns = [...patterns];
-	while ((newPatterns.length + 1) % 3 !== 0) {
+	while ((newPatterns.length + 2) % 3 !== 0) {
 		newPatterns.push({
 			colors: [],
 			defaultSpeed: 0,
@@ -22,10 +22,11 @@ export const RGBControllerHTML = new TemplateFn<RGBController>(function (html, p
 			<color-controls id="controls"></color-controls>
 			<div id="buttons">
 				<color-button #parent="${this}" class="button"></color-button>
-				${fillPatterns(props.patterns).map((pattern) => {
+				${fillPatterns(props.patterns || []).map((pattern) => {
 					return html`<pattern-button #parent="${this}" class="pattern button" 
 						#pattern="${pattern}"></pattern-button>`;
 				})}
+				<power-button #parent="${this}" id="power" class="power button"></power-button>
 			</div>
 		</div>
 	`;

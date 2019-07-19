@@ -38,7 +38,8 @@ export class PatternControls extends ConfigurableWebComponent<{
 		this._updateParams();
 	}
 
-	firstRender() {
+	postRender() {
+		this.$.speedSlider.value = (this.props.defaultSpeed - 1) + '';
 		this.$.speedSlider.value = this.props.defaultSpeed + '';
 	}
 }

@@ -2,32 +2,47 @@ import { ServiceworkerSelf } from '../../../types/serviceworker';
 
 declare const self: ServiceworkerSelf;
 
-const CACHE_NAME = 'keyval';
+const CACHE_NAME = 'rgb';
 const CACHE_STATIC = [
-	'/keyval/components/json-boolean/json-boolean.templates.js',
-	'/keyval/components/json-boolean/json-boolean.js',
-	'/keyval/components/json-object/json-object.templates.js',
-	'/keyval/components/json-object/json-object.js',
-	'/keyval/components/json-switches/json-switches.templates.js',
-	'/keyval/components/json-switches/json-switches.js',
-	'/keyval/components/json-value/json-value.templates.js',
-	'/keyval/components/json-value/json-value.js',
-	'/keyval/components/message-toast/message-toast.js',
-	'/keyval/components/power-switch/power-switch.templates.js',
-	'/keyval/components/power-switch/power-switch.js',
+	'/rgb/components/color-button/color-button.css.js',
+	'/rgb/components/color-button/color-button.html.js',
+	'/rgb/components/color-button/color-button.js',
+	'/rgb/components/color-controls/color-controls.css.js',
+	'/rgb/components/color-controls/color-controls.html.js',
+	'/rgb/components/color-controls/color-controls.js',
+	'/rgb/components/color-display/color-display.css.js',
+	'/rgb/components/color-display/color-display.html.js',
+	'/rgb/components/color-display/color-display.js',
+	'/rgb/components/pattern-button/pattern-button.css.js',
+	'/rgb/components/pattern-button/pattern-button.html.js',
+	'/rgb/components/pattern-button/pattern-button.js',
+	'/rgb/components/pattern-controls/pattern-controls.css.js',
+	'/rgb/components/pattern-controls/pattern-controls.html.js',
+	'/rgb/components/pattern-controls/pattern-controls.js',
+	'/rgb/components/power-button/power-button.css.js',
+	'/rgb/components/power-button/power-button.html.js',
+	'/rgb/components/power-button/power-button.js',
+	'/rgb/components/rgb-controller/rgb-controller.templates.js',
+	'/rgb/components/rgb-controller/rgb-controller.js',
+	'/rgb/components/rgb-controls/rgb-controls.css.js',
+	'/rgb/components/rgb-controls/rgb-controls.html.js',
+	'/rgb/components/rgb-controls/rgb-controls.js',
+	
 	'/shared/css-util/css-util.js',
 	'/shared/message-toast/message-toast.js',
 	'/shared/server-comm/server-comm.js',
-	'/keyval/favicon.ico',
-	'/keyval/keyval.js',
-	'/keyval/static/manifest.json',
-	'/keyval/static/images/48.png',
-	'/keyval/static/images/72.png',
-	'/keyval/static/images/96.png',
-	'/keyval/static/images/128.png',
-	'/keyval/static/images/144.png',
-	'/keyval/static/images/168.png',
-	'/keyval/static/images/192.png'
+	'/rgb/favicon.ico',
+	'/rgb/rgb.js',
+	'/rgb/static/manifest.json',
+	'/rgb/static/images/48.png',
+	'/rgb/static/images/72.png',
+	'/rgb/static/images/96.png',
+	'/rgb/static/images/128.png',
+	'/rgb/static/images/144.png',
+	'/rgb/static/images/168.png',
+	'/rgb/static/images/192.png',
+	'/rgb/static/images/power-button.png',
+	'/rgb/static/images/power-button-on.png',
 ];
 
 self.addEventListener('install', (event) => {
@@ -54,14 +69,14 @@ function indexPage() {
 		<!DOCTYPE HTML>
 		<html style="background-color: rgb(70,70,70);">
 		<head>
-			<link rel="icon" href="/keyval/favicon.ico" type="image/x-icon" />
-			<link rel="manifest" href="/keyval/static/manifest.json">
+			<link rel="icon" href="/rgb/favicon.ico" type="image/x-icon" />
+			<link rel="manifest" href="/rgb/static/manifest.json">
 			<meta name="viewport" content="width=device-width, initial-scale=1">
-			<title>KeyVal Switch</title>
+			<title>RGB controller</title>
 		</head>
 		<body style="margin: 0">
-			<json-switches></json-switches>
-			<script type="module" src="./keyval.js"></script>
+			<rgb-controller></rgb-controller>
+			<script type="module" src="/rgb/rgb.js"></script>
 		</body>
 	</html>`, {
 		headers: {
@@ -111,8 +126,8 @@ self.addEventListener('fetch', (event) => {
 	}
 
 	switch (pathname) {
-		case '/keyval':
-		case '/keyval/':
+		case '/rgb':
+		case '/rgb/':
 			event.respondWith(indexPage());
 			break;
 		default:

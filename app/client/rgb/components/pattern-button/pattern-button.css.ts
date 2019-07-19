@@ -36,10 +36,9 @@ export const PatternButtonCSS = [
 			#leftLine, #rightLine {
 				height: 7%;
 				background-color: rgb(0, 0, 0);
-				width: 10px;
 				width: 100%;
 				position: absolute;
-				margin-top: 50%;
+				margin-top: 45%;
 			}
 
 			#leftLine {

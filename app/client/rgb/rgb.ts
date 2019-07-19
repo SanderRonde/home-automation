@@ -3,8 +3,8 @@ import {
 	BooleanAttributePart, AttributeCommitter, 
 	NodePart, isDirective, noChange 
 } from "../../../node_modules/lit-html/lit-html.js";
-import { WebComponent } from '../../../node_modules/wclib/build/es/wclib.js';
 import { RGBController } from './components/rgb-controller/rgb-controller.js';
+import { WebComponent } from '../../../node_modules/wclib/build/es/wclib.js';
 
 function registerElements() {
 	WebComponent.initComplexTemplateProvider({
@@ -18,7 +18,7 @@ function registerElements() {
 function registerServiceworker() {
 	if ('serviceWorker' in navigator) {
 		navigator.serviceWorker.register('/rgb/serviceworker.js', {
-			scope: '/rgbkeyval/',
+			scope: '/rgb/',
 			updateViaCache: 'none'
 		});
 	}
