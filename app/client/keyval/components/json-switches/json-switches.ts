@@ -99,12 +99,6 @@ export class JSONSwitches extends ServerComm {
 			if (!await this._sendValChange(key, toValue)) return;
 		}
 		if (!await this._refreshJSON()) return;
-		MessageToast.create({
-			message: `Set "${
-				path.length === 0 ? '*' :  path.join('.')
-			}" to "${toValue}"`,
-			duration: 3000
-		});
 	}
 
 	firstRender() {
