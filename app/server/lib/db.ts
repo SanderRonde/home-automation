@@ -22,7 +22,7 @@ class DBFileManager {
 		}
 		return JSON.parse(await fs.readFile(filePath, {
 			encoding: 'utf8'
-		}));
+		}) || "{}");
 	}
 
 	public static async write(fileName: string, data: {
