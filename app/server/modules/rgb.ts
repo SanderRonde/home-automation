@@ -221,7 +221,10 @@ class APIHandler {
 		attachMessage(res, `Running pattern ${patternName}`);
 		try {
 			await Promise.all(clients!.map((c) => {
-				return c.setCustomPattern(pattern, speed || defaultSpeed);
+				return Promise.all([
+					c.setCustomPattern(pattern, speed || defaultSpeed),
+					c.turnOn()
+				]);
 			}));
 			res.status(200).end();
 		} catch(e) {
