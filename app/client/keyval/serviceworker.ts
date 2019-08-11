@@ -12,7 +12,6 @@ const CACHE_STATIC = [
 	'/keyval/components/json-switches/json-switches.js',
 	'/keyval/components/json-value/json-value.templates.js',
 	'/keyval/components/json-value/json-value.js',
-	'/keyval/components/message-toast/message-toast.js',
 	'/keyval/components/power-switch/power-switch.templates.js',
 	'/keyval/components/power-switch/power-switch.js',
 	'/shared/css-util/css-util.js',
