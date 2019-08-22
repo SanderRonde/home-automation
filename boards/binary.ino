@@ -3,6 +3,7 @@
 #define KEY_NAME "room.speakers.couch"
 #define OUT_PIN D1
 #define INVERT 0
+#define SWITCH_LED 0
 
 #include <Arduino.h>
 #include <string.h>
@@ -198,7 +199,10 @@ SemiWebSocket ws = SemiWebSocket(ws_event, 5000, 60 * 1000);
 int value = DEFAULT_VALUE;
 
 void set(int value) {
-	digitalWrite(LED_BUILTIN, value ? LOW : HIGH);
+	Serial.printf("Setting to %d\n", value);
+	if (SWITCH_LED) {
+		digitalWrite(LED_BUILTIN, value ? LOW : HIGH);
+	}
 	if (INVERT) {
 		value = !value;
 	}
@@ -206,7 +210,9 @@ void set(int value) {
 }
 
 void general_setup() {
-	pinMode(LED_BUILTIN, OUTPUT);
+	if (SWITCH_LED) {
+		pinMode(LED_BUILTIN, OUTPUT);
+	}
 	pinMode(OUT_PIN, OUTPUT);
 	set(DEFAULT_VALUE);
 
