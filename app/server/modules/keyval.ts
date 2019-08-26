@@ -1,7 +1,9 @@
 import { errorHandle, requireParams, auth, authCookie } from "../lib/decorators";
+import * as ReadLine from '@serialport/parser-readline';
 import { WSSimulator, WSInstance } from "../lib/ws";
 import { attachMessage } from "../lib/logger";
 import { AppWrapper } from "../lib/routes";
+import * as SerialPort from 'serialport';
 import { ResponseLike } from "./multi";
 import { Database } from "../lib/db";
 import * as express from "express";
@@ -179,6 +181,31 @@ export class WebpageHandler {
 	}
 }
 
+class ScreenHandler {
+	private _port: SerialPort = new SerialPort('/dev/ttyUSB0', {
+		baudRate: 9600
+	});
+	// @ts-ignore
+	private _parser = new ReadLine()
+	private _db: Database;
+
+	constructor({ db }: { db: Database }) {
+		this._db = db;
+
+		//@ts-ignore
+		this._port.pipe(this._parser);
+		this._parser.on('data', async (line: string) => {
+			const [ key, value ] = line.split(' ');
+			await this._db.setVal(`room.${key}`, value.trim());
+			GetSetListener.update(key)
+		});
+		GetSetListener.addListener('room.lights.ceiling', () => {
+			const value = this._db.get('room.lights.ceiling', '0');
+			this._port.write(value);
+		});
+	}
+}
+
 type WSMessages = {
 	send: "authid"|"authfail"|"authsuccess"|"valChange";
 	receive: "auth"|"listen";
@@ -187,6 +214,8 @@ type WSMessages = {
 export function initKeyValRoutes(app: AppWrapper, websocket: WSSimulator, db: Database) {
 	const apiHandler = new APIHandler({ db });
 	const webpageHandler = new WebpageHandler({ db });
+	// @ts-ignore
+	const screenHandler = new ScreenHandler({ db });
 
 	app.post('/keyval/all', async (req, res) => {
 		await apiHandler.all(res, {...req.params, ...req.body});

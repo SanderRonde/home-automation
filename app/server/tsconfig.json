@@ -27,6 +27,7 @@
     "compileOnSave": true,
     "allowJs": true,
     "include": [
-        "./"
+        "./",
+        "../../types/*"
     ]
 }
