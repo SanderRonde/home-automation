@@ -6,7 +6,7 @@
 #include <Nextion.h>
 
 #define DO_DIM 1
-#define DIM_TIME 60
+#define DIM_TIME 20
 #define DIM_BRIGHTNESS 1
 #define NORMAL_BRIGHTNESS 100
 
@@ -99,6 +99,7 @@ bool is_dimmed = false;
 bool enable_dimming = true;
 void wake_screen() {
 	if (!is_dimmed) return;
+	Serial.println("# Waking screen");
 
 	String dim = "dim=" + String(NORMAL_BRIGHTNESS);
 	myNextion.sendCommand(dim.c_str());
@@ -107,6 +108,7 @@ void wake_screen() {
 
 void dim_screen() {
 	if (is_dimmed) return;
+	Serial.println("# Dimming screen");
 
 	String dim = "dim=" + String(DIM_BRIGHTNESS);
 	myNextion.sendCommand(dim.c_str());
@@ -130,6 +132,9 @@ void check_dim() {
 
 void handle_message(String message) {
 	msg_t* msg = parse_msg(message);
+
+	String log_msg = "# " + message;
+	Serial.println(log_msg.c_str());
 
 	if (msg->event_type == 65) {
 		on_touch();
