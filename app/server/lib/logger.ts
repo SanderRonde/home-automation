@@ -15,6 +15,10 @@ export function setLogLevel(level: number) {
 	logLevel = level;
 }
 
+export function getLogLevel() {
+	return logLevel;
+}
+
 function setDefaultArrValues<T>(arr: T[], len: number, value: T): T[] {
 	for (let i = 0; i < len; i++) {
 		arr[i] = arr[i] || value;

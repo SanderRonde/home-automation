@@ -1,13 +1,14 @@
 import { errorHandle, requireParams, auth, authCookie } from "../lib/decorators";
 import * as ReadLine from '@serialport/parser-readline';
 import { WSSimulator, WSInstance } from "../lib/ws";
-import { attachMessage } from "../lib/logger";
+import { attachMessage, getLogLevel } from "../lib/logger";
 import { AppWrapper } from "../lib/routes";
 import * as SerialPort from 'serialport';
 import { ResponseLike } from "./multi";
 import { Database } from "../lib/db";
 import * as express from "express";
 import { Auth } from "../lib/auth";
+import chalk from "chalk";
 
 function str(value: any|undefined) {
 	return JSON.stringify(value || null);
@@ -195,7 +196,16 @@ class ScreenHandler {
 		//@ts-ignore
 		this._port.pipe(this._parser);
 		this._parser.on('data', async (line: string) => {
+			if (line.startsWith('#')) {
+				if (getLogLevel() > 1) {
+					console.log(chalk.gray('[/dev/ttyUSB0]'),
+						line.slice(2));
+				}
+				return;
+			}
 			const [ key, value ] = line.split(' ');
+			console.log(chalk.cyan('[/dev/ttyUSB0]'),
+				chalk.white(line));
 			await this._db.setVal(`room.${key}`, value.trim());
 			GetSetListener.update(key)
 		});
