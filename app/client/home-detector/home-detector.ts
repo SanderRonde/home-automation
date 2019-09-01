@@ -15,4 +15,15 @@ function registerElements() {
 	HomeDetectorDisplay.define();
 }
 
+function registerServiceworker() {
+	if ('serviceWorker' in navigator) {
+		navigator.serviceWorker.register('/home-detector/serviceworker.js', {
+			scope: '/home-detector/',
+			updateViaCache: 'none'
+		});
+	}
+}
+
+
 registerElements();
+registerServiceworker();
