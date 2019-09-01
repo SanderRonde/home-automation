@@ -1,7 +1,7 @@
+import { attachMessage, getLogLevel, ResDummy } from "../lib/logger";
 import { errorHandle, requireParams, auth, authCookie } from "../lib/decorators";
 import * as ReadLine from '@serialport/parser-readline';
 import { WSSimulator, WSInstance } from "../lib/ws";
-import { attachMessage, getLogLevel } from "../lib/logger";
 import { AppWrapper } from "../lib/routes";
 import * as SerialPort from 'serialport';
 import { ResponseLike } from "./multi";
@@ -54,6 +54,91 @@ namespace GetSetListener {
 	}
 }
 
+type ExternalRequest = ({
+	type: 'get';
+	resolver: (value: any) => void;
+}|{
+	type: 'set';
+	value: string;
+	resolver: () => void;
+}) & {
+	key: string;
+	logObj: any;
+};
+
+export class KeyvalExternal {
+	private static _requests: ExternalRequest[] = [];
+	private static _db: Database|null = null;
+	private static _apiHandler: APIHandler|null = null;
+
+	static async init({ db, apiHandler }: { 
+		db: Database, 
+		apiHandler: APIHandler 
+	}) {
+		this._db = db;
+		this._apiHandler = apiHandler;
+		for (const req of this._requests) {
+			await this._handleRequest(req);
+		}
+	}
+
+	private static async _handleRequest(request: ExternalRequest) {
+		const { logObj } = request;
+		const resDummy = new ResDummy();
+		if (request.type === 'get') {
+			const { key, resolver } = request;
+			const value = await this._apiHandler!.get(resDummy, {
+				key,
+				auth: await Auth.Secret.getKey()
+			})
+			resDummy.transferTo(logObj);
+			resolver(value);
+		} else {
+			const { key, value, resolver } = request;
+			await this._apiHandler!.set(resDummy, {
+				key,
+				value,
+				auth: await Auth.Secret.getKey()
+			})
+			resDummy.transferTo(logObj);
+			resolver();
+		}
+	}
+
+	static async set(logObj: any, key: string, value: string) {
+		return new Promise((resolve) => {
+			const req: ExternalRequest = {
+				type: 'set',
+				key,
+				value,
+				logObj,
+				resolver: resolve
+			};
+			if (this._db) {
+				this._handleRequest(req);
+			} else {
+				this._requests.push(req)
+			}
+		});
+	}
+
+	static async get<V>(logObj: any, key: string) {
+		return new Promise<V>((resolve) => {
+			const req: ExternalRequest = {
+				type: 'get',
+				key,
+				logObj,
+				resolver: resolve
+			};
+			if (this._db) {
+				this._handleRequest(req);
+			} else {
+				this._requests.push(req)
+			}
+		});
+	}
+}
+
 class APIHandler {
 	private _db: Database;
 
@@ -70,13 +155,14 @@ class APIHandler {
 	@auth
 	public get(res: ResponseLike, { key }: {
 		key: string;
-		auth: string;
+		auth?: string;
 	}) {
 		const value = this._db.get(key, '0');
 		attachMessage(res, `Key: "${key}", val: "${str(value)}"`);
 		res.status(200).write(value === undefined ?
 			'' : value);
 		res.end();
+		return value;
 	}
 
 	@errorHandle
@@ -125,7 +211,7 @@ class APIHandler {
 	public async set(res: ResponseLike, { key, value }: {
 		key: string;
 		value: string;
-		auth: string;
+		auth?: string;
 	}) {
 		const original = this._db.get(key);
 		await this._db.setVal(key, value);
@@ -221,11 +307,12 @@ type WSMessages = {
 	receive: "auth"|"listen";
 }
 
-export function initKeyValRoutes(app: AppWrapper, websocket: WSSimulator, db: Database) {
+export async function initKeyValRoutes(app: AppWrapper, websocket: WSSimulator, db: Database) {
 	const apiHandler = new APIHandler({ db });
 	const webpageHandler = new WebpageHandler({ db });
 	// @ts-ignore
 	const screenHandler = new ScreenHandler({ db });
+	await KeyvalExternal.init({ db, apiHandler });
 
 	app.post('/keyval/all', async (req, res) => {
 		await apiHandler.all(res, {...req.params, ...req.body});

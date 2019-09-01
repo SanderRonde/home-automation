@@ -3,8 +3,11 @@ import { hasArg, getArg, getNumberArg } from './lib/io';
 import { setLogLevel } from './lib/logger';
 import { WSSimulator } from './lib/ws';
 import * as express from 'express';
+import * as WebSocket from 'ws';
 import * as path from 'path';
 import * as http from 'http';
+import { Socket } from 'net';
+import * as url from 'url';
 
 interface PartialConfig {
 	ports?: {
@@ -26,9 +29,38 @@ type DeepRequired<T> = {
 };
 export type Config = DeepRequired<PartialConfig>;
 
+export class WSHandler {
+	private _listeners: {
+		path: string;
+		server: WebSocket.Server;
+	}[] = [];
+
+	constructor(httpServer: http.Server) { 
+		httpServer.on('upgrade', this._handleUpgrade.bind(this));
+	}
+
+	private _handleUpgrade(req: http.IncomingMessage, socket: Socket, head: Buffer) {
+		const pathName = url.parse(req.url!).pathname;
+		for (const { path, server } of this._listeners) {
+			if (path === pathName) {
+				server.handleUpgrade(req, socket, head, (ws: WebSocket) => {
+					server.emit('connection', ws, req);
+				});
+				return;
+			}
+		}
+		socket.destroy();
+	}
+
+	listenPath(path: string, server: WebSocket.Server) {
+		this._listeners.push({ path, server });
+	}
+}
+
 class WebServer {
 	public app!: express.Express;
-	public websocket!: WSSimulator;
+	public websocketSim!: WSSimulator;
+	public websocket!: WSHandler;
 	private _server!: http.Server;
 
 	private _config: Config;
@@ -59,17 +91,23 @@ class WebServer {
 		this.app = express();
 		await initMiddleware(this.app);
 		await this._initServers();
-		await initRoutes(this.app, this.websocket, this._config);
+		await initRoutes({ 
+			app: this.app, 
+			websocketSim: this.websocketSim, 
+			websocket: this.websocket,
+			config: this._config 
+		});
 		setLogLevel(this._config.log.level);
 		this._listen();
 	}
 
 	private async _initServers() {
-		this.websocket = new WSSimulator();
+		this.websocketSim = new WSSimulator();
 		this.app.use((req, res, next) => {
-			this.websocket.handler(req, res, next);
+			this.websocketSim.handler(req, res, next);
 		});
 		this._server = http.createServer(this.app);
+		this.websocket = new WSHandler(this._server);
 	}
 
 	private _listen() {

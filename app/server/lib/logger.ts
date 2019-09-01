@@ -129,6 +129,12 @@ export function logOutgoingReq(req: http.ClientRequest, data: {
 	logAssociatedMessages(msgMap.get(req)!);
 }
 
+export function logAttached(obj: ResponseLike|AssociatedMessage|{}) {
+	if (logLevel < 2 || !msgMap.has(obj)) return;
+
+	logAssociatedMessages(msgMap.get(obj)!);
+}
+
 export function transferAttached(from: ResponseLike|AssociatedMessage|{}, to: ResponseLike|AssociatedMessage|{}) {
 	const attached = msgMap.get(from) || [];
 	if (!msgMap.has(to)) {
@@ -155,4 +161,18 @@ export function attachMessage(obj: ResponseLike|AssociatedMessage|{}, ...message
 	prevMessages.push(msg);
 
 	return msg;
+}
+
+export class ResDummy implements ResponseLike {
+	status() {
+		return this;
+	}
+	write() { }
+	end() { }
+	contentType() {}
+	cookie() {}
+
+	transferTo(obj: ResponseLike|AssociatedMessage|{}) {
+		transferAttached(this, obj);
+	}
 }

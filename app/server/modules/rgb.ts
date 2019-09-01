@@ -1,6 +1,6 @@
 import { errorHandle, requireParams, auth, authCookie } from '../lib/decorators';
 import { Discovery, Control, CustomMode, TransitionTypes } from 'magic-home';
-import { attachMessage } from '../lib/logger';
+import { attachMessage, ResDummy } from '../lib/logger';
 import { AppWrapper } from '../lib/routes';
 import { ResponseLike } from './multi';
 import { Auth } from '../lib/auth';
@@ -115,6 +115,7 @@ class APIHandler {
 	@auth
 	public static async setColor(res: ResponseLike, { color }: {
 		color: string;
+		auth?: string;
 	}) {
 		if (!(color in colorList)) return;
 		const hexColor = colorList[color as keyof typeof colorList];
@@ -140,7 +141,7 @@ class APIHandler {
 		return String.fromCharCode(97 + (num - 10));
 	}
 
-	private static _toHex(num: number) {
+	static toHex(num: number) {
 		return this._singleNumToHex(Math.floor(num / 16)) + this._singleNumToHex(num % 16);
 	}
 
@@ -151,17 +152,18 @@ class APIHandler {
 		red: string;
 		green: string;
 		blue: string;
+		auth?: string;
 	}) {
 		const redNum = Math.min(255, Math.max(0, parseInt(red, 10)));
 		const greenNum = Math.min(255, Math.max(0, parseInt(green, 10)));
 		const blueNum = Math.min(255, Math.max(0, parseInt(blue, 10)));
 		attachMessage(attachMessage(res, `rgb(${red}, ${green}, ${blue})`),
 			chalk.bgHex(`#${
-				this._toHex(redNum)
+				this.toHex(redNum)
 			}${
-				this._toHex(greenNum)
+				this.toHex(greenNum)
 			}${
-				this._toHex(blueNum)
+				this.toHex(blueNum)
 			}`)('   '));
 
 		await Promise.all(clients!.map(async (client) => {
@@ -179,13 +181,14 @@ class APIHandler {
 	@auth
 	public static async setPower(res: ResponseLike, { power }: {
 		power: string;
+		auth?: string;
 	}) {
 		attachMessage(res, `Turned ${power}`);
 		await Promise.all(clients!.map(c => power === 'on' ? c.turnOn() : c.turnOff()));
 		res.status(200).end();
 	}
 
-	private static _overrideTransition(pattern: CustomMode, transition: 'fade'|'jump'|'strobe') {
+	static overrideTransition(pattern: CustomMode, transition: 'fade'|'jump'|'strobe') {
 		return new CustomMode().addColorList(pattern.colors.map(({ red, green, blue }) => {
 			return [red, green, blue] as [number, number, number];
 		})).setTransitionType(transition);
@@ -198,6 +201,7 @@ class APIHandler {
 		pattern: CustomPattern;
 		speed?: number;
 		transition?: string;
+		auth?: string;
 	}) {
 		if (!patterns.hasOwnProperty(patternName)) {
 			attachMessage(res, `Pattern ${patternName} does not exist`);
@@ -215,7 +219,7 @@ class APIHandler {
 				return;
 			}
 
-			pattern = this._overrideTransition(pattern, transition as TransitionTypes);
+			pattern = this.overrideTransition(pattern, transition as TransitionTypes);
 		}
 
 		attachMessage(res, `Running pattern ${patternName}`);
@@ -238,6 +242,7 @@ class APIHandler {
 	@auth
 	public static async runFunction(res: ResponseLike, { function: fn }: {
 		function: string;
+		auth?: string;
 	}) {
 		attachMessage(res, `Running function ${fn}`);
 		await Promise.all(clients!.map((c) => {
@@ -252,6 +257,143 @@ class APIHandler {
 		await scanRGBControllers();
 		res.status(200);
 		res.end();
+	}
+}
+
+type ExternalRequest = (({
+	type: 'color';
+} & ({
+	color: string;
+}|{
+	r: string;
+	g: string;
+	b: string;
+}))|{
+	type: 'power';
+	state: 'on'|'off';
+}|{
+	type: 'pattern';
+	name: string;
+	speed?: number;
+	transition?: 'fade'|'jump'|'strobe';
+}) & {
+	logObj: any;
+	resolver: () => void;
+}
+
+export class RGBExternal {
+	private static _requests: ExternalRequest[] = [];
+
+	private static _ready: boolean = false;
+	static async init() {
+		this._ready = true;
+		for (const req of this._requests) {
+			await this._handleRequest(req);
+		}
+	}
+
+	private static async _handleRequest(request: ExternalRequest) {
+		const { logObj, resolver } = request;
+		const resDummy = new ResDummy();
+		if (request.type === 'color') {
+			if ('color' in request) {
+				await APIHandler.setColor(resDummy, {
+					color: request.color,
+					auth: await Auth.Secret.getKey()
+				});
+			} else {
+				const { r, g, b } = request;
+				await APIHandler.setRGB(resDummy, {
+					red: r,
+					green: g,
+					blue: b,
+					auth: await Auth.Secret.getKey()
+				});
+			}
+		} else if (request.type == 'power') {
+			await APIHandler.setPower(resDummy, {
+				power: request.state,
+				auth: await Auth.Secret.getKey()
+			});
+		} else {
+			const { name, speed, transition } = request;
+			await APIHandler.runPattern(resDummy, {
+				pattern: name as any,
+				speed,
+				transition,
+				auth: await Auth.Secret.getKey()
+			});
+		}
+		resDummy.transferTo(logObj);
+		resolver();
+	}
+
+	static async color(logObj: any, color: string) {
+		return new Promise((resolve) => {
+			const req: ExternalRequest = {
+				type: 'color',
+				color: color,
+				logObj,
+				resolver: resolve
+			};
+			if (this._ready) {
+				this._handleRequest(req);
+			} else {
+				this._requests.push(req)
+			}
+		});
+	}
+
+	static async rgb(logObj: any, red: string, green: string, blue: string) {
+		return new Promise((resolve) => {
+			const req: ExternalRequest = {
+				type: 'color',
+				r: red,
+				g: green,
+				b: blue,
+				logObj,
+				resolver: resolve
+			};
+			if (this._ready) {
+				this._handleRequest(req);
+			} else {
+				this._requests.push(req)
+			}
+		});
+	}
+
+	static async power(logObj: any, state: 'on'|'off') {
+		return new Promise((resolve) => {
+			const req: ExternalRequest = {
+				type: 'power',
+				state: state,
+				logObj,
+				resolver: resolve
+			};
+			if (this._ready) {
+				this._handleRequest(req);
+			} else {
+				this._requests.push(req)
+			}
+		});
+	}
+
+	static async pattern(logObj: any, name: string, speed?: number, transition?: 'fade'|'jump'|'strobe') {
+		return new Promise((resolve) => {
+			const req: ExternalRequest = {
+				type: 'pattern',
+				name,
+				speed,
+				transition,
+				logObj,
+				resolver: resolve
+			};
+			if (this._ready) {
+				this._handleRequest(req);
+			} else {
+				this._requests.push(req)
+			}
+		});
 	}
 }
 
@@ -294,6 +436,7 @@ class WebpageHandler {
 export async function initRGBRoutes(app: AppWrapper) {
 	await scanRGBControllers();
 	setInterval(scanRGBControllers, 1000 * 60 * 60);
+	await RGBExternal.init();
 
 	app.post('/rgb/color/:color', async (req, res) => {
 		await APIHandler.setColor(res, {...req.params, ...req.body});

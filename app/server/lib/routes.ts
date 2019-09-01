@@ -1,16 +1,17 @@
 import { initRGBRoutes, scanRGBControllers } from '../modules/rgb';
 import { initMultiRoutes, ResponseLike } from '../modules/multi';
+import { initHomeDetector } from '../modules/home-detector';
 import { initKeyValRoutes } from '../modules/keyval';
 import { initScriptRoutes } from '../modules/script';
 import { logReq, attachMessage } from './logger';
 import * as pathToRegexp from 'path-to-regexp';
 import * as cookieParser from 'cookie-parser';
 import * as serveStatic from 'serve-static';
+import { Config, WSHandler } from '../app';
 import * as bodyParser from 'body-parser';
 import * as express from 'express';
 import { WSSimulator } from './ws';
 import { Database } from './db';
-import { Config } from '../app';
 import { Auth } from './auth';
 import * as path from 'path';
 import chalk from 'chalk';
@@ -36,26 +37,40 @@ export class AppWrapper {
 		return { keys, regexp };
 	}
 
-	get(route: string, handler: Handler) {
-		this._routes.push({
-			route, handler, method: 'get',
-			matching: this._genRegexp(route)
+	private static _makeArr<V>(value: V|V[]): V[] {
+		if (Array.isArray(value)) return value;
+		return [value];
+	}
+
+	get(route: string|string[], handler: Handler) {
+		const routes = AppWrapper._makeArr(route);
+		routes.forEach((route) => {
+			this._routes.push({
+				route, handler, method: 'get',
+				matching: this._genRegexp(route)
+			});
 		});
 		this.app.get(route, handler);
 	}
 
-	post(route: string, handler: Handler) {
-		this._routes.push({
-			route, handler, method: 'post',
-			matching: this._genRegexp(route)
+	post(route: string|string[], handler: Handler) {
+		const routes = AppWrapper._makeArr(route);
+		routes.forEach((route) => {
+			this._routes.push({
+				route, handler, method: 'post',
+				matching: this._genRegexp(route)
+			});
 		});
 		this.app.post(route, handler);
 	}
 
-	all(route: string, handler: Handler) {
-		this._routes.push({
-			route, handler, method: 'all',
-			matching: this._genRegexp(route)
+	all(route: string|string[], handler: Handler) {
+		const routes = AppWrapper._makeArr(route);
+		routes.forEach((route) => {
+			this._routes.push({
+				route, handler, method: 'all',
+				matching: this._genRegexp(route)
+			});
 		});
 		this.app.all(route, handler);
 	}
@@ -151,13 +166,21 @@ export async function initMiddleware(app: express.Express) {
 	}, serveStatic(path.join(__dirname, '../../../', 'node_modules/wclib')));
 }
 
-export async function initRoutes(app: express.Express, websocket: WSSimulator, config: Config) {
+export async function initRoutes({ 
+	app, websocketSim, websocket, config 
+}: { 
+	app: express.Express; 
+	websocket: WSHandler;
+	websocketSim: WSSimulator; 
+	config: Config; 
+}) {
 	const wrappedApp = new AppWrapper(app);
-	initKeyValRoutes(wrappedApp, websocket, await new Database('keyval.json').init());
+	await initKeyValRoutes(wrappedApp, websocketSim, await new Database('keyval.json').init());
 	initScriptRoutes(wrappedApp, config);
 	await initRGBRoutes(wrappedApp);
 	await Auth.initRoutes(wrappedApp, config);
 	initMultiRoutes(wrappedApp);
+	initHomeDetector(wrappedApp, websocket, await new Database('home-detector.json').init());
 	
 	app.post('/scan', (_req, res) => {
 		scanRGBControllers();
