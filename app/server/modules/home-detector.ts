@@ -10,8 +10,6 @@ import { Database } from "../lib/db";
 import { RGBExternal } from './rgb';
 import express = require("express");
 import { Auth } from '../lib/auth';
-import { WSHandler } from '../app';
-import * as WebSocket from 'ws';
 import * as ping from 'ping';
 import chalk from 'chalk';
 
@@ -235,24 +233,24 @@ class APIHandler {
 }
 
 async function homeDetectorHTML(json: string) {
-	return `<html>
+	return `<html style="background-color: rgb(40, 40, 40);">
 		<head>
 			<link rel="icon" href="/home-detector/favicon.ico" type="image/x-icon" />
 			<meta name="viewport" content="width=device-width, initial-scale=1">
 			<title>Who is home</title>
 		</head>
 		<body style="margin: 0">
-			<home-detector json='${json}' key="${await Auth.Secret.getKey()}"></json-switches>
+			<home-detector-display json='${json}' key="${await Auth.Secret.getKey()}"></home-detector-display>
 			<script type="module" src="/home-detector/home-detector.js"></script>
 		</body>
 	</html>`;
 }
 
 export class WebpageHandler {
-	private _db: Database
+	private _detector: Detector;
 
-	constructor({ db }: { db: Database }) {
-		this._db = db;
+	constructor({ detector }: { detector: Detector }) {
+		this._detector = detector;
 	}
 	
 	@errorHandle
@@ -260,7 +258,7 @@ export class WebpageHandler {
 	public async index(res: ResponseLike, _req: express.Request) {
 		res.status(200);
 		res.contentType('.html');
-		res.write(await homeDetectorHTML(await this._db.json(true)));
+		res.write(await homeDetectorHTML(JSON.stringify(this._detector.getAll())));
 		res.end();
 	}
 }
@@ -301,7 +299,7 @@ async function handleHooks(newState: HOME_STATE, name: string) {
 	logAttached(logObj);
 }
 
-export function initHomeDetector(app: AppWrapper, websocket: WSHandler, db: Database) {
+export function initHomeDetector(app: AppWrapper, db: Database) {
 	Detector.addListener(null, (newState, name) => {
 		console.log(chalk.cyan(`[device:${name}]`, newState === HOME_STATE.HOME ?
 			chalk.bold(chalk.blue('now home')) : chalk.blue('just left')));
@@ -312,7 +310,7 @@ export function initHomeDetector(app: AppWrapper, websocket: WSHandler, db: Data
 
 	const detector = new Detector({ db });
 	const apiHandler = new APIHandler({ detector });
-	const webpageHandler = new WebpageHandler({ db });
+	const webpageHandler = new WebpageHandler({ detector });
 
 	app.post('/home-detector/all', async (req, res) => {
 		await apiHandler.getAll(res, {...req.params, ...req.body});
@@ -327,23 +325,5 @@ export function initHomeDetector(app: AppWrapper, websocket: WSHandler, db: Data
 		'/whoshome'
 	], async (req, res) => {
 		webpageHandler.index(res, req);
-	});
-
-	const wsServer = new WebSocket.Server({ noServer: true });
-	websocket.listenPath('/home-detector/ws', wsServer);
-	wsServer.on('connection', (ws) => {
-		ws.on('message', async (data) => {
-			const str = data.toString();
-			try {
-				const parsed = JSON.parse(str);
-				if (parsed.type === 'all') {
-					ws.send(JSON.stringify(await detector.getAll()));
-				} else if (parsed.type === 'get') {
-					ws.send(JSON.stringify(await detector.get(parsed.name)));
-				}
-			} catch(e) { 
-				// Ignore message
-			}
-		});
 	});
 }

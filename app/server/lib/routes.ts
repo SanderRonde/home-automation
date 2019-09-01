@@ -7,10 +7,10 @@ import { logReq, attachMessage } from './logger';
 import * as pathToRegexp from 'path-to-regexp';
 import * as cookieParser from 'cookie-parser';
 import * as serveStatic from 'serve-static';
-import { Config, WSHandler } from '../app';
 import * as bodyParser from 'body-parser';
 import * as express from 'express';
 import { WSSimulator } from './ws';
+import { Config } from '../app';
 import { Database } from './db';
 import { Auth } from './auth';
 import * as path from 'path';
@@ -167,10 +167,9 @@ export async function initMiddleware(app: express.Express) {
 }
 
 export async function initRoutes({ 
-	app, websocketSim, websocket, config 
+	app, websocketSim, config 
 }: { 
 	app: express.Express; 
-	websocket: WSHandler;
 	websocketSim: WSSimulator; 
 	config: Config; 
 }) {
@@ -180,7 +179,7 @@ export async function initRoutes({
 	await initRGBRoutes(wrappedApp);
 	await Auth.initRoutes(wrappedApp, config);
 	initMultiRoutes(wrappedApp);
-	initHomeDetector(wrappedApp, websocket, await new Database('home-detector.json').init());
+	initHomeDetector(wrappedApp, await new Database('home-detector.json').init());
 	
 	app.post('/scan', (_req, res) => {
 		scanRGBControllers();
