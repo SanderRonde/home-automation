@@ -1,6 +1,6 @@
 import { 
 	ConfigurableWebComponent, Props, PROP_TYPE, config, EventListenerObj
-} from "../../../../node_modules/wclib/build/es/wclib.js";
+} from "../../../../node_modules/wc-lib/build/es/wc-lib.js";
 import { MessageToast } from "../message-toast/message-toast.js";
 const AUTH = {
 	auth: btoa('***REMOVED***')
@@ -24,7 +24,10 @@ export abstract class ServerComm<ELS extends {
 } = {
 	IDS: {};
 	CLASSES: {}
-}, E extends EventListenerObj = {}> extends ConfigurableWebComponent<ELS, E> {
+}, E extends EventListenerObj = {}> extends ConfigurableWebComponent<{
+	selectors: ELS;
+	events: E;
+}> {
 	props = Props.define(this, {
 		reflect: {
 			key: {

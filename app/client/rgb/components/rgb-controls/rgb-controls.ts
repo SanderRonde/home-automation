@@ -1,4 +1,4 @@
-import { ConfigurableWebComponent, Props, config, ComplexType } from '../../../../../node_modules/wclib/build/es/wclib.js';
+import { ConfigurableWebComponent, Props, config, ComplexType } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { ColorButton } from '../color-button/color-button.js';
 import { RgbControlsHTML } from './rgb-controls.html.js';
 import { RgbControlsCSS } from './rgb-controls.css.js';
@@ -9,10 +9,12 @@ import { RgbControlsCSS } from './rgb-controls.css.js';
 	html: RgbControlsHTML
 })
 export class RgbControls extends ConfigurableWebComponent<{
-	IDS: {
-		hueSlider: HTMLInputElement;
+	selectors: {
+		IDS: {
+			hueSlider: HTMLInputElement;
+		};
+		CLASSES: {};
 	};
-	CLASSES: {};
 }> {
 	props = Props.define(this, {
 		reflect: {
@@ -70,7 +72,7 @@ export class RgbControls extends ConfigurableWebComponent<{
 		const value = this.$.hueSlider.valueAsNumber;
 		const color = RgbControls.getColorAtIndex(value);
 		this.lastColor = color;
-		this.props.parent.updateCanvasColor(color);
-		this.props.parent.onDrag();
+		this.props.parent!.updateCanvasColor(color);
+		this.props.parent!.onDrag();
 	}
 }

@@ -1,4 +1,4 @@
-import { ComplexType, config, Props } from '../../../../../node_modules/wclib/build/es/wclib.js';
+import { ComplexType, config, Props } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { JSONSwitchesCSS, JSONSwitchesHTML } from './json-switches.templates.js';
 import { MessageToast } from '../../../shared/message-toast/message-toast.js';
 import { ServerComm } from '../../../shared/server-comm/server-comm.js';

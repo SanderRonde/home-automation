@@ -1,4 +1,4 @@
-import { ComplexType, config, Props } from '../../../../../node_modules/wclib/build/es/wclib.js';
+import { ComplexType, config, Props } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { RGBControllerHTML, RGBControllerCSS } from './rgb-controller.templates.js';
 import { MessageToast } from '../../../shared/message-toast/message-toast.js';
 import { ServerComm } from '../../../shared/server-comm/server-comm.js';
@@ -22,7 +22,7 @@ export interface PatternConfig {
 
 export interface ColorOption {
 	props: {
-		selected: boolean;
+		selected?: boolean|undefined;
 	}
 	setDisplay(display: ColorDisplay): void;
 	setControls(controls: ColorControls): void;

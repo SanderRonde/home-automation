@@ -1,4 +1,4 @@
-import { CHANGE_TYPE, TemplateFn } from '../../../../../node_modules/wclib/build/es/wclib.js';
+import { CHANGE_TYPE, TemplateFn } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { clampWidthSelector, clampWidth } from '../../../shared/css-util/css-util.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { JSONBoolean } from './json-boolean.js';
@@ -6,7 +6,7 @@ import { JSONBoolean } from './json-boolean.js';
 export const JSONBooleanHTML = new TemplateFn<JSONBoolean>(function (html, props) {
 	return html`
 		<div id="container">
-			<div title="${props.path.join('.')}" id="name">${props.name}</div>
+			<div title="${props.path!.join('.')}" id="name">${props.name}</div>
 			<div id="switchContainer">
 				<power-switch id="switch" @@toggle="${this.onToggle}" ?initial="${(() => {
 					if (typeof props.value === 'number') {

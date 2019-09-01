@@ -1,4 +1,4 @@
-import { TemplateFn, CHANGE_TYPE } from '../../../../../node_modules/wclib/build/es/wclib.js';
+import { TemplateFn, CHANGE_TYPE } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { PatternButton } from './pattern-button.js';
 
@@ -9,7 +9,7 @@ export const PatternButtonCSS = [
 				transition: transform 200ms ease-in-out;
 				transform: scale(0.9);
 				background-image: linear-gradient(to bottom right, ${
-					props.pattern.colors.map(({ red, green, blue }) => {
+					props.pattern!.colors.map(({ red, green, blue }) => {
 						return `rgb(${red}, ${green}, ${blue})`
 					}).join(', ')});
 				width: 100%;

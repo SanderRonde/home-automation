@@ -1,4 +1,4 @@
-import { ConfigurableWebComponent, Props, PROP_TYPE, config } from '../../../../../node_modules/wclib/build/es/wclib.js';
+import { ConfigurableWebComponent, Props, PROP_TYPE, config } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { PowerButtonHTML } from './power-button.html.js';
 import { PowerButtonCSS } from './power-button.css.js';
 import { RGBController } from '../rgb-controller/rgb-controller.js';

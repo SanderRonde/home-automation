@@ -1,4 +1,4 @@
-import { config, ConfigurableWebComponent, Props, PROP_TYPE } from '../../../../../node_modules/wclib/build/es/wclib.js';
+import { config, ConfigurableWebComponent, Props, PROP_TYPE } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { PowerSwitchHTML, PowerSwitchCSS } from './power-switch.templates.js';
 
 @config({
@@ -7,15 +7,18 @@ import { PowerSwitchHTML, PowerSwitchCSS } from './power-switch.templates.js';
 	css: PowerSwitchCSS
 })
 export class PowerSwitch extends ConfigurableWebComponent<{
-	IDS: {
-		label: HTMLLabelElement;
-		switch: HTMLInputElement;
+	selectors: {
+		IDS: {
+			label: HTMLLabelElement;
+			switch: HTMLInputElement;
+		};
+		CLASSES: {};
 	};
-	CLASSES: {};
-}, {
-	toggle: {
-		args: [boolean, boolean]
-	}
+	events: {
+		toggle: {
+			args: [boolean, boolean]
+		}
+	};
 }> {
 	private _element!: HTMLElement;
 	private _inputElement!: HTMLInputElement;

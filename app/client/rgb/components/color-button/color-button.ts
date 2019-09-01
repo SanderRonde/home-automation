@@ -1,4 +1,4 @@
-import { ComplexType, ConfigurableWebComponent, Props, PROP_TYPE, config, bindToClass, awaitConnected } from '../../../../../node_modules/wclib/build/es/wclib.js';
+import { ComplexType, ConfigurableWebComponent, Props, PROP_TYPE, config, bindToClass, awaitConnected } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { RGBController, ColorOption } from '../rgb-controller/rgb-controller.js';
 import { ColorControls } from '../color-controls/color-controls.js';
 import { ColorDisplay } from '../color-display/color-display.js';
@@ -199,8 +199,8 @@ export class ColorButton extends ConfigurableWebComponent implements ColorOption
 
 	@bindToClass
 	onClick() {
-		this.props.parent.deselectAll();
-		this.props.parent.setSelected(this);
+		this.props.parent!.deselectAll();
+		this.props.parent!.setSelected(this);
 	}
 
 	setDisplay(display: ColorDisplay) {

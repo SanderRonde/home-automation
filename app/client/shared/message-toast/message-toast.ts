@@ -1,4 +1,4 @@
-import { CHANGE_TYPE, bindToClass, TemplateFn, config, ConfigurableWebComponent, Props, PROP_TYPE, wait } from '../../../../node_modules/wclib/build/es/wclib.js';
+import { CHANGE_TYPE, bindToClass, TemplateFn, config, ConfigurableWebComponent, Props, PROP_TYPE, wait } from '../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { render } from '../../../../node_modules/lit-html/lit-html.js';
 import { clampWidthSelector } from '../css-util/css-util.js';
 
@@ -67,15 +67,18 @@ interface CreateConfig {
 	}, CHANGE_TYPE.NEVER, render)
 })
 export class MessageToast extends ConfigurableWebComponent<{
-	IDS: {};
-	CLASSES: {};
-}, {
-	click: {
-		args: [MouseEvent];
-	}
-	hide: {
-		args: [];
-	}
+	selectors: {
+		IDS: {};
+		CLASSES: {};
+	};
+	events: {
+		click: {
+			args: [MouseEvent];
+		}
+		hide: {
+			args: [];
+		}
+	};
 }> {
 	props = Props.define(this, {
 		reflect: {

@@ -1,4 +1,4 @@
-import { ConfigurableWebComponent, Props, config } from '../../../../../node_modules/wclib/build/es/wclib.js';
+import { ConfigurableWebComponent, config } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { ColorControlsHTML } from './color-controls.html.js';
 import { ColorControlsCSS } from './color-controls.css.js';
 
@@ -8,15 +8,13 @@ import { ColorControlsCSS } from './color-controls.css.js';
 	html: ColorControlsHTML
 })
 export class ColorControls extends ConfigurableWebComponent<{
-	IDS: {
-		container: HTMLElement;
+	selectors: {
+		IDS: {
+			container: HTMLElement;
+		};
+		CLASSES: {};
 	};
-	CLASSES: {};
 }> {
-	props = Props.define(this, {
-		// ...
-	});
-
 	appendElement(element: HTMLElement) {
 		Array.from(this.$.container.children).forEach(el => el.remove());
 		this.$.container.appendChild(element);

@@ -160,10 +160,10 @@ export async function initMiddleware(app: express.Express) {
 		req.url = req.url.replace('/node_modules/lit-html', '');
 		next();
 	}, serveStatic(path.join(__dirname, '../../../', 'node_modules/lit-html')));
-	app.use('/node_modules/wclib', (req, _res, next) => {
-		req.url = req.url.replace('/node_modules/wclib', '');
+	app.use('/node_modules/wc-lib', (req, _res, next) => {
+		req.url = req.url.replace('/node_modules/wc-lib', '');
 		next();
-	}, serveStatic(path.join(__dirname, '../../../', 'node_modules/wclib')));
+	}, serveStatic(path.join(__dirname, '../../../', 'node_modules/wc-lib')));
 }
 
 export async function initRoutes({ 

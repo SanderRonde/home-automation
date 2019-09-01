@@ -1,4 +1,4 @@
-import { TemplateFn, CHANGE_TYPE } from '../../../../../node_modules/wclib/build/es/wclib.js';
+import { TemplateFn, CHANGE_TYPE } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { ColorDisplay } from './color-display.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 

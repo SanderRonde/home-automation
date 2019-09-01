@@ -4,7 +4,7 @@ import {
 	NodePart, isDirective, noChange 
 } from "../../../node_modules/lit-html/lit-html.js";
 import { RGBController } from './components/rgb-controller/rgb-controller.js';
-import { WebComponent } from '../../../node_modules/wclib/build/es/wclib.js';
+import { WebComponent } from '../../../node_modules/wc-lib/build/es/wc-lib.js';
 
 function registerElements() {
 	WebComponent.initComplexTemplateProvider({

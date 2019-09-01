@@ -1,4 +1,4 @@
-import { CHANGE_TYPE, TemplateFn } from '../../../../../node_modules/wclib/build/es/wclib.js';
+import { CHANGE_TYPE, TemplateFn } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { clampWidthSelector, clampWidth } from '../../../shared/css-util/css-util.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { jsonValue } from '../json-value/json-value.templates.js';
@@ -50,7 +50,7 @@ export const JSONObjectHTML = new TemplateFn<JSONObject>(function (html, props) 
 		<div id="subsection">
 			${getKeys(props.json).map((key) => {
 				if (key === '___last_updated') return null;
-				return jsonValue(html, props.json[key], [...props.path, key + ''], key + '');
+				return jsonValue(html, props.json[key], [...props.path!, key + ''], key + '');
 			}).filter(v => !!v)}
 		</div>
 	`;

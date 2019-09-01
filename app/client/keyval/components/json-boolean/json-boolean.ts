@@ -1,4 +1,4 @@
-import { bindToClass, ComplexType, config, ConfigurableWebComponent, Props, PROP_TYPE } from '../../../../../node_modules/wclib/build/es/wclib.js';
+import { bindToClass, ComplexType, config, ConfigurableWebComponent, Props, PROP_TYPE } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { JSONBooleanHTML, JSONBooleanCSS } from './json-boolean.templates.js';
 import { MessageToast } from '../../../shared/message-toast/message-toast.js';
 import { JSONSwitches } from '../json-switches/json-switches.js';
@@ -14,10 +14,12 @@ import { PowerSwitch } from '../power-switch/power-switch.js';
 	]
 })
 export class JSONBoolean extends ConfigurableWebComponent<{
-	IDS: {
-		switch: PowerSwitch;
-	}
-	CLASSES: {};
+	selectors: {
+		IDS: {
+			switch: PowerSwitch;
+		}
+		CLASSES: {};
+	};
 }> {
 	props = Props.define(this, {
 		reflect: {
@@ -44,6 +46,6 @@ export class JSONBoolean extends ConfigurableWebComponent<{
 			return;
 		}
 		
-		root.changeValue(this.props.path, this.$.switch.checked ? '1' : '0');
+		root.changeValue(this.props.path!, this.$.switch.checked ? '1' : '0');
 	}
 }

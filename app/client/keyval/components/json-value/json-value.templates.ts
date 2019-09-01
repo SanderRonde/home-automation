@@ -1,4 +1,4 @@
-import { CHANGE_TYPE, TemplateFn, Templater, TemplateRenderResult } from '../../../../../node_modules/wclib/build/es/wclib.js';
+import { CHANGE_TYPE, TemplateFn, Templater, TemplateRenderResult } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { JSONValue } from './json-value.js';
 

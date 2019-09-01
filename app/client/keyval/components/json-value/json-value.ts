@@ -1,4 +1,4 @@
-import { config, ConfigurableWebComponent, ComplexType, Props } from '../../../../../node_modules/wclib/build/es/wclib.js';
+import { config, ConfigurableWebComponent, ComplexType, Props } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { JSONBoolean } from '../json-boolean/json-boolean.js';
 import { JSONObject } from '../json-object/json-object.js';
 import { JSONValueHTML } from './json-value.templates.js';
