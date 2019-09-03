@@ -27,7 +27,7 @@ function setDefaultArrValues<T>(arr: T[], len: number, value: T): T[] {
 	return arr;
 }
 
-function logAssociatedMessages(messages: AssociatedMessage[], indent: number = 0, hasNextMessage: boolean[] = []) {
+function logAssociatedMessages(logTime: boolean, messages: AssociatedMessage[], indent: number = 0, hasNextMessage: boolean[] = []) {
 	if (logLevel < indent + 2) return;
 
 	for (let i = 0; i < messages.length; i++) {
@@ -38,14 +38,15 @@ function logAssociatedMessages(messages: AssociatedMessage[], indent: number = 0
 				return '    ';
 			}
 		}).join('');
+		const timeArr = logTime ? [getTime()]: [];
 		if (i === messages.length - 1) {
-			console.log(`${padding} \\- `, ...messages[i].content);
+			console.log(...timeArr, `${padding} \\- `, ...messages[i].content);
 			hasNextMessage[indent] = false;
 		} else {
-			console.log(`${padding} |- `, ...messages[i].content);
+			console.log(...timeArr, `${padding} |- `, ...messages[i].content);
 			hasNextMessage[indent] = true;
 		}
-		logAssociatedMessages(msgMap.get(messages[i]) || [], indent + 1, hasNextMessage);
+		logAssociatedMessages(false, msgMap.get(messages[i]) || [], indent + 1, hasNextMessage);
 	}
 }
 
@@ -96,7 +97,7 @@ export function logReq(req: express.Request, res: express.Response) {
 		if (logLevel < 1) return;
 
 		const end = Date.now();
-		console.log(...genURLLog({ 
+		console.log(getTime(), ...genURLLog({ 
 			req, 
 			statusCode: res.statusCode, 
 			duration: end - start, 
@@ -106,8 +107,12 @@ export function logReq(req: express.Request, res: express.Response) {
 		// Log attached messages
 		if (logLevel < 2 || !msgMap.has(res)) return;
 
-		logAssociatedMessages(msgMap.get(res)!);
+		logAssociatedMessages(false, msgMap.get(res)!);
 	});
+}
+
+function getTime() {
+	return chalk.bold(`[${new Date().toLocaleString()}]`);
 }
 
 export function logOutgoingReq(req: http.ClientRequest, data: {
@@ -117,7 +122,7 @@ export function logOutgoingReq(req: http.ClientRequest, data: {
 
 	if (logLevel < 1) return;
 
-	console.log(...genURLLog({ 
+	console.log(getTime(), ...genURLLog({ 
 		ip: 'localhost',
 		method: data.method,
 		url: ip
@@ -126,13 +131,13 @@ export function logOutgoingReq(req: http.ClientRequest, data: {
 	// Log attached messages
 	if (logLevel < 2 || !msgMap.has(req)) return;
 
-	logAssociatedMessages(msgMap.get(req)!);
+	logAssociatedMessages(false, msgMap.get(req)!);
 }
 
 export function logAttached(obj: ResponseLike|AssociatedMessage|{}) {
 	if (logLevel < 2 || !msgMap.has(obj)) return;
 
-	logAssociatedMessages(msgMap.get(obj)!);
+	logAssociatedMessages(true, msgMap.get(obj)!);
 }
 
 export function transferAttached(from: ResponseLike|AssociatedMessage|{}, to: ResponseLike|AssociatedMessage|{}) {
