@@ -63,7 +63,7 @@ export function genURLLog({
 	statusCode = 200, 
 	duration = '?', 
 	ip = req.ip || '?' ,
-	isSend = true
+	isSend = false
 }: { 
 	req?: RequestLike; 
 	method?: string;
@@ -125,7 +125,8 @@ export function logOutgoingReq(req: http.ClientRequest, data: {
 	console.log(getTime(), ...genURLLog({ 
 		ip: 'localhost',
 		method: data.method,
-		url: ip
+		url: ip,
+		isSend: true
 	}));
 
 	// Log attached messages
