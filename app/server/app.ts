@@ -87,19 +87,41 @@ class WebServer {
 if (hasArg('help', 'h')) {
 	console.log('Usage:');
 	console.log('');
-	console.log('node app/server/app.js 	[-h | --help] [--http {port}] ');
-	console.log('			[--https {port}] [--scripts {dir}]');
-	console.log('			[--uid	{uid}] [-v | --verbose]');
-	console.log('			[-vv | --veryverbose]');
+	console.log('node app/server/app.js 		[-h | --help] [--http {port}] ');
+	console.log('				[--https {port}] [--scripts {dir}]');
+	console.log('				[--uid	{uid}] [-v | --verbose]');
+	console.log('				[-vv | --veryverbose]');
 	console.log('');
-	console.log('-h, --help		Print this help message');
-	console.log('--http 		{port}	The HTTP port to use');
-	console.log('--https 	{port}	The HTTP port to use');
-	console.log('--uid 		{uid}	The uid to use for scripts');
-	console.log('--scripts 	{dir}	A directory of scripts to use for /script');
-	console.log('-v, --verbose		Log request-related data');
-	console.log('-vv, --veryverbose	Log even more request-related data');
+	console.log('-h, --help			Print this help message');
+	console.log('--http 		{port}		The HTTP port to use');
+	console.log('--https 	{port}		The HTTP port to use');
+	console.log('--uid 		{uid}		The uid to use for scripts');
+	console.log('--scripts 	{dir}		A directory of scripts to use for /script');
+	console.log('-v, --verbose			Log request-related data');
+	console.log('-vv, --veryverbose		Log even more request-related data');
+	console.log('-v{v+}, --{very+}verbose	Logs even more data. The more v\'s and very\'s the more data');
+	console.log('-v*, --verbose*			Logs all data (equivalent of adding a lot of v\'s');
 	process.exit(0);
+}
+function getVerbosity() {
+	if (hasArg('verbose*', 'v*')) {
+		return Infinity;
+	}
+	if (hasArg('verbose', 'v')) {
+		return 1;
+	}
+	if (hasArg('veryverbose', 'vv')) {
+		return 2;
+	}
+	for (let i = 0; i < process.argv.length; i++) {
+		const arg = process.argv[i];
+		if (/^--(very)*verbose$/.test(arg)) {
+			return arg.slice(2, -'verbose'.length).split('very').length - 1;
+		} else if (/^-(v)+$/.test(arg)) {
+			return arg.slice(1).split('v').length - 1;
+		}
+	}
+	return 0;
 }
 new WebServer({
 	ports: {
@@ -111,8 +133,7 @@ new WebServer({
 		uid: getNumberArg('uid')
 	},
 	log: {
-		level: hasArg('veryverbose', 'vv') ? Infinity : 
-			hasArg('verbose', 'v') ? 2 : 1,
+		level: getVerbosity(),
 		secrets: hasArg('log-secrets') || false
 	}
 }).init();
