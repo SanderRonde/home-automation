@@ -92,7 +92,8 @@ export class WSInstance< DATA extends {
 
 			attachMessage(req, 'Type:', chalk.bold(type), 'data:', chalk.bold(data));
 			logOutgoingReq(req, {
-				method: 'POST'
+				method: 'POST',
+				target: this._ip
 			});
 		} catch(e) {
 			this._alive = false;

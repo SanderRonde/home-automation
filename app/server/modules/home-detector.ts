@@ -1,5 +1,5 @@
 import { errorHandle, authCookie, requireParams, auth } from '../lib/decorators';
-import { attachMessage, logAttached } from '../lib/logger';
+import { attachMessage, logFixture, getTime } from '../lib/logger';
 import { AppWrapper } from "../lib/routes";
 import { ScriptExternal } from './script';
 import { KeyvalExternal } from './keyval';
@@ -280,28 +280,28 @@ async function handleHooks(newState: HOME_STATE, name: string) {
 	}
 
 	const nameHooks = hooks[name];
-	const fns = (() => {
+	const changeHooks = (() => {
 		if (newState === HOME_STATE.HOME) {
 			return nameHooks.home;
 		} else {
 			return nameHooks.away;
 		}
 	})();
-	if (!fns) return;
+	if (!changeHooks) return;
 
 	const logObj = {};
-	const rootLog = attachMessage(logObj, chalk.cyan('[hook]'), 
-		'State for', chalk.bold(name), 'changed to', chalk.bold(newState));
-	for (let i = 0; i < fns.length; i++) {
-		const fn = fns[i];
-		await fn(hookables, attachMessage(rootLog, 'Hook', chalk.bold(i + '')));
+	for (let i = 0; i < changeHooks.length; i++) {
+		const { name, fn } = changeHooks[i];
+		await fn(hookables, attachMessage(logObj, 'Hook', chalk.bold(i + ''), 
+			':', chalk.bold(name)));
 	}
-	logAttached(logObj);
+	logFixture(logObj, chalk.cyan('[hook]'), 
+		'State for', chalk.bold(name), 'changed to', chalk.bold(newState));
 }
 
 export function initHomeDetector(app: AppWrapper, db: Database) {
 	Detector.addListener(null, (newState, name) => {
-		console.log(chalk.cyan(`[device:${name}]`, newState === HOME_STATE.HOME ?
+		console.log(getTime(), chalk.cyan(`[device:${name}]`, newState === HOME_STATE.HOME ?
 			chalk.bold(chalk.blue('now home')) : chalk.blue('just left')));
 	});
 	Detector.addListener(null, async (newState, name) => {

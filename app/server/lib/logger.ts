@@ -27,7 +27,7 @@ function setDefaultArrValues<T>(arr: T[], len: number, value: T): T[] {
 	return arr;
 }
 
-function logAssociatedMessages(logTime: boolean, messages: AssociatedMessage[], indent: number = 0, hasNextMessage: boolean[] = []) {
+function logAssociatedMessages(messages: AssociatedMessage[], indent: number = 0, hasNextMessage: boolean[] = []) {
 	if (logLevel < indent + 2) return;
 
 	for (let i = 0; i < messages.length; i++) {
@@ -38,15 +38,15 @@ function logAssociatedMessages(logTime: boolean, messages: AssociatedMessage[], 
 				return '    ';
 			}
 		}).join('');
-		const timeArr = logTime ? [getTime()]: [];
+		const timeFiller = getTimeFiller();
 		if (i === messages.length - 1) {
-			console.log(...timeArr, `${padding} \\- `, ...messages[i].content);
+			console.log(timeFiller, `${padding} \\- `, ...messages[i].content);
 			hasNextMessage[indent] = false;
 		} else {
-			console.log(...timeArr, `${padding} |- `, ...messages[i].content);
+			console.log(timeFiller, `${padding} |- `, ...messages[i].content);
 			hasNextMessage[indent] = true;
 		}
-		logAssociatedMessages(false, msgMap.get(messages[i]) || [], indent + 1, hasNextMessage);
+		logAssociatedMessages(msgMap.get(messages[i]) || [], indent + 1, hasNextMessage);
 	}
 }
 
@@ -106,23 +106,28 @@ export function logReq(req: express.Request, res: express.Response) {
 		// Log attached messages
 		if (logLevel < 2 || !msgMap.has(res)) return;
 
-		logAssociatedMessages(false, msgMap.get(res)!);
+		logAssociatedMessages(msgMap.get(res)!);
 	});
 }
 
-function getTime() {
+export function getTime() {
 	return chalk.bold(`[${new Date().toLocaleString()}]`);
+}
+
+function getTimeFiller() {
+	return new Array(new Date().toLocaleString().length).fill(' ').join('');
 }
 
 export function logOutgoingReq(req: http.ClientRequest, data: {
 	method: string;
+	target: string;
 }) {
 	const ip = req.path;
 
 	if (logLevel < 1) return;
 
 	console.log(getTime(), ...genURLLog({ 
-		ip: 'localhost',
+		ip: data.target,
 		method: data.method,
 		url: ip,
 		isSend: true
@@ -131,13 +136,16 @@ export function logOutgoingReq(req: http.ClientRequest, data: {
 	// Log attached messages
 	if (logLevel < 2 || !msgMap.has(req)) return;
 
-	logAssociatedMessages(false, msgMap.get(req)!);
+	logAssociatedMessages(msgMap.get(req)!);
 }
 
-export function logAttached(obj: ResponseLike|AssociatedMessage|{}) {
+export function logFixture(obj: ResponseLike|AssociatedMessage|{}, ...name: string[]) {
+	console.log(getTime(), ...name);
+
+	// Log attached messages
 	if (logLevel < 2 || !msgMap.has(obj)) return;
 
-	logAssociatedMessages(true, msgMap.get(obj)!);
+	logAssociatedMessages(msgMap.get(obj)!);
 }
 
 export function transferAttached(from: ResponseLike|AssociatedMessage|{}, to: ResponseLike|AssociatedMessage|{}) {
