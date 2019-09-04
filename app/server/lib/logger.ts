@@ -115,7 +115,7 @@ export function getTime() {
 }
 
 function getTimeFiller() {
-	return new Array(new Date().toLocaleString().length).fill(' ').join('');
+	return new Array(new Date().toLocaleString().length + 2).fill(' ').join('');
 }
 
 export function logOutgoingReq(req: http.ClientRequest, data: {
