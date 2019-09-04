@@ -13,6 +13,11 @@
       "app/server/"
     ]
   },
+  "scripts": {
+    "compile:server": "tsc -p app/server/tsconfig.json",
+    "compile:client": "tsc -p app/client/tsconfig.json",
+    "compile": "npm run compile:server && npm run compile:client"
+  },
   "devDependencies": {
     "@types/body-parser": "^1.17.0",
     "@types/chalk": "^2.2.0",
