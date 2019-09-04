@@ -73,21 +73,20 @@ export function genURLLog({
 	ip?: string; 
 	isSend?: boolean;
 }) {
-	if (statusCode === 200) {
-		return [chalk.green(`[${statusCode}]`), `[${method.toUpperCase()}]`, 
-			chalk.bgGreen(chalk.black(Auth.Secret.redact(url))), 
-				`${isSend ? '<-' : '->'}`, chalk.bold(ip), `(${duration} ms)`];
-	}
-	else if (statusCode === 500) {
-		return [chalk.red(`[${statusCode}]`), `[${method.toUpperCase()}]`, 
-			chalk.bgRed(chalk.black(Auth.Secret.redact(url))), 
-				`${isSend ? '<-' : '->'}`, chalk.bold(ip), `(${duration} ms)`];
-	}
-	else {
-		return [chalk.yellow(`[${statusCode}]`), `[${method.toUpperCase()}]`, 
-			chalk.bgYellow(chalk.black(Auth.Secret.redact(url))), 
-				`${isSend ? '<-' : '->'}`, chalk.bold(ip), `(${duration} ms)`];
-	}
+	const [ statusColor, ipBg ] = (() => {
+		if (statusCode === 200) {
+			return [chalk.green, chalk.bgGreen];
+		}
+		else if (statusCode === 500) {
+			return [chalk.red, chalk.bgRed];
+		}
+		else {
+			return [chalk.yellow, chalk.bgYellow];
+		}
+	})();
+	return [statusColor(`[${statusCode}]`), `[${method.toUpperCase()}]`, 
+		ipBg(chalk.black(Auth.Secret.redact(url))), 
+			`${isSend ? '->' : '<-'}`, chalk.bold(ip), `(${duration} ms)`];
 }
 
 export function logReq(req: express.Request, res: express.Response) {
