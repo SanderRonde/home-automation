@@ -107,7 +107,7 @@ export class JSONSwitches extends ServerComm {
 		}, 1000 * 60);
 		this.props.key = this.props.key || localStorage.getItem('key')!;
 		localStorage.setItem('key', this.props.key!);
-		if (!this.props.json) {
+		if (!this.props.json || Object.keys(this.props.json).length === 0) {
 			this._refreshJSON();
 		}
 	}
