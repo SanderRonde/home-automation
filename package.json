@@ -16,8 +16,8 @@
   "scripts": {
     "compile:server": "tsc -p app/server/tsconfig.json",
     "compile:client": "tsc -p app/client/tsconfig.json",
-    "compile": "npm run compile:server && npm run compile:client",
-    "bundle": "rollup --config rollup.config.js"
+    "bundle": "rollup --config rollup.config.js",
+    "compile": "npm run compile:server && npm run compile:client && npm run bundle"
   },
   "devDependencies": {
     "@types/body-parser": "^1.17.0",
