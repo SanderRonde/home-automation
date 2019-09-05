@@ -117,7 +117,7 @@ class Pinger {
 				} else {
 					// A ping definitely landed, device is home
 				}
-				if (finalState !== this._state) {
+				if (finalState !== this._state && this._state !== null) {
 					this._onChange(finalState);
 				}
 				this._state = finalState;
