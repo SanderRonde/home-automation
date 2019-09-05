@@ -70,6 +70,7 @@ export class KeyvalExternal {
 	private static _requests: ExternalRequest[] = [];
 	private static _db: Database|null = null;
 	private static _apiHandler: APIHandler|null = null;
+	static logObj: any;
 
 	static async init({ db, apiHandler }: { 
 		db: Database, 
@@ -105,13 +106,13 @@ export class KeyvalExternal {
 		}
 	}
 
-	static async set(logObj: any, key: string, value: string) {
+	static async set(key: string, value: string) {
 		return new Promise((resolve) => {
 			const req: ExternalRequest = {
 				type: 'set',
 				key,
 				value,
-				logObj,
+				logObj: this.logObj,
 				resolver: resolve
 			};
 			if (this._db) {
@@ -122,12 +123,12 @@ export class KeyvalExternal {
 		});
 	}
 
-	static async get<V>(logObj: any, key: string) {
+	static async get<V>(key: string) {
 		return new Promise<V>((resolve) => {
 			const req: ExternalRequest = {
 				type: 'get',
 				key,
-				logObj,
+				logObj: this.logObj,
 				resolver: resolve
 			};
 			if (this._db) {

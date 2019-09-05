@@ -269,11 +269,34 @@ export interface ModuleHookables {
 	script: typeof ScriptExternal;
 }
 
-const hookables: ModuleHookables = {
-	rgb: RGBExternal,
-	keyval: KeyvalExternal,
-	script: ScriptExternal
+function proxyHookable<T extends {
+	logObj: any;
+}>(logObj: any, base: T) {
+	return new Proxy(base, {
+		get(target, property) {
+			const value = target[property as keyof typeof target];
+			if (typeof value !== 'function') {
+				return value;
+			}
+
+			return new Proxy(target, {
+				get(_, prop, receiver) {
+					if (prop === 'logObj') return logObj;
+					return Reflect.get(target, prop, receiver);
+				}
+			});
+		}
+	})
 }
+
+function createHookables(lobObj: any): ModuleHookables {
+	return {
+		rgb: proxyHookable(lobObj, RGBExternal),
+		keyval: proxyHookable(lobObj, KeyvalExternal),
+		script: proxyHookable(lobObj, ScriptExternal),
+	}
+}
+
 async function handleHooks(newState: HOME_STATE, name: string) {
 	if (!(name in hooks)) {
 		return;
@@ -292,8 +315,8 @@ async function handleHooks(newState: HOME_STATE, name: string) {
 	const logObj = {};
 	for (let i = 0; i < changeHooks.length; i++) {
 		const { name, fn } = changeHooks[i];
-		await fn(hookables, attachMessage(logObj, 'Hook', chalk.bold(i + ''), 
-			':', chalk.bold(name)));
+		await fn(createHookables(attachMessage(logObj, 'Hook', chalk.bold(i + ''), 
+		':', chalk.bold(name))));
 	}
 	logFixture(logObj, chalk.cyan('[hook]'), 
 		'State for', chalk.bold(name), 'changed to', chalk.bold(newState));

@@ -300,6 +300,8 @@ export class RGBExternal {
 		}
 	}
 
+	static logObj: any;
+
 	private static async _handleRequest(request: ExternalRequest) {
 		const { logObj, resolver } = request;
 		const resDummy = new ResDummy();
@@ -336,12 +338,12 @@ export class RGBExternal {
 		resolver();
 	}
 
-	static async color(logObj: any, color: string) {
+	static async color(color: string) {
 		return new Promise((resolve) => {
 			const req: ExternalRequest = {
 				type: 'color',
 				color: color,
-				logObj,
+				logObj: this.logObj,
 				resolver: resolve
 			};
 			if (this._ready) {
@@ -352,14 +354,14 @@ export class RGBExternal {
 		});
 	}
 
-	static async rgb(logObj: any, red: string, green: string, blue: string) {
+	static async rgb(red: string, green: string, blue: string) {
 		return new Promise((resolve) => {
 			const req: ExternalRequest = {
 				type: 'color',
 				r: red,
 				g: green,
 				b: blue,
-				logObj,
+				logObj: this.logObj,
 				resolver: resolve
 			};
 			if (this._ready) {
@@ -370,12 +372,12 @@ export class RGBExternal {
 		});
 	}
 
-	static async power(logObj: any, state: 'on'|'off') {
+	static async power(state: 'on'|'off') {
 		return new Promise((resolve) => {
 			const req: ExternalRequest = {
 				type: 'power',
 				state: state,
-				logObj,
+				logObj: this.logObj,
 				resolver: resolve
 			};
 			if (this._ready) {
@@ -386,14 +388,14 @@ export class RGBExternal {
 		});
 	}
 
-	static async pattern(logObj: any, name: string, speed?: number, transition?: 'fade'|'jump'|'strobe') {
+	static async pattern(name: string, speed?: number, transition?: 'fade'|'jump'|'strobe') {
 		return new Promise((resolve) => {
 			const req: ExternalRequest = {
 				type: 'pattern',
 				name,
 				speed,
 				transition,
-				logObj,
+				logObj: this.logObj,
 				resolver: resolve
 			};
 			if (this._ready) {

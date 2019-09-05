@@ -2,11 +2,11 @@ import { ModuleHookables } from "../modules/home-detector";
 
 interface ChangeHook {
 	name: string;
-	fn: ((hookables: ModuleHookables, logObj: any) => void);
+	fn: ((hookables: ModuleHookables) => void);
 };
 
 function createHook(name: string, 
-	fn: (hookables: ModuleHookables, logObj: any) => void) {
+	fn: (hookables: ModuleHookables) => void) {
 		return {
 			name, fn
 		}
@@ -14,14 +14,14 @@ function createHook(name: string,
 
 export default {
 	"***REMOVED***": {
-		"home": [createHook('lights-on', (modules, logObj) => {
-			return modules.keyval.set(logObj, 'room.lights.ceiling', '1');
+		"home": [createHook('lights-on', (modules) => {
+			return modules.keyval.set('room.lights.ceiling', '1');
 		})],
 		"away": [
-			createHook('lights-off', (modules, logObj) => {
-				return modules.keyval.set(logObj, 'room.lights', '0');
-			}), createHook('speakers-off', (modules, logObj) => {
-				return modules.keyval.set(logObj, 'room.speakers', '0');
+			createHook('lights-off', (modules) => {
+				return modules.keyval.set('room.lights', '0');
+			}), createHook('speakers-off', (modules) => {
+				return modules.keyval.set('room.speakers', '0');
 			})
 		]
 	}

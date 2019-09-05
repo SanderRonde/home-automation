@@ -20,6 +20,8 @@ export class ScriptExternal {
 	private static _config: Config|null = null;
 	private static _requests: ExternalRequest[] = [];
 
+	static logObj: any;
+
 	static async init({ config }: { config: Config }) {
 		this._config = config;
 		for (const req of this._requests) {
@@ -35,12 +37,12 @@ export class ScriptExternal {
 		}, this._config!);
 	}
 
-	static async script(logObj: any, name: string) {
+	static async script(name: string) {
 		return new Promise((resolve) => {
 			const req: ExternalRequest = {
 				type: 'script',
 				name,
-				logObj,
+				logObj: this.logObj,
 				resolver: resolve
 			};
 			if (this._config) {
