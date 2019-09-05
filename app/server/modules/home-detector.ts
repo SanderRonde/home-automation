@@ -263,11 +263,30 @@ export class WebpageHandler {
 	}
 }
 
-export interface ModuleHookables {
+interface ModuleHookables {
 	rgb: typeof RGBExternal;
 	keyval: typeof KeyvalExternal;
 	script: typeof ScriptExternal;
 }
+
+interface ChangeHook {
+	name: string;
+	fn: ((hookables: ModuleHookables) => void);
+};
+
+export interface HomeHooks {
+	[key: string]: {
+		home?: ChangeHook[];
+		away?: ChangeHook[];
+	}
+}
+
+export function createHook(name: string, 
+	fn: (hookables: ModuleHookables) => void) {
+		return {
+			name, fn
+		}
+	}
 
 function proxyHookable<T extends {
 	logObj: any;

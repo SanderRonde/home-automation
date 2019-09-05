@@ -1,16 +1,4 @@
-import { ModuleHookables } from "../modules/home-detector";
-
-interface ChangeHook {
-	name: string;
-	fn: ((hookables: ModuleHookables) => void);
-};
-
-function createHook(name: string, 
-	fn: (hookables: ModuleHookables) => void) {
-		return {
-			name, fn
-		}
-	}
+import { createHook, HomeHooks } from "../modules/home-detector";
 
 export default {
 	"***REMOVED***": {
@@ -27,9 +15,4 @@ export default {
 			})
 		]
 	}
-} as {
-	[key: string]: {
-		home?: ChangeHook[];
-		away?: ChangeHook[];
-	}
-}
+} as HomeHooks;
