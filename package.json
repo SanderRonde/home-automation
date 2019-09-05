@@ -16,7 +16,8 @@
   "scripts": {
     "compile:server": "tsc -p app/server/tsconfig.json",
     "compile:client": "tsc -p app/client/tsconfig.json",
-    "compile": "npm run compile:server && npm run compile:client"
+    "compile": "npm run compile:server && npm run compile:client",
+    "bundle": "webpack --config webpack.config.js"
   },
   "devDependencies": {
     "@types/body-parser": "^1.17.0",
@@ -30,7 +31,9 @@
     "@types/serialport": "^7.0.4",
     "@types/serve-static": "^1.13.2",
     "@types/ws": "^6.0.3",
-    "typescript": "^3.5.3"
+    "typescript": "^3.5.3",
+    "webpack": "^4.39.3",
+    "webpack-cli": "^3.3.7"
   },
   "dependencies": {
     "@serialport/parser-readline": "^2.0.2",
