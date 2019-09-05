@@ -4,13 +4,8 @@ declare const self: ServiceworkerSelf;
 
 const CACHE_NAME = 'home-detector';
 const CACHE_STATIC = [
-	'/home-detector/components/home-detector-display/home-detector-display.js',
-	'/home-detector/components/home-detector-display/home-detector-display.html.js',
-	'/home-detector/components/home-detector-display/home-detector-display.css.js',
-	
-	'/shared/server-comm/server-comm.js',
 	'/home-detector/favicon.ico',
-	'/home-detector/home-detector.js'
+	'/home-detector/home-detector.bundle.js'
 ];
 
 self.addEventListener('install', (event) => {
@@ -43,7 +38,7 @@ function indexPage() {
 		</head>
 		<body style="margin: 0">
 			<home-detector-display></home-detector-display>
-			<script type="module" src="/home-detector/home-detector.js"></script>
+			<script type="module" src="/home-detector/home-detector.bundle.js"></script>
 		</body>
 	</html>`, {
 		headers: {

@@ -4,21 +4,8 @@ declare const self: ServiceworkerSelf;
 
 const CACHE_NAME = 'keyval';
 const CACHE_STATIC = [
-	'/keyval/components/json-boolean/json-boolean.templates.js',
-	'/keyval/components/json-boolean/json-boolean.js',
-	'/keyval/components/json-object/json-object.templates.js',
-	'/keyval/components/json-object/json-object.js',
-	'/keyval/components/json-switches/json-switches.templates.js',
-	'/keyval/components/json-switches/json-switches.js',
-	'/keyval/components/json-value/json-value.templates.js',
-	'/keyval/components/json-value/json-value.js',
-	'/keyval/components/power-switch/power-switch.templates.js',
-	'/keyval/components/power-switch/power-switch.js',
-	'/shared/css-util/css-util.js',
-	'/shared/message-toast/message-toast.js',
-	'/shared/server-comm/server-comm.js',
 	'/keyval/favicon.ico',
-	'/keyval/keyval.js',
+	'/keyval/keyval.bundle.js',
 	'/keyval/static/manifest.json',
 	'/keyval/static/images/48.png',
 	'/keyval/static/images/72.png',
@@ -60,7 +47,7 @@ function indexPage() {
 		</head>
 		<body style="margin: 0">
 			<json-switches></json-switches>
-			<script type="module" src="./keyval.js"></script>
+			<script type="module" src="./keyval.bundle.js"></script>
 		</body>
 	</html>`, {
 		headers: {

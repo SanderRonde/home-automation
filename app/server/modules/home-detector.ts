@@ -241,7 +241,7 @@ async function homeDetectorHTML(json: string) {
 		</head>
 		<body style="margin: 0">
 			<home-detector-display json='${json}' key="${await Auth.Secret.getKey()}"></home-detector-display>
-			<script type="module" src="/home-detector/home-detector.js"></script>
+			<script type="module" src="/home-detector/home-detector.bundle.js"></script>
 		</body>
 	</html>`;
 }

@@ -246,7 +246,7 @@ async function keyvalHTML(json: string) {
 		</head>
 		<body style="margin: 0">
 			<json-switches json='${json}' key="${await Auth.Secret.getKey()}"></json-switches>
-			<script type="module" src="/keyval/keyval.js"></script>
+			<script type="module" src="/keyval/keyval.bundle.js"></script>
 		</body>
 	</html>`;
 }

@@ -425,7 +425,7 @@ async function rgbHTML() {
 		</head>
 		<body style="margin: 0">
 			<rgb-controller key="${await Auth.Secret.getKey()}" patterns='${patternPreviews}'></rgb-controller>
-			<script type="module" src="/rgb/rgb.js"></script>
+			<script type="module" src="/rgb/rgb.bundle.js"></script>
 		</body>
 	</html>`;
 }

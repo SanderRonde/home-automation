@@ -4,35 +4,8 @@ declare const self: ServiceworkerSelf;
 
 const CACHE_NAME = 'rgb';
 const CACHE_STATIC = [
-	'/rgb/components/color-button/color-button.css.js',
-	'/rgb/components/color-button/color-button.html.js',
-	'/rgb/components/color-button/color-button.js',
-	'/rgb/components/color-controls/color-controls.css.js',
-	'/rgb/components/color-controls/color-controls.html.js',
-	'/rgb/components/color-controls/color-controls.js',
-	'/rgb/components/color-display/color-display.css.js',
-	'/rgb/components/color-display/color-display.html.js',
-	'/rgb/components/color-display/color-display.js',
-	'/rgb/components/pattern-button/pattern-button.css.js',
-	'/rgb/components/pattern-button/pattern-button.html.js',
-	'/rgb/components/pattern-button/pattern-button.js',
-	'/rgb/components/pattern-controls/pattern-controls.css.js',
-	'/rgb/components/pattern-controls/pattern-controls.html.js',
-	'/rgb/components/pattern-controls/pattern-controls.js',
-	'/rgb/components/power-button/power-button.css.js',
-	'/rgb/components/power-button/power-button.html.js',
-	'/rgb/components/power-button/power-button.js',
-	'/rgb/components/rgb-controller/rgb-controller.templates.js',
-	'/rgb/components/rgb-controller/rgb-controller.js',
-	'/rgb/components/rgb-controls/rgb-controls.css.js',
-	'/rgb/components/rgb-controls/rgb-controls.html.js',
-	'/rgb/components/rgb-controls/rgb-controls.js',
-	
-	'/shared/css-util/css-util.js',
-	'/shared/message-toast/message-toast.js',
-	'/shared/server-comm/server-comm.js',
 	'/rgb/favicon.ico',
-	'/rgb/rgb.js',
+	'/rgb/rgb.bundle.js',
 	'/rgb/static/manifest.json',
 	'/rgb/static/images/48.png',
 	'/rgb/static/images/72.png',
@@ -76,7 +49,7 @@ function indexPage() {
 		</head>
 		<body style="margin: 0">
 			<rgb-controller></rgb-controller>
-			<script type="module" src="/rgb/rgb.js"></script>
+			<script type="module" src="/rgb/rgb.bundle.js"></script>
 		</body>
 	</html>`, {
 		headers: {
