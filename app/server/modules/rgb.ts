@@ -1,6 +1,6 @@
 import { errorHandle, requireParams, auth, authCookie } from '../lib/decorators';
 import { Discovery, Control, CustomMode, TransitionTypes } from 'magic-home';
-import { attachMessage, ResDummy } from '../lib/logger';
+import { attachMessage, ResDummy, getTime } from '../lib/logger';
 import { AppWrapper } from '../lib/routes';
 import { ResponseLike } from './multi';
 import { Auth } from '../lib/auth';
@@ -9,11 +9,13 @@ import chalk from 'chalk';
 
 let clients: Control[]|null = null;
 export async function scanRGBControllers() {
-	clients = (await new Discovery().scan(1000)).map((client) => {
+	clients = (await new Discovery().scan(10000)).map((client) => {
 		return new Control(client.address, {
 			wait_for_reply: false
 		});
 	});
+	console.log(getTime(), chalk.cyan(`[rgb]`),
+		'Found', chalk.bold(clients.length + ''), 'clients');
 }
 
 type CustomPattern = 'rgb'|'rainbow'|'christmas'|'strobe'|'darkColors'|
@@ -121,8 +123,10 @@ class APIHandler {
 		const hexColor = colorList[color as keyof typeof colorList];
 		const { r, g, b } = hexToRGB(hexColor);
 
-		attachMessage(attachMessage(res, `rgb(${r}, ${g}, ${b})`),
-			chalk.bgHex(hexColor)('   '));
+		attachMessage(attachMessage(attachMessage(res, `rgb(${r}, ${g}, ${b})`),
+			chalk.bgHex(hexColor)('   ')), 
+				`Updated ${clients!.length} clients`);
+		
 
 		await Promise.all(clients!.map(async (client) => {
 			return Promise.all([
@@ -157,14 +161,14 @@ class APIHandler {
 		const redNum = Math.min(255, Math.max(0, parseInt(red, 10)));
 		const greenNum = Math.min(255, Math.max(0, parseInt(green, 10)));
 		const blueNum = Math.min(255, Math.max(0, parseInt(blue, 10)));
-		attachMessage(attachMessage(res, `rgb(${red}, ${green}, ${blue})`),
+		attachMessage(attachMessage(attachMessage(res, `rgb(${red}, ${green}, ${blue})`),
 			chalk.bgHex(`#${
 				this.toHex(redNum)
 			}${
 				this.toHex(greenNum)
 			}${
 				this.toHex(blueNum)
-			}`)('   '));
+			}`)('   ')), `Updated ${clients!.length} clients`);
 
 		await Promise.all(clients!.map(async (client) => {
 			return Promise.all([
@@ -183,7 +187,8 @@ class APIHandler {
 		power: string;
 		auth?: string;
 	}) {
-		attachMessage(res, `Turned ${power}`);
+		attachMessage(attachMessage(res, `Turned ${power}`),
+			`Updated ${clients!.length} clients`);
 		await Promise.all(clients!.map(c => power === 'on' ? c.turnOn() : c.turnOff()));
 		res.status(200).end();
 	}
@@ -222,7 +227,9 @@ class APIHandler {
 			pattern = this.overrideTransition(pattern, transition as TransitionTypes);
 		}
 
-		attachMessage(res, `Running pattern ${patternName}`);
+		attachMessage(
+			attachMessage(res, `Running pattern ${patternName}`),
+			`Updated ${clients!.length} clients`);
 		try {
 			await Promise.all(clients!.map((c) => {
 				return Promise.all([
@@ -244,7 +251,8 @@ class APIHandler {
 		function: string;
 		auth?: string;
 	}) {
-		attachMessage(res, `Running function ${fn}`);
+		attachMessage(attachMessage(res, `Running function ${fn}`),
+			`Updated ${clients!.length} clients`);
 		await Promise.all(clients!.map((c) => {
 			c.startEffectMode()
 		}));
