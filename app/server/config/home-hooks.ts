@@ -1,4 +1,11 @@
-import { createHook, HomeHooks } from "../modules/home-detector";
+import { HomeHooks, ModuleHookables } from "../modules/home-detector";
+
+function createHook(name: string, 
+	fn: (hookables: ModuleHookables) => void) {
+		return {
+			name, fn
+		}
+	}
 
 export default {
 	"***REMOVED***": {
