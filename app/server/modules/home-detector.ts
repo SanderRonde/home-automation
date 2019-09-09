@@ -13,10 +13,10 @@ import { Auth } from '../lib/auth';
 import * as ping from 'ping';
 import chalk from 'chalk';
 
-const AWAY_PING_INTERVAL = 7;
+const AWAY_PING_INTERVAL = 5;
 const HOME_PING_INTERVAL = 60;
 const CHANGE_PING_INTERVAL = 1;
-const CHANGE_MIN_CONSECUTIVE_PINGS = 10;
+const AWAY_MIN_CONSECUTIVE_PINGS = 20;
 
 const enum HOME_STATE {
 	HOME = 'home',
@@ -80,7 +80,7 @@ class Pinger {
 			state: HOME_STATE;
 		}>[] = [];
 
-		for (let i = 0; i < CHANGE_MIN_CONSECUTIVE_PINGS; i++) {
+		for (let i = 0; i < AWAY_MIN_CONSECUTIVE_PINGS; i++) {
 			pings.push(this._ping(ip));
 			await wait(CHANGE_PING_INTERVAL * 1000);
 		}
