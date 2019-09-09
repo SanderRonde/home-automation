@@ -264,48 +264,27 @@ export class WebpageHandler {
 }
 
 export interface ModuleHookables {
-	rgb: typeof RGBExternal;
-	keyval: typeof KeyvalExternal;
-	script: typeof ScriptExternal;
+	rgb: RGBExternal;
+	keyval: KeyvalExternal;
+	script: ScriptExternal;
 }
-
-interface ChangeHook {
-	name: string;
-	fn: ((hookables: ModuleHookables) => void);
-};
 
 export interface HomeHooks {
 	[key: string]: {
-		home?: ChangeHook[];
-		away?: ChangeHook[];
+		home?: {
+			[name: string]: ((hookables: ModuleHookables) => void);
+		};
+		away?: {
+			[name: string]: ((hookables: ModuleHookables) => void);
+		}
 	}
 }
 
-function proxyHookable<T extends {
-	logObj: any;
-}>(logObj: any, base: T) {
-	return new Proxy(base, {
-		get(target, property) {
-			const value = target[property as keyof typeof target];
-			if (typeof value !== 'function') {
-				return value;
-			}
-
-			return new Proxy(target, {
-				get(_, prop, receiver) {
-					if (prop === 'logObj') return logObj;
-					return Reflect.get(target, prop, receiver);
-				}
-			});
-		}
-	})
-}
-
-function createHookables(lobObj: any): ModuleHookables {
+function createHookables(logObj: any): ModuleHookables {
 	return {
-		rgb: proxyHookable(lobObj, RGBExternal),
-		keyval: proxyHookable(lobObj, KeyvalExternal),
-		script: proxyHookable(lobObj, ScriptExternal),
+		rgb: new RGBExternal(logObj),
+		keyval: new KeyvalExternal(logObj),
+		script: new ScriptExternal(logObj),
 	}
 }
 
@@ -324,10 +303,11 @@ async function handleHooks(newState: HOME_STATE, name: string) {
 	})();
 	if (!changeHooks) return;
 
+	let index = 0;
 	const logObj = {};
-	for (let i = 0; i < changeHooks.length; i++) {
-		const { name, fn } = changeHooks[i];
-		await fn(createHookables(attachMessage(logObj, 'Hook', chalk.bold(i + ''), 
+	for (const name in changeHooks) {
+		const fn = changeHooks[name];
+		await fn(createHookables(attachMessage(logObj, 'Hook', chalk.bold(index++ + ''), 
 		':', chalk.bold(name))));
 	}
 	logFixture(logObj, chalk.cyan('[hook]'), 

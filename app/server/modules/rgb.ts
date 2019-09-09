@@ -300,7 +300,7 @@ export class RGBExternal {
 		}
 	}
 
-	static logObj: any;
+	constructor(private _logObj: any) { }
 
 	private static async _handleRequest(request: ExternalRequest) {
 		const { logObj, resolver } = request;
@@ -338,70 +338,70 @@ export class RGBExternal {
 		resolver();
 	}
 
-	static async color(color: string) {
+	async color(color: string) {
 		return new Promise((resolve) => {
 			const req: ExternalRequest = {
 				type: 'color',
 				color: color,
-				logObj: this.logObj,
+				logObj: this._logObj,
 				resolver: resolve
 			};
-			if (this._ready) {
-				this._handleRequest(req);
+			if (RGBExternal._ready) {
+				RGBExternal._handleRequest(req);
 			} else {
-				this._requests.push(req)
+				RGBExternal._requests.push(req)
 			}
 		});
 	}
 
-	static async rgb(red: string, green: string, blue: string) {
+	async rgb(red: string, green: string, blue: string) {
 		return new Promise((resolve) => {
 			const req: ExternalRequest = {
 				type: 'color',
 				r: red,
 				g: green,
 				b: blue,
-				logObj: this.logObj,
+				logObj: this._logObj,
 				resolver: resolve
 			};
-			if (this._ready) {
-				this._handleRequest(req);
+			if (RGBExternal._ready) {
+				RGBExternal._handleRequest(req);
 			} else {
-				this._requests.push(req)
+				RGBExternal._requests.push(req)
 			}
 		});
 	}
 
-	static async power(state: 'on'|'off') {
+	async power(state: 'on'|'off') {
 		return new Promise((resolve) => {
 			const req: ExternalRequest = {
 				type: 'power',
 				state: state,
-				logObj: this.logObj,
+				logObj: this._logObj,
 				resolver: resolve
 			};
-			if (this._ready) {
-				this._handleRequest(req);
+			if (RGBExternal._ready) {
+				RGBExternal._handleRequest(req);
 			} else {
-				this._requests.push(req)
+				RGBExternal._requests.push(req)
 			}
 		});
 	}
 
-	static async pattern(name: string, speed?: number, transition?: 'fade'|'jump'|'strobe') {
+	async pattern(name: string, speed?: number, transition?: 'fade'|'jump'|'strobe') {
 		return new Promise((resolve) => {
 			const req: ExternalRequest = {
 				type: 'pattern',
 				name,
 				speed,
 				transition,
-				logObj: this.logObj,
+				logObj: this._logObj,
 				resolver: resolve
 			};
-			if (this._ready) {
-				this._handleRequest(req);
+			if (RGBExternal._ready) {
+				RGBExternal._handleRequest(req);
 			} else {
-				this._requests.push(req)
+				RGBExternal._requests.push(req)
 			}
 		});
 	}

@@ -20,7 +20,7 @@ export class ScriptExternal {
 	private static _config: Config|null = null;
 	private static _requests: ExternalRequest[] = [];
 
-	static logObj: any;
+	constructor(private _logObj: any) {}
 
 	static async init({ config }: { config: Config }) {
 		this._config = config;
@@ -37,18 +37,18 @@ export class ScriptExternal {
 		}, this._config!);
 	}
 
-	static async script(name: string) {
+	async script(name: string) {
 		return new Promise((resolve) => {
 			const req: ExternalRequest = {
 				type: 'script',
 				name,
-				logObj: this.logObj,
+				logObj: this._logObj,
 				resolver: resolve
 			};
-			if (this._config) {
-				this._handleRequest(req);
+			if (ScriptExternal._config) {
+				ScriptExternal._handleRequest(req);
 			} else {
-				this._requests.push(req);
+				ScriptExternal._requests.push(req);
 			}
 		});
 	}
