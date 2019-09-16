@@ -1,6 +1,6 @@
+import { setLogLevel, ProgressLogger } from './lib/logger';
 import { initRoutes, initMiddleware } from './lib/routes';
 import { hasArg, getArg, getNumberArg } from './lib/io';
-import { setLogLevel } from './lib/logger';
 import { WSSimulator } from './lib/ws';
 import * as express from 'express';
 import * as path from 'path';
@@ -32,6 +32,7 @@ class WebServer {
 	private _server!: http.Server;
 
 	private _config: Config;
+	private _initLogger: ProgressLogger = new ProgressLogger('Server start', 14);
 
 	private _setConfigDefaults(config: PartialConfig): Config {
 		return {
@@ -53,17 +54,26 @@ class WebServer {
 
 	constructor(config: PartialConfig = {}) {
 		this._config = this._setConfigDefaults(config);
+		this._initLogger.increment('IO');
 	}
 
 	public async init() {
 		this.app = express();
+		this._initLogger.increment('express');
 		await initMiddleware(this.app);
+		this._initLogger.increment('middleware');
 		await this._initServers();
+		this._initLogger.increment('servers');
 		await initRoutes({ 
 			app: this.app, 
 			websocketSim: this.websocketSim, 
-			config: this._config 
+			config: this._config ,
+			// This is just for semi-versioning of files
+			// to prevent caching
+			randomNum: Math.round(Math.random() * 1000000),
+			initLogger: this._initLogger
 		});
+		this._initLogger.increment('routes');
 		setLogLevel(this._config.log.level);
 		this._listen();
 	}
@@ -74,11 +84,14 @@ class WebServer {
 			this.websocketSim.handler(req, res, next);
 		});
 		this._server = http.createServer(this.app);
+		this._initLogger.increment('HTTP server');
 	}
 
 	private _listen() {
 		// HTTPS is unused for now
 		this._server.listen(this._config.ports.http, () => {
+			this._initLogger.increment('listening');
+			this._initLogger.done();
 			console.log(`HTTP server listening on port ${this._config.ports.http}`);
 		});
 	}

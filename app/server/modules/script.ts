@@ -87,7 +87,12 @@ class APIHandler {
 	}
 }
 
-export function initScriptRoutes(app: AppWrapper, config: Config) {
+export function initScriptRoutes({ 
+	app, config 
+}: { 
+	app: AppWrapper; 
+	config: Config; 
+}) {
 	app.post('/script/:name', async (req, res, _next) => {
 		await APIHandler.script(res, {...req.params, ...req.body}, config);
 	});

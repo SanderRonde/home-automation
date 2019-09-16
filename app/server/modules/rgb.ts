@@ -417,7 +417,7 @@ const patternPreviews = JSON.stringify(Object.keys(patterns).map((key) => {
 	}
 }));
 
-async function rgbHTML() {
+async function rgbHTML(randomNum: number) {
 	return `<html style="background-color: rgb(70,70,70);">
 		<head>
 			<link rel="icon" href="/rgb/favicon.ico" type="image/x-icon" />
@@ -427,7 +427,7 @@ async function rgbHTML() {
 		</head>
 		<body style="margin: 0">
 			<rgb-controller key="${await Auth.Secret.getKey()}" patterns='${patternPreviews}'></rgb-controller>
-			<script type="module" src="/rgb/rgb.bundle.js"></script>
+			<script type="module" src="/rgb/rgb.bundle.js?n=${randomNum}"></script>
 		</body>
 	</html>`;
 }
@@ -435,15 +435,18 @@ async function rgbHTML() {
 class WebpageHandler {
 	@errorHandle
 	@authCookie
-	public static async index(res: ResponseLike, _req: express.Request) {
+	public static async index(res: ResponseLike, _req: express.Request, randomNum: number) {
 		res.status(200);
 		res.contentType('.html');
-		res.write(await rgbHTML());
+		res.write(await rgbHTML(randomNum));
 		res.end();
 	}
 }
 
-export async function initRGBRoutes(app: AppWrapper) {
+export async function initRGBRoutes({ app, randomNum }: { 
+	app: AppWrapper; 
+	randomNum: number; 
+}) {
 	await scanRGBControllers();
 	setInterval(scanRGBControllers, 1000 * 60 * 60);
 	await RGBExternal.init();
@@ -467,7 +470,7 @@ export async function initRGBRoutes(app: AppWrapper) {
 		await APIHandler.refresh(res);
 	});
 	app.all('/rgb', async (req, res) => {
-		await WebpageHandler.index(res, req);
+		await WebpageHandler.index(res, req, randomNum);
 	});
 }
 

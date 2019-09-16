@@ -1,9 +1,9 @@
 import { initRGBRoutes, scanRGBControllers } from '../modules/rgb';
+import { logReq, attachMessage, ProgressLogger } from './logger';
 import { initMultiRoutes, ResponseLike } from '../modules/multi';
 import { initHomeDetector } from '../modules/home-detector';
 import { initKeyValRoutes } from '../modules/keyval';
 import { initScriptRoutes } from '../modules/script';
-import { logReq, attachMessage } from './logger';
 import * as pathToRegexp from 'path-to-regexp';
 import * as cookieParser from 'cookie-parser';
 import * as serveStatic from 'serve-static';
@@ -167,19 +167,49 @@ export async function initMiddleware(app: express.Express) {
 }
 
 export async function initRoutes({ 
-	app, websocketSim, config 
+	app, websocketSim, config, randomNum, initLogger
 }: { 
 	app: express.Express; 
 	websocketSim: WSSimulator; 
-	config: Config; 
+	config: Config;
+	randomNum: number;
+	initLogger: ProgressLogger;
 }) {
 	const wrappedApp = new AppWrapper(app);
-	await initKeyValRoutes(wrappedApp, websocketSim, await new Database('keyval.json').init());
-	initScriptRoutes(wrappedApp, config);
-	await initRGBRoutes(wrappedApp);
-	await Auth.initRoutes(wrappedApp, config);
-	initMultiRoutes(wrappedApp);
-	initHomeDetector(wrappedApp, await new Database('home-detector.json').init());
+	const routeSettings = {
+		app: wrappedApp,
+		websocket: websocketSim,
+		randomNum, config
+	};
+
+	await Promise.all([
+		await (async () => {
+			await Auth.initRoutes({ ...routeSettings });
+			initLogger.increment('/auth');
+		})(),
+		await (async () => {
+			await initKeyValRoutes({ ...routeSettings, db: await new Database('keyval.json').init() });
+			initLogger.increment('/keyval');
+		})(),
+		await (async () => {
+			await initScriptRoutes({ ...routeSettings });
+			initLogger.increment('/script');
+		})(),
+		await (async () => {
+			await initRGBRoutes({ ...routeSettings });
+			initLogger.increment('/rgb');
+		})(),
+		await (async () => {
+			await initMultiRoutes({ ...routeSettings });
+			initLogger.increment('/multi');
+		})(),
+		await (async () => {
+			await initHomeDetector({ ...routeSettings, db: await new Database('home-detector.json').init() });
+			initLogger.increment('/home-detector');
+		})()
+	]);
+
+	initLogger.increment('routes');
 	
 	app.post('/scan', (_req, res) => {
 		scanRGBControllers();

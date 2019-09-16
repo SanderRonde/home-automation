@@ -232,7 +232,7 @@ class APIHandler {
 	}
 }
 
-async function homeDetectorHTML(json: string) {
+async function homeDetectorHTML(json: string, randomNum: number) {
 	return `<html style="background-color: rgb(40, 40, 40);">
 		<head>
 			<link rel="icon" href="/home-detector/favicon.ico" type="image/x-icon" />
@@ -241,16 +241,18 @@ async function homeDetectorHTML(json: string) {
 		</head>
 		<body style="margin: 0">
 			<home-detector-display json='${json}' key="${await Auth.Secret.getKey()}"></home-detector-display>
-			<script type="module" src="/home-detector/home-detector.bundle.js"></script>
+			<script type="module" src="/home-detector/home-detector.bundle.js?n=${randomNum}"></script>
 		</body>
 	</html>`;
 }
 
 export class WebpageHandler {
 	private _detector: Detector;
+	private _randomNum: number;
 
-	constructor({ detector }: { detector: Detector }) {
+	constructor({ detector, randomNum }: { randomNum: number; detector: Detector }) {
 		this._detector = detector;
+		this._randomNum = randomNum;
 	}
 	
 	@errorHandle
@@ -258,7 +260,8 @@ export class WebpageHandler {
 	public async index(res: ResponseLike, _req: express.Request) {
 		res.status(200);
 		res.contentType('.html');
-		res.write(await homeDetectorHTML(JSON.stringify(this._detector.getAll())));
+		res.write(await homeDetectorHTML(
+			JSON.stringify(this._detector.getAll()), this._randomNum));
 		res.end();
 	}
 }
@@ -314,7 +317,13 @@ async function handleHooks(newState: HOME_STATE, name: string) {
 		'State for', chalk.bold(name), 'changed to', chalk.bold(newState));
 }
 
-export function initHomeDetector(app: AppWrapper, db: Database) {
+export function initHomeDetector({ 
+	app, db, randomNum 
+}: { 
+	app: AppWrapper; 
+	db: Database; 
+	randomNum: number; 
+}) {
 	Detector.addListener(null, (newState, name) => {
 		console.log(getTime(), chalk.cyan(`[device:${name}]`, newState === HOME_STATE.HOME ?
 			chalk.bold(chalk.blue('now home')) : chalk.blue('just left')));
@@ -325,7 +334,7 @@ export function initHomeDetector(app: AppWrapper, db: Database) {
 
 	const detector = new Detector({ db });
 	const apiHandler = new APIHandler({ detector });
-	const webpageHandler = new WebpageHandler({ detector });
+	const webpageHandler = new WebpageHandler({ randomNum, detector });
 
 	app.post('/home-detector/all', async (req, res) => {
 		await apiHandler.getAll(res, {...req.params, ...req.body});

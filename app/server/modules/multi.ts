@@ -111,7 +111,7 @@ interface MultiRequestRequest {
 	method: string;
 }
 
-export function initMultiRoutes(app: AppWrapper) {
+export function initMultiRoutes({ app }: { app: AppWrapper }) {
 	app.app.post('/multi', async (req, res) => {
 		const { requests } = req.body as {
 			requests: MultiRequestRequest[];

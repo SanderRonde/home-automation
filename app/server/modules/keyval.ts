@@ -238,7 +238,7 @@ class APIHandler {
 	}
 }
 
-async function keyvalHTML(json: string) {
+async function keyvalHTML(json: string, randomNum: number) {
 	return `<html style="background-color: rgb(70,70,70);">
 		<head>
 			<link rel="icon" href="/keyval/favicon.ico" type="image/x-icon" />
@@ -248,16 +248,18 @@ async function keyvalHTML(json: string) {
 		</head>
 		<body style="margin: 0">
 			<json-switches json='${json}' key="${await Auth.Secret.getKey()}"></json-switches>
-			<script type="module" src="/keyval/keyval.bundle.js"></script>
+			<script type="module" src="/keyval/keyval.bundle.js?n=${randomNum}"></script>
 		</body>
 	</html>`;
 }
 
 export class WebpageHandler {
 	private _db: Database
+	private _randomNum: number;
 
-	constructor({ db }: { db: Database }) {
+	constructor({ db, randomNum }: { randomNum: number; db: Database }) {
 		this._db = db;
+		this._randomNum = randomNum;
 	}
 	
 	@errorHandle
@@ -265,7 +267,7 @@ export class WebpageHandler {
 	public async index(res: ResponseLike, _req: express.Request) {
 		res.status(200);
 		res.contentType('.html');
-		res.write(await keyvalHTML(await this._db.json(true)));
+		res.write(await keyvalHTML(await this._db.json(true), this._randomNum));
 		res.end();
 	}
 }
@@ -309,11 +311,17 @@ type WSMessages = {
 	receive: "auth"|"listen";
 }
 
-export async function initKeyValRoutes(app: AppWrapper, websocket: WSSimulator, db: Database) {
+export async function initKeyValRoutes({ 
+	app, websocket, db, randomNum 
+}: { 
+	app: AppWrapper; 
+	websocket: WSSimulator; 
+	db: Database; 
+	randomNum: number; 
+}) {
 	const apiHandler = new APIHandler({ db });
-	const webpageHandler = new WebpageHandler({ db });
-	// @ts-ignore
-	const screenHandler = new ScreenHandler({ db });
+	const webpageHandler = new WebpageHandler({ randomNum, db });
+	new ScreenHandler({ db });
 	await KeyvalExternal.init({ db, apiHandler });
 
 	app.post('/keyval/all', async (req, res) => {

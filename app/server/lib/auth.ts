@@ -103,7 +103,7 @@ export namespace Auth {
 		}
 	}
 
-	export async function initRoutes(app: AppWrapper, config: Config) {
+	export async function initRoutes({ app, config }: { app: AppWrapper; config: Config; }) {
 		await Secret.readSecret();
 		app.post('/authid', async (_req, res) => {
 			const id = (await Auth.ClientSecret.genId()) + '';
