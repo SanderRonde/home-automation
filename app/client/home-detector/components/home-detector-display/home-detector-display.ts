@@ -19,7 +19,10 @@ export class HomeDetectorDisplay extends ServerComm {
 	}, super.props);
 
 	private async _refreshJSON() {
-		const res = await this.request(`${location.origin}/home-detector/all`, {},
+		const url = location.href.includes('/e') ?
+			`${location.origin}/home-detector/all/e` : 
+			`${location.origin}/home-detector/all`;
+		const res = await this.request(url, {},
 			'Failed to refresh');
 		if (res === false) return false;
 		const json = await res.json();

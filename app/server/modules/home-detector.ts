@@ -146,7 +146,8 @@ export class Detector {
 		name: string|null;
 		callback: (newState: HOME_STATE, name: string) => void;
 	}[] = [];
-	private _pingers: Map<string, Pinger> = new Map();
+	private _basePingers: Map<string, Pinger> = new Map();
+	private _extendedPingers: Map<string, Pinger> = new Map();
 
 	constructor({ db }: {
 		db: Database
@@ -164,28 +165,40 @@ export class Detector {
 	}
 
 	private _initPingers() {
-		for (const name in config) {
-			this._pingers.set(name, new Pinger({
-				name,
-				ips: config[name]
+		for (const { key, data, extended } of [
+			...(Object.keys(config.base) || []).map(n => ({ key: n, data: config.base[n], extended: false })),
+			...(Object.keys(config.extended) || []).map(n => ({ key: n, data: config.extended[n], extended: true }))
+		]) {
+			this._extendedPingers.set(key, new Pinger({
+				name: key,
+				ips: data
 			}, this._db, (newState) => {
-				this._onChange(name, newState);
+				this._onChange(key, newState);
 			}));
+			if (!extended) {
+				this._basePingers.set(key, this._extendedPingers.get(key)!);
+			}
 		}
 	}
 
-	getAll() {
+	getAll(extended: boolean = false) {
 		const obj: {
 			[key: string]: HOME_STATE;
 		} = {};
-		this._pingers.forEach((pinger, key) => {
-			obj[key] = pinger.state;
-		});
+		if (extended) {
+			this._extendedPingers.forEach((pinger, key) => {
+				obj[key] = pinger.state;
+			});
+		} else {
+			this._basePingers.forEach((pinger, key) => {
+				obj[key] = pinger.state;
+			});
+		}
 		return obj;
 	}
 
 	get(name: string) {
-		const pinger = this._pingers.get(name);
+		const pinger = this._extendedPingers.get(name);
 		if (!pinger) {
 			return '?';
 		}
@@ -224,8 +237,8 @@ class APIHandler {
 	@auth
 	public async getAll(res: ResponseLike, _params: {
 		auth: string;
-	}) {
-		const result = JSON.stringify(this._detector.getAll());
+	}, extended: boolean = false) {
+		const result = JSON.stringify(this._detector.getAll(extended));
 		attachMessage(res, `JSON: ${result}`);
 		res.write(result);
 		res.end();
@@ -257,11 +270,11 @@ export class WebpageHandler {
 	
 	@errorHandle
 	@authCookie
-	public async index(res: ResponseLike, _req: express.Request) {
+	public async index(res: ResponseLike, _req: express.Request, extended: boolean = false) {
 		res.status(200);
 		res.contentType('.html');
 		res.write(await homeDetectorHTML(
-			JSON.stringify(this._detector.getAll()), this._randomNum));
+			JSON.stringify(this._detector.getAll(extended)), this._randomNum));
 		res.end();
 	}
 }
@@ -339,6 +352,9 @@ export function initHomeDetector({
 	app.post('/home-detector/all', async (req, res) => {
 		await apiHandler.getAll(res, {...req.params, ...req.body});
 	});
+	app.post('/home-detector/all/e', async (req, res) => {
+		await apiHandler.getAll(res, {...req.params, ...req.body}, true);
+	});
 	app.post('/home-detector/:name', async (req, res) => {
 		await apiHandler.get(res, {...req.params, ...req.body});
 	});
@@ -349,5 +365,12 @@ export function initHomeDetector({
 		'/whoshome'
 	], async (req, res) => {
 		webpageHandler.index(res, req);
+	});
+	app.all([
+		'/home-detector/e', 
+		'/whoishome/e',
+		'/whoshome/e'
+	], async (req, res) => {
+		webpageHandler.index(res, req, true);
 	});
 }

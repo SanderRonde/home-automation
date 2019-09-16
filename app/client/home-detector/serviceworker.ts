@@ -94,6 +94,12 @@ self.addEventListener('fetch', (event) => {
 		case '/whoishome/':
 		case '/whoshome':
 		case '/whoshome/':
+		case '/home-detector/e':
+		case '/whoishome/e':
+		case '/whoshome/e':
+		case '/home-detector/e/':
+		case '/whoishome/e/':
+		case '/whoshome/e/':
 			event.respondWith(indexPage());
 			break;
 		default:
