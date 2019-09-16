@@ -33,9 +33,9 @@ function logAssociatedMessages(messages: AssociatedMessage[], indent: number = 0
 	for (let i = 0; i < messages.length; i++) {
 		const padding = setDefaultArrValues(hasNextMessage, indent, false).map((next) => {
 			if (next) {
-				return ' |  ';
+				return ' |   ';
 			} else {
-				return '    ';
+				return '     ';
 			}
 		}).join('');
 		const timeFiller = getTimeFiller();
