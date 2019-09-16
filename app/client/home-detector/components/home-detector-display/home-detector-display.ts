@@ -30,6 +30,11 @@ export class HomeDetectorDisplay extends ServerComm {
 					return true;
 				}
 			}
+			for (const key in json) {
+				if (json[key] !== this.props.json[key]) {
+					return true;
+				}
+			}
 			return false;
 		})();
 
