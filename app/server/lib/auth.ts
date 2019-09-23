@@ -1,4 +1,4 @@
-import { SECRETS_FILE } from './constants';
+import { AUTH_SECRET_FILE } from './constants';
 import { attachMessage } from './logger';
 import { AppWrapper } from './routes';
 import * as express from 'express';
@@ -55,12 +55,12 @@ export namespace Auth {
 	export namespace Secret {
 		let key: string|null = null;
 		export async function readSecret() {
-			if (!(await fs.pathExists(SECRETS_FILE))) {
+			if (!(await fs.pathExists(AUTH_SECRET_FILE))) {
 				console.log('Missing auth file');
 				process.exit(1);
 			}
 
-			return (key = await fs.readFile(SECRETS_FILE, {
+			return (key = await fs.readFile(AUTH_SECRET_FILE, {
 				encoding: 'utf8'
 			}));
 		}
