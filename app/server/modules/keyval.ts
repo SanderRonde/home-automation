@@ -1,4 +1,4 @@
-import { attachMessage, getLogLevel, ResDummy } from "../lib/logger";
+import { attachMessage, getLogLevel, ResDummy, getTime } from "../lib/logger";
 import { errorHandle, requireParams, auth, authCookie } from "../lib/decorators";
 import * as ReadLine from '@serialport/parser-readline';
 import { WSSimulator, WSInstance } from "../lib/ws";
@@ -273,15 +273,20 @@ export class WebpageHandler {
 }
 
 class ScreenHandler {
-	private _port: SerialPort = new SerialPort('/dev/ttyUSB0', {
-		baudRate: 9600
-	});
+	private _port: SerialPort;
 	// @ts-ignore
 	private _parser = new ReadLine()
 	private _db: Database;
 
 	constructor({ db }: { db: Database }) {
 		this._db = db;
+		
+		this._port = new SerialPort('/dev/ttyUSB0', {
+			baudRate: 9600
+		});
+		this._port.on('error', (e) => {
+			console.log(getTime(), chalk.red('Failed to connect to screen', e));
+		});;
 
 		//@ts-ignore
 		this._port.pipe(this._parser);
@@ -299,6 +304,7 @@ class ScreenHandler {
 			await this._db.setVal(`room.${key}`, value.trim());
 			GetSetListener.update(key)
 		});
+		
 		GetSetListener.addListener('room.lights.ceiling', () => {
 			const value = this._db.get('room.lights.ceiling', '0');
 			this._port.write(value);
