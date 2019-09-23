@@ -285,7 +285,7 @@ class ScreenHandler {
 			baudRate: 9600
 		});
 		this._port.on('error', (e) => {
-			console.log(getTime(), chalk.red('Failed to connect to screen', e));
+			log(getTime(), chalk.red('Failed to connect to screen', e));
 		});;
 
 		//@ts-ignore
