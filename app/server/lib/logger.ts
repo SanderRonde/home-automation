@@ -227,3 +227,24 @@ export class ProgressLogger {
 			chalk.bold(`Done loading ${this._name} in ${Date.now() - this._startTime}ms`))));
 	}
 }
+
+let isInit: boolean = false;
+const initMessages: any[][] = [];
+export function startInit() {
+	isInit = true;
+}
+
+export function endInit() {
+	isInit = false;
+	initMessages.forEach((args) => {
+		console.log(...args);
+	});
+}
+
+export function log(...args: any[]) {
+	if (isInit) {
+		initMessages.push(args);
+	} else {
+		console.log(...args);
+	}
+}

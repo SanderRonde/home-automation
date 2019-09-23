@@ -1,5 +1,5 @@
 import { errorHandle, authCookie, requireParams, auth } from '../lib/decorators';
-import { attachMessage, logFixture, getTime } from '../lib/logger';
+import { attachMessage, logFixture, getTime, log } from '../lib/logger';
 import { AppWrapper } from "../lib/routes";
 import { ScriptExternal } from './script';
 import { KeyvalExternal } from './keyval';
@@ -338,7 +338,7 @@ export function initHomeDetector({
 	randomNum: number; 
 }) {
 	Detector.addListener(null, (newState, name) => {
-		console.log(getTime(), chalk.cyan(`[device:${name}]`, newState === HOME_STATE.HOME ?
+		log(getTime(), chalk.cyan(`[device:${name}]`, newState === HOME_STATE.HOME ?
 			chalk.bold(chalk.blue('now home')) : chalk.blue('just left')));
 	});
 	Detector.addListener(null, async (newState, name) => {

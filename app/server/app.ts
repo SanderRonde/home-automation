@@ -1,4 +1,4 @@
-import { setLogLevel, ProgressLogger } from './lib/logger';
+import { setLogLevel, ProgressLogger, startInit, endInit } from './lib/logger';
 import { initRoutes, initMiddleware } from './lib/routes';
 import { hasArg, getArg, getNumberArg } from './lib/io';
 import { WSSimulator } from './lib/ws';
@@ -54,6 +54,7 @@ class WebServer {
 
 	constructor(config: PartialConfig = {}) {
 		this._config = this._setConfigDefaults(config);
+		startInit();
 		this._initLogger.increment('IO');
 	}
 
@@ -92,6 +93,7 @@ class WebServer {
 		this._server.listen(this._config.ports.http, () => {
 			this._initLogger.increment('listening');
 			this._initLogger.done();
+			endInit();
 			console.log(`HTTP server listening on port ${this._config.ports.http}`);
 		});
 	}

@@ -1,6 +1,6 @@
 import { errorHandle, requireParams, auth, authCookie } from '../lib/decorators';
 import { Discovery, Control, CustomMode, TransitionTypes } from 'magic-home';
-import { attachMessage, ResDummy, getTime } from '../lib/logger';
+import { attachMessage, ResDummy, getTime, log } from '../lib/logger';
 import { AppWrapper } from '../lib/routes';
 import { ResponseLike } from './multi';
 import { Auth } from '../lib/auth';
@@ -14,7 +14,7 @@ export async function scanRGBControllers() {
 			wait_for_reply: false
 		});
 	});
-	console.log(getTime(), chalk.cyan(`[rgb]`),
+	log(getTime(), chalk.cyan(`[rgb]`),
 		'Found', chalk.bold(clients.length + ''), 'clients');
 }
 
