@@ -90,7 +90,7 @@ export class WSInstance< DATA extends {
 			});
 			req.end();
 
-			attachMessage(req, 'Type:', chalk.bold(type), 'data:', chalk.bold(data));
+			attachMessage(req, chalk.cyan('[ws]'), 'Type:', chalk.bold(type), 'data:', chalk.bold(data));
 			logOutgoingReq(req, {
 				method: 'POST',
 				target: this._ip

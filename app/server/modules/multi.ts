@@ -2,6 +2,13 @@ import { transferAttached, genURLLog, attachMessage } from '../lib/logger';
 import { AppWrapper } from '../lib/routes';
 import * as express from 'express';
 
+interface MultiRequestRequest {
+	path: string;
+	body: {
+		[key: string]: string;
+	}
+	method: string;
+}
 
 export interface ResponseLike {
 	status(code: number): this;
@@ -103,40 +110,36 @@ class ResponseDummy {
 	}
 }
 
-interface MultiRequestRequest {
-	path: string;
-	body: {
-		[key: string]: string;
-	}
-	method: string;
-}
-
-export function initMultiRoutes({ app }: { app: AppWrapper }) {
-	app.app.post('/multi', async (req, res) => {
-		const { requests } = req.body as {
-			requests: MultiRequestRequest[];
-		};
-		if (!requests || !Array.isArray(requests)) {
-			res.status(400).write('No routes given');
-			res.end();
-			return;
-		}
-
-		// Validate them all
-		for (const route of requests) {
-			if (typeof route !== 'object' || !route.path || typeof route.path !== 'string' ||
-				!route.body || typeof route.body !== 'object') {
-					res.status(400).write('Invalid route format. Expected is { method: string, path: string, body: {} }');
+export namespace Multi {
+	export namespace Routing {
+		export function init({ app }: { app: AppWrapper }) {
+			app.app.post('/multi', async (req, res) => {
+				const { requests } = req.body as {
+					requests: MultiRequestRequest[];
+				};
+				if (!requests || !Array.isArray(requests)) {
+					res.status(400).write('No routes given');
 					res.end();
 					return;
 				}
-		}
 
-		const resDummy = new ResponseDummy(res)
-		await Promise.all(requests.map((config) => {
-			const { body, path, method } = config;
-			return app.triggerRoute(req, resDummy.response(config), method, path, body);
-		}));
-		resDummy.finish(req);
-	});
+				// Validate them all
+				for (const route of requests) {
+					if (typeof route !== 'object' || !route.path || typeof route.path !== 'string' ||
+						!route.body || typeof route.body !== 'object') {
+							res.status(400).write('Invalid route format. Expected is { method: string, path: string, body: {} }');
+							res.end();
+							return;
+						}
+				}
+
+				const resDummy = new ResponseDummy(res)
+				await Promise.all(requests.map((config) => {
+					const { body, path, method } = config;
+					return app.triggerRoute(req, resDummy.response(config), method, path, body);
+				}));
+				resDummy.finish(req);
+			});
+		}
+	}
 }

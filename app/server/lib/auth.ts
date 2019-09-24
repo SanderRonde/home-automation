@@ -1,4 +1,4 @@
-import { AUTH_SECRET_FILE } from './constants';
+import { AUTH_SECRET_FILE, BOT_SECRET_FILE } from './constants';
 import { attachMessage } from './logger';
 import { AppWrapper } from './routes';
 import * as express from 'express';
@@ -54,6 +54,8 @@ export namespace Auth {
 
 	export namespace Secret {
 		let key: string|null = null;
+		let botSecret: string|null = null;
+
 		export async function readSecret() {
 			if (!(await fs.pathExists(AUTH_SECRET_FILE))) {
 				console.log('Missing auth file');
@@ -78,8 +80,15 @@ export namespace Auth {
 		}
 
 		export function redact(msg: string) {
-			return msg.replace(key!, '[redacted]');
+			return msg.replace(key!, '[redacted]')
+				.replace(botSecret!, '[redacted]')
 		}
+
+		(async () => {
+			botSecret = await fs.readFile(BOT_SECRET_FILE, {
+				encoding: 'utf8'
+			});
+		})();
 	}
 
 	export namespace Cookie {

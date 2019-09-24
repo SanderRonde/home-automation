@@ -3,6 +3,7 @@ import * as express from 'express';
 import { Auth } from './auth';
 import * as http from 'http';
 import chalk from 'chalk';
+import { IP_LOG_VERSION } from './constants';
 
 interface AssociatedMessage {
 	content: string[];
@@ -54,15 +55,33 @@ interface RequestLike {
 	url?: string;
 	method?: string;
 	ip?: string;
+	headers: {
+		[key: string]: any;
+	}
+}
+
+function getIP(req: RequestLike) {
+	const fwd = req.headers['x-forwarded-for'];
+	if (Array.isArray(fwd)) {
+		return fwd[0];
+	}
+	if (typeof fwd === 'string' && fwd.includes(',')) {
+		const [ ipv4, ipv6 ] = fwd.split(',');
+		return IP_LOG_VERSION === 'ipv4' ?
+			ipv4 : ipv6;
+	}
+	return fwd || req.ip;
 }
 
 export function genURLLog({ 
-	req = {}, 
+	req = {
+		headers: {}
+	}, 
 	url = req.url || '?', 
 	method = req.method || '?',
 	statusCode = 200, 
 	duration = '?', 
-	ip = req.ip || '?' ,
+	ip = getIP(req) || '?' ,
 	isSend = false
 }: { 
 	req?: RequestLike; 
@@ -91,7 +110,7 @@ export function genURLLog({
 
 export function logReq(req: express.Request, res: express.Response) {
 	const start = Date.now();
-	const ip = req.ip;
+	const ip = getIP(req);
 	res.on('finish', async () => {
 		if (logLevel < 1) return;
 
