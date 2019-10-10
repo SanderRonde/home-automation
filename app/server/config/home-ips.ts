@@ -1,7 +1,7 @@
 export default {
 	"base": {
-		"self": ["192.168.1.14"],
-		"***REMOVED***": ["***REMOVED***"],
+		"self": ["***REMOVED***"],
+		"***REMOVED***": ["***REMOVED***9"],
 		"***REMOVED***": ["192.168.1.5", "***REMOVED***"]
 	},
 	"extended": {
