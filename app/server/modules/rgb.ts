@@ -4,6 +4,7 @@ import { attachMessage, ResDummy, getTime, log } from '../lib/logger';
 import { BotState } from '../lib/bot-state';
 import { AppWrapper } from '../lib/routes';
 import { ResponseLike } from './multi';
+import { Bot as _Bot } from './bot';
 import { Auth } from '../lib/auth';
 import * as express from 'express';
 import chalk from 'chalk';
@@ -434,17 +435,26 @@ export namespace RGB {
 		}
 
 		export class State extends BotState.Base {
+			static readonly matches = State.createMatchMaker(() => {});
+
 			constructor(_json?: JSON) {
 				super();	
 			}
 
-			async match() {
-				return undefined;
+			static async match(config: { 
+				logObj: any; 
+				text: string; 
+				message: _Bot.TelegramMessage; 
+				state: _Bot.Message.StateKeeping.ChatState; 
+			}): Promise<_Bot.Message.MatchResponse | undefined> {
+				return await this.matchLines({ ...config, matchConfig: State.matches });
 			}
 
 			toJSON(): JSON {
 				return {} as any;
 			}
+
+			static resetState() {}
 		}
 	}
 

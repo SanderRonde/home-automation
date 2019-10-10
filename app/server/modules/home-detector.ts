@@ -20,6 +20,23 @@ const HOME_PING_INTERVAL = 60;
 const CHANGE_PING_INTERVAL = 1;
 const AWAY_MIN_CONSECUTIVE_PINGS = 20;
 
+export interface ModuleHookables {
+	rgb: RGB.External.Handler;
+	keyval: KeyVal.External.Handler;
+	script: Script.External.Handler;
+}
+
+export interface HomeHooks {
+	[key: string]: {
+		home?: {
+			[name: string]: ((hookables: ModuleHookables) => void);
+		};
+		away?: {
+			[name: string]: ((hookables: ModuleHookables) => void);
+		}
+	}
+}
+
 export namespace HomeDetector {
 	const enum HOME_STATE {
 		HOME = 'home',
@@ -316,23 +333,6 @@ export namespace HomeDetector {
 	}
 
 	export namespace Hooks {
-		export interface ModuleHookables {
-			rgb: RGB.External.Handler;
-			keyval: KeyVal.External.Handler;
-			script: Script.External.Handler;
-		}
-
-		export interface HomeHooks {
-			[key: string]: {
-				home?: {
-					[name: string]: ((hookables: ModuleHookables) => void);
-				};
-				away?: {
-					[name: string]: ((hookables: ModuleHookables) => void);
-				}
-			}
-		}
-
 		function createHookables(logObj: any): ModuleHookables {
 			return {
 				rgb: new RGB.External.Handler(logObj),

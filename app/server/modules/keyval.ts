@@ -7,9 +7,31 @@ import { AppWrapper } from "../lib/routes";
 import * as SerialPort from 'serialport';
 import { ResponseLike } from "./multi";
 import { Database } from "../lib/db";
+import { Bot as _Bot } from './bot';
 import * as express from "express";
 import { Auth } from "../lib/auth";
 import chalk from "chalk";
+
+const MAIN_LIGHTS = ['room.lights.ceiling']
+const COMMON_SWITCH_MAPPINGS = {
+	'ceiling light': 'room.lights.ceiling',
+	'the light': 'room.lights.ceiling',
+	'my light': 'room.lights.ceiling',
+	'light': 'room.lights.ceiling',
+	'lights': 'room.lights.ceiling',
+	'the nightlight': 'room.lights.nightstand',
+	'my nightlight': 'room.lights.nightstand',
+	'the nightstand light': 'room.lights.nightstand',
+	'my nightstand light': 'room.lights.nightstand',
+	'all lights': 'room.lights',
+	'the speakers': 'room.speakers',
+	'my speakers': 'room.speakers',
+	'all speakers': 'room.speakers',
+	'the couch speakers': 'room.speakers.couch',
+	'couch speakers': 'room.speakers.couch',
+	'the desk speakers': 'room.speakers.desk',
+	'desk speakers': 'room.speakers.desk'
+}
 
 export namespace KeyVal {
 	function str(value: any|undefined) {
@@ -151,12 +173,91 @@ export namespace KeyVal {
 		}
 
 		export class State extends BotState.Base {
+			static readonly matches = State.createMatchMaker(({
+				matchMaker: mm,
+				fallbackSetter: fallback
+			}) => {
+				mm(/is the light (on|off)/, /are the lights (on|off)/, async ({ 
+					match, logObj, state
+				}) => {
+					
+					const results = await Promise.all(MAIN_LIGHTS.map((light) => {
+						return new External.Handler(logObj).get(light);
+					})) as string[];
+
+					const actualState = (() => {
+						if (results.every(v => v === '1')) return 'ON';
+						if (results.every(v => v === '0')) return 'OFF';
+						return 'BETWEEN';
+					})();
+
+					state.keyval.lastSubjects = MAIN_LIGHTS;
+
+					switch (actualState) {
+						case 'ON':
+							return match[1] === 'on' ? 'Yep' : 'Nope';
+						case 'OFF':
+							return match[1] === 'off' ? 'Yep' : 'Nope';
+						default:
+							return 'Some are on some are off';
+					}
+				});
+				Object.keys(COMMON_SWITCH_MAPPINGS).forEach((commonSwitch: keyof typeof COMMON_SWITCH_MAPPINGS) => {
+					mm(`turn on ${commonSwitch}`, async ({ logObj, state }) => {
+						state.keyval.lastSubjects = [COMMON_SWITCH_MAPPINGS[commonSwitch]];
+						await new External.Handler(logObj)
+							.set(COMMON_SWITCH_MAPPINGS[commonSwitch], '1');
+						return 'Turned it on';
+					});
+					mm(`turn off ${commonSwitch}`, async ({ logObj, state }) => {
+						state.keyval.lastSubjects = [COMMON_SWITCH_MAPPINGS[commonSwitch]];
+						await new External.Handler(logObj)
+							.set(COMMON_SWITCH_MAPPINGS[commonSwitch], '0');
+						return 'Turned it off';
+					});
+					mm(`is ${commonSwitch} on`, async ({ logObj, state }) => {
+						state.keyval.lastSubjects = [COMMON_SWITCH_MAPPINGS[commonSwitch]];
+						const res = await new External.Handler(logObj)
+							.get(COMMON_SWITCH_MAPPINGS[commonSwitch]);
+						return res === '1' ? 'Yep' : 'Nope';
+					});
+					mm(`is ${commonSwitch} off`, async ({ logObj, state }) => {
+						state.keyval.lastSubjects = [COMMON_SWITCH_MAPPINGS[commonSwitch]];
+						const res = await new External.Handler(logObj)
+							.get(COMMON_SWITCH_MAPPINGS[commonSwitch]);
+						return res === '0' ? 'Yep' : 'Nope';
+					});
+				});
+				mm(/Turn (it|them) (on|off)( again?)/, async ({ state, logObj, match }) => {
+					for (const lastSubject of state.keyval.lastSubjects!) {
+						await new External.Handler(logObj)
+							.set(lastSubject, match[2] === 'on' ? '1' : '0');
+					}
+					return `Turned ${match[1]} ${match[2]}`;
+				});
+
+				fallback(({ state }) => {
+					State.resetState(state);
+				});
+			});
+
+			lastSubjects: string[]|null = null;
+
 			constructor(_json?: JSON) {
-				super();	
+				super();
 			}
 
-			async match() {
-				return undefined;
+			static async match(config: { 
+				logObj: any; 
+				text: string; 
+				message: _Bot.TelegramMessage; 
+				state: _Bot.Message.StateKeeping.ChatState; 
+			}): Promise<_Bot.Message.MatchResponse | undefined> {
+				return await this.matchLines({ ...config, matchConfig: State.matches });
+			}
+
+			static resetState(state: _Bot.Message.StateKeeping.ChatState) {
+				state.keyval.lastSubjects = null;
 			}
 
 			toJSON(): JSON {

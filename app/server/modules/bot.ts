@@ -13,6 +13,8 @@ import * as https from 'https';
 import { RGB } from "./rgb";
 import chalk from 'chalk';
 
+const BOT_NAME = 'HuisBot';
+
 export namespace Bot {
 	export type TelegramMessage = {
 		message_id: number;
@@ -115,34 +117,36 @@ export namespace Bot {
 			private static _bootedAt = new Date();
 			private _stateKeeper!: StateKeeping.StateKeeper;
 
-			static readonly matches = Handler.createMatches([
-				[['hi', 'hello'], () => {
-					return 'Hi!';
-				}],
-				[['who am i', 'what is my name'], ({ message }) => {
+			static readonly matches = Handler.createMatchMaker(({ 
+				matchMaker: mm,
+				sameWordMaker: wm
+			}) => {
+				mm('hi', 'hello', () => 'Hi!');
+				mm('thanks', () => 'You\'re welcome');
+				mm('who am i', 'what is my name', ({ message }) => {
 					return `You are ${message.chat.first_name} ${message.chat.last_name}.`;
-				}],
-				['what is the chat id', ({ message }) => {
+				});
+				mm('what is the chat id', ({ message }) => {
 					return message.chat.id + '';
-				}],
-				[['who are you', 'what is your name'], () => {
-					return 'I am HuisBot.';
-				}],
-				[['what time is it', 'how late is it'], () => {
+				});
+				mm('who are you', 'what is your name', () => {
+					return `I am ${BOT_NAME}`;
+				});
+				mm('What time is it', 'How late is it', () => {
 					return new Date().toLocaleTimeString();
-				}],
-				['what day is it', () => {
+				})
+				mm('what day is it', () => {
 					const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 					const day = new Date().getDay();
 					return weekdays[day - 1];
-				}],
-				[[`what's the date`, 'what is the date'], () => {
+				});
+				mm(wm`What${['\'s', ' is']} the date`, () => {
 					return new Date().toLocaleDateString();
-				}],
-				[['when did the server start', 'when did the server boot'], () => {
+				});
+				mm(wm`when did the server ${['boot', 'start']}`, () => {
 					return Handler._bootedAt.toLocaleTimeString();
-				}],
-				[['how long is the server up', 'how long are you up'], () => {
+				});
+				mm('how long is the server up', 'how long are you up', () => {
 					const boot = Handler._bootedAt.getTime()
 					const now = Date.now();
 					let ms = now - boot;
@@ -157,8 +161,8 @@ export namespace Bot {
 
 					return `${days} days, ${hours} hours, ${mins} mins, ${days} days, ${
 						mins} mins, ${seconds} seconds and ${ms} milliseconds`;
-				}]
-			]);
+				});
+			});
 
 			constructor(private _secret: string, private _db: Database) {
 				super();
@@ -202,19 +206,56 @@ export namespace Bot {
 				});
 			}
 
-			private async _matchSelf(text: string, message: TelegramMessage, state: StateKeeping.ChatState): Promise<MatchResponse | undefined> {
-				return await this.matchLines(text, { text, message, state, }, Handler.matches);
+			private static async _matchSelf(config: { 
+				logObj: any; 
+				text: string; 
+				message: Bot.TelegramMessage; 
+				state: Bot.Message.StateKeeping.ChatState; 
+			}): Promise<MatchResponse | undefined> {
+				return await BotState.Matchable.matchLines({ ...config, matchConfig: Handler.matches });
 			}
 
-			async match(text: string, message: TelegramMessage, state: StateKeeping.ChatState): Promise<MatchResponse | undefined> {
-				return await this._matchSelf(text, message, state);
+			private static async _matchMatchables(config: { 
+				logObj: any; 
+				text: string; 
+				message: Bot.TelegramMessage; 
+				state: Bot.Message.StateKeeping.ChatState; 
+			}, value: any, ...matchables: (typeof BotState.Matchable)[]) {
+				for (let i = 0; i < matchables.length; i++) {
+					if (!value) {
+						value = await matchables[i].match(config);
+					} else {
+						matchables[i].resetState(config.state);
+					}
+				}
+				return value;
 			}
 
-			async multiMatch(text: string, message: TelegramMessage, state: StateKeeping.ChatState): Promise<string | undefined> {
+			static async match(config: { 
+				logObj: any; 
+				text: string; 
+				message: Bot.TelegramMessage; 
+				state: Bot.Message.StateKeeping.ChatState; 
+			}): Promise<MatchResponse | undefined> {
+				return this._matchMatchables(config,
+					await this._matchSelf(config),
+					KeyVal.Bot.State,
+					RGB.Bot.State);
+			}
+
+			static async multiMatch({ logObj, text, message, state }: { 
+				logObj: any; 
+				text: string; 
+				message: Bot.TelegramMessage; 
+				state: Bot.Message.StateKeeping.ChatState; 
+			}): Promise<string | undefined> {
 				let response: string[] = [];
 
 				let match: MatchResponse | undefined = undefined;
-				while ((match = await this.match(text, message, state))) {
+				
+				while ((match = await this.match({
+					logObj, text, message, state
+				}))) {
 					// Push response
 					response.push(match.response);
 
@@ -235,8 +276,15 @@ export namespace Bot {
 
 			async handleMessage(req: TelegramReq, res: ResponseLike) {
 				const { message } = req.body;
-				const response = await this.multiMatch(message.text, message, this._stateKeeper.getState(message.chat.id)) ||
-					'I\'m not sure what you mean';
+				const logObj = attachMessage(res, chalk.bold(chalk.cyan('[bot]')));
+				attachMessage(logObj, `Message text: ${message.text}`);
+				attachMessage(logObj, `Chat ID: ${message.chat.id}`);
+				const response = await Handler.multiMatch({
+					logObj: attachMessage(logObj, chalk.bold('Match')),
+					text: message.text, 
+					message,
+					state: this._stateKeeper.getState(message.chat.id)
+				}) || 'I\'m not sure what you mean';
 				if (await this.sendMessage(response, message.chat.id)) {
 					res.write('ok');
 				} else {
