@@ -16,7 +16,20 @@ import chalk from 'chalk';
 const BOT_NAME = 'HuisBot';
 
 export namespace Bot {
-	export type TelegramMessage = {
+	export interface TelegramText {
+		text: string;
+	}
+
+	export interface TelegramImage {
+		photo: {
+			file_id: string;
+			file_size: number;
+			width: number;
+			height: number;
+		}[];
+	}
+
+	export type TelegramMessage<C = TelegramText|TelegramImage> = {
 		message_id: number;
 		from: {
 			id: number;
@@ -32,8 +45,7 @@ export namespace Bot {
 			type: 'private';
 		};
 		date: number;
-		text: string;
-	};
+	} & C;
 
 	interface TelegramReqBody {
 		message: TelegramMessage
@@ -274,17 +286,28 @@ export namespace Bot {
 				return response.join('\n');
 			}
 
-			async handleMessage(req: TelegramReq, res: ResponseLike) {
-				const { message } = req.body;
-				const logObj = attachMessage(res, chalk.bold(chalk.cyan('[bot]')));
+			async handleTextMessage(logObj: any, message: TelegramMessage<TelegramText>) {
 				attachMessage(logObj, `Message text: ${message.text}`);
 				attachMessage(logObj, `Chat ID: ${message.chat.id}`);
-				const response = await Handler.multiMatch({
+				return await Handler.multiMatch({
 					logObj: attachMessage(logObj, chalk.bold('Match')),
 					text: message.text, 
 					message,
 					state: this._stateKeeper.getState(message.chat.id)
 				}) || 'I\'m not sure what you mean';
+			}
+
+			async handleMessage(req: TelegramReq, res: ResponseLike) {
+				const { message } = req.body;
+				const logObj = attachMessage(res, chalk.bold(chalk.cyan('[bot]')));
+			
+				const response = await (() => {
+					if ('text' in message) {
+						return this.handleTextMessage(logObj,
+							message);
+					}
+					return 'Message type unsupported';
+				})();
 				if (await this.sendMessage(response, message.chat.id)) {
 					res.write('ok');
 				} else {
