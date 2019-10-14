@@ -1,5 +1,6 @@
 import { Bot } from '../modules/bot';
 import { attachMessage } from './logger';
+import chalk from 'chalk';
 
 export namespace BotState {
 	export type MatchHandler = (config: { 
@@ -34,7 +35,7 @@ export namespace BotState {
 		conditions: ((params: MatchParams) => boolean)[];
 	}
 
-	export type MatchMaker = (...args: (string[]|string|RegExp[]|RegExp|MatchHandler)[]) => void;
+	export type MatchMaker = (...args: (string[]|string|RegExp[]|RegExp|MatchHandler)[]) => MatchData;
 
 	export type SameMaker = (str: TemplateStringsArray, ...values: string[][]) => string[];
 
@@ -57,7 +58,7 @@ export namespace BotState {
 						return condition(config);
 					})) {
 						const newLogObj = attachMessage(logObj,
-							`Matching Str: ${matchText}`);
+							`Matching string:`, chalk.bold(matchText));
 						return {
 							end: index + matchText.length,
 							response: await fn({ ...config, logObj: newLogObj, match: [] as any }) + ''
@@ -69,7 +70,7 @@ export namespace BotState {
 						return condition(config);
 					})) {
 						const newLogObj = attachMessage(logObj,
-							`Matching Regex: ${matchRegexp}`);
+							`Matching regex:`, chalk.bold(matchRegexp.source));
 						return {
 							end: match.index + match[0].length,
 							response: await fn({ ...config, logObj: newLogObj, match }) + ''
@@ -178,7 +179,9 @@ export namespace BotState {
 
 			fn({
 				matchMaker: (...args: (string[]|RegExp[]|MatchHandler)[]) => {
-					config.matches.push(this.createMatch(...args));
+					const match = this.createMatch(...args);
+					config.matches.push(match);
+					return match;
 				},
 				sameWordMaker: (str: TemplateStringsArray, ...values: string[][]): string[] => {
 					return this.createJoinedWords(str, ...values);
