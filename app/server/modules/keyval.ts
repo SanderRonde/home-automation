@@ -13,25 +13,15 @@ import { Auth } from "../lib/auth";
 import chalk from "chalk";
 
 const MAIN_LIGHTS = ['room.lights.ceiling']
-const COMMON_SWITCH_MAPPINGS = {
-	'ceiling light': 'room.lights.ceiling',
-	'the light': 'room.lights.ceiling',
-	'my light': 'room.lights.ceiling',
-	'light': 'room.lights.ceiling',
-	'lights': 'room.lights.ceiling',
-	'the nightlight': 'room.lights.nightstand',
-	'my nightlight': 'room.lights.nightstand',
-	'the nightstand light': 'room.lights.nightstand',
-	'my nightstand light': 'room.lights.nightstand',
-	'all lights': 'room.lights',
-	'the speakers': 'room.speakers',
-	'my speakers': 'room.speakers',
-	'all speakers': 'room.speakers',
-	'the couch speakers': 'room.speakers.couch',
-	'couch speakers': 'room.speakers.couch',
-	'the desk speakers': 'room.speakers.desk',
-	'desk speakers': 'room.speakers.desk'
-}
+const COMMON_SWITCH_MAPPINGS: [RegExp, string][] = [
+	[/((ceiling|the|my)\s+)?light/, 'room.lights.ceiling'],
+	[/((the)\s+)?lights/, 'room.lights.ceiling'],
+	[/((the|my)\s+)?(nightlight|(nightstand\s*light))/, 'room.lights.nightstand'],
+	[/all\s+lights/, 'room.lights'],
+	[/((all|the|my)\s+)?speakers/, 'room.speakers'],
+	[/((the|my)\s+)?couch\s+speakers/, 'room.speakers.couch'],
+	[/((the|my)\s+)?desk\s+speakers/, 'room.speakers.desk']
+];
 
 export namespace KeyVal {
 	function str(value: any|undefined) {
@@ -175,7 +165,8 @@ export namespace KeyVal {
 		export class State extends BotState.Base {
 			static readonly matches = State.createMatchMaker(({
 				matchMaker: mm,
-				fallbackSetter: fallback
+				fallbackSetter: fallback,
+				conditional
 			}) => {
 				mm(/is the light (on|off)/, /are the lights (on|off)/, async ({ 
 					match, logObj, state
@@ -202,38 +193,33 @@ export namespace KeyVal {
 							return 'Some are on some are off';
 					}
 				});
-				Object.keys(COMMON_SWITCH_MAPPINGS).forEach((commonSwitch: keyof typeof COMMON_SWITCH_MAPPINGS) => {
-					mm(`turn on ${commonSwitch}`, async ({ logObj, state }) => {
-						state.keyval.lastSubjects = [COMMON_SWITCH_MAPPINGS[commonSwitch]];
-						await new External.Handler(logObj)
-							.set(COMMON_SWITCH_MAPPINGS[commonSwitch], '1');
-						return 'Turned it on';
+				for (const [ reg, switchName ] of COMMON_SWITCH_MAPPINGS) {
+					mm(new RegExp('turn (on|off) ' + reg.source), async ({ logObj, state, match }) => {
+						const keyvalState = match[1];
+						state.keyval.lastSubjects = [switchName];
+						await new External.Handler(logObj).set(switchName, keyvalState === 'on' ? '1' : '0');
+						return `Turned it ${keyvalState}`;
 					});
-					mm(`turn off ${commonSwitch}`, async ({ logObj, state }) => {
-						state.keyval.lastSubjects = [COMMON_SWITCH_MAPPINGS[commonSwitch]];
-						await new External.Handler(logObj)
-							.set(COMMON_SWITCH_MAPPINGS[commonSwitch], '0');
-						return 'Turned it off';
-					});
-					mm(`is ${commonSwitch} on`, async ({ logObj, state }) => {
-						state.keyval.lastSubjects = [COMMON_SWITCH_MAPPINGS[commonSwitch]];
+					mm(new RegExp('is ' + reg.source + ' (on|off)'), async ({ logObj, state, match }) => {
+						const keyvalState = match.pop();
+						state.keyval.lastSubjects = [switchName];
 						const res = await new External.Handler(logObj)
-							.get(COMMON_SWITCH_MAPPINGS[commonSwitch]);
-						return res === '1' ? 'Yep' : 'Nope';
+							.get(switchName);
+						if ((res === '1') === (keyvalState === 'on')) {
+							return 'Yep';
+						} else {
+							return 'Nope';
+						}
 					});
-					mm(`is ${commonSwitch} off`, async ({ logObj, state }) => {
-						state.keyval.lastSubjects = [COMMON_SWITCH_MAPPINGS[commonSwitch]];
-						const res = await new External.Handler(logObj)
-							.get(COMMON_SWITCH_MAPPINGS[commonSwitch]);
-						return res === '0' ? 'Yep' : 'Nope';
-					});
-				});
-				mm(/Turn (it|them) (on|off)( again?)/, async ({ state, logObj, match }) => {
+				}
+				conditional(mm(/turn (it|them) (on|off)( again)?/, async ({ state, logObj, match }) => {
 					for (const lastSubject of state.keyval.lastSubjects!) {
 						await new External.Handler(logObj)
 							.set(lastSubject, match[2] === 'on' ? '1' : '0');
 					}
 					return `Turned ${match[1]} ${match[2]}`;
+				}), ({ state }) => {
+					return state.keyval.lastSubjects !== null;
 				});
 
 				fallback(({ state }) => {
