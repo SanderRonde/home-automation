@@ -287,14 +287,15 @@ export namespace Bot {
 			}
 
 			async handleTextMessage(logObj: any, message: TelegramMessage<TelegramText>) {
-				attachMessage(logObj, `Message text: ${message.text}`);
-				attachMessage(logObj, `Chat ID: ${message.chat.id}`);
+				attachMessage(logObj, `Message text:`, chalk.bold(message.text));
+				attachMessage(logObj, `Chat ID:`, chalk.bold(message.chat.id + ''));
+				const matchMsg = attachMessage(logObj, chalk.bold('Match'));
 				return await Handler.multiMatch({
-					logObj: attachMessage(logObj, chalk.bold('Match')),
+					logObj: matchMsg,
 					text: message.text, 
 					message,
 					state: this._stateKeeper.getState(message.chat.id)
-				}) || 'I\'m not sure what you mean';
+				}) || (attachMessage(matchMsg, 'None') && 'I\'m not sure what you mean');
 			}
 
 			async handleMessage(req: TelegramReq, res: ResponseLike) {
