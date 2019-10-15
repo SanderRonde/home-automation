@@ -12,15 +12,21 @@ import chalk from 'chalk';
 export namespace RGB {
 	export namespace Scan {
 		export let clients: Control[]|null = null;
-		export async function scanRGBControllers(first: boolean = false) {
+		export async function scanRGBControllers(first: boolean = false, logObj: any = undefined) {
 			const scanTime = (first && process.argv.indexOf('--debug') > -1) ? 500 : 10000;
 			clients = (await new Discovery().scan(scanTime)).map((client) => {
 				return new Control(client.address, {
 					wait_for_reply: false
 				});
 			});
-			log(getTime(), chalk.cyan(`[rgb]`),
-				'Found', chalk.bold(clients.length + ''), 'clients');
+			if (!logObj) {
+				log(getTime(), chalk.cyan(`[rgb]`),
+					'Found', chalk.bold(clients.length + ''), 'clients');
+			} else {
+				attachMessage(logObj, getTime(), chalk.cyan(`[rgb]`),
+					'Found', chalk.bold(clients.length + ''), 'clients');
+			}
+			return clients.length;
 		}
 	}
 
@@ -138,7 +144,7 @@ export namespace RGB {
 				color: string;
 				auth?: string;
 			}) {
-				if (!(color in colorList)) return;
+				if (!(color in colorList)) return false;
 				const hexColor = colorList[color as keyof typeof colorList];
 				const { r, g, b } = hexToRGB(hexColor);
 
@@ -155,6 +161,7 @@ export namespace RGB {
 				}));
 
 				res.status(200).end();
+				return true;
 			}
 
 			private static _singleNumToHex(num: number) {
@@ -231,7 +238,7 @@ export namespace RGB {
 					attachMessage(res, `Pattern ${patternName} does not exist`);
 					res.status(400).write('Unknown pattern');
 					res.end();
-					return;
+					return false;
 				}
 
 				let { pattern, defaultSpeed } = patterns[patternName as CustomPattern];
@@ -240,7 +247,7 @@ export namespace RGB {
 						attachMessage(res, `Invalid transition mode ${transition}`);
 						res.status(400).write('Invalid transiton mode');
 						res.end();
-						return;
+						return false;
 					}
 
 					pattern = this.overrideTransition(pattern, transition as TransitionTypes);
@@ -257,9 +264,11 @@ export namespace RGB {
 						]);
 					}));
 					res.status(200).end();
+					return true;
 				} catch(e) {
 					res.status(400).write('Failed to run pattern');
 					res.end();
+					return false;
 				}
 			}
 
@@ -307,7 +316,7 @@ export namespace RGB {
 			transition?: 'fade'|'jump'|'strobe';
 		}) & {
 			logObj: any;
-			resolver: () => void;
+			resolver: (value?: any) => void;
 		}
 
 		export class Handler {
@@ -326,9 +335,10 @@ export namespace RGB {
 			private static async _handleRequest(request: ExternalRequest) {
 				const { logObj, resolver } = request;
 				const resDummy = new ResDummy();
+				let value = undefined;
 				if (request.type === 'color') {
 					if ('color' in request) {
-						await API.Handler.setColor(resDummy, {
+						value = await API.Handler.setColor(resDummy, {
 							color: request.color,
 							auth: await Auth.Secret.getKey()
 						});
@@ -348,7 +358,7 @@ export namespace RGB {
 					});
 				} else {
 					const { name, speed, transition } = request;
-					await API.Handler.runPattern(resDummy, {
+					value = await API.Handler.runPattern(resDummy, {
 						pattern: name as any,
 						speed,
 						transition,
@@ -356,11 +366,11 @@ export namespace RGB {
 					});
 				}
 				resDummy.transferTo(logObj);
-				resolver();
+				resolver(value);
 			}
 
 			async color(color: string) {
-				return new Promise((resolve) => {
+				return new Promise<boolean>((resolve) => {
 					const req: ExternalRequest = {
 						type: 'color',
 						color: color,
@@ -435,7 +445,44 @@ export namespace RGB {
 		}
 
 		export class State extends BotState.Base {
-			static readonly matches = State.createMatchMaker(() => {});
+			static readonly matches = State.createMatchMaker(({
+				matchMaker: mm
+			}) => {
+				mm(/turn (on|off) (rgb|led)/, async ({
+					logObj, match
+				}) => {
+					const targetState = match[1];
+					await new External.Handler(logObj).power(targetState as 'on'|'off');
+					return `Turned it ${targetState}`;
+				});
+				mm(/set (rgb|led|it|them|color) to ([^ ]*)/, async ({
+					logObj, match
+				}) => {
+					const color = match[2];
+					if (await new External.Handler(logObj).color(color)) {
+						return `Set color to ${color}`;
+					} else {
+						return 'Failed to set color (invalid color)';
+					}
+				});
+				mm(/(start|launch) pattern ([^ ]*)(\s+with speed ([^ ]+))?(\s*and\s*)?(with transition ([^ ]+))?(\s*and\s*)?(\s*with speed ([^ ]+))?/, async ({
+					logObj, match
+				}) => {
+					const [ , , pattern, , speed1, , , transition, , , speed2 ] = match;
+					const speed = speed1 || speed2;
+					if (await new External.Handler(logObj).pattern(pattern, parseInt(speed, 10) || undefined,
+						(transition as any) || undefined)) {
+							return `Started pattern ${pattern}`;
+						} else {
+							return 'Failed to start pattern';
+						}
+				});
+				mm(/refresh (rgb|led)/, async ({
+					logObj
+				}) => {
+					return `Found ${await Scan.scanRGBControllers(false, logObj)} RGB controllers`;
+				});
+			});
 
 			constructor(_json?: JSON) {
 				super();	
@@ -451,10 +498,8 @@ export namespace RGB {
 			}
 
 			toJSON(): JSON {
-				return {} as any;
+				return {};
 			}
-
-			static resetState() {}
 		}
 	}
 
