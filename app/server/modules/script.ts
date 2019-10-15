@@ -5,6 +5,7 @@ import { BotState } from '../lib/bot-state';
 import { AppWrapper } from "../lib/routes";
 import { AuthError } from "../lib/errors";
 import { ResponseLike } from "./multi";
+import { Bot as _Bot } from './bot';
 import { Auth } from "../lib/auth";
 import { Config } from "../app";
 import * as path from 'path';
@@ -16,7 +17,7 @@ export namespace Script {
 			type: 'script';
 			name: string;
 			logObj: any;
-			resolver: () => void;
+			resolver: (value: any) => void;
 		}
 
 		export class Handler {
@@ -34,14 +35,16 @@ export namespace Script {
 
 			private static async _handleRequest(request: ExternalRequest) {
 				const dummy = new ResDummy();
-				await API.Handler.script(dummy, {
+				const value = await API.Handler.script(dummy, {
 					name: request.name,
 					auth: await Auth.Secret.getKey()
 				}, this._config!);
+				dummy.transferTo(request.logObj);
+				request.resolver(value);
 			}
 
 			async script(name: string) {
-				return new Promise((resolve) => {
+				return new Promise<any>((resolve) => {
 					const req: ExternalRequest = {
 						type: 'script',
 						name,
@@ -64,16 +67,49 @@ export namespace Script {
 		}
 
 		export class State extends BotState.Base {
+			static readonly matches = State.createMatchMaker(({
+				matchMaker: mm
+			}) => {
+				mm(/run script ([^ ]+)/, async ({
+					logObj, match
+				}) => {
+					const script = match[1];
+					const output = await new External.Handler(logObj).script(script);
+					if (output) {
+						return `Script output: ${output}`;
+					} else {
+						return 'Ran script, no output'
+					}
+				});
+				mm(/(shutdown|kill) desktop/, async ({
+					logObj
+				}) => {
+					await new External.Handler(logObj).script('shutdown_desktop');
+					return 'Shut it down';
+				});
+				mm(/(wake|start|boot) desktop/, async ({
+					logObj
+				}) => {
+					await new External.Handler(logObj).script('wake_desktop');
+					return 'Started it';
+				});
+			});
+
 			constructor(_json?: JSON) {
 				super();	
 			}
 
-			async match() {
-				return undefined;
+			static async match(config: { 
+				logObj: any; 
+				text: string; 
+				message: _Bot.TelegramMessage; 
+				state: _Bot.Message.StateKeeping.ChatState; 
+			}): Promise<_Bot.Message.MatchResponse | undefined> {
+				return await this.matchLines({ ...config, matchConfig: State.matches });
 			}
 
 			toJSON(): JSON {
-				return {} as any;
+				return {};
 			}
 		}
 	}
@@ -102,12 +138,14 @@ export namespace Script {
 					res.write(output);
 					res.status(200);
 					res.end();
+					return output;
 				} catch(e) {
 					const errMsg = attachMessage(res, chalk.bgRed(chalk.black(`Error: ${e.message}`)));
 					for (const line of e.stack.split('\n')) {
 						attachMessage(errMsg, chalk.bgRed(chalk.black(line)));
 					}
 					res.status(400).end();
+					return '';
 				}
 			}
 		}
