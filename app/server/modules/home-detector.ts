@@ -1,5 +1,6 @@
 import { errorHandle, authCookie, requireParams, auth } from '../lib/decorators';
-import { attachMessage, logFixture, getTime, log } from '../lib/logger';
+import { attachMessage, logFixture, getTime, log, ResDummy } from '../lib/logger';
+import { makeTable } from '../lib/telegram-output';
 import { BotState } from '../lib/bot-state';
 import { AppWrapper } from "../lib/routes";
 import hooks from '../config/home-hooks';
@@ -52,8 +53,8 @@ export namespace HomeDetector {
 
 		class Pinger {
 			private _state: HOME_STATE|null = null;
-			public leftAt: number = 0;
-			public joinedAt: number = 0;
+			public leftAt: Date = new Date(1970, 0, 0, 0, 0, 0, 0);
+			public joinedAt: Date = new Date(1970, 0, 0, 0, 0, 0, 0);
 
 			constructor(private _config: {
 				name: string;
@@ -144,9 +145,9 @@ export namespace HomeDetector {
 							this._onChange(finalState);
 						}
 						if (finalState === HOME_STATE.AWAY) {
-							this.leftAt = Date.now();
+							this.leftAt = new Date();
 						} else {
-							this.joinedAt = Date.now();
+							this.joinedAt = new Date();
 						}
 						this._state = finalState;
 						await wait(CHANGE_PING_INTERVAL);
@@ -225,6 +226,10 @@ export namespace HomeDetector {
 				return obj;
 			}
 
+			getPinger(name: string) {
+				return this._extendedPingers.get(name);
+			}
+
 			get(name: string) {
 				const pinger = this._extendedPingers.get(name);
 				if (!pinger) {
@@ -241,20 +246,171 @@ export namespace HomeDetector {
 
 	export namespace Bot {
 		export interface JSON {
+			lastSubjects: string[]|null;
+		}
 
+		interface HomeDetectorBotConfig {
+			apiHandler: API.Handler;
+			detector: Classes.Detector;
 		}
 
 		export class State extends BotState.Base {
-			constructor(_json?: JSON) {
-				super();	
+			private static capitalize(word: string) {
+				return word[0].toUpperCase() + word.slice(1);
 			}
 
-			async match() {
-				return undefined;
+			static readonly matches = State.createMatchMaker(({
+				matchMaker: mm,
+				fallbackSetter: fallback,
+				conditional
+			}) => {
+				mm(/who (is|are) (home|away)/, async ({
+					logObj, state, match
+				}) => {
+					const resDummy = new ResDummy();
+					const all = await State._config!.apiHandler.getAll(
+						resDummy, {
+							auth: await Auth.Secret.getKey()
+						}, true);
+					resDummy.transferTo(logObj);
+
+					const matches: string[] = [];
+					for (const name in all) {
+						if ((match[2] === 'home') === (all[name] === HOME_STATE.HOME)) {
+							matches.push(State.capitalize(name));
+						}
+					}
+
+					const nameText = (() => {
+						if (matches.length === 0) {
+							return 'Noone is';
+						} else if (matches.length === 1) {
+							return `${matches[0]} is`;
+						} else {
+							return `${matches.slice(0, -1).join(', ')} and ${matches[matches.length - 1]} are`;
+						}
+					})();
+
+					state.homeDetector.lastSubjects = matches.length === 0 ?
+						null : matches;
+					
+					return `${nameText}`;
+				});
+				mm(/is (.*) (home|away)(\??)/, async ({
+					logObj, state, match
+				}) => {
+					const checkTarget = match[2];
+
+					const resDummy = new ResDummy();
+					const homeState = await State._config!.apiHandler.get(
+						resDummy, {
+							auth: await Auth.Secret.getKey(),
+							name: match[1]
+						});
+					resDummy.transferTo(logObj);
+
+					state.homeDetector.lastSubjects = [ match[1] ];
+					if ((homeState === HOME_STATE.HOME) === (checkTarget === 'home')) {
+						return 'Yep';
+					} else {
+						return 'Nope';
+					}
+				});
+				mm(/when did (.*) (arrive|(get home)|leave|(go away))/, async ({
+					logObj, state, match
+				}) => {
+					const checkTarget = (match[2] === 'arrive' || 
+						match[2] === 'get home') ? HOME_STATE.HOME : HOME_STATE.AWAY;
+					const target = match[1];
+
+					const nameMsg = attachMessage(logObj, `Name: ${target}`);
+					const pinger = State._config!.detector.getPinger(target.toLowerCase());
+					if (!pinger) {
+						attachMessage(nameMsg, chalk.bold('Nonexistent'));
+						return 'Person does not exist';
+					}
+
+					attachMessage(nameMsg, `Left at:`, chalk.bold(pinger.leftAt + ''));
+					attachMessage(nameMsg, `Arrived at:`, chalk.bold(pinger.joinedAt + ''));
+
+					state.homeDetector.lastSubjects = [ target ];
+
+					return checkTarget === HOME_STATE.HOME ?
+						pinger.joinedAt.toLocaleString() : 
+						pinger.leftAt.toLocaleString();
+				});
+
+				conditional(mm(/when did (he|she|they) (arrive|(get home)|leave|(go away))/, async ({
+					logObj, state, match
+				}) => {
+					const checkTarget = (match[2] === 'arrive' || 
+						match[2] === 'get home') ? HOME_STATE.HOME : HOME_STATE.AWAY;
+
+					const table: {
+						contents: string[][];
+						header: string[];
+					} = {
+						contents: [],
+						header: ['Name', 'Time']
+					};
+					for (const target of state.homeDetector.lastSubjects!) {
+						const nameMsg = attachMessage(logObj, `Name: ${target}`);
+						const pinger = State._config!.detector.getPinger(target.toLowerCase());
+						if (!pinger) {
+							attachMessage(nameMsg, chalk.bold('Nonexistent'));
+							continue;
+						}
+
+						attachMessage(nameMsg, `Left at:`, chalk.bold(pinger.leftAt + ''));
+						attachMessage(nameMsg, `Arrived at:`, chalk.bold(pinger.joinedAt + ''));
+
+						const timeMsg = checkTarget === HOME_STATE.HOME ?
+							pinger.joinedAt.toLocaleString() : 
+							pinger.leftAt.toLocaleString();
+						table.contents.push([State.capitalize(target), timeMsg]);
+					}
+
+					return makeTable(table);
+				}), ({ state }) => {
+					return state.homeDetector.lastSubjects !== null;
+				});
+
+				fallback(({ state }) => {
+					State.resetState(state);
+				});
+			});
+
+			private static _config: HomeDetectorBotConfig|null = null;
+			lastSubjects: string[]|null = null;
+
+			constructor(json?: JSON) {
+				super();
+				if (json) {
+					this.lastSubjects = json.lastSubjects;
+				}
+			}
+
+			static init(config: HomeDetectorBotConfig) {
+				this._config = config;
+			}
+
+			static async match(config: { 
+				logObj: any; 
+				text: string; 
+				message: _Bot.TelegramMessage; 
+				state: _Bot.Message.StateKeeping.ChatState; 
+			}): Promise<_Bot.Message.MatchResponse | undefined> {
+				return await this.matchLines({ ...config, matchConfig: State.matches });
+			}
+
+			static resetState(state: _Bot.Message.StateKeeping.ChatState) {
+				state.keyval.lastSubjects = null;
 			}
 
 			toJSON(): JSON {
-				return {} as any;
+				return {
+					"lastSubjects": this.lastSubjects
+				};
 			}
 		}
 	}
@@ -275,12 +431,14 @@ export namespace HomeDetector {
 			@requireParams('name')
 			@auth
 			public async get(res: ResponseLike, { name }: {
-				name: string
+				name: string;
+				auth: string;
 			}) {
 				const result = this._detector.get(name);
 				attachMessage(res, `Name: ${name}, val: ${result}`);
 				res.write(result);
 				res.end();
+				return result;
 			}
 
 			@errorHandle
@@ -288,10 +446,12 @@ export namespace HomeDetector {
 			public async getAll(res: ResponseLike, _params: {
 				auth: string;
 			}, extended: boolean = false) {
-				const result = JSON.stringify(this._detector.getAll(extended));
+				const all = this._detector.getAll(extended);
+				const result = JSON.stringify(all);
 				attachMessage(res, `JSON: ${result}`);
 				res.write(result);
 				res.end();
+				return all;
 			}
 		}
 	}
@@ -387,6 +547,7 @@ export namespace HomeDetector {
 			const detector = new Classes.Detector({ db });
 			const apiHandler = new API.Handler({ detector });
 			const webpageHandler = new Webpage.Handler({ randomNum, detector });
+			Bot.State.init({ apiHandler, detector });
 
 			app.post('/home-detector/all', async (req, res) => {
 				await apiHandler.getAll(res, {...req.params, ...req.body});

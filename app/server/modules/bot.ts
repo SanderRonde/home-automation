@@ -15,6 +15,12 @@ import chalk from 'chalk';
 
 const BOT_NAME = 'HuisBot';
 
+export const enum RESPONSE_TYPE {
+	MARKDOWN = 'Markdown',
+	HTML = 'HTML',
+	TEXT = 'Text'
+};
+
 export namespace Bot {
 	export interface TelegramText {
 		text: string;
@@ -58,7 +64,10 @@ export namespace Bot {
 	export namespace Message {
 		export interface MatchResponse {
 			end: number;
-			response: string;
+			response: string|number|{
+				type: RESPONSE_TYPE;
+				text: string|number;
+			};
 		}
 
 		export namespace StateKeeping {
@@ -185,12 +194,14 @@ export namespace Bot {
 				return this;
 			}
 
-			async sendMessage(text: string, chatId: number) {
+			async sendMessage(text: string|number, type: RESPONSE_TYPE, chatId: number) {
 				return new Promise<boolean>((resolve) => {
-					const msg = JSON.stringify({
+					const msg = JSON.stringify({...{
 						chat_id: chatId,
-						text
-					});
+						text: text + ''
+					}, ...(type === RESPONSE_TYPE.TEXT ? {} : {
+						parse_mode: type
+					})});
 					const req = https.request({
 						method: 'POST',
 						path: `/bot${this._secret}/sendMessage`,
@@ -213,8 +224,10 @@ export namespace Bot {
 					});
 					req.end();
 
-					attachMessage(req, chalk.cyan('[bot]'), 'id: ', chalk.bold(chatId + ''),
-						'Text: ', chalk.bold(text));
+					const botLogObj = attachMessage(req, chalk.cyan('[bot]'));
+					attachMessage(botLogObj, 'ID: ', chalk.bold(chatId + ''));
+					attachMessage(botLogObj, 'Type: ', chalk.bold(type + ''));
+					attachMessage(botLogObj, 'Text: ', chalk.bold(JSON.stringify(text)));
 				});
 			}
 
@@ -251,6 +264,7 @@ export namespace Bot {
 			}): Promise<MatchResponse | undefined> {
 				return this._matchMatchables(config,
 					await this._matchSelf(config),
+					HomeDetector.Bot.State,
 					KeyVal.Bot.State,
 					RGB.Bot.State);
 			}
@@ -260,8 +274,14 @@ export namespace Bot {
 				text: string; 
 				message: Bot.TelegramMessage; 
 				state: Bot.Message.StateKeeping.ChatState; 
-			}): Promise<string | undefined> {
-				let response: string[] = [];
+			}): Promise<{
+				type: RESPONSE_TYPE;
+				text: string|number;
+			}[] | undefined> {
+				let response: {
+					type: RESPONSE_TYPE;
+					text: string|number;
+				}[] = [];
 
 				let match: MatchResponse | undefined = undefined;
 				
@@ -269,7 +289,14 @@ export namespace Bot {
 					logObj, text, message, state
 				}))) {
 					// Push response
-					response.push(match.response);
+					if (typeof match.response === 'string' || typeof match.response === 'number') {
+						response.push({
+							type: RESPONSE_TYPE.TEXT,
+							text: match.response
+						});
+					} else {
+						response.push(match.response);
+					}
 
 					// Adapt the text
 					text = text.slice(match.end).trim();
@@ -283,33 +310,57 @@ export namespace Bot {
 						break;
 					}
 				}
-				return response.join('\n');
+
+				if (response.length === 0) return undefined;
+
+				const responses: {
+					type: RESPONSE_TYPE;
+					text: string|number;
+				}[] = [response[0]];
+				let lastType: string = response[0].type;
+				for (let i = 1; i < response.length; i++) {
+					if (lastType !== response[i].type) {
+						responses.push(response[i]);
+					} else {
+						responses[responses.length - 1].text += '\n' + response[i].text;
+					}
+				}
+				return responses;
 			}
 
 			async handleTextMessage(logObj: any, message: TelegramMessage<TelegramText>) {
 				attachMessage(logObj, `Message text:`, chalk.bold(message.text));
 				attachMessage(logObj, `Chat ID:`, chalk.bold(message.chat.id + ''));
-				const matchMsg = attachMessage(logObj, chalk.bold('Match'));
+				const matchMsg = attachMessage(logObj, 'Match');
 				return await Handler.multiMatch({
 					logObj: matchMsg,
 					text: message.text, 
 					message,
 					state: this._stateKeeper.getState(message.chat.id)
-				}) || (attachMessage(matchMsg, 'None') && 'I\'m not sure what you mean');
+				}) || (attachMessage(matchMsg, 'None') && [{
+					type: RESPONSE_TYPE.TEXT,
+					text: 'I\'m not sure what you mean'
+				}]);
 			}
 
 			async handleMessage(req: TelegramReq, res: ResponseLike) {
 				const { message } = req.body;
 				const logObj = attachMessage(res, chalk.bold(chalk.cyan('[bot]')));
 			
-				const response = await (() => {
+				const responses = await (() => {
 					if ('text' in message) {
 						return this.handleTextMessage(logObj,
 							message);
 					}
-					return 'Message type unsupported';
+					return [{
+						type: RESPONSE_TYPE.TEXT,
+						text: 'Message type unsupported' as (string|number)
+					}];
 				})();
-				if (await this.sendMessage(response, message.chat.id)) {
+				attachMessage(logObj, 'Return value(s)', chalk.bold(JSON.stringify(responses)));
+				if ((await Promise.all(responses.map((response) => {
+					return this.sendMessage(response.text, response.type, message.chat.id);
+				}))).every(v => v)) {
 					res.write('ok');
 				} else {
 					res.write('Error : failed to respond');

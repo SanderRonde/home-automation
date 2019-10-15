@@ -1,15 +1,23 @@
-import { Bot } from '../modules/bot';
+import { Bot, RESPONSE_TYPE } from '../modules/bot';
 import { attachMessage } from './logger';
 import chalk from 'chalk';
 
 export namespace BotState {
+	export type MatchHandlerRet = (string | number | {
+		type: RESPONSE_TYPE;
+		text: string|number;
+	} | Promise<string|number|{
+		type: RESPONSE_TYPE;
+		text: string|number;
+	}>)
+
 	export type MatchHandler = (config: { 
 		text: string;
 		message: Bot.TelegramMessage;
 		state: Bot.Message.StateKeeping.ChatState;
 		match: RegExpMatchArray;
 		logObj: any;
-	}) => (string | number | Promise<string | number>);
+	}) => MatchHandlerRet;
 
 	export interface MatchBaseParams {
 		text: string;
@@ -52,30 +60,62 @@ export namespace BotState {
 			let index: number = -1;
 			let match: RegExpExecArray | null = null;
 			text = text.toLowerCase();
+			let earliestMatch: {
+				type: 'text'|'regexp';
+				index: number;
+				match: RegExpExecArray;
+				fn: MatchHandler;
+				matchText: string;
+				end: number;
+			} | null = null;
+
 			for (const { fn, regexps, texts, conditions } of matchConfig.matches) {
 				for (const matchText of texts) {
-					if ((index = text.indexOf(matchText)) > -1 && conditions.every((condition) => {
+					if ((index = text.indexOf(matchText)) === 0 && conditions.every((condition) => {
 						return condition(config);
 					})) {
-						const newLogObj = attachMessage(logObj,
-							`Matching string:`, chalk.bold(matchText));
-						return {
-							end: index + matchText.length,
-							response: await fn({ ...config, logObj: newLogObj, match: [] as any }) + ''
+						if (earliestMatch === null || index < earliestMatch!.index) {
+							earliestMatch = {
+								type: 'text',
+								match: [] as unknown as RegExpExecArray,
+								fn,
+								index,
+								matchText,
+								end: index + matchText.length
+							};
 						}
 					}
 				}
 				for (const matchRegexp of regexps) {
-					if ((match = matchRegexp.exec(text)) && conditions.every((condition) => {
+					if ((match = new RegExp('^' + matchRegexp.source).exec(text)) && conditions.every((condition) => {
 						return condition(config);
 					})) {
-						const newLogObj = attachMessage(logObj,
-							`Matching regex:`, chalk.bold(matchRegexp.source));
-						return {
-							end: match.index + match[0].length,
-							response: await fn({ ...config, logObj: newLogObj, match }) + ''
+						if (earliestMatch === null || match.index < earliestMatch!.index) {
+							earliestMatch = {
+								type: 'text',
+								match,
+								fn,
+								index: match.index,
+								matchText: matchRegexp.source,
+								end: match.index + match[0].length
+							};
 						}
 					}
+				}
+			}
+
+			if (earliestMatch) {
+				const newLogObj = attachMessage(logObj,
+					earliestMatch!.type === 'text' ? 
+					'Matching string:' : 'Matching regex:', 
+					chalk.bold(earliestMatch!.matchText));
+				return {
+					end: earliestMatch!.end,
+					response: await earliestMatch!.fn({ 
+						...config, 
+						logObj: newLogObj, 
+						match: earliestMatch!.match 
+					})
 				}
 			}
 

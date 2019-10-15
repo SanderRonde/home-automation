@@ -159,7 +159,7 @@ export namespace KeyVal {
 
 	export namespace Bot {
 		export interface JSON {
-
+			lastSubjects: string[]|null;
 		}
 
 		export class State extends BotState.Base {
@@ -171,7 +171,6 @@ export namespace KeyVal {
 				mm(/is the light (on|off)/, /are the lights (on|off)/, async ({ 
 					match, logObj, state
 				}) => {
-					
 					const results = await Promise.all(MAIN_LIGHTS.map((light) => {
 						return new External.Handler(logObj).get(light);
 					})) as string[];
@@ -229,8 +228,11 @@ export namespace KeyVal {
 
 			lastSubjects: string[]|null = null;
 
-			constructor(_json?: JSON) {
+			constructor(json?: JSON) {
 				super();
+				if (json) {
+					this.lastSubjects = json.lastSubjects;
+				}
 			}
 
 			static async match(config: { 
@@ -247,7 +249,9 @@ export namespace KeyVal {
 			}
 
 			toJSON(): JSON {
-				return {} as any;
+				return {
+					"lastSubjects": this.lastSubjects
+				};
 			}
 		}
 	}
