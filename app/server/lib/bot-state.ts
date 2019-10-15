@@ -239,9 +239,7 @@ export namespace BotState {
 
 		static readonly matches: MatchConfig;
 
-		static resetState(_state: Bot.Message.StateKeeping.ChatState) {
-			throw new Error('Not implemented');
-		}
+		static resetState(_state: Bot.Message.StateKeeping.ChatState) { }
 	}
 
 	export abstract class Base extends Matchable {
