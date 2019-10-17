@@ -5,6 +5,39 @@
 #include "keypad_types.h"
 #include <Nextion.h>
 
+/**
+ * IR Data
+ * Decode type = NEC = 3
+ * 
+ * Help			E17250AF
+ * Power		E172E817
+ * Menu			E17240BF
+ * Esc			E1720AF5
+ * Left			E1728877
+ * Up			E172C837
+ * Right		E17248B7
+ * Down			E17228D7
+ * Select		E1724CB3
+ * Source		E17208F7
+ * AutoImg		E172CC33
+ * PC			E1729867
+ * Video		E17258A7
+ * VolUp		E17210EF
+ * VolDown		E17220DF
+ * KeyStoneUp	E17204FB
+ * KeyStoneDown	E172847B
+ * ZoomIn		E1724AB5
+ * ZoomOut		E172CA35
+ * Mute			E172946B
+ * Blank		E1728C73
+ * Presets		E17234CB
+ * Resize		E1722CD3
+ * Freeze		E172708F
+ * Overscan		E172AC53
+ * SuperMute	E1728A75
+ * Custom		E172D42B
+ */
+
 #define DO_DIM 1
 #define DIM_TIME 20
 #define DIM_BRIGHTNESS 1
