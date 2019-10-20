@@ -35,7 +35,25 @@ export namespace Bot {
 		}[];
 	}
 
-	export type TelegramMessage<C = TelegramText|TelegramImage> = {
+	export interface TelegramVoice {
+		voice: {
+			duration: number;
+			mime_type: string;
+			file_id: string;
+			file_size: number;
+		}
+	}
+
+	export interface TelegramDocument {
+		document: {
+			file_name: string;
+			mime_type: string;
+			file_id: string;
+			file_size: number;
+		}
+	}
+
+	export type TelegramMessage<C = TelegramText|TelegramImage|TelegramVoice|TelegramDocument> = {
 		message_id: number;
 		from: {
 			id: number;
@@ -343,8 +361,11 @@ export namespace Bot {
 				}]);
 			}
 
+
+
 			async handleMessage(req: TelegramReq, res: ResponseLike) {
 				const { message } = req.body;
+				console.log(message);
 				const logObj = attachMessage(res, chalk.bold(chalk.cyan('[bot]')));
 			
 				const responses = await (() => {
