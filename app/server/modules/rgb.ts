@@ -1715,7 +1715,6 @@ export namespace RGB {
 					let pause: boolean = false;
 					const interval = setInterval(() => {
 						if (pause) return;
-						console.log('writing', data);
 						this._port.write(data);
 						attempts++;
 						if (attempts >= MAX_ATTEMPTS) {
@@ -1868,7 +1867,7 @@ export namespace RGB {
 				blockSize = 2,
 				updateTime, mode
 			}: ArduinoAPI.Flash) {
-				return this.sendCommand(`flash ${intensity} ${updateTime} ${mode} ${blockSize} ${colors.map(({
+				return this.sendCommand(`flash ${intensity} ${updateTime} ${blockSize} ${mode} ${colors.map(({
 					r, g, b
 				}) => {
 					return `${r} ${g} ${b}`;
