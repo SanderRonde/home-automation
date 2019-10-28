@@ -62,6 +62,7 @@ typings/
 database/
 secrets/
 app/**/*.js
+serial_mon/**/*.js
 .vscode
 scripts/**/*.js
 **/*.d.ts
