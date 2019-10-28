@@ -1867,7 +1867,9 @@ export namespace RGB {
 				blockSize = 2,
 				updateTime, mode
 			}: ArduinoAPI.Flash) {
-				return this.sendCommand(`flash ${intensity} ${updateTime} ${blockSize} ${mode} ${colors.map(({
+				return this.sendCommand(`flash ${intensity} ${updateTime} ${blockSize} ${mode}${
+					colors.length ? ' ': ''
+				}${colors.map(({
 					r, g, b
 				}) => {
 					return `${r} ${g} ${b}`;
