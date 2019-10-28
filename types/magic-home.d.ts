@@ -64,7 +64,7 @@ export class CustomMode {
 	addColorList(list: [number, number, number][]): this;
 	setTransitionType(type: TransitionTypes): this;
 
-	transitionType: string;
+	transitionType: TransitionTypes;
 	colors: {
 		red: number;
 		green: number;
