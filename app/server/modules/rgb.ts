@@ -17,6 +17,15 @@ function spedToMs(speed: number) {
 	return 1000 / speed;
 }
 
+interface Color {
+	r: number;
+	g: number;
+	b: number;
+}
+
+const MSG_INTERVAL = 50;
+const MAX_ATTEMPTS = 10;
+
 export namespace RGB {
 	export namespace Clients {
 		abstract class RGBClient {
@@ -24,13 +33,13 @@ export namespace RGB {
 				[key in BuiltinPatterns]: number;
 			} = Control.patternNames;
 
-			abstract setColor(red: number, green: number, blue: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean>;
-			abstract setColorAndWarmWhite(red: number, green: number, blue: number, ww: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean>;
-			abstract setColorWithBrightness(red: number, green: number, blue: number, brightness: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean>;
+			abstract setColor(red: number, green: number, blue: number, intensity?: number, callback?: (err: Error | null, success: boolean) => void): Promise<boolean>;
+			abstract setColorAndWarmWhite(red: number, green: number, blue: number, ww: number, callback?: (err: Error | null, success: boolean) => void): Promise<boolean>;
+			abstract setColorWithBrightness(red: number, green: number, blue: number, brightness: number, intensity?: number, callback?: (err: Error | null, success: boolean) => void): Promise<boolean>;
 			abstract setCustomPattern(pattern: CustomMode, speed: number, callback?: () => void): Promise<boolean>;
 			abstract setPattern(pattern: BuiltinPatterns, speed: number, callback?: () => void): Promise<boolean>;
 			abstract setPower(on: boolean, callback?: () => void): Promise<boolean>;
-			abstract setWarmWhite(ww: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean>;
+			abstract setWarmWhite(ww: number, callback?: (err: Error | null, success: boolean) => void): Promise<boolean>;
 			abstract turnOff(callback?: () => void): Promise<boolean>;
 			abstract turnOn(callback?: () => void): Promise<boolean>;
 		}
@@ -40,13 +49,13 @@ export namespace RGB {
 				super();
 			}
 
-			setColor(red: number, green: number, blue: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean> {
+			setColor(red: number, green: number, blue: number, _intensity?: number, callback?: (err: Error | null, success: boolean) => void): Promise<boolean> {
 				return this._control.setColor(red, green, blue, callback);
 			}
-			setColorAndWarmWhite(red: number, green: number, blue: number, ww: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean> {
+			setColorAndWarmWhite(red: number, green: number, blue: number, ww: number, callback?: (err: Error | null, success: boolean) => void): Promise<boolean> {
 				return this._control.setColorAndWarmWhite(red, green, blue, ww, callback);
 			}
-			setColorWithBrightness(red: number, green: number, blue: number, brightness: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean> {
+			setColorWithBrightness(red: number, green: number, blue: number, brightness: number, _intensity?: number, callback?: (err: Error | null, success: boolean) => void): Promise<boolean> {
 				return this._control.setColorWithBrightness(red, green, blue, brightness, callback);
 			}
 			setCustomPattern(pattern: CustomMode, speed: number, callback?: () => void): Promise<boolean> {
@@ -58,7 +67,7 @@ export namespace RGB {
 			setPower(on: boolean, callback?: () => void): Promise<boolean> {
 				return this._control.setPower(on, callback);
 			}
-			setWarmWhite(ww: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean> {
+			setWarmWhite(ww: number, callback?: (err: Error | null, success: boolean) => void): Promise<boolean> {
 				return this._control.setWarmWhite(ww, callback);
 			}
 			turnOff(callback?: () => void): Promise<boolean> {
@@ -78,26 +87,31 @@ export namespace RGB {
 				return this.board.ping();
 			}
 
-			private _sendSuccess(callback?: (err: Error|null, success: boolean) => void) {
+			private _sendSuccess(callback?: (err: Error | null, success: boolean) => void) {
 				callback && callback(null, true);
 				return true;
 			}
 
-			async setColor(red: number, green: number, blue: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean> {
-				this.board.setSolid({ r: red, g: green, b: blue });
+			async setColor(red: number, green: number, blue: number, intensity?: number, callback?: (err: Error | null, success: boolean) => void): Promise<boolean> {
+				await this.board.setSolid({ r: red, g: green, b: blue, intensity });
 				return this._sendSuccess(callback);
 			}
-			async setColorAndWarmWhite(red: number, green: number, blue: number, _ww: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean> {
-				this.board.setSolid({ r: red, g: green, b: blue });
+			async setColorAndWarmWhite(red: number, green: number, blue: number, _ww: number, callback?: (err: Error | null, success: boolean) => void): Promise<boolean> {
+				await this.board.setSolid({ r: red, g: green, b: blue });
 				return this._sendSuccess(callback);
 			}
-			async setColorWithBrightness(red: number, green: number, blue: number, brightness: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean> {
+			async setColorWithBrightness(red: number, green: number, blue: number, brightness: number, intensity?: number, callback?: (err: Error | null, success: boolean) => void): Promise<boolean> {
 				const brightnessScale = brightness / 100;
-				this.board.setSolid({ r: red * brightnessScale, g: green * brightnessScale, b: blue * brightnessScale });
+				await this.board.setSolid({
+					r: red * brightnessScale,
+					g: green * brightnessScale,
+					b: blue * brightnessScale,
+					intensity
+				});
 				return this._sendSuccess(callback);
 			}
 			async setCustomPattern(pattern: CustomMode, speed: number, callback?: () => void): Promise<boolean> {
-				this.board.setFlash({
+				await this.board.setFlash({
 					colors: pattern.colors.map(({ red, green, blue }) => ({ r: red, g: green, b: blue })),
 					mode: pattern.transitionType,
 					updateTime: spedToMs(speed)
@@ -115,12 +129,12 @@ export namespace RGB {
 					return this.turnOff(callback);
 				}
 			}
-			async setWarmWhite(ww: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean> {
-				this.board.setSolid({ r: ww, g: ww, b: ww });
+			async setWarmWhite(ww: number, callback?: (err: Error | null, success: boolean) => void): Promise<boolean> {
+				await this.board.setSolid({ r: ww, g: ww, b: ww });
 				return this._sendSuccess(callback);
 			}
 			async turnOff(callback?: () => void): Promise<boolean> {
-				this.board.setModeOff();
+				await this.board.setModeOff();
 				return this._sendSuccess(callback);
 			}
 			async turnOn(callback?: () => void): Promise<boolean> {
@@ -171,7 +185,7 @@ export namespace RGB {
 		}
 
 		export async function scanRGBControllers(first: boolean = false, logObj: any = undefined) {
-			const [ magicHomeClients, arduinoClients] = await Promise.all([
+			const [magicHomeClients, arduinoClients] = await Promise.all([
 				scanMagicHomeControllers(first),
 				scanArduinos()
 			]);
@@ -183,19 +197,20 @@ export namespace RGB {
 			} else {
 				attachMessage(logObj, getTime(), chalk.cyan(`[rgb]`),
 					'Found', chalk.bold(clients + ''), 'clients');
-			}			
+			}
 		}
 	}
 
-	type CustomPattern = 'rgb'|'rainbow'|'christmas'|'strobe'|'darkColors'|
-		'shittyFire'|'betterFire';
+	type CustomPattern = 'rgb' | 'rainbow' | 'christmas' | 'strobe' | 'darkColors' |
+		'shittyFire' | 'betterFire';
 
 	const patterns: Object & {
 		[K in CustomPattern]: {
 			pattern: CustomMode;
 			defaultSpeed: number;
+			arduinoOnly?: boolean;
 		}
-	}= {
+	} = {
 		rgb: {
 			pattern: new CustomMode()
 				.addColor(255, 0, 0)
@@ -270,8 +285,8 @@ export namespace RGB {
 			pattern: new CustomMode()
 				.addColorList(new Array(15).fill('').map(() => {
 					return [
-						255 - (Math.random() * 90), 
-						200 - (Math.random() * 200), 
+						255 - (Math.random() * 90),
+						200 - (Math.random() * 200),
 						0
 					] as [number, number, number];
 				}))
@@ -280,25 +295,339 @@ export namespace RGB {
 		}
 	}
 
+	namespace ArduinoAPI {
+		export const enum DIR {
+			DIR_FORWARDS = 1,
+			DIR_BACKWARDS = 0
+		}
+
+		export interface Solid {
+			intensity?: number;
+			r: number;
+			g: number;
+			b: number;
+		}
+
+		export interface Dot {
+			intensity?: number;
+			backgroundRed: number;
+			backgroundGreen: number;
+			backgroundBlue: number;
+			dots: {
+				size: number;
+				speed: number;
+				dir: DIR;
+				dotPos: number;
+				r: number;
+				g: number;
+				b: number;
+			}[];
+		}
+
+		export interface Split {
+			intensity?: number;
+			updateTime: number;
+			dir: DIR;
+			parts: Color[];
+		}
+
+		export interface Pattern {
+			intensity?: number;
+			updateTime: number;
+			blockSize?: number;
+			dir: DIR;
+			parts: Color[];
+		}
+
+		export interface Flash {
+			intensity?: number;
+			updateTime: number;
+			mode: TransitionTypes;
+			blockSize?: number;
+			colors?: Color[];
+		}
+
+		export type ArduinoConfig = {
+			type: 'solid';
+			data: Solid;
+		} | {
+			type: 'dot';
+			data: Dot;
+		} | {
+			type: 'split';
+			data: Split;
+		} | {
+			type: 'pattern';
+			data: Pattern;
+		} | {
+			type: 'flash';
+			data: Flash;
+		} | {
+			type: 'off';
+		} | {
+			type: 'prime';
+		}
+
+		export type JoinedConfigs = Partial<Solid & Dot & Split & Pattern & Flash>;
+
+		export type Effects = 'rainbow'|'reddot'|'reddotbluebg'|'multidot'|
+			'split'|'rgb'|'quickstrobe'|'strobe'|'slowstrobe'|'brightstrobe';
+
+
+		function interpolate(c1: Color, c2: Color, steps: number, {
+			start = true, end = true
+		}: {
+			start?: boolean;
+			end?: boolean;
+		} = {}) {
+			const stops: Color[] = [];
+			if (start) {
+				stops.push(c1);
+			}
+
+			let delta = 1 / steps;
+			for (let i = 1; i < steps - 1; i++) {
+				const progress = delta * i;
+				const invertedProgress = 1 - progress;
+				stops.push({
+					r: Math.round((invertedProgress * c1.r) + (progress * c2.r)),
+					g: Math.round((invertedProgress * c1.g) + (progress * c2.g)),
+					b: Math.round((invertedProgress * c1.b) + (progress * c2.b)),
+				});
+			}
+
+			if (end) {
+				stops.push(c2);
+			}
+			return stops;
+		}
+
+		export const arduinoEffects: Object & {
+			[K in Effects]: ArduinoConfig
+		} = {
+			rainbow: {
+				type: 'pattern',
+				data: {
+					updateTime: 1,
+					dir: DIR.DIR_FORWARDS,
+					blockSize: 1,
+					intensity: 0,
+					parts: [
+						...interpolate({
+							r: 255, g: 0, b: 0
+						}, {
+							r: 0, g: 255, b: 0
+						}, 5, { end: false }),
+						...interpolate({
+							r: 0, g: 255, b: 0
+						}, {
+							r: 0, g: 0, b: 255
+						}, 5, { end: false }),
+						...interpolate({
+							r: 0, g: 0, b: 255
+						}, {
+							r: 255, g: 0, b: 0
+						}, 5, { end: false }),
+					]
+				}
+			},
+			reddot: {
+				type: 'dot',
+				data: {
+					backgroundBlue: 0,
+					backgroundGreen: 0,
+					backgroundRed: 0,
+					dots: [{
+						r: 255,
+						g: 0,
+						b: 0,
+						dir: DIR.DIR_FORWARDS,
+						dotPos: 0,
+						size: 5,
+						speed: 1
+					}]
+				}
+			},
+			multidot: {
+				type: 'dot',
+				data: {
+					backgroundBlue: 0,
+					backgroundGreen: 0,
+					backgroundRed: 0,
+					dots: [{
+						r: 255,
+						g: 0,
+						b: 0,
+						dir: DIR.DIR_FORWARDS,
+						dotPos: 0,
+						size: 5,
+						speed: 1
+					}, {
+						r: 0,
+						g: 255,
+						b: 0,
+						dir: DIR.DIR_FORWARDS,
+						dotPos: 12,
+						size: 5,
+						speed: 1
+					}, {
+						r: 0,
+						g: 0,
+						b: 255,
+						dir: DIR.DIR_FORWARDS,
+						dotPos: 24,
+						size: 5,
+						speed: 1
+					}, {
+						r: 255,
+						g: 0,
+						b: 255,
+						dir: DIR.DIR_FORWARDS,
+						dotPos: 36,
+						size: 5,
+						speed: 1
+					}, {
+						r: 255,
+						g: 255,
+						b: 0,
+						dir: DIR.DIR_FORWARDS,
+						dotPos: 48,
+						size: 5,
+						speed: 1
+					}, {
+						r: 0,
+						g: 255,
+						b: 255,
+						dir: DIR.DIR_FORWARDS,
+						dotPos: 60,
+						size: 5,
+						speed: 1
+					}]
+				}
+			},
+			reddotbluebg: {
+				type: 'dot',
+				data: {
+					backgroundBlue: 255,
+					backgroundGreen: 0,
+					backgroundRed: 0,
+					dots: [{
+						r: 255,
+						g: 0,
+						b: 0,
+						dir: DIR.DIR_FORWARDS,
+						dotPos: 0,
+						size: 5,
+						speed: 1
+					}]
+				}
+			},
+			split: {
+				type: 'split',
+				data: {
+					intensity: 0,
+					updateTime: 100,
+					dir: DIR.DIR_FORWARDS,
+					parts: [{
+						r: 0,
+						g: 0,
+						b: 255
+					}, {
+						r: 255,
+						g: 0,
+						b: 0
+					}, {
+						r: 255,
+						g: 0,
+						b: 255
+					}, {
+						r: 0,
+						g: 255,
+						b: 0
+					}]
+				}
+			},
+			rgb: {
+				type: 'pattern',
+				data: {
+					blockSize: 0,
+					intensity: 0,
+					dir: DIR.DIR_FORWARDS,
+					updateTime: 1,
+					parts: [{
+						r: 255,
+						g: 0,
+						b: 0
+					}, {
+						r: 0,
+						g: 255,
+						b: 0
+					}, {
+						r: 0,
+						g: 0,
+						b: 255
+					}]
+				}
+			},
+			quickstrobe: {
+				type: 'flash',
+				data: {
+					mode: 'strobe',
+					blockSize: 2,
+					intensity: 0,
+					updateTime: 1
+				}
+			},
+			strobe: {
+				type: 'flash',
+				data: {
+					mode: 'strobe',
+					blockSize: 7,
+					intensity: 0,
+					updateTime: 60
+				}
+			},
+			slowstrobe: {
+				type: 'flash',
+				data: {
+					mode: 'strobe',
+					blockSize: 3,
+					intensity: 0,
+					updateTime: 500
+				}
+			},
+			brightstrobe: {
+				type: 'flash',
+				data: {
+					mode: 'strobe',
+					blockSize: 3,
+					intensity: 0,
+					updateTime: 1000
+				}
+			}
+		}
+	}
+
 	export namespace API {
-		const HEX_REGEX = /#([a-fA-F\d]{2})([a-fA-F\d]{2})([a-fA-F\d]{2})/;
-		function hexToRGB(hex: string) {
+		export const HEX_REGEX = /#([a-fA-F\d]{2})([a-fA-F\d]{2})([a-fA-F\d]{2})/;
+		export function hexToRGB(hex: string) {
 			const match = HEX_REGEX.exec(hex)!;
 
-			const [ , r, g, b ] = match;
+			const [, r, g, b] = match;
 			return {
 				r: parseInt(r, 16),
 				g: parseInt(g, 16),
 				b: parseInt(b, 16)
 			}
 		}
-		
+
 		export class Handler {
 			@errorHandle
 			@requireParams('color')
 			@auth
-			public static async setColor(res: ResponseLike, { color }: {
+			public static async setColor(res: ResponseLike, { color, intensity }: {
 				color: string;
+				intensity?: number;
 				auth?: string;
 			}) {
 				if (!(color in colorList)) return false;
@@ -306,13 +635,13 @@ export namespace RGB {
 				const { r, g, b } = hexToRGB(hexColor);
 
 				attachMessage(attachMessage(attachMessage(res, `rgb(${r}, ${g}, ${b})`),
-					chalk.bgHex(hexColor)('   ')), 
-						`Updated ${Clients.clients!.length} clients`);
-				
+					chalk.bgHex(hexColor)('   ')),
+					`Updated ${Clients.clients!.length} clients`);
+
 
 				await Promise.all(Clients.clients!.map(async (client) => {
 					return Promise.all([
-						client.setColorWithBrightness(r, g, b, 100),
+						client.setColorWithBrightness(r, g, b, 100, intensity),
 						client.turnOn()
 					]);
 				}));
@@ -335,11 +664,12 @@ export namespace RGB {
 			@errorHandle
 			@requireParams('red', 'green', 'blue')
 			@auth
-			public static async setRGB(res: ResponseLike, { red, green, blue }: {
+			public static async setRGB(res: ResponseLike, { red, green, blue, intensity }: {
 				red: string;
 				green: string;
 				blue: string;
 				auth?: string;
+				intensity?: number;
 			}) {
 				const redNum = Math.min(255, Math.max(0, parseInt(red, 10)));
 				const greenNum = Math.min(255, Math.max(0, parseInt(green, 10)));
@@ -347,15 +677,15 @@ export namespace RGB {
 				attachMessage(attachMessage(attachMessage(res, `rgb(${red}, ${green}, ${blue})`),
 					chalk.bgHex(`#${
 						this.toHex(redNum)
-					}${
+						}${
 						this.toHex(greenNum)
-					}${
+						}${
 						this.toHex(blueNum)
-					}`)('   ')), `Updated ${Clients.clients!.length} clients`);
+						}`)('   ')), `Updated ${Clients.clients!.length} clients`);
 
 				await Promise.all(Clients.clients!.map(async (client) => {
 					return Promise.all([
-						client.setColorWithBrightness(redNum, greenNum, blueNum, 100),
+						client.setColorWithBrightness(redNum, greenNum, blueNum, 100, intensity),
 						client.turnOn()
 					]);
 				}));
@@ -376,7 +706,7 @@ export namespace RGB {
 				res.status(200).end();
 			}
 
-			static overrideTransition(pattern: CustomMode, transition: 'fade'|'jump'|'strobe') {
+			static overrideTransition(pattern: CustomMode, transition: 'fade' | 'jump' | 'strobe') {
 				return new CustomMode().addColorList(pattern.colors.map(({ red, green, blue }) => {
 					return [red, green, blue] as [number, number, number];
 				})).setTransitionType(transition);
@@ -398,7 +728,7 @@ export namespace RGB {
 					return false;
 				}
 
-				let { pattern, defaultSpeed } = patterns[patternName as CustomPattern];
+				let { pattern, defaultSpeed, arduinoOnly = false } = patterns[patternName as CustomPattern];
 				if (transition) {
 					if (['fade', 'jump', 'strobe'].indexOf(transition) === -1) {
 						attachMessage(res, `Invalid transition mode ${transition}`);
@@ -410,11 +740,13 @@ export namespace RGB {
 					pattern = this.overrideTransition(pattern, transition as TransitionTypes);
 				}
 
+				const usedClients = arduinoOnly ?
+					Clients.arduinoClients : Clients.clients;
 				attachMessage(
 					attachMessage(res, `Running pattern ${patternName}`),
-					`Updated ${Clients.clients!.length} clients`);
+					`Updated ${usedClients!.length} clients`);
 				try {
-					await Promise.all(Clients.clients!.map((c) => {
+					await Promise.all(usedClients!.map((c) => {
 						return Promise.all([
 							c.setCustomPattern(pattern, speed || defaultSpeed),
 							c.turnOn()
@@ -422,8 +754,66 @@ export namespace RGB {
 					}));
 					res.status(200).end();
 					return true;
-				} catch(e) {
+				} catch (e) {
 					res.status(400).write('Failed to run pattern');
+					res.end();
+					return false;
+				}
+			}
+
+			@errorHandle
+			@requireParams('effect')
+			@auth
+			public static async runEffect(res: ResponseLike, body: {
+				effect: ArduinoAPI.Effects;
+				auth?: string;
+			} & {
+				[key: string]: any;
+			}) {
+				const { effect: effectName } = body;
+				if (!ArduinoAPI.arduinoEffects.hasOwnProperty(effectName)) {
+					attachMessage(res, `Effect ${effectName} does not exist`);
+					res.status(400).write('Unknown effect');
+					res.end();
+					return false;
+				}
+
+				const effect = ArduinoAPI.arduinoEffects[effectName];
+
+				attachMessage(
+					attachMessage(res, `Running effect ${effectName}`),
+					`Updated ${Clients.arduinoClients.length} clients`);
+				try {
+					Clients.arduinoClients.forEach((c) => {
+						return c.board.runConfig(effect, body as ArduinoAPI.JoinedConfigs);
+					});
+					res.status(200).end();
+					return true;
+				} catch (e) {
+					res.status(400).write('Failed to run effect');
+					res.end();
+					return false;
+				}
+			}
+
+			@errorHandle
+			@requireParams('config')
+			@auth
+			public static async runConfig(res: ResponseLike, { config }: {
+				config: ArduinoAPI.ArduinoConfig;
+				auth?: string;
+			}) {
+				attachMessage(
+					attachMessage(res, `Running config ${JSON.stringify(config)}`),
+					`Updated ${Clients.arduinoClients.length} clients`);
+				try {
+					Clients.arduinoClients.forEach((c) => {
+						return c.board.runConfig(config);
+					});
+					res.status(200).end();
+					return true;
+				} catch (e) {
+					res.status(400).write('Failed to run config');
 					res.end();
 					return false;
 				}
@@ -442,20 +832,28 @@ export namespace RGB {
 	export namespace External {
 		type ExternalRequest = (({
 			type: 'color';
+			intensity: number;
 		} & ({
 			color: string;
-		}|{
+		} | {
 			r: string;
 			g: string;
 			b: string;
-		}))|{
+		})) | {
 			type: 'power';
-			state: 'on'|'off';
-		}|{
+			state: 'on' | 'off';
+		} | {
 			type: 'pattern';
 			name: string;
 			speed?: number;
-			transition?: 'fade'|'jump'|'strobe';
+			transition?: 'fade' | 'jump' | 'strobe';
+		} | {
+			type: 'effect';
+			name: ArduinoAPI.Effects;
+			extra: ArduinoAPI.JoinedConfigs;
+		} | {
+			type: 'config';
+			config: ArduinoAPI.ArduinoConfig;
 		}) & {
 			logObj: any;
 			resolver: (value?: any) => void;
@@ -482,6 +880,7 @@ export namespace RGB {
 					if ('color' in request) {
 						value = await API.Handler.setColor(resDummy, {
 							color: request.color,
+							intensity: request.intensity,
 							auth: await Auth.Secret.getKey()
 						});
 					} else {
@@ -490,12 +889,24 @@ export namespace RGB {
 							red: r,
 							green: g,
 							blue: b,
+							intensity: request.intensity,
 							auth: await Auth.Secret.getKey()
 						});
 					}
 				} else if (request.type == 'power') {
 					await API.Handler.setPower(resDummy, {
 						power: request.state,
+						auth: await Auth.Secret.getKey()
+					});
+				} else if (request.type === 'effect') {
+					await API.Handler.runEffect(resDummy, {
+						effect: request.name,
+						auth: await Auth.Secret.getKey(),
+						...request.extra
+					})
+				} else if (request.type === 'config') {
+					await API.Handler.runConfig(resDummy, {
+						config: request.config,
 						auth: await Auth.Secret.getKey()
 					});
 				} else {
@@ -511,11 +922,12 @@ export namespace RGB {
 				resolver(value);
 			}
 
-			async color(color: string) {
+			async color(color: string, intensity: number = 0) {
 				return new Promise<boolean>((resolve) => {
 					const req: ExternalRequest = {
 						type: 'color',
 						color: color,
+						intensity,
 						logObj: this._logObj,
 						resolver: resolve
 					};
@@ -527,13 +939,14 @@ export namespace RGB {
 				});
 			}
 
-			async rgb(red: string, green: string, blue: string) {
+			async rgb(red: string, green: string, blue: string, intensity: number = 0) {
 				return new Promise((resolve) => {
 					const req: ExternalRequest = {
 						type: 'color',
 						r: red,
 						g: green,
 						b: blue,
+						intensity,
 						logObj: this._logObj,
 						resolver: resolve
 					};
@@ -545,7 +958,7 @@ export namespace RGB {
 				});
 			}
 
-			async power(state: 'on'|'off') {
+			async power(state: 'on' | 'off') {
 				return new Promise((resolve) => {
 					const req: ExternalRequest = {
 						type: 'power',
@@ -561,7 +974,7 @@ export namespace RGB {
 				});
 			}
 
-			async pattern(name: string, speed?: number, transition?: 'fade'|'jump'|'strobe') {
+			async pattern(name: string, speed?: number, transition?: 'fade' | 'jump' | 'strobe') {
 				return new Promise((resolve) => {
 					const req: ExternalRequest = {
 						type: 'pattern',
@@ -578,46 +991,547 @@ export namespace RGB {
 					}
 				});
 			}
+
+			async effect(name: ArduinoAPI.Effects, extra: ArduinoAPI.JoinedConfigs = {}) {
+				return new Promise((resolve) => {
+					const req: ExternalRequest = {
+						type: 'effect',
+						name,
+						extra,
+						logObj: this._logObj,
+						resolver: resolve
+					};
+					if (Handler._ready) {
+						Handler._handleRequest(req);
+					} else {
+						Handler._requests.push(req)
+					}
+				});
+			}
+
+			async runConfig(config: ArduinoAPI.ArduinoConfig) {
+				return new Promise((resolve) => {
+					const req: ExternalRequest = {
+						type: 'config',
+						config,
+						logObj: this._logObj,
+						resolver: resolve
+					};
+					if (Handler._ready) {
+						Handler._handleRequest(req);
+					} else {
+						Handler._requests.push(req)
+					}
+				});
+			}
 		}
 	}
 
 	export namespace Bot {
 		export interface JSON {
-
+			lastConfig: (ArduinoAPI.ArduinoConfig & {
+				data?: ArduinoAPI.JoinedConfigs;
+			}) | null;
 		}
 
 		export class State extends BotState.Base {
+			static colorTextToColor(text: string) {
+				if (API.HEX_REGEX.test(text)) {
+					return API.hexToRGB(text);
+				}
+				if (text in colorList) {
+					return API.hexToRGB(colorList[text as keyof typeof colorList]);
+				}
+				return undefined;
+			}
+
+			static parseDir(dir: string) {
+				if (dir === 'backwards' || dir === 'back' || dir === '0') {
+					return ArduinoAPI.DIR.DIR_BACKWARDS;
+				}
+				return ArduinoAPI.DIR.DIR_FORWARDS;
+			}
+
 			static readonly matches = State.createMatchMaker(({
 				matchMaker: mm
 			}) => {
 				mm(/turn (on|off) (rgb|led)/, async ({
+					logObj, match, state
+				}) => {
+					const targetState = match[1];
+					if (targetState === 'on') {
+						state.rgb.lastConfig = {
+							type: 'solid',
+							data: {
+								r: 100, g: 100, b: 100
+							}
+						}
+					} else {
+						state.rgb.lastConfig = {
+							type: 'off'
+						}
+					}
+					await new External.Handler(logObj).power(targetState as 'on' | 'off');
+					return `Turned it ${targetState}`;
+				});
+				mm(/turn (on|off) (ceiling|arduino|duino)/, async ({
+					logObj, match, state
+				}) => {
+					const targetState = match[1];
+					if (targetState === 'on') {
+						state.rgb.lastConfig = {
+							type: 'solid',
+							data: {
+								r: 100, g: 100, b: 100
+							}
+						}
+					} else {
+						state.rgb.lastConfig = {
+							type: 'off'
+						}
+					}
+					attachMessage(logObj, `Turned ${targetState} ${Clients.arduinoClients.length} arduino clients`);
+					return `Turned ${targetState} ${Clients.arduinoClients.length} arduino clients`;
+				});
+				mm(/turn (on|off) (magic(-| )home)/, async ({
 					logObj, match
 				}) => {
 					const targetState = match[1];
-					await new External.Handler(logObj).power(targetState as 'on'|'off');
-					return `Turned it ${targetState}`;
+
+					await Promise.all(Clients.magicHomeClients.map(c => new Promise((resolve) => {
+						if (targetState === 'on') {
+							c.turnOff(resolve);
+						} else {
+							c.turnOff(resolve);
+						}
+					})));
+					attachMessage(logObj, `Turned ${targetState} ${Clients.magicHomeClients.length} magichome clients`);
+					return `Turned ${targetState} ${Clients.magicHomeClients.length} magichome clients`;
 				});
-				mm(/set (rgb|led|it|them|color) to ([^ ]*)/, async ({
-					logObj, match
+				mm(/set (rgb|led|it|them|color) to (((\d+) (\d+) (\d+))|([^ ]+))(\s+with intensity (\d+))?/, async ({
+					logObj, match, state
 				}) => {
 					const color = match[2];
-					if (await new External.Handler(logObj).color(color)) {
+					const intensity = match[4];
+					const resolvedColor = State.colorTextToColor(color);
+					if (resolvedColor) {
+						state.rgb.lastConfig = {
+							type: 'solid',
+							data: {
+								r: resolvedColor.r,
+								g: resolvedColor.g,
+								b: resolvedColor.b
+							}
+						}
+					} else {
+						state.rgb.lastConfig = null;
+					}
+					if (await new External.Handler(logObj).color(color,
+						(intensity && intensity.length) ?
+							parseInt(intensity, 10) : 0)) {
 						return `Set color to ${color}`;
 					} else {
 						return 'Failed to set color (invalid color)';
 					}
 				});
-				mm(/(start|launch) pattern ([^ ]*)(\s+with speed ([^ ]+))?(\s*and\s*)?(with transition ([^ ]+))?(\s*and\s*)?(\s*with speed ([^ ]+))?/, async ({
-					logObj, match
+				mm(/(start|launch) pattern ([^ ]+)(\s+with speed ([^ ]+))?(\s*and\s*)?(with transition ([^ ]+))?(\s*and\s*)?(\s*with speed ([^ ]+))?/, async ({
+					logObj, match, state
 				}) => {
-					const [ , , pattern, , speed1, , , transition, , , speed2 ] = match;
+					const [, , pattern, , speed1, , , transition, , , speed2] = match;
 					const speed = speed1 || speed2;
+
+					state.rgb.lastConfig = null;
+
 					if (await new External.Handler(logObj).pattern(pattern, parseInt(speed, 10) || undefined,
 						(transition as any) || undefined)) {
-							return `Started pattern ${pattern}`;
-						} else {
-							return 'Failed to start pattern';
+						return `Started pattern ${pattern}`;
+					} else {
+						return 'Failed to start pattern';
+					}
+				});
+				mm(/(start|launch|(?:set effect to)) effect ([^ ]+)(\s+with intensity ([^ ]+))?(\s*and\s*)?(\s*with background (((\d+) (\d+) (\d+))|([^ ]+)))?(\s*and\s*)?(\s*with update(-| )?time ([^ ]+))?(\s*and\s*)?(\s*with dir(ection)? ([^ ]+))?(\s*and\s*)?(\s*with (?:(?:block(-| )?size)|per(-| )?strobe) ([^ ]+))?(\s*and\s*)?(\s*with mode ([^ ]+))?(\s*and\s*)?(\s*with color (((\d+) (\d+) (\d+))|([^ ]+)))?/, async ({
+					logObj, match, state
+				}) => {
+					const effect = match[2] as ArduinoAPI.Effects;
+					const intensity = match[4];
+					const bgR = match[9];
+					const bgG = match[10];
+					const bgB = match[11];
+					const bg = match[12];
+					const updateTime = match[16];
+					const dir = match[20];
+					const blockSize = match[24];
+					const mode = match[27];
+					const colorR = match[32];
+					const colorG = match[33];
+					const colorB = match[34];
+					const colorStr = match[35];
+
+					const background = (() => {
+						if (bg) {
+							return State.colorTextToColor(bg);
 						}
+						if (bgR && bgG && bgB) {
+							return {
+								r: parseInt(bgR, 10),
+								g: parseInt(bgG, 10),
+								b: parseInt(bgB, 10)
+							}
+						}
+						return undefined;
+					})();
+					const color = (() => {
+						if (colorStr) {
+							return State.colorTextToColor(colorStr);
+						}
+						if (colorR && colorG && colorB) {
+							return {
+								r: parseInt(colorR, 10),
+								g: parseInt(colorG, 10),
+								b: parseInt(colorB, 10)
+							}
+						}
+						return undefined;
+					})();
+					const config = {
+						intensity: intensity !== undefined ? parseInt(intensity, 10) : undefined,
+						backgroundRed: background ? background.r : undefined,
+						backgroundGreen: background ? background.g : undefined,
+						backgroundBlue: background ? background.b : undefined,
+						updateTime: updateTime ? parseInt(updateTime, 10) : undefined,
+						dir: dir ? State.parseDir(dir) : undefined,
+						blockSize: blockSize ? parseInt(blockSize, 10) : undefined,
+						mode: mode as TransitionTypes,
+						colors: color ? [color] : undefined
+					};
+
+					if (effect in ArduinoAPI.arduinoEffects) {
+						state.rgb.lastConfig = { ...ArduinoAPI.arduinoEffects[effect] };
+						if ('data' in state.rgb.lastConfig) {
+							state.rgb.lastConfig.data = Board.Board.mergeObj(
+								state.rgb.lastConfig.data, config);
+						}
+					} else {
+						state.rgb.lastConfig = null;
+					}
+
+					await new External.Handler(logObj).effect(effect, config);
+					return `Started effect ${effect} with config ${JSON.stringify(config)}`;
+				});
+				mm(/(create) effect ([^ ]+)(\s+with intensity ([^ ]+))?(\s*and\s*)?(\s*with background (((\d+) (\d+) (\d+))|([^ ]+)))?(\s*and\s*)?(\s*with update(-| )?time ([^ ]+))?(\s*and\s*)?(\s*with dir(ection)? ([^ ]+))?(\s*and\s*)?(\s*with (?:(?:block(-| )?size)|per(-| )?strobe) ([^ ]+))?(\s*and\s*)?(\s*with mode ([^ ]+))?(\s*and\s*)?(\s*with color (((\d+) (\d+) (\d+))|([^ ]+)))?/, async ({
+					logObj, match, state
+				}) => {
+					const type = match[2] as ArduinoAPI.ArduinoConfig['type'];
+					const intensity = match[4];
+					const bgR = match[9];
+					const bgG = match[10];
+					const bgB = match[11];
+					const bg = match[12];
+					const updateTime = match[16];
+					const dir = match[20];
+					const blockSize = match[24];
+					const mode = match[27];
+					const colorR = match[32];
+					const colorG = match[33];
+					const colorB = match[34];
+					const colorStr = match[35];
+
+					const background = (() => {
+						if (bg) {
+							return State.colorTextToColor(bg);
+						}
+						if (bgR && bgG && bgB) {
+							return {
+								r: parseInt(bgR, 10),
+								g: parseInt(bgG, 10),
+								b: parseInt(bgB, 10)
+							}
+						}
+						return undefined;
+					})();
+					const color = (() => {
+						if (colorStr) {
+							return State.colorTextToColor(colorStr);
+						}
+						if (colorR && colorG && colorB) {
+							return {
+								r: parseInt(colorR, 10),
+								g: parseInt(colorG, 10),
+								b: parseInt(colorB, 10)
+							}
+						}
+						return undefined;
+					})();
+					const config = {
+						intensity: intensity !== undefined ? parseInt(intensity, 10) : undefined,
+						backgroundRed: background ? background.r : undefined,
+						backgroundGreen: background ? background.g : undefined,
+						backgroundBlue: background ? background.b : undefined,
+						updateTime: updateTime ? parseInt(updateTime, 10) : undefined,
+						dir: dir ? State.parseDir(dir) : undefined,
+						blockSize: blockSize ? parseInt(blockSize, 10) : undefined,
+						mode: mode,
+						colors: color ? [color] : undefined
+					};
+
+					state.rgb.lastConfig = {
+						type,
+						data: { ...config }
+					} as any;
+
+					if (await new External.Handler(logObj).runConfig({
+						type,
+						data: config as any
+					})) {
+						return `Started effect of type ${type} with config ${JSON.stringify(config)}`;
+					} else {
+						return 'Failed to start effect';
+					}
+				});
+				mm(/(?:change|set) intensity to ([^ ]+)/, async ({
+					logObj, state, match
+				}) => {
+					if (state.rgb.lastConfig === null) {
+						attachMessage(logObj, 'No lastConfig for RGB');
+						return 'I don\'t know what to edit';
+					}
+					state.rgb.lastConfig.data = state.rgb.lastConfig.data || {};
+					state.rgb.lastConfig.data.intensity = parseInt(match[1], 10);
+					const msg = `Changed config to ${
+						JSON.stringify(state.rgb.lastConfig)} (intensity->${
+						state.rgb.lastConfig.data.intensity})`;
+					attachMessage(logObj, msg);
+					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
+					return msg;
+				});
+				mm(/(?:change|set) (?:(?:block(-| )?size)|per(-| )?strobe) to ([^ ]+)/, async ({
+					logObj, state, match
+				}) => {
+					if (state.rgb.lastConfig === null) {
+						attachMessage(logObj, 'No lastConfig for RGB');
+						return 'I don\'t know what to edit';
+					}
+					state.rgb.lastConfig.data = state.rgb.lastConfig.data || {};
+					state.rgb.lastConfig.data.blockSize = parseInt(match[1], 10);
+					const msg = `Changed config to ${
+						JSON.stringify(state.rgb.lastConfig)} (blockSize->${
+						state.rgb.lastConfig.data.blockSize})`;
+					attachMessage(logObj, msg);
+					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
+					return msg;
+				});
+				mm(/(?:change|set) r(ed)? to (\d+)/, async ({
+					logObj, state, match
+				}) => {
+					if (state.rgb.lastConfig === null) {
+						attachMessage(logObj, 'No lastConfig for RGB');
+						return 'I don\'t know what to edit';
+					}
+					state.rgb.lastConfig.data = state.rgb.lastConfig.data || {};
+					state.rgb.lastConfig.data.r = parseInt(match[2], 10);
+					const msg = `Changed config to ${
+						JSON.stringify(state.rgb.lastConfig)} (r->${
+							state.rgb.lastConfig.data.r
+						})`;
+					attachMessage(logObj, msg);
+					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
+					return msg;
+				});
+				mm(/(?:change|set) g(reen)? to (\d+)/, async ({
+					logObj, state, match
+				}) => {
+					if (state.rgb.lastConfig === null) {
+						attachMessage(logObj, 'No lastConfig for RGB');
+						return 'I don\'t know what to edit';
+					}
+					state.rgb.lastConfig.data = state.rgb.lastConfig.data || {};
+					state.rgb.lastConfig.data.g = parseInt(match[2], 10);
+					const msg = `Changed config to ${
+						JSON.stringify(state.rgb.lastConfig)} (g->${
+							state.rgb.lastConfig.data.g
+						})`;
+					attachMessage(logObj, msg);
+					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
+					return msg;
+				});
+				mm(/(?:change|set) r(ed)? to (\d+)/, async ({
+					logObj, state, match
+				}) => {
+					if (state.rgb.lastConfig === null) {
+						attachMessage(logObj, 'No lastConfig for RGB');
+						return 'I don\'t know what to edit';
+					}
+					state.rgb.lastConfig.data = state.rgb.lastConfig.data || {};
+					state.rgb.lastConfig.data.b = parseInt(match[2], 10);
+					const msg = `Changed config to ${
+						JSON.stringify(state.rgb.lastConfig)} (b->${
+							state.rgb.lastConfig.data.b
+						})`;
+					attachMessage(logObj, msg);
+					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
+					return msg;
+				});
+				mm(/(?:change|set) (color|part)( \d+)? to (((\d+) (\d+) (\d+))|([^ ]+))/, async ({
+					logObj, state, match
+				}) => {
+					if (state.rgb.lastConfig === null) {
+						attachMessage(logObj, 'No lastConfig for RGB');
+						return 'I don\'t know what to edit';
+					}
+
+					const colorIndex = match[2] ? parseInt(match[2], 10) : 0;
+					const colorR = match[5];
+					const colorG = match[6];
+					const colorB = match[7];
+					const colorStr = match[8];
+					const color = (() => {
+						if (colorStr) {
+							return State.colorTextToColor(colorStr);
+						}
+						if (colorR && colorG && colorB) {
+							return {
+								r: parseInt(colorR, 10),
+								g: parseInt(colorG, 10),
+								b: parseInt(colorB, 10)
+							}
+						}
+						return undefined;
+					})();
+					if (!color) {
+						attachMessage(logObj, 'Unknown color');
+						return 'Unknown color';
+					}
+
+					state.rgb.lastConfig.data = state.rgb.lastConfig.data || {};
+					state.rgb.lastConfig.data.r = color.r;
+					state.rgb.lastConfig.data.g = color.g;
+					state.rgb.lastConfig.data.b = color.b;
+					state.rgb.lastConfig.data.colors = state.rgb.lastConfig.data.colors || [];
+					state.rgb.lastConfig.data.parts = state.rgb.lastConfig.data.parts || [];
+					state.rgb.lastConfig.data.colors[colorIndex] = {...color};
+					state.rgb.lastConfig.data.parts[colorIndex] = {...color};
+					const msg = `Changed config to ${
+						JSON.stringify(state.rgb.lastConfig)} (color->${
+							JSON.stringify(color)
+						})`;
+					attachMessage(logObj, msg);
+					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
+					return msg;
+				});
+				mm(/(?:change|set) background(-| )?(color)? to (((\d+) (\d+) (\d+))|([^ ]+))/, async ({
+					logObj, state, match
+				}) => {
+					if (state.rgb.lastConfig === null) {
+						attachMessage(logObj, 'No lastConfig for RGB');
+						return 'I don\'t know what to edit';
+					}
+
+					const colorR = match[5];
+					const colorG = match[6];
+					const colorB = match[7];
+					const colorStr = match[8];
+					const color = (() => {
+						if (colorStr) {
+							return State.colorTextToColor(colorStr);
+						}
+						if (colorR && colorG && colorB) {
+							return {
+								r: parseInt(colorR, 10),
+								g: parseInt(colorG, 10),
+								b: parseInt(colorB, 10)
+							}
+						}
+						return undefined;
+					})();
+					if (!color) {
+						attachMessage(logObj, 'Unknown color');
+						return 'Unknown color';
+					}
+
+					state.rgb.lastConfig.data = state.rgb.lastConfig.data || {};
+					state.rgb.lastConfig.data.backgroundRed = color.r;
+					state.rgb.lastConfig.data.backgroundGreen = color.g;
+					state.rgb.lastConfig.data.backgroundBlue = color.b;
+					const msg = `Changed config to ${
+						JSON.stringify(state.rgb.lastConfig)} (color->${
+							JSON.stringify(color)
+						})`;
+					attachMessage(logObj, msg);
+					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
+					return msg;
+				});
+				mm(/(?:change|set) dot (\d+)?('s)? ([^ ]+) to ([^ ]+)/, async ({
+					logObj, state, match
+				}) => {
+					if (state.rgb.lastConfig === null) {
+						attachMessage(logObj, 'No lastConfig for RGB');
+						return 'I don\'t know what to edit';
+					}
+
+					const dotIndex = parseInt(match[1], 10);
+					const prop = match[3];
+					const value = prop === 'dir' ? 
+						State.parseDir(match[4]) : parseInt(match[4], 10);
+
+					state.rgb.lastConfig.data = state.rgb.lastConfig.data || {};
+					state.rgb.lastConfig.data.dots = state.rgb.lastConfig.data.dots || [];
+					(state.rgb.lastConfig.data.dots[dotIndex] as any)[prop] = value;
+					const msg = `Changed config to ${
+						JSON.stringify(state.rgb.lastConfig)} (dot[${dotIndex}].${prop}->${
+							value
+						})`;
+					attachMessage(logObj, msg);
+					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
+					return msg;
+				});
+				mm(/(?:change|set) update(-| )?time to ([^ ]+)/, async ({
+					logObj, state, match
+				}) => {
+					if (state.rgb.lastConfig === null) {
+						attachMessage(logObj, 'No lastConfig for RGB');
+						return 'I don\'t know what to edit';
+					}
+					state.rgb.lastConfig.data = state.rgb.lastConfig.data || {};
+					state.rgb.lastConfig.data.updateTime = parseInt(match[2], 10);
+					const msg = `Changed config to ${
+						JSON.stringify(state.rgb.lastConfig)} (updateTime->${
+						state.rgb.lastConfig.data.updateTime})`;
+					attachMessage(logObj, msg);
+					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
+					return msg;
+				});
+				mm(/(?:change|set) dir to ([^ ]+)/, async ({
+					logObj, state, match
+				}) => {
+					debugger;
+					if (state.rgb.lastConfig === null) {
+						attachMessage(logObj, 'No lastConfig for RGB');
+						return 'I don\'t know what to edit';
+					}
+					state.rgb.lastConfig.data = state.rgb.lastConfig.data || {};
+					state.rgb.lastConfig.data.dir = State.parseDir(match[1]);
+					const msg = `Changed config to ${
+						JSON.stringify(state.rgb.lastConfig)} (dir->${
+						state.rgb.lastConfig.data.dir})`;
+					attachMessage(logObj, msg);
+					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
+					return msg;
+				});
+				mm(/(?:change|set) mode to ([^ ]+)/, async ({
+					logObj, state, match
+				}) => {
+					if (state.rgb.lastConfig === null) {
+						attachMessage(logObj, 'No lastConfig for RGB');
+						return 'I don\'t know what to edit';
+					}
+					state.rgb.lastConfig.data = state.rgb.lastConfig.data || {};
+					state.rgb.lastConfig.data.mode = match[1] as TransitionTypes;
+					const msg = `Changed config to ${
+						JSON.stringify(state.rgb.lastConfig)} (mode->${
+						state.rgb.lastConfig.data.mode})`;
+					attachMessage(logObj, msg);
+					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
+					return msg;
 				});
 				mm(/refresh (rgb|led)/, async ({
 					logObj
@@ -626,28 +1540,37 @@ export namespace RGB {
 				});
 			});
 
-			constructor(_json?: JSON) {
-				super();	
+			constructor(json?: JSON) {
+				super();
+				if (json) {
+					this.lastConfig = json.lastConfig;
+				}
 			}
 
-			static async match(config: { 
-				logObj: any; 
-				text: string; 
-				message: _Bot.TelegramMessage; 
-				state: _Bot.Message.StateKeeping.ChatState; 
+			public lastConfig: (ArduinoAPI.ArduinoConfig & {
+				data?: ArduinoAPI.JoinedConfigs;
+			}) | null = null;
+
+			static async match(config: {
+				logObj: any;
+				text: string;
+				message: _Bot.TelegramMessage;
+				state: _Bot.Message.StateKeeping.ChatState;
 			}): Promise<_Bot.Message.MatchResponse | undefined> {
 				return await this.matchLines({ ...config, matchConfig: State.matches });
 			}
 
 			toJSON(): JSON {
-				return {};
+				return {
+					lastConfig: this.lastConfig
+				};
 			}
 		}
 	}
 
 	export namespace WebPage {
 		const patternPreviews = JSON.stringify(Object.keys(patterns).map((key) => {
-			const { pattern: { colors, transitionType}, defaultSpeed } = patterns[key as CustomPattern];
+			const { pattern: { colors, transitionType }, defaultSpeed } = patterns[key as CustomPattern];
 			return {
 				defaultSpeed,
 				colors,
@@ -684,19 +1607,18 @@ export namespace RGB {
 	}
 
 	export namespace Board {
-		export const enum DIR {
-			DIR_FORWARDS = 1,
-			DIR_BACKWARDS = 0
-		}
-
-		export async function tryConnectRGBBoard() {
+		async function tryConnectToSerial() {
 			const DEVICE_NAME = '/dev/ttyACM0';
 
-			return new Promise<Board|null>((resolve) => {
+			return new Promise<{
+				port: SerialPort;
+				updateListener(listener: (line: string) => any): void,
+				leds: number;
+			} | null>((resolve) => {
 				const port = new SerialPort(DEVICE_NAME, {
 					baudRate: 115200
 				});
-				
+
 				let err: boolean = false;
 				port.on('error', (e) => {
 					log(getTime(), chalk.red('Failed to connect to LED arduino', e));
@@ -721,23 +1643,34 @@ export namespace RGB {
 					log(getTime(), chalk.gray(`[${DEVICE_NAME}]`),
 						`Connected, ${LED_NUM} leds detected`);
 
-					onData = (): any => {};
-					resolve(new Board(port, (listener: (line: string) => any) => {
-						onData = listener;
-					}, LED_NUM))
+					onData = (): any => { };
+					resolve({
+						port, 
+						updateListener: (listener: (line: string) => any) => {
+							onData = listener;
+						}, 
+						leds: LED_NUM
+					})
 				}
 
-				parser.once('data', (line: string) => {
+				parser.on('data', (line: string) => {
 					onData(line);
 				});
 			});
 		}
 
+		export async function tryConnectRGBBoard() {
+			const res = await tryConnectToSerial();
+			if (res === null) return res;
+
+			return new Board(res.port, res.updateListener, res.leds);
+		}
+
 		export class Board {
 			// @ts-ignore
-			constructor(private _port: SerialPort, 
-				private _setListener: (listener: (line: string) => any) => void, 
-				public leds: number) {}
+			constructor(private _port: SerialPort,
+				private _setListener: (listener: (line: string) => any) => void,
+				public leds: number) { }
 
 			public ping() {
 				return new Promise<boolean>((resolve) => {
@@ -751,62 +1684,152 @@ export namespace RGB {
 				});
 			}
 
-			public write(data: string) {
-				this._port.write(data);
+			private _busy: number = -1;
+
+			private async _waitForTurn() {
+				return new Promise((resolve) => {
+					if (this._busy !== -1) {
+						const interval = setInterval(() => {
+							if (this._busy === -1) {
+								this._busy = 0;
+								clearInterval(interval);
+								resolve();
+							}
+						}, 50);
+					} else {
+						resolve();
+					}
+				});
+			}
+
+			public async write(data: string) {
+				await this._waitForTurn();
+				await new Promise((resolve) => {
+					let attempts: number = 0;
+					this._setListener((line: string) => {
+						if (line.indexOf('ack') !== -1) {
+							resolve();
+							clearInterval(interval);
+						}
+					});
+					let pause: boolean = false;
+					const interval = setInterval(() => {
+						if (pause) return;
+						console.log('writing', data);
+						this._port.write(data);
+						attempts++;
+						if (attempts >= MAX_ATTEMPTS) {
+							pause = true;
+							this._port.close(async () => {
+								const res = await tryConnectToSerial();
+								if (!res) {
+									console.log('Failed to connect to serial');
+									pause = false;
+									return;
+								}
+								log(getTime(), chalk.red(`[rgb]`, 'Forcefully restarted'));
+								this._port = res.port;
+								this.leds = res.leds;
+								this._setListener = res.updateListener;
+								this._setListener((line: string) => {
+									if (line.indexOf('ack') !== -1) {
+										resolve();
+										clearInterval(interval);
+									}
+								});
+								attempts = 0;
+								pause = false;
+							});
+						}
+					}, MSG_INTERVAL);
+				});
+				this._busy = -1;
 			}
 
 			public sendCommand(command: string) {
-				console.log('Sending command', command);
-				this.write(`/ ${command} \\\n`);
+				return this.write(`/ ${command} \\\n`);
 			}
 
 			public sendPrimed(command: string) {
-				this.write(command + '\n');
+				return this.write(command + '\n');
 			}
 
 			public setModeOff() {
-				this.sendCommand('off');
+				return this.sendCommand('off');
 			}
 
 			public getLeds() {
 				return this.sendCommand('leds');
 			}
 
+			public static mergeArr(arr1: any[], arr2: any[]) {
+				for (let i = 0; i < arr2.length; i++) {
+					if (i > arr1.length || typeof arr1[i] !== 'object') {
+						arr1[i] = arr2[i];
+					} else {
+						if (Array.isArray(arr1[i])) {
+							this.mergeArr(arr1[i], arr2[i]);
+						} else {
+							this.mergeObj(arr1[i], arr2[i]);
+						}
+					}
+				}
+				return arr1;
+			}
+
+			public static mergeObj<T1>(config: T1, extra: Object): T1 {
+				const final = { ...config };
+				for (const key in extra) {
+					if (!(key in config) || typeof (config as any)[key] !== 'object') {
+						if ((extra as any)[key] === undefined) continue;
+						(final as any)[key] = (extra as any)[key];
+					} else {
+						// Merge object or array
+						if (Array.isArray((config as any)[key])) {
+							this.mergeArr((final as any)[key], (extra as any)[key]);
+						} else {
+							this.mergeObj((final as any)[key], (extra as any)[key]);
+						}
+					}
+				}
+				return final;
+			}
+
+			public runConfig(config: ArduinoAPI.ArduinoConfig, extra: ArduinoAPI.JoinedConfigs = {}) {
+				switch (config.type) {
+					case 'solid':
+						return this.setSolid(Board.mergeObj(config.data, extra));
+					case 'dot':
+						return this.setDot(Board.mergeObj(config.data, extra));
+					case 'split':
+						return this.setSplit(Board.mergeObj(config.data, extra));
+					case 'pattern':
+						return this.setPattern(Board.mergeObj(config.data, extra));
+					case 'flash':
+						return this.setFlash(Board.mergeObj(config.data, extra));
+					case 'off':
+						return this.setModeOff();
+					case 'prime':
+						return this.setPrime();
+				}
+			}
+
 			public setSolid({
 				intensity = 0,
 				r, g, b
-			}: {
-				intensity?: number;
-				r: number;
-				g: number;
-				b: number;
-			}) {
-				this.sendCommand(`solid ${intensity} ${r} ${g} ${b}`);
+			}: ArduinoAPI.Solid) {
+				return this.sendCommand(`solid ${intensity} ${r} ${g} ${b}`);
 			}
 
 			public setDot({
 				intensity = 0,
 				backgroundRed, backgroundGreen,
 				backgroundBlue, dots
-			}: {
-				intensity?: number;
-				backgroundRed: number;
-				backgroundGreen: number;
-				backgroundBlue: number;
-				dots: {
-					size: number;
-					speed: number;
-					dir: DIR;
-					dotPos: number;
-					r: number;
-					g: number;
-					b: number;
-				}[];
-			}) {
-				this.sendCommand(`dot ${intensity} ${backgroundRed} ${
-					backgroundGreen} ${backgroundBlue} ${dots.map(({ 
-						size, speed, dir, 
-						dotPos, r, g, b 
+			}: ArduinoAPI.Dot) {
+				return this.sendCommand(`dot ${intensity} ${backgroundRed} ${
+					backgroundGreen} ${backgroundBlue} ${dots.map(({
+						size, speed, dir,
+						dotPos, r, g, b
 					}) => {
 						return `${size} ${speed} ${dir} ${dotPos} ${r} ${g} ${b}`;
 					}).join(' ')}`)
@@ -815,68 +1838,41 @@ export namespace RGB {
 			public setSplit({
 				intensity = 0,
 				updateTime, dir, parts
-			}: {
-				intensity?: number;
-				updateTime: number;
-				dir: DIR;
-				parts: {
-					r: number;
-					g: number;
-					b: number;
-				}[];
-			}) {
-				this.sendCommand(`split ${intensity} ${updateTime} ${dir} ${parts.map(({ 
-						r, g, b 
-					}) => {
-						return `${r} ${g} ${b}`;
-					}).join(' ')}`)
+			}: ArduinoAPI.Split) {
+				return this.sendCommand(`split ${intensity} ${updateTime} ${dir} ${parts.map(({
+					r, g, b
+				}) => {
+					return `${r} ${g} ${b}`;
+				}).join(' ')}`)
 			}
 
 			public setPattern({
 				intensity = 0,
 				blockSize = 0,
 				updateTime, dir, parts
-			}: {
-				intensity?: number;
-				updateTime: number;
-				blockSize?: number;
-				dir: DIR;
-				parts: {
-					r: number;
-					g: number;
-					b: number;
-				}[];
-			}) {
-				this.sendCommand(`pattern ${intensity} ${updateTime} ${dir} ${blockSize} ${parts.map(({ 
-						r, g, b 
-					}) => {
-						return `${r} ${g} ${b}`;
-					}).join(' ')}`);
+			}: ArduinoAPI.Pattern) {
+				return this.sendCommand(`pattern ${intensity} ${updateTime} ${dir} ${blockSize} ${parts.map(({
+					r, g, b
+				}) => {
+					return `${r} ${g} ${b}`;
+				}).join(' ')}`);
 			}
 
 			public setPrime() {
-				this.sendCommand('prime');
+				return this.sendCommand('prime');
 			}
 
 			public setFlash({
 				intensity = 0,
 				colors = [],
+				blockSize = 2,
 				updateTime, mode
-			}: {
-				intensity?: number;
-				updateTime: number;
-				mode: TransitionTypes;
-				colors?: {
-					r: number;
-					g: number;
-					b: number;
-				}[];
-			}) {
-				this.sendCommand(`flash ${intensity} ${updateTime} ${mode} ${colors.map(({
-						r, g, b 
-					}) => {
-						return `${r} ${g} ${b}`;
-					}).join(' ')}`);
+			}: ArduinoAPI.Flash) {
+				return this.sendCommand(`flash ${intensity} ${updateTime} ${mode} ${blockSize} ${colors.map(({
+					r, g, b
+				}) => {
+					return `${r} ${g} ${b}`;
+				}).join(' ')}`);
 			}
 		}
 	}
@@ -912,8 +1908,8 @@ export namespace RGB {
 	}
 
 	export namespace Routing {
-		export async function init({ app, randomNum, ws }: { 
-			app: AppWrapper; 
+		export async function init({ app, randomNum, ws }: {
+			app: AppWrapper;
 			randomNum: number;
 			ws: WSWrapper;
 		}) {
@@ -921,17 +1917,20 @@ export namespace RGB {
 			setInterval(Scan.scanRGBControllers, 1000 * 60 * 60);
 			await External.Handler.init();
 
-			app.post('/rgb/color/:color', async (req, res) => {
-				await API.Handler.setColor(res, {...req.params, ...req.body});
+			app.post('/rgb/color/:color/:instensity?', async (req, res) => {
+				await API.Handler.setColor(res, { ...req.params, ...req.body });
 			});
-			app.post('/rgb/color/:red/:green/:blue', async (req, res) => {
-				await API.Handler.setRGB(res, {...req.params, ...req.body});
+			app.post('/rgb/color/:red/:green/:blue/:intensity?', async (req, res) => {
+				await API.Handler.setRGB(res, { ...req.params, ...req.body });
 			});
 			app.post('/rgb/power/:power', async (req, res) => {
-				await API.Handler.setPower(res, {...req.params, ...req.body});
+				await API.Handler.setPower(res, { ...req.params, ...req.body });
 			});
 			app.post('/rgb/pattern/:pattern/:speed?/:transition?', async (req, res) => {
-				await API.Handler.runPattern(res, {...req.params, ...req.body});
+				await API.Handler.runPattern(res, { ...req.params, ...req.body });
+			});
+			app.post('/rgb/effect/:effect', async (req, res) => {
+				await API.Handler.runEffect(res, { ...req.params, ...req.body });
 			});
 			app.post('/rgb/refresh', async (_req, res) => {
 				await API.Handler.refresh(res);
