@@ -1,7 +1,10 @@
 import { attachMessage, logOutgoingReq } from './logger';
 import { errorHandle, auth } from './decorators';
+import { Server as WebsocketServer } from 'ws';
 import * as express from 'express';
+import { Socket } from 'net';
 import * as http from 'http';
+import * as url from 'url';
 import chalk from 'chalk';
 
 function genUniqueId() {
@@ -12,11 +15,11 @@ function genUniqueId() {
 	return id;
 }
 const instanceIDs = new Map<number, {
-	instance: WSInstance;
+	instance: WSSimInstance;
 	ip: string;
 }>();
 
-export class WSInstance< DATA extends {
+export class WSSimInstance< DATA extends {
 	receive: string;
 	send: string;
 } = {
@@ -59,7 +62,7 @@ export class WSInstance< DATA extends {
 		this._listener = setTimeout(() => {
 			this._alive = false;
 			this.onClose();
-		}, WSInstance.TIMEOUT);
+		}, WSSimInstance.TIMEOUT);
 	}
 
 	constructor(req: express.Request, res: express.Response) {
@@ -148,14 +151,14 @@ export const enum ACCEPT_STATE {
 export class WSSimulator {
 	private _onRequests: {
 		accept: (req: express.Request, res: express.Response) => Promise<ACCEPT_STATE>,
-		onAccept: (instance: WSInstance) => void
+		onAccept: (instance: WSSimInstance) => void
 	}[] = [];
 
 	private async _onRequest(req: express.Request, res: express.Response) {
 		for (const { accept, onAccept } of this._onRequests) {
 			const acceptState = await accept(req, res);
 			if (acceptState === ACCEPT_STATE.ACCEPTED) {
-				onAccept(new WSInstance(req, res));
+				onAccept(new WSSimInstance(req, res));
 				return true;
 			} else if (acceptState === ACCEPT_STATE.REJECTED) {
 				return true;
@@ -202,7 +205,7 @@ export class WSSimulator {
 		return true;
 	}
 
-	all(route: string, handler: (instance: WSInstance) => void, authenticate: boolean = true) {
+	all(route: string, handler: (instance: WSSimInstance) => void, authenticate: boolean = true) {
 		const __this = this;
 		this._onRequests.push({
 			async accept(req: express.Request, res: express.Response) {
@@ -214,17 +217,17 @@ export class WSSimulator {
 				}
 				return ACCEPT_STATE.IGNORED;
 			},
-			onAccept(instance: WSInstance) {
+			onAccept(instance: WSSimInstance) {
 				handler(instance);
 			}
 		})
 	}
 
-	get(route: string, handler: (instance: WSInstance) => void) {
+	get(route: string, handler: (instance: WSSimInstance) => void) {
 		this.all(route, handler);
 	}
 
-	post(route: string, handler: (instance: WSInstance) => void) {
+	post(route: string, handler: (instance: WSSimInstance) => void) {
 		this.all(route, handler);
 	}
 
@@ -234,5 +237,63 @@ export class WSSimulator {
 			return;
 		}
 		next();
+	}
+}
+
+type WSHandler = (args: {
+	send: (message: string) => void,
+	addListener: (listener: (message: string) => void) => void
+}) => void;
+
+export class WSWrapper {
+	routes: {
+		route: string;
+		handler: WSHandler;
+	}[] = [];
+
+	constructor(public server: http.Server) {
+		server.on('upgrade', (req: http.IncomingMessage, socket: Socket, head: any) => {
+			this.handle(req, socket, head);
+		});
+	}
+
+	handle(req: http.IncomingMessage, socket: Socket, head: any) {
+		const pathname = url.parse(req.url!).pathname;
+		for (const { route, handler } of this.routes) {
+			if (pathname !== route && (route.endsWith('/') || pathname === route + '/')) {
+				continue;
+			}
+
+			const instance = new WebsocketServer({ noServer: true });
+			instance.handleUpgrade(req, socket, head, (ws) => {
+				ws.emit('connection', ws, req);
+
+				handler({
+					send(message: string) {
+						ws.send(message);
+					},
+					addListener(messageListener) {
+						ws.on('message', (data) => {
+							messageListener(data.toString());
+						});
+					}
+				});
+			});
+			return;
+		}
+	}
+
+	all(route: string, handler: WSHandler) {
+		this.routes.push({
+			route, handler
+		});
+	}
+
+	post(route: string, handler: WSHandler) {
+		this.all(route, handler);
+	}
+
+	get(route: string, handler: WSHandler) {
+		this.all(route, handler);
 	}
 }

@@ -1,7 +1,7 @@
 import { attachMessage, getLogLevel, ResDummy, getTime, log } from "../lib/logger";
 import { errorHandle, requireParams, auth, authCookie } from "../lib/decorators";
 import * as ReadLine from '@serialport/parser-readline';
-import { WSSimulator, WSInstance } from "../lib/ws";
+import { WSSimulator, WSSimInstance } from "../lib/ws";
 import { BotState } from "../lib/bot-state";
 import { AppWrapper } from "../lib/routes";
 import * as SerialPort from 'serialport';
@@ -397,11 +397,12 @@ export namespace KeyVal {
 			// @ts-ignore
 			private _parser = new ReadLine()
 			private _db: Database;
+			static readonly DEVICE_NAME = '/dev/ttyUSB0';
 
 			constructor({ db }: { db: Database }) {
 				this._db = db;
 				
-				this._port = new SerialPort('/dev/ttyUSB0', {
+				this._port = new SerialPort(Handler.DEVICE_NAME, {
 					baudRate: 9600
 				});
 				this._port.on('error', (e) => {
@@ -413,13 +414,13 @@ export namespace KeyVal {
 				this._parser.on('data', async (line: string) => {
 					if (line.startsWith('#')) {
 						if (getLogLevel() > 1) {
-							console.log(chalk.gray('[/dev/ttyUSB0]'),
+							console.log(chalk.gray(Handler.DEVICE_NAME),
 								line.slice(2));
 						}
 						return;
 					}
 					const [ key, value ] = line.split(' ');
-					console.log(chalk.cyan('[/dev/ttyUSB0]'),
+					console.log(chalk.cyan(Handler.DEVICE_NAME),
 						chalk.white(line));
 					await this._db.setVal(`room.${key}`, value.trim());
 					GetSetListener.update(key)
@@ -468,7 +469,7 @@ export namespace KeyVal {
 				await apiHandler.set(res, {...req.params, ...req.body});
 			});
 
-			websocket.all('/keyval/websocket', async (instance: WSInstance<WSMessages>) => {
+			websocket.all('/keyval/websocket', async (instance: WSSimInstance<WSMessages>) => {
 				instance.listen('listen', (key) => {
 					let lastVal: string|undefined = undefined;
 					const onChange = () => {

@@ -10,7 +10,7 @@ import * as bodyParser from 'body-parser';
 import { RGB } from '../modules/rgb';
 import { Bot } from '../modules/bot';
 import * as express from 'express';
-import { WSSimulator } from './ws';
+import { WSSimulator, WSWrapper } from './ws';
 import { Config } from '../app';
 import { Database } from './db';
 import { Auth } from './auth';
@@ -168,19 +168,20 @@ export async function initMiddleware(app: express.Express) {
 }
 
 export async function initRoutes({ 
-	app, websocketSim, config, randomNum, initLogger
+	app, websocketSim, config, randomNum, initLogger, ws
 }: { 
 	app: express.Express; 
 	websocketSim: WSSimulator; 
 	config: Config;
 	randomNum: number;
 	initLogger: ProgressLogger;
+	ws: WSWrapper;
 }) {
 	const wrappedApp = new AppWrapper(app);
 	const routeSettings = {
 		app: wrappedApp,
 		websocket: websocketSim,
-		randomNum, config
+		randomNum, config, ws
 	};
 
 	await Promise.all([

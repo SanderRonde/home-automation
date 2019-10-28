@@ -1,32 +1,189 @@
+import { Discovery, Control, CustomMode, TransitionTypes, BuiltinPatterns } from 'magic-home';
 import { errorHandle, requireParams, auth, authCookie } from '../lib/decorators';
-import { Discovery, Control, CustomMode, TransitionTypes } from 'magic-home';
 import { attachMessage, ResDummy, getTime, log } from '../lib/logger';
+import * as ReadLine from '@serialport/parser-readline';
 import { BotState } from '../lib/bot-state';
 import { AppWrapper } from '../lib/routes';
+import SerialPort = require('serialport');
 import { ResponseLike } from './multi';
+import { WSWrapper } from '../lib/ws';
 import { Bot as _Bot } from './bot';
 import { Auth } from '../lib/auth';
 import * as express from 'express';
 import chalk from 'chalk';
 
+function spedToMs(speed: number) {
+	// TODO: fit this better
+	return 1000 / speed;
+}
+
 export namespace RGB {
+	export namespace Clients {
+		abstract class RGBClient {
+			static patternNames: {
+				[key in BuiltinPatterns]: number;
+			} = Control.patternNames;
+
+			abstract setColor(red: number, green: number, blue: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean>;
+			abstract setColorAndWarmWhite(red: number, green: number, blue: number, ww: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean>;
+			abstract setColorWithBrightness(red: number, green: number, blue: number, brightness: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean>;
+			abstract setCustomPattern(pattern: CustomMode, speed: number, callback?: () => void): Promise<boolean>;
+			abstract setPattern(pattern: BuiltinPatterns, speed: number, callback?: () => void): Promise<boolean>;
+			abstract setPower(on: boolean, callback?: () => void): Promise<boolean>;
+			abstract setWarmWhite(ww: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean>;
+			abstract turnOff(callback?: () => void): Promise<boolean>;
+			abstract turnOn(callback?: () => void): Promise<boolean>;
+		}
+
+		export class MagicHomeClient extends RGBClient {
+			constructor(private _control: Control) {
+				super();
+			}
+
+			setColor(red: number, green: number, blue: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean> {
+				return this._control.setColor(red, green, blue, callback);
+			}
+			setColorAndWarmWhite(red: number, green: number, blue: number, ww: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean> {
+				return this._control.setColorAndWarmWhite(red, green, blue, ww, callback);
+			}
+			setColorWithBrightness(red: number, green: number, blue: number, brightness: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean> {
+				return this._control.setColorWithBrightness(red, green, blue, brightness, callback);
+			}
+			setCustomPattern(pattern: CustomMode, speed: number, callback?: () => void): Promise<boolean> {
+				return this._control.setCustomPattern(pattern, speed, callback);
+			}
+			setPattern(pattern: BuiltinPatterns, speed: number, callback?: () => void): Promise<boolean> {
+				return this._control.setPattern(pattern, speed, callback);
+			}
+			setPower(on: boolean, callback?: () => void): Promise<boolean> {
+				return this._control.setPower(on, callback);
+			}
+			setWarmWhite(ww: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean> {
+				return this._control.setWarmWhite(ww, callback);
+			}
+			turnOff(callback?: () => void): Promise<boolean> {
+				return this._control.turnOff(callback);
+			}
+			turnOn(callback?: () => void): Promise<boolean> {
+				return this._control.turnOn(callback);
+			}
+		}
+
+		export class ArduinoClient extends RGBClient {
+			constructor(public board: Board.Board) {
+				super();
+			}
+
+			public ping(): Promise<boolean> {
+				return this.board.ping();
+			}
+
+			private _sendSuccess(callback?: (err: Error|null, success: boolean) => void) {
+				callback && callback(null, true);
+				return true;
+			}
+
+			async setColor(red: number, green: number, blue: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean> {
+				this.board.setSolid({ r: red, g: green, b: blue });
+				return this._sendSuccess(callback);
+			}
+			async setColorAndWarmWhite(red: number, green: number, blue: number, _ww: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean> {
+				this.board.setSolid({ r: red, g: green, b: blue });
+				return this._sendSuccess(callback);
+			}
+			async setColorWithBrightness(red: number, green: number, blue: number, brightness: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean> {
+				const brightnessScale = brightness / 100;
+				this.board.setSolid({ r: red * brightnessScale, g: green * brightnessScale, b: blue * brightnessScale });
+				return this._sendSuccess(callback);
+			}
+			async setCustomPattern(pattern: CustomMode, speed: number, callback?: () => void): Promise<boolean> {
+				this.board.setFlash({
+					colors: pattern.colors.map(({ red, green, blue }) => ({ r: red, g: green, b: blue })),
+					mode: pattern.transitionType,
+					updateTime: spedToMs(speed)
+				})
+				return this._sendSuccess(callback);
+			}
+			async setPattern(_pattern: BuiltinPatterns, _speed: number, _callback?: () => void): Promise<boolean> {
+				// Not implemented
+				return Promise.resolve(true);
+			}
+			async setPower(on: boolean, callback?: () => void): Promise<boolean> {
+				if (on) {
+					return this.turnOn(callback);
+				} else {
+					return this.turnOff(callback);
+				}
+			}
+			async setWarmWhite(ww: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean> {
+				this.board.setSolid({ r: ww, g: ww, b: ww });
+				return this._sendSuccess(callback);
+			}
+			async turnOff(callback?: () => void): Promise<boolean> {
+				this.board.setModeOff();
+				return this._sendSuccess(callback);
+			}
+			async turnOn(callback?: () => void): Promise<boolean> {
+				return this._sendSuccess(callback);
+			}
+		}
+
+		export let magicHomeClients: MagicHomeClient[] = [];
+		export let arduinoClients: ArduinoClient[] = [];
+		export let clients: RGBClient[] = [];
+	}
+
 	export namespace Scan {
-		export let clients: Control[]|null = null;
-		export async function scanRGBControllers(first: boolean = false, logObj: any = undefined) {
+		export async function scanMagicHomeControllers(first: boolean) {
 			const scanTime = (first && process.argv.indexOf('--debug') > -1) ? 500 : 10000;
-			clients = (await new Discovery().scan(scanTime)).map((client) => {
+			const clients = (await new Discovery().scan(scanTime)).map((client) => {
 				return new Control(client.address, {
 					wait_for_reply: false
 				});
-			});
+			}).map(control => new Clients.MagicHomeClient(control));
+
+			Clients.magicHomeClients = clients;
+			Clients.clients = [
+				...Clients.magicHomeClients,
+				...Clients.arduinoClients
+			];
+
+			return clients.length;
+		}
+
+		export async function scanArduinos() {
+			const pings = await Promise.all(Clients.arduinoClients.map(c => c.ping()));
+			Clients.arduinoClients = Clients.arduinoClients.filter((_, i) => pings[i]);
+
+			if (Clients.arduinoClients.length === 0) {
+				const board = await Board.tryConnectRGBBoard();
+				if (board) {
+					Clients.arduinoClients.push(new Clients.ArduinoClient(board));
+				}
+			}
+
+			Clients.clients = [
+				...Clients.magicHomeClients,
+				...Clients.arduinoClients
+			];
+
+			return Clients.arduinoClients.length;
+		}
+
+		export async function scanRGBControllers(first: boolean = false, logObj: any = undefined) {
+			const [ magicHomeClients, arduinoClients] = await Promise.all([
+				scanMagicHomeControllers(first),
+				scanArduinos()
+			]);
+			const clients = magicHomeClients + arduinoClients;
+
 			if (!logObj) {
 				log(getTime(), chalk.cyan(`[rgb]`),
-					'Found', chalk.bold(clients.length + ''), 'clients');
+					'Found', chalk.bold(clients + ''), 'clients');
 			} else {
 				attachMessage(logObj, getTime(), chalk.cyan(`[rgb]`),
-					'Found', chalk.bold(clients.length + ''), 'clients');
-			}
-			return clients.length;
+					'Found', chalk.bold(clients + ''), 'clients');
+			}			
 		}
 	}
 
@@ -150,10 +307,10 @@ export namespace RGB {
 
 				attachMessage(attachMessage(attachMessage(res, `rgb(${r}, ${g}, ${b})`),
 					chalk.bgHex(hexColor)('   ')), 
-						`Updated ${Scan.clients!.length} clients`);
+						`Updated ${Clients.clients!.length} clients`);
 				
 
-				await Promise.all(Scan.clients!.map(async (client) => {
+				await Promise.all(Clients.clients!.map(async (client) => {
 					return Promise.all([
 						client.setColorWithBrightness(r, g, b, 100),
 						client.turnOn()
@@ -194,9 +351,9 @@ export namespace RGB {
 						this.toHex(greenNum)
 					}${
 						this.toHex(blueNum)
-					}`)('   ')), `Updated ${Scan.clients!.length} clients`);
+					}`)('   ')), `Updated ${Clients.clients!.length} clients`);
 
-				await Promise.all(Scan.clients!.map(async (client) => {
+				await Promise.all(Clients.clients!.map(async (client) => {
 					return Promise.all([
 						client.setColorWithBrightness(redNum, greenNum, blueNum, 100),
 						client.turnOn()
@@ -214,8 +371,8 @@ export namespace RGB {
 				auth?: string;
 			}) {
 				attachMessage(attachMessage(res, `Turned ${power}`),
-					`Updated ${Scan.clients!.length} clients`);
-				await Promise.all(Scan.clients!.map(c => power === 'on' ? c.turnOn() : c.turnOff()));
+					`Updated ${Clients.clients!.length} clients`);
+				await Promise.all(Clients.clients!.map(c => power === 'on' ? c.turnOn() : c.turnOff()));
 				res.status(200).end();
 			}
 
@@ -255,9 +412,9 @@ export namespace RGB {
 
 				attachMessage(
 					attachMessage(res, `Running pattern ${patternName}`),
-					`Updated ${Scan.clients!.length} clients`);
+					`Updated ${Clients.clients!.length} clients`);
 				try {
-					await Promise.all(Scan.clients!.map((c) => {
+					await Promise.all(Clients.clients!.map((c) => {
 						return Promise.all([
 							c.setCustomPattern(pattern, speed || defaultSpeed),
 							c.turnOn()
@@ -270,21 +427,6 @@ export namespace RGB {
 					res.end();
 					return false;
 				}
-			}
-
-			@errorHandle
-			@requireParams('function')
-			@auth
-			public static async runFunction(res: ResponseLike, { function: fn }: {
-				function: string;
-				auth?: string;
-			}) {
-				attachMessage(attachMessage(res, `Running function ${fn}`),
-					`Updated ${Scan.clients!.length} clients`);
-				await Promise.all(Scan.clients!.map((c) => {
-					c.startEffectMode()
-				}));
-				res.status(200).end();
 			}
 
 			@errorHandle
@@ -541,10 +683,239 @@ export namespace RGB {
 		}
 	}
 
+	export namespace Board {
+		export const enum DIR {
+			DIR_FORWARDS = 1,
+			DIR_BACKWARDS = 0
+		}
+
+		export async function tryConnectRGBBoard() {
+			const DEVICE_NAME = '/dev/ttyACM0';
+
+			return new Promise<Board|null>((resolve) => {
+				const port = new SerialPort(DEVICE_NAME, {
+					baudRate: 115200
+				});
+				
+				let err: boolean = false;
+				port.on('error', (e) => {
+					log(getTime(), chalk.red('Failed to connect to LED arduino', e));
+					resolve(null);
+					err = true;
+				});
+
+				//@ts-ignore
+				const parser = new ReadLine();
+				//@ts-ignore
+				port.pipe(parser);
+
+				// Get LEDS
+				setTimeout(() => {
+					if (err) return;
+					port.write('/ leds \\\n');
+				}, 2500);
+
+				let onData = async (line: string) => {
+					const LED_NUM = parseInt(line, 10);
+
+					log(getTime(), chalk.gray(`[${DEVICE_NAME}]`),
+						`Connected, ${LED_NUM} leds detected`);
+
+					onData = (): any => {};
+					resolve(new Board(port, (listener: (line: string) => any) => {
+						onData = listener;
+					}, LED_NUM))
+				}
+
+				parser.once('data', (line: string) => {
+					onData(line);
+				});
+			});
+		}
+
+		export class Board {
+			// @ts-ignore
+			constructor(private _port: SerialPort, 
+				private _setListener: (listener: (line: string) => any) => void, 
+				public leds: number) {}
+
+			public ping() {
+				return new Promise<boolean>((resolve) => {
+					this._setListener((_line: string) => {
+						resolve(true);
+					});
+					this.getLeds();
+					setTimeout(() => {
+						resolve(false);
+					}, 1000);
+				});
+			}
+
+			public write(data: string) {
+				this._port.write(data);
+			}
+
+			public sendCommand(command: string) {
+				console.log('Sending command', command);
+				this.write(`/ ${command} \\\n`);
+			}
+
+			public sendPrimed(command: string) {
+				this.write(command + '\n');
+			}
+
+			public setModeOff() {
+				this.sendCommand('off');
+			}
+
+			public getLeds() {
+				return this.sendCommand('leds');
+			}
+
+			public setSolid({
+				intensity = 0,
+				r, g, b
+			}: {
+				intensity?: number;
+				r: number;
+				g: number;
+				b: number;
+			}) {
+				this.sendCommand(`solid ${intensity} ${r} ${g} ${b}`);
+			}
+
+			public setDot({
+				intensity = 0,
+				backgroundRed, backgroundGreen,
+				backgroundBlue, dots
+			}: {
+				intensity?: number;
+				backgroundRed: number;
+				backgroundGreen: number;
+				backgroundBlue: number;
+				dots: {
+					size: number;
+					speed: number;
+					dir: DIR;
+					dotPos: number;
+					r: number;
+					g: number;
+					b: number;
+				}[];
+			}) {
+				this.sendCommand(`dot ${intensity} ${backgroundRed} ${
+					backgroundGreen} ${backgroundBlue} ${dots.map(({ 
+						size, speed, dir, 
+						dotPos, r, g, b 
+					}) => {
+						return `${size} ${speed} ${dir} ${dotPos} ${r} ${g} ${b}`;
+					}).join(' ')}`)
+			}
+
+			public setSplit({
+				intensity = 0,
+				updateTime, dir, parts
+			}: {
+				intensity?: number;
+				updateTime: number;
+				dir: DIR;
+				parts: {
+					r: number;
+					g: number;
+					b: number;
+				}[];
+			}) {
+				this.sendCommand(`split ${intensity} ${updateTime} ${dir} ${parts.map(({ 
+						r, g, b 
+					}) => {
+						return `${r} ${g} ${b}`;
+					}).join(' ')}`)
+			}
+
+			public setPattern({
+				intensity = 0,
+				blockSize = 0,
+				updateTime, dir, parts
+			}: {
+				intensity?: number;
+				updateTime: number;
+				blockSize?: number;
+				dir: DIR;
+				parts: {
+					r: number;
+					g: number;
+					b: number;
+				}[];
+			}) {
+				this.sendCommand(`pattern ${intensity} ${updateTime} ${dir} ${blockSize} ${parts.map(({ 
+						r, g, b 
+					}) => {
+						return `${r} ${g} ${b}`;
+					}).join(' ')}`);
+			}
+
+			public setPrime() {
+				this.sendCommand('prime');
+			}
+
+			public setFlash({
+				intensity = 0,
+				colors = [],
+				updateTime, mode
+			}: {
+				intensity?: number;
+				updateTime: number;
+				mode: TransitionTypes;
+				colors?: {
+					r: number;
+					g: number;
+					b: number;
+				}[];
+			}) {
+				this.sendCommand(`flash ${intensity} ${updateTime} ${mode} ${colors.map(({
+						r, g, b 
+					}) => {
+						return `${r} ${g} ${b}`;
+					}).join(' ')}`);
+			}
+		}
+	}
+
+	export namespace Visualizer {
+		export namespace Music {
+			function applyTransform(data: number[]) {
+				return data.reduce((prev, current) => {
+					return prev + current;
+				}, 0);
+			}
+
+			export namespace Youtube {
+				export class Handler {
+					static readonly MAX_INTENSITY = 50;
+					static colorFromIntensity(intensity: number) {
+						const clamped = Math.min(intensity, this.MAX_INTENSITY);
+						const relativeIntensity = clamped / this.MAX_INTENSITY;
+						const rgbIntensity = Math.round(relativeIntensity * 255);
+						const redColor = rgbIntensity.toString(16);
+						const redLonger = redColor.length === 1 ? ('0' + redColor) : redColor;
+						return `${redLonger}0000`;
+					}
+
+					static parse(data: string) {
+						const transformed = applyTransform(JSON.parse(data));
+						console.log('Writing', this.colorFromIntensity(transformed));
+						Clients.arduinoClients.forEach(c => c.board.sendPrimed(this.colorFromIntensity(transformed)));
+					}
+				}
+			}
+		}
+	}
+
 	export namespace Routing {
-		export async function init({ app, randomNum }: { 
+		export async function init({ app, randomNum, ws }: { 
 			app: AppWrapper; 
-			randomNum: number; 
+			randomNum: number;
+			ws: WSWrapper;
 		}) {
 			await Scan.scanRGBControllers(true);
 			setInterval(Scan.scanRGBControllers, 1000 * 60 * 60);
@@ -562,14 +933,23 @@ export namespace RGB {
 			app.post('/rgb/pattern/:pattern/:speed?/:transition?', async (req, res) => {
 				await API.Handler.runPattern(res, {...req.params, ...req.body});
 			});
-			app.post('/rgb/function/:function', async (req, res) => {
-				await API.Handler.runFunction(res, {...req.params, ...req.body});
-			});
 			app.post('/rgb/refresh', async (_req, res) => {
 				await API.Handler.refresh(res);
 			});
 			app.all('/rgb', async (req, res) => {
 				await WebPage.Handler.index(res, req, randomNum);
+			});
+
+			ws.all('/music_visualize', async ({ addListener }) => {
+				// Prime it
+				if (Clients.arduinoClients.length === 0) {
+					if (await Scan.scanArduinos() == 0) return;
+				}
+				Clients.arduinoClients.forEach(c => c.board.sendCommand('prime'));
+
+				addListener((message: string) => {
+					Visualizer.Music.Youtube.Handler.parse(message);
+				});
 			});
 		}
 	}

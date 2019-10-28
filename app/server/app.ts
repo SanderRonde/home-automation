@@ -1,7 +1,7 @@
 import { setLogLevel, ProgressLogger, startInit, endInit } from './lib/logger';
 import { initRoutes, initMiddleware } from './lib/routes';
 import { hasArg, getArg, getNumberArg } from './lib/io';
-import { WSSimulator } from './lib/ws';
+import { WSSimulator, WSWrapper } from './lib/ws';
 import * as express from 'express';
 import * as path from 'path';
 import * as http from 'http';
@@ -29,6 +29,7 @@ export type Config = DeepRequired<PartialConfig>;
 class WebServer {
 	public app!: express.Express;
 	public websocketSim!: WSSimulator;
+	public ws!: WSWrapper;
 	private _server!: http.Server;
 
 	private _config: Config;
@@ -72,7 +73,8 @@ class WebServer {
 			// This is just for semi-versioning of files
 			// to prevent caching
 			randomNum: Math.round(Math.random() * 1000000),
-			initLogger: this._initLogger
+			initLogger: this._initLogger,
+			ws: this.ws
 		});
 		this._initLogger.increment('routes');
 		setLogLevel(this._config.log.level);
@@ -85,6 +87,7 @@ class WebServer {
 			this.websocketSim.handler(req, res, next);
 		});
 		this._server = http.createServer(this.app);
+		this.ws = new WSWrapper(this._server);
 		this._initLogger.increment('HTTP server');
 	}
 
