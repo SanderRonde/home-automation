@@ -53,7 +53,11 @@ export namespace Bot {
 		}
 	}
 
-	export type TelegramMessage<C = TelegramText|TelegramImage|TelegramVoice|TelegramDocument> = {
+	export type TelegramReply<C = TelegramText|TelegramImage|TelegramVoice|TelegramDocument> = {
+		reply_to_message: TelegramMessage<C>;
+	} & TelegramText;
+
+	export type TelegramMessage<C = TelegramReply|TelegramText|TelegramImage|TelegramVoice|TelegramDocument> = {
 		message_id: number;
 		from: {
 			id: number;
@@ -361,14 +365,37 @@ export namespace Bot {
 				}]);
 			}
 
-
+			async handleReplyMessage(logObj: any, message: TelegramMessage<TelegramReply>): Promise<{
+				type: RESPONSE_TYPE;
+				text: string | number;
+			}[]> {
+				attachMessage(logObj, `Reply message text:`, chalk.bold(message.text));
+				attachMessage(logObj, `Reply chat ID:`, chalk.bold(message.chat.id + ''));
+				const replyObj = attachMessage(logObj, 'Reply');
+				if ('text' in message.reply_to_message) {
+					return this.handleTextMessage(replyObj,
+						message.reply_to_message)
+				}
+				if ('reply_to_message' in message) {
+					return this.handleReplyMessage(replyObj,
+						(message as unknown as TelegramMessage<TelegramReply<TelegramReply>>)
+							.reply_to_message);
+				}
+				return [{
+					type: RESPONSE_TYPE.TEXT,
+					text: 'Message type unsupported' as (string|number)
+				}];
+			}
 
 			async handleMessage(req: TelegramReq, res: ResponseLike) {
 				const { message } = req.body;
-				console.log(message);
 				const logObj = attachMessage(res, chalk.bold(chalk.cyan('[bot]')));
 			
 				const responses = await (() => {
+					if ('reply_to_message' in message) {
+						return this.handleTextMessage(logObj,
+							message)
+					}
 					if ('text' in message) {
 						return this.handleTextMessage(logObj,
 							message);
