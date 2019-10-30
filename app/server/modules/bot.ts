@@ -5,6 +5,7 @@ import { BotState } from '../lib/bot-state';
 import { AppWrapper } from "../lib/routes";
 import { ResponseLike } from "./multi";
 import { Database } from "../lib/db";
+import { log } from '../lib/logger';
 import * as express from 'express';
 import { KeyVal } from "./keyval";
 import { Script } from "./script";
@@ -468,5 +469,19 @@ export namespace Bot {
 				}
 			});
 		}
+	}
+
+	export function printCommands() {
+		const bots = [
+			RGB.Bot.Bot,
+			KeyVal.Bot.Bot,
+			Script.Bot.Bot,
+			HomeDetector.Bot.Bot,
+		]
+		log(`${chalk.bold('Available commands are')}:\n\n${bots.map((bot) => {
+			return `${Object.keys(bot.commands).map((cmd) => {
+				return `${chalk.bold(cmd.slice(1))} - ${bot.commands[cmd as keyof typeof bot.commands]}`
+			}).join('\n')}`
+		}).join('\n')}\n`);
 	}
 }

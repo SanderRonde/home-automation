@@ -1036,6 +1036,31 @@ export namespace RGB {
 		}
 
 		export class Bot extends BotState.Base {
+			static readonly commands = {
+				'/rgboff': 'Turn off RGB',
+				'/rgbon': 'Turn on RGB',
+				'/arduinooff': 'Turn off arduino lights',
+				'/magicoff': 'Turn off magic-home lights',
+				'/color': 'Set color to given value',
+				'/pattern': 'Start given pattern',
+				'/effect': 'Start given effect',
+				'/intensity': 'Set intensity to given value',
+				'/blocksize': 'Set block size to given value',
+				'/red': 'Set red to given value',
+				'/green': 'Set green to given value',
+				'/blue': 'Set blue to given value',
+				'/background': 'Set background to given color',
+				'/dot': 'Set dot to given color',
+				'/updatetime': 'Set update-time to given value',
+				'/dir': 'Set dir to given value',
+				'/mode': 'Set mode to given value',
+				'/effects': 'List effects',
+				'/refresh': 'Refresh LEDs',
+				'/help_rgb': 'Print help comands for RGB'
+			};
+
+			static readonly botName = 'RGB';
+
 			static colorTextToColor(text: string) {
 				if (API.HEX_REGEX.test(text)) {
 					return API.hexToRGB(text);
@@ -1056,29 +1081,49 @@ export namespace RGB {
 			static readonly matches = Bot.createMatchMaker(({
 				matchMaker: mm
 			}) => {
+				function rgbOff(state: _Bot.Message.StateKeeping.ChatState) {
+					state.rgb.lastConfig = {
+						type: 'off'
+					}
+				}
+				function rgbOn(state: _Bot.Message.StateKeeping.ChatState) {
+					state.rgb.lastConfig = {
+						type: 'solid',
+						data: {
+							r: 100, g: 100, b: 100
+						}
+					}
+				}
+				mm('/rgbon', async ({
+					state, logObj
+				}) => {
+					rgbOn(state);
+					await new External.Handler(logObj).power('on');
+					return `Turned it on`;
+				});
+				mm('/rgboff', async ({
+					state, logObj
+				}) => {
+					rgbOff(state);
+					await new External.Handler(logObj).power('off');
+					return `Turned it off`;
+				});
 				mm(/turn (on|off) (rgb|led)/, async ({
 					logObj, match, state
 				}) => {
 					const targetState = match[1];
 					if (targetState === 'on') {
-						state.rgb.lastConfig = {
-							type: 'solid',
-							data: {
-								r: 100, g: 100, b: 100
-							}
-						}
+						rgbOn(state);
 					} else {
-						state.rgb.lastConfig = {
-							type: 'off'
-						}
+						rgbOff(state);
 					}
 					await new External.Handler(logObj).power(targetState as 'on' | 'off');
 					return `Turned it ${targetState}`;
 				});
-				mm(/turn (on|off) (ceiling|arduino|duino)/, async ({
+				mm('/arduinooff', /turn (on|off) (ceiling|arduino|duino)/, async ({
 					logObj, match, state
 				}) => {
-					const targetState = match[1];
+					const targetState = match.length === 0 ? 'off' : match[1];
 					if (targetState === 'on') {
 						state.rgb.lastConfig = {
 							type: 'solid',
@@ -1094,10 +1139,10 @@ export namespace RGB {
 					attachMessage(logObj, `Turned ${targetState} ${Clients.arduinoClients.length} arduino clients`);
 					return `Turned ${targetState} ${Clients.arduinoClients.length} arduino clients`;
 				});
-				mm(/turn (on|off) (magic(-| )home)/, async ({
+				mm('/magicoff', /turn (on|off) (magic(-| )home)/, async ({
 					logObj, match
 				}) => {
-					const targetState = match[1];
+					const targetState = match.length === 0 ? 'off' : match[1];
 
 					await Promise.all(Clients.magicHomeClients.map(c => new Promise((resolve) => {
 						if (targetState === 'on') {
@@ -1109,12 +1154,27 @@ export namespace RGB {
 					attachMessage(logObj, `Turned ${targetState} ${Clients.magicHomeClients.length} magichome clients`);
 					return `Turned ${targetState} ${Clients.magicHomeClients.length} magichome clients`;
 				});
-				mm(/set (rgb|led|it|them|color) to (((\d+) (\d+) (\d+))|([^ ]+))(\s+with intensity (\d+))?/, async ({
+				mm(/\/color (?:(?:(\d+) (\d+) (\d+))|([^ ]+))/, /set (?:rgb|led|it|them|color) to (?:(?:(\d+) (\d+) (\d+))|([^ ]+))(\s+with intensity (\d+))?/, async ({
 					logObj, match, state
 				}) => {
-					const color = match[2];
-					const intensity = match[4];
-					const resolvedColor = Bot.colorTextToColor(color);
+					const colorR = match[1];
+					const colorG = match[2];
+					const colorB = match[3];
+					const colorStr = match[4];
+					const intensity = match[6];
+					const resolvedColor = (() => {
+						if (colorStr) {
+							return Bot.colorTextToColor(colorStr);
+						}
+						if (colorR && colorG && colorB) {
+							return {
+								r: parseInt(colorR, 10),
+								g: parseInt(colorG, 10),
+								b: parseInt(colorB, 10)
+							}
+						}
+						return undefined;
+					})();
 					if (resolvedColor) {
 						state.rgb.lastConfig = {
 							type: 'solid',
@@ -1127,18 +1187,20 @@ export namespace RGB {
 					} else {
 						state.rgb.lastConfig = null;
 					}
-					if (await new External.Handler(logObj).color(color,
-						(intensity && intensity.length) ?
-							parseInt(intensity, 10) : 0)) {
-						return `Set color to ${color}`;
+					if (resolvedColor) {
+						await new External.Handler(logObj).rgb(
+							resolvedColor.r + '', resolvedColor.g + '', resolvedColor.b + '',
+							(intensity?.length) ?
+								parseInt(intensity, 10) : 0)
+						return `Set color to ${JSON.stringify(resolvedColor)}`;
 					} else {
 						return 'Failed to set color (invalid color)';
 					}
 				});
-				mm(/(start|launch) pattern ([^ ]+)(\s+with speed ([^ ]+))?(\s*and\s*)?(with transition ([^ ]+))?(\s*and\s*)?(\s*with speed ([^ ]+))?/, async ({
+				mm(/\/pattern ([^ ]+)/, /(?:start|launch) pattern ([^ ]+)(\s+with speed ([^ ]+))?(\s*and\s*)?(with transition ([^ ]+))?(\s*and\s*)?(\s*with speed ([^ ]+))?/, async ({
 					logObj, match, state
 				}) => {
-					const [, , pattern, , speed1, , , transition, , , speed2] = match;
+					const [, pattern, , speed1, , , transition, , , speed2] = match;
 					const speed = speed1 || speed2;
 
 					state.rgb.lastConfig = null;
@@ -1150,23 +1212,23 @@ export namespace RGB {
 						return 'Failed to start pattern';
 					}
 				});
-				mm(/((?:start effect)|(?:launch effect)|(?:run effect)|(?:set effect to)) ([^ ]+)(\s+with intensity ([^ ]+))?(\s*and\s*)?(\s*with background (((\d+) (\d+) (\d+))|([^ ]+)))?(\s*and\s*)?(\s*with update(-| )?time ([^ ]+))?(\s*and\s*)?(\s*with dir(ection)? ([^ ]+))?(\s*and\s*)?(\s*with (?:(?:block(-| )?size)|per(-| )?strobe) ([^ ]+))?(\s*and\s*)?(\s*with mode ([^ ]+))?(\s*and\s*)?(\s*with color (((\d+) (\d+) (\d+))|([^ ]+)))?/, async ({
+				mm(/\/effect ([^ ]+)/, /(?:(?:start effect)|(?:launch effect)|(?:run effect)|(?:set effect to)) ([^ ]+)(\s+with intensity ([^ ]+))?(\s*and\s*)?(\s*with background (((\d+) (\d+) (\d+))|([^ ]+)))?(\s*and\s*)?(\s*with update(-| )?time ([^ ]+))?(\s*and\s*)?(\s*with dir(ection)? ([^ ]+))?(\s*and\s*)?(\s*with (?:(?:block(-| )?size)|per(-| )?strobe) ([^ ]+))?(\s*and\s*)?(\s*with mode ([^ ]+))?(\s*and\s*)?(\s*with color (((\d+) (\d+) (\d+))|([^ ]+)))?/, async ({
 					logObj, match, state
 				}) => {
-					const effect = match[2] as ArduinoAPI.Effects;
-					const intensity = match[4];
-					const bgR = match[9];
-					const bgG = match[10];
-					const bgB = match[11];
-					const bg = match[12];
-					const updateTime = match[16];
-					const dir = match[20];
-					const blockSize = match[24];
-					const mode = match[27];
-					const colorR = match[32];
-					const colorG = match[33];
-					const colorB = match[34];
-					const colorStr = match[35];
+					const effect = match[1] as ArduinoAPI.Effects;
+					const intensity = match[3];
+					const bgR = match[8];
+					const bgG = match[9];
+					const bgB = match[10];
+					const bg = match[11];
+					const updateTime = match[15];
+					const dir = match[19];
+					const blockSize = match[23];
+					const mode = match[26];
+					const colorR = match[31];
+					const colorG = match[32];
+					const colorB = match[33];
+					const colorStr = match[34];
 
 					const background = (() => {
 						if (bg) {
@@ -1291,7 +1353,7 @@ export namespace RGB {
 						return 'Failed to start effect';
 					}
 				});
-				mm(/(?:change|set) intensity to ([^ ]+)/, async ({
+				mm(/\/intensity ([^ ]+)/, /(?:change|set) intensity to ([^ ]+)/, async ({
 					logObj, state, match
 				}) => {
 					if (state.rgb.lastConfig === null) {
@@ -1307,7 +1369,7 @@ export namespace RGB {
 					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
 					return msg;
 				});
-				mm(/(?:change|set) (?:(?:block(-| )?size)|per(-| )?strobe) to ([^ ]+)/, async ({
+				mm(/\/blocksize ([^ ]+)/, /(?:change|set) (?:(?:block(-| )?size)|per(-| )?strobe) to ([^ ]+)/, async ({
 					logObj, state, match
 				}) => {
 					if (state.rgb.lastConfig === null) {
@@ -1323,7 +1385,7 @@ export namespace RGB {
 					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
 					return msg;
 				});
-				mm(/(?:change|set) r(ed)? to (\d+)/, async ({
+				mm(/\/red (\d+)/, /(?:change|set) r(ed)? to (\d+)/, async ({
 					logObj, state, match
 				}) => {
 					if (state.rgb.lastConfig === null) {
@@ -1340,7 +1402,7 @@ export namespace RGB {
 					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
 					return msg;
 				});
-				mm(/(?:change|set) g(reen)? to (\d+)/, async ({
+				mm(/\/green (\d+)/, /(?:change|set) g(reen)? to (\d+)/, async ({
 					logObj, state, match
 				}) => {
 					if (state.rgb.lastConfig === null) {
@@ -1357,7 +1419,7 @@ export namespace RGB {
 					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
 					return msg;
 				});
-				mm(/(?:change|set) r(ed)? to (\d+)/, async ({
+				mm(/\/blue (\d+)/, /(?:change|set) r(blue)? to (\d+)/, async ({
 					logObj, state, match
 				}) => {
 					if (state.rgb.lastConfig === null) {
@@ -1421,7 +1483,7 @@ export namespace RGB {
 					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
 					return msg;
 				});
-				mm(/(?:change|set) background(-| )?(color)? to (((\d+) (\d+) (\d+))|([^ ]+))/, async ({
+				mm(/\/background (?:(?:(\d+) (\d+) (\d+))|([^ ]+))/, /(?:change|set) background(?:-| )?(?:color)? to (?:(?:(\d+) (\d+) (\d+))|([^ ]+))/, async ({
 					logObj, state, match
 				}) => {
 					if (state.rgb.lastConfig === null) {
@@ -1429,10 +1491,10 @@ export namespace RGB {
 						return 'I don\'t know what to edit';
 					}
 
-					const colorR = match[5];
-					const colorG = match[6];
-					const colorB = match[7];
-					const colorStr = match[8];
+					const colorR = match[1];
+					const colorG = match[2];
+					const colorB = match[3];
+					const colorStr = match[4];
 					const color = (() => {
 						if (colorStr) {
 							return Bot.colorTextToColor(colorStr);
@@ -1463,7 +1525,7 @@ export namespace RGB {
 					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
 					return msg;
 				});
-				mm(/(?:change|set) dot (\d+)?('s)? ([^ ]+) to ([^ ]+)/, async ({
+				mm(/\/dot (?:(?:(\d+) (\d+) (\d+))|([^ ]+))/, /(?:change|set) dot (\d+)?('s)? ([^ ]+) to ([^ ]+)/, async ({
 					logObj, state, match
 				}) => {
 					if (state.rgb.lastConfig === null) {
@@ -1487,7 +1549,7 @@ export namespace RGB {
 					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
 					return msg;
 				});
-				mm(/(?:change|set) update(-| )?time to ([^ ]+)/, async ({
+				mm(/\/updatetime ([^ ]+)/, /(?:change|set) update(-| )?time to ([^ ]+)/, async ({
 					logObj, state, match
 				}) => {
 					if (state.rgb.lastConfig === null) {
@@ -1503,7 +1565,7 @@ export namespace RGB {
 					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
 					return msg;
 				});
-				mm(/(?:change|set) dir to ([^ ]+)/, async ({
+				mm(/\/dir ([^ ]+)/, /(?:change|set) dir to ([^ ]+)/, async ({
 					logObj, state, match
 				}) => {
 					if (state.rgb.lastConfig === null) {
@@ -1519,7 +1581,7 @@ export namespace RGB {
 					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
 					return msg;
 				});
-				mm(/(?:change|set) mode to ([^ ]+)/, async ({
+				mm(/\/mode ([^ ]+)/, /(?:change|set) mode to ([^ ]+)/, async ({
 					logObj, state, match
 				}) => {
 					if (state.rgb.lastConfig === null) {
@@ -1535,15 +1597,15 @@ export namespace RGB {
 					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
 					return msg;
 				});
-				mm(/what effects are there(\?)?/, async () => {
+				mm('/effects', /what effects are there(\?)?/, async () => {
 					return `Effects are ${Bot.formatList(Object.keys(ArduinoAPI.arduinoEffects))}`;
 				});
-				mm(/refresh (rgb|led)/, async ({
+				mm('/refresh', /refresh (rgb|led)/, async ({
 					logObj
 				}) => {
 					return `Found ${await Scan.scanRGBControllers(false, logObj)} RGB controllers`;
 				});
-				mm(/what commands are there for rgb/, async () => {
+				mm('/help_rgb', /what commands are there for rgb/, async () => {
 					return `Commands are:\n${Bot.matches.matches.map((match) => {
 						return `RegExps: ${
 							match.regexps.map(r => r.source).join(', ')}. Texts: ${

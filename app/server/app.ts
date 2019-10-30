@@ -2,6 +2,7 @@ import { setLogLevel, ProgressLogger, startInit, endInit } from './lib/logger';
 import { initRoutes, initMiddleware } from './lib/routes';
 import { hasArg, getArg, getNumberArg } from './lib/io';
 import { WSSimulator, WSWrapper } from './lib/ws';
+import { Bot } from './modules/bot';
 import * as express from 'express';
 import * as path from 'path';
 import * as http from 'http';
@@ -78,6 +79,7 @@ class WebServer {
 		});
 		this._initLogger.increment('routes');
 		setLogLevel(this._config.log.level);
+		Bot.printCommands();
 		this._listen();
 	}
 

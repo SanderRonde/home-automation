@@ -163,12 +163,22 @@ export namespace KeyVal {
 		}
 
 		export class Bot extends BotState.Base {
+			static readonly commands = {
+				'/islighton': 'Check if the light is on',
+				'/lightoff': 'Turn off the light',
+				'/lighton': 'Turn on the light',
+				'/help_keyval': 'Print help comands for keyval'
+			};
+
+			static readonly botName = 'Keyval';
+
+			
 			static readonly matches = Bot.createMatchMaker(({
 				matchMaker: mm,
 				fallbackSetter: fallback,
 				conditional
 			}) => {
-				mm(/is the light (on|off)/, /are the lights (on|off)/, async ({ 
+				mm('/islighton', /is the light (on|off)/, /are the lights (on|off)/, async ({ 
 					match, logObj, state
 				}) => {
 					const results = await Promise.all(MAIN_LIGHTS.map((light) => {
@@ -185,12 +195,26 @@ export namespace KeyVal {
 
 					switch (actualState) {
 						case 'ON':
-							return match[1] === 'on' ? 'Yep' : 'Nope';
+							return !match.length || match[1] === 'on' ? 'Yep' : 'Nope';
 						case 'OFF':
-							return match[1] === 'off' ? 'Yep' : 'Nope';
+							return match.length && match[1] === 'off' ? 'Yep' : 'Nope';
 						default:
 							return 'Some are on some are off';
 					}
+				});
+				mm('/lighton', async ({ logObj, state }) => {
+					state.keyval.lastSubjects = MAIN_LIGHTS;
+					await Promise.all(MAIN_LIGHTS.map((light) => {
+						return new External.Handler(logObj).set(light, '1');
+					}));
+					return `Turned ${MAIN_LIGHTS.length > 1 ? 'them' : 'it'} on`;
+				});
+				mm('/lightoff', async ({ logObj, state }) => {
+					state.keyval.lastSubjects = MAIN_LIGHTS;
+					await Promise.all(MAIN_LIGHTS.map((light) => {
+						return new External.Handler(logObj).set(light, '0');
+					}));
+					return `Turned ${MAIN_LIGHTS.length > 1 ? 'them' : 'it'} on`;
 				});
 				for (const [ reg, switchName ] of COMMON_SWITCH_MAPPINGS) {
 					mm(new RegExp('turn (on|off) ' + reg.source), async ({ logObj, state, match }) => {
@@ -220,7 +244,7 @@ export namespace KeyVal {
 				}), ({ state }) => {
 					return state.keyval.lastSubjects !== null;
 				});
-				mm(/what commands are there for keyval/, async () => {
+				mm('/help_keyval', /what commands are there for keyval/, async () => {
 					return `Commands are:\n${Bot.matches.matches.map((match) => {
 						return `RegExps: ${
 							match.regexps.map(r => r.source).join(', ')}. Texts: ${

@@ -240,6 +240,12 @@ export namespace BotState {
 
 		static readonly matches: MatchConfig;
 
+		static readonly commands: {
+			[command: string]: string;
+		} = {};
+
+		static readonly botName: string;
+
 		static resetState(_state: Bot.Message.StateKeeping.ChatState) { }
 	}
 

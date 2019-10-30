@@ -254,16 +254,19 @@ export namespace HomeDetector {
 		}
 
 		export class Bot extends BotState.Base {
-			private static capitalize(word: string) {
-				return word[0].toUpperCase() + word.slice(1);
-			}
+			static readonly commands = {
+				'/whoshome': 'Check who is home',
+				'/help_homedetector': 'Print help comands for home-detector'
+			};
+
+			static readonly botName = 'Home-Detector';
 
 			static readonly matches = Bot.createMatchMaker(({
 				matchMaker: mm,
 				fallbackSetter: fallback,
 				conditional
 			}) => {
-				mm(/who (is|are) (home|away)/, async ({
+				mm('/whoshome', /who (is|are) (home|away)/, async ({
 					logObj, state, match
 				}) => {
 					const resDummy = new ResDummy();
@@ -374,7 +377,7 @@ export namespace HomeDetector {
 					return state.homeDetector.lastSubjects !== null;
 				});
 
-				mm(/what commands are there for home(-| )?detector/, async () => {
+				mm('/help_homedetector', /what commands are there for home(-| )?detector/, async () => {
 					return `Commands are:\n${Bot.matches.matches.map((match) => {
 						return `RegExps: ${
 							match.regexps.map(r => r.source).join(', ')}. Texts: ${
