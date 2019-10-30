@@ -220,7 +220,7 @@ export namespace KeyVal {
 				}), ({ state }) => {
 					return state.keyval.lastSubjects !== null;
 				});
-				mm(/what commands are there for rgb/, async () => {
+				mm(/what commands are there for keyval/, async () => {
 					return `Commands are:\n${Bot.matches.matches.map((match) => {
 						return `RegExps: ${
 							match.regexps.map(r => r.source).join(', ')}. Texts: ${

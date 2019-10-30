@@ -374,7 +374,7 @@ export namespace HomeDetector {
 					return state.homeDetector.lastSubjects !== null;
 				});
 
-				mm(/what commands are there for rgb/, async () => {
+				mm(/what commands are there for home(-| )?detector/, async () => {
 					return `Commands are:\n${Bot.matches.matches.map((match) => {
 						return `RegExps: ${
 							match.regexps.map(r => r.source).join(', ')}. Texts: ${

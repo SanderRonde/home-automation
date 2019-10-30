@@ -93,7 +93,7 @@ export namespace Script {
 					await new External.Handler(logObj).script('wake_desktop');
 					return 'Started it';
 				});
-				mm(/what commands are there for rgb/, async () => {
+				mm(/what commands are there for script/, async () => {
 					return `Commands are:\n${Bot.matches.matches.map((match) => {
 						return `RegExps: ${
 							match.regexps.map(r => r.source).join(', ')}. Texts: ${
