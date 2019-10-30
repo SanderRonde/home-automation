@@ -1505,7 +1505,6 @@ export namespace RGB {
 				mm(/(?:change|set) dir to ([^ ]+)/, async ({
 					logObj, state, match
 				}) => {
-					debugger;
 					if (state.rgb.lastConfig === null) {
 						attachMessage(logObj, 'No lastConfig for RGB');
 						return 'I don\'t know what to edit';
