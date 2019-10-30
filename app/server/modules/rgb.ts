@@ -1315,7 +1315,7 @@ export namespace RGB {
 						return 'I don\'t know what to edit';
 					}
 					state.rgb.lastConfig.data = state.rgb.lastConfig.data || {};
-					state.rgb.lastConfig.data.blockSize = parseInt(match[1], 10);
+					state.rgb.lastConfig.data.blockSize = parseInt(match[3], 10);
 					const msg = `Changed config to ${
 						JSON.stringify(state.rgb.lastConfig)} (blockSize->${
 						state.rgb.lastConfig.data.blockSize})`;
