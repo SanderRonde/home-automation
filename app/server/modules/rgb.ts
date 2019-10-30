@@ -1543,6 +1543,13 @@ export namespace RGB {
 				}) => {
 					return `Found ${await Scan.scanRGBControllers(false, logObj)} RGB controllers`;
 				});
+				mm(/what commands are there for rgb/, async () => {
+					return `Commands are:\n${Bot.matches.matches.map((match) => {
+						return `RegExps: ${
+							match.regexps.map(r => r.source).join(', ')}. Texts: ${
+								match.texts.join(', ')}}`
+					}).join('\n')}`
+				});
 			});
 
 			constructor(json?: JSON) {
