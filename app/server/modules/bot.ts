@@ -76,7 +76,8 @@ export namespace Bot {
 	} & C;
 
 	interface TelegramReqBody {
-		message: TelegramMessage
+		message: TelegramMessage;
+		edited_message: TelegramMessage;
 	}
 
 	interface TelegramReq extends express.Request {
@@ -388,10 +389,16 @@ export namespace Bot {
 			}
 
 			async handleMessage(req: TelegramReq, res: ResponseLike) {
-				const { message } = req.body;
+				const { message, edited_message } = req.body;
 				const logObj = attachMessage(res, chalk.bold(chalk.cyan('[bot]')));
 			
 				const responses = await (() => {
+					if (edited_message) {
+						return [{
+							type: RESPONSE_TYPE.TEXT,
+							text: 'Edits unsupported'
+						}];
+					}
 					if ('reply_to_message' in message) {
 						return this.handleTextMessage(logObj,
 							message)
