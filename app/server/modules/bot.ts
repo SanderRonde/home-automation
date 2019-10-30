@@ -414,7 +414,9 @@ export namespace Bot {
 				})();
 				attachMessage(logObj, 'Return value(s)', chalk.bold(JSON.stringify(responses)));
 				if ((await Promise.all(responses.map((response) => {
-					return this.sendMessage(response.text, response.type, message.chat.id);
+					const chatId = message?.chat.id || edited_message?.chat.id;
+					if (chatId === undefined) return false;
+					return this.sendMessage(response.text, response.type, chatId);
 				}))).every(v => v)) {
 					res.write('ok');
 				} else {
