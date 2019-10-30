@@ -33,7 +33,7 @@
     "@types/ws": "^6.0.3",
     "rollup": "^1.20.3",
     "rollup-plugin-uglify-es": "^0.0.1",
-    "typescript": "^3.5.3"
+    "typescript": "^3.7.1-rc"
   },
   "dependencies": {
     "@serialport/parser-readline": "^2.0.2",
