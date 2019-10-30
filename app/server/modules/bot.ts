@@ -94,10 +94,10 @@ export namespace Bot {
 
 		export namespace StateKeeping {
 			export class ChatState {
-				rgb!: RGB.Bot.State;
-				keyval!: KeyVal.Bot.State;
-				script!: Script.Bot.State;
-				homeDetector!: HomeDetector.Bot.State;
+				rgb!: RGB.Bot.Bot;
+				keyval!: KeyVal.Bot.Bot;
+				script!: Script.Bot.Bot;
+				homeDetector!: HomeDetector.Bot.Bot;
 
 				constructor(json: {
 					rgb?: RGB.Bot.JSON;
@@ -105,10 +105,10 @@ export namespace Bot {
 					script?: Script.Bot.JSON;
 					homeDetector?: HomeDetector.Bot.JSON;
 				} = {}) {
-					this.rgb = new RGB.Bot.State(json.rgb);
-					this.keyval = new KeyVal.Bot.State(json.keyval);
-					this.script = new Script.Bot.State(json.script);
-					this.homeDetector = new HomeDetector.Bot.State(json.homeDetector);
+					this.rgb = new RGB.Bot.Bot(json.rgb);
+					this.keyval = new KeyVal.Bot.Bot(json.keyval);
+					this.script = new Script.Bot.Bot(json.script);
+					this.homeDetector = new HomeDetector.Bot.Bot(json.homeDetector);
 				}
 
 				toJSON() {
@@ -286,9 +286,9 @@ export namespace Bot {
 			}): Promise<MatchResponse | undefined> {
 				return this._matchMatchables(config,
 					await this._matchSelf(config),
-					HomeDetector.Bot.State,
-					KeyVal.Bot.State,
-					RGB.Bot.State);
+					HomeDetector.Bot.Bot,
+					KeyVal.Bot.Bot,
+					RGB.Bot.Bot);
 			}
 
 			static async multiMatch({ logObj, text, message, state }: { 

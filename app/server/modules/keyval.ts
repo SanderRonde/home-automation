@@ -162,8 +162,8 @@ export namespace KeyVal {
 			lastSubjects: string[]|null;
 		}
 
-		export class State extends BotState.Base {
-			static readonly matches = State.createMatchMaker(({
+		export class Bot extends BotState.Base {
+			static readonly matches = Bot.createMatchMaker(({
 				matchMaker: mm,
 				fallbackSetter: fallback,
 				conditional
@@ -222,7 +222,7 @@ export namespace KeyVal {
 				});
 
 				fallback(({ state }) => {
-					State.resetState(state);
+					Bot.resetState(state);
 				});
 			});
 
@@ -241,7 +241,7 @@ export namespace KeyVal {
 				message: _Bot.TelegramMessage; 
 				state: _Bot.Message.StateKeeping.ChatState; 
 			}): Promise<_Bot.Message.MatchResponse | undefined> {
-				return await this.matchLines({ ...config, matchConfig: State.matches });
+				return await this.matchLines({ ...config, matchConfig: Bot.matches });
 			}
 
 			static resetState(state: _Bot.Message.StateKeeping.ChatState) {

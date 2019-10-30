@@ -66,8 +66,8 @@ export namespace Script {
 
 		}
 
-		export class State extends BotState.Base {
-			static readonly matches = State.createMatchMaker(({
+		export class Bot extends BotState.Base {
+			static readonly matches = Bot.createMatchMaker(({
 				matchMaker: mm
 			}) => {
 				mm(/run script ([^ ]+)/, async ({
@@ -105,7 +105,7 @@ export namespace Script {
 				message: _Bot.TelegramMessage; 
 				state: _Bot.Message.StateKeeping.ChatState; 
 			}): Promise<_Bot.Message.MatchResponse | undefined> {
-				return await this.matchLines({ ...config, matchConfig: State.matches });
+				return await this.matchLines({ ...config, matchConfig: Bot.matches });
 			}
 
 			toJSON(): JSON {

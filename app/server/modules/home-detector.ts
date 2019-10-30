@@ -1,6 +1,5 @@
 import { errorHandle, authCookie, requireParams, auth } from '../lib/decorators';
 import { attachMessage, logFixture, getTime, log, ResDummy } from '../lib/logger';
-import { makeTable } from '../lib/telegram-output';
 import { BotState } from '../lib/bot-state';
 import { AppWrapper } from "../lib/routes";
 import hooks from '../config/home-hooks';
@@ -254,12 +253,12 @@ export namespace HomeDetector {
 			detector: Classes.Detector;
 		}
 
-		export class State extends BotState.Base {
+		export class Bot extends BotState.Base {
 			private static capitalize(word: string) {
 				return word[0].toUpperCase() + word.slice(1);
 			}
 
-			static readonly matches = State.createMatchMaker(({
+			static readonly matches = Bot.createMatchMaker(({
 				matchMaker: mm,
 				fallbackSetter: fallback,
 				conditional
@@ -268,7 +267,7 @@ export namespace HomeDetector {
 					logObj, state, match
 				}) => {
 					const resDummy = new ResDummy();
-					const all = await State._config!.apiHandler.getAll(
+					const all = await Bot._config!.apiHandler.getAll(
 						resDummy, {
 							auth: await Auth.Secret.getKey()
 						}, true);
@@ -277,7 +276,7 @@ export namespace HomeDetector {
 					const matches: string[] = [];
 					for (const name in all) {
 						if ((match[2] === 'home') === (all[name] === HOME_STATE.HOME)) {
-							matches.push(State.capitalize(name));
+							matches.push(Bot.capitalize(name));
 						}
 					}
 
@@ -302,7 +301,7 @@ export namespace HomeDetector {
 					const checkTarget = match[2];
 
 					const resDummy = new ResDummy();
-					const homeState = await State._config!.apiHandler.get(
+					const homeState = await Bot._config!.apiHandler.get(
 						resDummy, {
 							auth: await Auth.Secret.getKey(),
 							name: match[1]
@@ -324,7 +323,7 @@ export namespace HomeDetector {
 					const target = match[1];
 
 					const nameMsg = attachMessage(logObj, `Name: ${target}`);
-					const pinger = State._config!.detector.getPinger(target.toLowerCase());
+					const pinger = Bot._config!.detector.getPinger(target.toLowerCase());
 					if (!pinger) {
 						attachMessage(nameMsg, chalk.bold('Nonexistent'));
 						return 'Person does not exist';
@@ -355,7 +354,7 @@ export namespace HomeDetector {
 					};
 					for (const target of state.homeDetector.lastSubjects!) {
 						const nameMsg = attachMessage(logObj, `Name: ${target}`);
-						const pinger = State._config!.detector.getPinger(target.toLowerCase());
+						const pinger = Bot._config!.detector.getPinger(target.toLowerCase());
 						if (!pinger) {
 							attachMessage(nameMsg, chalk.bold('Nonexistent'));
 							continue;
@@ -367,16 +366,16 @@ export namespace HomeDetector {
 						const timeMsg = checkTarget === HOME_STATE.HOME ?
 							pinger.joinedAt.toLocaleString() : 
 							pinger.leftAt.toLocaleString();
-						table.contents.push([State.capitalize(target), timeMsg]);
+						table.contents.push([Bot.capitalize(target), timeMsg]);
 					}
 
-					return makeTable(table);
+					return Bot.makeTable(table);
 				}), ({ state }) => {
 					return state.homeDetector.lastSubjects !== null;
 				});
 
 				fallback(({ state }) => {
-					State.resetState(state);
+					Bot.resetState(state);
 				});
 			});
 
@@ -400,7 +399,7 @@ export namespace HomeDetector {
 				message: _Bot.TelegramMessage; 
 				state: _Bot.Message.StateKeeping.ChatState; 
 			}): Promise<_Bot.Message.MatchResponse | undefined> {
-				return await this.matchLines({ ...config, matchConfig: State.matches });
+				return await this.matchLines({ ...config, matchConfig: Bot.matches });
 			}
 
 			static resetState(state: _Bot.Message.StateKeeping.ChatState) {
@@ -547,7 +546,7 @@ export namespace HomeDetector {
 			const detector = new Classes.Detector({ db });
 			const apiHandler = new API.Handler({ detector });
 			const webpageHandler = new Webpage.Handler({ randomNum, detector });
-			Bot.State.init({ apiHandler, detector });
+			Bot.Bot.init({ apiHandler, detector });
 
 			app.post('/home-detector/all', async (req, res) => {
 				await apiHandler.getAll(res, {...req.params, ...req.body});

@@ -1,5 +1,6 @@
 import { Bot, RESPONSE_TYPE } from '../modules/bot';
 import { attachMessage } from './logger';
+import { BotUtil } from './bot-util';
 import chalk from 'chalk';
 
 export namespace BotState {
@@ -47,7 +48,7 @@ export namespace BotState {
 
 	export type SameMaker = (str: TemplateStringsArray, ...values: string[][]) => string[];
 
-	export abstract class Matchable {
+	export abstract class Matchable extends BotUtil.BotUtil {
 		static async match({ }: MatchParams): Promise<Bot.Message.MatchResponse | undefined> {
 			throw new Error('Not implemented');
 		}

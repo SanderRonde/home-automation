@@ -5,6 +5,7 @@ import * as ReadLine from '@serialport/parser-readline';
 import { BotState } from '../lib/bot-state';
 import { AppWrapper } from '../lib/routes';
 import SerialPort = require('serialport');
+import { BotUtil } from '../lib/bot-util';
 import { ResponseLike } from './multi';
 import { WSWrapper } from '../lib/ws';
 import { Bot as _Bot } from './bot';
@@ -1034,7 +1035,7 @@ export namespace RGB {
 			}) | null;
 		}
 
-		export class State extends BotState.Base {
+		export class Bot extends BotState.Base {
 			static colorTextToColor(text: string) {
 				if (API.HEX_REGEX.test(text)) {
 					return API.hexToRGB(text);
@@ -1052,7 +1053,7 @@ export namespace RGB {
 				return ArduinoAPI.DIR.DIR_FORWARDS;
 			}
 
-			static readonly matches = State.createMatchMaker(({
+			static readonly matches = Bot.createMatchMaker(({
 				matchMaker: mm
 			}) => {
 				mm(/turn (on|off) (rgb|led)/, async ({
@@ -1113,7 +1114,7 @@ export namespace RGB {
 				}) => {
 					const color = match[2];
 					const intensity = match[4];
-					const resolvedColor = State.colorTextToColor(color);
+					const resolvedColor = Bot.colorTextToColor(color);
 					if (resolvedColor) {
 						state.rgb.lastConfig = {
 							type: 'solid',
@@ -1169,7 +1170,7 @@ export namespace RGB {
 
 					const background = (() => {
 						if (bg) {
-							return State.colorTextToColor(bg);
+							return Bot.colorTextToColor(bg);
 						}
 						if (bgR && bgG && bgB) {
 							return {
@@ -1182,7 +1183,7 @@ export namespace RGB {
 					})();
 					const color = (() => {
 						if (colorStr) {
-							return State.colorTextToColor(colorStr);
+							return Bot.colorTextToColor(colorStr);
 						}
 						if (colorR && colorG && colorB) {
 							return {
@@ -1199,7 +1200,7 @@ export namespace RGB {
 						backgroundGreen: background ? background.g : undefined,
 						backgroundBlue: background ? background.b : undefined,
 						updateTime: updateTime ? parseInt(updateTime, 10) : undefined,
-						dir: dir ? State.parseDir(dir) : undefined,
+						dir: dir ? Bot.parseDir(dir) : undefined,
 						blockSize: blockSize ? parseInt(blockSize, 10) : undefined,
 						mode: mode as TransitionTypes,
 						colors: color ? [color] : undefined
@@ -1208,7 +1209,7 @@ export namespace RGB {
 					if (effect in ArduinoAPI.arduinoEffects) {
 						state.rgb.lastConfig = { ...ArduinoAPI.arduinoEffects[effect] };
 						if ('data' in state.rgb.lastConfig) {
-							state.rgb.lastConfig.data = Board.Board.mergeObj(
+							state.rgb.lastConfig.data = Bot.mergeObj(
 								state.rgb.lastConfig.data, config);
 						}
 					} else {
@@ -1218,7 +1219,7 @@ export namespace RGB {
 
 					await new External.Handler(logObj).effect(effect, config);
 					return `Started effect "${effect}" with config ${JSON.stringify(
-						Board.Board.mergeObj(ArduinoAPI.arduinoEffects[effect], config))}`;
+						Bot.mergeObj(ArduinoAPI.arduinoEffects[effect], config))}`;
 				});
 				mm(/(create) effect ([^ ]+)(\s+with intensity ([^ ]+))?(\s*and\s*)?(\s*with background (((\d+) (\d+) (\d+))|([^ ]+)))?(\s*and\s*)?(\s*with update(-| )?time ([^ ]+))?(\s*and\s*)?(\s*with dir(ection)? ([^ ]+))?(\s*and\s*)?(\s*with (?:(?:block(-| )?size)|per(-| )?strobe) ([^ ]+))?(\s*and\s*)?(\s*with mode ([^ ]+))?(\s*and\s*)?(\s*with color (((\d+) (\d+) (\d+))|([^ ]+)))?/, async ({
 					logObj, match, state
@@ -1240,7 +1241,7 @@ export namespace RGB {
 
 					const background = (() => {
 						if (bg) {
-							return State.colorTextToColor(bg);
+							return Bot.colorTextToColor(bg);
 						}
 						if (bgR && bgG && bgB) {
 							return {
@@ -1253,7 +1254,7 @@ export namespace RGB {
 					})();
 					const color = (() => {
 						if (colorStr) {
-							return State.colorTextToColor(colorStr);
+							return Bot.colorTextToColor(colorStr);
 						}
 						if (colorR && colorG && colorB) {
 							return {
@@ -1270,7 +1271,7 @@ export namespace RGB {
 						backgroundGreen: background ? background.g : undefined,
 						backgroundBlue: background ? background.b : undefined,
 						updateTime: updateTime ? parseInt(updateTime, 10) : undefined,
-						dir: dir ? State.parseDir(dir) : undefined,
+						dir: dir ? Bot.parseDir(dir) : undefined,
 						blockSize: blockSize ? parseInt(blockSize, 10) : undefined,
 						mode: mode,
 						colors: color ? [color] : undefined
@@ -1388,7 +1389,7 @@ export namespace RGB {
 					const colorStr = match[8];
 					const color = (() => {
 						if (colorStr) {
-							return State.colorTextToColor(colorStr);
+							return Bot.colorTextToColor(colorStr);
 						}
 						if (colorR && colorG && colorB) {
 							return {
@@ -1434,7 +1435,7 @@ export namespace RGB {
 					const colorStr = match[8];
 					const color = (() => {
 						if (colorStr) {
-							return State.colorTextToColor(colorStr);
+							return Bot.colorTextToColor(colorStr);
 						}
 						if (colorR && colorG && colorB) {
 							return {
@@ -1473,7 +1474,7 @@ export namespace RGB {
 					const dotIndex = parseInt(match[1], 10);
 					const prop = match[3];
 					const value = prop === 'dir' ? 
-						State.parseDir(match[4]) : parseInt(match[4], 10);
+						Bot.parseDir(match[4]) : parseInt(match[4], 10);
 
 					state.rgb.lastConfig.data = state.rgb.lastConfig.data || {};
 					state.rgb.lastConfig.data.dots = state.rgb.lastConfig.data.dots || [];
@@ -1510,7 +1511,7 @@ export namespace RGB {
 						return 'I don\'t know what to edit';
 					}
 					state.rgb.lastConfig.data = state.rgb.lastConfig.data || {};
-					state.rgb.lastConfig.data.dir = State.parseDir(match[1]);
+					state.rgb.lastConfig.data.dir = Bot.parseDir(match[1]);
 					const msg = `Changed config to ${
 						JSON.stringify(state.rgb.lastConfig)} (dir->${
 						state.rgb.lastConfig.data.dir})`;
@@ -1533,6 +1534,9 @@ export namespace RGB {
 					attachMessage(logObj, msg);
 					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
 					return msg;
+				});
+				mm(/what effects are there(\?)?/, async () => {
+					return `Effects are ${ArduinoAPI.arduinoEffects}`
 				});
 				mm(/refresh (rgb|led)/, async ({
 					logObj
@@ -1558,7 +1562,7 @@ export namespace RGB {
 				message: _Bot.TelegramMessage;
 				state: _Bot.Message.StateKeeping.ChatState;
 			}): Promise<_Bot.Message.MatchResponse | undefined> {
-				return await this.matchLines({ ...config, matchConfig: State.matches });
+				return await this.matchLines({ ...config, matchConfig: Bot.matches });
 			}
 
 			toJSON(): JSON {
@@ -1762,51 +1766,18 @@ export namespace RGB {
 				return this.sendCommand('leds');
 			}
 
-			public static mergeArr(arr1: any[], arr2: any[]) {
-				for (let i = 0; i < arr2.length; i++) {
-					if (i > arr1.length || typeof arr1[i] !== 'object') {
-						arr1[i] = arr2[i];
-					} else {
-						if (Array.isArray(arr1[i])) {
-							this.mergeArr(arr1[i], arr2[i]);
-						} else {
-							this.mergeObj(arr1[i], arr2[i]);
-						}
-					}
-				}
-				return arr1;
-			}
-
-			public static mergeObj<T1>(config: T1, extra: Object): T1 {
-				const final = { ...config };
-				for (const key in extra) {
-					if (!(key in config) || typeof (config as any)[key] !== 'object') {
-						if ((extra as any)[key] === undefined) continue;
-						(final as any)[key] = (extra as any)[key];
-					} else {
-						// Merge object or array
-						if (Array.isArray((config as any)[key])) {
-							this.mergeArr((final as any)[key], (extra as any)[key]);
-						} else {
-							this.mergeObj((final as any)[key], (extra as any)[key]);
-						}
-					}
-				}
-				return final;
-			}
-
 			public runConfig(config: ArduinoAPI.ArduinoConfig, extra: ArduinoAPI.JoinedConfigs = {}) {
 				switch (config.type) {
 					case 'solid':
-						return this.setSolid(Board.mergeObj(config.data, extra));
+						return this.setSolid(BotUtil.BotUtil.mergeObj(config.data, extra));
 					case 'dot':
-						return this.setDot(Board.mergeObj(config.data, extra));
+						return this.setDot(BotUtil.BotUtil.mergeObj(config.data, extra));
 					case 'split':
-						return this.setSplit(Board.mergeObj(config.data, extra));
+						return this.setSplit(BotUtil.BotUtil.mergeObj(config.data, extra));
 					case 'pattern':
-						return this.setPattern(Board.mergeObj(config.data, extra));
+						return this.setPattern(BotUtil.BotUtil.mergeObj(config.data, extra));
 					case 'flash':
-						return this.setFlash(Board.mergeObj(config.data, extra));
+						return this.setFlash(BotUtil.BotUtil.mergeObj(config.data, extra));
 					case 'off':
 						return this.setModeOff();
 					case 'prime':
