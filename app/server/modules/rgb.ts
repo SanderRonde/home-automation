@@ -1536,7 +1536,7 @@ export namespace RGB {
 					return msg;
 				});
 				mm(/what effects are there(\?)?/, async () => {
-					return `Effects are ${ArduinoAPI.arduinoEffects}`
+					return `Effects are ${Bot.formatList(Object.keys(ArduinoAPI.arduinoEffects))}`;
 				});
 				mm(/refresh (rgb|led)/, async ({
 					logObj

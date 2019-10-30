@@ -45,8 +45,15 @@ export namespace BotUtil {
 			return final;
 		}
 
-		public static formatList() {
-
+		public static formatList(list: string[]): string {
+			if (list.length === 0) {
+				return `(empty)`
+			}
+			if (list.length === 1) {
+				return `${list[0]}`;
+			} else {
+				return `${list.slice(0, -1).join(', ')} and ${list.slice(-1)}`
+			}
 		}
 		
 		public static makeTable({ header, contents }: {
