@@ -199,6 +199,8 @@ export namespace RGB {
 				attachMessage(logObj, getTime(), chalk.cyan(`[rgb]`),
 					'Found', chalk.bold(clients + ''), 'clients');
 			}
+
+			return clients;
 		}
 	}
 
