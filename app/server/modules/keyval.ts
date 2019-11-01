@@ -214,7 +214,7 @@ export namespace KeyVal {
 					await Promise.all(MAIN_LIGHTS.map((light) => {
 						return new External.Handler(logObj).set(light, '0');
 					}));
-					return `Turned ${MAIN_LIGHTS.length > 1 ? 'them' : 'it'} on`;
+					return `Turned ${MAIN_LIGHTS.length > 1 ? 'them' : 'it'} off`;
 				});
 				for (const [ reg, switchName ] of COMMON_SWITCH_MAPPINGS) {
 					mm(new RegExp('turn (on|off) ' + reg.source), async ({ logObj, state, match }) => {
