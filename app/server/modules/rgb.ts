@@ -1371,7 +1371,7 @@ export namespace RGB {
 					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
 					return msg;
 				});
-				mm(/\/blocksize ([^ ]+)/, /(?:change|set) (?:(?:block(-| )?size)|per(-| )?strobe) to ([^ ]+)/, async ({
+				mm(/\/blocksize ([^ ]+)/, /(?:change|set) (?:(?:block(?:-| )?size)|per(?:-| )?strobe) to ([^ ]+)/, async ({
 					logObj, state, match
 				}) => {
 					if (state.rgb.lastConfig === null) {
@@ -1379,7 +1379,7 @@ export namespace RGB {
 						return 'I don\'t know what to edit';
 					}
 					state.rgb.lastConfig.data = state.rgb.lastConfig.data || {};
-					state.rgb.lastConfig.data.blockSize = parseInt(match[3], 10);
+					state.rgb.lastConfig.data.blockSize = parseInt(match[1], 10);
 					const msg = `Changed config to ${
 						JSON.stringify(state.rgb.lastConfig)} (blockSize->${
 						state.rgb.lastConfig.data.blockSize})`;
@@ -1387,7 +1387,7 @@ export namespace RGB {
 					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
 					return msg;
 				});
-				mm(/\/red (\d+)/, /(?:change|set) r(ed)? to (\d+)/, async ({
+				mm(/\/red (\d+)/, /(?:change|set) r(?:ed)? to (\d+)/, async ({
 					logObj, state, match
 				}) => {
 					if (state.rgb.lastConfig === null) {
@@ -1395,7 +1395,7 @@ export namespace RGB {
 						return 'I don\'t know what to edit';
 					}
 					state.rgb.lastConfig.data = state.rgb.lastConfig.data || {};
-					state.rgb.lastConfig.data.r = parseInt(match[2], 10);
+					state.rgb.lastConfig.data.r = parseInt(match[1], 10);
 					const msg = `Changed config to ${
 						JSON.stringify(state.rgb.lastConfig)} (r->${
 							state.rgb.lastConfig.data.r
@@ -1404,7 +1404,7 @@ export namespace RGB {
 					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
 					return msg;
 				});
-				mm(/\/green (\d+)/, /(?:change|set) g(reen)? to (\d+)/, async ({
+				mm(/\/green (\d+)/, /(?:change|set) g(?:reen)? to (\d+)/, async ({
 					logObj, state, match
 				}) => {
 					if (state.rgb.lastConfig === null) {
@@ -1412,7 +1412,7 @@ export namespace RGB {
 						return 'I don\'t know what to edit';
 					}
 					state.rgb.lastConfig.data = state.rgb.lastConfig.data || {};
-					state.rgb.lastConfig.data.g = parseInt(match[2], 10);
+					state.rgb.lastConfig.data.g = parseInt(match[1], 10);
 					const msg = `Changed config to ${
 						JSON.stringify(state.rgb.lastConfig)} (g->${
 							state.rgb.lastConfig.data.g
@@ -1421,7 +1421,7 @@ export namespace RGB {
 					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
 					return msg;
 				});
-				mm(/\/blue (\d+)/, /(?:change|set) r(blue)? to (\d+)/, async ({
+				mm(/\/blue (\d+)/, /(?:change|set) r(?:blue)? to (\d+)/, async ({
 					logObj, state, match
 				}) => {
 					if (state.rgb.lastConfig === null) {
@@ -1429,7 +1429,7 @@ export namespace RGB {
 						return 'I don\'t know what to edit';
 					}
 					state.rgb.lastConfig.data = state.rgb.lastConfig.data || {};
-					state.rgb.lastConfig.data.b = parseInt(match[2], 10);
+					state.rgb.lastConfig.data.b = parseInt(match[1], 10);
 					const msg = `Changed config to ${
 						JSON.stringify(state.rgb.lastConfig)} (b->${
 							state.rgb.lastConfig.data.b
@@ -1551,7 +1551,7 @@ export namespace RGB {
 					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
 					return msg;
 				});
-				mm(/\/updatetime ([^ ]+)/, /(?:change|set) update(-| )?time to ([^ ]+)/, async ({
+				mm(/\/updatetime ([^ ]+)/, /(?:change|set) update(?:-| )?time to ([^ ]+)/, async ({
 					logObj, state, match
 				}) => {
 					if (state.rgb.lastConfig === null) {
@@ -1559,7 +1559,7 @@ export namespace RGB {
 						return 'I don\'t know what to edit';
 					}
 					state.rgb.lastConfig.data = state.rgb.lastConfig.data || {};
-					state.rgb.lastConfig.data.updateTime = parseInt(match[2], 10);
+					state.rgb.lastConfig.data.updateTime = parseInt(match[1], 10);
 					const msg = `Changed config to ${
 						JSON.stringify(state.rgb.lastConfig)} (updateTime->${
 						state.rgb.lastConfig.data.updateTime})`;
