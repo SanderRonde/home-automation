@@ -553,7 +553,7 @@ export namespace RGB {
 			rgb: {
 				type: 'pattern',
 				data: {
-					blockSize: 0,
+					blockSize: 1,
 					intensity: 0,
 					dir: DIR.DIR_FORWARDS,
 					updateTime: 1,
