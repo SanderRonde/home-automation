@@ -374,7 +374,8 @@ export namespace RGB {
 		export type JoinedConfigs = Partial<Solid & Dot & Split & Pattern & Flash>;
 
 		export type Effects = 'rainbow'|'reddot'|'reddotbluebg'|'multidot'|
-			'split'|'rgb'|'quickstrobe'|'strobe'|'slowstrobe'|'brightstrobe';
+			'split'|'rgb'|'quickstrobe'|'strobe'|'slowstrobe'|'brightstrobe'|
+			'epileptisch'|'quickfade'|'slowfade';
 
 
 		function interpolate(c1: Color, c2: Color, steps: number, {
@@ -606,6 +607,72 @@ export namespace RGB {
 					blockSize: 3,
 					intensity: 0,
 					updateTime: 1000
+				}
+			},
+			epileptisch: {
+				type: 'flash',
+				data: {
+					mode: 'fade',
+					blockSize: 0,
+					intensity: 0,
+					updateTime: 1,
+					colors: [{
+						r: 255,
+						g: 0,
+						b: 0
+					}, {
+						r: 0,
+						g: 0,
+						b: 255
+					}, {
+						r: 0,
+						g: 255,
+						b: 0
+					}]
+				}
+			},
+			quickfade: {
+				type: 'flash',
+				data: {
+					mode: 'fade',
+					blockSize: 0,
+					intensity: 0,
+					updateTime: 100,
+					colors: [{
+						r: 255,
+						g: 0,
+						b: 0
+					}, {
+						r: 0,
+						g: 0,
+						b: 255
+					}, {
+						r: 0,
+						g: 255,
+						b: 0
+					}]
+				}
+			},
+			slowfade: {
+				type: 'flash',
+				data: {
+					mode: 'fade',
+					blockSize: 0,
+					intensity: 0,
+					updateTime: 2500,
+					colors: [{
+						r: 255,
+						g: 0,
+						b: 0
+					}, {
+						r: 0,
+						g: 0,
+						b: 255
+					}, {
+						r: 0,
+						g: 255,
+						b: 0
+					}]
 				}
 			}
 		}
