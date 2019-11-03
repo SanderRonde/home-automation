@@ -1684,7 +1684,7 @@ export namespace RGB {
 
 	export namespace Board {
 		async function tryConnectToSerial() {
-			const DEVICE_NAME = '/dev/ttyACM0';
+			const DEVICE_NAME = '/dev/ttyACM1';
 
 			return new Promise<{
 				port: SerialPort;
