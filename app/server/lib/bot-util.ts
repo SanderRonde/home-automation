@@ -14,7 +14,7 @@ export namespace BotUtil {
 	export abstract class BotUtil {
 		public static mergeArr(arr1: any[], arr2: any[]) {
 			for (let i = 0; i < arr2.length; i++) {
-				if (i > arr1.length || typeof arr1[i] !== 'object') {
+				if (i > arr1.length || typeof arr1[i] !== 'object' || arr1[i] === undefined || arr1[i] === null) {
 					arr1[i] = arr2[i];
 				} else {
 					if (Array.isArray(arr1[i])) {
@@ -30,7 +30,7 @@ export namespace BotUtil {
 		public static mergeObj<T1>(config: T1, extra: Object): T1 {
 			const final = { ...config };
 			for (const key in extra) {
-				if (!(key in config) || typeof (config as any)[key] !== 'object') {
+				if (!(key in config) || typeof (config as any)[key] !== 'object' || (config as any)[key] == undefined || (config as any)[key] == null) {
 					if ((extra as any)[key] === undefined) continue;
 					(final as any)[key] = (extra as any)[key];
 				} else {
