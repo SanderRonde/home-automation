@@ -1,3 +1,4 @@
+import { SERIAL_MAX_ATTEMPTS, SERIAL_MSG_INTERVAL, BED_LEDS, NIGHTSTAND_COLOR, LED_DEVICE_NAME } from '../lib/constants';
 import { Discovery, Control, CustomMode, TransitionTypes, BuiltinPatterns } from 'magic-home';
 import { errorHandle, requireParams, auth, authCookie } from '../lib/decorators';
 import { attachMessage, ResDummy, getTime, log } from '../lib/logger';
@@ -41,11 +42,6 @@ export class Color implements Color {
 		}
 	}
 }
-
-const MSG_INTERVAL = 50;
-const MAX_ATTEMPTS = 10;
-const BED_LEDS = ['192.168.1.5'];
-const NIGHTSTAND_COLOR: Color = new Color(177, 22, 0);
 
 export namespace RGB {
 	export namespace Clients {
@@ -1192,7 +1188,7 @@ export namespace RGB {
 					attachMessage(logObj, `Turned ${targetState} ${Clients.magicHomeClients.length} magichome clients`);
 					return `Turned ${targetState} ${Clients.magicHomeClients.length} magichome clients`;
 				});
-				mm(/\/color (?:(?:(\d+) (\d+) (\d+))|([^ ]+))/, /set (?:rgb|led|it|them|color) to (?:(?:(\d+) (\d+) (\d+))|([^ ]+))(\s+with intensity (\d+))?/, async ({
+				mm(/\/color (?:(?:(\d+) (\d+) (\d+))|([^ ]+))/, /set (?:rgb|led(?:s)?|it|them|color) to (?:(?:(\d+) (\d+) (\d+))|([^ ]+))(\s+with intensity (\d+))?/, async ({
 					logObj, match, state
 				}) => {
 					const colorR = match[1];
@@ -1720,15 +1716,13 @@ export namespace RGB {
 
 	export namespace Board {
 		async function tryConnectToSerial() {
-			const DEVICE_NAME = '/dev/ttyACM1';
-
 			return new Promise<{
 				port: SerialPort;
 				updateListener(listener: (line: string) => any): void,
 				leds: number;
 				name: string;
 			} | null>((resolve) => {
-				const port = new SerialPort(DEVICE_NAME, {
+				const port = new SerialPort(LED_DEVICE_NAME, {
 					baudRate: 115200
 				});
 
@@ -1753,7 +1747,7 @@ export namespace RGB {
 				let onData = async (line: string) => {
 					const LED_NUM = parseInt(line, 10);
 
-					log(getTime(), chalk.gray(`[${DEVICE_NAME}]`),
+					log(getTime(), chalk.gray(`[${LED_DEVICE_NAME}]`),
 						`Connected, ${LED_NUM} leds detected`);
 
 					onData = (): any => { };
@@ -1763,7 +1757,7 @@ export namespace RGB {
 							onData = listener;
 						},
 						leds: LED_NUM,
-						name: DEVICE_NAME
+						name: LED_DEVICE_NAME
 					})
 				}
 
@@ -1832,7 +1826,7 @@ export namespace RGB {
 						if (pause) return;
 						this._port.write(data);
 						attempts++;
-						if (attempts >= MAX_ATTEMPTS) {
+						if (attempts >= SERIAL_MAX_ATTEMPTS) {
 							pause = true;
 							this._port.close(async () => {
 								const res = await tryConnectToSerial();
@@ -1855,7 +1849,7 @@ export namespace RGB {
 								pause = false;
 							});
 						}
-					}, MSG_INTERVAL);
+					}, SERIAL_MSG_INTERVAL);
 				});
 				this._busy = -1;
 			}

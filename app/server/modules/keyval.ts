@@ -1,3 +1,4 @@
+import { SCREEN_DEVICE_NAME, MAIN_LIGHTS, COMMON_SWITCH_MAPPINGS } from "../lib/constants";
 import { attachMessage, getLogLevel, ResDummy, getTime, log } from "../lib/logger";
 import { errorHandle, requireParams, auth, authCookie } from "../lib/decorators";
 import * as ReadLine from '@serialport/parser-readline';
@@ -11,17 +12,6 @@ import { Bot as _Bot } from './bot';
 import * as express from "express";
 import { Auth } from "../lib/auth";
 import chalk from "chalk";
-
-const MAIN_LIGHTS = ['room.lights.ceiling']
-const COMMON_SWITCH_MAPPINGS: [RegExp, string][] = [
-	[/((ceiling|the|my)\s+)?light/, 'room.lights.ceiling'],
-	[/((the)\s+)?lights/, 'room.lights.ceiling'],
-	[/((the|my)\s+)?(nightlight|(nightstand\s*light))/, 'room.lights.nightstand'],
-	[/all\s+lights/, 'room.lights'],
-	[/((all|the|my)\s+)?speakers/, 'room.speakers'],
-	[/((the|my)\s+)?couch\s+speakers/, 'room.speakers.couch'],
-	[/((the|my)\s+)?desk\s+speakers/, 'room.speakers.desk']
-];
 
 export namespace KeyVal {
 	function str(value: any|undefined) {
@@ -433,7 +423,7 @@ export namespace KeyVal {
 			// @ts-ignore
 			private _parser = new ReadLine()
 			private _db: Database;
-			static readonly DEVICE_NAME = '/dev/ttyUSB0';
+			static readonly DEVICE_NAME = SCREEN_DEVICE_NAME;
 
 			constructor({ db }: { db: Database }) {
 				this._db = db;
