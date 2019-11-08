@@ -11,6 +11,7 @@ import { WSWrapper } from '../lib/ws';
 import { Bot as _Bot } from './bot';
 import { Auth } from '../lib/auth';
 import * as express from 'express';
+import { KeyVal } from './keyval';
 import chalk from 'chalk';
 
 function spedToMs(speed: number) {
@@ -18,14 +19,33 @@ function spedToMs(speed: number) {
 	return 1000 / speed;
 }
 
-interface Color {
+export interface Color {
 	r: number;
 	g: number;
 	b: number;
 }
+export class Color implements Color {
+	constructor(r: number)
+	constructor(r: number, g: number, b: number)
+	constructor(r: number, g: number = r, b: number = r) {
+		this.r = r;
+		this.g = g;
+		this.b = b;
+	}
+
+	toJSON?() {
+		return {
+			r: this.r,
+			g: this.g,
+			b: this.b
+		}
+	}
+}
 
 const MSG_INTERVAL = 50;
 const MAX_ATTEMPTS = 10;
+const BED_LEDS = ['192.168.1.5'];
+const NIGHTSTAND_COLOR: Color = new Color(177, 22, 0);
 
 export namespace RGB {
 	export namespace Clients {
@@ -33,6 +53,7 @@ export namespace RGB {
 			static patternNames: {
 				[key in BuiltinPatterns]: number;
 			} = Control.patternNames;
+			abstract address: string;
 
 			abstract setColor(red: number, green: number, blue: number, intensity?: number, callback?: (err: Error | null, success: boolean) => void): Promise<boolean>;
 			abstract setColorAndWarmWhite(red: number, green: number, blue: number, ww: number, callback?: (err: Error | null, success: boolean) => void): Promise<boolean>;
@@ -46,7 +67,7 @@ export namespace RGB {
 		}
 
 		export class MagicHomeClient extends RGBClient {
-			constructor(private _control: Control) {
+			constructor(private _control: Control, public address: string) {
 				super();
 			}
 
@@ -80,8 +101,11 @@ export namespace RGB {
 		}
 
 		export class ArduinoClient extends RGBClient {
+			address: string
+
 			constructor(public board: Board.Board) {
 				super();
+				this.address = board.name;
 			}
 
 			public ping(): Promise<boolean> {
@@ -113,7 +137,7 @@ export namespace RGB {
 			}
 			async setCustomPattern(pattern: CustomMode, speed: number, callback?: () => void): Promise<boolean> {
 				await this.board.setFlash({
-					colors: pattern.colors.map(({ red, green, blue }) => ({ r: red, g: green, b: blue })),
+					colors: pattern.colors.map(({ red, green, blue }) => new Color(red, green, blue)),
 					mode: pattern.transitionType,
 					updateTime: spedToMs(speed)
 				})
@@ -131,7 +155,7 @@ export namespace RGB {
 				}
 			}
 			async setWarmWhite(ww: number, callback?: (err: Error | null, success: boolean) => void): Promise<boolean> {
-				await this.board.setSolid({ r: ww, g: ww, b: ww });
+				await this.board.setSolid(new Color(ww));
 				return this._sendSuccess(callback);
 			}
 			async turnOff(callback?: () => void): Promise<boolean> {
@@ -151,11 +175,12 @@ export namespace RGB {
 	export namespace Scan {
 		export async function scanMagicHomeControllers(first: boolean) {
 			const scanTime = (first && process.argv.indexOf('--debug') > -1) ? 500 : 10000;
-			const clients = (await new Discovery().scan(scanTime)).map((client) => {
-				return new Control(client.address, {
+			const clients = (await new Discovery().scan(scanTime)).map((client) => ({
+				control: new Control(client.address, {
 					wait_for_reply: false
-				});
-			}).map(control => new Clients.MagicHomeClient(control));
+				}),
+				address: client.address
+			})).map(client => new Clients.MagicHomeClient(client.control, client.address));
 
 			Clients.magicHomeClients = clients;
 			Clients.clients = [
@@ -373,9 +398,9 @@ export namespace RGB {
 
 		export type JoinedConfigs = Partial<Solid & Dot & Split & Pattern & Flash>;
 
-		export type Effects = 'rainbow'|'reddot'|'reddotbluebg'|'multidot'|
-			'split'|'rgb'|'quickstrobe'|'strobe'|'slowstrobe'|'brightstrobe'|
-			'epileptisch'|'quickfade'|'slowfade';
+		export type Effects = 'rainbow' | 'reddot' | 'reddotbluebg' | 'multidot' |
+			'split' | 'rgb' | 'quickstrobe' | 'strobe' | 'slowstrobe' | 'brightstrobe' |
+			'epileptisch' | 'quickfade' | 'slowfade';
 
 
 		function interpolate(c1: Color, c2: Color, steps: number, {
@@ -393,11 +418,11 @@ export namespace RGB {
 			for (let i = 1; i < steps - 1; i++) {
 				const progress = delta * i;
 				const invertedProgress = 1 - progress;
-				stops.push({
-					r: Math.round((invertedProgress * c1.r) + (progress * c2.r)),
-					g: Math.round((invertedProgress * c1.g) + (progress * c2.g)),
-					b: Math.round((invertedProgress * c1.b) + (progress * c2.b)),
-				});
+				stops.push(new Color(
+					Math.round((invertedProgress * c1.r) + (progress * c2.r)),
+					Math.round((invertedProgress * c1.g) + (progress * c2.g)),
+					Math.round((invertedProgress * c1.b) + (progress * c2.b)),
+				));
 			}
 
 			if (end) {
@@ -417,21 +442,9 @@ export namespace RGB {
 					blockSize: 1,
 					intensity: 0,
 					parts: [
-						...interpolate({
-							r: 255, g: 0, b: 0
-						}, {
-							r: 0, g: 255, b: 0
-						}, 5, { end: false }),
-						...interpolate({
-							r: 0, g: 255, b: 0
-						}, {
-							r: 0, g: 0, b: 255
-						}, 5, { end: false }),
-						...interpolate({
-							r: 0, g: 0, b: 255
-						}, {
-							r: 255, g: 0, b: 0
-						}, 5, { end: false }),
+						...interpolate(new Color(255, 0, 0), new Color(0, 255, 0), 5, { end: false }),
+						...interpolate(new Color(0, 255, 0), new Color(0, 0, 255), 5, { end: false }),
+						...interpolate(new Color(0, 0, 255), new Color(255, 0, 0), 5, { end: false }),
 					]
 				}
 			},
@@ -532,23 +545,12 @@ export namespace RGB {
 					intensity: 0,
 					updateTime: 100,
 					dir: DIR.DIR_FORWARDS,
-					parts: [{
-						r: 0,
-						g: 0,
-						b: 255
-					}, {
-						r: 255,
-						g: 0,
-						b: 0
-					}, {
-						r: 255,
-						g: 0,
-						b: 255
-					}, {
-						r: 0,
-						g: 255,
-						b: 0
-					}]
+					parts: [
+						new Color(0, 0, 255),
+						new Color(255, 0, 0),
+						new Color(255, 0, 255),
+						new Color(0, 255, 0)
+					]
 				}
 			},
 			rgb: {
@@ -558,19 +560,11 @@ export namespace RGB {
 					intensity: 0,
 					dir: DIR.DIR_FORWARDS,
 					updateTime: 1,
-					parts: [{
-						r: 255,
-						g: 0,
-						b: 0
-					}, {
-						r: 0,
-						g: 255,
-						b: 0
-					}, {
-						r: 0,
-						g: 0,
-						b: 255
-					}]
+					parts: [
+						new Color(255, 0, 0),
+						new Color(0, 255, 0),
+						new Color(0, 0, 255)
+					]
 				}
 			},
 			quickstrobe: {
@@ -616,19 +610,11 @@ export namespace RGB {
 					blockSize: 0,
 					intensity: 0,
 					updateTime: 1,
-					colors: [{
-						r: 255,
-						g: 0,
-						b: 0
-					}, {
-						r: 0,
-						g: 0,
-						b: 255
-					}, {
-						r: 0,
-						g: 255,
-						b: 0
-					}]
+					colors: [
+						new Color(255, 0, 0),
+						new Color(0, 0, 255),
+						new Color(0, 255, 0)
+					]
 				}
 			},
 			quickfade: {
@@ -638,19 +624,11 @@ export namespace RGB {
 					blockSize: 0,
 					intensity: 0,
 					updateTime: 100,
-					colors: [{
-						r: 255,
-						g: 0,
-						b: 0
-					}, {
-						r: 0,
-						g: 0,
-						b: 255
-					}, {
-						r: 0,
-						g: 255,
-						b: 0
-					}]
+					colors: [
+						new Color(255, 0, 0),
+						new Color(0, 0, 255),
+						new Color(0, 255, 0)
+					]
 				}
 			},
 			slowfade: {
@@ -660,19 +638,11 @@ export namespace RGB {
 					blockSize: 0,
 					intensity: 0,
 					updateTime: 2500,
-					colors: [{
-						r: 255,
-						g: 0,
-						b: 0
-					}, {
-						r: 0,
-						g: 0,
-						b: 255
-					}, {
-						r: 0,
-						g: 255,
-						b: 0
-					}]
+					colors: [
+						new Color(255, 0, 0),
+						new Color(0, 0, 255),
+						new Color(0, 255, 0)
+					]
 				}
 			}
 		}
@@ -684,11 +654,30 @@ export namespace RGB {
 			const match = HEX_REGEX.exec(hex)!;
 
 			const [, r, g, b] = match;
-			return {
-				r: parseInt(r, 16),
-				g: parseInt(g, 16),
-				b: parseInt(b, 16)
+			return new Color(
+				parseInt(r, 16),
+				parseInt(g, 16),
+				parseInt(b, 16)
+			);
+		}
+
+		function singleNumToHex(num: number) {
+			if (num < 10) {
+				return num + '';
 			}
+			return String.fromCharCode(97 + (num - 10));
+		}
+
+		export function toHex(num: number) {
+			return singleNumToHex(Math.floor(num / 16)) + singleNumToHex(num % 16);
+		}
+
+		export function rgbToHex(red: number, green: number, blue: number) {
+			return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
+		}
+
+		export function colorToHex(color: Color) {
+			return rgbToHex(color.r, color.g, color.b);
 		}
 
 		export class Handler {
@@ -720,17 +709,6 @@ export namespace RGB {
 				return true;
 			}
 
-			private static _singleNumToHex(num: number) {
-				if (num < 10) {
-					return num + '';
-				}
-				return String.fromCharCode(97 + (num - 10));
-			}
-
-			static toHex(num: number) {
-				return this._singleNumToHex(Math.floor(num / 16)) + this._singleNumToHex(num % 16);
-			}
-
 			@errorHandle
 			@requireParams('red', 'green', 'blue')
 			@auth
@@ -745,13 +723,8 @@ export namespace RGB {
 				const greenNum = Math.min(255, Math.max(0, parseInt(green, 10)));
 				const blueNum = Math.min(255, Math.max(0, parseInt(blue, 10)));
 				attachMessage(attachMessage(attachMessage(res, `rgb(${red}, ${green}, ${blue})`),
-					chalk.bgHex(`#${
-						this.toHex(redNum)
-						}${
-						this.toHex(greenNum)
-						}${
-						this.toHex(blueNum)
-						}`)('   ')), `Updated ${Clients.clients!.length} clients`);
+					chalk.bgHex(rgbToHex(redNum, greenNum, blueNum))('   ')),
+					`Updated ${Clients.clients!.length} clients`);
 
 				await Promise.all(Clients.clients!.map(async (client) => {
 					return Promise.all([
@@ -1158,9 +1131,7 @@ export namespace RGB {
 				function rgbOn(state: _Bot.Message.StateKeeping.ChatState) {
 					state.rgb.lastConfig = {
 						type: 'solid',
-						data: {
-							r: 100, g: 100, b: 100
-						}
+						data: new Color(100)
 					}
 				}
 				mm('/rgbon', async ({
@@ -1196,9 +1167,7 @@ export namespace RGB {
 					if (targetState === 'on') {
 						state.rgb.lastConfig = {
 							type: 'solid',
-							data: {
-								r: 100, g: 100, b: 100
-							}
+							data: new Color(100)
 						}
 					} else {
 						state.rgb.lastConfig = {
@@ -1236,22 +1205,22 @@ export namespace RGB {
 							return Bot.colorTextToColor(colorStr);
 						}
 						if (colorR && colorG && colorB) {
-							return {
-								r: parseInt(colorR, 10),
-								g: parseInt(colorG, 10),
-								b: parseInt(colorB, 10)
-							}
+							return new Color(
+								parseInt(colorR, 10),
+								parseInt(colorG, 10),
+								parseInt(colorB, 10)
+							);
 						}
 						return undefined;
 					})();
 					if (resolvedColor) {
 						state.rgb.lastConfig = {
 							type: 'solid',
-							data: {
-								r: resolvedColor.r,
-								g: resolvedColor.g,
-								b: resolvedColor.b
-							}
+							data: new Color(
+								resolvedColor.r,
+								resolvedColor.g,
+								resolvedColor.b
+							)
 						}
 					} else {
 						state.rgb.lastConfig = null;
@@ -1304,11 +1273,11 @@ export namespace RGB {
 							return Bot.colorTextToColor(bg);
 						}
 						if (bgR && bgG && bgB) {
-							return {
-								r: parseInt(bgR, 10),
-								g: parseInt(bgG, 10),
-								b: parseInt(bgB, 10)
-							}
+							return new Color(
+								parseInt(bgR, 10),
+								parseInt(bgG, 10),
+								parseInt(bgB, 10)
+							);
 						}
 						return undefined;
 					})();
@@ -1317,11 +1286,11 @@ export namespace RGB {
 							return Bot.colorTextToColor(colorStr);
 						}
 						if (colorR && colorG && colorB) {
-							return {
-								r: parseInt(colorR, 10),
-								g: parseInt(colorG, 10),
-								b: parseInt(colorB, 10)
-							}
+							return new Color(
+								parseInt(colorR, 10),
+								parseInt(colorG, 10),
+								parseInt(colorB, 10)
+							);
 						}
 						return undefined;
 					})();
@@ -1375,11 +1344,11 @@ export namespace RGB {
 							return Bot.colorTextToColor(bg);
 						}
 						if (bgR && bgG && bgB) {
-							return {
-								r: parseInt(bgR, 10),
-								g: parseInt(bgG, 10),
-								b: parseInt(bgB, 10)
-							}
+							return new Color(
+								parseInt(bgR, 10),
+								parseInt(bgG, 10),
+								parseInt(bgB, 10)
+							);
 						}
 						return undefined;
 					})();
@@ -1388,11 +1357,11 @@ export namespace RGB {
 							return Bot.colorTextToColor(colorStr);
 						}
 						if (colorR && colorG && colorB) {
-							return {
-								r: parseInt(colorR, 10),
-								g: parseInt(colorG, 10),
-								b: parseInt(colorB, 10)
-							}
+							return new Color(
+								parseInt(colorR, 10),
+								parseInt(colorG, 10),
+								parseInt(colorB, 10)
+							);
 						}
 						return undefined;
 					})();
@@ -1465,7 +1434,7 @@ export namespace RGB {
 					state.rgb.lastConfig.data.r = parseInt(match[1], 10);
 					const msg = `Changed config to ${
 						JSON.stringify(state.rgb.lastConfig)} (r->${
-							state.rgb.lastConfig.data.r
+						state.rgb.lastConfig.data.r
 						})`;
 					attachMessage(logObj, msg);
 					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
@@ -1482,7 +1451,7 @@ export namespace RGB {
 					state.rgb.lastConfig.data.g = parseInt(match[1], 10);
 					const msg = `Changed config to ${
 						JSON.stringify(state.rgb.lastConfig)} (g->${
-							state.rgb.lastConfig.data.g
+						state.rgb.lastConfig.data.g
 						})`;
 					attachMessage(logObj, msg);
 					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
@@ -1499,7 +1468,7 @@ export namespace RGB {
 					state.rgb.lastConfig.data.b = parseInt(match[1], 10);
 					const msg = `Changed config to ${
 						JSON.stringify(state.rgb.lastConfig)} (b->${
-							state.rgb.lastConfig.data.b
+						state.rgb.lastConfig.data.b
 						})`;
 					attachMessage(logObj, msg);
 					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
@@ -1523,11 +1492,11 @@ export namespace RGB {
 							return Bot.colorTextToColor(colorStr);
 						}
 						if (colorR && colorG && colorB) {
-							return {
-								r: parseInt(colorR, 10),
-								g: parseInt(colorG, 10),
-								b: parseInt(colorB, 10)
-							}
+							return new Color(
+								parseInt(colorR, 10),
+								parseInt(colorG, 10),
+								parseInt(colorB, 10)
+							);
 						}
 						return undefined;
 					})();
@@ -1542,11 +1511,11 @@ export namespace RGB {
 					state.rgb.lastConfig.data.b = color.b;
 					state.rgb.lastConfig.data.colors = state.rgb.lastConfig.data.colors || [];
 					state.rgb.lastConfig.data.parts = state.rgb.lastConfig.data.parts || [];
-					state.rgb.lastConfig.data.colors[colorIndex] = {...color};
-					state.rgb.lastConfig.data.parts[colorIndex] = {...color};
+					state.rgb.lastConfig.data.colors[colorIndex] = { ...color };
+					state.rgb.lastConfig.data.parts[colorIndex] = { ...color };
 					const msg = `Changed config to ${
 						JSON.stringify(state.rgb.lastConfig)} (color->${
-							JSON.stringify(color)
+						JSON.stringify(color)
 						})`;
 					attachMessage(logObj, msg);
 					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
@@ -1569,11 +1538,11 @@ export namespace RGB {
 							return Bot.colorTextToColor(colorStr);
 						}
 						if (colorR && colorG && colorB) {
-							return {
-								r: parseInt(colorR, 10),
-								g: parseInt(colorG, 10),
-								b: parseInt(colorB, 10)
-							}
+							return new Color(
+								parseInt(colorR, 10),
+								parseInt(colorG, 10),
+								parseInt(colorB, 10)
+							);
 						}
 						return undefined;
 					})();
@@ -1588,7 +1557,7 @@ export namespace RGB {
 					state.rgb.lastConfig.data.backgroundBlue = color.b;
 					const msg = `Changed config to ${
 						JSON.stringify(state.rgb.lastConfig)} (color->${
-							JSON.stringify(color)
+						JSON.stringify(color)
 						})`;
 					attachMessage(logObj, msg);
 					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
@@ -1604,7 +1573,7 @@ export namespace RGB {
 
 					const dotIndex = parseInt(match[1], 10);
 					const prop = match[3];
-					const value = prop === 'dir' ? 
+					const value = prop === 'dir' ?
 						Bot.parseDir(match[4]) : parseInt(match[4], 10);
 
 					state.rgb.lastConfig.data = state.rgb.lastConfig.data || {};
@@ -1612,7 +1581,7 @@ export namespace RGB {
 					(state.rgb.lastConfig.data.dots[dotIndex] as any)[prop] = value;
 					const msg = `Changed config to ${
 						JSON.stringify(state.rgb.lastConfig)} (dot[${dotIndex}].${prop}->${
-							value
+						value
 						})`;
 					attachMessage(logObj, msg);
 					await new External.Handler(logObj).runConfig(state.rgb.lastConfig);
@@ -1678,7 +1647,7 @@ export namespace RGB {
 					return `Commands are:\n${Bot.matches.matches.map((match) => {
 						return `RegExps: ${
 							match.regexps.map(r => r.source).join(', ')}. Texts: ${
-								match.texts.join(', ')}}`
+							match.texts.join(', ')}}`
 					}).join('\n')}`
 				});
 			});
@@ -1757,6 +1726,7 @@ export namespace RGB {
 				port: SerialPort;
 				updateListener(listener: (line: string) => any): void,
 				leds: number;
+				name: string;
 			} | null>((resolve) => {
 				const port = new SerialPort(DEVICE_NAME, {
 					baudRate: 115200
@@ -1788,11 +1758,12 @@ export namespace RGB {
 
 					onData = (): any => { };
 					resolve({
-						port, 
+						port,
 						updateListener: (listener: (line: string) => any) => {
 							onData = listener;
-						}, 
-						leds: LED_NUM
+						},
+						leds: LED_NUM,
+						name: DEVICE_NAME
 					})
 				}
 
@@ -1806,14 +1777,15 @@ export namespace RGB {
 			const res = await tryConnectToSerial();
 			if (res === null) return res;
 
-			return new Board(res.port, res.updateListener, res.leds);
+			return new Board(res.port, res.updateListener, res.leds, res.name);
 		}
 
 		export class Board {
 			// @ts-ignore
 			constructor(private _port: SerialPort,
 				private _setListener: (listener: (line: string) => any) => void,
-				public leds: number) { }
+				public leds: number,
+				public name: string) { }
 
 			public ping() {
 				return new Promise<boolean>((resolve) => {
@@ -1978,12 +1950,12 @@ export namespace RGB {
 				updateTime, mode
 			}: ArduinoAPI.Flash) {
 				return this.sendCommand(`flash ${intensity} ${updateTime} ${blockSize} ${mode}${
-					colors.length ? ' ': ''
-				}${colors.map(({
-					r, g, b
-				}) => {
-					return `${r} ${g} ${b}`;
-				}).join(' ')}`);
+					colors.length ? ' ' : ''
+					}${colors.map(({
+						r, g, b
+					}) => {
+						return `${r} ${g} ${b}`;
+					}).join(' ')}`);
 			}
 		}
 	}
@@ -2043,11 +2015,36 @@ export namespace RGB {
 			app.post('/rgb/effect/:effect', async (req, res) => {
 				await API.Handler.runEffect(res, { ...req.params, ...req.body });
 			});
-			app.post('/rgb/refresh', async (_req, res) => {
+			app.all('/rgb/refresh', async (_req, res) => {
 				await API.Handler.refresh(res);
 			});
 			app.all('/rgb', async (req, res) => {
 				await WebPage.Handler.index(res, req, randomNum);
+			});
+			KeyVal.GetSetListener.addListener('room.lights.nightstand', async (value, logObj) => {
+				console.log('this is the one', value);
+				await Clients.magicHomeClients.filter(({ address }) => {
+					return BED_LEDS.indexOf(address) > -1;
+				}).map(async (client) => {
+					if (value === '1') {
+						attachMessage(attachMessage(logObj, `Setting`, chalk.bold(client.address), `to color rgb(${
+							NIGHTSTAND_COLOR.r
+							}, ${
+							NIGHTSTAND_COLOR.g
+							}, ${
+							NIGHTSTAND_COLOR.b
+							})`), chalk.bgHex(API.colorToHex(NIGHTSTAND_COLOR))('   '));
+						return client.setColor(
+							NIGHTSTAND_COLOR.r,
+							NIGHTSTAND_COLOR.g,
+							NIGHTSTAND_COLOR.b
+						);
+					} else if (value === '0') {
+						attachMessage(logObj, `Turned off`, chalk.bold(client.address));
+						return client.turnOff();
+					}
+					return Promise.resolve();
+				});
 			});
 
 			ws.all('/music_visualize', async ({ addListener }) => {

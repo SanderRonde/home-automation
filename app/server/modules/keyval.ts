@@ -28,15 +28,15 @@ export namespace KeyVal {
 		return JSON.stringify(value || null);
 	}
 
-	namespace GetSetListener {
+	export namespace GetSetListener {
 		const _listeners: Map<number, {
 			key: string;
-			listener: () => void;
+			listener: (value: string, logObj: any) => void;
 			once: boolean;
 		}> = new Map();
 		let _lastIndex: number = 0;
 
-		export function addListener(key: string, listener: () => void, once: boolean = false) {
+		export function addListener(key: string, listener: (value: string, logObj: any) => void, once: boolean = false) {
 			const index = _lastIndex++;
 			_listeners.set(index, {
 				key, listener, once
@@ -48,17 +48,22 @@ export namespace KeyVal {
 			_listeners.delete(index);
 		}
 
-		export function update(key: string) {
+		export function update(key: string, value: string, logObj: any) {
 			let updated: number = 0;
 			const updatedKeyParts = key.split('.');
 
 			for (const [index, { key: listenerKey, listener, once }] of _listeners) {
 				const listenerParts = listenerKey.split('.');
+				let next: boolean = false;
 				for (let i = 0; i < Math.min(updatedKeyParts.length, listenerParts.length); i++) {
-					if (updatedKeyParts[i] !== listenerParts[i]) continue;
+					if (updatedKeyParts[i] !== listenerParts[i]) {
+						next = true;
+						break;
+					}
 				}
+				if (next) continue;
 
-				listener();
+				listener(value, logObj);
 				updated++;
 				if (once) {
 					_listeners.delete(index);
@@ -334,11 +339,11 @@ export namespace KeyVal {
 
 				// Wait for changes to this key
 				let triggered: boolean = false;
-				const id = GetSetListener.addListener(key, () => {
+				const id = GetSetListener.addListener(key, (value, logObj) => {
 					triggered = true;
-					const value = this._db.get(key, '0');
 					const msg = attachMessage(res, `Key: "${key}", val: "${str(value)}"`);
 					attachMessage(msg, `Set to "${str(value)}". Expected "${expected}"`);
+					attachMessage(logObj, `Returned longpoll with value "${value}"`);
 					res.status(200).write(value === undefined ? '' : value);
 					res.end();
 				}, true);
@@ -366,7 +371,7 @@ export namespace KeyVal {
 				await this._db.setVal(key, value);
 				const msg = attachMessage(res, `Key: "${key}", val: "${str(value)}"`);
 				const nextMessage = attachMessage(msg, `"${str(original)}" -> "${str(value)}"`)
-				const updated = GetSetListener.update(key);
+				const updated = GetSetListener.update(key, value, attachMessage(nextMessage, "Updates"));
 				attachMessage(nextMessage, `Updated ${updated} listeners`);
 				res.status(200).write(value);
 				res.end();
@@ -454,11 +459,11 @@ export namespace KeyVal {
 					console.log(chalk.cyan(Handler.DEVICE_NAME),
 						chalk.white(line));
 					await this._db.setVal(`room.${key}`, value.trim());
-					GetSetListener.update(key)
+					GetSetListener.update(key, value, {});
 				});
 				
-				GetSetListener.addListener('room.lights.ceiling', () => {
-					const value = this._db.get('room.lights.ceiling', '0');
+				GetSetListener.addListener('room.lights.ceiling', (value, logObj) => {
+					attachMessage(logObj, `Writing "${value}" to screen port`);
 					this._port.write(value);
 				});
 			}
@@ -503,15 +508,16 @@ export namespace KeyVal {
 			websocket.all('/keyval/websocket', async (instance: WSSimInstance<WSMessages>) => {
 				instance.listen('listen', (key) => {
 					let lastVal: string|undefined = undefined;
-					const onChange = () => {
+					const onChange = (_value: string, logObj: any) => {
 						const val = db.get(key, '0');
 						if (val !== lastVal) {
 							lastVal = val;
+							attachMessage(logObj, `Sending "${val}" to`, chalk.bold(instance.ip));
 							instance.send('valChange', val);
 						}
 					}
 					const listener = GetSetListener.addListener(key, onChange);
-					onChange();
+					onChange('0', {});
 
 					instance.onClose = () => {
 						GetSetListener.removeListener(listener);
