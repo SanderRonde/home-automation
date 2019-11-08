@@ -310,6 +310,25 @@ export namespace KeyVal {
 			}
 
 			@errorHandle
+			@requireParams('key')
+			@auth
+			public async toggle(res: ResponseLike, { key }: {
+				key: string;
+				auth?: string;
+			}) {
+				const original = this._db.get(key);
+				const value = original === '0' ? '1' : '0';
+				await this._db.setVal(key, value);
+				const msg = attachMessage(res, `Toggling key: "${key}", to val: "${str(value)}"`);
+				const nextMessage = attachMessage(msg, `"${str(original)}" -> "${str(value)}"`)
+				const updated = GetSetListener.update(key, value, attachMessage(nextMessage, "Updates"));
+				attachMessage(nextMessage, `Updated ${updated} listeners`);
+				res.status(200).write(value);
+				res.end();
+				return value;
+			}
+
+			@errorHandle
 			@requireParams('key', 'maxtime', 'expected')
 			@auth
 			public getLongPoll(res: ResponseLike, { key, expected, maxtime }: {
@@ -490,6 +509,9 @@ export namespace KeyVal {
 			});
 			app.post('/keyval/:key', async (req, res) => {
 				await apiHandler.get(res, {...req.params, ...req.body});
+			});
+			app.post('/keyval/toggle/:key', async (req, res) => {
+				await apiHandler.toggle(res, {...req.params, ...req.body});
 			});
 			app.post('/keyval/:key/:value', async (req, res) => {
 				await apiHandler.set(res, {...req.params, ...req.body});
