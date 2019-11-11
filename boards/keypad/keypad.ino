@@ -134,7 +134,7 @@ void wake_screen() {
 	if (!is_dimmed) return;
 	Serial.println("# Waking screen");
 
-	String dim = "dim=" + String(NORMAL_BRIGHTNESS);
+	String dim = "sleep=0";
 	myNextion.sendCommand(dim.c_str());
 	is_dimmed = false;
 }
@@ -143,7 +143,7 @@ void dim_screen() {
 	if (is_dimmed) return;
 	Serial.println("# Dimming screen");
 
-	String dim = "dim=" + String(DIM_BRIGHTNESS);
+	String dim = "sleep=1";
 	myNextion.sendCommand(dim.c_str());
 	is_dimmed = true;
 }
