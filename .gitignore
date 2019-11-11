@@ -70,3 +70,7 @@ scripts/**/*.js
 !types/*.d.ts
 *.tsbuildinfo
 build/
+
+ai/beat-detector/features
+ai/beat-detector/input_files
+**/*.pyc
