@@ -28,7 +28,8 @@ export class WSSimInstance< DATA extends {
 }> {
 	private _listeners: ({
 		type: string;
-		handler: (data: string, req: express.Request, res: express.Response) => void
+		handler: (data: string, req: express.Request, res: express.Response) => void;
+		identifier?: any;
 	})[] = [{
 		type: 'ping',
 		handler: () => {
@@ -103,8 +104,13 @@ export class WSSimInstance< DATA extends {
 		}
 	}
 
-	listen<T extends DATA['receive']>(type: T, handler: (data: string) => void): void;
-	listen(type: string, handler: (data: string) => void): void {
+	listen<T extends DATA['receive']>(type: T, handler: (data: string) => void, identifier?: any): void;
+	listen(type: string, handler: (data: string) => void, identifier?: any): void {
+		// Check if another listener with this identifier exists
+		for (const { type: listenerType, identifier: listenerIdentifier } of this._listeners) {
+			if (identifier && listenerIdentifier && identifier === listenerIdentifier &&
+				type === listenerType) return;
+		}
 		this._listeners.push({
 			type,
 			handler

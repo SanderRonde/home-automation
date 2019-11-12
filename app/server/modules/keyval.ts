@@ -534,7 +534,7 @@ export namespace KeyVal {
 					instance.onClose = () => {
 						GetSetListener.removeListener(listener);
 					}
-				});
+				}, instance.ip);
 			});
 
 			app.all('/keyval', async (req, res) => {
