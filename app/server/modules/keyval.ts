@@ -459,15 +459,15 @@ export namespace KeyVal {
 				this._parser.on('data', async (line: string) => {
 					if (line.startsWith('#')) {
 						if (getLogLevel() > 1) {
-							console.log(chalk.gray(Handler.DEVICE_NAME),
+							log(getTime(), chalk.gray(`[${Handler.DEVICE_NAME}]`),
 								line.slice(2));
 						}
 						return;
 					}
 					const [ key, value ] = line.split(' ');
-					console.log(chalk.cyan(Handler.DEVICE_NAME),
-						chalk.white(line));
-					await this._db.setVal(`room.${key}`, value.trim());
+					log(getTime(), chalk.cyan(`[${Handler.DEVICE_NAME}]`),
+						chalk.bold(line));
+					await this._db.setVal(key, value.trim());
 					GetSetListener.update(key, value, {});
 				});
 				
