@@ -54,21 +54,21 @@ void setup() {
 instruction_t ids[] = {
 	{ "", -1 },
 	{ "", -1 },
-	{ "lights.ceiling", 1 },
+	{ "room.lights.ceiling", 1 },
 	{ "", -1 },
 	{ "", -1 },
 	{ "", -1 },
-	{ "lights.ceiling", 0 },
-	{ "lights.nightstand", 1 },
-	{ "lights.nightstand", 0 },
-	{ "speakers.couch", 1 },
-	{ "speakers.couch", 0 },
-	{ "speakers.desk", 1 },
-	{ "speakers.desk", 0 },
-	{ "lights", 1 },
-	{ "lights", 0 },
-	{ "speakers", 1 },
-	{ "speakers", 0 }
+	{ "room.lights.ceiling", 0 },
+	{ "room.lights.nightstand", 1 },
+	{ "room.lights.nightstand", 0 },
+	{ "room.speakers.couch", 1 },
+	{ "room.speakers.couch", 0 },
+	{ "room.speakers.desk", 1 },
+	{ "room.speakers.desk", 0 },
+	{ "room.lights", 1 },
+	{ "room.lights", 0 },
+	{ "room.speakers", 1 },
+	{ "room.speakers", 0 }
 };
 
 const int SPLIT_LEN = 10;
