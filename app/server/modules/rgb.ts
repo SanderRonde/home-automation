@@ -20,6 +20,10 @@ function spedToMs(speed: number) {
 	return 1000 / speed;
 }
 
+function getIntensityPercentage(percentage: number) {
+	return Math.round((percentage / 100) * 255);
+}
+
 export interface Color {
 	r: number;
 	g: number;
@@ -450,6 +454,7 @@ export namespace RGB {
 					backgroundBlue: 0,
 					backgroundGreen: 0,
 					backgroundRed: 0,
+					intensity: getIntensityPercentage(100),
 					dots: [{
 						r: 255,
 						g: 0,
@@ -467,6 +472,7 @@ export namespace RGB {
 					backgroundBlue: 0,
 					backgroundGreen: 0,
 					backgroundRed: 0,
+					intensity: getIntensityPercentage(100),
 					dots: [{
 						r: 255,
 						g: 0,
@@ -524,6 +530,7 @@ export namespace RGB {
 					backgroundBlue: 255,
 					backgroundGreen: 0,
 					backgroundRed: 0,
+					intensity: getIntensityPercentage(100),
 					dots: [{
 						r: 255,
 						g: 0,
@@ -538,7 +545,7 @@ export namespace RGB {
 			split: {
 				type: 'split',
 				data: {
-					intensity: 0,
+					intensity: getIntensityPercentage(100),
 					updateTime: 100,
 					dir: DIR.DIR_FORWARDS,
 					parts: [
@@ -553,7 +560,7 @@ export namespace RGB {
 				type: 'pattern',
 				data: {
 					blockSize: 1,
-					intensity: 0,
+					intensity: getIntensityPercentage(100),
 					dir: DIR.DIR_FORWARDS,
 					updateTime: 1,
 					parts: [
@@ -568,7 +575,7 @@ export namespace RGB {
 				data: {
 					mode: 'strobe',
 					blockSize: 2,
-					intensity: 0,
+					intensity: getIntensityPercentage(100),
 					updateTime: 1
 				}
 			},
@@ -577,7 +584,7 @@ export namespace RGB {
 				data: {
 					mode: 'strobe',
 					blockSize: 7,
-					intensity: 0,
+					intensity: getIntensityPercentage(100),
 					updateTime: 60
 				}
 			},
@@ -586,7 +593,7 @@ export namespace RGB {
 				data: {
 					mode: 'strobe',
 					blockSize: 3,
-					intensity: 0,
+					intensity: getIntensityPercentage(100),
 					updateTime: 500
 				}
 			},
@@ -595,7 +602,7 @@ export namespace RGB {
 				data: {
 					mode: 'strobe',
 					blockSize: 3,
-					intensity: 0,
+					intensity: getIntensityPercentage(100),
 					updateTime: 1000
 				}
 			},
@@ -603,9 +610,9 @@ export namespace RGB {
 				type: 'flash',
 				data: {
 					mode: 'fade',
-					blockSize: 0,
-					intensity: 0,
-					updateTime: 1,
+					blockSize: 1,
+					intensity: getIntensityPercentage(100),
+					updateTime: 10,
 					colors: [
 						new Color(255, 0, 0),
 						new Color(0, 0, 255),
@@ -617,8 +624,8 @@ export namespace RGB {
 				type: 'flash',
 				data: {
 					mode: 'fade',
-					blockSize: 0,
-					intensity: 0,
+					blockSize: 1,
+					intensity: getIntensityPercentage(100),
 					updateTime: 100,
 					colors: [
 						new Color(255, 0, 0),
@@ -631,8 +638,8 @@ export namespace RGB {
 				type: 'flash',
 				data: {
 					mode: 'fade',
-					blockSize: 0,
-					intensity: 0,
+					blockSize: 1,
+					intensity: getIntensityPercentage(100),
 					updateTime: 2500,
 					colors: [
 						new Color(255, 0, 0),
@@ -685,7 +692,12 @@ export namespace RGB {
 				intensity?: number;
 				auth?: string;
 			}) {
-				if (!(color in colorList)) return false;
+				color = color.toLowerCase().trim();
+				if (!(color in colorList)) {
+					attachMessage(res, `Unknown color "${color}"`);
+					res.status(400).end();
+					return false;
+				}
 				const hexColor = colorList[color as keyof typeof colorList];
 				const { r, g, b } = hexToRGB(hexColor);
 
@@ -819,16 +831,21 @@ export namespace RGB {
 
 				const effect = ArduinoAPI.arduinoEffects[effectName];
 
-				attachMessage(
-					attachMessage(res, `Running effect ${effectName}`),
-					`Updated ${Clients.arduinoClients.length} clients`);
 				try {
-					Clients.arduinoClients.forEach((c) => {
+					const strings = await Promise.all(Clients.arduinoClients.map(async (c) => {
 						return c.board.runConfig(effect, body as ArduinoAPI.JoinedConfigs);
-					});
+					}));
+					attachMessage(attachMessage(
+						attachMessage(res, `Running effect ${effectName}`),
+						`Updated ${Clients.arduinoClients.length} clients`),
+						`Sent string "${strings[0]}"`);
 					res.status(200).end();
 					return true;
 				} catch (e) {
+					console.log(e);
+					attachMessage(
+						attachMessage(res, `Failed to run effect ${effectName}`),
+						`Updated ${Clients.arduinoClients.length} clients`);
 					res.status(400).write('Failed to run effect');
 					res.end();
 					return false;
@@ -846,9 +863,13 @@ export namespace RGB {
 					attachMessage(res, `Running config ${JSON.stringify(config)}`),
 					`Updated ${Clients.arduinoClients.length} clients`);
 				try {
-					Clients.arduinoClients.forEach((c) => {
+					const strings = await Promise.all(Clients.arduinoClients.map(async (c) => {
 						return c.board.runConfig(config);
-					});
+					}));
+					attachMessage(attachMessage(
+						attachMessage(res, `Running config ${JSON.stringify(config)}`),
+						`Updated ${Clients.arduinoClients.length} clients`),
+						`Sent string "${strings[0]}"`);
 					res.status(200).end();
 					return true;
 				} catch (e) {
@@ -1306,7 +1327,7 @@ export namespace RGB {
 						state.rgb.lastConfig = { ...ArduinoAPI.arduinoEffects[effect] };
 						if ('data' in state.rgb.lastConfig) {
 							state.rgb.lastConfig.data = Bot.mergeObj(
-								state.rgb.lastConfig.data, config);
+								state.rgb.lastConfig.data, Bot.unsetUndefined(config));
 						}
 					} else {
 						state.rgb.lastConfig = null;
@@ -1315,7 +1336,7 @@ export namespace RGB {
 
 					await new External.Handler(logObj).effect(effect, config);
 					return `Started effect "${effect}" with config ${JSON.stringify(
-						Bot.mergeObj(ArduinoAPI.arduinoEffects[effect], config))}`;
+						Bot.mergeObj(ArduinoAPI.arduinoEffects[effect], Bot.unsetUndefined(config)))}`;
 				});
 				mm(/(create) effect ([^ ]+)(\s+with intensity ([^ ]+))?(\s*and\s*)?(\s*with background (((\d+) (\d+) (\d+))|([^ ]+)))?(\s*and\s*)?(\s*with update(-| )?time ([^ ]+))?(\s*and\s*)?(\s*with dir(ection)? ([^ ]+))?(\s*and\s*)?(\s*with (?:(?:block(-| )?size)|per(-| )?strobe) ([^ ]+))?(\s*and\s*)?(\s*with mode ([^ ]+))?(\s*and\s*)?(\s*with color (((\d+) (\d+) (\d+))|([^ ]+)))?/, async ({
 					logObj, match, state
@@ -1811,7 +1832,7 @@ export namespace RGB {
 				});
 			}
 
-			public async write(data: string) {
+			public async write(data: string): Promise<string> {
 				await this._waitForTurn();
 				await new Promise((resolve) => {
 					let attempts: number = 0;
@@ -1852,9 +1873,10 @@ export namespace RGB {
 					}, SERIAL_MSG_INTERVAL);
 				});
 				this._busy = -1;
+				return data;
 			}
 
-			public sendCommand(command: string) {
+			public sendCommand(command: string): Promise<string> {
 				return this.write(`/ ${command} \\\n`);
 			}
 
@@ -1866,11 +1888,11 @@ export namespace RGB {
 				return this.sendCommand('off');
 			}
 
-			public getLeds() {
+			public getLeds(): Promise<string> {
 				return this.sendCommand('leds');
 			}
 
-			public runConfig(config: ArduinoAPI.ArduinoConfig, extra: ArduinoAPI.JoinedConfigs = {}) {
+			public runConfig(config: ArduinoAPI.ArduinoConfig, extra: ArduinoAPI.JoinedConfigs = {}): Promise<string> {
 				switch (config.type) {
 					case 'solid':
 						return this.setSolid(BotUtil.BotUtil.mergeObj(config.data, extra));
@@ -1994,6 +2016,9 @@ export namespace RGB {
 			setInterval(Scan.scanRGBControllers, 1000 * 60 * 60);
 			await External.Handler.init();
 
+			app.post('/rgb/color', async (req, res) => {
+				await API.Handler.setColor(res, { ...req.params, ...req.body });
+			});
 			app.post('/rgb/color/:color/:instensity?', async (req, res) => {
 				await API.Handler.setColor(res, { ...req.params, ...req.body });
 			});
