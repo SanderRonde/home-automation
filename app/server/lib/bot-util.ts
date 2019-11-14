@@ -1,6 +1,16 @@
 import { RESPONSE_TYPE } from '../modules/bot';
 
 export namespace BotUtil {
+	type NotUndefined<O extends {
+		[key: string]: any;
+	}> = {
+		[K in keyof O]: O[K] extends undefined ? void : O[K];
+	}
+
+	type Defined<O extends {
+		[key: string]: any;
+	}> = Pick<O, keyof NotUndefined<O>>;
+
 	function padWord(word: string, length: number, padChar: string = ' ') {
 		if (word.length === length) return word;
 	
@@ -16,7 +26,7 @@ export namespace BotUtil {
 			for (let i = 0; i < arr2.length; i++) {
 				if (i > arr1.length || typeof arr1[i] !== 'object' || arr1[i] === undefined || arr1[i] === null) {
 					arr1[i] = arr2[i];
-				} else {
+				} else if ((arr2 as any)[i] !== undefined) {
 					if (Array.isArray(arr1[i])) {
 						this.mergeArr(arr1[i], arr2[i]);
 					} else {
@@ -33,7 +43,7 @@ export namespace BotUtil {
 				if (!(key in config) || typeof (config as any)[key] !== 'object' || (config as any)[key] == undefined || (config as any)[key] == null) {
 					if ((extra as any)[key] === undefined) continue;
 					(final as any)[key] = (extra as any)[key];
-				} else {
+				} else if ((extra as any)[key] !== undefined) {
 					// Merge object or array
 					if (Array.isArray((config as any)[key])) {
 						this.mergeArr((final as any)[key], (extra as any)[key]);
@@ -44,6 +54,17 @@ export namespace BotUtil {
 			}
 			return final;
 		}
+
+		public static unsetUndefined<O extends { [key: string]: any|undefined; }>(
+			obj: O): Defined<O> {
+				const finalObj: Partial<Defined<O>> = {};
+				for (const key in obj) {
+					if (obj[key] !== undefined) {
+						finalObj[key] = obj[key];
+					}
+				}
+				return finalObj as Defined<O>;
+			}
 
 		public static formatList(list: string[]): string {
 			if (list.length === 0) {
