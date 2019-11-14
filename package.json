@@ -17,6 +17,8 @@
     "compile:server": "tsc -p app/server/tsconfig.json",
     "compile:client": "tsc -p app/client/tsconfig.json",
     "bundle": "rollup --config rollup.config.js",
+    "watch:server": "tsc -w -p app/server/tsconfig.json",
+    "watch:client": "tsc -w -p app/client/tsconfig.json",
     "compile": "npm run compile:server && npm run compile:client && npm run bundle"
   },
   "devDependencies": {
