@@ -472,8 +472,12 @@ export namespace KeyVal {
 				});
 				
 				GetSetListener.addListener('room.lights.ceiling', (value, logObj) => {
-					attachMessage(logObj, `Writing "${value}" to screen port`);
-					this._port.write(value);
+					attachMessage(logObj, `Writing "s${value}" to screen port - screen`);
+					this._port.write(`s${value}\n`);
+				});
+				GetSetListener.addListener('room.devices.beamer', (value, logObj) => {
+					attachMessage(logObj, `Writing "i${value}" to screen port - IR`);
+					this._port.write(`i${value}\n`);
 				});
 			}
 		}
