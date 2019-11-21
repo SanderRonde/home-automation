@@ -468,7 +468,7 @@ export namespace KeyVal {
 					log(getTime(), chalk.cyan(`[${Handler.DEVICE_NAME}]`),
 						chalk.bold(line));
 					await this._db.setVal(key, value.trim());
-					GetSetListener.update(key, value, {});
+					GetSetListener.update(key, value.trim(), {});
 				});
 				
 				GetSetListener.addListener('room.lights.ceiling', (value, logObj) => {
