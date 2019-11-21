@@ -170,6 +170,8 @@ export namespace RGB {
 		export let magicHomeClients: MagicHomeClient[] = [];
 		export let arduinoClients: ArduinoClient[] = [];
 		export let clients: RGBClient[] = [];
+
+		export let arduinoBoards: Board.Board[] = [];
 	}
 
 	export namespace Scan {
@@ -192,11 +194,8 @@ export namespace RGB {
 		}
 
 		export async function scanArduinos() {
-			const pings = await Promise.all(Clients.arduinoClients.map(c => c.ping()));
-			Clients.arduinoClients = Clients.arduinoClients.filter((_, i) => pings[i]);
-
 			if (Clients.arduinoClients.length === 0) {
-				const board = await Board.tryConnectRGBBoard();
+				const board = await Board.tryConnectRGBBoard(true);
 				if (board) {
 					Clients.arduinoClients.push(new Clients.ArduinoClient(board));
 				}
@@ -1788,7 +1787,11 @@ export namespace RGB {
 			});
 		}
 
-		export async function tryConnectRGBBoard() {
+		export async function tryConnectRGBBoard(force: boolean = false) {
+			if (force) {
+				await Promise.all(Clients.arduinoBoards.map(b => b.destroy()));
+			}
+
 			const res = await tryConnectToSerial();
 			if (res === null) return res;
 
@@ -1796,11 +1799,15 @@ export namespace RGB {
 		}
 
 		export class Board {
+			private _dead: boolean = false;
+
 			// @ts-ignore
 			constructor(private _port: SerialPort,
 				private _setListener: (listener: (line: string) => any) => void,
 				public leds: number,
-				public name: string) { }
+				public name: string) { 
+					Clients.arduinoBoards.push(this);
+				}
 
 			public ping() {
 				return new Promise<boolean>((resolve) => {
@@ -1973,6 +1980,16 @@ export namespace RGB {
 						return `${r} ${g} ${b}`;
 					}).join(' ')}`);
 			}
+
+			public destroy() {
+				if (this._dead) return;
+
+				return new Promise((resolve) => {
+					this._port.close(() => {
+						resolve();
+					});
+				});
+			}
 		}
 	}
 
@@ -2041,7 +2058,6 @@ export namespace RGB {
 				await WebPage.Handler.index(res, req, randomNum);
 			});
 			KeyVal.GetSetListener.addListener('room.lights.nightstand', async (value, logObj) => {
-				console.log('this is the one', value);
 				await Clients.magicHomeClients.filter(({ address }) => {
 					return BED_LEDS.indexOf(address) > -1;
 				}).map(async (client) => {
