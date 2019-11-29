@@ -15,7 +15,7 @@ import * as express from 'express';
 import { KeyVal } from './keyval';
 import chalk from 'chalk';
 
-function spedToMs(speed: number) {
+function speedToMs(speed: number) {
 	// TODO: fit this better
 	return 1000 / speed;
 }
@@ -139,7 +139,7 @@ export namespace RGB {
 				await this.board.setFlash({
 					colors: pattern.colors.map(({ red, green, blue }) => new Color(red, green, blue)),
 					mode: pattern.transitionType,
-					updateTime: spedToMs(speed)
+					updateTime: speedToMs(speed)
 				})
 				return this._sendSuccess(callback);
 			}
@@ -175,7 +175,11 @@ export namespace RGB {
 	}
 
 	export namespace Scan {
-		export async function scanMagicHomeControllers(first: boolean) {
+		let magicHomeTimer: NodeJS.Timeout|null = null;
+		let arduinoTimer: NodeJS.Timeout|null = null;
+		const RESCAN_TIME = 1000 * 60;
+
+		export async function scanMagicHomeControllers(first: boolean = false) {
 			const scanTime = (first && process.argv.indexOf('--debug') > -1) ? 500 : 10000;
 			const clients = (await new Discovery().scan(scanTime)).map((client) => ({
 				control: new Control(client.address, {
@@ -215,6 +219,25 @@ export namespace RGB {
 				scanArduinos()
 			]);
 			const clients = magicHomeClients + arduinoClients;
+
+			if (magicHomeClients === 0) {
+				if (magicHomeTimer !== null) {
+					clearInterval(magicHomeTimer)
+				}
+				magicHomeTimer = setTimeout(() => {
+					scanMagicHomeControllers();
+					magicHomeTimer !== null && clearInterval(magicHomeTimer);
+				}, RESCAN_TIME);
+			}
+			if (arduinoClients === 0) {
+				if (arduinoTimer !== null) {
+					clearInterval(arduinoTimer)
+				}
+				arduinoTimer = setTimeout(() => {
+					scanArduinos();
+					arduinoTimer !== null && clearInterval(arduinoTimer);
+				}, RESCAN_TIME);
+			}
 
 			if (!logObj) {
 				log(getTime(), chalk.cyan(`[rgb]`),
