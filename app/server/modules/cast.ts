@@ -143,10 +143,21 @@ export namespace Cast {
 	namespace LocalURLS {
 		export const LOCAL_URLS: {
 			[key: string]: string;
-		} = {
-			'***REMOVED***': 'http://***REMOVED***/***REMOVED***.mp3',
-			'***REMOVED***': 'http://***REMOVED***/***REMOVED***.mp3'
-		}
+		} = ((obj: {
+			[key: string]: string;
+		}) => {
+			const newObj: {
+				[key: string]: string;
+			} = {};
+			for (const key in obj) {
+				newObj[key] = `http://***REMOVED***/${obj[key]}`;
+			}
+			return newObj;
+		})({
+			'***REMOVED***': '***REMOVED***.mp3',
+			'***REMOVED***': '***REMOVED***.mp3',
+			'***REMOVED***': '***REMOVED***.mp3'
+		})
 	}
 
 	namespace Casting {
