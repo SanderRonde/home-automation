@@ -11,6 +11,7 @@ import { KeyVal } from "./keyval";
 import { Script } from "./script";
 import * as fs from 'fs-extra';
 import * as https from 'https';
+import { Cast } from './cast';
 import { RGB } from "./rgb";
 import chalk from 'chalk';
 
@@ -97,17 +98,20 @@ export namespace Bot {
 		export namespace StateKeeping {
 			export class ChatState {
 				rgb!: RGB.Bot.Bot;
+				cast!: Cast.Bot.Bot;
 				keyval!: KeyVal.Bot.Bot;
 				script!: Script.Bot.Bot;
 				homeDetector!: HomeDetector.Bot.Bot;
 
 				constructor(json: {
 					rgb?: RGB.Bot.JSON;
+					cast?: Cast.Bot.JSON;
 					keyval?: KeyVal.Bot.JSON;
 					script?: Script.Bot.JSON;
 					homeDetector?: HomeDetector.Bot.JSON;
 				} = {}) {
 					this.rgb = new RGB.Bot.Bot(json.rgb);
+					this.cast = new Cast.Bot.Bot(json.cast);
 					this.keyval = new KeyVal.Bot.Bot(json.keyval);
 					this.script = new Script.Bot.Bot(json.script);
 					this.homeDetector = new HomeDetector.Bot.Bot(json.homeDetector);
@@ -116,6 +120,7 @@ export namespace Bot {
 				toJSON() {
 					return {
 						rgb: this.rgb.toJSON(),
+						cast: this.cast.toJSON(),
 						keyval: this.keyval.toJSON(),
 						script: this.script.toJSON(),
 						homeDetector: this.homeDetector.toJSON()
@@ -288,6 +293,7 @@ export namespace Bot {
 			}): Promise<MatchResponse | undefined> {
 				return this._matchMatchables(config,
 					await this._matchSelf(config),
+					Cast.Bot.Bot,
 					HomeDetector.Bot.Bot,
 					KeyVal.Bot.Bot,
 					RGB.Bot.Bot);
@@ -474,6 +480,7 @@ export namespace Bot {
 	export function printCommands() {
 		const bots = [
 			RGB.Bot.Bot,
+			Cast.Bot.Bot,
 			KeyVal.Bot.Bot,
 			Script.Bot.Bot,
 			HomeDetector.Bot.Bot,

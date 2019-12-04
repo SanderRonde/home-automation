@@ -58,8 +58,8 @@ export function errorHandle(_target: any, _propertyKey: string, descriptor: Prop
 			} else if (e instanceof AuthError) {
 				res.status(403).write(e.message);
 			} else {
-				const msg = attachMessage(res, chalk.red(chalk.bgBlack(e.message)));
-				for (const line of e.stack.split('\n')) {
+				const msg = attachMessage(res, chalk.red(chalk.bgBlack(e?.message || '?')));
+				for (const line of e?.stack?.split('\n') || []) {
 					attachMessage(msg, line);
 				}
 				res.status(500).write('Internal server error');

@@ -7,6 +7,7 @@ import * as serveStatic from 'serve-static';
 import { KeyVal } from '../modules/keyval';
 import { Script } from '../modules/script';
 import * as bodyParser from 'body-parser';
+import { Cast } from '../modules/cast';
 import { RGB } from '../modules/rgb';
 import { Bot } from '../modules/bot';
 import * as express from 'express';
@@ -157,6 +158,8 @@ export async function initMiddleware(app: express.Express) {
 	app.use(bodyParser.text());
 	app.use(serveStatic(
 		path.join(__dirname, '../../../', 'app/client/')));
+	app.use(serveStatic(
+		path.join(__dirname, '../../../', 'static/')));
 	app.use('/node_modules/lit-html', (req, _res, next) => {
 		req.url = req.url.replace('/node_modules/lit-html', '');
 		next();
@@ -200,6 +203,10 @@ export async function initRoutes({
 		await (async () => {
 			await RGB.Routing.init({ ...routeSettings });
 			initLogger.increment('/rgb');
+		})(),
+		await (async () => {
+			await Cast.Routing.init({ ...routeSettings });
+			initLogger.increment('/cast');
 		})(),
 		await (async () => {
 			await Multi.Routing.init({ ...routeSettings });
