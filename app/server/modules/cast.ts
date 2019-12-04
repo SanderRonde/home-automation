@@ -482,8 +482,8 @@ export namespace Cast {
 				return mediaPlayers;
 			}
 
-			@requireParams('pasta')
 			@errorHandle
+			@requireParams('pasta')
 			@auth
 			static async pasta(res: ResponseLike, { pasta }: {
 				pasta: string;
@@ -539,7 +539,7 @@ export namespace Cast {
 				await API.Handler.say(res, {...req.params, ...req.body});
 			});
 			app.post('/cast/pasta/:pasta?', async (req, res) => {
-				await API.Handler.pasta(res, {...req.param, ...req.body});
+				await API.Handler.pasta(res, {...req.params, ...req.body});
 			})
 		}
 	}
