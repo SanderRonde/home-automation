@@ -45,7 +45,7 @@ export class PowerSwitch extends ConfigurableWebComponent<{
 		this._updateScale();
 
 		const original = window.onresize;
-		window.onresize = (e) => {
+		window.onresize = (e: any) => {
 			original && original.call(window, e);
 			this._updateScale();
 		}
