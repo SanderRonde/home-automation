@@ -397,6 +397,10 @@ export namespace RGB {
 			colors?: Color[];
 		}
 
+		export interface Rainbow {
+			updateTime: number;
+		}
+
 		export type ArduinoConfig = {
 			type: 'solid';
 			data: Solid;
@@ -413,6 +417,9 @@ export namespace RGB {
 			type: 'flash';
 			data: Flash;
 		} | {
+			type: 'rainbow';
+			data: Rainbow;
+		} | {
 			type: 'off';
 		} | {
 			type: 'prime';
@@ -422,7 +429,7 @@ export namespace RGB {
 
 		export type Effects = 'rainbow' | 'reddot' | 'reddotbluebg' | 'multidot' |
 			'split' | 'rgb' | 'quickstrobe' | 'strobe' | 'slowstrobe' | 'brightstrobe' |
-			'epileptisch' | 'quickfade' | 'slowfade';
+			'epileptisch' | 'quickfade' | 'slowfade' | 'rainbow2';
 
 
 		function interpolate(c1: Color, c2: Color, steps: number, {
@@ -468,6 +475,12 @@ export namespace RGB {
 						...interpolate(new Color(0, 255, 0), new Color(0, 0, 255), 5, { end: false }),
 						...interpolate(new Color(0, 0, 255), new Color(255, 0, 0), 5, { end: false }),
 					]
+				}
+			},
+			rainbow2: {
+				type: 'rainbow',
+				data: {
+					updateTime: 1
 				}
 			},
 			reddot: {
@@ -1934,6 +1947,8 @@ export namespace RGB {
 						return this.setPattern(BotUtil.BotUtil.mergeObj(config.data, extra));
 					case 'flash':
 						return this.setFlash(BotUtil.BotUtil.mergeObj(config.data, extra));
+					case 'rainbow':
+						return this.setRainbow(BotUtil.BotUtil.mergeObj(config.data, extra));
 					case 'off':
 						return this.setModeOff();
 					case 'prime':
@@ -2002,6 +2017,12 @@ export namespace RGB {
 					}) => {
 						return `${r} ${g} ${b}`;
 					}).join(' ')}`);
+			}
+
+			public setRainbow({
+				updateTime = 1
+			}: ArduinoAPI.Rainbow) {
+				return this.sendCommand(`rainbow ${updateTime}`);
 			}
 
 			public destroy() {
