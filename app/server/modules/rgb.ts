@@ -9,6 +9,7 @@ import SerialPort = require('serialport');
 import { BotUtil } from '../lib/bot-util';
 import { ResponseLike } from './multi';
 import { WSWrapper } from '../lib/ws';
+import { exec } from 'child_process';
 import { Bot as _Bot } from './bot';
 import { Auth } from '../lib/auth';
 import * as express from 'express';
@@ -1876,6 +1877,33 @@ export namespace RGB {
 				});
 			}
 
+			private _totalConnectTries = 0;
+
+			private _restartSelf() {
+				// Find this program in the forever list
+				exec('sudo -u root su -c "forever list"', (err, stdout, stderr) => {
+					if (err) {
+						console.log('Failed to restart :(', stderr);
+						return;
+					}
+
+					const lines = stdout.split('\n');
+					for (const line of lines) {
+						if (line.indexOf('automation') !== -1) {
+							const index = line.split('[')[1].split(']')[0];
+
+							// Restart that (this) program
+							exec(`sudo -u root su -c "forever restart ${index}"`, (err, _stdout, stderr) => {
+								if (err) {
+									console.log('Failed to restart :(', stderr);
+									return;	
+								}
+							});
+						}
+					}
+				});
+			}
+
 			public async write(data: string): Promise<string> {
 				await this._waitForTurn();
 				await new Promise((resolve) => {
@@ -1897,6 +1925,12 @@ export namespace RGB {
 								const res = await tryConnectToSerial();
 								if (!res) {
 									console.log('Failed to connect to serial');
+									this._restartSelf();
+									this._totalConnectTries++;
+
+									if (this._totalConnectTries > 10) {
+										// Force restart this program
+									}
 									pause = false;
 									return;
 								}
