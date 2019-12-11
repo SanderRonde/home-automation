@@ -399,6 +399,7 @@ export namespace RGB {
 
 		export interface Rainbow {
 			updateTime: number;
+			blockSize?: number;
 		}
 
 		export type ArduinoConfig = {
@@ -2020,9 +2021,10 @@ export namespace RGB {
 			}
 
 			public setRainbow({
-				updateTime = 1
+				updateTime = 1,
+				blockSize = 1
 			}: ArduinoAPI.Rainbow) {
-				return this.sendCommand(`rainbow ${updateTime}`);
+				return this.sendCommand(`rainbow ${updateTime} ${blockSize}`);
 			}
 
 			public destroy() {
