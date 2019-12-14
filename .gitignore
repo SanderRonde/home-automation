@@ -76,3 +76,5 @@ ai/beat-detector/input_files
 **/*.pyc
 
 static/
+
+ai/files/
