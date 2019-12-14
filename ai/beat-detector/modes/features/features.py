@@ -3,6 +3,7 @@
 from .files import read_input_files
 from typing import List, Union, Dict, Any
 from lib.io import IO, IOInput
+from glob import glob
 
 # Take a (somehow) set of wav files, each
 # annotated by a JSON file containing an array
@@ -45,4 +46,5 @@ def mode_features():
         if not input_files:
             return None
         pass
+        # TODO: extract features
 

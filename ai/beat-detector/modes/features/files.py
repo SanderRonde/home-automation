@@ -96,9 +96,11 @@ def _read_input_files(io: IO) -> List[MarkedAudioFile]:
 
 class read_input_files:
 	def __enter__(self, io: IO) -> List[MarkedAudioFile]:
-		return _read_input_files(io)
+		self.files = _read_input_files(io)
+		return self.files
+
 	def __exit__(self, type, value, traceback):
-		tear things down
+		close_input_files(self.files)
 
 
 

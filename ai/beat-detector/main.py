@@ -9,10 +9,13 @@ def run_mode(mode):
 		return mode_features()
 	elif mode == "train":
 		print("not implemented")
+		# TODO: implement
 	elif mode == "test":
 		print("not implemented")
+		# TODO: implement
 	elif mode == "realtime_test":
 		print("not implemented")
+		# TODO: implement
 	else:
 		if mode == "":
 			print("No mode supplied. Choose one of:\n")
