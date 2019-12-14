@@ -160,6 +160,8 @@ export async function initMiddleware(app: express.Express) {
 		path.join(__dirname, '../../../', 'app/client/')));
 	app.use(serveStatic(
 		path.join(__dirname, '../../../', 'static/')));
+	app.use(serveStatic(
+		path.join(__dirname, '../../../', 'ai/annotator/')));
 	app.use('/node_modules/lit-html', (req, _res, next) => {
 		req.url = req.url.replace('/node_modules/lit-html', '');
 		next();
