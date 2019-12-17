@@ -2,6 +2,7 @@ import { logReq, attachMessage, ProgressLogger } from './logger';
 import { HomeDetector } from '../modules/home-detector';
 import { Multi, ResponseLike } from '../modules/multi';
 import * as pathToRegexp from 'path-to-regexp';
+import { WSSimulator, WSWrapper } from './ws';
 import * as cookieParser from 'cookie-parser';
 import * as serveStatic from 'serve-static';
 import { KeyVal } from '../modules/keyval';
@@ -11,11 +12,11 @@ import { Cast } from '../modules/cast';
 import { RGB } from '../modules/rgb';
 import { Bot } from '../modules/bot';
 import * as express from 'express';
-import { WSSimulator, WSWrapper } from './ws';
 import { Config } from '../app';
 import { Database } from './db';
 import { Auth } from './auth';
 import * as path from 'path';
+import * as glob from 'glob';
 import chalk from 'chalk';
 
 type Handler = (req: express.Request, res: ResponseLike, next: express.NextFunction) => any;
@@ -143,6 +144,22 @@ export class AppWrapper {
 		}
 }
 
+export async function initAnnotatorRoutes(app: express.Express) {
+	app.all('/annotator/files', (_req, res) => {
+		console.log(path.join(__dirname, '../../../', 'ai/files', '*.wav'));
+		glob(path.join(__dirname, '../../../', 'ai/files', '*.wav'), {}, (err: Error|null, files: string[]) => {
+			if (err) {
+				res.status(500);
+				res.end();
+			} else {
+				res.status(200);
+				res.write(JSON.stringify({"files": files.map((file: string) => file.split('/').pop())}));
+				res.end();
+			}
+		});
+	});
+}
+
 export async function initMiddleware(app: express.Express) {
 	app.use((req, res, next) => {
 		logReq(req, res);
@@ -162,6 +179,8 @@ export async function initMiddleware(app: express.Express) {
 		path.join(__dirname, '../../../', 'static/')));
 	app.use(serveStatic(
 		path.join(__dirname, '../../../', 'ai/annotator/')));
+	app.use(serveStatic(
+		path.join(__dirname, '../../../', 'ai/files/')));
 	app.use('/node_modules/lit-html', (req, _res, next) => {
 		req.url = req.url.replace('/node_modules/lit-html', '');
 		next();

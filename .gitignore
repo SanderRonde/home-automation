@@ -78,4 +78,4 @@ ai/beat-detector/input_files
 static/
 
 ai/files/
-ai/annotator/*.js
+ai/annotator/**/*.js

@@ -1,5 +1,5 @@
 import { setLogLevel, ProgressLogger, startInit, endInit } from './lib/logger';
-import { initRoutes, initMiddleware } from './lib/routes';
+import { initRoutes, initMiddleware, initAnnotatorRoutes } from './lib/routes';
 import { hasArg, getArg, getNumberArg } from './lib/io';
 import { WSSimulator, WSWrapper } from './lib/ws';
 import { Bot } from './modules/bot';
@@ -64,6 +64,7 @@ class WebServer {
 		this.app = express();
 		this._initLogger.increment('express');
 		await initMiddleware(this.app);
+		await initAnnotatorRoutes(this.app);
 		this._initLogger.increment('middleware');
 		await this._initServers();
 		this._initLogger.increment('servers');
