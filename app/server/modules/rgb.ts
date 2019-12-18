@@ -431,7 +431,7 @@ export namespace RGB {
 
 		export type Effects = 'rainbow' | 'reddot' | 'reddotbluebg' | 'multidot' |
 			'split' | 'rgb' | 'quickstrobe' | 'strobe' | 'slowstrobe' | 'brightstrobe' |
-			'epileptisch' | 'quickfade' | 'slowfade' | 'rainbow2';
+			'epileptisch' | 'quickfade' | 'slowfade' | 'rainbow2' | 'desk';
 
 
 		function interpolate(c1: Color, c2: Color, steps: number, {
@@ -482,7 +482,8 @@ export namespace RGB {
 			rainbow2: {
 				type: 'rainbow',
 				data: {
-					updateTime: 1
+					updateTime: 1,
+					blockSize: 2
 				}
 			},
 			reddot: {
@@ -682,6 +683,25 @@ export namespace RGB {
 						new Color(255, 0, 0),
 						new Color(0, 0, 255),
 						new Color(0, 255, 0)
+					]
+				}
+			},
+			desk: {
+				type: 'split',
+				data: {
+					intensity: 100,
+					updateTime: 0,
+					dir: DIR.DIR_FORWARDS,
+					parts: [
+						new Color(0, 0, 0),
+						new Color(0, 0, 0),
+						new Color(0, 0, 0),
+						new Color(255, 255, 255),
+						new Color(255, 255, 255),
+						new Color(255, 255, 255),
+						new Color(255, 255, 255),
+						new Color(0, 0, 0),
+						new Color(0, 0, 0),
 					]
 				}
 			}
