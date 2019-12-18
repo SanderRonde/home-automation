@@ -1172,7 +1172,8 @@ export namespace RGB {
 				'/mode': 'Set mode to given value',
 				'/effects': 'List effects',
 				'/refresh': 'Refresh LEDs',
-				'/help_rgb': 'Print help comands for RGB'
+				'/help_rgb': 'Print help comands for RGB',
+				'/perf': 'Get performance'
 			};
 
 			static readonly botName = 'RGB';
@@ -1717,6 +1718,23 @@ export namespace RGB {
 				}) => {
 					return `Found ${await Scan.scanRGBControllers(false, logObj)} RGB controllers`;
 				});
+				mm('/perf', /get perf(ormance)?/, async ({
+					logObj
+				}) => {
+					const perfs = await Promise.all(Clients.arduinoClients.map((client) => {
+						return new Promise<string>((resolve) => {
+							client.board.setListener((res: string) => {
+								const [ section, min, max, avg ] = res.split(',');
+								const str = `${section}: min: ${min}, max: ${max}, avg: ${avg}`;
+								attachMessage(logObj, `${client.address}: ${str}`);
+								resolve(str);
+							});
+							client.board.sendCommand('perf main');
+							client.board.sendCommand('perf loop');
+						});
+					}));
+					return perfs.join(',');
+				});
 				mm('/help_rgb', /what commands are there for rgb/, async () => {
 					return `Commands are:\n${Bot.matches.matches.map((match) => {
 						return `RegExps: ${
@@ -1861,7 +1879,7 @@ export namespace RGB {
 
 			// @ts-ignore
 			constructor(private _port: SerialPort,
-				private _setListener: (listener: (line: string) => any) => void,
+				public setListener: (listener: (line: string) => any) => void,
 				public leds: number,
 				public name: string) { 
 					Clients.arduinoBoards.push(this);
@@ -1869,7 +1887,7 @@ export namespace RGB {
 
 			public ping() {
 				return new Promise<boolean>((resolve) => {
-					this._setListener((_line: string) => {
+					this.setListener((_line: string) => {
 						resolve(true);
 					});
 					this.getLeds();
@@ -1928,7 +1946,7 @@ export namespace RGB {
 				await this._waitForTurn();
 				await new Promise((resolve) => {
 					let attempts: number = 0;
-					this._setListener((line: string) => {
+					this.setListener((line: string) => {
 						if (line.indexOf('ack') !== -1) {
 							resolve();
 							clearInterval(interval);
@@ -1957,8 +1975,8 @@ export namespace RGB {
 								log(getTime(), chalk.red(`[rgb]`, 'Forcefully restarted'));
 								this._port = res.port;
 								this.leds = res.leds;
-								this._setListener = res.updateListener;
-								this._setListener((line: string) => {
+								this.setListener = res.updateListener;
+								this.setListener((line: string) => {
 									if (line.indexOf('ack') !== -1) {
 										resolve();
 										clearInterval(interval);
