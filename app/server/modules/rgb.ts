@@ -48,6 +48,31 @@ export class Color implements Color {
 	}
 }
 
+function restartSelf() {
+	// Find this program in the forever list
+	exec('sudo -u root su -c "forever list"', (err, stdout, stderr) => {
+		if (err) {
+			console.log('Failed to restart :(', stderr);
+			return;
+		}
+
+		const lines = stdout.split('\n');
+		for (const line of lines) {
+			if (line.indexOf('automation') !== -1) {
+				const index = line.split('[')[1].split(']')[0];
+
+				// Restart that (this) program
+				exec(`sudo -u root su -c "forever restart ${index}"`, (err, _stdout, stderr) => {
+					if (err) {
+						console.log('Failed to restart :(', stderr);
+						return;	
+					}
+				});
+			}
+		}
+	});
+}
+
 export namespace RGB {
 	export namespace Clients {
 		abstract class RGBClient {
@@ -1173,7 +1198,7 @@ export namespace RGB {
 				'/effects': 'List effects',
 				'/refresh': 'Refresh LEDs',
 				'/help_rgb': 'Print help comands for RGB',
-				'/perf': 'Get performance'
+				'/restart': 'Restart the server'
 			};
 
 			static readonly botName = 'RGB';
@@ -1742,6 +1767,13 @@ export namespace RGB {
 							match.texts.join(', ')}}`
 					}).join('\n')}`
 				});
+				mm('/restart', /restart( yourself)?/, /reboot( yourself)?/, async () => {
+					log(getTime(), chalk.red(`[self]`, 'Restarting self'));
+					setTimeout(() => {
+						restartSelf();
+					}, 50);
+					return 'Restarting...';
+				});
 			});
 
 			constructor(json?: JSON) {
@@ -1917,31 +1949,6 @@ export namespace RGB {
 
 			private _totalConnectTries = 0;
 
-			private _restartSelf() {
-				// Find this program in the forever list
-				exec('sudo -u root su -c "forever list"', (err, stdout, stderr) => {
-					if (err) {
-						console.log('Failed to restart :(', stderr);
-						return;
-					}
-
-					const lines = stdout.split('\n');
-					for (const line of lines) {
-						if (line.indexOf('automation') !== -1) {
-							const index = line.split('[')[1].split(']')[0];
-
-							// Restart that (this) program
-							exec(`sudo -u root su -c "forever restart ${index}"`, (err, _stdout, stderr) => {
-								if (err) {
-									console.log('Failed to restart :(', stderr);
-									return;	
-								}
-							});
-						}
-					}
-				});
-			}
-
 			public async write(data: string): Promise<string> {
 				await this._waitForTurn();
 				await new Promise((resolve) => {
@@ -1961,9 +1968,9 @@ export namespace RGB {
 							pause = true;
 							this._port.close(async () => {
 								const res = await tryConnectToSerial();
-								if (!res) {
+								if (!res || !res.port || !res.leds) {
 									console.log('Failed to connect to serial');
-									this._restartSelf();
+									restartSelf();
 									this._totalConnectTries++;
 
 									if (this._totalConnectTries > 10) {

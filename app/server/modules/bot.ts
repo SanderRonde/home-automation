@@ -212,6 +212,7 @@ export namespace Bot {
 					return `${days} days, ${hours} hours, ${mins} mins, ${days} days, ${
 						mins} mins, ${seconds} seconds and ${ms} milliseconds`;
 				});
+				
 			});
 
 			constructor(private _secret: string, private _db: Database) {
