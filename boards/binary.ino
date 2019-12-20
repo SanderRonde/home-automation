@@ -1,5 +1,5 @@
 #define DEFAULT_VALUE 0
-#define SECRET_KEY String("***REMOVED***")
+#define SECRET_KEY String("**SECRET**")
 #define KEY_NAME "room.speakers.couch"
 #define OUT_PIN D1
 #define INVERT 0
