@@ -68,6 +68,8 @@ When a keyval value changes, a listener is fired which then sends the changed va
 
 This module uses two types of led strips. Those powered by magic-home RGB controllers and those powered by an arduino. Controlling the magic-home led strips is actually quite easy since there's a library for it. The other led strips are a bit harder to control. They are individually addressable led strips and as such can do a bit more than regular led strips. Because of this I wrote some code for an arduino that then controls the led strips directly. Since it's not possible to constantly send a constant state to the arduino over serial for every write (this would take too long), a bunch of configurable patterns had to be made. For example the flash pattern, the solid color pattern, the single dot pattern and some more. The server then controls the current mode and its configuration through a serial connection with the arduino.
 
+Check out the arduino driver for the individually addressible LEDs [over here](https://github.com/SanderRonde/arduino-board-led-driver).
+
 #### Home-detector
 
 The home detector constantly pings given IP addresses and checks if any response is given. When a response is not given for a certain amount of time, the device that the IP address belongs to is deemed off of the network and the associated configuration is triggered. Check `app/server/config_examples/home-hooks.ts` for an example. Through the use of interfaces from other modules, other modules can easily be triggered.
@@ -99,6 +101,8 @@ The web apps use the [wc-lib](https://github.com/SanderRonde/wc-lib) webcomponen
 #### Touch screen
 
 The touch screen is based on a nextion touch screen and a controlling arduino. The arduino listens for any touch events from the touch screen and passes those on to the server, which then sets the keyval store's values. 
+
+Check out the arduino driver for the board [over here](https://github.com/SanderRonde/arduino-board-screen-driver).
 
 ## License
 
