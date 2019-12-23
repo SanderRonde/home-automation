@@ -33,9 +33,23 @@ export const SCREEN_DEVICE_NAME = '/dev/ttyUSB0';
 export const LED_DEVICE_NAME = '/dev/ttyACM0';
 
 // Rgb
-export const BED_LEDS = [
-	'192.168.1.5',
+export const enum LED_NAMES {
+	BED_LEDS,
+	DESK_LEDS,
+	CEILING_LEDS
+}
+export const MAGIC_LEDS = [
+	LED_NAMES.BED_LEDS, LED_NAMES.DESK_LEDS
 ];
+export const ARDUINO_LEDS = [
+	LED_NAMES.CEILING_LEDS
+];
+export const LED_IPS: {
+	[key: string]: LED_NAMES;
+} = {
+	"192.168.1.5": LED_NAMES.BED_LEDS,
+	"192.168.1.4": LED_NAMES.DESK_LEDS
+};
 export const NIGHTSTAND_COLOR: Color = {
 	r: 177,
 	g: 22,

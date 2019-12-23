@@ -20,7 +20,8 @@
     "watch:server": "tsc -w -p app/server/tsconfig.json",
     "watch:client": "tsc -w -p app/client/tsconfig.json",
     "html-typings": "",
-    "compile": "npm run compile:server && npm run compile:client && npm run bundle"
+    "compile": "npm run compile:server && npm run compile:client && npm run bundle",
+    "watch": "tsc -w -p app/server/tsconfig.json"
   },
   "devDependencies": {
     "@types/body-parser": "^1.17.0",

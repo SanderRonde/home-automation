@@ -1,4 +1,4 @@
-import { SERIAL_MAX_ATTEMPTS, SERIAL_MSG_INTERVAL, BED_LEDS, NIGHTSTAND_COLOR, LED_DEVICE_NAME } from '../lib/constants';
+import { SERIAL_MAX_ATTEMPTS, SERIAL_MSG_INTERVAL, LED_NAMES, NIGHTSTAND_COLOR, LED_DEVICE_NAME, MAGIC_LEDS, ARDUINO_LEDS, LED_IPS } from '../lib/constants';
 import { Discovery, Control, CustomMode, TransitionTypes, BuiltinPatterns } from 'magic-home';
 import { errorHandle, requireParams, auth, authCookie } from '../lib/decorators';
 import { attachMessage, ResDummy, getTime, log } from '../lib/logger';
@@ -198,6 +198,17 @@ export namespace RGB {
 		export let clients: RGBClient[] = [];
 
 		export let arduinoBoards: Board.Board[] = [];
+
+		export function getLed(name: LED_NAMES): MagicHomeClient|ArduinoClient|null {
+			if (MAGIC_LEDS.includes(name)) {
+				return magicHomeClients.filter((client) => {
+					return LED_IPS[client.address] === name;
+				})[0] || null;
+			} else if (ARDUINO_LEDS.includes(name)) {
+				return arduinoClients[0] || null;
+			}
+			return null;
+		}
 	}
 
 	export namespace Scan {
@@ -2149,6 +2160,19 @@ export namespace RGB {
 	}
 
 	export namespace Routing {
+		async function switchLed(name: LED_NAMES, value: string, logObj: any) {
+			const client = Clients.getLed(name);
+			if (!client) return;
+			if (value === '1') {
+				attachMessage(attachMessage(logObj, `Setting`, chalk.bold(client.address), `to color rgb(255, 255, 255)`), chalk.bgHex(API.colorToHex(NIGHTSTAND_COLOR))('   '));
+				return client.setColor(255, 255, 255);
+			} else if (value === '0') {
+				attachMessage(logObj, `Turned off`, chalk.bold(client.address));
+				return client.turnOff();
+			}
+			return Promise.resolve();
+		}
+
 		export async function init({ app, randomNum, ws }: {
 			app: AppWrapper;
 			randomNum: number;
@@ -2183,28 +2207,35 @@ export namespace RGB {
 				await WebPage.Handler.index(res, req, randomNum);
 			});
 			KeyVal.GetSetListener.addListener('room.lights.nightstand', async (value, logObj) => {
-				await Clients.magicHomeClients.filter(({ address }) => {
-					return BED_LEDS.indexOf(address) > -1;
-				}).map(async (client) => {
-					if (value === '1') {
-						attachMessage(attachMessage(logObj, `Setting`, chalk.bold(client.address), `to color rgb(${
-							NIGHTSTAND_COLOR.r
-							}, ${
-							NIGHTSTAND_COLOR.g
-							}, ${
-							NIGHTSTAND_COLOR.b
-							})`), chalk.bgHex(API.colorToHex(NIGHTSTAND_COLOR))('   '));
-						return client.setColor(
-							NIGHTSTAND_COLOR.r,
-							NIGHTSTAND_COLOR.g,
-							NIGHTSTAND_COLOR.b
-						);
-					} else if (value === '0') {
-						attachMessage(logObj, `Turned off`, chalk.bold(client.address));
-						return client.turnOff();
-					}
-					return Promise.resolve();
-				});
+				const client = Clients.getLed(LED_NAMES.BED_LEDS);
+				if (!client) return;
+				if (value === '1') {
+					attachMessage(attachMessage(logObj, `Setting`, chalk.bold(client.address), `to color rgb(${
+						NIGHTSTAND_COLOR.r
+						}, ${
+						NIGHTSTAND_COLOR.g
+						}, ${
+						NIGHTSTAND_COLOR.b
+						})`), chalk.bgHex(API.colorToHex(NIGHTSTAND_COLOR))('   '));
+					return client.setColor(
+						NIGHTSTAND_COLOR.r,
+						NIGHTSTAND_COLOR.g,
+						NIGHTSTAND_COLOR.b
+					);
+				} else if (value === '0') {
+					attachMessage(logObj, `Turned off`, chalk.bold(client.address));
+					return client.turnOff();
+				}
+				return Promise.resolve();
+			});
+			KeyVal.GetSetListener.addListener('room.leds.ceiling', async (value, logObj) => {
+				await switchLed(LED_NAMES.CEILING_LEDS, value, logObj);
+			});
+			KeyVal.GetSetListener.addListener('room.leds.bed', async (value, logObj) => {
+				await switchLed(LED_NAMES.BED_LEDS, value, logObj);
+			});
+			KeyVal.GetSetListener.addListener('room.leds.desk', async (value, logObj) => {
+				await switchLed(LED_NAMES.DESK_LEDS, value, logObj);
 			});
 
 			ws.all('/music_visualize', async ({ addListener }) => {
