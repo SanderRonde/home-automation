@@ -56,7 +56,49 @@ There is a touch screen using a [nextion touch screen](https://nextion.tech/). I
 
 #### KeyVal
 
+Consists of a simple JSON file that serves as a mini key-value database. It stores the state of all keys. States can be set through any of the controllers. State changes can be listened for through internal modules, allowing for changes to be handled in a number of ways. The most used one is the communicating with power controlling switches through a sort of makeshift websockets implementation.
 
+The power controlling switches are made out of a couple of components. The first thing is any development board that is powered by the ESP8266 chip (generally a NodeMCU board). This board controls a relay whose terminals are connected to stripped 220v power cables. Both the relay and board are powered by a 5v power adapter. The relay's output terminal and the ground are then connected to a female power socket, allowing any plug put in it to be remotely powered. In total these components cost around 7 euros on ebay.
+
+The board runs C/C++ code which can be found `board/binary.ino`. Since these boards can use neither long polling nor websockets (some of them can but not all), a sort of makeshift websockets protocol was made. It connects to the server and tells it its own IP address. The server then sends messages directly to that IP address. Of course this only works over a local network but it works surprisingly well.
+
+When a keyval value changes, a listener is fired which then sends the changed value to the responsible board over the makeshift websockets. The board then changes the state of the data pin of the relay, after which the power goes on or off.
+
+#### RGB
+
+This module uses two types of led strips. Those powered by magic-home RGB controllers and those powered by an arduino. Controlling the magic-home led strips is actually quite easy since there's a library for it. The other led strips are a bit harder to control. They are individually addressable led strips and as such can do a bit more than regular led strips. Because of this I wrote some code for an arduino that then controls the led strips directly. Since it's not possible to constantly send a constant state to the arduino over serial for every write (this would take too long), a bunch of configurable patterns had to be made. For example the flash pattern, the solid color pattern, the single dot pattern and some more. The server then controls the current mode and its configuration through a serial connection with the arduino.
+
+#### Home-detector
+
+The home detector constantly pings given IP addresses and checks if any response is given. When a response is not given for a certain amount of time, the device that the IP address belongs to is deemed off of the network and the associated configuration is triggered. Check `app/server/config_examples/home-hooks.ts` for an example. Through the use of interfaces from other modules, other modules can easily be triggered.
+
+#### Cast
+
+The cast module works by casting the audio file returned by google translate's text to speech engine to a cast-enabled device.
+
+#### Scripts
+
+Scripts work by simply executing the file at given path. Of course this could potentially be very unsafe so some safeguards exist when it comes to path alongside the regular authentication measures.
+
+#### Telegram bot
+
+The telegram bot works by first configuring a lot of possible telegram messages and their responses. For example sending "hi" returns "hello" and asking how late it is returns the time. These possible inputs are all set up through a big list of regular expressions. When a message is received, the list is checked for any matches and it executed the ones that are found.
+
+It can also keep track of a previous subject. For example saying "turn on the light" and then later saying "turn it off" will turn off that light. This works by storing the last subject and referring back to it.
+
+It also allows for simple chaining through common words. For example "turn off the light and turn on leds" would do both.
+
+#### Smart speaker integration
+
+Smart speaker integration works by providing an HTTP endpoint for almost everything that can be done. IFTTT hooks can then be set up to send a webrequest to one of these endpoints when a given string is matched. 
+
+#### Web apps
+
+The web apps use the [wc-lib](https://github.com/SanderRonde/wc-lib) webcomponent framework for the frontend and communicate with the server through the same endpoints as the smart speaker integration. 
+
+#### Touch screen
+
+The touch screen is based on a nextion touch screen and a controlling arduino. The arduino listens for any touch events from the touch screen and passes those on to the server, which then sets the keyval store's values. 
 
 ## License
 
