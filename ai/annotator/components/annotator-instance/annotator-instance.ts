@@ -283,11 +283,6 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 				this._markPressed(this.$.prepDownload);
 				this.prepDownload();
 				break;
-			// m
-			case 77:
-				this._markPressed(this.$.melody);
-				this.melodyStart();
-				break;
 			// p
 			case 80:
 				this._markPressed(this.$.pauseplay);
@@ -298,12 +293,18 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 				this._markPressed(this.$.clearMelody);
 				this.clearLastMelodies();
 				break;
+			// x
+			case 88:
+				this._markPressed(this.$.melody);
+				this.melodyStart();
+				break;
 		}
 	}
 
 	keyUp(e: KeyboardEvent) {
 		switch (e.keyCode) {
-			case 77:
+			// x
+			case 88:
 				this.melodyEnd();
 				break;
 		}

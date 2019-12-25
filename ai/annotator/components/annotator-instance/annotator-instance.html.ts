@@ -57,7 +57,7 @@ export const AnnotatorInstanceHTML = new TemplateFn<AnnotatorInstance>(function 
 			<div id="buttons" class="flexRow">
 				<button id="left" @click=${this.seekLeft} class="button">(left) <<</button>
 				<button id="beat" @click=${this.markBeat} class="button">Beat (Space)</button>
-				<button id="melody" @mousedown=${this.melodyStart} @mouseup=${this.melodyEnd} class="button">Melody (M)</button>
+				<button id="melody" @mousedown=${this.melodyStart} @mouseup=${this.melodyEnd} class="button">Melody (x)</button>
 				<button id="right" @click=${this.seekRight} class="button">>> (right)</button>
 				<button id="pauseplay" @click=${this.pausePlay} class="button">pause/play (p)</button>
 				<button id="prepDownload" @click=${this.prepDownload} class="button">Prep Download (d)</button>
