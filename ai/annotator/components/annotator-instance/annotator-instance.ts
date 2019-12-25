@@ -104,7 +104,7 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 		this.$.vid.currentTime += 10;
 	}
 
-	mark(type: 'melody' | 'beat', time = this.$.vid.currentTime, duration = 0.01) {
+	paint(type: 'melody' | 'beat', time = this.$.vid.currentTime, duration = 0.01) {
 		const canvas = type === 'melody' ? this.$.melodies : this.$.beats;
 		const zoomedCanvas = type === 'melody' ? this.$.zoomedMelodies : this.$.zoomedBeats;
 		const color = type === 'melody' ? '#3F51B5' : '#ff2110';
@@ -122,6 +122,10 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 		const zoomedEndX = type === 'beat' ?
 			1 : (((time + duration) * 10) - zoomedStartX);
 		zoomedCtx.fillRect(zoomedStartX, 0, zoomedEndX, canvas.height);
+	}
+
+	mark(type: 'melody' | 'beat', time = this.$.vid.currentTime, duration = 0.01) {
+		this.paint(type, time, duration);
 
 		if (type === 'melody') {
 			this.items.push({
@@ -141,6 +145,14 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 
 	markBeat(time?: number, duration?: number) {
 		this.mark('beat', time, duration);
+	}
+
+	paintMelody(time?: number, duration?: number) {
+		this.paint('melody', time, duration);
+	}
+
+	paintBeat(time?: number, duration?: number) {
+		this.paint('beat', time, duration);
 	}
 
 	private _markTimesInCanvas(canvas: HTMLCanvasElement, zoomedCanvas: HTMLCanvasElement) {
@@ -235,6 +247,9 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 
 		// Repaint
 		this._forcePaint(this.items);
+		
+		// Seek
+		this.seekLeft();
 	}
 
 	clearLastBeats() {
@@ -345,9 +360,9 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 		this._clearAll();
 		for (const entry of entries) {
 			if (entry.type === 'beat') {
-				this.markBeat(entry.time);
+				this.paintBeat(entry.time);
 			} else {
-				this.markMelody(entry.time, entry.duration);
+				this.paintMelody(entry.time, entry.duration);
 			}
 		}
 	}
@@ -364,7 +379,7 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 		// Fill based on associated JSON file's markings
 		if (this.props.filename === null || this.props.filename === 'null') return;
 		const file = await this._getJsonFile();
-		if (!file) return;
+		if (!file || file.status === 404) return;
 
 		const content = await file.json() as AnnotatedFile;
 		if (content.items) {
@@ -381,45 +396,43 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 	private _boundPaint = this._paintTime.bind(this);
 	private _paintTime() {
 		const vid = this.$.vid;
-		if (vid) {
-			if (!vid.paused) {
-				const canvas = this.$.time;
-				const zoomedCanvas = this.$.zoomedTime;
-				const ctx = canvas.getContext('2d')!;
-				const zoomedCtx = zoomedCanvas.getContext('2d')!;
-				zoomedCtx.fillStyle = ctx.fillStyle = '#fff';
-				zoomedCtx.clearRect(0, 0, canvas.width, canvas.height);
-				ctx.clearRect(0, 0, canvas.width, canvas.height);
+		if (vid && !vid.paused) {
+			const canvas = this.$.time;
+			const zoomedCanvas = this.$.zoomedTime;
+			const ctx = canvas.getContext('2d')!;
+			const zoomedCtx = zoomedCanvas.getContext('2d')!;
+			zoomedCtx.fillStyle = ctx.fillStyle = '#fff';
+			zoomedCtx.clearRect(0, 0, canvas.width, canvas.height);
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-				// Paint zoomed range
-				const midTime = Math.max(Math.min(vid.currentTime, vid.duration - 50), 50);
-				const startTime = midTime - 50;
-				const endTime = midTime + 50;
+			// Paint zoomed range
+			const midTime = Math.max(Math.min(vid.currentTime, vid.duration - 50), 50);
+			const startTime = midTime - 50;
+			const endTime = midTime + 50;
 
-				const startX = canvas.width * (startTime / vid.duration) - 1;
-				const endX = canvas.width * (endTime / vid.duration) - 1;
-				ctx.fillRect(startX, 0, 2, canvas.height);
-				ctx.fillStyle = '#242424';
-				ctx.fillRect(startX + 2, 0, (endX - startX) - 2, canvas.height);
-				ctx.fillStyle = '#fff';
-				ctx.fillRect(endX, 0, 2, canvas.height);
+			const startX = canvas.width * (startTime / vid.duration) - 1;
+			const endX = canvas.width * (endTime / vid.duration) - 1;
+			ctx.fillRect(startX, 0, 2, canvas.height);
+			ctx.fillStyle = '#242424';
+			ctx.fillRect(startX + 2, 0, (endX - startX) - 2, canvas.height);
+			ctx.fillStyle = '#fff';
+			ctx.fillRect(endX, 0, 2, canvas.height);
 
-				// Paint time dot
-				const percentage = vid.currentTime / vid.duration;
-				ctx.beginPath();
-				ctx.arc(percentage * canvas.width, canvas.height / 2, 15, 0, 2 * Math.PI);
-				ctx.fill();
-				ctx.stroke();
+			// Paint time dot
+			const percentage = vid.currentTime / vid.duration;
+			ctx.beginPath();
+			ctx.arc(percentage * canvas.width, canvas.height / 2, 15, 0, 2 * Math.PI);
+			ctx.fill();
+			ctx.stroke();
 
-				// Paint zoomed time dot
-				zoomedCtx.beginPath();
-				zoomedCtx.arc(vid.currentTime * 10, canvas.height / 2, 15, 0, 2 * Math.PI);
-				zoomedCtx.fill();
-				zoomedCtx.stroke();
+			// Paint zoomed time dot
+			zoomedCtx.beginPath();
+			zoomedCtx.arc(vid.currentTime * 10, canvas.height / 2, 15, 0, 2 * Math.PI);
+			zoomedCtx.fill();
+			zoomedCtx.stroke();
 
-				// Move the range
-				this.$.zoomedTimeline.style.transform = `translateX(-${Math.round(this._secPx * startTime)}px)`;
-			}
+			// Move the range
+			this.$.zoomedTimeline.style.transform = `translateX(-${Math.round(this._secPx * startTime)}px)`;
 		}
 		window.requestAnimationFrame(this._boundPaint);
 	}
