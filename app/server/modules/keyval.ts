@@ -452,7 +452,7 @@ export namespace KeyVal {
 				});
 				this._port.on('error', (e) => {
 					log(getTime(), chalk.red('Failed to connect to screen', e));
-				});;
+				});
 
 				//@ts-ignore
 				this._port.pipe(this._parser);
