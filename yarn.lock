@@ -847,10 +847,10 @@ has@^1.0.3:
   dependencies:
     function-bind "^1.1.1"
 
-html-typings@^1.1.3:
-  version "1.1.3"
-  resolved "https://registry.yarnpkg.com/html-typings/-/html-typings-1.1.3.tgz#40bc5faae5d98436298c905be130688606fd2bd5"
-  integrity sha512-QSRSf6Yk8unyHRVEOYMwc9xUOi0YdD/2/AHeENnYXHP9FUoPf59dxOO0Mwhmzu8O/60otvuWIahS6KjW0JU+zQ==
+html-typings@^1.1.4:
+  version "1.1.4"
+  resolved "https://registry.yarnpkg.com/html-typings/-/html-typings-1.1.4.tgz#e2d54106610a7c1a0352b2a40c187f3310a4b9fb"
+  integrity sha512-M+R6UKYoeyBEHIYoligd6UDFd3RDa/1kqtIye+YYdC/2WYLjLcIPEz1AMXmj0FViz9gTAlOC8gHbt8JMKEtGWg==
   dependencies:
     argparse "^1.0.9"
     gaze "^1.1.2"
