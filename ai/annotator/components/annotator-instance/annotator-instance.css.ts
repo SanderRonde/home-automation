@@ -72,19 +72,26 @@ export const AnnotatorInstanceCSS = new TemplateFn<AnnotatorInstance>(function (
 			width: 100%;
 		}
 
-		#timelinePaddingLeft {
-			width: 153px;
+		#zoomedTimelineContainer {
+			margin-bottom: 5px;
+			width: 100%;
+			background-color: #686868;
+			overflow-x: hidden;
 		}
 
-		#timelinePaddingRight {
-			width: 110px;
-		}
-
-		#beats, #melodies {
+		#beats, #melodies, #zoomedBeats, #zoomedMelodies {
 			height: 50px;
 		}
 
-		#times {
+		#time, #zoomedTime {
+			height: 30px;
+		}
+
+		#zoomedText, #text {
+			height: 30px;
+		}
+
+		#times, #zoomedTimes {
 			height: 10px;
 		}
 
@@ -98,6 +105,10 @@ export const AnnotatorInstanceCSS = new TemplateFn<AnnotatorInstance>(function (
 
 		.timelineFill {
 			height: 5px;
+		}
+
+		#zoomedTimeline {
+			will-change: transform;
 		}
 
 	</style>`
