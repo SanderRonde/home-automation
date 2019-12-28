@@ -227,6 +227,20 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 		this._melody = null;
 	}
 
+	markStart() {
+		if (this.markType === 'melody') {
+			this.melodyStart();
+		} else {
+			this.markBeat();
+		}
+	}
+
+	markEnd() {
+		if (this.markType === 'melody') {
+			this.melodyEnd();
+		}
+	}
+
 	prepDownload() {
 		this.$.download.href = `data:text/plain;charset=utf-8,${
 			encodeURIComponent(JSON.stringify({
@@ -239,10 +253,15 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 			}`;
 	}
 
-	clearLast(type: 'beat'|'melody') {
+	get markType() {
+		return this.$.markMode.checked ?
+			'melody' : 'beat';
+	}
+
+	clearLast() {
 		const time = this.$.vid.currentTime;
 		this.items = this.items.filter((item) => {
-			return item.time < (time - 10) || item.type !== type;
+			return item.time < (time - 10) || item.type !== this.markType;
 		});
 
 		// Repaint
@@ -252,12 +271,13 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 		this.seekLeft();
 	}
 
-	clearLastBeats() {
-		this.clearLast('beat');
-	}
+	undo() {
+		const last = this.items.filter(i => i.type === this.markType).pop();
 
-	clearLastMelodies() {
-		this.clearLast('melody');
+		this.items = this.items.filter(i => i !== last);
+
+		// Repaint
+		this._forcePaint(this.items);
 	}
 
 	private _pressed: HTMLButtonElement|null = null;
@@ -286,12 +306,12 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 			// space
 			case 32:
 				this._markPressed(this.$.beat);
-				this.markBeat();
+				this.markStart();
 				break;
 			// c
 			case 67:
 				this._markPressed(this.$.clearBeat);
-				this.clearLastBeats();
+				this.clearLast();
 				break;
 			// d
 			case 68:
@@ -303,24 +323,19 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 				this._markPressed(this.$.pauseplay);
 				this.pausePlay();
 				break;
-			// v
-			case 86:
-				this._markPressed(this.$.clearMelody);
-				this.clearLastMelodies();
-				break;
-			// x
-			case 88:
-				this._markPressed(this.$.melody);
-				this.melodyStart();
+			// u
+			case 85:
+				this._markPressed(this.$.undo);
+				this.undo();
 				break;
 		}
 	}
 
 	keyUp(e: KeyboardEvent) {
 		switch (e.keyCode) {
-			// x
-			case 88:
-				this.melodyEnd();
+			// space
+			case 32:
+				this.markEnd();
 				break;
 		}
 		this._release();

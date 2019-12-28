@@ -55,14 +55,17 @@ export const AnnotatorInstanceHTML = new TemplateFn<AnnotatorInstance>(function 
 				</div>
 			</div>
 			<div id="buttons" class="flexRow">
+				<div class="button">
+					<label for="markMode">Melody Mode</label>
+					<input type="checkbox" id="markMode">
+				</div>
 				<button id="left" @click=${this.seekLeft} class="button">(left) <<</button>
-				<button id="beat" @click=${this.markBeat} class="button">Beat (Space)</button>
-				<button id="melody" @mousedown=${this.melodyStart} @mouseup=${this.melodyEnd} class="button">Melody (x)</button>
+				<button id="beat" @click=${this.markBeat} class="button">Mark (Space)</button>
 				<button id="right" @click=${this.seekRight} class="button">>> (right)</button>
 				<button id="pauseplay" @click=${this.pausePlay} class="button">pause/play (p)</button>
 				<button id="prepDownload" @click=${this.prepDownload} class="button">Prep Download (d)</button>
-				<button id="clearBeat" @click=${this.clearLastBeats} class="button">Clear last beats (c)</button>
-				<button id="clearMelody" @click=${this.clearLastMelodies} class="button">Clear last melodies (v)</button>
+				<button id="clearBeat" @click=${this.clearLast} class="button">Clear last 10s (c)</button>
+				<button id="undo" @click=${this.undo} class="button">Undo last (u)</button>
 				<a id="download" class="button">Download</a>
 			</div>
 		</div>
