@@ -1,6 +1,8 @@
 import { errorHandle, requireParams, authCookie, authAll, upgradeToHTTPS } from "../lib/decorators";
 import { remoteControlHTML } from "../templates/remote-control-template";
-import { attachMessage, ResDummy } from "../lib/logger";
+import { attachMessage, ResDummy, log, getTime } from "../lib/logger";
+import telnet_client, * as TelnetClient from "telnet-client";
+import { TELNET_IPS_FILE } from "../lib/constants";
 import { BotState } from "../lib/bot-state";
 import { AppWrapper } from "../lib/routes";
 import { ResponseLike } from "./multi";
@@ -8,6 +10,8 @@ import { WSWrapper } from "../lib/ws";
 import { Bot as _Bot } from './bot';
 import * as express from "express";
 import { Auth } from "../lib/auth";
+import * as fs from 'fs-extra';
+import chalk from 'chalk';
 
 export namespace RemoteControl {
 	type Commands = {
@@ -127,7 +131,7 @@ export namespace RemoteControl {
 			any: true;
 			key?: string;
 		}) & {
-			listener: (command: Commands, logObj: any) => void;
+			listener: (command: Commands, logObj: any) => Promise<void>|void;
 			once: boolean;
 		}> = new Map();
 		let _lastIndex: number = 0;
@@ -152,12 +156,12 @@ export namespace RemoteControl {
 			_listeners.delete(index);
 		}
 
-		export function update(command: Commands, logObj: any) {
+		export async function update(command: Commands, logObj: any) {
 			let updated: number = 0;
 			const updatedKeyParts = command['action'].split('.');
 
 			for (const [index, { any, key: listenerKey, listener, once }] of _listeners) {
-				if (any) {
+				if (!any) {
 					const listenerParts = listenerKey!.split('.');
 					let next: boolean = false;
 					for (let i = 0; i < Math.min(updatedKeyParts.length, listenerParts.length); i++) {
@@ -169,7 +173,7 @@ export namespace RemoteControl {
 					if (next) continue;
 				}
 
-				listener(command, logObj);
+				await listener(command, logObj);
 				updated++;
 				if (once) {
 					_listeners.delete(index);
@@ -253,13 +257,15 @@ export namespace RemoteControl {
 		export class Handler {
 			@errorHandle
 			@authAll
-			public static play(res: ResponseLike, { }: {
+			public static async play(res: ResponseLike, { }: {
 				auth?: string;
 			}) {
 				const msg = attachMessage(res, `Command: "play"`);
-				GetSetListener.update({
+				console.log('playing');
+				await GetSetListener.update({
 					action: 'play'
 				}, attachMessage(msg, "Updates"));
+				console.log('post-update');
 				res.status(200);
 				res.end();
 			}
@@ -368,6 +374,112 @@ export namespace RemoteControl {
 	}
 
 	export namespace Routing {
+		export namespace Telnet {
+			let TELNET_IPS: [string, string, string][]|null;
+			const connections: Map<string, {
+				host: string;
+				conn: telnet_client;
+			}> = new Map();
+
+			async function* getClients() {
+				const preConnectVals = connections.values();
+
+				const prom = Promise.all(TELNET_IPS!.map(async ([ host, port, password ]) => {
+					if (connections.has(host)) {
+						return;
+					}
+
+					const conn = new (TelnetClient as unknown as typeof telnet_client)();
+					try {
+						await conn.connect({
+							host,
+							port: parseInt(port, 10),
+							password: password,
+							debug: true,
+							timeout: 1500,
+							shellPrompt: '> ',
+							username: '',
+							initialLFCR: true
+						});
+						log(getTime(), chalk.cyan(`[telnet]`),
+							chalk.bold(`Connected to host ${host}`));
+						connections.set(host, {
+							host,
+							conn
+						});
+						return {
+							host, conn
+						};
+					} catch (err) {
+						console.log('failed to connect');
+						return;
+					}
+				}));
+
+				for (const client of preConnectVals) {
+					yield client;
+				}
+
+				for (const newConnection of await prom) {
+					if (newConnection) {
+						yield newConnection;
+					}
+				}
+			}
+
+			async function executeTelnetCommand(conn: telnet_client, command: Commands) {
+				switch (command.action) {
+					case 'close':
+						return conn.send('quit');
+					case 'pause':
+						return conn.send('pause');
+					case 'play':
+						return conn.send('play');
+					case 'playpause':
+						const isPlaying = await conn.send('is_playing');
+						return conn.send(isPlaying === '1' ? 'pause' : 'play');
+					case 'setVolume':
+						return conn.send(`volume ${command.amount * 2.56}`);
+					case 'volumeUp':
+						const vol1 = parseInt(await conn.send('volume', {
+							waitfor: /\d+/
+						}), 10);
+						return conn.send(`volume ${Math.min(320, vol1 + (command.amount || 10) * 2.56)}`)
+					case 'volumeDown':
+						const vol2 = parseInt(await conn.send('volume', {
+							waitfor: /\d+/
+						}), 10);
+						return conn.send(`volume ${Math.max(0, vol2 - (command.amount || 10) * 2.56)}`)
+				}
+			}
+
+			export async function sendMessage(command: Commands, logObj: any) {
+				const gen = getClients();
+				let next: IteratorResult<{
+					host: string;
+					conn: telnet_client;
+				}, void>|null = null;
+				while ((next = await gen.next()) && !next.done) {
+					(async () => {
+						try {
+							attachMessage(logObj, `Executing telnet command: ${JSON.stringify(command)} on host ${next.value.host}`);
+							await executeTelnetCommand(next.value.conn, command);
+						} catch(e) {
+							attachMessage(logObj, `Failed Executing telnet command: ${JSON.stringify(command)} on host ${next.value.host}`);
+							// Remove connection
+							connections.delete(next.value.host);
+						}
+					})();
+				}
+			}
+
+			(async () => {
+				TELNET_IPS = (await fs.readFile(TELNET_IPS_FILE, {
+					encoding: 'utf8'
+				})).split("\n").filter(l => l.length).map(l => l.split(':')) as [string, string, string][];
+			})();
+		}
+
 		export async function init({ 
 			app, randomNum, ws
 		}: { 
@@ -420,6 +532,12 @@ export namespace RemoteControl {
 						});
 					}
 				});
+			});
+
+			// Update any VLC telnet instances on change
+			GetSetListener.listenAny(async (command, logObj) => {
+				attachMessage(logObj, `Sending vlc telnet remote control message`);
+				await Telnet.sendMessage(command, logObj);
 			});
 
 			app.all('/remote-control', async (req, res) => {

@@ -8,6 +8,7 @@ export const DB_FOLDER = path.join(ROOT, 'database');
 export const SECRETS_FOLDER = path.join(ROOT, 'secrets');
 export const AUTH_SECRET_FILE = path.join(SECRETS_FOLDER, 'auth.txt');
 export const BOT_SECRET_FILE = path.join(SECRETS_FOLDER, 'bot.txt');
+export const TELNET_IPS_FILE = path.join(SECRETS_FOLDER, "telnet-ips.txt");
 
 // Logging
 export const IP_LOG_VERSION: 'ipv4'|'ipv6' = 'ipv6';
