@@ -216,7 +216,7 @@ export class WSSimulator {
 		this._onRequests.push({
 			async accept(req: express.Request, res: express.Response) {
 				if (req.path === route) {
-					if (authenticate && !(await __this._authenticate(res, {...req.params, ...req.body}))) {
+					if (authenticate && !(await __this._authenticate(res, {...req.params, ...req.body, cookies: req.cookies}))) {
 						return ACCEPT_STATE.REJECTED;
 					}
 					return ACCEPT_STATE.ACCEPTED;
@@ -248,7 +248,8 @@ export class WSSimulator {
 
 type WSHandler = (args: {
 	send: (message: string) => void,
-	addListener: (listener: (message: string) => void) => void
+	addListener: (listener: (message: string) => void) => void;
+	onDead(handler: () => void): void;
 }) => void;
 
 export class WSWrapper {
@@ -276,12 +277,19 @@ export class WSWrapper {
 
 				handler({
 					send(message: string) {
-						ws.send(message);
+						ws.send(message, (err) => {
+							if (err) {
+								ws.emit('close');
+							}
+						});
 					},
 					addListener(messageListener) {
 						ws.on('message', (data) => {
 							messageListener(data.toString());
 						});
+					},
+					onDead(handler) {
+						ws.addEventListener('close', handler);
 					}
 				});
 			});

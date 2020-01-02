@@ -1,6 +1,6 @@
 import { SCREEN_DEVICE_NAME, MAIN_LIGHTS, COMMON_SWITCH_MAPPINGS } from "../lib/constants";
+import { errorHandle, requireParams, auth, authCookie, authAll } from "../lib/decorators";
 import { attachMessage, getLogLevel, ResDummy, getTime, log } from "../lib/logger";
-import { errorHandle, requireParams, auth, authCookie } from "../lib/decorators";
 import * as ReadLine from '@serialport/parser-readline';
 import { WSSimulator, WSSimInstance } from "../lib/ws";
 import { BotState } from "../lib/bot-state";
@@ -370,7 +370,7 @@ export namespace KeyVal {
 
 			@errorHandle
 			@requireParams('key', 'value')
-			@auth
+			@authAll
 			public async set(res: ResponseLike, { key, value }: {
 				key: string;
 				value: string;
@@ -387,7 +387,7 @@ export namespace KeyVal {
 			}
 
 			@errorHandle
-			@auth
+			@authAll
 			public async all(res: ResponseLike, { force = false }: {
 				force?: boolean;
 			}) {
@@ -503,22 +503,22 @@ export namespace KeyVal {
 			await External.Handler.init({ db, apiHandler });
 
 			app.post('/keyval/all', async (req, res) => {
-				await apiHandler.all(res, {...req.params, ...req.body});
+				await apiHandler.all(res, {...req.params, ...req.body, cookies: req.cookies});
 			});
 			app.post('/keyval/long/:key', async (req, res) => {
-				await apiHandler.getLongPoll(res, {...req.params, ...req.body});
+				await apiHandler.getLongPoll(res, {...req.params, ...req.body, cookies: req.cookies});
 			});
 			app.get('/keyval/long/:maxtime/:auth/:key/:expected', async (req, res) => {
-				await apiHandler.getLongPoll(res, {...req.params, ...req.body});
+				await apiHandler.getLongPoll(res, {...req.params, ...req.body, cookies: req.cookies});
 			});
 			app.post('/keyval/:key', async (req, res) => {
-				await apiHandler.get(res, {...req.params, ...req.body});
+				await apiHandler.get(res, {...req.params, ...req.body, cookies: req.cookies});
 			});
 			app.post('/keyval/toggle/:key', async (req, res) => {
-				await apiHandler.toggle(res, {...req.params, ...req.body});
+				await apiHandler.toggle(res, {...req.params, ...req.body, cookies: req.cookies});
 			});
 			app.post('/keyval/:key/:value', async (req, res) => {
-				await apiHandler.set(res, {...req.params, ...req.body});
+				await apiHandler.set(res, {...req.params, ...req.body, cookies: req.cookies});
 			});
 
 			websocket.all('/keyval/websocket', async (instance: WSSimInstance<WSMessages>) => {

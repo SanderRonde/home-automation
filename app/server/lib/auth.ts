@@ -1,7 +1,6 @@
 import { AUTH_SECRET_FILE, BOT_SECRET_FILE } from './constants';
 import { attachMessage } from './logger';
 import { AppWrapper } from './routes';
-import * as express from 'express';
 import { Config } from '../app';
 import * as fs from 'fs-extra';
 import chalk from 'chalk';
@@ -107,7 +106,11 @@ export namespace Auth {
 			return await ClientSecret.getClientSecret(parsed[0]) === parsed[1];
 		}
 
-		export async function checkCookie(req: express.Request) {
+		export async function checkCookie(req: { 
+			cookies: {
+				[key: string]: string;
+			}
+		}) {
 			return req.cookies && req.cookies['key'] && await verifyCookie(req.cookies['key']);
 		}
 	}

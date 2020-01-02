@@ -455,25 +455,25 @@ export namespace Cast {
 			await External.Handler.init();
 
 			app.get('/cast/:auth/stop', async (req, res) => {
-				await API.Handler.stop(res, {...req.params, ...req.body});
+				await API.Handler.stop(res, {...req.params, ...req.body, cookies: req.cookies});
 			});
 			app.post('/cast/stop', async (req, res) => {
-				await API.Handler.stop(res, {...req.params, ...req.body});
+				await API.Handler.stop(res, {...req.params, ...req.body, cookies: req.cookies});
 			});
 			app.get('/cast/:auth/cast/:url', async (req, res) => {
-				await API.Handler.url(res, {...req.params, ...req.body});
+				await API.Handler.url(res, {...req.params, ...req.body, cookies: req.cookies});
 			});
 			app.post('/cast/cast/:url?', async (req, res) => {
-				await API.Handler.url(res, {...req.params, ...req.body});
+				await API.Handler.url(res, {...req.params, ...req.body, cookies: req.cookies});
 			});
 			app.get('/cast/:auth/say/:text/:lang?', async (req, res) => {
-				await API.Handler.say(res, {...req.params, ...req.body});
+				await API.Handler.say(res, {...req.params, ...req.body, cookies: req.cookies});
 			});
 			app.post('/cast/say/:text?/:lang?', async (req, res) => {
-				await API.Handler.say(res, {...req.params, ...req.body});
+				await API.Handler.say(res, {...req.params, ...req.body, cookies: req.cookies});
 			});
 			app.post('/cast/pasta/:pasta?', async (req, res) => {
-				await API.Handler.pasta(res, {...req.params, ...req.body});
+				await API.Handler.pasta(res, {...req.params, ...req.body, cookies: req.cookies});
 			})
 		}
 	}

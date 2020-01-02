@@ -2,9 +2,6 @@ import {
 	ConfigurableWebComponent, Props, PROP_TYPE, config, EventListenerObj
 } from "../../../../node_modules/wc-lib/build/es/wc-lib.js";
 import { MessageToast } from "../message-toast/message-toast.js";
-const AUTH = {
-	auth: btoa('***REMOVED***')
-};
 
 @config({
 	is: 'server-comm',
@@ -65,7 +62,8 @@ export abstract class ServerComm<ELS extends {
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify({...AUTH, ...postBody})
+				body: JSON.stringify({...postBody}),
+				credentials: 'include'
 			});
 			if (!response.ok) {
 				MessageToast.create({

@@ -1,4 +1,4 @@
-import { errorHandle, requireParams, auth } from "../lib/decorators";
+import { errorHandle, requireParams, authAll } from "../lib/decorators";
 import * as childProcess from 'child_process';
 import { attachMessage, ResDummy } from "../lib/logger";
 import { BotState } from '../lib/bot-state';
@@ -134,7 +134,7 @@ export namespace Script {
 		export class Handler {
 			@errorHandle
 			@requireParams('auth', 'name')
-			@auth
+			@authAll
 			public static async script(res: ResponseLike, params: {
 				auth?: string;
 				name: string;
@@ -175,7 +175,7 @@ export namespace Script {
 			config: Config; 
 		}) {
 			app.post('/script/:name', async (req, res, _next) => {
-				await API.Handler.script(res, {...req.params, ...req.body}, config);
+				await API.Handler.script(res, {...req.params, ...req.body, cookies: req.cookies}, config);
 			});
 		}
 	}

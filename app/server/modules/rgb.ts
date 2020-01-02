@@ -1,6 +1,6 @@
 import { SERIAL_MAX_ATTEMPTS, SERIAL_MSG_INTERVAL, LED_NAMES, NIGHTSTAND_COLOR, LED_DEVICE_NAME, MAGIC_LEDS, ARDUINO_LEDS, LED_IPS } from '../lib/constants';
 import { Discovery, Control, CustomMode, TransitionTypes, BuiltinPatterns } from 'magic-home';
-import { errorHandle, requireParams, auth, authCookie } from '../lib/decorators';
+import { errorHandle, requireParams, auth, authCookie, authAll } from '../lib/decorators';
 import { attachMessage, ResDummy, getTime, log } from '../lib/logger';
 import * as ReadLine from '@serialport/parser-readline';
 import { BotState } from '../lib/bot-state';
@@ -49,27 +49,32 @@ export class Color implements Color {
 }
 
 function restartSelf() {
-	// Find this program in the forever list
-	exec('sudo -u root su -c "forever list"', (err, stdout, stderr) => {
-		if (err) {
-			console.log('Failed to restart :(', stderr);
-			return;
-		}
-
-		const lines = stdout.split('\n');
-		for (const line of lines) {
-			if (line.indexOf('automation') !== -1) {
-				const index = line.split('[')[1].split(']')[0];
-
-				// Restart that (this) program
-				exec(`sudo -u root su -c "forever restart ${index}"`, (err, _stdout, stderr) => {
-					if (err) {
-						console.log('Failed to restart :(', stderr);
-						return;	
-					}
-				});
+	return new Promise((resolve) => {
+		// Find this program in the forever list
+		exec('sudo -u root su -c "forever list"', (err, stdout, stderr) => {
+			if (err) {
+				console.log('Failed to restart :(', stderr);
+				resolve();
+				return;
 			}
-		}
+
+			const lines = stdout.split('\n');
+			for (const line of lines) {
+				if (line.indexOf('automation') !== -1) {
+					const index = line.split('[')[1].split(']')[0];
+
+					// Restart that (this) program
+					exec(`sudo -u root su -c "forever restart ${index}"`, (err, _stdout, stderr) => {
+						if (err) {
+							console.log('Failed to restart :(', stderr);
+							resolve();
+							return;	
+						}
+						resolve();
+					});
+				}
+			}
+		});
 	});
 }
 
@@ -217,7 +222,7 @@ export namespace RGB {
 		const RESCAN_TIME = 1000 * 60;
 
 		export async function scanMagicHomeControllers(first: boolean = false) {
-			const scanTime = (first && process.argv.indexOf('--debug') > -1) ? 500 : 10000;
+			const scanTime = (first && process.argv.indexOf('--debug') > -1) ? 250 : 10000;
 			const clients = (await new Discovery().scan(scanTime)).map((client) => ({
 				control: new Control(client.address, {
 					wait_for_reply: false
@@ -812,7 +817,7 @@ export namespace RGB {
 
 			@errorHandle
 			@requireParams('red', 'green', 'blue')
-			@auth
+			@authAll
 			public static async setRGB(res: ResponseLike, { red, green, blue, intensity }: {
 				red: string;
 				green: string;
@@ -839,7 +844,7 @@ export namespace RGB {
 
 			@errorHandle
 			@requireParams('power')
-			@auth
+			@authAll
 			public static async setPower(res: ResponseLike, { power }: {
 				power: string;
 				auth?: string;
@@ -858,7 +863,7 @@ export namespace RGB {
 
 			@errorHandle
 			@requireParams('pattern')
-			@auth
+			@authAll
 			public static async runPattern(res: ResponseLike, { pattern: patternName, speed, transition }: {
 				pattern: CustomPattern;
 				speed?: number;
@@ -1976,12 +1981,17 @@ export namespace RGB {
 						this._port.write(data);
 						attempts++;
 						if (attempts >= SERIAL_MAX_ATTEMPTS) {
+							if (process.argv.indexOf('--debug') > -1) {
+								clearInterval(interval);
+								return;
+							}
+
 							pause = true;
 							this._port.close(async () => {
 								const res = await tryConnectToSerial();
 								if (!res || !res.port || !res.leds) {
 									console.log('Failed to connect to serial');
-									restartSelf();
+									await restartSelf();
 									this._totalConnectTries++;
 
 									if (this._totalConnectTries > 10) {

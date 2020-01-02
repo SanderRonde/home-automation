@@ -1,4 +1,4 @@
-import { errorHandle, authCookie, requireParams, auth } from '../lib/decorators';
+import { errorHandle, authCookie, requireParams, auth, authAll } from '../lib/decorators';
 import { attachMessage, logFixture, getTime, log, ResDummy } from '../lib/logger';
 import { BotState } from '../lib/bot-state';
 import { AppWrapper } from "../lib/routes";
@@ -452,7 +452,7 @@ export namespace HomeDetector {
 			}
 
 			@errorHandle
-			@auth
+			@authAll
 			public async getAll(res: ResponseLike, _params: {
 				auth: string;
 			}, extended: boolean = false) {
@@ -560,13 +560,13 @@ export namespace HomeDetector {
 			Bot.Bot.init({ apiHandler, detector });
 
 			app.post('/home-detector/all', async (req, res) => {
-				await apiHandler.getAll(res, {...req.params, ...req.body});
+				await apiHandler.getAll(res, {...req.params, ...req.body, cookies: req.cookies});
 			});
 			app.post('/home-detector/all/e', async (req, res) => {
-				await apiHandler.getAll(res, {...req.params, ...req.body}, true);
+				await apiHandler.getAll(res, {...req.params, ...req.body, cookies: req.cookies}, true);
 			});
 			app.post('/home-detector/:name', async (req, res) => {
-				await apiHandler.get(res, {...req.params, ...req.body});
+				await apiHandler.get(res, {...req.params, ...req.body, cookies: req.cookies});
 			});
 
 			app.all([
