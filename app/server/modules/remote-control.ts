@@ -1,4 +1,4 @@
-import { errorHandle, requireParams, authCookie, authAll } from "../lib/decorators";
+import { errorHandle, requireParams, authCookie, authAll, upgradeToHTTPS } from "../lib/decorators";
 import { remoteControlHTML } from "../templates/remote-control-template";
 import { attachMessage, ResDummy } from "../lib/logger";
 import { BotState } from "../lib/bot-state";
@@ -357,6 +357,7 @@ export namespace RemoteControl {
 
 			@errorHandle
 			@authCookie
+			@upgradeToHTTPS
 			public async index(res: ResponseLike, _req: express.Request) {
 				res.status(200);
 				res.contentType('.html');

@@ -1,5 +1,5 @@
+import { errorHandle, requireParams, auth, authCookie, authAll, upgradeToHTTPS } from "../lib/decorators";
 import { SCREEN_DEVICE_NAME, MAIN_LIGHTS, COMMON_SWITCH_MAPPINGS } from "../lib/constants";
-import { errorHandle, requireParams, auth, authCookie, authAll } from "../lib/decorators";
 import { attachMessage, getLogLevel, ResDummy, getTime, log } from "../lib/logger";
 import * as ReadLine from '@serialport/parser-readline';
 import { WSSimulator, WSSimInstance } from "../lib/ws";
@@ -427,6 +427,7 @@ export namespace KeyVal {
 			
 			@errorHandle
 			@authCookie
+			@upgradeToHTTPS
 			public async index(res: ResponseLike, _req: express.Request) {
 				res.status(200);
 				res.contentType('.html');

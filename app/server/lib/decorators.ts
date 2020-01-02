@@ -96,3 +96,28 @@ export function errorHandle(_target: any, _propertyKey: string, descriptor: Prop
 		}
 	}
 }
+
+export function upgradeToHTTPS(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
+	const original = descriptor.value;
+	descriptor.value = async function (res: express.Response, req: express.Request, ...args: any[]) {
+		const protocol = (() => {
+			if ('x-forwarded-proto' in req.headers) {
+				// Should only be used if the proxy is trusted but mine is
+				const proto = req.headers['x-forwarded-proto'];
+				if (Array.isArray(proto)) {
+					return proto[0];
+				} else if (typeof proto === 'string') {
+					return proto.split(',')[0];
+				}
+			}
+			return req.protocol;
+		})();
+
+		if (protocol === 'http') {
+			res.redirect(`https://${req.headers.host}${req.url}`);
+			return;
+		}
+
+		return original.bind(this)(res, req, ...args);
+	}
+}

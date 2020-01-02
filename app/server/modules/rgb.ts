@@ -1,6 +1,6 @@
 import { SERIAL_MAX_ATTEMPTS, SERIAL_MSG_INTERVAL, LED_NAMES, NIGHTSTAND_COLOR, LED_DEVICE_NAME, MAGIC_LEDS, ARDUINO_LEDS, LED_IPS } from '../lib/constants';
+import { errorHandle, requireParams, auth, authCookie, authAll, upgradeToHTTPS } from '../lib/decorators';
 import { Discovery, Control, CustomMode, TransitionTypes, BuiltinPatterns } from 'magic-home';
-import { errorHandle, requireParams, auth, authCookie, authAll } from '../lib/decorators';
 import { attachMessage, ResDummy, getTime, log } from '../lib/logger';
 import * as ReadLine from '@serialport/parser-readline';
 import { BotState } from '../lib/bot-state';
@@ -1850,6 +1850,7 @@ export namespace RGB {
 		export class Handler {
 			@errorHandle
 			@authCookie
+			@upgradeToHTTPS
 			public static async index(res: ResponseLike, _req: express.Request, randomNum: number) {
 				res.status(200);
 				res.contentType('.html');

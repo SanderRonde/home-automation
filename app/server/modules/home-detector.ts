@@ -1,4 +1,4 @@
-import { errorHandle, authCookie, requireParams, auth, authAll } from '../lib/decorators';
+import { errorHandle, authCookie, requireParams, auth, authAll, upgradeToHTTPS } from '../lib/decorators';
 import { attachMessage, logFixture, getTime, log, ResDummy } from '../lib/logger';
 import { BotState } from '../lib/bot-state';
 import { AppWrapper } from "../lib/routes";
@@ -492,6 +492,7 @@ export namespace HomeDetector {
 			
 			@errorHandle
 			@authCookie
+			@upgradeToHTTPS
 			public async index(res: ResponseLike, _req: express.Request, extended: boolean = false) {
 				res.status(200);
 				res.contentType('.html');
