@@ -1,4 +1,5 @@
 import { logReq, attachMessage, ProgressLogger } from './logger';
+import { RemoteControl } from '../modules/remote-control';
 import { HomeDetector } from '../modules/home-detector';
 import { Multi, ResponseLike } from '../modules/multi';
 import * as pathToRegexp from 'path-to-regexp';
@@ -236,6 +237,10 @@ export async function initRoutes({
 		await (async () => {
 			await HomeDetector.Routing.init({ ...routeSettings, db: await new Database('home-detector.json').init() });
 			initLogger.increment('/home-detector');
+		})(),
+		await (async () => {
+			await RemoteControl.Routing.init({ ...routeSettings });
+			initLogger.increment('/remote-control');
 		})(),
 		await (async () => {
 			await Bot.Routing.init({ ...routeSettings, db: await new Database('bot.json').init() });
