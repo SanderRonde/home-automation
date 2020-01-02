@@ -267,7 +267,7 @@ export class WSWrapper {
 	handle(req: http.IncomingMessage, socket: Socket, head: any) {
 		const pathname = url.parse(req.url!).pathname;
 		for (const { route, handler } of this.routes) {
-			if (pathname !== route && (route.endsWith('/') || pathname === route + '/')) {
+			if (pathname !== route && (route.endsWith('/') || pathname !== route + '/')) {
 				continue;
 			}
 
