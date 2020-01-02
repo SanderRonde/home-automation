@@ -1,6 +1,6 @@
 # home-automation
 
-A locally hosted home automation server that automates various things. Currently consists of remote device control (lamps, speakers etc), rgb effects, a script runner and a detector for who's home. Tightly integrated to, for example, turn off the lights when I leave. Tied together by a web app, touch screen, telegram bot and smart device (Google Home) APIs, allowing for simple control from anywhere in any way. 
+A locally hosted home automation server that automates various things. Currently consists of remote device control (lamps, speakers etc), rgb effects, a script runner, a remote media controller and a detector for who's home. Tightly integrated to, for example, turn off the lights when I leave. Tied together by a web app, touch screen, telegram bot and smart device (Google Home) APIs, allowing for simple control from anywhere in any way. 
 
 A large part of this project consists of the smart controllers and rgb strips that are to be controlled. This part is done with microcontrollers, consisting of Arduinos (Uno and Due) and various boards with the ESP8266 WiFi chip. These are programmed in C/C++ to interface with the server. See [How it works](#How-it-works) for more info on that.
 
@@ -33,6 +33,10 @@ The cast module allows for the casting of things to cast-enabled devices. Since 
 #### Scripts
 
 The scripts module simply runs specified scripts in a pre-configured directory. This allows for shutting down the PC or booting it up when someone leaves or enters the house.
+
+#### Remote Control
+
+The remote control module allows remote control of media playing on a given computer. This, for example, allows you to tell your smart home device to pause the video playing on your PC (which could be connected to a projector or something). It allows for control of media playing websites (Youtube, Netflix and Plex) and applications (VLC through telnet).
 
 ### Controllers
 
@@ -81,6 +85,10 @@ The cast module works by casting the audio file returned by google translate's t
 #### Scripts
 
 Scripts work by simply executing the file at given path. Of course this could potentially be very unsafe so some safeguards exist when it comes to path alongside the regular authentication measures.
+
+#### Remote Control
+
+The remote control works by sending any commands it gets to two destinations. The first one being a list of listening webbrowsers (through the [playback-control browser extension](https://github.com/SanderRonde/playback-control)) and the second one being a preconfigured list of telnet clients. The telnet client expects a VLC instance to listen at the receiving end, executing all instructions. If noone is listening, messages are simply ignored, allowing other listening instances to pick them up. For more info about how the webbrowser version works check out the repo. 
 
 #### Telegram bot
 
