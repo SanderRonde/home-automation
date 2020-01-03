@@ -231,7 +231,7 @@ void wifi_setup() {
 	}
 
 	WiFi.mode(WIFI_AP_STA);
-	WiFiMulti.addAP("***REMOVED***", "***REMOVED***");
+	WiFiMulti.addAP("[removed]", "[removed]");
 }
 
 void setup() {
