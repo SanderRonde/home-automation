@@ -16,6 +16,7 @@ export namespace Temperature {
 		let mode: Mode = 'auto';
 		let lastTemp: number = -1;
 		let db: Database|null = null;
+		let lastLoggedTemp: number = -1;
 
 		export function setTarget(targetTemp: number) {
 			target = targetTemp;
@@ -41,8 +42,10 @@ export namespace Temperature {
 				db!.setVal('history', tempHistory);
 			}
 			
-			log(getTime(), chalk.cyan('[temp]',
-				chalk.bold(`Current temperature: ${temp}°`)));
+			if (Math.round(lastLoggedTemp) != Math.round(temp)) {
+				log(getTime(), chalk.cyan('[temp]',
+					chalk.bold(`Current temperature: ${temp}°`)));
+			}
 		}
 
 		export function getTarget() {
