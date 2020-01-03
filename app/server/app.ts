@@ -34,7 +34,7 @@ class WebServer {
 	private _server!: http.Server;
 
 	private _config: Config;
-	private _initLogger: ProgressLogger = new ProgressLogger('Server start', 17);
+	private _initLogger: ProgressLogger = new ProgressLogger('Server start', 18);
 
 	private _setConfigDefaults(config: PartialConfig): Config {
 		return {

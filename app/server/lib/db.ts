@@ -57,7 +57,7 @@ export class Database {
 		}
 	}
 
-	async setVal(key: string, val: string|number, noWrite: boolean = false) {
+	async setVal(key: string, val: any, noWrite: boolean = false) {
 		this._assertInitialized();
 
 		const parts = key.split('.');

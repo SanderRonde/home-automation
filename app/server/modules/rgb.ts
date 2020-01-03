@@ -1183,6 +1183,10 @@ export namespace RGB {
 					}
 				});
 			}
+
+			static x() {
+				
+			}
 		}
 	}
 

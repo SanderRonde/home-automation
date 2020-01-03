@@ -181,6 +181,11 @@ export function transferAttached(from: ResponseLike|AssociatedMessage|{}, to: Re
 }
 
 export function attachMessage(obj: ResponseLike|AssociatedMessage|{}, ...messages: string[]) {
+	if (typeof obj !== 'object' && typeof obj !== 'function') {
+		console.warn('Invalid log target', obj);
+		console.trace();
+		return {};
+	}
 	if (!msgMap.has(obj)) {
 		msgMap.set(obj, []);
 	}

@@ -238,6 +238,10 @@ export namespace RemoteControl {
 				});
 			});
 
+			constructor(_json?: JsonWebKey) {
+				super();
+			}
+
 			static async match(config: { 
 				logObj: any; 
 				text: string; 

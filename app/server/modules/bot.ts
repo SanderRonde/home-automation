@@ -1,6 +1,8 @@
 import { BOT_SECRET_FILE, TELEGRAM_IPS, TELEGRAM_API } from "../lib/constants";
 import { attachMessage, logOutgoingReq } from "../lib/logger";
+import { RemoteControl } from "./remote-control";
 import { HomeDetector } from "./home-detector";
+import { Temperature } from "./temperature";
 import { BotState } from '../lib/bot-state';
 import { AppWrapper } from "../lib/routes";
 import { ResponseLike } from "./multi";
@@ -101,20 +103,26 @@ export namespace Bot {
 				cast!: Cast.Bot.Bot;
 				keyval!: KeyVal.Bot.Bot;
 				script!: Script.Bot.Bot;
+				temperature!: Temperature.Bot.Bot;
 				homeDetector!: HomeDetector.Bot.Bot;
+				remoteControl!: RemoteControl.Bot.Bot;
 
 				constructor(json: {
 					rgb?: RGB.Bot.JSON;
 					cast?: Cast.Bot.JSON;
 					keyval?: KeyVal.Bot.JSON;
 					script?: Script.Bot.JSON;
+					temperature?: Temperature.Bot.JSON;
 					homeDetector?: HomeDetector.Bot.JSON;
+					remoteControl?: RemoteControl.Bot.JSON;
 				} = {}) {
 					this.rgb = new RGB.Bot.Bot(json.rgb);
 					this.cast = new Cast.Bot.Bot(json.cast);
 					this.keyval = new KeyVal.Bot.Bot(json.keyval);
 					this.script = new Script.Bot.Bot(json.script);
+					this.temperature = new Temperature.Bot.Bot(json.temperature);
 					this.homeDetector = new HomeDetector.Bot.Bot(json.homeDetector);
+					this.remoteControl = new RemoteControl.Bot.Bot(json.remoteControl);
 				}
 
 				toJSON() {
@@ -123,7 +131,9 @@ export namespace Bot {
 						cast: this.cast.toJSON(),
 						keyval: this.keyval.toJSON(),
 						script: this.script.toJSON(),
-						homeDetector: this.homeDetector.toJSON()
+						temperature: this.temperature.toJSON(),
+						homeDetector: this.homeDetector.toJSON(),
+						remoteControl: this.remoteControl.toJSON()
 					}
 				}
 			}

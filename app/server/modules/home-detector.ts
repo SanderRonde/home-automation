@@ -1,16 +1,20 @@
 import { errorHandle, authCookie, requireParams, auth, authAll, upgradeToHTTPS } from '../lib/decorators';
 import { attachMessage, logFixture, getTime, log, ResDummy } from '../lib/logger';
+import { RemoteControl } from './remote-control';
+import { Temperature } from './temperature';
 import { BotState } from '../lib/bot-state';
 import { AppWrapper } from "../lib/routes";
 import hooks from '../config/home-hooks';
 import config from '../config/home-ips';
 import { ResponseLike } from "./multi";
+import { arrToObj } from '../lib/util';
 import { Database } from "../lib/db";
 import { Bot as _Bot } from './bot';
 import express = require("express");
 import { Auth } from '../lib/auth';
 import { KeyVal } from './keyval';
 import { Script } from './script';
+import { Cast } from './cast';
 import * as ping from 'ping';
 import { RGB } from './rgb';
 import chalk from 'chalk';
@@ -20,11 +24,23 @@ const HOME_PING_INTERVAL = 60;
 const CHANGE_PING_INTERVAL = 1;
 const AWAY_MIN_CONSECUTIVE_PINGS = 20;
 
+const REGISTERED_MODULES = {
+	rgb: RGB,
+	cast: Cast,
+	keyval: KeyVal,
+	script: Script,
+	temperature: Temperature,
+	remoteControl: RemoteControl
+};
+
 export interface ModuleHookables {
-	rgb: RGB.External.Handler;
-	keyval: KeyVal.External.Handler;
-	script: Script.External.Handler;
-}
+	rgb: RGB.External.Handler,
+	cast: Cast.External.Handler,
+	keyval: KeyVal.External.Handler,
+	script: Script.External.Handler,
+	temperature: Temperature.External.Handler,
+	remoteControl: RemoteControl.External.Handler
+};
 
 export interface HomeHooks {
 	[key: string]: {
@@ -505,11 +521,9 @@ export namespace HomeDetector {
 
 	export namespace Hooks {
 		function createHookables(logObj: any): ModuleHookables {
-			return {
-				rgb: new RGB.External.Handler(logObj),
-				keyval: new KeyVal.External.Handler(logObj),
-				script: new Script.External.Handler(logObj),
-			}
+			return arrToObj(Object.keys(REGISTERED_MODULES).map((name: keyof typeof REGISTERED_MODULES) => {
+				return [name, new REGISTERED_MODULES[name].External.Handler(logObj)]
+			})) as unknown as ModuleHookables;
 		}
 
 		export async function handle(newState: HOME_STATE, name: string) {

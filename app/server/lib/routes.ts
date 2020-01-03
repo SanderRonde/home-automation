@@ -2,6 +2,7 @@ import { logReq, attachMessage, ProgressLogger } from './logger';
 import { RemoteControl } from '../modules/remote-control';
 import { HomeDetector } from '../modules/home-detector';
 import { Multi, ResponseLike } from '../modules/multi';
+import { Temperature } from '../modules/temperature';
 import * as pathToRegexp from 'path-to-regexp';
 import { WSSimulator, WSWrapper } from './ws';
 import * as cookieParser from 'cookie-parser';
@@ -245,6 +246,10 @@ export async function initRoutes({
 		await (async () => {
 			await Bot.Routing.init({ ...routeSettings, db: await new Database('bot.json').init() });
 			initLogger.increment('/bot');
+		})(),
+		await (async () => {
+			await Temperature.Routing.init({ ...routeSettings, db: await new Database('temp.json').init() });
+			initLogger.increment('/temperature');
 		})()
 	]);
 
