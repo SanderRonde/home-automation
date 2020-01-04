@@ -95,13 +95,13 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 	seekLeft() {
 		if (!this.$.vid) return;
 
-		this.$.vid.currentTime -= 10;
+		this.$.vid.currentTime -= 5;
 	}
 
 	seekRight() {
 		if (!this.$.vid) return;
 
-		this.$.vid.currentTime += 10;
+		this.$.vid.currentTime += 5;
 	}
 
 	paint(type: 'melody' | 'beat', time = this.$.vid.currentTime, duration = 0.01) {
