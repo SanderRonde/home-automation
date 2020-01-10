@@ -74,7 +74,8 @@ export class Database {
 			current = current[part];
 		}
 		if (typeof current !== 'object') return;
-		if (typeof current[parts[parts.length - 1]] === 'object') {
+		if (typeof current[parts[parts.length - 1]] === 'object' && 
+			typeof val === 'string' || typeof val === 'number') {
 			// Set every child of this object to that value
 			const final = current[parts[parts.length - 1]];
 			for (const child in final) {
