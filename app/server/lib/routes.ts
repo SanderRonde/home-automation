@@ -248,7 +248,7 @@ export async function initRoutes({
 			initLogger.increment('/bot');
 		})(),
 		await (async () => {
-			await Temperature.Routing.init({ ...routeSettings, db: await new Database('temp.json').init() });
+			await Temperature.Routing.init({ ...routeSettings, db: await new Database('temperature.json').init() });
 			initLogger.increment('/temperature');
 		})()
 	]);
