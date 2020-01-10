@@ -31,10 +31,10 @@ export namespace Temperature {
 
 			// Write temp to database
 			if (store) {
-				const tempHistory = db!.get('history', []) as {
+				const tempHistory = JSON.parse(JSON.stringify(db!.get('history', []) as {
 					date: number;
 					temp: number;
-				}[];
+				}[]));
 				tempHistory.push({
 					date: Date.now(),
 					temp: temp
@@ -44,7 +44,7 @@ export namespace Temperature {
 			
 			if (Math.round(lastLoggedTemp) != Math.round(temp)) {
 				log(getTime(), chalk.cyan('[temp]',
-					chalk.bold(`Current temperature: ${temp}°`)));
+					chalk.bold(`Current temperature: ${temp}Ã‚Â°`)));
 			}
 		}
 
