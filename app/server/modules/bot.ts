@@ -98,6 +98,7 @@ export namespace Bot {
 		}
 
 		export namespace StateKeeping {
+			// NEWBOT
 			export class ChatState {
 				rgb!: RGB.Bot.Bot;
 				cast!: Cast.Bot.Bot;
@@ -107,6 +108,7 @@ export namespace Bot {
 				homeDetector!: HomeDetector.Bot.Bot;
 				remoteControl!: RemoteControl.Bot.Bot;
 
+				// NEWBOT
 				constructor(json: {
 					rgb?: RGB.Bot.JSON;
 					cast?: Cast.Bot.JSON;
@@ -116,6 +118,7 @@ export namespace Bot {
 					homeDetector?: HomeDetector.Bot.JSON;
 					remoteControl?: RemoteControl.Bot.JSON;
 				} = {}) {
+					// NEWBOT
 					this.rgb = new RGB.Bot.Bot(json.rgb);
 					this.cast = new Cast.Bot.Bot(json.cast);
 					this.keyval = new KeyVal.Bot.Bot(json.keyval);
@@ -127,6 +130,7 @@ export namespace Bot {
 
 				toJSON() {
 					return {
+						// NEWBOT
 						rgb: this.rgb.toJSON(),
 						cast: this.cast.toJSON(),
 						keyval: this.keyval.toJSON(),
@@ -302,12 +306,16 @@ export namespace Bot {
 				message: Bot.TelegramMessage; 
 				state: Bot.Message.StateKeeping.ChatState; 
 			}): Promise<MatchResponse | undefined> {
+				// NEWBOT
 				return this._matchMatchables(config,
 					await this._matchSelf(config),
-					Cast.Bot.Bot,
-					HomeDetector.Bot.Bot,
-					KeyVal.Bot.Bot,
-					RGB.Bot.Bot);
+						Cast.Bot.Bot,
+						HomeDetector.Bot.Bot,
+						KeyVal.Bot.Bot,
+						RGB.Bot.Bot,
+						Script.Bot.Bot,
+						Temperature.Bot.Bot,
+						RemoteControl.Bot.Bot);
 			}
 
 			static async multiMatch({ logObj, text, message, state }: { 
@@ -489,12 +497,15 @@ export namespace Bot {
 	}
 
 	export function printCommands() {
+		// NEWBOT
 		const bots = [
 			RGB.Bot.Bot,
 			Cast.Bot.Bot,
 			KeyVal.Bot.Bot,
 			Script.Bot.Bot,
+			Temperature.Bot.Bot,
 			HomeDetector.Bot.Bot,
+			RemoteControl.Bot.Bot
 		]
 		log(`${chalk.bold('Available commands are')}:\n\n${bots.map((bot) => {
 			return `${Object.keys(bot.commands).map((cmd) => {
