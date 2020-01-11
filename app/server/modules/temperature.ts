@@ -8,6 +8,8 @@ import { Bot as _Bot } from './bot';
 import { Auth } from "../lib/auth";
 import chalk from 'chalk';
 
+const LOG_INTERVAL_SECS = 60;
+
 export namespace Temperature {
 	type Mode = 'on'|'off'|'auto';
 
@@ -16,6 +18,7 @@ export namespace Temperature {
 		let mode: Mode = 'auto';
 		let lastTemp: number = -1;
 		let db: Database|null = null;
+		let lastLogTime: number = 0;
 		let lastLoggedTemp: number = -1;
 
 		export function setTarget(targetTemp: number) {
@@ -26,7 +29,7 @@ export namespace Temperature {
 			mode = newMode;
 		}
 
-		export function setLastTemp(temp: number, store: boolean = true) {
+		export function setLastTemp(temp: number, store: boolean = true, doLog: boolean = true) {
 			lastTemp = temp;
 
 			// Write temp to database
@@ -42,9 +45,11 @@ export namespace Temperature {
 				db!.setVal('history', tempHistory);
 			}
 			
-			if (Math.round(lastLoggedTemp) != Math.round(temp)) {
-				log(getTime(), chalk.cyan('[temp]',
-					chalk.bold(`Current temperature: ${temp}Ã‚Â°`)));
+			if (doLog && Math.round(lastLoggedTemp) != Math.round(temp) && 
+				Date.now() - lastLogTime > (LOG_INTERVAL_SECS * 1000)) {
+					log(getTime(), chalk.cyan('[temp]',
+						chalk.bold(`Current temperature: ${temp}°`)));
+					lastLogTime = Date.now();
 			}
 		}
 
@@ -61,22 +66,23 @@ export namespace Temperature {
 		}
 
 		export function getHeaterState() {
-			if (mode === 'on') return 'on';
-			if (mode === 'off') return 'off';
+			if (mode !== 'auto') return mode;
 			if (lastTemp > target) {
-				return 'on';
+				return 'off';
 			}
-			return 'off';
+			return 'on';
 		}
 
 		export function init(database: Database) {
 			db = database;
 
 			const target = database.get('target', 20.0);
+			const prevMode = database.get('mode', 'auto');
 			const temp = database.get('temp', 20.0);
 
 			setTarget(target);
-			setLastTemp(temp, false);
+			setMode(prevMode);
+			setLastTemp(temp, false, false);
 		}
 	}
 
@@ -151,8 +157,6 @@ export namespace Temperature {
 		export class Bot extends BotState.Base {
 			static readonly commands = {
 				'/temp': 'Get the current temperature',
-				'/tempstate': 'Get the state of the heater',
-				'/tempmode': 'Get the mode of the heater',
 				'/heat': 'Start heating',
 				'/heatoff': 'Stop heating',
 				'/help_temperature': 'Print help commands for temperature'
@@ -174,21 +178,13 @@ export namespace Temperature {
 						]
 					});
 				});
-				mm('/tempstate', /what is the (temp|temperature|heater) state/, async ({ logObj }) => {
-					attachMessage(logObj, `Reporting heater state ${TempControl.getHeaterState()}`);
-					return `Heater is currently ${TempControl.getHeaterState()}`;
-				});
-				mm('/tempmode', /what is the (temp|temperature|heater) mode/, async ({ logObj }) => {
-					attachMessage(logObj, `Reporting heater mode ${TempControl.getMode()}`);
-					return `Heater mode is ${TempControl.getMode()}`;
+				mm('/heatoff', /stop heating/, /make it cold/, async ({ logObj }) => {
+					new External.Handler(attachMessage(logObj, 'Stopping heating')).setMode('off');
+					return 'Stopping heating';
 				});
 				mm('/heat', /start heating/, /make it hot/, /heat/, async ({ logObj }) => {
 					new External.Handler(attachMessage(logObj, 'Heating')).setMode('on');
 					return 'Heating';
-				});
-				mm('/heatoff', /stop heating/, /make it cold/, async ({ logObj }) => {
-					new External.Handler(attachMessage(logObj, 'Stopping heating')).setMode('off');
-					return 'Stopping heating';
 				});
 				mm(/set(?: temp(?:erature)?) target to ((\d+)(\.\d+)?)/, async ({ logObj, match }) => {	
 					const target = parseFloat(match[1]);
@@ -238,6 +234,7 @@ export namespace Temperature {
 			}) {
 				const oldMode = TempControl.getMode();
 				attachMessage(res, `Setting mode to ${mode} from ${oldMode}`);
+				TempControl.setMode(mode);
 				res.status(200);
 				res.end();
 			}
@@ -251,6 +248,7 @@ export namespace Temperature {
 			}) {
 				const oldTemp = TempControl.getTarget();
 				attachMessage(res, `Setting target temp to ${target} from ${oldTemp}`);
+				TempControl.setTarget(target);
 				res.status(200);
 				res.end();
 			}
@@ -311,7 +309,11 @@ export namespace Temperature {
 				// Set last temp
 				TempControl.setLastTemp(temp);
 				
-				res.write(TempControl.getHeaterState());
+				const advise = TempControl.getHeaterState();
+				attachMessage(
+					attachMessage(res, `Returning advise: "${advise}" for temp ${temp}°`),
+						`Heater mode: "${TempControl.getMode()}, target: ${TempControl.getTarget()}`);
+				res.write(advise);
 				res.status(200);
 				res.end();
 			});
