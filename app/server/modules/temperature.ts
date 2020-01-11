@@ -424,7 +424,7 @@ export namespace Temperature {
 					),
 					`Heater mode: "${TempControl.getMode()}, target: ${TempControl.getTarget()}`
 				);
-				res.write(advise);
+				res.write(`${advise} ${TempControl.getMode()}`);
 				res.status(200);
 				res.end();
 			});
