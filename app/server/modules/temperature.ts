@@ -22,10 +22,12 @@ export namespace Temperature {
 		let lastLoggedTemp: number = -1;
 
 		export function setTarget(targetTemp: number) {
+			db!.setVal('target', targetTemp);
 			target = targetTemp;
 		}
 
 		export function setMode(newMode: Mode) {
+			db!.setVal('mode', newMode);
 			mode = newMode;
 		}
 
@@ -51,6 +53,7 @@ export namespace Temperature {
 					temp: temp
 				});
 				db!.setVal('history', tempHistory);
+				db!.setVal('temp', temp);
 			}
 
 			if (
