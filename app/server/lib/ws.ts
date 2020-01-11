@@ -229,8 +229,8 @@ export class WSSimulator {
 				return true;
 			}
 			const [id, msgType, msgData] = req.body.split(' ');
-			if (!msgType || !msgData) {
-				res.status(400).write('Missing data');
+			if (!msgType) {
+				res.status(400).write('Missing type');
 				res.end();
 				return true;
 			}
@@ -242,6 +242,19 @@ export class WSSimulator {
 
 			if (!instanceIDs.has(parseInt(id, 10))) {
 				res.status(401).write('Unknown ID');
+				res.end();
+				return true;
+			}
+
+			if (msgType === 'ping') {
+				attachMessage(res, 'ping');
+				res.status(200).write('OK');
+				res.end();
+				return true;
+			}
+
+			if (!msgData) {
+				res.status(400).write('Missing data');
 				res.end();
 				return true;
 			}
