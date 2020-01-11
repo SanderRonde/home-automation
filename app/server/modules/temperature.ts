@@ -62,7 +62,7 @@ export namespace Temperature {
 					getTime(),
 					chalk.cyan(
 						'[temp]',
-						chalk.bold(`Current temperature: ${temp}Â°`)
+						chalk.bold(`Current temperature: ${temp}Ã‚Â°`)
 					)
 				);
 				lastLogTime = Date.now();
@@ -177,6 +177,7 @@ export namespace Temperature {
 				'/temp': 'Get the current temperature',
 				'/heat': 'Start heating',
 				'/heatoff': 'Stop heating',
+				'/heatauto': 'Set heat mode to auto',
 				'/help_temperature': 'Print help commands for temperature'
 			};
 
@@ -226,6 +227,12 @@ export namespace Temperature {
 							return 'Stopping heating';
 						}
 					);
+					mm('/heatauto', async ({ logObj }) => {
+						new External.Handler(
+							attachMessage(logObj, 'Set heat mode to auto')
+						).setMode('auto');
+						return 'Set heat mode to auto';
+					});
 					mm(
 						'/heat',
 						/start heating/,
@@ -236,6 +243,19 @@ export namespace Temperature {
 								attachMessage(logObj, 'Heating')
 							).setMode('on');
 							return 'Heating';
+						}
+					);
+					mm(
+						/set(?: temp(?:erature)?) mode to (\w+)/,
+						async ({ logObj, match }) => {
+							const mode = match[1];
+							if (['on', 'off', 'auto'].indexOf(mode) === -1) {
+								return 'Invalid mode';
+							}
+							new External.Handler(
+								attachMessage(logObj, `Setting mode to ${mode}`)
+							).setMode(mode as Mode);
+							return `Set mode to ${mode}`;
 						}
 					);
 					mm(
@@ -423,7 +443,7 @@ export namespace Temperature {
 				attachMessage(
 					attachMessage(
 						res,
-						`Returning advise: "${advise}" for temp ${temp}Â°`
+						`Returning advise: "${advise}" for temp ${temp}Ã‚Â°`
 					),
 					`Heater mode: "${TempControl.getMode()}, target: ${TempControl.getTarget()}`
 				);
