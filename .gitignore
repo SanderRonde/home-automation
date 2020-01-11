@@ -80,3 +80,4 @@ static/
 ai/files/
 ai/annotator/**/*.js
 app/server/config/**
+boards/ip_list.txt
