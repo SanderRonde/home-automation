@@ -166,7 +166,7 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 		const zoomedCtx = zoomedCanvas.getContext('2d')!;
 		zoomedCtx.fillStyle = '#fff';
 
-		for (let i = 0; i < this.props.length; i += 10) {
+		for (let i = 10; i < this.props.length; i += 10) {
 			zoomedCtx.fillRect(((10 * i)) - 1, 0, 2, canvas.height);
 		}
 	}
