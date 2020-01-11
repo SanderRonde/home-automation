@@ -1,4 +1,4 @@
-import { SERIAL_MAX_ATTEMPTS, SERIAL_MSG_INTERVAL, LED_NAMES, NIGHTSTAND_COLOR, LED_DEVICE_NAME, MAGIC_LEDS, ARDUINO_LEDS, LED_IPS } from '../lib/constants';
+import { SERIAL_MAX_ATTEMPTS, SERIAL_MSG_INTERVAL, LED_NAMES, NIGHTSTAND_COLOR, LED_DEVICE_NAME, MAGIC_LEDS, ARDUINO_LEDS, LED_IPS, WAKELIGHT_TIME } from '../lib/constants';
 import { errorHandle, requireParams, auth, authCookie, authAll, upgradeToHTTPS } from '../lib/decorators';
 import { Discovery, Control, CustomMode, TransitionTypes, BuiltinPatterns } from 'magic-home';
 import { attachMessage, ResDummy, getTime, log } from '../lib/logger';
@@ -2239,6 +2239,52 @@ export namespace RGB {
 						NIGHTSTAND_COLOR.b
 					);
 				} else if (value === '0') {
+					attachMessage(logObj, `Turned off`, chalk.bold(client.address));
+					return client.turnOff();
+				}
+				return Promise.resolve();
+			});
+
+			let wakelights: NodeJS.Timeout[] = [];
+			KeyVal.GetSetListener.addListener('room.leds.wakelight', async (value, logObj) => {
+				wakelights.forEach(w => clearInterval(w));
+				wakelights = [];
+
+				const client = Clients.getLed(LED_NAMES.BED_LEDS);
+				if (!client) return;
+				if (value === '1') {
+					attachMessage(attachMessage(logObj, `Fading in`, chalk.bold(client.address), `to color rgb(${
+						NIGHTSTAND_COLOR.r
+						}, ${
+						NIGHTSTAND_COLOR.g
+						}, ${
+						NIGHTSTAND_COLOR.b
+						})`), chalk.bgHex(API.colorToHex(NIGHTSTAND_COLOR))('   '));
+					
+					let count: number = 2;
+					const interval = setInterval(() => {
+						client.setColor(
+							NIGHTSTAND_COLOR.r,
+							NIGHTSTAND_COLOR.g,
+							NIGHTSTAND_COLOR.b,
+							count
+						);
+
+						if (count++ === 100) {
+							clearInterval(interval);
+							wakelights.splice(wakelights.indexOf(interval), 1);
+						}
+					}, WAKELIGHT_TIME / 100);
+					wakelights.push(interval);
+					client.setColor(
+						NIGHTSTAND_COLOR.r,
+						NIGHTSTAND_COLOR.g,
+						NIGHTSTAND_COLOR.b,
+						1
+					);
+				} else if (value === '0') {
+					wakelights.forEach(w => clearInterval(w));
+					wakelights = [];
 					attachMessage(logObj, `Turned off`, chalk.bold(client.address));
 					return client.turnOff();
 				}

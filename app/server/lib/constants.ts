@@ -56,6 +56,7 @@ export const NIGHTSTAND_COLOR: Color = {
 	g: 22,
 	b: 0
 };
+export const WAKELIGHT_TIME = 60 * 5 * 1000;
 
 // Keyval
 export const MAIN_LIGHTS = ['room.lights.ceiling']
