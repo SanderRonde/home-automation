@@ -28,7 +28,6 @@ export const JSONSwitchesCSS = new TemplateFn<JSONSwitches>(
 			<style>
 				#background {
 					width: 100vw;
-					max-width: 1000px;
 					height: 100vh;
 					background-color: rgb(70, 70, 70);
 					margin-left: auto;
