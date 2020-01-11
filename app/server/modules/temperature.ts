@@ -62,7 +62,7 @@ export namespace Temperature {
 					getTime(),
 					chalk.cyan(
 						'[temp]',
-						chalk.bold(`Current temperature: ${temp}°`)
+						chalk.bold(`Current temperature: ${temp}Â°`)
 					)
 				);
 				lastLogTime = Date.now();
@@ -200,7 +200,10 @@ export namespace Temperature {
 								contents: [
 									[
 										'Temp',
-										Math.round(TempControl.getLastTemp()) +
+										Math.round(
+											TempControl.getLastTemp() * 10
+										) /
+											10 +
 											''
 									],
 									[
@@ -420,7 +423,7 @@ export namespace Temperature {
 				attachMessage(
 					attachMessage(
 						res,
-						`Returning advise: "${advise}" for temp ${temp}°`
+						`Returning advise: "${advise}" for temp ${temp}Â°`
 					),
 					`Heater mode: "${TempControl.getMode()}, target: ${TempControl.getTarget()}`
 				);
