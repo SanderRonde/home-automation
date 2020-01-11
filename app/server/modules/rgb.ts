@@ -103,8 +103,8 @@ export namespace RGB {
 				super();
 			}
 
-			setColor(red: number, green: number, blue: number, _intensity?: number, callback?: (err: Error | null, success: boolean) => void): Promise<boolean> {
-				return this._control.setColor(red, green, blue, callback);
+			setColor(red: number, green: number, blue: number, intensity?: number, callback?: (err: Error | null, success: boolean) => void): Promise<boolean> {
+				return this._control.setColorWithBrightness(red, green, blue, intensity || 100, callback);
 			}
 			setColorAndWarmWhite(red: number, green: number, blue: number, ww: number, callback?: (err: Error | null, success: boolean) => void): Promise<boolean> {
 				return this._control.setColorAndWarmWhite(red, green, blue, ww, callback);
