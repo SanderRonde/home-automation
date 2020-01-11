@@ -23,7 +23,8 @@
     "watch:ai": "tsc -w -p ai/annotator/tsconfig.json",
     "html-typings": "html-typings -i ai/annotator/components/annotator-instance/annotator-instance.html.ts -o ai/annotator/components/annotator-instance/annotator-instance-querymap.d.ts -e",
     "compile": "npm run html-typings && npm run compile:server && npm run compile:client && npm run compile:ai && npm run bundle",
-    "watch": "tsc -w -p app/server/tsconfig.json"
+    "watch": "tsc -w -p app/server/tsconfig.json",
+    "pretty": "pretty-quick"
   },
   "devDependencies": {
     "@types/body-parser": "^1.17.0",
@@ -39,6 +40,8 @@
     "@types/serve-static": "^1.13.2",
     "@types/ws": "^6.0.3",
     "html-typings": "^1.1.4",
+    "prettier": "^1.19.1",
+    "pretty-quick": "^2.0.1",
     "rollup": "^1.20.3",
     "rollup-plugin-uglify-es": "^0.0.1",
     "typescript": "^3.7.1-rc"
