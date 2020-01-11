@@ -4,7 +4,7 @@ export const PASTAS: {
 		text: string;
 	};
 } = {
-	'key': {
+	key: {
 		lang: 'lang',
 		text: 'this is the text i want to be said'
 	}
@@ -13,5 +13,5 @@ export const PASTAS: {
 export const LOCAL_URLS: {
 	[key: string]: string;
 } = {
-	'file': 'http://www.example.com/somemp3file.mp3',
+	file: 'http://www.example.com/somemp3file.mp3'
 };

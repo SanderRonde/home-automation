@@ -1,4 +1,10 @@
-import { ComplexType, config, Props, ConfigurableWebComponent, PROP_TYPE } from '../../../../node_modules/wc-lib/build/es/wc-lib.js';
+import {
+	ComplexType,
+	config,
+	Props,
+	ConfigurableWebComponent,
+	PROP_TYPE
+} from '../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { AnnotatorInstance } from '../annotator-instance/annotator-instance.js';
 import { AnnotatorMainHTML } from './annotator-main.templates.js';
 
@@ -6,16 +12,14 @@ import { AnnotatorMainHTML } from './annotator-main.templates.js';
 	is: 'annotator-main',
 	html: AnnotatorMainHTML,
 	css: null,
-	dependencies: [
-		AnnotatorInstance
-	]
+	dependencies: [AnnotatorInstance]
 })
 export class AnnotatorMain extends ConfigurableWebComponent<{
 	selectors: {
 		IDS: {
 			select: HTMLSelectElement;
-		}
-	}
+		};
+	};
 }> {
 	props = Props.define(this, {
 		priv: {
@@ -37,7 +41,10 @@ export class AnnotatorMain extends ConfigurableWebComponent<{
 	}
 
 	public nextSong() {
-		this.props.selected = Math.min(this.props.selected + 1, this.props.fileNames.length);
+		this.props.selected = Math.min(
+			this.props.selected + 1,
+			this.props.fileNames.length
+		);
 	}
 
 	public onSelect() {
@@ -46,8 +53,12 @@ export class AnnotatorMain extends ConfigurableWebComponent<{
 
 	async firstRender() {
 		// Fetch all file names
-		this.props.fileNames = (await (await fetch(`${location.origin}/annotator/files`, {
-			method: 'POST'
-		})).json()).files;
+		this.props.fileNames = (
+			await (
+				await fetch(`${location.origin}/annotator/files`, {
+					method: 'POST'
+				})
+			).json()
+		).files;
 	}
 }

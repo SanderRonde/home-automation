@@ -1,4 +1,7 @@
-import { ConfigurableWebComponent, config } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
+import {
+	ConfigurableWebComponent,
+	config
+} from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { ColorControlsHTML } from './color-controls.html.js';
 import { ColorControlsCSS } from './color-controls.css.js';
 

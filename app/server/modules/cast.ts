@@ -12,19 +12,19 @@ import { Bot as _Bot } from './bot';
 import { Auth } from '../lib/auth';
 
 class DummyLog {
-	constructor (public componentName: string = 'castv2'){ };  
+	constructor(public componentName: string = 'castv2') {}
 
-	_addPrefix (firstArg?: any, ...args: any[]) {
+	_addPrefix(firstArg?: any, ...args: any[]) {
 		if (firstArg) {
-			return [`${this.componentName} - ${firstArg}`, ...args]
-		};
+			return [`${this.componentName} - ${firstArg}`, ...args];
+		}
 		return [];
 	}
 
-	error () {
+	error() {
 		console.error.apply(console, this._addPrefix(...arguments));
 	}
-	warn () {}  
+	warn() {}
 	info() {}
 	debug() {}
 }
@@ -68,9 +68,10 @@ export namespace Cast {
 
 		export function tts(text: string, lang: string) {
 			const parts = splitTTSParts(text);
-			return parts.map((part) => {
-				return `https://translate.google.com/translate_tts?ie=UTF-8&tl=${
-					lang}&q=${encodeURIComponent(part)}&client=tw-ob`;
+			return parts.map(part => {
+				return `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&q=${encodeURIComponent(
+					part
+				)}&client=tw-ob`;
 			});
 		}
 	}
@@ -85,7 +86,10 @@ export namespace Cast {
 
 	namespace Casting {
 		export namespace Media {
-			const mediaPlayers: WeakMap<castv2.Device, castv2.MediaPlayerClass> = new WeakMap();
+			const mediaPlayers: WeakMap<
+				castv2.Device,
+				castv2.MediaPlayerClass
+			> = new WeakMap();
 
 			async function assertMediaPlayers() {
 				if (Scanning.devices.length === 0) {
@@ -101,7 +105,9 @@ export namespace Cast {
 				mediaPlayers.set(device, new MediaPlayer(device));
 			}
 
-			export async function playURL(url: string): Promise<castv2.MediaPlayerClass[]> {
+			export async function playURL(
+				url: string
+			): Promise<castv2.MediaPlayerClass[]> {
 				await assertMediaPlayers();
 
 				const players = Scanning.devices.map(d => mediaPlayers.get(d)!);
@@ -112,27 +118,34 @@ export namespace Cast {
 				return players;
 			}
 
-			export async function playURLs(urls: string[]): Promise<castv2.MediaPlayerClass[]> {
+			export async function playURLs(
+				urls: string[]
+			): Promise<castv2.MediaPlayerClass[]> {
 				await assertMediaPlayers();
 
 				const players = Scanning.devices.map(d => mediaPlayers.get(d)!);
 				await Promise.all(players.map(p => p.stopClientPromise()));
 
-				await Promise.all(players.map(async (p) => {
-					const playlist = new Playlist(p.connection.name, {
-						on() {}
-					});
-					const list = playlist._addItems(urls.map((url) => ({
-						url: url,
-						contentType: 'audio/mpeg',
-						metadata: {}
-					})), {}, false);
-					await p._player.queueLoadPromise(p._player,
-						list, {
+				await Promise.all(
+					players.map(async p => {
+						const playlist = new Playlist(p.connection.name, {
+							on() {}
+						});
+						const list = playlist._addItems(
+							urls.map(url => ({
+								url: url,
+								contentType: 'audio/mpeg',
+								metadata: {}
+							})),
+							{},
+							false
+						);
+						await p._player.queueLoadPromise(p._player, list, {
 							startIndex: 0,
 							repeatMode: 'REPEAT_OFF'
 						});
-				}));
+					})
+				);
 
 				return players;
 			}
@@ -148,19 +161,24 @@ export namespace Cast {
 	}
 
 	export namespace External {
-		type ExternalRequest = ({
-			type: 'stop';
-		}|{
-			type: 'pasta';
-			pasta: string;
-		}|{
-			type: 'say';
-			text: string;
-			lang?: string;
-		}|{
-			type: 'url';
-			url: string;
-		}) & {
+		type ExternalRequest = (
+			| {
+					type: 'stop';
+			  }
+			| {
+					type: 'pasta';
+					pasta: string;
+			  }
+			| {
+					type: 'say';
+					text: string;
+					lang?: string;
+			  }
+			| {
+					type: 'url';
+					url: string;
+			  }
+		) & {
 			logObj: any;
 			resolver: () => void;
 		};
@@ -218,7 +236,7 @@ export namespace Cast {
 			}
 
 			async stop() {
-				return new Promise((resolve) => {
+				return new Promise(resolve => {
 					const req: ExternalRequest = {
 						type: 'stop',
 						logObj: this._logObj,
@@ -233,7 +251,7 @@ export namespace Cast {
 			}
 
 			async pasta(pasta: string) {
-				return new Promise((resolve) => {
+				return new Promise(resolve => {
 					const req: ExternalRequest = {
 						type: 'pasta',
 						pasta: pasta,
@@ -249,7 +267,7 @@ export namespace Cast {
 			}
 
 			async say(text: string, lang: string = 'en') {
-				return new Promise((resolve) => {
+				return new Promise(resolve => {
 					const req: ExternalRequest = {
 						type: 'say',
 						text,
@@ -266,7 +284,7 @@ export namespace Cast {
 			}
 
 			async url(url: string) {
-				return new Promise((resolve) => {
+				return new Promise(resolve => {
 					const req: ExternalRequest = {
 						type: 'url',
 						url,
@@ -298,62 +316,75 @@ export namespace Cast {
 
 			static readonly botName = 'Cast';
 
-			static readonly matches = Bot.createMatchMaker(({
-				matchMaker: mm
-			}) => {
-				mm('/castoff', /stop cast(ing)?/, async ({
-					logObj
-				}) => {
-					await new External.Handler(logObj).stop();
-					return 'Stopped casting';
-				});
-				mm(/(cast url|\/casturl)(\s*)(.*)/, async ({
-					logObj, match
-				}) => {
-					await new External.Handler(logObj).url(match[3]);
-					return `Casting URL "${match[3]}"`;
-				});
-				mm(/(say|\/say)(\s*)(in lang(uage)?(\s*)(\w+))?(\s*)(.*)/, async ({
-					logObj, match
-				}) => {
-					const lang = match[6] || 'en';
-					const text = match[8];
-					await new External.Handler(logObj).say(text, lang);
-					return `Saying "${text}" in lang "${lang}"`;
-				});
-				mm(/\/pastas/, /show me all (of your)? pasta(s)?/, /what pasta(s)? do you have/, async ({}) => {
-					return `The pastas we have are: ${Bot.formatList(Object.keys(Pasta.PASTAS))}`;
-				});
-				mm(/(pasta|show pasta|play pasta|\/pasta)(\s*)(.*)/, async ({
-					logObj, match
-				}) => {
-					const pasta = match[3];
-					if (!(pasta in Pasta.PASTAS)) {
-						return 'We don\'t have that pasta';
-					}
-					await new External.Handler(logObj).pasta(pasta);
-					return `Played pasta: "${pasta}"`;
-				});
-				mm(/\/mp3s/, /show all mp3s/, async ({}) => {
-					return `The mp3s are: ${Bot.formatList(Object.keys(LocalURLS.LOCAL_URLS))}`;
-				});
-			});
+			static readonly matches = Bot.createMatchMaker(
+				({ matchMaker: mm }) => {
+					mm('/castoff', /stop cast(ing)?/, async ({ logObj }) => {
+						await new External.Handler(logObj).stop();
+						return 'Stopped casting';
+					});
+					mm(
+						/(cast url|\/casturl)(\s*)(.*)/,
+						async ({ logObj, match }) => {
+							await new External.Handler(logObj).url(match[3]);
+							return `Casting URL "${match[3]}"`;
+						}
+					);
+					mm(
+						/(say|\/say)(\s*)(in lang(uage)?(\s*)(\w+))?(\s*)(.*)/,
+						async ({ logObj, match }) => {
+							const lang = match[6] || 'en';
+							const text = match[8];
+							await new External.Handler(logObj).say(text, lang);
+							return `Saying "${text}" in lang "${lang}"`;
+						}
+					);
+					mm(
+						/\/pastas/,
+						/show me all (of your)? pasta(s)?/,
+						/what pasta(s)? do you have/,
+						async ({}) => {
+							return `The pastas we have are: ${Bot.formatList(
+								Object.keys(Pasta.PASTAS)
+							)}`;
+						}
+					);
+					mm(
+						/(pasta|show pasta|play pasta|\/pasta)(\s*)(.*)/,
+						async ({ logObj, match }) => {
+							const pasta = match[3];
+							if (!(pasta in Pasta.PASTAS)) {
+								return 'We don\'t have that pasta';
+							}
+							await new External.Handler(logObj).pasta(pasta);
+							return `Played pasta: "${pasta}"`;
+						}
+					);
+					mm(/\/mp3s/, /show all mp3s/, async ({}) => {
+						return `The mp3s are: ${Bot.formatList(
+							Object.keys(LocalURLS.LOCAL_URLS)
+						)}`;
+					});
+				}
+			);
 
 			constructor(_json?: JsonWebKey) {
 				super();
 			}
 
-			static async match(config: { 
-				logObj: any; 
-				text: string; 
-				message: _Bot.TelegramMessage; 
-				state: _Bot.Message.StateKeeping.ChatState; 
+			static async match(config: {
+				logObj: any;
+				text: string;
+				message: _Bot.TelegramMessage;
+				state: _Bot.Message.StateKeeping.ChatState;
 			}): Promise<_Bot.Message.MatchResponse | undefined> {
-				return await this.matchLines({ ...config, matchConfig: Bot.matches });
+				return await this.matchLines({
+					...config,
+					matchConfig: Bot.matches
+				});
 			}
 
 			toJSON(): JSON {
-				return {}
+				return {};
 			}
 		}
 	}
@@ -363,20 +394,32 @@ export namespace Cast {
 			@errorHandle
 			@requireParams('url')
 			@auth
-			static async url(res:  ResponseLike, { url }: {
-				url: string;
-				auth?: string;
-			}) {
+			static async url(
+				res: ResponseLike,
+				{
+					url
+				}: {
+					url: string;
+					auth?: string;
+				}
+			) {
 				if (url in LocalURLS.LOCAL_URLS) {
 					url = LocalURLS.LOCAL_URLS[url];
 				}
 
 				const mediaPlayers = await Casting.Media.playURL(url);
-				const playerLog = attachMessage(res, `Playing on ${mediaPlayers.length} players`);
-				attachMessage(playerLog,
-					`Device names: ${mediaPlayers.map(p => p.connection.name)}`);
-				attachMessage(playerLog,
-					`Device IPs: ${mediaPlayers.map(p => p.connection.host)}`);
+				const playerLog = attachMessage(
+					res,
+					`Playing on ${mediaPlayers.length} players`
+				);
+				attachMessage(
+					playerLog,
+					`Device names: ${mediaPlayers.map(p => p.connection.name)}`
+				);
+				attachMessage(
+					playerLog,
+					`Device IPs: ${mediaPlayers.map(p => p.connection.host)}`
+				);
 				res.status(200).write('Success');
 				res.end();
 				return mediaPlayers;
@@ -384,11 +427,14 @@ export namespace Cast {
 
 			@errorHandle
 			@auth
-			static async stop(res:  ResponseLike, { }: {
-				auth?: string;
-			}) {
+			static async stop(
+				res: ResponseLike,
+				{}: {
+					auth?: string;
+				}
+			) {
 				const mediaPlayers = await Casting.Media.stop();
-				attachMessage(res, `Stopped ${mediaPlayers.length} players`)
+				attachMessage(res, `Stopped ${mediaPlayers.length} players`);
 				res.status(200).write('Success');
 				res.end();
 				return mediaPlayers;
@@ -396,21 +442,34 @@ export namespace Cast {
 
 			@errorHandle
 			@auth
-			static async say(res: ResponseLike, { text, lang = 'en' }: {
-				text: string;
-				lang?: string;
-				auth?: string;
-			}) {
+			static async say(
+				res: ResponseLike,
+				{
+					text,
+					lang = 'en'
+				}: {
+					text: string;
+					lang?: string;
+					auth?: string;
+				}
+			) {
 				const urls = TTS.tts(text, lang);
 				attachMessage(res, `Got urls ${urls.join(', ')}`);
-				
+
 				const mediaPlayers = await Casting.Media.playURLs(urls);
 				attachMessage(res, `Saying in lang "${lang}": "${text}"`);
-				const playerLog = attachMessage(res, `Playing on ${mediaPlayers.length} players`);
-				attachMessage(playerLog,
-					`Device names: ${mediaPlayers.map(p => p.connection.name)}`);
-				attachMessage(playerLog,
-					`Device IPs: ${mediaPlayers.map(p => p.connection.host)}`);
+				const playerLog = attachMessage(
+					res,
+					`Playing on ${mediaPlayers.length} players`
+				);
+				attachMessage(
+					playerLog,
+					`Device names: ${mediaPlayers.map(p => p.connection.name)}`
+				);
+				attachMessage(
+					playerLog,
+					`Device IPs: ${mediaPlayers.map(p => p.connection.host)}`
+				);
 				res.status(200).write('Success');
 				res.end();
 				return mediaPlayers;
@@ -419,10 +478,15 @@ export namespace Cast {
 			@errorHandle
 			@requireParams('pasta')
 			@auth
-			static async pasta(res: ResponseLike, { pasta }: {
-				pasta: string;
-				auth?: string;
-			}) {
+			static async pasta(
+				res: ResponseLike,
+				{
+					pasta
+				}: {
+					pasta: string;
+					auth?: string;
+				}
+			) {
 				if (!(pasta in Pasta.PASTAS)) {
 					res.status(400).write('Unknown pasta');
 					res.end();
@@ -434,11 +498,18 @@ export namespace Cast {
 				attachMessage(res, `Got urls ${urls.join(', ')}`);
 				const mediaPlayers = await Casting.Media.playURLs(urls);
 				attachMessage(res, `Saying pasta in lang "${lang}": "${text}"`);
-				const playerLog = attachMessage(res, `Playing on ${mediaPlayers.length} players`);
-				attachMessage(playerLog,
-					`Device names: ${mediaPlayers.map(p => p.connection.name)}`);
-				attachMessage(playerLog,
-					`Device IPs: ${mediaPlayers.map(p => p.connection.host)}`);
+				const playerLog = attachMessage(
+					res,
+					`Playing on ${mediaPlayers.length} players`
+				);
+				attachMessage(
+					playerLog,
+					`Device names: ${mediaPlayers.map(p => p.connection.name)}`
+				);
+				attachMessage(
+					playerLog,
+					`Device IPs: ${mediaPlayers.map(p => p.connection.host)}`
+				);
 				res.status(200).write('Success');
 				res.end();
 				return mediaPlayers;
@@ -447,34 +518,58 @@ export namespace Cast {
 	}
 
 	export namespace Routing {
-		export async function init({ 
-			app 
-		}: { 
-			app: AppWrapper; 
-		}) {
+		export async function init({ app }: { app: AppWrapper }) {
 			await External.Handler.init();
 
 			app.get('/cast/:auth/stop', async (req, res) => {
-				await API.Handler.stop(res, {...req.params, ...req.body, cookies: req.cookies});
+				await API.Handler.stop(res, {
+					...req.params,
+					...req.body,
+					cookies: req.cookies
+				});
 			});
 			app.post('/cast/stop', async (req, res) => {
-				await API.Handler.stop(res, {...req.params, ...req.body, cookies: req.cookies});
+				await API.Handler.stop(res, {
+					...req.params,
+					...req.body,
+					cookies: req.cookies
+				});
 			});
 			app.get('/cast/:auth/cast/:url', async (req, res) => {
-				await API.Handler.url(res, {...req.params, ...req.body, cookies: req.cookies});
+				await API.Handler.url(res, {
+					...req.params,
+					...req.body,
+					cookies: req.cookies
+				});
 			});
 			app.post('/cast/cast/:url?', async (req, res) => {
-				await API.Handler.url(res, {...req.params, ...req.body, cookies: req.cookies});
+				await API.Handler.url(res, {
+					...req.params,
+					...req.body,
+					cookies: req.cookies
+				});
 			});
 			app.get('/cast/:auth/say/:text/:lang?', async (req, res) => {
-				await API.Handler.say(res, {...req.params, ...req.body, cookies: req.cookies});
+				await API.Handler.say(res, {
+					...req.params,
+					...req.body,
+					cookies: req.cookies
+				});
 			});
 			app.post('/cast/say/:text?/:lang?', async (req, res) => {
-				await API.Handler.say(res, {...req.params, ...req.body, cookies: req.cookies});
+				await API.Handler.say(res, {
+					...req.params,
+					...req.body,
+					cookies: req.cookies
+				});
 			});
 			app.post('/cast/pasta/:pasta?', async (req, res) => {
-				await API.Handler.pasta(res, {...req.params, ...req.body, cookies: req.cookies});
-			})
+				await API.Handler.pasta(res, {
+					...req.params,
+					...req.body,
+					cookies: req.cookies
+				});
+			});
 		}
 	}
 }

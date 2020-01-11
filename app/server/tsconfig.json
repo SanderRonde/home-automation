@@ -1,33 +1,30 @@
 {
-    "compilerOptions": {
+	"compilerOptions": {
 		"baseUrl": ".",
 		"paths": { "*": ["../../types/*"] },
-        "alwaysStrict": true,
-        "forceConsistentCasingInFileNames": true,
-        "module": "commonjs",
-        "moduleResolution": "node",
-        "noImplicitAny": true,
-        "noImplicitThis": true,
-        "preserveConstEnums": false,
-        "listFiles": false,
-        "pretty": true,
-        "noFallthroughCasesInSwitch": true,
-        "noImplicitReturns": true,
-        "noUnusedLocals": true,
-        "target": "es6",
-        "noUnusedParameters": true,
-        "experimentalDecorators": true,
-        "strictPropertyInitialization": true,
-        "strictNullChecks": true,
-        "strictBindCallApply": true,
-        "composite": true,
-        "declaration": true,
-        "declarationMap": true
+		"alwaysStrict": true,
+		"forceConsistentCasingInFileNames": true,
+		"module": "commonjs",
+		"moduleResolution": "node",
+		"noImplicitAny": true,
+		"noImplicitThis": true,
+		"preserveConstEnums": false,
+		"listFiles": false,
+		"pretty": true,
+		"noFallthroughCasesInSwitch": true,
+		"noImplicitReturns": true,
+		"noUnusedLocals": true,
+		"target": "es6",
+		"noUnusedParameters": true,
+		"experimentalDecorators": true,
+		"strictPropertyInitialization": true,
+		"strictNullChecks": true,
+		"strictBindCallApply": true,
+		"composite": true,
+		"declaration": true,
+		"declarationMap": true
 	},
-    "compileOnSave": true,
-    "allowJs": true,
-    "include": [
-        "./**/*.ts",
-        "../../types/*"
-    ]
+	"compileOnSave": true,
+	"allowJs": true,
+	"include": ["./**/*.ts", "../../types/*"]
 }

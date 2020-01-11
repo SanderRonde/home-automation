@@ -21,7 +21,11 @@ import * as path from 'path';
 import * as glob from 'glob';
 import chalk from 'chalk';
 
-type Handler = (req: express.Request, res: ResponseLike, next: express.NextFunction) => any;
+type Handler = (
+	req: express.Request,
+	res: ResponseLike,
+	next: express.NextFunction
+) => any;
 
 export class AppWrapper {
 	constructor(public app: express.Express) {}
@@ -31,7 +35,7 @@ export class AppWrapper {
 		matching: {
 			regexp: RegExp;
 			keys: pathToRegexp.Key[];
-		}
+		};
 		handler: Handler;
 		method: string;
 	}[] = [];
@@ -42,38 +46,44 @@ export class AppWrapper {
 		return { keys, regexp };
 	}
 
-	private static _makeArr<V>(value: V|V[]): V[] {
+	private static _makeArr<V>(value: V | V[]): V[] {
 		if (Array.isArray(value)) return value;
 		return [value];
 	}
 
-	get(route: string|string[], handler: Handler) {
+	get(route: string | string[], handler: Handler) {
 		const routes = AppWrapper._makeArr(route);
-		routes.forEach((route) => {
+		routes.forEach(route => {
 			this._routes.push({
-				route, handler, method: 'get',
+				route,
+				handler,
+				method: 'get',
 				matching: this._genRegexp(route)
 			});
 		});
 		this.app.get(route, handler);
 	}
 
-	post(route: string|string[], handler: Handler) {
+	post(route: string | string[], handler: Handler) {
 		const routes = AppWrapper._makeArr(route);
-		routes.forEach((route) => {
+		routes.forEach(route => {
 			this._routes.push({
-				route, handler, method: 'post',
+				route,
+				handler,
+				method: 'post',
 				matching: this._genRegexp(route)
 			});
 		});
 		this.app.post(route, handler);
 	}
 
-	all(route: string|string[], handler: Handler) {
+	all(route: string | string[], handler: Handler) {
 		const routes = AppWrapper._makeArr(route);
-		routes.forEach((route) => {
+		routes.forEach(route => {
 			this._routes.push({
-				route, handler, method: 'all',
+				route,
+				handler,
+				method: 'all',
 				matching: this._genRegexp(route)
 			});
 		});
@@ -82,28 +92,32 @@ export class AppWrapper {
 
 	private _decodeParam(val: any) {
 		if (typeof val !== 'string' || val.length === 0) {
-		  return val;
+			return val;
 		}
-	  
+
 		try {
-		  	return decodeURIComponent(val);
+			return decodeURIComponent(val);
 		} catch (err) {
 			if (err instanceof URIError) {
-				err.message = 'Failed to decode param \'' + val + '\'';
+				err.message = "Failed to decode param '" + val + "'";
 			}
-	  
-		  throw err;
+
+			throw err;
 		}
 	}
 
-	private _matchRoute(matching: {
-		regexp: RegExp;
-		keys: pathToRegexp.Key[];
-	}, expected: string, actual: string): null|{
+	private _matchRoute(
+		matching: {
+			regexp: RegExp;
+			keys: pathToRegexp.Key[];
+		},
+		expected: string,
+		actual: string
+	): null | {
 		[key: string]: string;
 	} {
 		if (expected === '*') {
-			return { '0': this._decodeParam(actual) }
+			return { '0': this._decodeParam(actual) };
 		}
 		if (expected === '/') {
 			return {};
@@ -130,35 +144,55 @@ export class AppWrapper {
 		return params;
 	}
 
-	async triggerRoute(req: express.Request, res: ResponseLike, method: string, 
-		actual: string, bodyParams: {
+	async triggerRoute(
+		req: express.Request,
+		res: ResponseLike,
+		method: string,
+		actual: string,
+		bodyParams: {
 			[key: string]: string;
-		}) {
-			for (const { handler, method: routeMethod, route: expected, matching } of this._routes) {
-				if (routeMethod.toLowerCase() !== method.toLowerCase()) continue;
-				const urlParams = this._matchRoute(matching, expected, actual);
-				if (!urlParams) continue;
-
-				req.body = {...bodyParams, ...urlParams};
-				await handler(req, res, () => {});
-				return;
-			}
 		}
+	) {
+		for (const {
+			handler,
+			method: routeMethod,
+			route: expected,
+			matching
+		} of this._routes) {
+			if (routeMethod.toLowerCase() !== method.toLowerCase()) continue;
+			const urlParams = this._matchRoute(matching, expected, actual);
+			if (!urlParams) continue;
+
+			req.body = { ...bodyParams, ...urlParams };
+			await handler(req, res, () => {});
+			return;
+		}
+	}
 }
 
 export async function initAnnotatorRoutes(app: express.Express) {
 	app.all('/annotator/files', (_req, res) => {
 		console.log(path.join(__dirname, '../../../', 'ai/files', '*.wav'));
-		glob(path.join(__dirname, '../../../', 'ai/files', '*.wav'), {}, (err: Error|null, files: string[]) => {
-			if (err) {
-				res.status(500);
-				res.end();
-			} else {
-				res.status(200);
-				res.write(JSON.stringify({"files": files.map((file: string) => file.split('/').pop())}));
-				res.end();
+		glob(
+			path.join(__dirname, '../../../', 'ai/files', '*.wav'),
+			{},
+			(err: Error | null, files: string[]) => {
+				if (err) {
+					res.status(500);
+					res.end();
+				} else {
+					res.status(200);
+					res.write(
+						JSON.stringify({
+							files: files.map((file: string) =>
+								file.split('/').pop()
+							)
+						})
+					);
+					res.end();
+				}
 			}
-		});
+		);
 	});
 }
 
@@ -168,36 +202,49 @@ export async function initMiddleware(app: express.Express) {
 		next();
 	});
 	app.use(cookieParser());
-	app.use(bodyParser.json({
-		type: '*/json'
-	}));
-	app.use(bodyParser.urlencoded({
-		extended: true
-	}));
+	app.use(
+		bodyParser.json({
+			type: '*/json'
+		})
+	);
+	app.use(
+		bodyParser.urlencoded({
+			extended: true
+		})
+	);
 	app.use(bodyParser.text());
-	app.use(serveStatic(
-		path.join(__dirname, '../../../', 'app/client/')));
-	app.use(serveStatic(
-		path.join(__dirname, '../../../', 'static/')));
-	app.use(serveStatic(
-		path.join(__dirname, '../../../', 'ai/annotator/')));
-	app.use(serveStatic(
-		path.join(__dirname, '../../../', 'ai/files/')));
-	app.use('/node_modules/lit-html', (req, _res, next) => {
-		req.url = req.url.replace('/node_modules/lit-html', '');
-		next();
-	}, serveStatic(path.join(__dirname, '../../../', 'node_modules/lit-html')));
-	app.use('/node_modules/wc-lib', (req, _res, next) => {
-		req.url = req.url.replace('/node_modules/wc-lib', '');
-		next();
-	}, serveStatic(path.join(__dirname, '../../../', 'node_modules/wc-lib')));
+	app.use(serveStatic(path.join(__dirname, '../../../', 'app/client/')));
+	app.use(serveStatic(path.join(__dirname, '../../../', 'static/')));
+	app.use(serveStatic(path.join(__dirname, '../../../', 'ai/annotator/')));
+	app.use(serveStatic(path.join(__dirname, '../../../', 'ai/files/')));
+	app.use(
+		'/node_modules/lit-html',
+		(req, _res, next) => {
+			req.url = req.url.replace('/node_modules/lit-html', '');
+			next();
+		},
+		serveStatic(path.join(__dirname, '../../../', 'node_modules/lit-html'))
+	);
+	app.use(
+		'/node_modules/wc-lib',
+		(req, _res, next) => {
+			req.url = req.url.replace('/node_modules/wc-lib', '');
+			next();
+		},
+		serveStatic(path.join(__dirname, '../../../', 'node_modules/wc-lib'))
+	);
 }
 
-export async function initRoutes({ 
-	app, websocketSim, config, randomNum, initLogger, ws
-}: { 
-	app: express.Express; 
-	websocketSim: WSSimulator; 
+export async function initRoutes({
+	app,
+	websocketSim,
+	config,
+	randomNum,
+	initLogger,
+	ws
+}: {
+	app: express.Express;
+	websocketSim: WSSimulator;
 	config: Config;
 	randomNum: number;
 	initLogger: ProgressLogger;
@@ -207,7 +254,9 @@ export async function initRoutes({
 	const routeSettings = {
 		app: wrappedApp,
 		websocket: websocketSim,
-		randomNum, config, ws
+		randomNum,
+		config,
+		ws
 	};
 
 	await Promise.all([
@@ -216,7 +265,10 @@ export async function initRoutes({
 			initLogger.increment('/auth');
 		})(),
 		await (async () => {
-			await KeyVal.Routing.init({ ...routeSettings, db: await new Database('keyval.json').init() });
+			await KeyVal.Routing.init({
+				...routeSettings,
+				db: await new Database('keyval.json').init()
+			});
 			initLogger.increment('/keyval');
 		})(),
 		await (async () => {
@@ -236,7 +288,10 @@ export async function initRoutes({
 			initLogger.increment('/multi');
 		})(),
 		await (async () => {
-			await HomeDetector.Routing.init({ ...routeSettings, db: await new Database('home-detector.json').init() });
+			await HomeDetector.Routing.init({
+				...routeSettings,
+				db: await new Database('home-detector.json').init()
+			});
 			initLogger.increment('/home-detector');
 		})(),
 		await (async () => {
@@ -244,17 +299,23 @@ export async function initRoutes({
 			initLogger.increment('/remote-control');
 		})(),
 		await (async () => {
-			await Bot.Routing.init({ ...routeSettings, db: await new Database('bot.json').init() });
+			await Bot.Routing.init({
+				...routeSettings,
+				db: await new Database('bot.json').init()
+			});
 			initLogger.increment('/bot');
 		})(),
 		await (async () => {
-			await Temperature.Routing.init({ ...routeSettings, db: await new Database('temperature.json').init() });
+			await Temperature.Routing.init({
+				...routeSettings,
+				db: await new Database('temperature.json').init()
+			});
 			initLogger.increment('/temperature');
 		})()
 	]);
 
 	initLogger.increment('routes');
-	
+
 	app.post('/scan', (_req, res) => {
 		RGB.Scan.scanRGBControllers();
 		res.status(200).end();
@@ -263,18 +324,32 @@ export async function initRoutes({
 	app.use((_req, res, _next) => {
 		res.status(404).send('404');
 	});
-	app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-		if (err && err.message) {
-			if (res.headersSent) {
-				console.log(chalk.bgRed(chalk.black('Got error after headers were sent',
-					err.message, err.stack!)));
-				return;
+	app.use(
+		(
+			err: Error,
+			_req: express.Request,
+			res: express.Response,
+			_next: express.NextFunction
+		) => {
+			if (err && err.message) {
+				if (res.headersSent) {
+					console.log(
+						chalk.bgRed(
+							chalk.black(
+								'Got error after headers were sent',
+								err.message,
+								err.stack!
+							)
+						)
+					);
+					return;
+				}
+				res.status(500).write('Internal server error');
+				for (const line of err.stack!.split('\n')) {
+					attachMessage(res, chalk.bgRed(chalk.black(line)));
+				}
+				res.end();
 			}
-			res.status(500).write('Internal server error');
-			for (const line of err.stack!.split('\n')) {
-				attachMessage(res, chalk.bgRed(chalk.black(line)));
-			}
-			res.end();
 		}
-	});
+	);
 }

@@ -9,21 +9,21 @@ import * as http from 'http';
 
 interface PartialConfig {
 	ports?: {
-		http?: number|void;
-		https?: number|void;
-	}
+		http?: number | void;
+		https?: number | void;
+	};
 	scripts?: {
-		uid?: number|void;
-		scriptDir?: string|void;
-	}
+		uid?: number | void;
+		scriptDir?: string | void;
+	};
 	log?: {
 		level?: number;
 		secrets: boolean;
-	}
+	};
 }
 
 type DeepRequired<T> = {
-    [P in keyof T]-?: DeepRequired<T[P]>;
+	[P in keyof T]-?: DeepRequired<T[P]>;
 };
 export type Config = DeepRequired<PartialConfig>;
 
@@ -34,24 +34,28 @@ class WebServer {
 	private _server!: http.Server;
 
 	private _config: Config;
-	private _initLogger: ProgressLogger = new ProgressLogger('Server start', 18);
+	private _initLogger: ProgressLogger = new ProgressLogger(
+		'Server start',
+		18
+	);
 
 	private _setConfigDefaults(config: PartialConfig): Config {
 		return {
 			ports: {
-				http: config.ports && config.ports.http || 1234,
-				https: config.ports && config.ports.https || 1235,
+				http: (config.ports && config.ports.http) || 1234,
+				https: (config.ports && config.ports.https) || 1235
 			},
 			scripts: {
-				uid: config.scripts && config.scripts.uid || 0,
-				scriptDir: config.scripts && config.scripts.scriptDir ||
+				uid: (config.scripts && config.scripts.uid) || 0,
+				scriptDir:
+					(config.scripts && config.scripts.scriptDir) ||
 					path.join(__dirname, '../../', 'scripts')
 			},
 			log: {
 				level: (config.log && config.log.level) || 1,
 				secrets: (config.log && config.log.secrets) || false
 			}
-		}
+		};
 	}
 
 	constructor(config: PartialConfig = {}) {
@@ -68,10 +72,10 @@ class WebServer {
 		this._initLogger.increment('middleware');
 		await this._initServers();
 		this._initLogger.increment('servers');
-		await initRoutes({ 
-			app: this.app, 
-			websocketSim: this.websocketSim, 
-			config: this._config ,
+		await initRoutes({
+			app: this.app,
+			websocketSim: this.websocketSim,
+			config: this._config,
 			// This is just for semi-versioning of files
 			// to prevent caching
 			randomNum: Math.round(Math.random() * 1000000),
@@ -100,7 +104,9 @@ class WebServer {
 			this._initLogger.increment('listening');
 			this._initLogger.done();
 			endInit();
-			console.log(`HTTP server listening on port ${this._config.ports.http}`);
+			console.log(
+				`HTTP server listening on port ${this._config.ports.http}`
+			);
 		});
 	}
 }
@@ -120,8 +126,12 @@ if (hasArg('help', 'h')) {
 	console.log('--scripts 	{dir}		A directory of scripts to use for /script');
 	console.log('-v, --verbose			Log request-related data');
 	console.log('-vv, --veryverbose		Log even more request-related data');
-	console.log('-v{v+}, --{very+}verbose	Logs even more data. The more v\'s and very\'s the more data');
-	console.log('-v*, --verbose*			Logs all data (equivalent of adding a lot of v\'s');
+	console.log(
+		"-v{v+}, --{very+}verbose	Logs even more data. The more v's and very's the more data"
+	);
+	console.log(
+		"-v*, --verbose*			Logs all data (equivalent of adding a lot of v's"
+	);
 	process.exit(0);
 }
 function getVerbosity() {

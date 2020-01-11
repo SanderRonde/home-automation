@@ -9,7 +9,10 @@ interface AssociatedMessage {
 	content: string[];
 }
 
-const msgMap: WeakMap<ResponseLike|AssociatedMessage|{}, AssociatedMessage[]> = new WeakMap();
+const msgMap: WeakMap<
+	ResponseLike | AssociatedMessage | {},
+	AssociatedMessage[]
+> = new WeakMap();
 
 let logLevel: number = 1;
 export function setLogLevel(level: number) {
@@ -28,17 +31,23 @@ function setDefaultArrValues<T>(arr: T[], len: number, value: T): T[] {
 	return arr;
 }
 
-function logAssociatedMessages(messages: AssociatedMessage[], indent: number = 0, hasNextMessage: boolean[] = []) {
+function logAssociatedMessages(
+	messages: AssociatedMessage[],
+	indent: number = 0,
+	hasNextMessage: boolean[] = []
+) {
 	if (logLevel < indent + 2) return;
 
 	for (let i = 0; i < messages.length; i++) {
-		const padding = setDefaultArrValues(hasNextMessage, indent, false).map((next) => {
-			if (next) {
-				return ' |   ';
-			} else {
-				return '     ';
-			}
-		}).join('');
+		const padding = setDefaultArrValues(hasNextMessage, indent, false)
+			.map(next => {
+				if (next) {
+					return ' |   ';
+				} else {
+					return '     ';
+				}
+			})
+			.join('');
 		const timeFiller = getTimeFiller();
 		if (i === messages.length - 1) {
 			console.log(timeFiller, `${padding} \\- `, ...messages[i].content);
@@ -47,7 +56,11 @@ function logAssociatedMessages(messages: AssociatedMessage[], indent: number = 0
 			console.log(timeFiller, `${padding} |- `, ...messages[i].content);
 			hasNextMessage[indent] = true;
 		}
-		logAssociatedMessages(msgMap.get(messages[i]) || [], indent + 1, hasNextMessage);
+		logAssociatedMessages(
+			msgMap.get(messages[i]) || [],
+			indent + 1,
+			hasNextMessage
+		);
 	}
 }
 
@@ -57,7 +70,7 @@ interface RequestLike {
 	ip?: string;
 	headers: {
 		[key: string]: any;
-	}
+	};
 }
 
 function getIP(req: RequestLike) {
@@ -66,46 +79,48 @@ function getIP(req: RequestLike) {
 		return fwd[0];
 	}
 	if (typeof fwd === 'string' && fwd.includes(',')) {
-		const [ ipv4, ipv6 ] = fwd.split(',');
-		return IP_LOG_VERSION === 'ipv4' ?
-			ipv4 : ipv6;
+		const [ipv4, ipv6] = fwd.split(',');
+		return IP_LOG_VERSION === 'ipv4' ? ipv4 : ipv6;
 	}
 	return fwd || req.ip;
 }
 
-export function genURLLog({ 
+export function genURLLog({
 	req = {
 		headers: {}
-	}, 
-	url = req.url || '?', 
+	},
+	url = req.url || '?',
 	method = req.method || '?',
-	statusCode = 200, 
-	duration = '?', 
-	ip = getIP(req) || '?' ,
+	statusCode = 200,
+	duration = '?',
+	ip = getIP(req) || '?',
 	isSend = false
-}: { 
-	req?: RequestLike; 
+}: {
+	req?: RequestLike;
 	method?: string;
 	url?: string;
-	statusCode?: number; 
-	duration?: number | string; 
-	ip?: string; 
+	statusCode?: number;
+	duration?: number | string;
+	ip?: string;
 	isSend?: boolean;
 }) {
-	const [ statusColor, ipBg ] = (() => {
+	const [statusColor, ipBg] = (() => {
 		if (statusCode === 200) {
 			return [chalk.green, chalk.bgGreen];
-		}
-		else if (statusCode === 500) {
+		} else if (statusCode === 500) {
 			return [chalk.red, chalk.bgRed];
-		}
-		else {
+		} else {
 			return [chalk.yellow, chalk.bgYellow];
 		}
 	})();
-	return [statusColor(`[${statusCode}]`), `[${method.toUpperCase()}]`, 
-		ipBg(chalk.black(Auth.Secret.redact(url))), 
-			`${isSend ? '->' : '<-'}`, chalk.bold(ip), `(${duration} ms)`];
+	return [
+		statusColor(`[${statusCode}]`),
+		`[${method.toUpperCase()}]`,
+		ipBg(chalk.black(Auth.Secret.redact(url))),
+		`${isSend ? '->' : '<-'}`,
+		chalk.bold(ip),
+		`(${duration} ms)`
+	];
 }
 
 export function logReq(req: express.Request, res: express.Response) {
@@ -115,12 +130,15 @@ export function logReq(req: express.Request, res: express.Response) {
 		if (logLevel < 1) return;
 
 		const end = Date.now();
-		console.log(getTime(), ...genURLLog({ 
-			req, 
-			statusCode: res.statusCode, 
-			duration: end - start, 
-			ip 
-		}));
+		console.log(
+			getTime(),
+			...genURLLog({
+				req,
+				statusCode: res.statusCode,
+				duration: end - start,
+				ip
+			})
+		);
 
 		// Log attached messages
 		if (logLevel < 2 || !msgMap.has(res)) return;
@@ -137,20 +155,26 @@ function getTimeFiller() {
 	return new Array(new Date().toLocaleString().length + 2).fill(' ').join('');
 }
 
-export function logOutgoingReq(req: http.ClientRequest, data: {
-	method: string;
-	target: string;
-}) {
+export function logOutgoingReq(
+	req: http.ClientRequest,
+	data: {
+		method: string;
+		target: string;
+	}
+) {
 	const ip = req.path;
 
 	if (logLevel < 1) return;
 
-	console.log(getTime(), ...genURLLog({ 
-		ip: data.target,
-		method: data.method,
-		url: ip,
-		isSend: true
-	}));
+	console.log(
+		getTime(),
+		...genURLLog({
+			ip: data.target,
+			method: data.method,
+			url: ip,
+			isSend: true
+		})
+	);
 
 	// Log attached messages
 	if (logLevel < 2 || !msgMap.has(req)) return;
@@ -158,7 +182,10 @@ export function logOutgoingReq(req: http.ClientRequest, data: {
 	logAssociatedMessages(msgMap.get(req)!);
 }
 
-export function logFixture(obj: ResponseLike|AssociatedMessage|{}, ...name: string[]) {
+export function logFixture(
+	obj: ResponseLike | AssociatedMessage | {},
+	...name: string[]
+) {
 	console.log(getTime(), ...name);
 
 	// Log attached messages
@@ -167,7 +194,10 @@ export function logFixture(obj: ResponseLike|AssociatedMessage|{}, ...name: stri
 	logAssociatedMessages(msgMap.get(obj)!);
 }
 
-export function transferAttached(from: ResponseLike|AssociatedMessage|{}, to: ResponseLike|AssociatedMessage|{}) {
+export function transferAttached(
+	from: ResponseLike | AssociatedMessage | {},
+	to: ResponseLike | AssociatedMessage | {}
+) {
 	const attached = msgMap.get(from) || [];
 	if (!msgMap.has(to)) {
 		msgMap.set(to, []);
@@ -180,7 +210,10 @@ export function transferAttached(from: ResponseLike|AssociatedMessage|{}, to: Re
 	msgMap.delete(from);
 }
 
-export function attachMessage(obj: ResponseLike|AssociatedMessage|{}, ...messages: string[]) {
+export function attachMessage(
+	obj: ResponseLike | AssociatedMessage | {},
+	...messages: string[]
+) {
 	if (typeof obj !== 'object' && typeof obj !== 'function') {
 		console.warn('Invalid log target', obj);
 		console.trace();
@@ -204,12 +237,12 @@ export class ResDummy implements ResponseLike {
 	status() {
 		return this;
 	}
-	write() { }
-	end() { }
+	write() {}
+	end() {}
 	contentType() {}
 	cookie() {}
 
-	transferTo(obj: ResponseLike|AssociatedMessage|{}) {
+	transferTo(obj: ResponseLike | AssociatedMessage | {}) {
 		transferAttached(this, obj);
 	}
 }
@@ -221,34 +254,66 @@ export class ProgressLogger {
 	constructor(private _name: string, private _max: number) {}
 
 	private _getProgressBar() {
-		return `[${
-			new Array(this._progress).fill('*').join('')}${
-				new Array(this._max - this._progress).fill(' ').join('')}]`
+		return `[${new Array(this._progress).fill('*').join('')}${new Array(
+			this._max - this._progress
+		)
+			.fill(' ')
+			.join('')}]`;
 	}
 
 	logInitial() {
-		console.log(chalk.bgBlack(getTime(),
-			chalk.bgBlack(chalk.bold(chalk.white(
-				`${this._name}: ${this._getProgressBar()}`)))));
+		console.log(
+			chalk.bgBlack(
+				getTime(),
+				chalk.bgBlack(
+					chalk.bold(
+						chalk.white(`${this._name}: ${this._getProgressBar()}`)
+					)
+				)
+			)
+		);
 	}
 
 	increment(name: string) {
 		this._progress++;
-		console.log(chalk.bgBlack(getTime(),
-			chalk.bgBlack(chalk.bold(chalk.white(
-				`${this._name}: ${this._getProgressBar()} - `),
-				chalk.green('✔'), chalk.white(name)))));
+		console.log(
+			chalk.bgBlack(
+				getTime(),
+				chalk.bgBlack(
+					chalk.bold(
+						chalk.white(
+							`${this._name}: ${this._getProgressBar()} - `
+						),
+						chalk.green('✔'),
+						chalk.white(name)
+					)
+				)
+			)
+		);
 	}
 
 	done() {
 		if (this._progress > this._max) {
-			console.log(chalk.red('Increment got called more often than configured'));
+			console.log(
+				chalk.red('Increment got called more often than configured')
+			);
 		} else if (this._progress < this._max) {
-			console.log(chalk.red('Increment got called less times than configured'));
+			console.log(
+				chalk.red('Increment got called less times than configured')
+			);
 		}
 
-		console.log(chalk.bgBlack(getTime(), chalk.bgBlack(
-			chalk.bold(`Done loading ${this._name} in ${Date.now() - this._startTime}ms`))));
+		console.log(
+			chalk.bgBlack(
+				getTime(),
+				chalk.bgBlack(
+					chalk.bold(
+						`Done loading ${this._name} in ${Date.now() -
+							this._startTime}ms`
+					)
+				)
+			)
+		);
 	}
 }
 
@@ -260,7 +325,7 @@ export function startInit() {
 
 export function endInit() {
 	isInit = false;
-	initMessages.forEach((args) => {
+	initMessages.forEach(args => {
 		console.log(...args);
 	});
 }

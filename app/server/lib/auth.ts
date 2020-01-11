@@ -10,7 +10,7 @@ export namespace Auth {
 		const ids: Map<number, string> = new Map();
 
 		function createId(): number {
-			let id = Math.floor(Math.random() * (1E6 - 1E5)) + 1E5;
+			let id = Math.floor(Math.random() * (1e6 - 1e5)) + 1e5;
 			if (ids.has(id)) return createId();
 			return id;
 		}
@@ -19,13 +19,16 @@ export namespace Auth {
 			const key = await Secret.getKey();
 			const idArr = (id + '').split('').map(s => parseInt(s, 10));
 
-			return key.split('').map((char) => {
-				let charCode = char.charCodeAt(0);
-				for (const idChar of idArr) {
-					charCode = charCode ^ idChar;
-				}
-				return charCode;
-			}).join('');
+			return key
+				.split('')
+				.map(char => {
+					let charCode = char.charCodeAt(0);
+					for (const idChar of idArr) {
+						charCode = charCode ^ idChar;
+					}
+					return charCode;
+				})
+				.join('');
 		}
 
 		export async function genId(): Promise<number> {
@@ -47,13 +50,16 @@ export namespace Auth {
 			if (authKey === Secret.getKeySync()) return true;
 
 			if (Number.isNaN(parseInt(id, 10))) return false;
-			return await ClientSecret.getClientSecret(parseInt(id, 10)) === authKey;
+			return (
+				(await ClientSecret.getClientSecret(parseInt(id, 10))) ===
+				authKey
+			);
 		}
 	}
 
 	export namespace Secret {
-		let key: string|null = null;
-		let botSecret: string|null = null;
+		let key: string | null = null;
+		let botSecret: string | null = null;
 
 		export async function readSecret() {
 			if (!(await fs.pathExists(AUTH_SECRET_FILE))) {
@@ -73,14 +79,15 @@ export namespace Auth {
 		export function getKeySync() {
 			return key;
 		}
-		
+
 		export async function getKey() {
-			return key || await Auth.Secret.readSecret();
+			return key || (await Auth.Secret.readSecret());
 		}
 
 		export function redact(msg: string) {
-			return msg.replace(key!, '[redacted]')
-				.replace(botSecret!, '[redacted]')
+			return msg
+				.replace(key!, '[redacted]')
+				.replace(botSecret!, '[redacted]');
 		}
 
 		(async () => {
@@ -94,37 +101,54 @@ export namespace Auth {
 		export async function genCookie() {
 			const id = await ClientSecret.genId();
 			const clientSecret = await ClientSecret.getClientSecret(id)!;
-			
+
 			return JSON.stringify([id, clientSecret]);
 		}
 
 		async function verifyCookie(cookie: string) {
 			const parsed = JSON.parse(cookie);
-			if (!parsed || !Array.isArray(parsed) || parsed.length !== 2) return false;
-			if (typeof parsed[0] !== 'number' || typeof parsed[1] !== 'string') return false;
+			if (!parsed || !Array.isArray(parsed) || parsed.length !== 2)
+				return false;
+			if (typeof parsed[0] !== 'number' || typeof parsed[1] !== 'string')
+				return false;
 
-			return await ClientSecret.getClientSecret(parsed[0]) === parsed[1];
+			return (
+				(await ClientSecret.getClientSecret(parsed[0])) === parsed[1]
+			);
 		}
 
-		export async function checkCookie(req: { 
+		export async function checkCookie(req: {
 			cookies: {
 				[key: string]: string;
-			}
+			};
 		}) {
-			return req.cookies && req.cookies['key'] && await verifyCookie(req.cookies['key']);
+			return (
+				req.cookies &&
+				req.cookies['key'] &&
+				(await verifyCookie(req.cookies['key']))
+			);
 		}
 	}
 
-	export async function initRoutes({ app, config }: { app: AppWrapper; config: Config; }) {
+	export async function initRoutes({
+		app,
+		config
+	}: {
+		app: AppWrapper;
+		config: Config;
+	}) {
 		await Secret.readSecret();
 		app.post('/authid', async (_req, res) => {
 			const id = (await Auth.ClientSecret.genId()) + '';
 			if (config.log.secrets) {
-				attachMessage(res, `{"id": "${
-					chalk.underline(id)
-				}", "auth": "${
-					chalk.underline(await ClientSecret.getClientSecret(parseInt(id, 10))!)
-				}" }`);
+				attachMessage(
+					res,
+					`{"id": "${chalk.underline(
+						id
+					)}", "auth": "${chalk.underline(
+						await ClientSecret.getClientSecret(parseInt(id, 10))!
+					)}" }`
+				);
 			}
 			res.status(200).write(id);
 			res.end();

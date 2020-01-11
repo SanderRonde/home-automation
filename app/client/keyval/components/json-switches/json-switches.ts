@@ -1,5 +1,12 @@
-import { ComplexType, config, Props } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
-import { JSONSwitchesCSS, JSONSwitchesHTML } from './json-switches.templates.js';
+import {
+	ComplexType,
+	config,
+	Props
+} from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
+import {
+	JSONSwitchesCSS,
+	JSONSwitchesHTML
+} from './json-switches.templates.js';
 import { MessageToast } from '../../../shared/message-toast/message-toast.js';
 import { ServerComm } from '../../../shared/server-comm/server-comm.js';
 import { JSONValue } from '../json-value/json-value.js';
@@ -18,12 +25,15 @@ function isValSame(a: unknown, b: unknown): boolean {
 				if (!isObjSame(a as any, b as any)) return false;
 			}
 		}
-	} else if (typeof a === 'number' || typeof a === 'string' ||
-		typeof a === 'boolean') {
-			if (a !== b) return false;
-		} else {
-			return false;
-		}
+	} else if (
+		typeof a === 'number' ||
+		typeof a === 'string' ||
+		typeof a === 'boolean'
+	) {
+		if (a !== b) return false;
+	} else {
+		return false;
+	}
 	return true;
 }
 
@@ -35,11 +45,14 @@ function isArrSame(a: unknown[], b: unknown[]): boolean {
 	return true;
 }
 
-function isObjSame(a: {
-	[key: string]: unknown;
-}, b: {
-	[key: string]: unknown;
-}): boolean {
+function isObjSame(
+	a: {
+		[key: string]: unknown;
+	},
+	b: {
+		[key: string]: unknown;
+	}
+): boolean {
 	const aKeys = Object.keys(a);
 	const bKeys = Object.keys(b);
 	if (aKeys.length !== bKeys.length) return false;
@@ -52,7 +65,7 @@ function isObjSame(a: {
 	}
 
 	for (const key in a) {
-		if (!isValSame(a[key], b[key])) return false;			
+		if (!isValSame(a[key], b[key])) return false;
 	}
 	return true;
 }
@@ -61,29 +74,36 @@ function isObjSame(a: {
 	is: 'json-switches',
 	html: JSONSwitchesHTML,
 	css: JSONSwitchesCSS,
-	dependencies: [
-		JSONValue,
-		MessageToast
-	]
+	dependencies: [JSONValue, MessageToast]
 })
 export class JSONSwitches extends ServerComm {
-	props = Props.define(this, {
-		reflect: {
-			json: {
-				value: {},
-				type: ComplexType<any>()
+	props = Props.define(
+		this,
+		{
+			reflect: {
+				json: {
+					value: {},
+					type: ComplexType<any>()
+				}
 			}
-		}
-	}, super.props);
+		},
+		super.props
+	);
 
 	private async _sendValChange(key: string, value: string) {
-		return this.request(`${location.origin}/keyval/${key}/${value}`, {}, 
-			'Failed to update value');
+		return this.request(
+			`${location.origin}/keyval/${key}/${value}`,
+			{},
+			'Failed to update value'
+		);
 	}
 
 	private async _refreshJSON() {
-		const res = await this.request(`${location.origin}/keyval/all`, {},
-			'Failed to refresh');
+		const res = await this.request(
+			`${location.origin}/keyval/all`,
+			{},
+			'Failed to refresh'
+		);
 		if (res === false) return false;
 		const json = await res.json();
 		if (!isValSame(json, this.props.json)) {
@@ -93,12 +113,14 @@ export class JSONSwitches extends ServerComm {
 	}
 
 	async changeValue(path: string[], toValue: string) {
-		const keys = path.length !== 0 ? 
-			[path.join('.')] : Object.getOwnPropertyNames(this.props.json);
+		const keys =
+			path.length !== 0
+				? [path.join('.')]
+				: Object.getOwnPropertyNames(this.props.json);
 		for (const key of keys) {
-			if (!await this._sendValChange(key, toValue)) return;
+			if (!(await this._sendValChange(key, toValue))) return;
 		}
-		if (!await this._refreshJSON()) return;
+		if (!(await this._refreshJSON())) return;
 	}
 
 	firstRender() {

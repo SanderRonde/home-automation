@@ -6,24 +6,26 @@ declare class PaperRipple {
 		center?: boolean;
 		round?: boolean;
 		target?: HTMLElement;
-	})
+	});
 	$: HTMLElement;
 	downAction(event: MouseEvent): void;
 	upAction(): void;
 }
 
 function initRipple() {
-	Array.from(document.querySelectorAll('.rippleTarget')).forEach((rippleTarget: HTMLElement) => {
-		const ripple = new PaperRipple();
-		rippleTarget.appendChild(ripple.$);
+	Array.from(document.querySelectorAll('.rippleTarget')).forEach(
+		(rippleTarget: HTMLElement) => {
+			const ripple = new PaperRipple();
+			rippleTarget.appendChild(ripple.$);
 
-		rippleTarget.addEventListener('mousedown', (e) => {
-			ripple.downAction(e);
-		});
-		rippleTarget.addEventListener('mouseup', () => {
-			ripple.upAction();
-		});
-	});
+			rippleTarget.addEventListener('mousedown', e => {
+				ripple.downAction(e);
+			});
+			rippleTarget.addEventListener('mouseup', () => {
+				ripple.upAction();
+			});
+		}
+	);
 }
 
 interface Window {
@@ -31,21 +33,18 @@ interface Window {
 }
 
 function initListeners() {
-	([
-		'volumeDown',
-		'volumeUp',
-		'playpause',
-		'close',
-		'play',
-		'pause',
-	]).forEach((externalEvent) => {
-		document.getElementById(externalEvent)!.addEventListener('click', () => {
-			fetch(`/remote-control/${externalEvent}`, {
-				method: 'POST',
-				credentials: 'include'
-			});
-		});
-	});
+	['volumeDown', 'volumeUp', 'playpause', 'close', 'play', 'pause'].forEach(
+		externalEvent => {
+			document
+				.getElementById(externalEvent)!
+				.addEventListener('click', () => {
+					fetch(`/remote-control/${externalEvent}`, {
+						method: 'POST',
+						credentials: 'include'
+					});
+				});
+		}
+	);
 }
 
 function initOfflineIndicator() {
@@ -56,7 +55,6 @@ function initOfflineIndicator() {
 		document.getElementById('networkStatus')!.classList.add('visible');
 	});
 }
-
 
 function initSetVolume() {
 	function hideDialog() {
@@ -75,7 +73,9 @@ function initSetVolume() {
 	});
 	document.getElementById('okButton')!.addEventListener('click', () => {
 		hideDialog();
-		const dialogInput = (document.getElementById('dialogInput') as HTMLInputElement);
+		const dialogInput = document.getElementById(
+			'dialogInput'
+		) as HTMLInputElement;
 		const amount = dialogInput.value;
 		dialogInput.value = '';
 

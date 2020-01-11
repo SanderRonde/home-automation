@@ -1,6 +1,6 @@
 # home-automation
 
-A locally hosted home automation server that automates various things. Currently consists of remote device control (lamps, speakers etc), rgb effects, a script runner, a remote media controller and a detector for who's home. Tightly integrated to, for example, turn off the lights when I leave. Tied together by a web app, touch screen, telegram bot and smart device (Google Home) APIs, allowing for simple control from anywhere in any way. 
+A locally hosted home automation server that automates various things. Currently consists of remote device control (lamps, speakers etc), rgb effects, a script runner, a remote media controller and a detector for who's home. Tightly integrated to, for example, turn off the lights when I leave. Tied together by a web app, touch screen, telegram bot and smart device (Google Home) APIs, allowing for simple control from anywhere in any way.
 
 A large part of this project consists of the smart controllers and rgb strips that are to be controlled. This part is done with microcontrollers, consisting of Arduinos (Uno and Due) and various boards with the ESP8266 WiFi chip. These are programmed in C/C++ to interface with the server. See [How it works](#How-it-works) for more info on that.
 
@@ -88,7 +88,7 @@ Scripts work by simply executing the file at given path. Of course this could po
 
 #### Remote Control
 
-The remote control works by sending any commands it gets to two destinations. The first one being a list of listening webbrowsers (through the [playback-control browser extension](https://github.com/SanderRonde/playback-control)) and the second one being a preconfigured list of telnet clients. The telnet client expects a VLC instance to listen at the receiving end, executing all instructions. If noone is listening, messages are simply ignored, allowing other listening instances to pick them up. For more info about how the webbrowser version works check out the repo. 
+The remote control works by sending any commands it gets to two destinations. The first one being a list of listening webbrowsers (through the [playback-control browser extension](https://github.com/SanderRonde/playback-control)) and the second one being a preconfigured list of telnet clients. The telnet client expects a VLC instance to listen at the receiving end, executing all instructions. If noone is listening, messages are simply ignored, allowing other listening instances to pick them up. For more info about how the webbrowser version works check out the repo.
 
 #### Telegram bot
 
@@ -100,15 +100,15 @@ It also allows for simple chaining through common words. For example "turn off t
 
 #### Smart speaker integration
 
-Smart speaker integration works by providing an HTTP endpoint for almost everything that can be done. IFTTT hooks can then be set up to send a webrequest to one of these endpoints when a given string is matched. 
+Smart speaker integration works by providing an HTTP endpoint for almost everything that can be done. IFTTT hooks can then be set up to send a webrequest to one of these endpoints when a given string is matched.
 
 #### Web apps
 
-The web apps use the [wc-lib](https://github.com/SanderRonde/wc-lib) webcomponent framework for the frontend and communicate with the server through the same endpoints as the smart speaker integration. 
+The web apps use the [wc-lib](https://github.com/SanderRonde/wc-lib) webcomponent framework for the frontend and communicate with the server through the same endpoints as the smart speaker integration.
 
 #### Touch screen
 
-The touch screen is based on a nextion touch screen and a controlling arduino. The arduino listens for any touch events from the touch screen and passes those on to the server, which then sets the keyval store's values. 
+The touch screen is based on a nextion touch screen and a controlling arduino. The arduino listens for any touch events from the touch screen and passes those on to the server, which then sets the keyval store's values.
 
 Check out the arduino driver for the board [over here](https://github.com/SanderRonde/arduino-board-screen-driver).
 

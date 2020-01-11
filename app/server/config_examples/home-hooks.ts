@@ -1,20 +1,20 @@
-import { HomeHooks } from "../modules/home-detector";
+import { HomeHooks } from '../modules/home-detector';
 
 export default {
-	"phone": {
-		"home": {
-			"lights-on":  (modules) => {
+	phone: {
+		home: {
+			'lights-on': modules => {
 				return modules.keyval.set('room.lights.ceiling', '1');
-			}, 
-			"pc-on": (modules) => {
+			},
+			'pc-on': modules => {
 				return modules.script.script('wake_desktop');
 			}
 		},
-		"away": {
-			"lights-off": (modules) => {
+		away: {
+			'lights-off': modules => {
 				return modules.keyval.set('room.lights', '0');
 			},
-			"speakers-off": (modules) => {
+			'speakers-off': modules => {
 				return modules.keyval.set('room.speakers', '0');
 			}
 		}

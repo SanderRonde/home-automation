@@ -1,27 +1,32 @@
-import { 
-	ConfigurableWebComponent, Props, PROP_TYPE, config, EventListenerObj
-} from "../../../../node_modules/wc-lib/build/es/wc-lib.js";
-import { MessageToast } from "../message-toast/message-toast.js";
+import {
+	ConfigurableWebComponent,
+	Props,
+	PROP_TYPE,
+	config,
+	EventListenerObj
+} from '../../../../node_modules/wc-lib/build/es/wc-lib.js';
+import { MessageToast } from '../message-toast/message-toast.js';
 
 @config({
 	is: 'server-comm',
 	html: null,
 	css: null,
-	dependencies: [
-		MessageToast
-	]
+	dependencies: [MessageToast]
 })
-export abstract class ServerComm<ELS extends {
-	IDS: {
-		[key: string]: HTMLElement|SVGElement;
-	};
-	CLASSES: {
-		[key: string]: HTMLElement|SVGElement;
-	}
-} = {
-	IDS: {};
-	CLASSES: {}
-}, E extends EventListenerObj = {}> extends ConfigurableWebComponent<{
+export abstract class ServerComm<
+	ELS extends {
+		IDS: {
+			[key: string]: HTMLElement | SVGElement;
+		};
+		CLASSES: {
+			[key: string]: HTMLElement | SVGElement;
+		};
+	} = {
+		IDS: {};
+		CLASSES: {};
+	},
+	E extends EventListenerObj = {}
+> extends ConfigurableWebComponent<{
 	selectors: ELS;
 	events: E;
 }> {
@@ -35,7 +40,7 @@ export abstract class ServerComm<ELS extends {
 
 	protected async assertOnline() {
 		if (navigator.onLine) return;
-		return new Promise((resolve) => {
+		return new Promise(resolve => {
 			const toast = MessageToast.create({
 				message: 'Waiting for internet...',
 				duration: 100000000
@@ -51,9 +56,13 @@ export abstract class ServerComm<ELS extends {
 		});
 	}
 
-	protected async request(url: string, postBody: {
-		[key: string]: any;
-	} = {}, errName: string = 'Failed request') {
+	protected async request(
+		url: string,
+		postBody: {
+			[key: string]: any;
+		} = {},
+		errName: string = 'Failed request'
+	) {
 		await this.assertOnline();
 
 		try {
@@ -62,7 +71,7 @@ export abstract class ServerComm<ELS extends {
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify({...postBody}),
+				body: JSON.stringify({ ...postBody }),
 				credentials: 'include'
 			});
 			if (!response.ok) {
@@ -73,7 +82,7 @@ export abstract class ServerComm<ELS extends {
 				return false;
 			}
 			return response;
-		} catch(e) {
+		} catch (e) {
 			MessageToast.create({
 				message: `${errName} (network error)`,
 				duration: 5000

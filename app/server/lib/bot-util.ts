@@ -1,19 +1,23 @@
 import { RESPONSE_TYPE } from '../modules/bot';
 
 export namespace BotUtil {
-	type NotUndefined<O extends {
-		[key: string]: any;
-	}> = {
+	type NotUndefined<
+		O extends {
+			[key: string]: any;
+		}
+	> = {
 		[K in keyof O]: O[K] extends undefined ? void : O[K];
-	}
+	};
 
-	type Defined<O extends {
-		[key: string]: any;
-	}> = Pick<O, keyof NotUndefined<O>>;
+	type Defined<
+		O extends {
+			[key: string]: any;
+		}
+	> = Pick<O, keyof NotUndefined<O>>;
 
 	function padWord(word: string, length: number, padChar: string = ' ') {
 		if (word.length === length) return word;
-	
+
 		let newStr: string = word;
 		while (newStr.length + 1 <= length) {
 			newStr = `${newStr}${padChar}`;
@@ -24,7 +28,12 @@ export namespace BotUtil {
 	export abstract class BotUtil {
 		public static mergeArr(arr1: any[], arr2: any[]) {
 			for (let i = 0; i < arr2.length; i++) {
-				if (i > arr1.length || typeof arr1[i] !== 'object' || arr1[i] === undefined || arr1[i] === null) {
+				if (
+					i > arr1.length ||
+					typeof arr1[i] !== 'object' ||
+					arr1[i] === undefined ||
+					arr1[i] === null
+				) {
 					arr1[i] = arr2[i];
 				} else if ((arr2 as any)[i] !== undefined) {
 					if (Array.isArray(arr1[i])) {
@@ -40,7 +49,12 @@ export namespace BotUtil {
 		public static mergeObj<T1>(config: T1, extra: Object): T1 {
 			const final = { ...config };
 			for (const key in extra) {
-				if (!(key in config) || typeof (config as any)[key] !== 'object' || (config as any)[key] == undefined || (config as any)[key] == null) {
+				if (
+					!(key in config) ||
+					typeof (config as any)[key] !== 'object' ||
+					(config as any)[key] == undefined ||
+					(config as any)[key] == null
+				) {
 					if ((extra as any)[key] === undefined) continue;
 					(final as any)[key] = (extra as any)[key];
 				} else if ((extra as any)[key] !== undefined) {
@@ -55,37 +69,46 @@ export namespace BotUtil {
 			return final;
 		}
 
-		public static unsetUndefined<O extends { [key: string]: any|undefined; }>(
-			obj: O): Defined<O> {
-				const finalObj: Partial<Defined<O>> = {};
-				for (const key in obj) {
-					if (obj[key] !== undefined) {
-						finalObj[key] = obj[key];
-					}
+		public static unsetUndefined<
+			O extends { [key: string]: any | undefined }
+		>(obj: O): Defined<O> {
+			const finalObj: Partial<Defined<O>> = {};
+			for (const key in obj) {
+				if (obj[key] !== undefined) {
+					finalObj[key] = obj[key];
 				}
-				return finalObj as Defined<O>;
 			}
+			return finalObj as Defined<O>;
+		}
 
 		public static formatList(list: string[]): string {
 			if (list.length === 0) {
-				return `(empty)`
+				return `(empty)`;
 			}
 			if (list.length === 1) {
 				return `${list[0]}`;
 			} else {
-				return `${list.slice(0, -1).join(', ')} and ${list.slice(-1)}`
+				return `${list.slice(0, -1).join(', ')} and ${list.slice(-1)}`;
 			}
 		}
-		
-		public static makeTable({ header, contents }: {
+
+		public static makeTable({
+			header,
+			contents
+		}: {
 			header?: string[];
 			contents: string[][];
 		}) {
-			if (!contents.every(row => row.length === (header ? 
-					header.length : contents[0].length))) {
-						throw new Error('Invalid table dimensions');
-					}
-		
+			if (
+				!contents.every(
+					row =>
+						row.length ===
+						(header ? header.length : contents[0].length)
+				)
+			) {
+				throw new Error('Invalid table dimensions');
+			}
+
 			if (contents.length === 0) {
 				if (!header) {
 					return 'Empty table';
@@ -93,11 +116,11 @@ export namespace BotUtil {
 					contents = [new Array(header.length).fill('empty')];
 				}
 			}
-			const data = [...(header ? [ header ] : []), ...contents];
-		
+			const data = [...(header ? [header] : []), ...contents];
+
 			const columns = contents[0].length;
 			const colLengths = [];
-		
+
 			for (let column = 0; column < columns; column++) {
 				colLengths[column] = 0;
 				for (let row = 0; row < data.length; row++) {
@@ -106,7 +129,7 @@ export namespace BotUtil {
 					}
 				}
 			}
-		
+
 			const output: string[] = [];
 			for (let i = 0; i < data.length; i++) {
 				output.push('');
@@ -120,10 +143,10 @@ export namespace BotUtil {
 					}
 					cellText += padWord(data[i][j], colLengths[j]);
 					cellText += ' ';
-		
+
 					output[output.length - 1] += cellText;
 				}
-		
+
 				if (header && i === 0) {
 					output.push('');
 					for (let j = 0; j < data[i].length; j++) {
@@ -133,7 +156,7 @@ export namespace BotUtil {
 					}
 				}
 			}
-			
+
 			return {
 				type: RESPONSE_TYPE.HTML,
 				text: `<pre>${output.join('\n')}</pre>`

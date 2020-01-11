@@ -9,9 +9,17 @@ interface KeyVal {
 }
 
 export function requireParams(...keys: string[]) {
-    return function (_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
+	return function(
+		_target: any,
+		_propertyKey: string,
+		descriptor: PropertyDescriptor
+	) {
 		const original = descriptor.value;
-        descriptor.value = function (res: express.Response, params: KeyVal, ...args: any[]) {
+		descriptor.value = function(
+			res: express.Response,
+			params: KeyVal,
+			...args: any[]
+		) {
 			for (const key of keys) {
 				if (!params || !params[key]) {
 					throw new KeyError(`Missing key "${key}"`);
@@ -19,74 +27,114 @@ export function requireParams(...keys: string[]) {
 			}
 
 			return original.bind(this)(res, params, ...args);
-		}
-    };
+		};
+	};
 }
 
-export function auth(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+export function auth(
+	target: any,
+	propertyKey: string,
+	descriptor: PropertyDescriptor
+) {
 	requireParams('auth')(target, propertyKey, descriptor);
 
 	const original = descriptor.value;
-	descriptor.value = async function (res: express.Response, params: KeyVal, ...args: any[]) {
-		if (!await Auth.ClientSecret.authenticate(params.auth, params.id || '0')) {
+	descriptor.value = async function(
+		res: express.Response,
+		params: KeyVal,
+		...args: any[]
+	) {
+		if (
+			!(await Auth.ClientSecret.authenticate(
+				params.auth,
+				params.id || '0'
+			))
+		) {
 			throw new AuthError('Invalid auth key');
 		}
 
-		return original.bind(this)(res, params, ...args);;
-	}
+		return original.bind(this)(res, params, ...args);
+	};
 }
 
-export function authCookie(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
+export function authCookie(
+	_target: any,
+	_propertyKey: string,
+	descriptor: PropertyDescriptor
+) {
 	const original = descriptor.value;
-	descriptor.value = async function (res: express.Response, req: express.Request|{
-		cookies: { 
-			[key: string]: string;
-		}
-	}, ...args: any[]) {
-		if (!await Auth.Cookie.checkCookie(req)) {
+	descriptor.value = async function(
+		res: express.Response,
+		req:
+			| express.Request
+			| {
+					cookies: {
+						[key: string]: string;
+					};
+			  },
+		...args: any[]
+	) {
+		if (!(await Auth.Cookie.checkCookie(req))) {
 			throw new AuthError('Invalid or missing auth cookie');
 		}
 
 		return original.bind(this)(res, req, ...args);
-	}
+	};
 }
 
-export function authAll(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
+export function authAll(
+	_target: any,
+	_propertyKey: string,
+	descriptor: PropertyDescriptor
+) {
 	const original = descriptor.value;
-	descriptor.value = async function (res: express.Response, params: KeyVal&{
-		cookies: { 
-			[key: string]: string;
-		}
-	}, ...args: any[]) {
+	descriptor.value = async function(
+		res: express.Response,
+		params: KeyVal & {
+			cookies: {
+				[key: string]: string;
+			};
+		},
+		...args: any[]
+	) {
 		if (await Auth.Cookie.checkCookie(params)) {
 			return original.bind(this)(res, params, ...args);
-		} else if (params.cookies && params.cookies["key"]) {
+		} else if (params.cookies && params.cookies['key']) {
 			throw new AuthError('Invalid auth cookie');
 		}
 
-		if (!params || !params["auth"]) {
+		if (!params || !params['auth']) {
 			throw new KeyError(`Missing key "auth"`);
 		}
-		if (await Auth.ClientSecret.authenticate(params.auth, params.id || '0')) {
+		if (
+			await Auth.ClientSecret.authenticate(params.auth, params.id || '0')
+		) {
 			return original.bind(this)(res, params, ...args);
 		} else {
 			throw new AuthError('Invalid auth key');
 		}
-	}
+	};
 }
 
-export function errorHandle(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
+export function errorHandle(
+	_target: any,
+	_propertyKey: string,
+	descriptor: PropertyDescriptor
+) {
 	const original = descriptor.value;
-	descriptor.value = async function (res: express.Response, ...args: any[]) {
+	descriptor.value = async function(res: express.Response, ...args: any[]) {
 		try {
 			return await original.bind(this)(res, ...args);
-		} catch(e) {
+		} catch (e) {
 			if (e instanceof KeyError) {
 				res.status(400).write(e.message);
 			} else if (e instanceof AuthError) {
 				res.status(403).write(e.message);
 			} else {
-				const msg = attachMessage(res, chalk.red(chalk.bgBlack(e?.message || '?')));
+				const msg = attachMessage(
+					res,
+					chalk.red(chalk.bgBlack(e?.message || '?'))
+				);
 				for (const line of e?.stack?.split('\n') || []) {
 					attachMessage(msg, line);
 				}
@@ -94,12 +142,20 @@ export function errorHandle(_target: any, _propertyKey: string, descriptor: Prop
 			}
 			res.end();
 		}
-	}
+	};
 }
 
-export function upgradeToHTTPS(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
+export function upgradeToHTTPS(
+	_target: any,
+	_propertyKey: string,
+	descriptor: PropertyDescriptor
+) {
 	const original = descriptor.value;
-	descriptor.value = async function (res: express.Response, req: express.Request, ...args: any[]) {
+	descriptor.value = async function(
+		res: express.Response,
+		req: express.Request,
+		...args: any[]
+	) {
 		const protocol = (() => {
 			if ('x-forwarded-proto' in req.headers) {
 				// Should only be used if the proxy is trusted but mine is
@@ -119,5 +175,5 @@ export function upgradeToHTTPS(_target: any, _propertyKey: string, descriptor: P
 		}
 
 		return original.bind(this)(res, req, ...args);
-	}
+	};
 }

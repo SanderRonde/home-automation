@@ -1,4 +1,9 @@
-import { ConfigurableWebComponent, Props, config, ComplexType } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
+import {
+	ConfigurableWebComponent,
+	Props,
+	config,
+	ComplexType
+} from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { ColorButton } from '../color-button/color-button.js';
 import { RgbControlsHTML } from './rgb-controls.html.js';
 import { RgbControlsCSS } from './rgb-controls.css.js';
@@ -22,7 +27,7 @@ export class RgbControls extends ConfigurableWebComponent<{
 		}
 	});
 
-	public lastColor: [number, number, number] = [0, 0, 0 ];
+	public lastColor: [number, number, number] = [0, 0, 0];
 
 	private static readonly RANGE_COLORS = [
 		[255, 0, 0],
@@ -32,7 +37,7 @@ export class RgbControls extends ConfigurableWebComponent<{
 		[0, 0, 255],
 		[255, 0, 255],
 		[255, 0, 0]
-	]
+	];
 	static getColorAtIndex(index: number): [number, number, number] {
 		const groupSize = 100 / (this.RANGE_COLORS.length - 1);
 		const closestGroup = Math.ceil(index / groupSize) * groupSize;
@@ -41,18 +46,18 @@ export class RgbControls extends ConfigurableWebComponent<{
 				return {
 					start: 100 - groupSize,
 					end: 100
-				}
+				};
 			}
 			if (index < closestGroup) {
 				return {
 					start: closestGroup - groupSize,
 					end: closestGroup
-				}
+				};
 			} else {
 				return {
 					start: closestGroup,
 					end: closestGroup + groupSize
-				}
+				};
 			}
 		})();
 		const startColor = this.RANGE_COLORS[Math.round(start / groupSize)];

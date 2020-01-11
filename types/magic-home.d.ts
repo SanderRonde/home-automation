@@ -20,12 +20,27 @@ interface Options {
 	apply_masks?: boolean;
 }
 
-type BuiltinPatterns = 'seven_color_cross_fade'|'red_gradual_change'|'green_gradual_change'|
-	'blue_gradual_change'|'yellow_gradual_change'|'cyan_gradual_change'|'purple_gradual_change'|
-	'white_gradual_change'|'red_green_cross_fade'|'red_blue_cross_fade'|'green_blue_cross_fade'|
-	'seven_color_strobe_flash'|'red_strobe_flash'|'green_strobe_flash'|'blue_stobe_flash'|
-	'yellow_strobe_flash'|'cyan_strobe_flash'|'purple_strobe_flash'|'white_strobe_flash'|
-	'seven_color_jumping';
+type BuiltinPatterns =
+	| 'seven_color_cross_fade'
+	| 'red_gradual_change'
+	| 'green_gradual_change'
+	| 'blue_gradual_change'
+	| 'yellow_gradual_change'
+	| 'cyan_gradual_change'
+	| 'purple_gradual_change'
+	| 'white_gradual_change'
+	| 'red_green_cross_fade'
+	| 'red_blue_cross_fade'
+	| 'green_blue_cross_fade'
+	| 'seven_color_strobe_flash'
+	| 'red_strobe_flash'
+	| 'green_strobe_flash'
+	| 'blue_stobe_flash'
+	| 'yellow_strobe_flash'
+	| 'cyan_strobe_flash'
+	| 'purple_strobe_flash'
+	| 'white_strobe_flash'
+	| 'seven_color_jumping';
 
 export class Control {
 	static patternNames: {
@@ -33,20 +48,55 @@ export class Control {
 	};
 	constructor(address: string, options?: Options);
 	queryState(callback?: (state: State) => void): Promise<State>;
-	setColor(red: number, green: number, blue: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean>;
-	setColorAndWarmWhite(red: number, green: number, blue: number, ww: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean>;
-	setColorWithBrightness(red: number, green: number, blue: number, brightness: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean>;
-	setCustomPattern(pattern: CustomMode, speed: number, callback?: () => void): Promise<boolean>;
-	setPattern(pattern: BuiltinPatterns, speed: number, callback?: () => void): Promise<boolean>;
+	setColor(
+		red: number,
+		green: number,
+		blue: number,
+		callback?: (err: Error | null, success: boolean) => void
+	): Promise<boolean>;
+	setColorAndWarmWhite(
+		red: number,
+		green: number,
+		blue: number,
+		ww: number,
+		callback?: (err: Error | null, success: boolean) => void
+	): Promise<boolean>;
+	setColorWithBrightness(
+		red: number,
+		green: number,
+		blue: number,
+		brightness: number,
+		callback?: (err: Error | null, success: boolean) => void
+	): Promise<boolean>;
+	setCustomPattern(
+		pattern: CustomMode,
+		speed: number,
+		callback?: () => void
+	): Promise<boolean>;
+	setPattern(
+		pattern: BuiltinPatterns,
+		speed: number,
+		callback?: () => void
+	): Promise<boolean>;
 	setPower(on: boolean, callback?: () => void): Promise<boolean>;
-	setWarmWhite(ww: number, callback?: (err: Error|null, success: boolean) => void): Promise<boolean>;
-	startEffectMode(callback?: (interface: EffectInterface) => void): Promise<EffectInterface>;
+	setWarmWhite(
+		ww: number,
+		callback?: (err: Error | null, success: boolean) => void
+	): Promise<boolean>;
+	startEffectMode(
+		callback?: (interface: EffectInterface) => void
+	): Promise<EffectInterface>;
 	turnOff(callback?: () => void): Promise<boolean>;
 	turnOn(callback?: () => void): Promise<boolean>;
 }
 
 export declare class EffectInterface {
-	constructor(address: string, port: number, options: Options, callback: (err: Error|null, interface: EffectInterface) => void);
+	constructor(
+		address: string,
+		port: number,
+		options: Options,
+		callback: (err: Error | null, interface: EffectInterface) => void
+	);
 
 	start(interval_function: () => void): void;
 	setColor(red: number, green: number, blue: number): void;
@@ -56,7 +106,7 @@ export declare class EffectInterface {
 	connected: boolean;
 }
 
-export type TransitionTypes = 'fade'|'jump'|'strobe';
+export type TransitionTypes = 'fade' | 'jump' | 'strobe';
 
 export class CustomMode {
 	static transitionTypes: TransitionTypes[];
@@ -80,7 +130,10 @@ export interface Client {
 
 export class Discovery {
 	static scan(timeout: number): Discovery;
-	scan(timeout?: number, callback?: (devices: Client[]) => void): Promise<Client[]>;
+	scan(
+		timeout?: number,
+		callback?: (devices: Client[]) => void
+	): Promise<Client[]>;
 
 	clients: Client[];
 	scanned: boolean;

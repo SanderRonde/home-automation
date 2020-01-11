@@ -11,7 +11,7 @@ const readLine = readline.createInterface({
 
 function getIO() {
 	let baud = 115200;
-	let file = "/dev/ttyACM0";
+	let file = '/dev/ttyACM0';
 	let input: string = '';
 	let takeInput: boolean = false;
 
@@ -32,7 +32,12 @@ function getIO() {
 	return { baud, file, input, takeInput };
 }
 
-async function connect({ baud, file, input, takeInput }: {
+async function connect({
+	baud,
+	file,
+	input,
+	takeInput
+}: {
 	baud: number;
 	file: string;
 	input: string;
@@ -41,7 +46,7 @@ async function connect({ baud, file, input, takeInput }: {
 	const port = new SerialPort(file, {
 		baudRate: baud
 	});
-	port.on('error', (e) => {
+	port.on('error', e => {
 		console.log('error', e);
 		process.exit(1);
 	});
@@ -75,39 +80,46 @@ async function connect({ baud, file, input, takeInput }: {
 	}
 
 	while (true) {
-		await new Promise((resolve) => {
-			readLine.question(showOutput ? '' : 'Enter command:\n> ', (command) => {
-				if (command === 'exit' || command === 'e' || command === 'q' ||
-					command === 'quit') {
+		await new Promise(resolve => {
+			readLine.question(
+				showOutput ? '' : 'Enter command:\n> ',
+				command => {
+					if (
+						command === 'exit' ||
+						command === 'e' ||
+						command === 'q' ||
+						command === 'quit'
+					) {
 						process.exit(1);
 					}
-				if (command === 's') {
-					showOutput = true;
-					console.log('Showing output');
-					buffered.forEach((line) => {
-						process.stdout.write(line);
-					});
-				} else if (command === 'h') {
-					showOutput = false;
-					console.log('Hiding output');
-				} else {
-					showOutput = true;
-					port.write(command + '\n');
+					if (command === 's') {
+						showOutput = true;
+						console.log('Showing output');
+						buffered.forEach(line => {
+							process.stdout.write(line);
+						});
+					} else if (command === 'h') {
+						showOutput = false;
+						console.log('Hiding output');
+					} else {
+						showOutput = true;
+						port.write(command + '\n');
+					}
+					if (takeInput) {
+						setTimeout(() => {
+							process.exit(0);
+						}, 100);
+					} else {
+						resolve();
+					}
 				}
-				if (takeInput) {
-					setTimeout(() => {
-						process.exit(0);
-					}, 100);
-				} else {
-					resolve();
-				}
-			});
+			);
 		});
 	}
 }
 
 function main() {
-	connect(getIO());	
+	connect(getIO());
 }
 
 main();

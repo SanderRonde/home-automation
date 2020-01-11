@@ -1,4 +1,9 @@
-import { ConfigurableWebComponent, Props, config, PROP_TYPE } from '../../../../node_modules/wc-lib/build/es/wc-lib.js';
+import {
+	ConfigurableWebComponent,
+	Props,
+	config,
+	PROP_TYPE
+} from '../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { AnnotatorInstanceHTML } from './annotator-instance.html.js';
 import { AnnotatorInstanceCSS } from './annotator-instance.css.js';
 import { IDMap, ClassMap } from './annotator-instance-querymap';
@@ -10,14 +15,16 @@ type ClassMapT = {
 	[key: string]: HTMLElement;
 } & ClassMap;
 
-type Entry = {
-	type: 'melody';
-	time: number;
-	duration: number;
-} | {
-	type: 'beat';
-	time: number;
-};
+type Entry =
+	| {
+			type: 'melody';
+			time: number;
+			duration: number;
+	  }
+	| {
+			type: 'beat';
+			time: number;
+	  };
 
 type Items = Entry[];
 
@@ -26,11 +33,11 @@ type AnnotatedFile = {
 	genre: {
 		hard: number;
 		uptempo: number;
-	}
+	};
 };
 
 function waitUntil(fn: () => boolean, interval: number = 50) {
-	return new Promise((resolve) => {
+	return new Promise(resolve => {
 		function doCheck() {
 			if (fn()) {
 				resolve();
@@ -42,7 +49,6 @@ function waitUntil(fn: () => boolean, interval: number = 50) {
 	});
 }
 
-
 @config({
 	is: 'annotator-instance',
 	css: AnnotatorInstanceCSS,
@@ -52,7 +58,7 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 	selectors: {
 		IDS: IDMapT;
 		CLASSES: ClassMapT;
-	}
+	};
 }> {
 	items: Items = [];
 	genre: {
@@ -104,32 +110,45 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 		this.$.vid.currentTime += 5;
 	}
 
-	paint(type: 'melody' | 'beat', time = this.$.vid.currentTime, duration = 0.01) {
+	paint(
+		type: 'melody' | 'beat',
+		time = this.$.vid.currentTime,
+		duration = 0.01
+	) {
 		const canvas = type === 'melody' ? this.$.melodies : this.$.beats;
-		const zoomedCanvas = type === 'melody' ? this.$.zoomedMelodies : this.$.zoomedBeats;
+		const zoomedCanvas =
+			type === 'melody' ? this.$.zoomedMelodies : this.$.zoomedBeats;
 		const color = type === 'melody' ? '#3F51B5' : '#ff2110';
 
 		const ctx = canvas.getContext('2d')!;
 		const zoomedCtx = zoomedCanvas.getContext('2d')!;
 		ctx.fillStyle = zoomedCtx.fillStyle = color;
 		const startX = (time / this.$.vid.duration) * canvas.width;
-		const endX = type === 'beat' ?
-			1 :
-			((((time + duration) / this.$.vid.duration) * canvas.width) - startX);
+		const endX =
+			type === 'beat'
+				? 1
+				: ((time + duration) / this.$.vid.duration) * canvas.width -
+				  startX;
 		ctx.fillRect(startX, 0, endX, canvas.height);
 
 		const zoomedStartX = time * 10;
-		const zoomedEndX = type === 'beat' ?
-			1 : (((time + duration) * 10) - zoomedStartX);
+		const zoomedEndX =
+			type === 'beat' ? 1 : (time + duration) * 10 - zoomedStartX;
 		zoomedCtx.fillRect(zoomedStartX, 0, zoomedEndX, canvas.height);
 	}
 
-	mark(type: 'melody' | 'beat', time = this.$.vid.currentTime, duration = 0.01) {
+	mark(
+		type: 'melody' | 'beat',
+		time = this.$.vid.currentTime,
+		duration = 0.01
+	) {
 		this.paint(type, time, duration);
 
 		if (type === 'melody') {
 			this.items.push({
-				type, time, duration
+				type,
+				time,
+				duration
 			});
 		} else {
 			this.items.push({
@@ -155,22 +174,25 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 		this.paint('beat', time, duration);
 	}
 
-	private _markTimesInCanvas(canvas: HTMLCanvasElement, zoomedCanvas: HTMLCanvasElement) {
+	private _markTimesInCanvas(
+		canvas: HTMLCanvasElement,
+		zoomedCanvas: HTMLCanvasElement
+	) {
 		const ctx = canvas.getContext('2d')!;
 		ctx.fillStyle = '#fff';
 		const delta = canvas.width / 10;
 		new Array(9).fill('').forEach((_, index) => {
-			ctx.fillRect((delta * (index + 1)) - 1, 0, 2, canvas.height);
+			ctx.fillRect(delta * (index + 1) - 1, 0, 2, canvas.height);
 		});
 
 		const zoomedCtx = zoomedCanvas.getContext('2d')!;
 		zoomedCtx.fillStyle = '#fff';
 
 		for (let i = 10; i < this.props.length; i += 10) {
-			zoomedCtx.fillRect(((10 * i)) - 1, 0, 2, canvas.height);
+			zoomedCtx.fillRect(10 * i - 1, 0, 2, canvas.height);
 		}
 	}
-	
+
 	private _secsToTime(secs: number): string {
 		const mins = Math.floor(secs / 60);
 		const remSecs = (() => {
@@ -181,10 +203,10 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 				return sec + '0';
 			}
 		})();
-	
+
 		const hours = Math.floor(mins / 60);
 		const remMins = Math.round(mins % 60);
-	
+
 		if (hours) {
 			return `${hours}:${remMins}:${remSecs}`;
 		}
@@ -197,12 +219,12 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 		const ctx = canvas.getContext('2d')!;
 		const zoomedCtx = zoomedCanvas.getContext('2d')!;
 		ctx.fillStyle = zoomedCtx.fillStyle = '#fff';
-		ctx.textAlign = zoomedCtx.textAlign = "center";
+		ctx.textAlign = zoomedCtx.textAlign = 'center';
 		ctx.font = zoomedCtx.font = '12px Arial';
 
 		for (let i = 0; i < 10; i++) {
-			const time = this._secsToTime(this.props.length * i / 10);
-			ctx.fillText(time, canvas.width * i / 10, canvas.height * 0.7);
+			const time = this._secsToTime((this.props.length * i) / 10);
+			ctx.fillText(time, (canvas.width * i) / 10, canvas.height * 0.7);
 		}
 		for (let i = 0; i < this.props.length; i += 10) {
 			const time = this._secsToTime(i);
@@ -217,7 +239,7 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 		if (this._melody) return;
 		this._melody = {
 			startTime: this.$.vid.currentTime
-		}
+		};
 	}
 
 	melodyEnd() {
@@ -242,31 +264,30 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 	}
 
 	prepDownload() {
-		this.$.download.href = `data:text/plain;charset=utf-8,${
-			encodeURIComponent(JSON.stringify({
+		this.$.download.href = `data:text/plain;charset=utf-8,${encodeURIComponent(
+			JSON.stringify({
 				items: this.items,
 				genre: this.genre || {
 					hard: 0.5,
 					uptempo: 0.5
 				}
-			}))
-			}`;
+			})
+		)}`;
 	}
 
 	get markType() {
-		return this.$.markMode.checked ?
-			'melody' : 'beat';
+		return this.$.markMode.checked ? 'melody' : 'beat';
 	}
 
 	clearLast() {
 		const time = this.$.vid.currentTime;
-		this.items = this.items.filter((item) => {
-			return item.time < (time - 10) || item.type !== this.markType;
+		this.items = this.items.filter(item => {
+			return item.time < time - 10 || item.type !== this.markType;
 		});
 
 		// Repaint
 		this._forcePaint(this.items);
-		
+
 		// Seek
 		this.seekLeft();
 	}
@@ -280,7 +301,7 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 		this._forcePaint(this.items);
 	}
 
-	private _pressed: HTMLButtonElement|null = null;
+	private _pressed: HTMLButtonElement | null = null;
 	private _markPressed(element: HTMLButtonElement) {
 		this._pressed = element;
 		this._pressed.classList.add('active');
@@ -342,8 +363,7 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 	}
 
 	pausePlay() {
-		this.$.vid.paused ? 
-			this.$.vid.play() : this.$.vid.pause();
+		this.$.vid.paused ? this.$.vid.play() : this.$.vid.pause();
 	}
 
 	postRender() {
@@ -354,7 +374,12 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 
 	private async _getJsonFile() {
 		try {
-			return await fetch(`${location.origin}/${this.props.filename!.replace('.wav', '.json')}`);
+			return await fetch(
+				`${location.origin}/${this.props.filename!.replace(
+					'.wav',
+					'.json'
+				)}`
+			);
 		} catch (e) {
 			return null;
 		}
@@ -362,8 +387,17 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 
 	private _clearAll() {
 		// Clear everything
-		[this.$.beats, this.$.melodies, this.$.zoomedBeats, this.$.zoomedMelodies, this.$.zoomedText, this.$.text].map((canvas) => {
-			canvas.getContext('2d') ?.clearRect(0, 0, canvas.width, canvas.height);
+		[
+			this.$.beats,
+			this.$.melodies,
+			this.$.zoomedBeats,
+			this.$.zoomedMelodies,
+			this.$.zoomedText,
+			this.$.text
+		].map(canvas => {
+			canvas
+				.getContext('2d')
+				?.clearRect(0, 0, canvas.width, canvas.height);
 		});
 		this._markTimesInCanvas(this.$.beats, this.$.zoomedBeats);
 		this._markTimesInCanvas(this.$.melodies, this.$.zoomedMelodies);
@@ -392,11 +426,12 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 		this.items = [];
 
 		// Fill based on associated JSON file's markings
-		if (this.props.filename === null || this.props.filename === 'null') return;
+		if (this.props.filename === null || this.props.filename === 'null')
+			return;
 		const file = await this._getJsonFile();
 		if (!file || file.status === 404) return;
 
-		const content = await file.json() as AnnotatedFile;
+		const content = (await file.json()) as AnnotatedFile;
 		if (content.items) {
 			this._forcePaint(content.items);
 		}
@@ -406,7 +441,7 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 
 		this.items = [...content.items];
 	}
-	
+
 	private _secPx = window.innerWidth / 100;
 	private _boundPaint = this._paintTime.bind(this);
 	private _paintTime() {
@@ -421,7 +456,10 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
 
 			// Paint zoomed range
-			const midTime = Math.max(Math.min(vid.currentTime, vid.duration - 50), 50);
+			const midTime = Math.max(
+				Math.min(vid.currentTime, vid.duration - 50),
+				50
+			);
 			const startTime = midTime - 50;
 			const endTime = midTime + 50;
 
@@ -429,25 +467,39 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 			const endX = canvas.width * (endTime / vid.duration) - 1;
 			ctx.fillRect(startX, 0, 2, canvas.height);
 			ctx.fillStyle = '#242424';
-			ctx.fillRect(startX + 2, 0, (endX - startX) - 2, canvas.height);
+			ctx.fillRect(startX + 2, 0, endX - startX - 2, canvas.height);
 			ctx.fillStyle = '#fff';
 			ctx.fillRect(endX, 0, 2, canvas.height);
 
 			// Paint time dot
 			const percentage = vid.currentTime / vid.duration;
 			ctx.beginPath();
-			ctx.arc(percentage * canvas.width, canvas.height / 2, 15, 0, 2 * Math.PI);
+			ctx.arc(
+				percentage * canvas.width,
+				canvas.height / 2,
+				15,
+				0,
+				2 * Math.PI
+			);
 			ctx.fill();
 			ctx.stroke();
 
 			// Paint zoomed time dot
 			zoomedCtx.beginPath();
-			zoomedCtx.arc(vid.currentTime * 10, canvas.height / 2, 15, 0, 2 * Math.PI);
+			zoomedCtx.arc(
+				vid.currentTime * 10,
+				canvas.height / 2,
+				15,
+				0,
+				2 * Math.PI
+			);
 			zoomedCtx.fill();
 			zoomedCtx.stroke();
 
 			// Move the range
-			this.$.zoomedTimeline.style.transform = `translateX(-${Math.round(this._secPx * startTime)}px)`;
+			this.$.zoomedTimeline.style.transform = `translateX(-${Math.round(
+				this._secPx * startTime
+			)}px)`;
 		}
 		window.requestAnimationFrame(this._boundPaint);
 	}

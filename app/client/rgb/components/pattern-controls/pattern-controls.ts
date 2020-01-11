@@ -1,4 +1,10 @@
-import { ConfigurableWebComponent, Props, config, PROP_TYPE, ComplexType } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
+import {
+	ConfigurableWebComponent,
+	Props,
+	config,
+	PROP_TYPE,
+	ComplexType
+} from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { PatternButton } from '../pattern-button/pattern-button.js';
 import { PatternControlsHTML } from './pattern-controls.html.js';
 import { PatternControlsCSS } from './pattern-controls.css.js';
@@ -41,7 +47,7 @@ export class PatternControls extends ConfigurableWebComponent<{
 	}
 
 	postRender() {
-		this.$.speedSlider.value = (this.props.defaultSpeed! - 1) + '';
+		this.$.speedSlider.value = this.props.defaultSpeed! - 1 + '';
 		this.$.speedSlider.value = this.props.defaultSpeed + '';
 	}
 }

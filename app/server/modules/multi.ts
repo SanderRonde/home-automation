@@ -6,7 +6,7 @@ interface MultiRequestRequest {
 	path: string;
 	body: {
 		[key: string]: string;
-	}
+	};
 	method: string;
 }
 
@@ -20,13 +20,13 @@ export interface ResponseLike {
 
 export class SubDummy implements ResponseLike {
 	private _status: number = 200;
-	private _contentType: string|null = null;
+	private _contentType: string | null = null;
 	private _cookies: [string, string][] = [];
 	private _written: string = '';
 	private _start: number = Date.now();
-	private _duration: string|number = '?';
+	private _duration: string | number = '?';
 
-	constructor(private _config: MultiRequestRequest) { }
+	constructor(private _config: MultiRequestRequest) {}
 
 	status(code: number) {
 		this._status = code;
@@ -37,7 +37,7 @@ export class SubDummy implements ResponseLike {
 		this._written = str;
 	}
 
-	end() { 
+	end() {
 		this._duration = Date.now() - this._start;
 	}
 
@@ -58,14 +58,14 @@ export class SubDummy implements ResponseLike {
 			start: this._start,
 			duration: this._duration,
 			config: this._config
-		}
+		};
 	}
 }
 
 class ResponseDummy {
 	private _dummies: SubDummy[] = [];
 
-	constructor(private _res: express.Response) { }
+	constructor(private _res: express.Response) {}
 
 	response(config: MultiRequestRequest) {
 		const dummy = new SubDummy(config);
@@ -74,33 +74,43 @@ class ResponseDummy {
 	}
 
 	finish(req: express.Request) {
-		this._res.status(this._dummies.map(d => d.data.status).reduce((prev, current) => {
-			if (current !== 200) return current;
-			return prev;
-		}, 200));
+		this._res.status(
+			this._dummies
+				.map(d => d.data.status)
+				.reduce((prev, current) => {
+					if (current !== 200) return current;
+					return prev;
+				}, 200)
+		);
 		this._res.write(JSON.stringify(this._dummies.map(d => d.data.written)));
-		const contentType = this._dummies.map(d => d.data.contentType).reduce((prev, current) => {
-			return prev || current;
-		}, null);
+		const contentType = this._dummies
+			.map(d => d.data.contentType)
+			.reduce((prev, current) => {
+				return prev || current;
+			}, null);
 		if (contentType) {
 			this._res.contentType(contentType);
 		}
-		for (const [ key, val ] of this._dummies.map(d => d.data.cookies).reduce((prev, current) => {
-			return [...prev, ...current];
-		}, [])) {
+		for (const [key, val] of this._dummies
+			.map(d => d.data.cookies)
+			.reduce((prev, current) => {
+				return [...prev, ...current];
+			}, [])) {
 			this._res.cookie(key, val);
 		}
 
 		for (const dummy of this._dummies) {
-			const subRes = attachMessage(this._res, 
-				...genURLLog({ 
-					req, 
-					statusCode: dummy.data.status, 
-					duration: dummy.data.duration, 
+			const subRes = attachMessage(
+				this._res,
+				...genURLLog({
+					req,
+					statusCode: dummy.data.status,
+					duration: dummy.data.duration,
 					ip: req.ip,
 					method: dummy.data.config.method,
 					url: dummy.data.config.path
-				}));
+				})
+			);
 			transferAttached(dummy, subRes);
 		}
 
@@ -125,19 +135,34 @@ export namespace Multi {
 
 				// Validate them all
 				for (const route of requests) {
-					if (typeof route !== 'object' || !route.path || typeof route.path !== 'string' ||
-						!route.body || typeof route.body !== 'object') {
-							res.status(400).write('Invalid route format. Expected is { method: string, path: string, body: {} }');
-							res.end();
-							return;
-						}
+					if (
+						typeof route !== 'object' ||
+						!route.path ||
+						typeof route.path !== 'string' ||
+						!route.body ||
+						typeof route.body !== 'object'
+					) {
+						res.status(400).write(
+							'Invalid route format. Expected is { method: string, path: string, body: {} }'
+						);
+						res.end();
+						return;
+					}
 				}
 
-				const resDummy = new ResponseDummy(res)
-				await Promise.all(requests.map((config) => {
-					const { body, path, method } = config;
-					return app.triggerRoute(req, resDummy.response(config), method, path, body);
-				}));
+				const resDummy = new ResponseDummy(res);
+				await Promise.all(
+					requests.map(config => {
+						const { body, path, method } = config;
+						return app.triggerRoute(
+							req,
+							resDummy.response(config),
+							method,
+							path,
+							body
+						);
+					})
+				);
 				resDummy.finish(req);
 			});
 		}

@@ -1,4 +1,9 @@
-import { config, ConfigurableWebComponent, Props, PROP_TYPE } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
+import {
+	config,
+	ConfigurableWebComponent,
+	Props,
+	PROP_TYPE
+} from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { PowerSwitchHTML, PowerSwitchCSS } from './power-switch.templates.js';
 
 @config({
@@ -16,8 +21,8 @@ export class PowerSwitch extends ConfigurableWebComponent<{
 	};
 	events: {
 		toggle: {
-			args: [boolean, boolean]
-		}
+			args: [boolean, boolean];
+		};
 	};
 }> {
 	private _element!: HTMLElement;
@@ -48,7 +53,7 @@ export class PowerSwitch extends ConfigurableWebComponent<{
 		window.onresize = (e: any) => {
 			original && original.call(window, e);
 			this._updateScale();
-		}
+		};
 	}
 
 	private _updateScale() {
@@ -105,17 +110,17 @@ export class PowerSwitch extends ConfigurableWebComponent<{
 
 	private _onMouseUp() {
 		this._blur();
-	};
+	}
 
 	private _updateClasses() {
 		this.checkDisabled();
-    	this.checkToggleState();
+		this.checkToggleState();
 	}
 
 	private _blur() {
 		window.setTimeout(() => {
 			this._inputElement.blur();
-		}, (PowerSwitch._TINY_TIMEOUT));
+		}, PowerSwitch._TINY_TIMEOUT);
 	}
 
 	checkDisabled() {
@@ -136,60 +141,69 @@ export class PowerSwitch extends ConfigurableWebComponent<{
 
 	disable() {
 		this._inputElement.disabled = true;
-    	this._updateClasses();
+		this._updateClasses();
 	}
 
 	enable() {
 		this._inputElement.disabled = false;
-    	this._updateClasses();
+		this._updateClasses();
 	}
 
 	on() {
 		this._inputElement.checked = true;
-    	this._updateClasses();
+		this._updateClasses();
 	}
 
 	off() {
 		this._inputElement.checked = false;
-    	this._updateClasses();
+		this._updateClasses();
 	}
 
 	private _init() {
 		if (this._element) {
 			var track = document.createElement('div');
 			track.classList.add(PowerSwitch._CssClasses.TRACK);
-	  
+
 			var thumb = document.createElement('div');
 			thumb.classList.add(PowerSwitch._CssClasses.THUMB);
-	  
+
 			var focusHelper = document.createElement('span');
 			focusHelper.classList.add(PowerSwitch._CssClasses.FOCUS_HELPER);
-	  
+
 			thumb.appendChild(focusHelper);
-	  
+
 			this._element.appendChild(track);
 			this._element.appendChild(thumb);
-	  
-			if (this._element.classList.contains(
-				PowerSwitch._CssClasses.RIPPLE_EFFECT)) {
+
+			if (
+				this._element.classList.contains(
+					PowerSwitch._CssClasses.RIPPLE_EFFECT
+				)
+			) {
 				this._element.classList.add(
-						PowerSwitch._CssClasses.RIPPLE_IGNORE_EVENTS);
+					PowerSwitch._CssClasses.RIPPLE_IGNORE_EVENTS
+				);
 				this._rippleContainerElement = document.createElement('span');
 				this._rippleContainerElement.classList.add(
-						PowerSwitch._CssClasses.RIPPLE_CONTAINER);
-				this._rippleContainerElement.classList.add(PowerSwitch._CssClasses.RIPPLE_EFFECT);
-				this._rippleContainerElement.classList.add(PowerSwitch._CssClasses.RIPPLE_CENTER);
+					PowerSwitch._CssClasses.RIPPLE_CONTAINER
+				);
+				this._rippleContainerElement.classList.add(
+					PowerSwitch._CssClasses.RIPPLE_EFFECT
+				);
+				this._rippleContainerElement.classList.add(
+					PowerSwitch._CssClasses.RIPPLE_CENTER
+				);
 				this._rippleContainerElement.addEventListener('mouseup', () => {
 					this._onMouseUp();
 				});
-		
+
 				var ripple = document.createElement('span');
 				ripple.classList.add(PowerSwitch._CssClasses.RIPPLE);
-		
+
 				this._rippleContainerElement.appendChild(ripple);
 				this._element.appendChild(this._rippleContainerElement);
 			}
-	  
+
 			this._inputElement.addEventListener('change', () => {
 				this._onChange();
 			});
@@ -202,9 +216,9 @@ export class PowerSwitch extends ConfigurableWebComponent<{
 			this._element.addEventListener('mouseup', () => {
 				this._onMouseUp();
 			});
-	  
+
 			this._updateClasses();
 			this._element.classList.add('is-upgraded');
-		  }
+		}
 	}
 }

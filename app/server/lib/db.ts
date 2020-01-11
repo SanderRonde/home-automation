@@ -6,7 +6,7 @@ class DBFileManager {
 	private static get date() {
 		return {
 			___last_updated: Date.now()
-		}
+		};
 	}
 
 	public static async read(fileName: string) {
@@ -14,26 +14,38 @@ class DBFileManager {
 		if (!(await fs.pathExists(filePath))) {
 			// Create it
 			await fs.mkdirp(DB_FOLDER);
-			await fs.writeFile(filePath, 
-				JSON.stringify(this.date, null, 4), {
-					encoding: 'utf8'
-				});
+			await fs.writeFile(filePath, JSON.stringify(this.date, null, 4), {
+				encoding: 'utf8'
+			});
 			return this.date;
 		}
-		return JSON.parse(await fs.readFile(filePath, {
-			encoding: 'utf8'
-		}) || "{}");
+		return JSON.parse(
+			(await fs.readFile(filePath, {
+				encoding: 'utf8'
+			})) || '{}'
+		);
 	}
 
-	public static async write(fileName: string, data: {
-		[key: string]: any;
-	}) {
-		await fs.writeFile(path.join(DB_FOLDER, fileName), JSON.stringify({
-			...data,
-			...this.date
-		}, null, 4), {
-			encoding: 'utf8'
-		});
+	public static async write(
+		fileName: string,
+		data: {
+			[key: string]: any;
+		}
+	) {
+		await fs.writeFile(
+			path.join(DB_FOLDER, fileName),
+			JSON.stringify(
+				{
+					...data,
+					...this.date
+				},
+				null,
+				4
+			),
+			{
+				encoding: 'utf8'
+			}
+		);
 	}
 }
 
@@ -42,7 +54,7 @@ export class Database {
 		[key: string]: any;
 	};
 	private _initialized: boolean = false;
-	constructor(private _fileName: string) { }
+	constructor(private _fileName: string) {}
 
 	async init() {
 		this._data = await DBFileManager.read(this._fileName);
@@ -74,8 +86,11 @@ export class Database {
 			current = current[part];
 		}
 		if (typeof current !== 'object') return;
-		if (typeof current[parts[parts.length - 1]] === 'object' && 
-			typeof val === 'string' || typeof val === 'number') {
+		if (
+			(typeof current[parts[parts.length - 1]] === 'object' &&
+				typeof val === 'string') ||
+			typeof val === 'number'
+		) {
 			// Set every child of this object to that value
 			const final = current[parts[parts.length - 1]];
 			for (const child in final) {
@@ -90,9 +105,9 @@ export class Database {
 		}
 	}
 
-	get<V>(key: string, defaultVal: V): V
-	get<V>(key: string): V|undefined
-	get<V>(key: string, defaultVal: V|undefined = undefined): V|undefined {
+	get<V>(key: string, defaultVal: V): V;
+	get<V>(key: string): V | undefined;
+	get<V>(key: string, defaultVal: V | undefined = undefined): V | undefined {
 		this._assertInitialized();
 
 		const parts = key.split('.');

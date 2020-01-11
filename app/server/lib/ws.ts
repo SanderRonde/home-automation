@@ -11,46 +11,57 @@ function genUniqueId() {
 	let id: number;
 	do {
 		id = Math.floor(Math.random() * 10000000);
-	} while(instanceIDs.has(id));
+	} while (instanceIDs.has(id));
 	return id;
 }
-const instanceIDs = new Map<number, {
-	instance: WSSimInstance;
-	ip: string;
-}>();
+const instanceIDs = new Map<
+	number,
+	{
+		instance: WSSimInstance;
+		ip: string;
+	}
+>();
 
-export class WSSimInstance< DATA extends {
-	receive: string;
-	send: string;
-} = {
-	receive: "";
-	send: ""
-}> {
-	private _listeners: ({
+export class WSSimInstance<
+	DATA extends {
+		receive: string;
+		send: string;
+	} = {
+		receive: '';
+		send: '';
+	}
+> {
+	private _listeners: {
 		type: string;
-		handler: (data: string, req: express.Request, res: express.Response) => void;
+		handler: (
+			data: string,
+			req: express.Request,
+			res: express.Response
+		) => void;
 		identifier?: any;
-	})[] = [{
-		type: 'ping',
-		handler: () => {
-			this._refreshTimeoutListener();
+	}[] = [
+		{
+			type: 'ping',
+			handler: () => {
+				this._refreshTimeoutListener();
+			}
 		}
-	}];
+	];
 	private _ip!: string;
 	private _alive: boolean = true;
 	private static readonly TIMEOUT = 10 * 60 * 1000;
-	private _listener: NodeJS.Timeout|null = null;
+	private _listener: NodeJS.Timeout | null = null;
 
 	private _init(req: express.Request, res: express.Response) {
 		const id = genUniqueId();
-		this._ip = {...req.body, ...req.params}.ip;
+		this._ip = { ...req.body, ...req.params }.ip;
 
 		// Store this IP alongside the ID
 		instanceIDs.set(id, {
 			instance: this,
 			ip: this._ip
 		});
-		
+
 		// Send the ID back and tell them it succeeded
 		res.status(200).write(`${id}`);
 		res.end();
@@ -74,9 +85,14 @@ export class WSSimInstance< DATA extends {
 	send<T extends DATA['send']>(type: T, data?: string): void;
 	send(type: string, data: string = '') {
 		if (!this.alive) {
-			console.warn('Attempting to send messages to closed instance', this._ip, type, data);
+			console.warn(
+				'Attempting to send messages to closed instance',
+				this._ip,
+				type,
+				data
+			);
 			return;
-		};
+		}
 		try {
 			const req = http.request({
 				method: 'POST',
@@ -94,22 +110,45 @@ export class WSSimInstance< DATA extends {
 			});
 			req.end();
 
-			attachMessage(req, chalk.cyan('[ws]'), 'Type:', chalk.bold(type), 'data:', chalk.bold(data));
+			attachMessage(
+				req,
+				chalk.cyan('[ws]'),
+				'Type:',
+				chalk.bold(type),
+				'data:',
+				chalk.bold(data)
+			);
 			logOutgoingReq(req, {
 				method: 'POST',
 				target: this._ip
 			});
-		} catch(e) {
+		} catch (e) {
 			this._alive = false;
 		}
 	}
 
-	listen<T extends DATA['receive']>(type: T, handler: (data: string) => void, identifier?: any): void;
-	listen(type: string, handler: (data: string) => void, identifier?: any): void {
+	listen<T extends DATA['receive']>(
+		type: T,
+		handler: (data: string) => void,
+		identifier?: any
+	): void;
+	listen(
+		type: string,
+		handler: (data: string) => void,
+		identifier?: any
+	): void {
 		// Check if another listener with this identifier exists
-		for (const { type: listenerType, identifier: listenerIdentifier } of this._listeners) {
-			if (identifier && listenerIdentifier && identifier === listenerIdentifier &&
-				type === listenerType) return;
+		for (const {
+			type: listenerType,
+			identifier: listenerIdentifier
+		} of this._listeners) {
+			if (
+				identifier &&
+				listenerIdentifier &&
+				identifier === listenerIdentifier &&
+				type === listenerType
+			)
+				return;
 		}
 		this._listeners.push({
 			type,
@@ -123,10 +162,16 @@ export class WSSimInstance< DATA extends {
 			res.end();
 			return;
 		}
-		const [ , msgType, msgData ] = (<string>req.body).split(' ');
+		const [, msgType, msgData] = (<string>req.body).split(' ');
 		for (const { type, handler } of this._listeners) {
 			if (type === msgType) {
-				attachMessage(res, 'Type:', chalk.bold(msgType), 'data:', chalk.bold(msgData));
+				attachMessage(
+					res,
+					'Type:',
+					chalk.bold(msgType),
+					'data:',
+					chalk.bold(msgData)
+				);
 				handler(msgData, req, res);
 				if (!res.headersSent) {
 					res.status(200).write('OK');
@@ -137,7 +182,7 @@ export class WSSimInstance< DATA extends {
 		}
 	}
 
-	onClose() { }
+	onClose() {}
 
 	get alive() {
 		return this._alive;
@@ -156,8 +201,11 @@ export const enum ACCEPT_STATE {
 
 export class WSSimulator {
 	private _onRequests: {
-		accept: (req: express.Request, res: express.Response) => Promise<ACCEPT_STATE>,
-		onAccept: (instance: WSSimInstance) => void
+		accept: (
+			req: express.Request,
+			res: express.Response
+		) => Promise<ACCEPT_STATE>;
+		onAccept: (instance: WSSimInstance) => void;
 	}[] = [];
 
 	private async _onRequest(req: express.Request, res: express.Response) {
@@ -180,7 +228,7 @@ export class WSSimulator {
 				res.end();
 				return true;
 			}
-			const [ id, msgType, msgData ] = req.body.split(' ');
+			const [id, msgType, msgData] = req.body.split(' ');
 			if (!msgType || !msgData) {
 				res.status(400).write('Missing data');
 				res.end();
@@ -207,16 +255,30 @@ export class WSSimulator {
 
 	@errorHandle
 	@auth
-	private async _authenticate(_res: express.Response, _params: { auth: string }): Promise<boolean> {
+	private async _authenticate(
+		_res: express.Response,
+		_params: { auth: string }
+	): Promise<boolean> {
 		return true;
 	}
 
-	all(route: string, handler: (instance: WSSimInstance) => void, authenticate: boolean = true) {
+	all(
+		route: string,
+		handler: (instance: WSSimInstance) => void,
+		authenticate: boolean = true
+	) {
 		const __this = this;
 		this._onRequests.push({
 			async accept(req: express.Request, res: express.Response) {
 				if (req.path === route) {
-					if (authenticate && !(await __this._authenticate(res, {...req.params, ...req.body, cookies: req.cookies}))) {
+					if (
+						authenticate &&
+						!(await __this._authenticate(res, {
+							...req.params,
+							...req.body,
+							cookies: req.cookies
+						}))
+					) {
 						return ACCEPT_STATE.REJECTED;
 					}
 					return ACCEPT_STATE.ACCEPTED;
@@ -226,7 +288,7 @@ export class WSSimulator {
 			onAccept(instance: WSSimInstance) {
 				handler(instance);
 			}
-		})
+		});
 	}
 
 	get(route: string, handler: (instance: WSSimInstance) => void) {
@@ -237,7 +299,11 @@ export class WSSimulator {
 		this.all(route, handler);
 	}
 
-	async handler(req: express.Request, res: express.Response, next: express.NextFunction): Promise<any> {
+	async handler(
+		req: express.Request,
+		res: express.Response,
+		next: express.NextFunction
+	): Promise<any> {
 		if (this._handleWSMessage(req, res)) return;
 		if (await this._onRequest(req, res)) {
 			return;
@@ -247,7 +313,7 @@ export class WSSimulator {
 }
 
 type WSHandler = (args: {
-	send: (message: string) => void,
+	send: (message: string) => void;
 	addListener: (listener: (message: string) => void) => void;
 	onDead(handler: () => void): void;
 }) => void;
@@ -259,32 +325,38 @@ export class WSWrapper {
 	}[] = [];
 
 	constructor(public server: http.Server) {
-		server.on('upgrade', (req: http.IncomingMessage, socket: Socket, head: any) => {
-			this.handle(req, socket, head);
-		});
+		server.on(
+			'upgrade',
+			(req: http.IncomingMessage, socket: Socket, head: any) => {
+				this.handle(req, socket, head);
+			}
+		);
 	}
 
 	handle(req: http.IncomingMessage, socket: Socket, head: any) {
 		const pathname = url.parse(req.url!).pathname;
 		for (const { route, handler } of this.routes) {
-			if (pathname !== route && (route.endsWith('/') || pathname !== route + '/')) {
+			if (
+				pathname !== route &&
+				(route.endsWith('/') || pathname !== route + '/')
+			) {
 				continue;
 			}
 
 			const instance = new WebsocketServer({ noServer: true });
-			instance.handleUpgrade(req, socket, head, (ws) => {
+			instance.handleUpgrade(req, socket, head, ws => {
 				ws.emit('connection', ws, req);
 
 				handler({
 					send(message: string) {
-						ws.send(message, (err) => {
+						ws.send(message, err => {
 							if (err) {
 								ws.emit('close');
 							}
 						});
 					},
 					addListener(messageListener) {
-						ws.on('message', (data) => {
+						ws.on('message', data => {
 							messageListener(data.toString());
 						});
 					},
@@ -299,7 +371,8 @@ export class WSWrapper {
 
 	all(route: string, handler: WSHandler) {
 		this.routes.push({
-			route, handler
+			route,
+			handler
 		});
 	}
 
