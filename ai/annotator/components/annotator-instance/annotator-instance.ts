@@ -384,7 +384,7 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 
 	private async _fileNameChange() {
 		await waitUntil(() => {
-			return !!(this.$.vid && this.$.vid.duration);
+			return !!(this.$.vid && this.$.vid.duration) && !!this.props.length;
 		});
 
 		// Reset everything
@@ -455,6 +455,7 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 	async mounted() {
 		this.listen('propChange', (name: string) => {
 			if (name === 'filename') {
+				this.props.length = 0;
 				this._fileNameChange();
 			}
 		});
