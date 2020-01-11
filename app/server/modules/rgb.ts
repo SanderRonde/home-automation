@@ -294,8 +294,8 @@ export namespace RGB {
 		}
 	}
 
-	type CustomPattern = 'rgb' | 'rainbow' | 'christmas' | 'strobe' | 'darkColors' |
-		'shittyFire' | 'betterFire';
+	type CustomPattern = 'rgb' | 'rainbow' | 'christmas' | 'strobe' | 'darkcolors' |
+		'shittyfire' | 'betterfire';
 
 	const patterns: Object & {
 		[K in CustomPattern]: {
@@ -339,7 +339,7 @@ export namespace RGB {
 				.setTransitionType('strobe'),
 			defaultSpeed: 100
 		},
-		darkColors: {
+		darkcolors: {
 			pattern: new CustomMode()
 				.addColor(255, 0, 0)
 				.addColor(255, 0, 85)
@@ -358,7 +358,7 @@ export namespace RGB {
 				.setTransitionType('fade'),
 			defaultSpeed: 90
 		},
-		shittyFire: {
+		shittyfire: {
 			pattern: new CustomMode()
 				.addColor(255, 0, 0)
 				.addColor(255, 25, 0)
@@ -374,7 +374,7 @@ export namespace RGB {
 				.setTransitionType('fade'),
 			defaultSpeed: 90
 		},
-		betterFire: {
+		betterfire: {
 			pattern: new CustomMode()
 				.addColorList(new Array(15).fill('').map(() => {
 					return [
