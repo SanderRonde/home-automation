@@ -45,12 +45,14 @@ export namespace Temperature {
 						db!.get('history', []) as {
 							date: number;
 							temp: number;
+							state?: 'on' | 'off';
 						}[]
 					)
 				);
 				tempHistory.push({
 					date: Date.now(),
-					temp: temp
+					temp: temp,
+					state: getHeaterState()
 				});
 				db!.setVal('history', tempHistory);
 				db!.setVal('temp', temp);
