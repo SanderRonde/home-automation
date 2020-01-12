@@ -38,6 +38,10 @@ The scripts module simply runs specified scripts in a pre-configured directory. 
 
 The remote control module allows remote control of media playing on a given computer. This, for example, allows you to tell your smart home device to pause the video playing on your PC (which could be connected to a projector or something). It allows for control of media playing websites (Youtube, Netflix and Plex) and applications (VLC through telnet).
 
+#### Temperature
+
+The temperature module allows for the setting of a target temperature of the house. The server then tells a temperature controller what to do based on the currently measured temperature, eventually reaching the target temperature. It also allows for manual turning on and off of a temperature controller (for example for when you leave home).
+
 ### Controllers
 
 #### Telegram bot
@@ -64,7 +68,7 @@ Consists of a simple JSON file that serves as a mini key-value database. It stor
 
 The power controlling switches are made out of a couple of components. The first thing is any development board that is powered by the ESP8266 chip (generally a NodeMCU board). This board controls a relay whose terminals are connected to stripped 220v power cables. Both the relay and board are powered by a 5v power adapter. The relay's output terminal and the ground are then connected to a female power socket, allowing any plug put in it to be remotely powered. In total these components cost around 7 euros on ebay.
 
-The board runs C/C++ code which can be found `board/binary.ino`. Since these boards can use neither long polling nor websockets (some of them can but not all), a sort of makeshift websockets protocol was made. It connects to the server and tells it its own IP address. The server then sends messages directly to that IP address. Of course this only works over a local network but it works surprisingly well.
+The board runs C/C++ code which can be found over at the [board-power-driver repository](https://github.com/SanderRonde/board-power-driver). Since these boards can use neither long polling nor websockets (some of them can but not all), a sort of makeshift websockets protocol was made. It connects to the server and tells it its own IP address. The server then sends messages directly to that IP address. Of course this only works over a local network but it works surprisingly well.
 
 When a keyval value changes, a listener is fired which then sends the changed value to the responsible board over the makeshift websockets. The board then changes the state of the data pin of the relay, after which the power goes on or off.
 
@@ -89,6 +93,12 @@ Scripts work by simply executing the file at given path. Of course this could po
 #### Remote Control
 
 The remote control works by sending any commands it gets to two destinations. The first one being a list of listening webbrowsers (through the [playback-control browser extension](https://github.com/SanderRonde/playback-control)) and the second one being a preconfigured list of telnet clients. The telnet client expects a VLC instance to listen at the receiving end, executing all instructions. If noone is listening, messages are simply ignored, allowing other listening instances to pick them up. For more info about how the webbrowser version works check out the repo.
+
+#### Temperature
+
+The temperature module works by setting a target temperature and instructing a temperature controller to either increase or decrease the temperature depending on the one that was measured. It also allows for manual turning on and off of the temperature controller. In the future something like knowing how long it takes for the home to heat up X degrees could be used to start pre-heating the home just in time before the user arrives.
+
+The code for the microcontroller driving it can be found [over at this repository](https://github.com/SanderRonde/board-temperature-driver).
 
 #### Telegram bot
 
