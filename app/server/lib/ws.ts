@@ -21,6 +21,7 @@ const instanceIDs = new Map<
 		ip: string;
 	}
 >();
+const instanceMap = new Map<WSSimInstance, number>();
 
 export class WSSimInstance<
 	DATA extends {
@@ -43,7 +44,7 @@ export class WSSimInstance<
 		{
 			type: 'ping',
 			handler: () => {
-				this._refreshTimeoutListener();
+				this.refreshTimeoutListener();
 			}
 		}
 	];
@@ -61,25 +62,31 @@ export class WSSimInstance<
 			instance: this,
 			ip: this._ip
 		});
+		instanceMap.set(this, id);
 
 		// Send the ID back and tell them it succeeded
 		res.status(200).write(`${id}`);
 		res.end();
 	}
 
-	private _refreshTimeoutListener() {
+	private _die() {
+		this._alive = false;
+		instanceIDs.delete(instanceMap.get(this)!);
+	}
+
+	public refreshTimeoutListener() {
 		if (this._listener) {
 			clearTimeout(this._listener);
 		}
 		this._listener = setTimeout(() => {
-			this._alive = false;
+			this._die();
 			this.onClose();
 		}, WSSimInstance.TIMEOUT);
 	}
 
 	constructor(req: express.Request, res: express.Response) {
 		this._init(req, res);
-		this._refreshTimeoutListener();
+		this.refreshTimeoutListener();
 	}
 
 	send<T extends DATA['send']>(type: T, data?: string): void;
@@ -106,7 +113,7 @@ export class WSSimInstance<
 			});
 			req.write(`${type} ${data}`);
 			req.on('error', () => {
-				this._alive = false;
+				this._die();
 			});
 			req.end();
 
@@ -123,7 +130,7 @@ export class WSSimInstance<
 				target: this._ip
 			});
 		} catch (e) {
-			this._alive = false;
+			this._die();
 		}
 	}
 
@@ -247,7 +254,10 @@ export class WSSimulator {
 			}
 
 			if (msgType === 'ping') {
-				attachMessage(res, 'ping');
+				instanceIDs
+					.get(parseInt(id, 10))!
+					.instance.refreshTimeoutListener();
+				attachMessage(res, `ping from ${id}`);
 				res.status(200).write('OK');
 				res.end();
 				return true;
