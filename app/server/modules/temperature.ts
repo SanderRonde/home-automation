@@ -67,7 +67,7 @@ export namespace Temperature {
 					getTime(),
 					chalk.cyan(
 						'[temp]',
-						chalk.bold(`Current temperature: ${temp}Ã‚Â°`)
+						chalk.bold(`Current temperature: ${temp}°`)
 					)
 				);
 				lastLogTime = Date.now();
@@ -452,7 +452,7 @@ export namespace Temperature {
 				attachMessage(
 					attachMessage(
 						res,
-						`Returning advise: "${advise}" for temp ${temp}Ã‚Â°`
+						`Returning advise: "${advise}" for temp ${temp}°`
 					),
 					`Heater mode: "${TempControl.getMode()}, target: ${TempControl.getTarget()}`
 				);
