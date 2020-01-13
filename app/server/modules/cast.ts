@@ -573,6 +573,3 @@ export namespace Cast {
 		}
 	}
 }
-
-// https://translate.google.com/translate_tts?ie=UTF-8&$tl=en&q=hi%20there&client=tw-ob
-// https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q=Hello+World
