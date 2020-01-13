@@ -69,3 +69,6 @@ export const COMMON_SWITCH_MAPPINGS: [RegExp, string][] = [
 	[/((the|my)\s+)?couch\s+speakers/, 'room.speakers.couch'],
 	[/((the|my)\s+)?desk\s+speakers/, 'room.speakers.desk']
 ];
+
+// Cast
+export const CAST_DEVICE_NAME = 'Home';

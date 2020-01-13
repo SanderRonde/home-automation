@@ -15,3 +15,5 @@ export const LOCAL_URLS: {
 } = {
 	file: 'http://www.example.com/somemp3file.mp3'
 };
+
+export const CAST_DEVICE_NAMES = ['Home'];

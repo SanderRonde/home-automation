@@ -1,4 +1,8 @@
-import { LOCAL_URLS as _LOCAL_URLS, PASTAS as _PASTAS } from '../config/casts';
+import {
+	LOCAL_URLS as _LOCAL_URLS,
+	PASTAS as _PASTAS,
+	CAST_DEVICE_NAMES
+} from '../config/casts';
 import { attachMessage, ResDummy } from '../lib/logger';
 import * as playlist from 'castv2-player/lib/playlist';
 import { requireParams } from '../lib/decorators';
@@ -36,12 +40,12 @@ const MAX_PART_LEN = 190;
 
 export namespace Cast {
 	export namespace Scanning {
-		export async function scan(): Promise<castv2.Device> {
-			const device = await scannerPromise();
-			if (device) {
-				devices = [device];
-			}
-			return device;
+		export async function scan(): Promise<castv2.Device[]> {
+			return (devices = (
+				await Promise.all(
+					CAST_DEVICE_NAMES.map(name => scannerPromise(name))
+				)
+			).filter(device => !!device));
 		}
 
 		export let devices: castv2.Device[] = [];
