@@ -2602,11 +2602,15 @@ export namespace RGB {
 								const res = await tryConnectToSerial();
 								if (!res || !res.port || !res.leds) {
 									console.log('Failed to connect to serial');
-									await restartSelf();
-									this._totalConnectTries++;
 
-									if (this._totalConnectTries > 10) {
+									if (
+										this._totalConnectTries > 10 &&
+										this._restartAttempts === 0
+									) {
 										// Force restart this program
+										await restartSelf();
+										this._restartAttempts++;
+										this._totalConnectTries++;
 									}
 									pause = false;
 									return;
