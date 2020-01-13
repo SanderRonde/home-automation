@@ -1,8 +1,8 @@
 #!/usr/bin/python
 """Main file used for launching everything"""
 
+from modes.preprocess.preprocess import mode_preprocess
 from lib.log import error, logline
-from modes import mode_preprocess
 import sys
 
 
