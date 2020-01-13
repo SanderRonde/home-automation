@@ -448,15 +448,15 @@ export namespace Temperature {
 				// Set last temp
 				TempControl.setLastTemp(temp);
 
-				const advise = TempControl.getHeaterState();
+				const advice = TempControl.getHeaterState();
 				attachMessage(
 					attachMessage(
 						res,
-						`Returning advise: "${advise}" for temp ${temp}°`
+						`Returning advice: "${advice}" for temp ${temp}°`
 					),
 					`Heater mode: "${TempControl.getMode()}, target: ${TempControl.getTarget()}`
 				);
-				res.write(`${advise} ${TempControl.getMode()}`);
+				res.write(`${advice} ${TempControl.getMode()}`);
 				res.status(200);
 				res.end();
 			});
