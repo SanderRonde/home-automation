@@ -216,7 +216,11 @@ export namespace Temperature {
 										'Heater state',
 										TempControl.getHeaterState()
 									],
-									['Heater mode', TempControl.getMode()]
+									['Heater mode', TempControl.getMode()],
+									[
+										'Target temperature',
+										TempControl.getTarget() + ''
+									]
 								]
 							});
 						}
