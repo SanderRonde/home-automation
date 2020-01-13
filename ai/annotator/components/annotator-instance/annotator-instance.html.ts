@@ -5,6 +5,8 @@ import {
 import { render } from '../../../../node_modules/lit-html/lit-html.js';
 import { AnnotatorInstance } from './annotator-instance.js';
 
+const MAX_LEN = 600;
+
 export const AnnotatorInstanceHTML = new TemplateFn<AnnotatorInstance>(
 	function(html) {
 		return html`
@@ -40,32 +42,37 @@ export const AnnotatorInstanceHTML = new TemplateFn<AnnotatorInstance>(
 							<canvas
 								style="width: calc((100vw * ${this.props
 									.length / 10}) - 20px)"
-								width="${100 * this.props.length}"
+								width="${100 *
+									Math.min(this.props.length, MAX_LEN)}"
 								height="60"
 								id="zoomedTime"
 							></canvas>
 							<canvas
 								style="width: calc((100vw * ${this.props
 									.length / 10}) - 20px)"
-								width="${100 * this.props.length}"
+								width="${100 *
+									Math.min(this.props.length, MAX_LEN)}"
 								id="zoomedBeats"
 							></canvas>
 							<canvas
 								style="width: calc((100vw * ${this.props
 									.length / 10}) - 20px)"
-								width="${100 * this.props.length}"
+								width="${100 *
+									Math.min(this.props.length, MAX_LEN)}"
 								id="zoomedMelodies"
 							></canvas>
 							<canvas
 								style="width: calc((100vw * ${this.props
 									.length / 10}) - 20px)"
-								width="${100 * this.props.length}"
+								width="${100 *
+									Math.min(this.props.length, MAX_LEN)}"
 								id="zoomedTimes"
 							></canvas>
 							<canvas
 								style="width: calc((100vw * ${this.props
 									.length / 10}) - 20px)"
-								width="${100 * this.props.length}"
+								width="${100 *
+									Math.min(this.props.length, MAX_LEN)}"
 								height="20"
 								id="zoomedText"
 							></canvas>
