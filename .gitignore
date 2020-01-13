@@ -71,7 +71,7 @@ scripts/**/*.js
 *.tsbuildinfo
 build/
 
-ai/beat-detector/features
+ai/beat-detector/data
 ai/beat-detector/input_files
 **/*.pyc
 
