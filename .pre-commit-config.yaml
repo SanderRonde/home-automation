@@ -11,10 +11,16 @@ repos:
       rev: v2.4.0
       hooks:
           - id: flake8
+            entry: python3
             name: flake8
             files: ".*.py$"
             args:
+                - "-m"
+                - "flake8"
                 - "--config=.flake8"
+            language: python
+            types: [python]
+            require_serial: true
     - repo: local
       hooks:
           - id: pretty-quick
