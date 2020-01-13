@@ -2575,6 +2575,7 @@ export namespace RGB {
 			}
 
 			private _totalConnectTries = 0;
+			private _restartAttempts: number = 0;
 
 			public async write(data: string): Promise<string> {
 				await this._waitForTurn();
