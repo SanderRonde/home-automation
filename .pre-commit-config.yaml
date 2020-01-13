@@ -14,7 +14,7 @@ repos:
             name: flake8
             files: ".*.py$"
             args:
-                - "--config=backend/.flake8"
+                - "--config=.flake8"
     - repo: local
       hooks:
           - id: pretty-quick
