@@ -64,4 +64,3 @@ class Timer:
     def current(self):
         """Gets the current passed actions"""
         return self._current
-

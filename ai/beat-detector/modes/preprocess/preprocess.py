@@ -2,13 +2,12 @@
 
 from .files import get_files, collect_input_paths, MarkedAudioFile
 from lib.log import logline, error, enter_group, exit_group
-from typing import List, Union, Dict, Any
+from typing import List, Union
 from lib.io import IO, IOInput
 from lib.timer import Timer
 from glob import glob
 import pickle
 import time
-import sys
 
 # Take a (somehow) set of wav files, each
 # annotated by a JSON file containing an array
@@ -108,7 +107,7 @@ def gen_outputs(file: MarkedAudioFile) -> List[ExpectedOutput]:
 
         if timestamp_index >= out_len:
             continue
-        
+
         if timestamp.beat_type == "beat":
             output_mark = outputs[timestamp_index]
             output_mark.is_beat = True
@@ -116,9 +115,8 @@ def gen_outputs(file: MarkedAudioFile) -> List[ExpectedOutput]:
             closest_end = get_closest(timestamp_time + (timestamp.length * 1000))
             for i in range(int((closest_end - closest) / INTERVAL)):
                 outputs[timestamp_index + i].is_melody = True
-        
-    return outputs
 
+    return outputs
 
 
 def mode_preprocess():
@@ -148,19 +146,21 @@ def mode_preprocess():
 
         features = gen_features(file)
         outputs = gen_outputs(file)
-        
-        preprocessed.append({
-            "file_name": file.name,
-            "features": features.to_arr(),
-            "outputs": list(map(lambda x: x.to_arr(), outputs))
-        })
+
+        preprocessed.append(
+            {"file_name": file.name, "features": features.to_arr(), "outputs": list(map(lambda x: x.to_arr(), outputs))}
+        )
         logline("done with file: {}".format(file.name))
+        file.close()
+
     exit_group()
     logline("done iterating files")
-    
+
     with open(io.get("output_file"), "wb+") as file:
         pickle.dump(preprocessed, file)
         logline("wrote output to file: {}".format(io.get("output_file")))
-    
+
     exit_group()
-    logline("done preprocessing, runtime is {}".format(Timer.stringify_time(Timer.format_time(time.time() - start_time))))
+    logline(
+        "done preprocessing, runtime is {}".format(Timer.stringify_time(Timer.format_time(time.time() - start_time)))
+    )

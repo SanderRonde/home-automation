@@ -106,6 +106,7 @@ def has_json_file(in_file: str) -> bool:
         return False
     return True
 
+
 def collect_input_paths(io: IO) -> Union[None, List[str]]:
     """Turn the input glob into file paths"""
     all_files = io.get("input_files")
@@ -123,10 +124,4 @@ def collect_input_paths(io: IO) -> Union[None, List[str]]:
 def get_files(input_paths: List[str]) -> Iterable[MarkedAudioFile]:
     """Read all input files"""
     for in_file in input_paths:
-        try:
-            yield MarkedAudioFile(in_file)
-        except Exception as e:
-            # Close remaining files
-            for audio_file in audio_files:
-                audio_file.close()
-            raise e
+        yield MarkedAudioFile(in_file)
