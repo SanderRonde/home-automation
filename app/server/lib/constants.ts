@@ -45,8 +45,8 @@ export const ARDUINO_LEDS = [LED_NAMES.CEILING_LEDS];
 export const LED_IPS: {
 	[key: string]: LED_NAMES;
 } = {
-	'192.168.1.5': LED_NAMES.BED_LEDS,
-	'192.168.1.4': LED_NAMES.DESK_LEDS
+	'192.168.1.4': LED_NAMES.BED_LEDS,
+	'192.168.1.2': LED_NAMES.DESK_LEDS
 };
 export const NIGHTSTAND_COLOR: Color = {
 	r: 177,
