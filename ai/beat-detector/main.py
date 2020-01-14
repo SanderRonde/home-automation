@@ -2,6 +2,7 @@
 """Main file used for launching everything"""
 
 from modes.preprocess.preprocess import mode_preprocess
+from modes.train.train import mode_train
 from lib.log import error, logline
 import sys
 
@@ -10,8 +11,7 @@ def run_mode(mode):
     if mode == "preprocess":
         return mode_preprocess()
     elif mode == "train":
-        error("not implemented")
-        # TODO: implement
+        return mode_train()
     elif mode == "test":
         error("not implemented")
         # TODO: implement

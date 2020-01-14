@@ -1,4 +1,4 @@
-"""Main entrypoint for mode_preprocess mode"""
+"""Main entrypoint for preprocess mode"""
 
 from .files import get_files, collect_input_paths, MarkedAudioFile
 from lib.log import logline, error, enter_group, exit_group
@@ -55,11 +55,14 @@ class Features:
         self.uptemo = uptempo
         self.spectrum_bins = spectrum_bins
 
-        self.length = 1 + 1 + BINS
-
     def to_arr(self) -> List[Union[int, float]]:
         """A feature array"""
         return [self.hard, self.uptemo] + self.spectrum_bins
+
+    @staticmethod
+    @property
+    def length():
+        return 1 + 1 + BINS
 
 
 class ExpectedOutput:
@@ -133,7 +136,7 @@ def mode_preprocess():
 
     input_paths = collect_input_paths(io)
     for input_path in input_paths:
-        logline("found path: {}".format(input_path))
+        logline('found path: "{}"'.format(input_path))
 
     exit_group()
 
@@ -150,7 +153,7 @@ def mode_preprocess():
         preprocessed.append(
             {"file_name": file.name, "features": features.to_arr(), "outputs": list(map(lambda x: x.to_arr(), outputs))}
         )
-        logline("done with file: {}".format(file.name))
+        logline('done with file: "{}"'.format(file.name))
         file.close()
 
     exit_group()
