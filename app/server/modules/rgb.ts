@@ -41,7 +41,6 @@ import { KeyVal } from './keyval';
 import chalk from 'chalk';
 
 function speedToMs(speed: number) {
-	// TODO: fit this better
 	return 1000 / speed;
 }
 
