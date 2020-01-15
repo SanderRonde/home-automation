@@ -22,6 +22,7 @@ import { NotifyFn, AllModules, ModuleHookables } from './all';
 import * as ReadLine from '@serialport/parser-readline';
 import { WSSimulator, WSSimInstance } from '../lib/ws';
 import { arrToObj, awaitCondition } from '../lib/util';
+import groups from '../config/keyval-groups';
 import aggregates from '../config/aggregates';
 import { BotState } from '../lib/bot-state';
 import { AppWrapper } from '../lib/routes';
@@ -44,6 +45,16 @@ export interface KeyvalHooks {
 	};
 }
 
+export const enum KEYVAL_GROUP_EFFECT {
+	SAME,
+	INVERT
+}
+export interface GroupConfig {
+	[key: string]: {
+		[key: string]: KEYVAL_GROUP_EFFECT;
+	};
+}
+
 export namespace KeyVal {
 	function str(value: any | undefined) {
 		return JSON.stringify(value || null);
@@ -59,6 +70,11 @@ export namespace KeyVal {
 			}
 		> = new Map();
 		let _lastIndex: number = 0;
+		let _db: Database | null = null;
+
+		export function setDB(db: Database) {
+			_db = db;
+		}
 
 		export function addListener(
 			key: string,
@@ -78,7 +94,29 @@ export namespace KeyVal {
 			_listeners.delete(index);
 		}
 
-		export function update(key: string, value: string, logObj: any) {
+		export async function triggerGroups(
+			key: string,
+			value: string,
+			logObj: any
+		) {
+			if (!(key in groups)) {
+				attachMessage(logObj, 'No groups');
+				return;
+			}
+
+			await awaitCondition(() => !!_db, 100);
+
+			const group = groups[key];
+			for (const key in group) {
+				const effect = group[key];
+				await _db!.setVal(
+					key,
+					effect === KEYVAL_GROUP_EFFECT.SAME ? value : !value
+				);
+			}
+		}
+
+		export async function update(key: string, value: string, logObj: any) {
 			let updated: number = 0;
 			const updatedKeyParts = key.split('.');
 
@@ -106,6 +144,13 @@ export namespace KeyVal {
 					_listeners.delete(index);
 				}
 			}
+
+			await triggerGroups(
+				key,
+				value,
+				attachMessage(logObj, 'Triggering groups')
+			);
+
 			return updated;
 		}
 	}
@@ -437,7 +482,7 @@ export namespace KeyVal {
 					msg,
 					`"${str(original)}" -> "${str(value)}"`
 				);
-				const updated = GetSetListener.update(
+				const updated = await GetSetListener.update(
 					key,
 					value,
 					attachMessage(nextMessage, 'Updates')
@@ -541,7 +586,7 @@ export namespace KeyVal {
 					msg,
 					`"${str(original)}" -> "${str(value)}"`
 				);
-				const updated = GetSetListener.update(
+				const updated = await GetSetListener.update(
 					key,
 					value,
 					attachMessage(nextMessage, 'Updates')
@@ -653,7 +698,7 @@ export namespace KeyVal {
 						chalk.bold(line)
 					);
 					await this._db.setVal(key, value.trim());
-					GetSetListener.update(key, value.trim(), {});
+					await GetSetListener.update(key, value.trim(), {});
 				});
 
 				GetSetListener.addListener(
@@ -774,6 +819,7 @@ export namespace KeyVal {
 			db: Database;
 			randomNum: number;
 		}) {
+			GetSetListener.setDB(db);
 			const apiHandler = new API.Handler({ db });
 			const webpageHandler = new Webpage.Handler({ randomNum, db });
 			new Screen.Handler({ db });
