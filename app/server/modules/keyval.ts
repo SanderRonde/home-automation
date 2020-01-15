@@ -165,6 +165,7 @@ export namespace KeyVal {
 					type: 'set';
 					value: string;
 					resolver: () => void;
+					update?: boolean;
 			  }
 		) & {
 			key: string;
@@ -204,10 +205,11 @@ export namespace KeyVal {
 					resDummy.transferTo(logObj);
 					resolver(value);
 				} else {
-					const { key, value, resolver } = request;
+					const { key, value, resolver, update } = request;
 					await this._apiHandler!.set(resDummy, {
 						key,
 						value,
+						update,
 						auth: await Auth.Secret.getKey()
 					});
 					resDummy.transferTo(logObj);
@@ -215,12 +217,13 @@ export namespace KeyVal {
 				}
 			}
 
-			async set(key: string, value: string) {
+			async set(key: string, value: string, update: boolean = true) {
 				return new Promise(resolve => {
 					const req: ExternalRequest = {
 						type: 'set',
 						key,
 						value,
+						update,
 						logObj: this._logObj,
 						resolver: resolve
 					};
@@ -569,11 +572,13 @@ export namespace KeyVal {
 				res: ResponseLike,
 				{
 					key,
-					value
+					value,
+					update
 				}: {
 					key: string;
 					value: string;
 					auth?: string;
+					update?: boolean;
 				}
 			) {
 				const original = this._db.get(key);
@@ -586,12 +591,14 @@ export namespace KeyVal {
 					msg,
 					`"${str(original)}" -> "${str(value)}"`
 				);
-				const updated = await GetSetListener.update(
-					key,
-					value,
-					attachMessage(nextMessage, 'Updates')
-				);
-				attachMessage(nextMessage, `Updated ${updated} listeners`);
+				if (update) {
+					const updated = await GetSetListener.update(
+						key,
+						value,
+						attachMessage(nextMessage, 'Updates')
+					);
+					attachMessage(nextMessage, `Updated ${updated} listeners`);
+				}
 				res.status(200).write(value);
 				res.end();
 			}
