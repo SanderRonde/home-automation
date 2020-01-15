@@ -7,6 +7,7 @@ import { Database } from '../lib/db';
 import { Bot as _Bot } from './bot';
 import { Auth } from '../lib/auth';
 import chalk from 'chalk';
+import { KeyVal } from './keyval';
 
 const LOG_INTERVAL_SECS = 60;
 
@@ -460,6 +461,15 @@ export namespace Temperature {
 				res.status(200);
 				res.end();
 			});
+
+			KeyVal.GetSetListener.addListener(
+				'room.heating',
+				async (value, logObj) => {
+					await new External.Handler(logObj).setMode(
+						value === '1' ? 'on' : 'off'
+					);
+				}
+			);
 		}
 	}
 }
