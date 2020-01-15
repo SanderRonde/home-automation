@@ -30,6 +30,12 @@ export namespace Temperature {
 		export function setMode(newMode: Mode) {
 			db!.setVal('mode', newMode);
 			mode = newMode;
+
+			if (newMode === 'off') {
+				new KeyVal.External.Handler({}).set('room.heating', '0', false);
+			} else {
+				new KeyVal.External.Handler({}).set('room.heating', '1', false);
+			}
 		}
 
 		export function setLastTemp(
