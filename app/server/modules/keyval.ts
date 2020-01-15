@@ -18,8 +18,11 @@ import {
 	getTime,
 	log
 } from '../lib/logger';
+import { NotifyFn, AllModules, ModuleHookables } from './all';
 import * as ReadLine from '@serialport/parser-readline';
 import { WSSimulator, WSSimInstance } from '../lib/ws';
+import { arrToObj, awaitCondition } from '../lib/util';
+import aggregates from '../config/aggregates';
 import { BotState } from '../lib/bot-state';
 import { AppWrapper } from '../lib/routes';
 import * as SerialPort from 'serialport';
@@ -29,6 +32,17 @@ import { Bot as _Bot } from './bot';
 import * as express from 'express';
 import { Auth } from '../lib/auth';
 import chalk from 'chalk';
+
+export interface KeyvalHooks {
+	[key: string]: {
+		on?: {
+			[name: string]: (hookables: ModuleHookables) => any | Promise<any>;
+		};
+		off?: {
+			[name: string]: (hookables: ModuleHookables) => any | Promise<any>;
+		};
+	};
+}
 
 export namespace KeyVal {
 	function str(value: any | undefined) {
@@ -666,6 +680,83 @@ export namespace KeyVal {
 		}
 	}
 
+	export const notifyModules: NotifyFn = modules => {
+		Aggregates.setModules(modules);
+	};
+
+	namespace Aggregates {
+		let allModules: AllModules | null = null;
+		export function setModules(modules: AllModules) {
+			allModules = modules;
+		}
+
+		async function registerAggregates(db: Database) {
+			for (const key in aggregates) {
+				const fullName = `aggregates.${key}`;
+				if ((await db.get(fullName)) === undefined) {
+					await db.setVal(fullName, '0');
+				}
+			}
+		}
+
+		async function createHookables(logObj: any): Promise<ModuleHookables> {
+			await awaitCondition(() => {
+				console.log('checking condition', allModules !== null);
+				return allModules !== null;
+			}, 100);
+
+			return (arrToObj(
+				Object.keys(allModules!).map((name: keyof AllModules) => {
+					return [
+						name,
+						new allModules![name].External.Handler(logObj)
+					];
+				})
+			) as unknown) as ModuleHookables;
+		}
+
+		function registerListeners() {
+			for (const key in aggregates) {
+				const config = aggregates[key];
+				const fullName = `aggregates.${key}`;
+				GetSetListener.addListener(fullName, async (value, logObj) => {
+					const handlers = (() => {
+						if (value === '1') {
+							return config.on;
+						} else if (value === '0') {
+							return config.off;
+						}
+						return null;
+					})();
+					if (!handlers) return;
+
+					let index: number = 0;
+					for (const key in handlers) {
+						const fn = handlers[key];
+						console.log(fn);
+						debugger;
+						await fn(
+							await createHookables(
+								attachMessage(
+									logObj,
+									'Aggregate',
+									chalk.bold(index++ + ''),
+									':',
+									chalk.bold(key)
+								)
+							)
+						);
+					}
+				});
+			}
+		}
+
+		export async function init(db: Database) {
+			await registerAggregates(db);
+			registerListeners();
+		}
+	}
+
 	export namespace Routing {
 		type WSMessages = {
 			send: 'authid' | 'authfail' | 'authsuccess' | 'valChange';
@@ -687,6 +778,7 @@ export namespace KeyVal {
 			const webpageHandler = new Webpage.Handler({ randomNum, db });
 			new Screen.Handler({ db });
 			await External.Handler.init({ db, apiHandler });
+			await Aggregates.init(db);
 
 			app.post('/keyval/all', async (req, res) => {
 				await apiHandler.all(res, {

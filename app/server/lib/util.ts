@@ -21,3 +21,17 @@ export function arrToObj<V>(
 	}
 	return obj;
 }
+
+export async function awaitCondition(
+	condition: () => boolean,
+	interval: number,
+	maxTime: number = Infinity
+) {
+	let tests: number = 0;
+	let maxTests = maxTime / interval;
+
+	while (!condition() && tests < maxTests) {
+		await wait(interval);
+		tests++;
+	}
+}

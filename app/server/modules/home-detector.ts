@@ -13,23 +13,18 @@ import {
 	log,
 	ResDummy
 } from '../lib/logger';
-import { RemoteControl } from './remote-control';
-import { Temperature } from './temperature';
+import { NotifyFn, AllModules, ModuleHookables } from './all';
+import { arrToObj, awaitCondition } from '../lib/util';
 import { BotState } from '../lib/bot-state';
 import { AppWrapper } from '../lib/routes';
 import hooks from '../config/home-hooks';
 import config from '../config/home-ips';
 import { ResponseLike } from './multi';
-import { arrToObj } from '../lib/util';
 import { Database } from '../lib/db';
 import { Bot as _Bot } from './bot';
 import express = require('express');
 import { Auth } from '../lib/auth';
-import { KeyVal } from './keyval';
-import { Script } from './script';
-import { Cast } from './cast';
 import * as ping from 'ping';
-import { RGB } from './rgb';
 import chalk from 'chalk';
 
 const AWAY_PING_INTERVAL = 5;
@@ -37,41 +32,23 @@ const HOME_PING_INTERVAL = 60;
 const CHANGE_PING_INTERVAL = 1;
 const AWAY_MIN_CONSECUTIVE_PINGS = 20;
 
-const REGISTERED_MODULES = {
-	rgb: RGB,
-	cast: Cast,
-	keyval: KeyVal,
-	script: Script,
-	temperature: Temperature,
-	remoteControl: RemoteControl
-};
-
-export interface ModuleHookables {
-	rgb: RGB.External.Handler;
-	cast: Cast.External.Handler;
-	keyval: KeyVal.External.Handler;
-	script: Script.External.Handler;
-	temperature: Temperature.External.Handler;
-	remoteControl: RemoteControl.External.Handler;
-}
-
 export interface HomeHooks {
 	[key: string]: {
 		home?: {
-			[name: string]: (hookables: ModuleHookables) => void;
+			[name: string]: (hookables: ModuleHookables) => any | Promise<any>;
 		};
 		away?: {
-			[name: string]: (hookables: ModuleHookables) => void;
+			[name: string]: (hookables: ModuleHookables) => any | Promise<any>;
 		};
 	};
 }
 
-export namespace HomeDetector {
-	const enum HOME_STATE {
-		HOME = 'home',
-		AWAY = 'away'
-	}
+export const enum HOME_STATE {
+	HOME = 'home',
+	AWAY = 'away'
+}
 
+export namespace HomeDetector {
 	export namespace Classes {
 		function wait(time: number) {
 			return new Promise(resolve => {
@@ -670,23 +647,73 @@ export namespace HomeDetector {
 		}
 	}
 
+	export namespace External {
+		type ExternalRequest = {
+			action: 'triggerHook';
+			newState: HOME_STATE;
+			name: string;
+		};
+
+		export class Handler {
+			constructor(private _logObj: any) {}
+
+			private async _handleRequest(request: ExternalRequest) {
+				const resDummy = new ResDummy();
+
+				switch (request.action) {
+					case 'triggerHook':
+						await Hooks.handle(
+							request.newState,
+							request.name,
+							resDummy
+						);
+						break;
+				}
+				resDummy.transferTo(this._logObj);
+				return;
+			}
+
+			public triggerHook(newState: HOME_STATE, name: string) {
+				const req: ExternalRequest = {
+					action: 'triggerHook',
+					name,
+					newState
+				};
+				this._handleRequest(req);
+			}
+		}
+	}
+
+	export const notifyModules: NotifyFn = modules => {
+		Hooks.setModules(modules);
+	};
+
 	export namespace Hooks {
-		function createHookables(logObj: any): ModuleHookables {
+		let allModules: AllModules | null = null;
+		export function setModules(modules: AllModules) {
+			allModules = modules;
+		}
+
+		async function createHookables(logObj: any): Promise<ModuleHookables> {
+			await awaitCondition(() => {
+				return allModules !== null;
+			}, 100);
+
 			return (arrToObj(
-				Object.keys(REGISTERED_MODULES).map(
-					(name: keyof typeof REGISTERED_MODULES) => {
-						return [
-							name,
-							new REGISTERED_MODULES[name].External.Handler(
-								logObj
-							)
-						];
-					}
-				)
+				Object.keys(allModules!).map((name: keyof AllModules) => {
+					return [
+						name,
+						new allModules![name].External.Handler(logObj)
+					];
+				})
 			) as unknown) as ModuleHookables;
 		}
 
-		export async function handle(newState: HOME_STATE, name: string) {
+		export async function handle(
+			newState: HOME_STATE,
+			name: string,
+			logObj: any = {}
+		) {
 			if (!(name in hooks)) {
 				return;
 			}
@@ -702,11 +729,10 @@ export namespace HomeDetector {
 			if (!changeHooks) return;
 
 			let index = 0;
-			const logObj = {};
 			for (const name in changeHooks) {
 				const fn = changeHooks[name];
 				await fn(
-					createHookables(
+					await createHookables(
 						attachMessage(
 							logObj,
 							'Hook',

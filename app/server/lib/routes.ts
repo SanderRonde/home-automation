@@ -9,6 +9,7 @@ import * as cookieParser from 'cookie-parser';
 import * as serveStatic from 'serve-static';
 import { KeyVal } from '../modules/keyval';
 import { Script } from '../modules/script';
+import { notifyAll } from '../modules/all';
 import * as bodyParser from 'body-parser';
 import { Cast } from '../modules/cast';
 import { RGB } from '../modules/rgb';
@@ -258,6 +259,8 @@ export async function initRoutes({
 		config,
 		ws
 	};
+
+	await notifyAll();
 
 	await Promise.all([
 		await (async () => {
