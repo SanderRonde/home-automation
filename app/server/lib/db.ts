@@ -86,8 +86,10 @@ export class Database {
 			current = current[part];
 		}
 		if (typeof current !== 'object') return;
+		const currentTarget = current[parts[parts.length - 1]];
 		if (
-			(typeof current[parts[parts.length - 1]] === 'object' &&
+			(currentTarget &&
+				typeof currentTarget === 'object' &&
 				typeof val === 'string') ||
 			typeof val === 'number'
 		) {
