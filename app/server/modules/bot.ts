@@ -588,6 +588,12 @@ export namespace Bot {
 		}
 	}
 
+	export namespace External {
+		export class Handler {
+			constructor() {}
+		}
+	}
+
 	export namespace Routing {
 		function isInIPRange(
 			ip: number[],

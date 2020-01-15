@@ -121,6 +121,12 @@ class ResponseDummy {
 }
 
 export namespace Multi {
+	export namespace External {
+		export class Handler {
+			constructor() {}
+		}
+	}
+
 	export namespace Routing {
 		export function init({ app }: { app: AppWrapper }) {
 			app.app.post('/multi', async (req, res) => {
