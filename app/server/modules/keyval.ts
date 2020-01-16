@@ -18,20 +18,20 @@ import {
 	getTime,
 	log
 } from '../lib/logger';
-import { NotifyFn, AllModules, ModuleHookables } from './all';
+import { AllModules, ModuleHookables, ModuleConfig } from './all';
 import * as ReadLine from '@serialport/parser-readline';
-import { WSSimulator, WSSimInstance } from '../lib/ws';
 import { arrToObj, awaitCondition } from '../lib/util';
-import groups from '../config/keyval-groups';
 import aggregates from '../config/aggregates';
+import groups from '../config/keyval-groups';
 import { BotState } from '../lib/bot-state';
-import { AppWrapper } from '../lib/routes';
+import { WSSimInstance } from '../lib/ws';
 import * as SerialPort from 'serialport';
 import { ResponseLike } from './multi';
 import { Database } from '../lib/db';
 import { Bot as _Bot } from './bot';
 import * as express from 'express';
-import { Auth } from '../lib/auth';
+import { ModuleMeta } from './meta';
+import { Auth } from './auth';
 import chalk from 'chalk';
 
 export interface KeyvalHooks {
@@ -56,6 +56,33 @@ export interface GroupConfig {
 }
 
 export namespace KeyVal {
+	export const meta = new (class Meta extends ModuleMeta {
+		name = 'keyval';
+
+		async init(config: ModuleConfig) {
+			const { db } = config;
+			GetSetListener.setDB(db);
+			const apiHandler = new API.Handler({ db });
+			new Screen.Handler({ db });
+			await External.Handler.init({ db, apiHandler });
+			await Aggregates.init(db);
+
+			await Routing.init({ ...config, apiHandler });
+		}
+
+		async notifyModules(modules: AllModules) {
+			Aggregates.setModules(modules);
+		}
+
+		get external() {
+			return External;
+		}
+
+		get bot() {
+			return Bot;
+		}
+	})();
+
 	function str(value: any | undefined) {
 		return JSON.stringify(value || null);
 	}
@@ -289,7 +316,7 @@ export namespace KeyVal {
 								return 'BETWEEN';
 							})();
 
-							state.keyval.lastSubjects = MAIN_LIGHTS;
+							state.states.keyval.lastSubjects = MAIN_LIGHTS;
 
 							switch (actualState) {
 								case 'ON':
@@ -306,7 +333,7 @@ export namespace KeyVal {
 						}
 					);
 					mm('/lighton', async ({ logObj, state }) => {
-						state.keyval.lastSubjects = MAIN_LIGHTS;
+						state.states.keyval.lastSubjects = MAIN_LIGHTS;
 						await Promise.all(
 							MAIN_LIGHTS.map(light => {
 								return new External.Handler(logObj).set(
@@ -320,7 +347,7 @@ export namespace KeyVal {
 						} on`;
 					});
 					mm('/lightoff', async ({ logObj, state }) => {
-						state.keyval.lastSubjects = MAIN_LIGHTS;
+						state.states.keyval.lastSubjects = MAIN_LIGHTS;
 						await Promise.all(
 							MAIN_LIGHTS.map(light => {
 								return new External.Handler(logObj).set(
@@ -338,7 +365,7 @@ export namespace KeyVal {
 							new RegExp('turn (on|off) ' + reg.source),
 							async ({ logObj, state, match }) => {
 								const keyvalState = match[1];
-								state.keyval.lastSubjects = [switchName];
+								state.states.keyval.lastSubjects = [switchName];
 								await new External.Handler(logObj).set(
 									switchName,
 									keyvalState === 'on' ? '1' : '0'
@@ -350,7 +377,7 @@ export namespace KeyVal {
 							new RegExp('is ' + reg.source + ' (on|off)'),
 							async ({ logObj, state, match }) => {
 								const keyvalState = match.pop();
-								state.keyval.lastSubjects = [switchName];
+								state.states.keyval.lastSubjects = [switchName];
 								const res = await new External.Handler(
 									logObj
 								).get(switchName);
@@ -366,7 +393,7 @@ export namespace KeyVal {
 						mm(
 							/turn (it|them) (on|off)( again)?/,
 							async ({ state, logObj, match }) => {
-								for (const lastSubject of state.keyval
+								for (const lastSubject of state.states.keyval
 									.lastSubjects!) {
 									await new External.Handler(logObj).set(
 										lastSubject,
@@ -377,7 +404,7 @@ export namespace KeyVal {
 							}
 						),
 						({ state }) => {
-							return state.keyval.lastSubjects !== null;
+							return state.states.keyval.lastSubjects !== null;
 						}
 					);
 					mm(
@@ -424,7 +451,7 @@ export namespace KeyVal {
 			}
 
 			static resetState(state: _Bot.Message.StateKeeping.ChatState) {
-				state.keyval.lastSubjects = null;
+				state.states.keyval.lastSubjects = null;
 			}
 
 			toJSON(): JSON {
@@ -732,10 +759,6 @@ export namespace KeyVal {
 		}
 	}
 
-	export const notifyModules: NotifyFn = modules => {
-		Aggregates.setModules(modules);
-	};
-
 	namespace Aggregates {
 		let allModules: AllModules | null = null;
 		export function setModules(modules: AllModules) {
@@ -761,7 +784,7 @@ export namespace KeyVal {
 				Object.keys(allModules!).map((name: keyof AllModules) => {
 					return [
 						name,
-						new allModules![name].External.Handler(logObj)
+						new allModules![name].meta.external.Handler(logObj)
 					];
 				})
 			) as unknown) as ModuleHookables;
@@ -817,21 +840,12 @@ export namespace KeyVal {
 
 		export async function init({
 			app,
-			websocket,
 			db,
-			randomNum
-		}: {
-			app: AppWrapper;
-			websocket: WSSimulator;
-			db: Database;
-			randomNum: number;
-		}) {
-			GetSetListener.setDB(db);
-			const apiHandler = new API.Handler({ db });
+			randomNum,
+			apiHandler,
+			websocketSim
+		}: ModuleConfig & { apiHandler: API.Handler }) {
 			const webpageHandler = new Webpage.Handler({ randomNum, db });
-			new Screen.Handler({ db });
-			await External.Handler.init({ db, apiHandler });
-			await Aggregates.init(db);
 
 			app.post('/keyval/all', async (req, res) => {
 				await apiHandler.all(res, {
@@ -879,7 +893,7 @@ export namespace KeyVal {
 				});
 			});
 
-			websocket.all(
+			websocketSim.all(
 				'/keyval/websocket',
 				async (instance: WSSimInstance<WSMessages>) => {
 					instance.listen(

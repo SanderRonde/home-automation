@@ -28,17 +28,17 @@ import {
 import { attachMessage, ResDummy, getTime, log } from '../lib/logger';
 import * as ReadLine from '@serialport/parser-readline';
 import { BotState } from '../lib/bot-state';
-import { AppWrapper } from '../lib/routes';
 import SerialPort = require('serialport');
 import { BotUtil } from '../lib/bot-util';
 import { colorList } from '../lib/data';
 import { ResponseLike } from './multi';
-import { WSWrapper } from '../lib/ws';
 import { exec } from 'child_process';
+import { ModuleConfig } from './all';
 import { Bot as _Bot } from './bot';
-import { Auth } from '../lib/auth';
 import * as express from 'express';
 import { KeyVal } from './keyval';
+import { ModuleMeta } from './meta';
+import { Auth } from './auth';
 import chalk from 'chalk';
 
 function speedToMs(speed: number) {
@@ -106,6 +106,27 @@ function restartSelf() {
 }
 
 export namespace RGB {
+	export const meta = new (class Meta extends ModuleMeta {
+		name = 'rgb';
+
+		async init(config: ModuleConfig) {
+			await Scan.scanRGBControllers(true);
+			setInterval(Scan.scanRGBControllers, 1000 * 60 * 60);
+			await External.Handler.init();
+			initListeners();
+
+			Routing.init(config);
+		}
+
+		get external() {
+			return External;
+		}
+
+		get bot() {
+			return Bot;
+		}
+	})();
+
 	export namespace Clients {
 		abstract class RGBClient {
 			static patternNames: {
@@ -1674,12 +1695,12 @@ export namespace RGB {
 					function rgbOff(
 						state: _Bot.Message.StateKeeping.ChatState
 					) {
-						state.rgb.lastConfig = {
+						state.states.RGB.lastConfig = {
 							type: 'off'
 						};
 					}
 					function rgbOn(state: _Bot.Message.StateKeeping.ChatState) {
-						state.rgb.lastConfig = {
+						state.states.RGB.lastConfig = {
 							type: 'solid',
 							data: new Color(100)
 						};
@@ -1716,12 +1737,12 @@ export namespace RGB {
 							const targetState =
 								match.length === 0 ? 'off' : match[1];
 							if (targetState === 'on') {
-								state.rgb.lastConfig = {
+								state.states.RGB.lastConfig = {
 									type: 'solid',
 									data: new Color(100)
 								};
 							} else {
-								state.rgb.lastConfig = {
+								state.states.RGB.lastConfig = {
 									type: 'off'
 								};
 							}
@@ -1781,7 +1802,7 @@ export namespace RGB {
 								return undefined;
 							})();
 							if (resolvedColor) {
-								state.rgb.lastConfig = {
+								state.states.RGB.lastConfig = {
 									type: 'solid',
 									data: new Color(
 										resolvedColor.r,
@@ -1790,7 +1811,7 @@ export namespace RGB {
 									)
 								};
 							} else {
-								state.rgb.lastConfig = null;
+								state.states.RGB.lastConfig = null;
 							}
 							if (resolvedColor) {
 								await new External.Handler(logObj).rgb(
@@ -1827,7 +1848,7 @@ export namespace RGB {
 							] = match;
 							const speed = speed1 || speed2;
 
-							state.rgb.lastConfig = null;
+							state.states.RGB.lastConfig = null;
 
 							if (
 								await new External.Handler(logObj).pattern(
@@ -1913,17 +1934,17 @@ export namespace RGB {
 							};
 
 							if (effect in ArduinoAPI.arduinoEffects) {
-								state.rgb.lastConfig = {
+								state.states.RGB.lastConfig = {
 									...ArduinoAPI.arduinoEffects[effect]
 								};
-								if ('data' in state.rgb.lastConfig) {
-									state.rgb.lastConfig.data = Bot.mergeObj(
-										state.rgb.lastConfig.data,
+								if ('data' in state.states.RGB.lastConfig) {
+									state.states.RGB.lastConfig.data = Bot.mergeObj(
+										state.states.RGB.lastConfig.data,
 										Bot.unsetUndefined(config)
 									);
 								}
 							} else {
-								state.rgb.lastConfig = null;
+								state.states.RGB.lastConfig = null;
 								return `Effect "${effect}" does not exist`;
 							}
 
@@ -2008,7 +2029,7 @@ export namespace RGB {
 								colors: color ? [color] : undefined
 							};
 
-							state.rgb.lastConfig = {
+							state.states.RGB.lastConfig = {
 								type,
 								data: { ...config }
 							} as any;
@@ -2031,24 +2052,24 @@ export namespace RGB {
 						/\/intensity ([^ ]+)/,
 						/(?:change|set) intensity to ([^ ]+)/,
 						async ({ logObj, state, match }) => {
-							if (state.rgb.lastConfig === null) {
+							if (state.states.RGB.lastConfig === null) {
 								attachMessage(logObj, 'No lastConfig for RGB');
 								return 'I don\'t know what to edit';
 							}
-							state.rgb.lastConfig.data =
-								state.rgb.lastConfig.data || {};
-							state.rgb.lastConfig.data.intensity = parseInt(
+							state.states.RGB.lastConfig.data =
+								state.states.RGB.lastConfig.data || {};
+							state.states.RGB.lastConfig.data.intensity = parseInt(
 								match[1],
 								10
 							);
 							const msg = `Changed config to ${JSON.stringify(
-								state.rgb.lastConfig
+								state.states.RGB.lastConfig
 							)} (intensity->${
-								state.rgb.lastConfig.data.intensity
+								state.states.RGB.lastConfig.data.intensity
 							})`;
 							attachMessage(logObj, msg);
 							await new External.Handler(logObj).runConfig(
-								state.rgb.lastConfig
+								state.states.RGB.lastConfig
 							);
 							return msg;
 						}
@@ -2057,24 +2078,24 @@ export namespace RGB {
 						/\/blocksize ([^ ]+)/,
 						/(?:change|set) (?:(?:block(?:-| )?size)|per(?:-| )?strobe) to ([^ ]+)/,
 						async ({ logObj, state, match }) => {
-							if (state.rgb.lastConfig === null) {
+							if (state.states.RGB.lastConfig === null) {
 								attachMessage(logObj, 'No lastConfig for RGB');
 								return 'I don\'t know what to edit';
 							}
-							state.rgb.lastConfig.data =
-								state.rgb.lastConfig.data || {};
-							state.rgb.lastConfig.data.blockSize = parseInt(
+							state.states.RGB.lastConfig.data =
+								state.states.RGB.lastConfig.data || {};
+							state.states.RGB.lastConfig.data.blockSize = parseInt(
 								match[1],
 								10
 							);
 							const msg = `Changed config to ${JSON.stringify(
-								state.rgb.lastConfig
+								state.states.RGB.lastConfig
 							)} (blockSize->${
-								state.rgb.lastConfig.data.blockSize
+								state.states.RGB.lastConfig.data.blockSize
 							})`;
 							attachMessage(logObj, msg);
 							await new External.Handler(logObj).runConfig(
-								state.rgb.lastConfig
+								state.states.RGB.lastConfig
 							);
 							return msg;
 						}
@@ -2083,22 +2104,22 @@ export namespace RGB {
 						/\/red (\d+)/,
 						/(?:change|set) r(?:ed)? to (\d+)/,
 						async ({ logObj, state, match }) => {
-							if (state.rgb.lastConfig === null) {
+							if (state.states.RGB.lastConfig === null) {
 								attachMessage(logObj, 'No lastConfig for RGB');
 								return 'I don\'t know what to edit';
 							}
-							state.rgb.lastConfig.data =
-								state.rgb.lastConfig.data || {};
-							state.rgb.lastConfig.data.r = parseInt(
+							state.states.RGB.lastConfig.data =
+								state.states.RGB.lastConfig.data || {};
+							state.states.RGB.lastConfig.data.r = parseInt(
 								match[1],
 								10
 							);
 							const msg = `Changed config to ${JSON.stringify(
-								state.rgb.lastConfig
-							)} (r->${state.rgb.lastConfig.data.r})`;
+								state.states.RGB.lastConfig
+							)} (r->${state.states.RGB.lastConfig.data.r})`;
 							attachMessage(logObj, msg);
 							await new External.Handler(logObj).runConfig(
-								state.rgb.lastConfig
+								state.states.RGB.lastConfig
 							);
 							return msg;
 						}
@@ -2107,22 +2128,22 @@ export namespace RGB {
 						/\/green (\d+)/,
 						/(?:change|set) g(?:reen)? to (\d+)/,
 						async ({ logObj, state, match }) => {
-							if (state.rgb.lastConfig === null) {
+							if (state.states.RGB.lastConfig === null) {
 								attachMessage(logObj, 'No lastConfig for RGB');
 								return 'I don\'t know what to edit';
 							}
-							state.rgb.lastConfig.data =
-								state.rgb.lastConfig.data || {};
-							state.rgb.lastConfig.data.g = parseInt(
+							state.states.RGB.lastConfig.data =
+								state.states.RGB.lastConfig.data || {};
+							state.states.RGB.lastConfig.data.g = parseInt(
 								match[1],
 								10
 							);
 							const msg = `Changed config to ${JSON.stringify(
-								state.rgb.lastConfig
-							)} (g->${state.rgb.lastConfig.data.g})`;
+								state.states.RGB.lastConfig
+							)} (g->${state.states.RGB.lastConfig.data.g})`;
 							attachMessage(logObj, msg);
 							await new External.Handler(logObj).runConfig(
-								state.rgb.lastConfig
+								state.states.RGB.lastConfig
 							);
 							return msg;
 						}
@@ -2131,22 +2152,22 @@ export namespace RGB {
 						/\/blue (\d+)/,
 						/(?:change|set) r(?:blue)? to (\d+)/,
 						async ({ logObj, state, match }) => {
-							if (state.rgb.lastConfig === null) {
+							if (state.states.RGB.lastConfig === null) {
 								attachMessage(logObj, 'No lastConfig for RGB');
 								return 'I don\'t know what to edit';
 							}
-							state.rgb.lastConfig.data =
-								state.rgb.lastConfig.data || {};
-							state.rgb.lastConfig.data.b = parseInt(
+							state.states.RGB.lastConfig.data =
+								state.states.RGB.lastConfig.data || {};
+							state.states.RGB.lastConfig.data.b = parseInt(
 								match[1],
 								10
 							);
 							const msg = `Changed config to ${JSON.stringify(
-								state.rgb.lastConfig
-							)} (b->${state.rgb.lastConfig.data.b})`;
+								state.states.RGB.lastConfig
+							)} (b->${state.states.RGB.lastConfig.data.b})`;
 							attachMessage(logObj, msg);
 							await new External.Handler(logObj).runConfig(
-								state.rgb.lastConfig
+								state.states.RGB.lastConfig
 							);
 							return msg;
 						}
@@ -2154,7 +2175,7 @@ export namespace RGB {
 					mm(
 						/(?:change|set) (color|part)( \d+)? to (((\d+) (\d+) (\d+))|([^ ]+))/,
 						async ({ logObj, state, match }) => {
-							if (state.rgb.lastConfig === null) {
+							if (state.states.RGB.lastConfig === null) {
 								attachMessage(logObj, 'No lastConfig for RGB');
 								return 'I don\'t know what to edit';
 							}
@@ -2184,27 +2205,31 @@ export namespace RGB {
 								return 'Unknown color';
 							}
 
-							state.rgb.lastConfig.data =
-								state.rgb.lastConfig.data || {};
-							state.rgb.lastConfig.data.r = color.r;
-							state.rgb.lastConfig.data.g = color.g;
-							state.rgb.lastConfig.data.b = color.b;
-							state.rgb.lastConfig.data.colors =
-								state.rgb.lastConfig.data.colors || [];
-							state.rgb.lastConfig.data.parts =
-								state.rgb.lastConfig.data.parts || [];
-							state.rgb.lastConfig.data.colors[colorIndex] = {
+							state.states.RGB.lastConfig.data =
+								state.states.RGB.lastConfig.data || {};
+							state.states.RGB.lastConfig.data.r = color.r;
+							state.states.RGB.lastConfig.data.g = color.g;
+							state.states.RGB.lastConfig.data.b = color.b;
+							state.states.RGB.lastConfig.data.colors =
+								state.states.RGB.lastConfig.data.colors || [];
+							state.states.RGB.lastConfig.data.parts =
+								state.states.RGB.lastConfig.data.parts || [];
+							state.states.RGB.lastConfig.data.colors[
+								colorIndex
+							] = {
 								...color
 							};
-							state.rgb.lastConfig.data.parts[colorIndex] = {
+							state.states.RGB.lastConfig.data.parts[
+								colorIndex
+							] = {
 								...color
 							};
 							const msg = `Changed config to ${JSON.stringify(
-								state.rgb.lastConfig
+								state.states.RGB.lastConfig
 							)} (color->${JSON.stringify(color)})`;
 							attachMessage(logObj, msg);
 							await new External.Handler(logObj).runConfig(
-								state.rgb.lastConfig
+								state.states.RGB.lastConfig
 							);
 							return msg;
 						}
@@ -2213,7 +2238,7 @@ export namespace RGB {
 						/\/background (?:(?:(\d+) (\d+) (\d+))|([^ ]+))/,
 						/(?:change|set) background(?:-| )?(?:color)? to (?:(?:(\d+) (\d+) (\d+))|([^ ]+))/,
 						async ({ logObj, state, match }) => {
-							if (state.rgb.lastConfig === null) {
+							if (state.states.RGB.lastConfig === null) {
 								attachMessage(logObj, 'No lastConfig for RGB');
 								return 'I don\'t know what to edit';
 							}
@@ -2240,17 +2265,20 @@ export namespace RGB {
 								return 'Unknown color';
 							}
 
-							state.rgb.lastConfig.data =
-								state.rgb.lastConfig.data || {};
-							state.rgb.lastConfig.data.backgroundRed = color.r;
-							state.rgb.lastConfig.data.backgroundGreen = color.g;
-							state.rgb.lastConfig.data.backgroundBlue = color.b;
+							state.states.RGB.lastConfig.data =
+								state.states.RGB.lastConfig.data || {};
+							state.states.RGB.lastConfig.data.backgroundRed =
+								color.r;
+							state.states.RGB.lastConfig.data.backgroundGreen =
+								color.g;
+							state.states.RGB.lastConfig.data.backgroundBlue =
+								color.b;
 							const msg = `Changed config to ${JSON.stringify(
-								state.rgb.lastConfig
+								state.states.RGB.lastConfig
 							)} (color->${JSON.stringify(color)})`;
 							attachMessage(logObj, msg);
 							await new External.Handler(logObj).runConfig(
-								state.rgb.lastConfig
+								state.states.RGB.lastConfig
 							);
 							return msg;
 						}
@@ -2259,7 +2287,7 @@ export namespace RGB {
 						/\/dot (?:(?:(\d+) (\d+) (\d+))|([^ ]+))/,
 						/(?:change|set) dot (\d+)?('s)? ([^ ]+) to ([^ ]+)/,
 						async ({ logObj, state, match }) => {
-							if (state.rgb.lastConfig === null) {
+							if (state.states.RGB.lastConfig === null) {
 								attachMessage(logObj, 'No lastConfig for RGB');
 								return 'I don\'t know what to edit';
 							}
@@ -2271,19 +2299,19 @@ export namespace RGB {
 									? Bot.parseDir(match[4])
 									: parseInt(match[4], 10);
 
-							state.rgb.lastConfig.data =
-								state.rgb.lastConfig.data || {};
-							state.rgb.lastConfig.data.dots =
-								state.rgb.lastConfig.data.dots || [];
-							(state.rgb.lastConfig.data.dots[dotIndex] as any)[
-								prop
-							] = value;
+							state.states.RGB.lastConfig.data =
+								state.states.RGB.lastConfig.data || {};
+							state.states.RGB.lastConfig.data.dots =
+								state.states.RGB.lastConfig.data.dots || [];
+							(state.states.RGB.lastConfig.data.dots[
+								dotIndex
+							] as any)[prop] = value;
 							const msg = `Changed config to ${JSON.stringify(
-								state.rgb.lastConfig
+								state.states.RGB.lastConfig
 							)} (dot[${dotIndex}].${prop}->${value})`;
 							attachMessage(logObj, msg);
 							await new External.Handler(logObj).runConfig(
-								state.rgb.lastConfig
+								state.states.RGB.lastConfig
 							);
 							return msg;
 						}
@@ -2292,24 +2320,24 @@ export namespace RGB {
 						/\/updatetime ([^ ]+)/,
 						/(?:change|set) update(?:-| )?time to ([^ ]+)/,
 						async ({ logObj, state, match }) => {
-							if (state.rgb.lastConfig === null) {
+							if (state.states.RGB.lastConfig === null) {
 								attachMessage(logObj, 'No lastConfig for RGB');
 								return 'I don\'t know what to edit';
 							}
-							state.rgb.lastConfig.data =
-								state.rgb.lastConfig.data || {};
-							state.rgb.lastConfig.data.updateTime = parseInt(
+							state.states.RGB.lastConfig.data =
+								state.states.RGB.lastConfig.data || {};
+							state.states.RGB.lastConfig.data.updateTime = parseInt(
 								match[1],
 								10
 							);
 							const msg = `Changed config to ${JSON.stringify(
-								state.rgb.lastConfig
+								state.states.RGB.lastConfig
 							)} (updateTime->${
-								state.rgb.lastConfig.data.updateTime
+								state.states.RGB.lastConfig.data.updateTime
 							})`;
 							attachMessage(logObj, msg);
 							await new External.Handler(logObj).runConfig(
-								state.rgb.lastConfig
+								state.states.RGB.lastConfig
 							);
 							return msg;
 						}
@@ -2318,21 +2346,21 @@ export namespace RGB {
 						/\/dir ([^ ]+)/,
 						/(?:change|set) dir to ([^ ]+)/,
 						async ({ logObj, state, match }) => {
-							if (state.rgb.lastConfig === null) {
+							if (state.states.RGB.lastConfig === null) {
 								attachMessage(logObj, 'No lastConfig for RGB');
 								return 'I don\'t know what to edit';
 							}
-							state.rgb.lastConfig.data =
-								state.rgb.lastConfig.data || {};
-							state.rgb.lastConfig.data.dir = Bot.parseDir(
+							state.states.RGB.lastConfig.data =
+								state.states.RGB.lastConfig.data || {};
+							state.states.RGB.lastConfig.data.dir = Bot.parseDir(
 								match[1]
 							);
 							const msg = `Changed config to ${JSON.stringify(
-								state.rgb.lastConfig
-							)} (dir->${state.rgb.lastConfig.data.dir})`;
+								state.states.RGB.lastConfig
+							)} (dir->${state.states.RGB.lastConfig.data.dir})`;
 							attachMessage(logObj, msg);
 							await new External.Handler(logObj).runConfig(
-								state.rgb.lastConfig
+								state.states.RGB.lastConfig
 							);
 							return msg;
 						}
@@ -2341,19 +2369,21 @@ export namespace RGB {
 						/\/mode ([^ ]+)/,
 						/(?:change|set) mode to ([^ ]+)/,
 						async ({ logObj, state, match }) => {
-							if (state.rgb.lastConfig === null) {
+							if (state.states.RGB.lastConfig === null) {
 								attachMessage(logObj, 'No lastConfig for RGB');
 								return 'I don\'t know what to edit';
 							}
-							state.rgb.lastConfig.data =
-								state.rgb.lastConfig.data || {};
-							state.rgb.lastConfig.data.mode = match[1] as TransitionTypes;
+							state.states.RGB.lastConfig.data =
+								state.states.RGB.lastConfig.data || {};
+							state.states.RGB.lastConfig.data.mode = match[1] as TransitionTypes;
 							const msg = `Changed config to ${JSON.stringify(
-								state.rgb.lastConfig
-							)} (mode->${state.rgb.lastConfig.data.mode})`;
+								state.states.RGB.lastConfig
+							)} (mode->${
+								state.states.RGB.lastConfig.data.mode
+							})`;
 							attachMessage(logObj, msg);
 							await new External.Handler(logObj).runConfig(
-								state.rgb.lastConfig
+								state.states.RGB.lastConfig
 							);
 							return msg;
 						}
@@ -2871,40 +2901,11 @@ export namespace RGB {
 	}
 
 	export namespace Routing {
-		async function switchLed(name: LED_NAMES, value: string, logObj: any) {
-			const client = Clients.getLed(name);
-			if (!client) return;
-			if (value === '1') {
-				attachMessage(
-					attachMessage(
-						logObj,
-						`Setting`,
-						chalk.bold(client.address),
-						`to color rgb(255, 255, 255)`
-					),
-					chalk.bgHex(API.colorToHex(NIGHTSTAND_COLOR))('   ')
-				);
-				return client.setColor(255, 255, 255);
-			} else if (value === '0') {
-				attachMessage(logObj, `Turned off`, chalk.bold(client.address));
-				return client.turnOff();
-			}
-			return Promise.resolve();
-		}
-
 		export async function init({
 			app,
 			randomNum,
-			ws
-		}: {
-			app: AppWrapper;
-			randomNum: number;
-			ws: WSWrapper;
-		}) {
-			await Scan.scanRGBControllers(true);
-			setInterval(Scan.scanRGBControllers, 1000 * 60 * 60);
-			await External.Handler.init();
-
+			websocket
+		}: ModuleConfig) {
 			app.post('/rgb/color', async (req, res) => {
 				await API.Handler.setColor(res, { ...req.params, ...req.body });
 			});
@@ -2944,115 +2945,8 @@ export namespace RGB {
 			app.all('/rgb', async (req, res) => {
 				await WebPage.Handler.index(res, req, randomNum);
 			});
-			KeyVal.GetSetListener.addListener(
-				'room.lights.nightstand',
-				async (value, logObj) => {
-					const client = Clients.getLed(LED_NAMES.BED_LEDS);
-					if (!client) return;
-					if (value === '1') {
-						attachMessage(
-							attachMessage(
-								logObj,
-								`Setting`,
-								chalk.bold(client.address),
-								`to color rgb(${NIGHTSTAND_COLOR.r}, ${NIGHTSTAND_COLOR.g}, ${NIGHTSTAND_COLOR.b})`
-							),
-							chalk.bgHex(API.colorToHex(NIGHTSTAND_COLOR))('   ')
-						);
-						return client.setColor(
-							NIGHTSTAND_COLOR.r,
-							NIGHTSTAND_COLOR.g,
-							NIGHTSTAND_COLOR.b
-						);
-					} else if (value === '0') {
-						attachMessage(
-							logObj,
-							`Turned off`,
-							chalk.bold(client.address)
-						);
-						return client.turnOff();
-					}
-					return Promise.resolve();
-				}
-			);
 
-			let wakelights: NodeJS.Timeout[] = [];
-			KeyVal.GetSetListener.addListener(
-				'room.leds.wakelight',
-				async (value, logObj) => {
-					wakelights.forEach(w => clearInterval(w));
-					wakelights = [];
-
-					const client = Clients.getLed(LED_NAMES.BED_LEDS);
-					if (!client) return;
-					if (value === '1') {
-						attachMessage(
-							attachMessage(
-								logObj,
-								`Fading in`,
-								chalk.bold(client.address),
-								`to color rgb(${NIGHTSTAND_COLOR.r}, ${NIGHTSTAND_COLOR.g}, ${NIGHTSTAND_COLOR.b})`
-							),
-							chalk.bgHex(API.colorToHex(NIGHTSTAND_COLOR))('   ')
-						);
-
-						let count: number = 2;
-						const interval = setInterval(() => {
-							client.setColor(
-								NIGHTSTAND_COLOR.r,
-								NIGHTSTAND_COLOR.g,
-								NIGHTSTAND_COLOR.b,
-								count
-							);
-
-							if (count++ === 100) {
-								clearInterval(interval);
-								wakelights.splice(
-									wakelights.indexOf(interval),
-									1
-								);
-							}
-						}, WAKELIGHT_TIME / 100);
-						wakelights.push(interval);
-						client.setColor(
-							NIGHTSTAND_COLOR.r,
-							NIGHTSTAND_COLOR.g,
-							NIGHTSTAND_COLOR.b,
-							1
-						);
-					} else if (value === '0') {
-						wakelights.forEach(w => clearInterval(w));
-						wakelights = [];
-						attachMessage(
-							logObj,
-							`Turned off`,
-							chalk.bold(client.address)
-						);
-						return client.turnOff();
-					}
-					return Promise.resolve();
-				}
-			);
-			KeyVal.GetSetListener.addListener(
-				'room.leds.ceiling',
-				async (value, logObj) => {
-					await switchLed(LED_NAMES.CEILING_LEDS, value, logObj);
-				}
-			);
-			KeyVal.GetSetListener.addListener(
-				'room.leds.bed',
-				async (value, logObj) => {
-					await switchLed(LED_NAMES.BED_LEDS, value, logObj);
-				}
-			);
-			KeyVal.GetSetListener.addListener(
-				'room.leds.desk',
-				async (value, logObj) => {
-					await switchLed(LED_NAMES.DESK_LEDS, value, logObj);
-				}
-			);
-
-			ws.all('/music_visualize', async ({ addListener }) => {
+			websocket.all('/music_visualize', async ({ addListener }) => {
 				// Prime it
 				if (Clients.arduinoClients.length === 0) {
 					if ((await Scan.scanArduinos()) == 0) return;
@@ -3066,5 +2960,133 @@ export namespace RGB {
 				});
 			});
 		}
+	}
+
+	async function switchLed(name: LED_NAMES, value: string, logObj: any) {
+		const client = Clients.getLed(name);
+		if (!client) return;
+		if (value === '1') {
+			attachMessage(
+				attachMessage(
+					logObj,
+					`Setting`,
+					chalk.bold(client.address),
+					`to color rgb(255, 255, 255)`
+				),
+				chalk.bgHex(API.colorToHex(NIGHTSTAND_COLOR))('   ')
+			);
+			return client.setColor(255, 255, 255);
+		} else if (value === '0') {
+			attachMessage(logObj, `Turned off`, chalk.bold(client.address));
+			return client.turnOff();
+		}
+		return Promise.resolve();
+	}
+
+	function initListeners() {
+		KeyVal.GetSetListener.addListener(
+			'room.lights.nightstand',
+			async (value, logObj) => {
+				const client = Clients.getLed(LED_NAMES.BED_LEDS);
+				if (!client) return;
+				if (value === '1') {
+					attachMessage(
+						attachMessage(
+							logObj,
+							`Setting`,
+							chalk.bold(client.address),
+							`to color rgb(${NIGHTSTAND_COLOR.r}, ${NIGHTSTAND_COLOR.g}, ${NIGHTSTAND_COLOR.b})`
+						),
+						chalk.bgHex(API.colorToHex(NIGHTSTAND_COLOR))('   ')
+					);
+					return client.setColor(
+						NIGHTSTAND_COLOR.r,
+						NIGHTSTAND_COLOR.g,
+						NIGHTSTAND_COLOR.b
+					);
+				} else if (value === '0') {
+					attachMessage(
+						logObj,
+						`Turned off`,
+						chalk.bold(client.address)
+					);
+					return client.turnOff();
+				}
+				return Promise.resolve();
+			}
+		);
+
+		let wakelights: NodeJS.Timeout[] = [];
+		KeyVal.GetSetListener.addListener(
+			'room.leds.wakelight',
+			async (value, logObj) => {
+				wakelights.forEach(w => clearInterval(w));
+				wakelights = [];
+
+				const client = Clients.getLed(LED_NAMES.BED_LEDS);
+				if (!client) return;
+				if (value === '1') {
+					attachMessage(
+						attachMessage(
+							logObj,
+							`Fading in`,
+							chalk.bold(client.address),
+							`to color rgb(${NIGHTSTAND_COLOR.r}, ${NIGHTSTAND_COLOR.g}, ${NIGHTSTAND_COLOR.b})`
+						),
+						chalk.bgHex(API.colorToHex(NIGHTSTAND_COLOR))('   ')
+					);
+
+					let count: number = 2;
+					const interval = setInterval(() => {
+						client.setColor(
+							NIGHTSTAND_COLOR.r,
+							NIGHTSTAND_COLOR.g,
+							NIGHTSTAND_COLOR.b,
+							count
+						);
+
+						if (count++ === 100) {
+							clearInterval(interval);
+							wakelights.splice(wakelights.indexOf(interval), 1);
+						}
+					}, WAKELIGHT_TIME / 100);
+					wakelights.push(interval);
+					client.setColor(
+						NIGHTSTAND_COLOR.r,
+						NIGHTSTAND_COLOR.g,
+						NIGHTSTAND_COLOR.b,
+						1
+					);
+				} else if (value === '0') {
+					wakelights.forEach(w => clearInterval(w));
+					wakelights = [];
+					attachMessage(
+						logObj,
+						`Turned off`,
+						chalk.bold(client.address)
+					);
+					return client.turnOff();
+				}
+				return Promise.resolve();
+			}
+		);
+		KeyVal.GetSetListener.addListener(
+			'room.leds.ceiling',
+			async (value, logObj) => {
+				await switchLed(LED_NAMES.CEILING_LEDS, value, logObj);
+			}
+		);
+		KeyVal.GetSetListener.addListener(
+			'room.leds.bed',
+			async (value, logObj) => {
+				await switchLed(LED_NAMES.BED_LEDS, value, logObj);
+			}
+		);
+		KeyVal.GetSetListener.addListener(
+			'room.leds.desk',
+			async (value, logObj) => {
+				await switchLed(LED_NAMES.DESK_LEDS, value, logObj);
+			}
+		);
 	}
 }

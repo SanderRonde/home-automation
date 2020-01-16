@@ -1,7 +1,7 @@
 import { KeyError, AuthError } from './errors';
 import { attachMessage } from './logger';
 import * as express from 'express';
-import { Auth } from './auth';
+import { Auth } from '../modules/auth';
 import chalk from 'chalk';
 
 interface KeyVal {

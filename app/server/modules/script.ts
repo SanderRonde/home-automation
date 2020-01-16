@@ -1,17 +1,35 @@
 import { errorHandle, requireParams, authAll } from '../lib/decorators';
-import * as childProcess from 'child_process';
 import { attachMessage, ResDummy } from '../lib/logger';
+import * as childProcess from 'child_process';
 import { BotState } from '../lib/bot-state';
 import { AppWrapper } from '../lib/routes';
 import { AuthError } from '../lib/errors';
 import { ResponseLike } from './multi';
+import { ModuleConfig } from './all';
 import { Bot as _Bot } from './bot';
-import { Auth } from '../lib/auth';
 import { Config } from '../app';
+import { ModuleMeta } from './meta';
+import { Auth } from './auth';
 import * as path from 'path';
 import chalk from 'chalk';
 
 export namespace Script {
+	export const meta = new (class Meta extends ModuleMeta {
+		name = 'script';
+
+		async init(config: ModuleConfig) {
+			Routing.init(config);
+		}
+
+		get external() {
+			return External;
+		}
+
+		get bot() {
+			return Bot;
+		}
+	})();
+
 	export namespace External {
 		interface ExternalRequest {
 			type: 'script';

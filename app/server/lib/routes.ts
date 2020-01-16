@@ -1,23 +1,11 @@
-import { logReq, attachMessage, ProgressLogger } from './logger';
-import { RemoteControl } from '../modules/remote-control';
-import { HomeDetector } from '../modules/home-detector';
-import { Multi, ResponseLike } from '../modules/multi';
-import { Temperature } from '../modules/temperature';
+import { logReq, attachMessage } from './logger';
+import { ResponseLike } from '../modules/multi';
 import * as pathToRegexp from 'path-to-regexp';
-import { WSSimulator, WSWrapper } from './ws';
 import * as cookieParser from 'cookie-parser';
 import * as serveStatic from 'serve-static';
-import { KeyVal } from '../modules/keyval';
-import { Script } from '../modules/script';
-import { notifyAll } from '../modules/all';
 import * as bodyParser from 'body-parser';
-import { Cast } from '../modules/cast';
 import { RGB } from '../modules/rgb';
-import { Bot } from '../modules/bot';
 import * as express from 'express';
-import { Config } from '../app';
-import { Database } from './db';
-import { Auth } from './auth';
 import * as path from 'path';
 import * as glob from 'glob';
 import chalk from 'chalk';
@@ -236,89 +224,7 @@ export async function initMiddleware(app: express.Express) {
 	);
 }
 
-export async function initRoutes({
-	app,
-	websocketSim,
-	config,
-	randomNum,
-	initLogger,
-	ws
-}: {
-	app: express.Express;
-	websocketSim: WSSimulator;
-	config: Config;
-	randomNum: number;
-	initLogger: ProgressLogger;
-	ws: WSWrapper;
-}) {
-	const wrappedApp = new AppWrapper(app);
-	const routeSettings = {
-		app: wrappedApp,
-		websocket: websocketSim,
-		randomNum,
-		config,
-		ws
-	};
-
-	await notifyAll();
-
-	await Promise.all([
-		await (async () => {
-			await Auth.initRoutes({ ...routeSettings });
-			initLogger.increment('/auth');
-		})(),
-		await (async () => {
-			await KeyVal.Routing.init({
-				...routeSettings,
-				db: await new Database('keyval.json').init()
-			});
-			initLogger.increment('/keyval');
-		})(),
-		await (async () => {
-			await Script.Routing.init({ ...routeSettings });
-			initLogger.increment('/script');
-		})(),
-		await (async () => {
-			await RGB.Routing.init({ ...routeSettings });
-			initLogger.increment('/rgb');
-		})(),
-		await (async () => {
-			await Cast.Routing.init({ ...routeSettings });
-			initLogger.increment('/cast');
-		})(),
-		await (async () => {
-			await Multi.Routing.init({ ...routeSettings });
-			initLogger.increment('/multi');
-		})(),
-		await (async () => {
-			await HomeDetector.Routing.init({
-				...routeSettings,
-				db: await new Database('home-detector.json').init()
-			});
-			initLogger.increment('/home-detector');
-		})(),
-		await (async () => {
-			await RemoteControl.Routing.init({ ...routeSettings });
-			initLogger.increment('/remote-control');
-		})(),
-		await (async () => {
-			await Bot.Routing.init({
-				...routeSettings,
-				db: await new Database('bot.json').init()
-			});
-			initLogger.increment('/bot');
-		})(),
-		await (async () => {
-			await Temperature.Routing.init({
-				...routeSettings,
-				db: await new Database('temperature.json').init()
-			});
-			initLogger.increment('/temperature');
-		})()
-	]);
-
-	initLogger.increment('routes');
-
+export async function initRoutes(app: express.Express) {
 	app.post('/scan', (_req, res) => {
 		RGB.Scan.scanRGBControllers();
 		res.status(200).end();

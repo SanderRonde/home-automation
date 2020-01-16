@@ -1,5 +1,7 @@
 import { transferAttached, genURLLog, attachMessage } from '../lib/logger';
 import { AppWrapper } from '../lib/routes';
+import { ModuleConfig } from './all';
+import { ModuleMeta } from './meta';
 import * as express from 'express';
 
 interface MultiRequestRequest {
@@ -121,11 +123,13 @@ class ResponseDummy {
 }
 
 export namespace Multi {
-	export namespace External {
-		export class Handler {
-			constructor() {}
+	export const meta = new (class Meta extends ModuleMeta {
+		name = 'multi';
+
+		async init(config: ModuleConfig) {
+			Routing.init(config);
 		}
-	}
+	})();
 
 	export namespace Routing {
 		export function init({ app }: { app: AppWrapper }) {

@@ -13,17 +13,17 @@ import {
 	log,
 	ResDummy
 } from '../lib/logger';
-import { NotifyFn, AllModules, ModuleHookables } from './all';
+import { AllModules, ModuleHookables, ModuleConfig } from './all';
 import { arrToObj, awaitCondition } from '../lib/util';
 import { BotState } from '../lib/bot-state';
-import { AppWrapper } from '../lib/routes';
 import hooks from '../config/home-hooks';
 import config from '../config/home-ips';
 import { ResponseLike } from './multi';
 import { Database } from '../lib/db';
 import { Bot as _Bot } from './bot';
 import express = require('express');
-import { Auth } from '../lib/auth';
+import { ModuleMeta } from './meta';
+import { Auth } from './auth';
 import * as ping from 'ping';
 import chalk from 'chalk';
 
@@ -49,6 +49,31 @@ export const enum HOME_STATE {
 }
 
 export namespace HomeDetector {
+	export const meta = new (class Meta extends ModuleMeta {
+		name = 'home-detector';
+
+		async init(config: ModuleConfig) {
+			const detector = new Classes.Detector({ db: config.db });
+			const apiHandler = new API.Handler({ detector });
+			Bot.Bot.init({ apiHandler, detector });
+
+			initListeners();
+			Routing.init({ ...config, detector, apiHandler });
+		}
+
+		async notifyModules(modules: AllModules) {
+			Hooks.setModules(modules);
+		}
+
+		get external() {
+			return External;
+		}
+
+		get bot() {
+			return Bot;
+		}
+	})();
+
 	export namespace Classes {
 		function wait(time: number) {
 			return new Promise(resolve => {
@@ -352,7 +377,7 @@ export namespace HomeDetector {
 								}
 							})();
 
-							state.homeDetector.lastSubjects =
+							state.states.homeDetector.lastSubjects =
 								matches.length === 0 ? null : matches;
 
 							return `${nameText}`;
@@ -373,7 +398,7 @@ export namespace HomeDetector {
 							);
 							resDummy.transferTo(logObj);
 
-							state.homeDetector.lastSubjects = [match[1]];
+							state.states.homeDetector.lastSubjects = [match[1]];
 							if (
 								(homeState === HOME_STATE.HOME) ===
 								(checkTarget === 'home')
@@ -419,7 +444,7 @@ export namespace HomeDetector {
 								chalk.bold(pinger.joinedAt + '')
 							);
 
-							state.homeDetector.lastSubjects = [target];
+							state.states.homeDetector.lastSubjects = [target];
 
 							return checkTarget === HOME_STATE.HOME
 								? pinger.joinedAt.toLocaleString()
@@ -444,7 +469,7 @@ export namespace HomeDetector {
 									contents: [],
 									header: ['Name', 'Time']
 								};
-								for (const target of state.homeDetector
+								for (const target of state.states.homeDetector
 									.lastSubjects!) {
 									const nameMsg = attachMessage(
 										logObj,
@@ -486,7 +511,9 @@ export namespace HomeDetector {
 							}
 						),
 						({ state }) => {
-							return state.homeDetector.lastSubjects !== null;
+							return (
+								state.states.homeDetector.lastSubjects !== null
+							);
 						}
 					);
 
@@ -539,7 +566,7 @@ export namespace HomeDetector {
 			}
 
 			static resetState(state: _Bot.Message.StateKeeping.ChatState) {
-				state.keyval.lastSubjects = null;
+				state.states.keyval.lastSubjects = null;
 			}
 
 			toJSON(): JSON {
@@ -684,10 +711,6 @@ export namespace HomeDetector {
 		}
 	}
 
-	export const notifyModules: NotifyFn = modules => {
-		Hooks.setModules(modules);
-	};
-
 	export namespace Hooks {
 		let allModules: AllModules | null = null;
 		export function setModules(modules: AllModules) {
@@ -703,7 +726,7 @@ export namespace HomeDetector {
 				Object.keys(allModules!).map((name: keyof AllModules) => {
 					return [
 						name,
-						new allModules![name].External.Handler(logObj)
+						new allModules![name].meta.external.Handler(logObj)
 					];
 				})
 			) as unknown) as ModuleHookables;
@@ -754,35 +777,34 @@ export namespace HomeDetector {
 		}
 	}
 
+	function initListeners() {
+		Classes.Detector.addListener(null, (newState, name) => {
+			log(
+				getTime(),
+				chalk.cyan(
+					`[device:${name}]`,
+					newState === HOME_STATE.HOME
+						? chalk.bold(chalk.blue('now home'))
+						: chalk.blue('just left')
+				)
+			);
+		});
+		Classes.Detector.addListener(null, async (newState, name) => {
+			await Hooks.handle(newState, name);
+		});
+	}
+
 	export namespace Routing {
 		export function init({
 			app,
-			db,
-			randomNum
-		}: {
-			app: AppWrapper;
-			db: Database;
-			randomNum: number;
+			apiHandler,
+			randomNum,
+			detector
+		}: ModuleConfig & {
+			detector: Classes.Detector;
+			apiHandler: API.Handler;
 		}) {
-			Classes.Detector.addListener(null, (newState, name) => {
-				log(
-					getTime(),
-					chalk.cyan(
-						`[device:${name}]`,
-						newState === HOME_STATE.HOME
-							? chalk.bold(chalk.blue('now home'))
-							: chalk.blue('just left')
-					)
-				);
-			});
-			Classes.Detector.addListener(null, async (newState, name) => {
-				await Hooks.handle(newState, name);
-			});
-
-			const detector = new Classes.Detector({ db });
-			const apiHandler = new API.Handler({ detector });
 			const webpageHandler = new Webpage.Handler({ randomNum, detector });
-			Bot.Bot.init({ apiHandler, detector });
 
 			app.post('/home-detector/all', async (req, res) => {
 				await apiHandler.getAll(res, {

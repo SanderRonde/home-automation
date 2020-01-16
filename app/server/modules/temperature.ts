@@ -1,17 +1,36 @@
 import { errorHandle, requireParams, authAll, auth } from '../lib/decorators';
 import { attachMessage, ResDummy, log, getTime } from '../lib/logger';
 import { BotState } from '../lib/bot-state';
-import { AppWrapper } from '../lib/routes';
 import { ResponseLike } from './multi';
+import { ModuleConfig } from './all';
 import { Database } from '../lib/db';
 import { Bot as _Bot } from './bot';
-import { Auth } from '../lib/auth';
-import chalk from 'chalk';
 import { KeyVal } from './keyval';
+import { Auth } from './auth';
+import { ModuleMeta } from './meta';
+import chalk from 'chalk';
 
 const LOG_INTERVAL_SECS = 60;
 
 export namespace Temperature {
+	export const meta = new (class Meta extends ModuleMeta {
+		name = 'temperature';
+
+		async init(config: ModuleConfig) {
+			TempControl.init(config.db);
+
+			Routing.init(config);
+		}
+
+		get external() {
+			return External;
+		}
+
+		get bot() {
+			return Bot;
+		}
+	})();
+
 	type Mode = 'on' | 'off' | 'auto';
 
 	namespace TempControl {
@@ -405,15 +424,7 @@ export namespace Temperature {
 	}
 
 	export namespace Routing {
-		export async function init({
-			app,
-			db
-		}: {
-			app: AppWrapper;
-			db: Database;
-		}) {
-			TempControl.init(db);
-
+		export async function init({ app }: ModuleConfig) {
 			app.post('/temperature/target/:target?', async (req, res) => {
 				API.Handler.setTargetTemp(res, {
 					...req.params,

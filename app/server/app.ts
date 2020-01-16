@@ -1,7 +1,15 @@
 import { setLogLevel, ProgressLogger, startInit, endInit } from './lib/logger';
-import { initRoutes, initMiddleware, initAnnotatorRoutes } from './lib/routes';
+import {
+	initRoutes,
+	initMiddleware,
+	initAnnotatorRoutes,
+	AppWrapper
+} from './lib/routes';
+import { notifyAllModules, NoDBModuleConfig } from './modules/all';
 import { hasArg, getArg, getNumberArg } from './lib/io';
 import { WSSimulator, WSWrapper } from './lib/ws';
+import { getAllModules } from './modules/all';
+import { Database } from './lib/db';
 import { Bot } from './modules/bot';
 import * as express from 'express';
 import * as path from 'path';
@@ -25,6 +33,7 @@ interface PartialConfig {
 type DeepRequired<T> = {
 	[P in keyof T]-?: DeepRequired<T[P]>;
 };
+
 export type Config = DeepRequired<PartialConfig>;
 
 class WebServer {
@@ -36,7 +45,7 @@ class WebServer {
 	private _config: Config;
 	private _initLogger: ProgressLogger = new ProgressLogger(
 		'Server start',
-		18
+		19
 	);
 
 	private _setConfigDefaults(config: PartialConfig): Config {
@@ -64,6 +73,29 @@ class WebServer {
 		this._initLogger.increment('IO');
 	}
 
+	private async _initModules() {
+		await notifyAllModules();
+
+		const modules = await getAllModules();
+
+		const config: NoDBModuleConfig = {
+			app: new AppWrapper(this.app),
+			websocketSim: this.websocketSim,
+			config: this._config,
+			randomNum: Math.round(Math.random() * 1000000),
+			websocket: this.ws
+		};
+		await Promise.all(
+			Object.values(modules).map(async mod => {
+				await mod.meta.init({
+					...config,
+					db: await new Database(`${mod.meta._dbName}.json`).init()
+				});
+				this._initLogger.increment(mod.meta.loggerName);
+			})
+		);
+	}
+
 	public async init() {
 		this.app = express();
 		this._initLogger.increment('express');
@@ -72,19 +104,12 @@ class WebServer {
 		this._initLogger.increment('middleware');
 		await this._initServers();
 		this._initLogger.increment('servers');
-		await initRoutes({
-			app: this.app,
-			websocketSim: this.websocketSim,
-			config: this._config,
-			// This is just for semi-versioning of files
-			// to prevent caching
-			randomNum: Math.round(Math.random() * 1000000),
-			initLogger: this._initLogger,
-			ws: this.ws
-		});
+		await initRoutes(this.app);
 		this._initLogger.increment('routes');
+		this._initModules();
+		this._initLogger.increment('modules');
 		setLogLevel(this._config.log.level);
-		Bot.printCommands();
+		await Bot.printCommands();
 		this._listen();
 	}
 

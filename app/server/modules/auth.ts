@@ -1,11 +1,20 @@
-import { AUTH_SECRET_FILE, BOT_SECRET_FILE } from './constants';
-import { attachMessage } from './logger';
-import { AppWrapper } from './routes';
-import { Config } from '../app';
+import { AUTH_SECRET_FILE, BOT_SECRET_FILE } from '../lib/constants';
+import { attachMessage } from '../lib/logger';
+import { ModuleConfig } from './all';
 import * as fs from 'fs-extra';
+import { ModuleMeta } from './meta';
 import chalk from 'chalk';
 
 export namespace Auth {
+	export const meta = new (class Meta extends ModuleMeta {
+		name = 'auth';
+
+		async init(config: ModuleConfig) {
+			await Secret.readSecret();
+			await initRoutes(config);
+		}
+	})();
+
 	export namespace ClientSecret {
 		const ids: Map<number, string> = new Map();
 
@@ -130,14 +139,7 @@ export namespace Auth {
 		}
 	}
 
-	export async function initRoutes({
-		app,
-		config
-	}: {
-		app: AppWrapper;
-		config: Config;
-	}) {
-		await Secret.readSecret();
+	async function initRoutes({ app, config }: ModuleConfig) {
 		app.post('/authid', async (_req, res) => {
 			const id = (await Auth.ClientSecret.genId()) + '';
 			if (config.log.secrets) {

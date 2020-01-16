@@ -10,16 +10,32 @@ import { attachMessage, ResDummy, log, getTime } from '../lib/logger';
 import telnet_client, * as TelnetClient from 'telnet-client';
 import { TELNET_IPS_FILE } from '../lib/constants';
 import { BotState } from '../lib/bot-state';
-import { AppWrapper } from '../lib/routes';
 import { ResponseLike } from './multi';
-import { WSWrapper } from '../lib/ws';
+import { ModuleConfig } from './all';
 import { Bot as _Bot } from './bot';
 import * as express from 'express';
-import { Auth } from '../lib/auth';
 import * as fs from 'fs-extra';
+import { Auth } from './auth';
+import { ModuleMeta } from './meta';
 import chalk from 'chalk';
 
 export namespace RemoteControl {
+	export const meta = new (class Meta extends ModuleMeta {
+		name = 'remote-control';
+
+		async init(config: ModuleConfig) {
+			Routing.init(config);
+		}
+
+		get external() {
+			return External;
+		}
+
+		get bot() {
+			return Bot;
+		}
+	})();
+
 	type Commands =
 		| {
 				action: 'play' | 'pause' | 'playpause' | 'close';
@@ -675,12 +691,8 @@ export namespace RemoteControl {
 		export async function init({
 			app,
 			randomNum,
-			ws
-		}: {
-			app: AppWrapper;
-			randomNum: number;
-			ws: WSWrapper;
-		}) {
+			websocket
+		}: ModuleConfig) {
 			const webpageHandler = new Webpage.Handler(randomNum);
 
 			app.post('/remote-control/play', async (req, res) => {
@@ -738,7 +750,7 @@ export namespace RemoteControl {
 				});
 			});
 
-			ws.all(
+			websocket.all(
 				'/remote-control/listen',
 				async ({ send, onDead, addListener }) => {
 					let authenticated: boolean = false;

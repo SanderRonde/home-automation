@@ -1,20 +1,14 @@
 import { BOT_SECRET_FILE, TELEGRAM_IPS, TELEGRAM_API } from '../lib/constants';
+import { ModuleConfig, getAllModules, AllModules, InstanceOf } from './all';
 import { attachMessage, logOutgoingReq } from '../lib/logger';
-import { RemoteControl } from './remote-control';
-import { HomeDetector } from './home-detector';
-import { Temperature } from './temperature';
 import { BotState } from '../lib/bot-state';
-import { AppWrapper } from '../lib/routes';
 import { ResponseLike } from './multi';
 import { Database } from '../lib/db';
 import { log } from '../lib/logger';
+import { ModuleMeta } from './meta';
 import * as express from 'express';
-import { KeyVal } from './keyval';
-import { Script } from './script';
 import * as fs from 'fs-extra';
 import * as https from 'https';
-import { Cast } from './cast';
-import { RGB } from './rgb';
 import chalk from 'chalk';
 
 const BOT_NAME = 'HuisBot';
@@ -26,6 +20,14 @@ export const enum RESPONSE_TYPE {
 }
 
 export namespace Bot {
+	export const meta = new (class Meta extends ModuleMeta {
+		name = 'bot';
+
+		async init(config: ModuleConfig) {
+			await Routing.init(config);
+		}
+	})();
+
 	export interface TelegramText {
 		text: string;
 	}
@@ -110,55 +112,42 @@ export namespace Bot {
 		}
 
 		export namespace StateKeeping {
-			// NEWBOT
 			export class ChatState {
-				rgb!: RGB.Bot.Bot;
-				cast!: Cast.Bot.Bot;
-				keyval!: KeyVal.Bot.Bot;
-				script!: Script.Bot.Bot;
-				temperature!: Temperature.Bot.Bot;
-				homeDetector!: HomeDetector.Bot.Bot;
-				remoteControl!: RemoteControl.Bot.Bot;
+				states!: {
+					[K in keyof AllModules]: InstanceOf<
+						AllModules[K]['meta']['bot']['Bot']
+					>;
+				};
 
-				// NEWBOT
-				constructor(
-					json: {
-						rgb?: RGB.Bot.JSON;
-						cast?: Cast.Bot.JSON;
-						keyval?: KeyVal.Bot.JSON;
-						script?: Script.Bot.JSON;
-						temperature?: Temperature.Bot.JSON;
-						homeDetector?: HomeDetector.Bot.JSON;
-						remoteControl?: RemoteControl.Bot.JSON;
-					} = {}
+				async init(
+					json?: {
+						[K in keyof AllModules]: any;
+					}
 				) {
-					// NEWBOT
-					this.rgb = new RGB.Bot.Bot(json.rgb);
-					this.cast = new Cast.Bot.Bot(json.cast);
-					this.keyval = new KeyVal.Bot.Bot(json.keyval);
-					this.script = new Script.Bot.Bot(json.script);
-					this.temperature = new Temperature.Bot.Bot(
-						json.temperature
-					);
-					this.homeDetector = new HomeDetector.Bot.Bot(
-						json.homeDetector
-					);
-					this.remoteControl = new RemoteControl.Bot.Bot(
-						json.remoteControl
-					);
+					if (!json) return this;
+
+					this.states = {} as any;
+					const modules = await getAllModules();
+					Object.keys(modules).map((key: keyof AllModules) => {
+						const bot = modules[key].meta.bot.Bot;
+						this.states[key] = new bot(json[key]) as any;
+					});
+					return this;
 				}
 
-				toJSON() {
-					return {
-						// NEWBOT
-						rgb: this.rgb.toJSON(),
-						cast: this.cast.toJSON(),
-						keyval: this.keyval.toJSON(),
-						script: this.script.toJSON(),
-						temperature: this.temperature.toJSON(),
-						homeDetector: this.homeDetector.toJSON(),
-						remoteControl: this.remoteControl.toJSON()
-					};
+				async toJSON() {
+					const obj: Partial<
+						{
+							[K in keyof AllModules]: any;
+						}
+					> = {};
+
+					const modules = await getAllModules();
+					Object.keys(modules).forEach((key: keyof AllModules) => {
+						obj[key] = this.states[key].toJSON();
+					});
+
+					return obj;
 				}
 			}
 
@@ -177,7 +166,7 @@ export namespace Bot {
 					for (const requestId in data) {
 						this.chatIds.set(
 							parseInt(requestId, 10),
-							new ChatState(data[requestId])
+							await new ChatState().init(data[requestId])
 						);
 					}
 				}
@@ -189,9 +178,9 @@ export namespace Bot {
 					);
 				}
 
-				getState(chatId: number) {
+				async getState(chatId: number) {
 					if (!this.chatIds.has(chatId)) {
-						this.chatIds.set(chatId, new ChatState());
+						this.chatIds.set(chatId, await new ChatState().init());
 					}
 					return this.chatIds.get(chatId)!;
 				}
@@ -366,17 +355,12 @@ export namespace Bot {
 				message: Bot.TelegramMessage;
 				state: Bot.Message.StateKeeping.ChatState;
 			}): Promise<MatchResponse | undefined> {
-				// NEWBOT
 				return this._matchMatchables(
 					config,
 					await this._matchSelf(config),
-					Cast.Bot.Bot,
-					HomeDetector.Bot.Bot,
-					KeyVal.Bot.Bot,
-					RGB.Bot.Bot,
-					Script.Bot.Bot,
-					Temperature.Bot.Bot,
-					RemoteControl.Bot.Bot
+					...Object.values(await getAllModules()).map(
+						mod => mod.meta.bot.Bot
+					)
 				);
 			}
 
@@ -476,7 +460,7 @@ export namespace Bot {
 						logObj: matchMsg,
 						text: message.text,
 						message,
-						state: this._stateKeeper.getState(message.chat.id)
+						state: await this._stateKeeper.getState(message.chat.id)
 					})) ||
 					(attachMessage(matchMsg, 'None') && [
 						{
@@ -588,12 +572,6 @@ export namespace Bot {
 		}
 	}
 
-	export namespace External {
-		export class Handler {
-			constructor() {}
-		}
-	}
-
 	export namespace Routing {
 		function isInIPRange(
 			ip: number[],
@@ -621,13 +599,7 @@ export namespace Bot {
 			return TELEGRAM_IPS.some(r => isInIPRange(ipBlocks, r));
 		}
 
-		export async function init({
-			app,
-			db
-		}: {
-			app: AppWrapper;
-			db: Database;
-		}) {
+		export async function init({ app, db }: ModuleConfig) {
 			const secret = await fs.readFile(BOT_SECRET_FILE, {
 				encoding: 'utf8'
 			});
@@ -644,19 +616,12 @@ export namespace Bot {
 		}
 	}
 
-	export function printCommands() {
-		// NEWBOT
-		const bots = [
-			RGB.Bot.Bot,
-			Cast.Bot.Bot,
-			KeyVal.Bot.Bot,
-			Script.Bot.Bot,
-			Temperature.Bot.Bot,
-			HomeDetector.Bot.Bot,
-			RemoteControl.Bot.Bot
-		];
+	export async function printCommands() {
 		log(
-			`${chalk.bold('Available commands are')}:\n\n${bots
+			`${chalk.bold('Available commands are')}:\n\n${Object.values(
+				await getAllModules()
+			)
+				.map(mod => mod.meta.bot.Bot)
 				.map(bot => {
 					return `${Object.keys(bot.commands)
 						.map(cmd => {

@@ -8,12 +8,13 @@ import * as playlist from 'castv2-player/lib/playlist';
 import { requireParams } from '../lib/decorators';
 import { errorHandle } from '../lib/decorators';
 import { BotState } from '../lib/bot-state';
-import { AppWrapper } from '../lib/routes';
 import { auth } from '../lib/decorators';
 import * as castv2 from 'castv2-player';
 import { ResponseLike } from './multi';
+import { ModuleConfig } from './all';
 import { Bot as _Bot } from './bot';
-import { Auth } from '../lib/auth';
+import { Auth } from './auth';
+import { ModuleMeta } from './meta';
 
 class DummyLog {
 	constructor(public componentName: string = 'castv2') {}
@@ -39,6 +40,22 @@ const Playlist = playlist(new DummyLog());
 const MAX_PART_LEN = 190;
 
 export namespace Cast {
+	export const meta = new (class Meta extends ModuleMeta {
+		name = 'cast';
+
+		async init(config: ModuleConfig) {
+			await Routing.init(config);
+		}
+
+		get external() {
+			return External;
+		}
+
+		get bot() {
+			return Bot;
+		}
+	})();
+
 	export namespace Scanning {
 		export async function scan(): Promise<castv2.Device[]> {
 			return (devices = (
@@ -522,7 +539,7 @@ export namespace Cast {
 	}
 
 	export namespace Routing {
-		export async function init({ app }: { app: AppWrapper }) {
+		export async function init({ app }: ModuleConfig) {
 			await External.Handler.init();
 
 			app.get('/cast/:auth/stop', async (req, res) => {
