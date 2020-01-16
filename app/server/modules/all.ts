@@ -1,17 +1,19 @@
-import { RemoteControl } from '../modules/remote-control';
-import { HomeDetector } from '../modules/home-detector';
-import { Temperature } from '../modules/temperature';
+import {
+	RemoteControl,
+	HomeDetector,
+	Temperature,
+	Script,
+	KeyVal,
+	Multi,
+	Cast,
+	RGB,
+	Bot,
+	Auth
+} from '../modules';
 import { WSSimulator, WSWrapper } from '../lib/ws';
 import { AppWrapper } from '../lib/routes';
-import { Script } from '../modules/script';
-import { KeyVal } from '../modules/keyval';
-import { Multi } from '../modules/multi';
-import { Cast } from '../modules/cast';
 import { Database } from '../lib/db';
-import { RGB } from '../modules/rgb';
-import { Bot } from '../modules/bot';
 import { Config } from '../app';
-import { Auth } from './auth';
 
 export type AllModules = typeof moduleObj;
 

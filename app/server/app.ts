@@ -8,9 +8,8 @@ import {
 import { notifyAllModules, NoDBModuleConfig } from './modules/all';
 import { hasArg, getArg, getNumberArg } from './lib/io';
 import { WSSimulator, WSWrapper } from './lib/ws';
-import { getAllModules } from './modules/all';
+import { getAllModules, Bot } from './modules';
 import { Database } from './lib/db';
-import { Bot } from './modules/bot';
 import * as express from 'express';
 import * as path from 'path';
 import * as http from 'http';

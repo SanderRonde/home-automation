@@ -1,6 +1,6 @@
 import { ResponseLike } from '../modules/multi';
 import * as express from 'express';
-import { Auth } from '../modules/auth';
+import { Auth } from '../modules';
 import * as http from 'http';
 import chalk from 'chalk';
 import { IP_LOG_VERSION } from './constants';
