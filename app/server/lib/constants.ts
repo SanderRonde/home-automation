@@ -48,6 +48,15 @@ export const LED_IPS: {
 	'192.168.1.4': LED_NAMES.BED_LEDS,
 	'192.168.1.2': LED_NAMES.DESK_LEDS
 };
+export const NAME_MAP = {
+	'192.168.1.4': [
+		'room.leds.bed',
+		'room.lights.nightstand',
+		'room.leds.wakelight'
+	],
+	'192.168.1.2': ['room.leds.desk'],
+	[LED_DEVICE_NAME]: ['room.leds.ceiling']
+};
 export const NIGHTSTAND_COLOR: Color = {
 	r: 177,
 	g: 22,

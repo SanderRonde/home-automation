@@ -7,7 +7,8 @@ import {
 	MAGIC_LEDS,
 	ARDUINO_LEDS,
 	LED_IPS,
-	WAKELIGHT_TIME
+	WAKELIGHT_TIME,
+	NAME_MAP
 } from '../lib/constants';
 import {
 	errorHandle,
@@ -112,6 +113,28 @@ export namespace RGB {
 			} = Control.patternNames;
 			abstract address: string;
 
+			private async _stateChange(value: string) {
+				const name = this.address;
+				if (name in NAME_MAP) {
+					const keys = NAME_MAP[name as keyof typeof NAME_MAP];
+					for (const key of keys) {
+						await new KeyVal.External.Handler({}).set(
+							key,
+							value,
+							false
+						);
+					}
+				}
+			}
+
+			protected async _turnedOn() {
+				await this._stateChange('1');
+			}
+
+			protected async _turnedOff() {
+				await this._stateChange('0');
+			}
+
 			abstract setColor(
 				red: number,
 				green: number,
@@ -161,13 +184,14 @@ export namespace RGB {
 				super();
 			}
 
-			setColor(
+			async setColor(
 				red: number,
 				green: number,
 				blue: number,
 				intensity?: number,
 				callback?: (err: Error | null, success: boolean) => void
 			): Promise<boolean> {
+				await this._turnedOn();
 				return this._control.setColorWithBrightness(
 					red,
 					green,
@@ -176,13 +200,14 @@ export namespace RGB {
 					callback
 				);
 			}
-			setColorAndWarmWhite(
+			async setColorAndWarmWhite(
 				red: number,
 				green: number,
 				blue: number,
 				ww: number,
 				callback?: (err: Error | null, success: boolean) => void
 			): Promise<boolean> {
+				await this._turnedOn();
 				return this._control.setColorAndWarmWhite(
 					red,
 					green,
@@ -191,7 +216,7 @@ export namespace RGB {
 					callback
 				);
 			}
-			setColorWithBrightness(
+			async setColorWithBrightness(
 				red: number,
 				green: number,
 				blue: number,
@@ -199,6 +224,7 @@ export namespace RGB {
 				_intensity?: number,
 				callback?: (err: Error | null, success: boolean) => void
 			): Promise<boolean> {
+				await this._turnedOn();
 				return this._control.setColorWithBrightness(
 					red,
 					green,
@@ -207,33 +233,46 @@ export namespace RGB {
 					callback
 				);
 			}
-			setCustomPattern(
+			async setCustomPattern(
 				pattern: CustomMode,
 				speed: number,
 				callback?: () => void
 			): Promise<boolean> {
+				await this._turnedOn();
 				return this._control.setCustomPattern(pattern, speed, callback);
 			}
-			setPattern(
+			async setPattern(
 				pattern: BuiltinPatterns,
 				speed: number,
 				callback?: () => void
 			): Promise<boolean> {
+				await this._turnedOn();
 				return this._control.setPattern(pattern, speed, callback);
 			}
-			setPower(on: boolean, callback?: () => void): Promise<boolean> {
+			async setPower(
+				on: boolean,
+				callback?: () => void
+			): Promise<boolean> {
+				if (on) {
+					await this._turnedOn();
+				} else {
+					await this._turnedOff();
+				}
 				return this._control.setPower(on, callback);
 			}
-			setWarmWhite(
+			async setWarmWhite(
 				ww: number,
 				callback?: (err: Error | null, success: boolean) => void
 			): Promise<boolean> {
+				await this._turnedOn();
 				return this._control.setWarmWhite(ww, callback);
 			}
-			turnOff(callback?: () => void): Promise<boolean> {
+			async turnOff(callback?: () => void): Promise<boolean> {
+				await this._turnedOff();
 				return this._control.turnOff(callback);
 			}
-			turnOn(callback?: () => void): Promise<boolean> {
+			async turnOn(callback?: () => void): Promise<boolean> {
+				await this._turnedOn();
 				return this._control.turnOn(callback);
 			}
 		}
@@ -264,6 +303,7 @@ export namespace RGB {
 				intensity?: number,
 				callback?: (err: Error | null, success: boolean) => void
 			): Promise<boolean> {
+				await this._turnedOn();
 				await this.board.setSolid({
 					r: red,
 					g: green,
@@ -279,6 +319,7 @@ export namespace RGB {
 				_ww: number,
 				callback?: (err: Error | null, success: boolean) => void
 			): Promise<boolean> {
+				await this._turnedOn();
 				await this.board.setSolid({ r: red, g: green, b: blue });
 				return this._sendSuccess(callback);
 			}
@@ -290,6 +331,7 @@ export namespace RGB {
 				intensity?: number,
 				callback?: (err: Error | null, success: boolean) => void
 			): Promise<boolean> {
+				await this._turnedOn();
 				const brightnessScale = brightness / 100;
 				await this.board.setSolid({
 					r: red * brightnessScale,
@@ -304,6 +346,7 @@ export namespace RGB {
 				speed: number,
 				callback?: () => void
 			): Promise<boolean> {
+				await this._turnedOn();
 				await this.board.setFlash({
 					colors: pattern.colors.map(
 						({ red, green, blue }) => new Color(red, green, blue)
@@ -326,8 +369,10 @@ export namespace RGB {
 				callback?: () => void
 			): Promise<boolean> {
 				if (on) {
+					await this._turnedOn();
 					return this.turnOn(callback);
 				} else {
+					await this._turnedOff();
 					return this.turnOff(callback);
 				}
 			}
@@ -335,14 +380,17 @@ export namespace RGB {
 				ww: number,
 				callback?: (err: Error | null, success: boolean) => void
 			): Promise<boolean> {
+				await this._turnedOn();
 				await this.board.setSolid(new Color(ww));
 				return this._sendSuccess(callback);
 			}
 			async turnOff(callback?: () => void): Promise<boolean> {
+				await this._turnedOff();
 				await this.board.setModeOff();
 				return this._sendSuccess(callback);
 			}
 			async turnOn(callback?: () => void): Promise<boolean> {
+				await this._turnedOn();
 				return this._sendSuccess(callback);
 			}
 		}
