@@ -1,4 +1,3 @@
-export { getAllModules, AllModules } from './all';
 export { Auth } from './auth';
 export { Bot } from './bot';
 export { Cast } from './cast';
@@ -9,3 +8,5 @@ export { RemoteControl } from './remote-control';
 export { RGB } from './rgb';
 export { Script } from './script';
 export { Temperature } from './temperature';
+
+export { getAllModules, AllModules } from './all';
