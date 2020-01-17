@@ -1,6 +1,7 @@
 import { BOT_SECRET_FILE, TELEGRAM_IPS, TELEGRAM_API } from '../lib/constants';
-import { ModuleConfig, getAllModules, AllModules, InstanceOf } from './all';
 import { attachMessage, logOutgoingReq } from '../lib/logger';
+import { ModuleConfig, AllModules, InstanceOf } from './all';
+import { awaitCondition } from '../lib/util';
 import { BotState } from '../lib/bot-state';
 import { ResponseLike } from './multi';
 import { Database } from '../lib/db';
@@ -20,13 +21,23 @@ export const enum RESPONSE_TYPE {
 }
 
 export namespace Bot {
+	let _modules!: AllModules;
 	export const meta = new (class Meta extends ModuleMeta {
 		name = 'bot';
 
 		async init(config: ModuleConfig) {
 			await Routing.init(config);
 		}
+
+		async notifyModules(modules: AllModules) {
+			_modules = modules;
+		}
 	})();
+
+	async function getAllModules() {
+		await awaitCondition(() => !!_modules, 100);
+		return _modules;
+	}
 
 	export interface TelegramText {
 		text: string;
