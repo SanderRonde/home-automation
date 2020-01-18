@@ -135,10 +135,11 @@ export namespace KeyVal {
 
 			const group = groups[key];
 			for (const key in group) {
+				const opposite = value === '1' ? '0' : '1';
 				const effect = group[key];
 				await _db!.setVal(
 					key,
-					effect === KEYVAL_GROUP_EFFECT.SAME ? value : !value
+					effect === KEYVAL_GROUP_EFFECT.SAME ? value : opposite
 				);
 			}
 		}
@@ -641,6 +642,7 @@ export namespace KeyVal {
 				}
 			) {
 				const data = await this._db.json(force);
+				console.log(data, this._db, await this._db.data());
 				const msg = attachMessage(res, data);
 				attachMessage(msg, `Force? ${force ? 'true' : 'false'}`);
 				res.status(200).write(data);
@@ -847,6 +849,7 @@ export namespace KeyVal {
 		}: ModuleConfig & { apiHandler: API.Handler }) {
 			const webpageHandler = new Webpage.Handler({ randomNum, db });
 
+			debugger;
 			app.post('/keyval/all', async (req, res) => {
 				await apiHandler.all(res, {
 					...req.params,
