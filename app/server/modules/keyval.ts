@@ -601,7 +601,7 @@ export namespace KeyVal {
 				{
 					key,
 					value,
-					update
+					update = true
 				}: {
 					key: string;
 					value: string;
