@@ -229,7 +229,9 @@ export async function initRoutes(app: express.Express) {
 		RGB.Scan.scanRGBControllers();
 		res.status(200).end();
 	});
+}
 
+export async function initPostRoutes(app: express.Express) {
 	app.use((_req, res, _next) => {
 		res.status(404).send('404');
 	});

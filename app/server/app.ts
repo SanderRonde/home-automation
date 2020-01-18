@@ -3,7 +3,8 @@ import {
 	initRoutes,
 	initMiddleware,
 	initAnnotatorRoutes,
-	AppWrapper
+	AppWrapper,
+	initPostRoutes
 } from './lib/routes';
 import { notifyAllModules, NoDBModuleConfig } from './modules/all';
 import { hasArg, getArg, getNumberArg } from './lib/io';
@@ -88,7 +89,7 @@ class WebServer {
 			Object.values(modules).map(async mod => {
 				await mod.meta.init({
 					...config,
-					db: await new Database(`${mod.meta._dbName}.json`).init()
+					db: await new Database(`${mod.meta.dbName}.json`).init()
 				});
 				this._initLogger.increment(mod.meta.loggerName);
 			})
@@ -105,8 +106,9 @@ class WebServer {
 		this._initLogger.increment('servers');
 		await initRoutes(this.app);
 		this._initLogger.increment('routes');
-		this._initModules();
+		await this._initModules();
 		this._initLogger.increment('modules');
+		await initPostRoutes(this.app);
 		setLogLevel(this._config.log.level);
 		await Bot.printCommands();
 		this._listen();
