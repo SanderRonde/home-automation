@@ -207,33 +207,45 @@ export namespace RemoteControl {
 			let updated: number = 0;
 			const updatedKeyParts = command['action'].split('.');
 
-			for (const [
-				index,
-				{ any, key: listenerKey, listener, once }
-			] of _listeners) {
-				if (!any) {
-					const listenerParts = listenerKey!.split('.');
-					let next: boolean = false;
-					for (
-						let i = 0;
-						i <
-						Math.min(updatedKeyParts.length, listenerParts.length);
-						i++
-					) {
-						if (updatedKeyParts[i] !== listenerParts[i]) {
-							next = true;
-							break;
-						}
-					}
-					if (next) continue;
-				}
+			const promises: Promise<any>[] = [];
+			_listeners.forEach(
+				({ any, key: listenerKey, listener, once }, index) => {
+					promises.push(
+						(async () => {
+							if (!any) {
+								const listenerParts = listenerKey!.split('.');
+								let next: boolean = false;
+								for (
+									let i = 0;
+									i <
+									Math.min(
+										updatedKeyParts.length,
+										listenerParts.length
+									);
+									i++
+								) {
+									if (
+										updatedKeyParts[i] !== listenerParts[i]
+									) {
+										next = true;
+										break;
+									}
+								}
+								if (next) {
+									return;
+								}
+							}
 
-				await listener(command, logObj);
-				updated++;
-				if (once) {
-					_listeners.delete(index);
+							await listener(command, logObj);
+							updated++;
+							if (once) {
+								_listeners.delete(index);
+							}
+						})()
+					);
 				}
-			}
+			);
+			await Promise.all(promises);
 			return updated;
 		}
 	}
@@ -406,6 +418,7 @@ export namespace RemoteControl {
 				}
 			) {
 				const msg = attachMessage(res, `Command: "playpause"`);
+				console.log('update');
 				GetSetListener.update(
 					{
 						action: 'playpause'
@@ -578,7 +591,6 @@ export namespace RemoteControl {
 								conn
 							};
 						} catch (err) {
-							console.log('failed to connect');
 							return;
 						}
 					})
