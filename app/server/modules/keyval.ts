@@ -20,7 +20,7 @@ import {
 } from '../lib/logger';
 import { AllModules, ModuleHookables, ModuleConfig } from './all';
 import * as ReadLine from '@serialport/parser-readline';
-import { arrToObj, awaitCondition } from '../lib/util';
+import { arrToObj, awaitCondition, wait } from '../lib/util';
 import aggregates from '../config/aggregates';
 import groups from '../config/keyval-groups';
 import { BotState } from '../lib/bot-state';
@@ -756,6 +756,11 @@ export namespace KeyVal {
 						this._port.write(`i${value}\n`);
 					}
 				);
+
+				wait(1000).then(async () => {
+					const value = this._db.get('room.lights.ceiling', '1');
+					this._port.write(`s${value}\n`);
+				});
 			}
 		}
 	}
