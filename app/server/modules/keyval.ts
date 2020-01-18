@@ -777,7 +777,6 @@ export namespace KeyVal {
 
 		async function createHookables(logObj: any): Promise<ModuleHookables> {
 			await awaitCondition(() => {
-				console.log('checking condition', allModules !== null);
 				return allModules !== null;
 			}, 100);
 
@@ -809,8 +808,6 @@ export namespace KeyVal {
 					let index: number = 0;
 					for (const key in handlers) {
 						const fn = handlers[key];
-						console.log(fn);
-						debugger;
 						await fn(
 							await createHookables(
 								attachMessage(
