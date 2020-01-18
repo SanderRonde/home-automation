@@ -642,7 +642,6 @@ export namespace KeyVal {
 				}
 			) {
 				const data = await this._db.json(force);
-				console.log(data, this._db, await this._db.data());
 				const msg = attachMessage(res, data);
 				attachMessage(msg, `Force? ${force ? 'true' : 'false'}`);
 				res.status(200).write(data);
