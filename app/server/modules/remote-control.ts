@@ -378,14 +378,12 @@ export namespace RemoteControl {
 				}
 			) {
 				const msg = attachMessage(res, `Command: "play"`);
-				console.log('playing');
 				await GetSetListener.update(
 					{
 						action: 'play'
 					},
 					attachMessage(msg, 'Updates')
 				);
-				console.log('post-update');
 				res.status(200);
 				res.end();
 			}
@@ -418,7 +416,6 @@ export namespace RemoteControl {
 				}
 			) {
 				const msg = attachMessage(res, `Command: "playpause"`);
-				console.log('update');
 				GetSetListener.update(
 					{
 						action: 'playpause'

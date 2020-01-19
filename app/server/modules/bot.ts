@@ -131,18 +131,18 @@ export namespace Bot {
 				};
 
 				async init(
-					json?: {
+					json: {
 						[K in keyof AllModules]: any;
-					}
+					} = {} as any
 				) {
-					if (!json) return this;
-
 					this.states = {} as any;
+
 					const modules = await getAllModules();
 					Object.keys(modules).map((key: keyof AllModules) => {
 						const bot = modules[key].meta.bot.Bot;
-						this.states[key] = new bot(json[key]) as any;
+						this.states[key] = new bot(json[key] || {}) as any;
 					});
+					console.log('initialized chat state');
 					return this;
 				}
 

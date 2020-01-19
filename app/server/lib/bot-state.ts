@@ -65,7 +65,7 @@ export namespace BotState {
 		static async match({}: MatchParams): Promise<
 			Bot.Message.MatchResponse | undefined
 		> {
-			throw new Error('Not implemented');
+			return undefined;
 		}
 
 		static async matchLines(

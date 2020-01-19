@@ -29,8 +29,6 @@ export const TELEGRAM_IPS = [
 export const TELEGRAM_API = 'api.telegram.org';
 
 // Serial
-export const SERIAL_MSG_INTERVAL = 50;
-export const SERIAL_MAX_ATTEMPTS = 10;
 export const SCREEN_DEVICE_NAME = '/dev/ttyUSB0';
 export const LED_DEVICE_NAME = '/dev/ttyACM0';
 

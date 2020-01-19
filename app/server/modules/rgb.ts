@@ -1,6 +1,4 @@
 import {
-	SERIAL_MAX_ATTEMPTS,
-	SERIAL_MSG_INTERVAL,
 	LED_NAMES,
 	NIGHTSTAND_COLOR,
 	LED_DEVICE_NAME,
@@ -34,10 +32,11 @@ import { colorList } from '../lib/data';
 import { ResponseLike } from './multi';
 import { exec } from 'child_process';
 import { ModuleConfig } from './all';
+import { ModuleMeta } from './meta';
 import { Bot as _Bot } from './bot';
 import * as express from 'express';
+import { wait } from '../lib/util';
 import { KeyVal } from './keyval';
-import { ModuleMeta } from './meta';
 import { Auth } from './auth';
 import chalk from 'chalk';
 
@@ -317,6 +316,13 @@ export namespace RGB {
 				return true;
 			}
 
+			private _sendFailure(
+				callback?: (err: Error | null, success: boolean) => void
+			) {
+				callback && callback({} as any, false);
+				return false;
+			}
+
 			async setColor(
 				red: number,
 				green: number,
@@ -325,13 +331,18 @@ export namespace RGB {
 				callback?: (err: Error | null, success: boolean) => void
 			): Promise<boolean> {
 				await this._turnedOn();
-				await this.board.setSolid({
-					r: red,
-					g: green,
-					b: blue,
-					intensity
-				});
-				return this._sendSuccess(callback);
+				if (
+					await this.board.setSolid({
+						r: red,
+						g: green,
+						b: blue,
+						intensity
+					})
+				) {
+					return this._sendSuccess(callback);
+				} else {
+					return this._sendFailure(callback);
+				}
 			}
 			async setColorAndWarmWhite(
 				red: number,
@@ -341,8 +352,11 @@ export namespace RGB {
 				callback?: (err: Error | null, success: boolean) => void
 			): Promise<boolean> {
 				await this._turnedOn();
-				await this.board.setSolid({ r: red, g: green, b: blue });
-				return this._sendSuccess(callback);
+				if (await this.board.setSolid({ r: red, g: green, b: blue })) {
+					return this._sendSuccess(callback);
+				} else {
+					return this._sendFailure(callback);
+				}
 			}
 			async setColorWithBrightness(
 				red: number,
@@ -354,13 +368,18 @@ export namespace RGB {
 			): Promise<boolean> {
 				await this._turnedOn();
 				const brightnessScale = brightness / 100;
-				await this.board.setSolid({
-					r: red * brightnessScale,
-					g: green * brightnessScale,
-					b: blue * brightnessScale,
-					intensity
-				});
-				return this._sendSuccess(callback);
+				if (
+					await this.board.setSolid({
+						r: red * brightnessScale,
+						g: green * brightnessScale,
+						b: blue * brightnessScale,
+						intensity
+					})
+				) {
+					return this._sendSuccess(callback);
+				} else {
+					return this._sendFailure(callback);
+				}
 			}
 			async setCustomPattern(
 				pattern: CustomMode,
@@ -368,14 +387,20 @@ export namespace RGB {
 				callback?: () => void
 			): Promise<boolean> {
 				await this._turnedOn();
-				await this.board.setFlash({
-					colors: pattern.colors.map(
-						({ red, green, blue }) => new Color(red, green, blue)
-					),
-					mode: pattern.transitionType,
-					updateTime: speedToMs(speed)
-				});
-				return this._sendSuccess(callback);
+				if (
+					await this.board.setFlash({
+						colors: pattern.colors.map(
+							({ red, green, blue }) =>
+								new Color(red, green, blue)
+						),
+						mode: pattern.transitionType,
+						updateTime: speedToMs(speed)
+					})
+				) {
+					return this._sendSuccess(callback);
+				} else {
+					return this._sendFailure(callback);
+				}
 			}
 			async setPattern(
 				_pattern: BuiltinPatterns,
@@ -402,13 +427,19 @@ export namespace RGB {
 				callback?: (err: Error | null, success: boolean) => void
 			): Promise<boolean> {
 				await this._turnedOn();
-				await this.board.setSolid(new Color(ww));
-				return this._sendSuccess(callback);
+				if (await this.board.setSolid(new Color(ww))) {
+					return this._sendSuccess(callback);
+				} else {
+					return this._sendFailure(callback);
+				}
 			}
 			async turnOff(callback?: () => void): Promise<boolean> {
 				await this._turnedOff();
-				await this.board.setModeOff();
-				return this._sendSuccess(callback);
+				if (await this.board.setModeOff()) {
+					return this._sendSuccess(callback);
+				} else {
+					return this._sendFailure(callback);
+				}
 			}
 			async turnOn(callback?: () => void): Promise<boolean> {
 				await this._turnedOn();
@@ -1124,23 +1155,33 @@ export namespace RGB {
 					`Updated ${Clients.clients!.length} clients`
 				);
 
-				await Promise.all(
-					Clients.clients!.map(async client => {
-						return Promise.all([
-							client.setColorWithBrightness(
-								r,
-								g,
-								b,
-								100,
-								intensity
-							),
-							client.turnOn()
-						]);
-					})
-				);
-
-				res.status(200).end();
-				return true;
+				if (
+					(
+						await Promise.all(
+							Clients.clients!.map(async client => {
+								return (
+									await Promise.all([
+										client.setColorWithBrightness(
+											r,
+											g,
+											b,
+											100,
+											intensity
+										),
+										client.turnOn()
+									])
+								).every(v => v);
+							})
+						)
+					).every(v => v)
+				) {
+					res.status(200).end();
+					return true;
+				} else {
+					res.status(500).write('Failed to write value');
+					res.end();
+					return false;
+				}
 			}
 
 			@errorHandle
@@ -1175,22 +1216,33 @@ export namespace RGB {
 					`Updated ${Clients.clients!.length} clients`
 				);
 
-				await Promise.all(
-					Clients.clients!.map(async client => {
-						return Promise.all([
-							client.setColorWithBrightness(
-								redNum,
-								greenNum,
-								blueNum,
-								100,
-								intensity
-							),
-							client.turnOn()
-						]);
-					})
-				);
-
-				res.status(200).end();
+				if (
+					(
+						await Promise.all(
+							Clients.clients!.map(async client => {
+								return (
+									await Promise.all([
+										client.setColorWithBrightness(
+											redNum,
+											greenNum,
+											blueNum,
+											100,
+											intensity
+										),
+										client.turnOn()
+									])
+								).every(v => v);
+							})
+						)
+					).every(v => v)
+				) {
+					res.status(200).end();
+					return true;
+				} else {
+					res.status(500).write('Failed to write value');
+					res.end();
+					return false;
+				}
 			}
 
 			@errorHandle
@@ -1209,12 +1261,22 @@ export namespace RGB {
 					attachMessage(res, `Turned ${power}`),
 					`Updated ${Clients.clients!.length} clients`
 				);
-				await Promise.all(
-					Clients.clients!.map(c =>
-						power === 'on' ? c.turnOn() : c.turnOff()
-					)
-				);
-				res.status(200).end();
+				if (
+					(
+						await Promise.all(
+							Clients.clients!.map(c =>
+								power === 'on' ? c.turnOn() : c.turnOff()
+							)
+						)
+					).every(v => v)
+				) {
+					res.status(200).end();
+					return true;
+				} else {
+					res.status(500).write('Failed to write data');
+					res.end();
+					return false;
+				}
 			}
 
 			static overrideTransition(
@@ -1285,24 +1347,30 @@ export namespace RGB {
 					`Updated ${usedClients!.length} clients`
 				);
 				try {
-					await Promise.all(
-						usedClients!.map(c => {
-							return Promise.all([
-								c.setCustomPattern(
-									pattern,
-									speed || defaultSpeed
-								),
-								c.turnOn()
-							]);
-						})
-					);
-					res.status(200).end();
-					return true;
-				} catch (e) {
-					res.status(400).write('Failed to run pattern');
-					res.end();
-					return false;
-				}
+					if (
+						(
+							await Promise.all(
+								usedClients!.map(async c => {
+									return (
+										await Promise.all([
+											c.setCustomPattern(
+												pattern,
+												speed || defaultSpeed
+											),
+											c.turnOn()
+										])
+									).every(v => v);
+								})
+							)
+						).every(v => v)
+					) {
+						res.status(200).end();
+						return true;
+					}
+				} catch (e) {}
+				res.status(400).write('Failed to run pattern');
+				res.end();
+				return false;
 			}
 
 			@errorHandle
@@ -1450,7 +1518,7 @@ export namespace RGB {
 			  }
 		) & {
 			logObj: any;
-			resolver: (value?: any) => void;
+			resolver: (value: boolean) => void;
 		};
 
 		export class Handler {
@@ -1479,7 +1547,7 @@ export namespace RGB {
 						});
 					} else {
 						const { r, g, b } = request;
-						await API.Handler.setRGB(resDummy, {
+						value = await API.Handler.setRGB(resDummy, {
 							red: r,
 							green: g,
 							blue: b,
@@ -1488,18 +1556,18 @@ export namespace RGB {
 						});
 					}
 				} else if (request.type == 'power') {
-					await API.Handler.setPower(resDummy, {
+					value = await API.Handler.setPower(resDummy, {
 						power: request.state,
 						auth: await Auth.Secret.getKey()
 					});
 				} else if (request.type === 'effect') {
-					await API.Handler.runEffect(resDummy, {
+					value = await API.Handler.runEffect(resDummy, {
 						effect: request.name,
 						auth: await Auth.Secret.getKey(),
 						...request.extra
 					});
 				} else if (request.type === 'config') {
-					await API.Handler.runConfig(resDummy, {
+					value = await API.Handler.runConfig(resDummy, {
 						config: request.config,
 						auth: await Auth.Secret.getKey()
 					});
@@ -1516,7 +1584,10 @@ export namespace RGB {
 				resolver(value);
 			}
 
-			async color(color: string, intensity: number = 0) {
+			async color(
+				color: string,
+				intensity: number = 0
+			): Promise<boolean> {
 				return new Promise<boolean>(resolve => {
 					const req: ExternalRequest = {
 						type: 'color',
@@ -1538,7 +1609,7 @@ export namespace RGB {
 				green: string,
 				blue: string,
 				intensity: number = 0
-			) {
+			): Promise<boolean> {
 				return new Promise(resolve => {
 					const req: ExternalRequest = {
 						type: 'color',
@@ -1557,7 +1628,7 @@ export namespace RGB {
 				});
 			}
 
-			async power(state: 'on' | 'off') {
+			async power(state: 'on' | 'off'): Promise<boolean> {
 				return new Promise(resolve => {
 					const req: ExternalRequest = {
 						type: 'power',
@@ -1577,7 +1648,7 @@ export namespace RGB {
 				name: string,
 				speed?: number,
 				transition?: 'fade' | 'jump' | 'strobe'
-			) {
+			): Promise<boolean> {
 				return new Promise(resolve => {
 					const req: ExternalRequest = {
 						type: 'pattern',
@@ -1598,7 +1669,7 @@ export namespace RGB {
 			async effect(
 				name: ArduinoAPI.Effects,
 				extra: ArduinoAPI.JoinedConfigs = {}
-			) {
+			): Promise<boolean> {
 				return new Promise(resolve => {
 					const req: ExternalRequest = {
 						type: 'effect',
@@ -1615,7 +1686,9 @@ export namespace RGB {
 				});
 			}
 
-			async runConfig(config: ArduinoAPI.ArduinoConfig) {
+			async runConfig(
+				config: ArduinoAPI.ArduinoConfig
+			): Promise<boolean> {
 				return new Promise(resolve => {
 					const req: ExternalRequest = {
 						type: 'config',
@@ -1666,6 +1739,7 @@ export namespace RGB {
 				'/effects': 'List effects',
 				'/refresh': 'Refresh LEDs',
 				'/help_rgb': 'Print help comands for RGB',
+				'/reconnect': 'Reconnect to arduino board',
 				'/restart': 'Restart the server'
 			};
 
@@ -1707,13 +1781,19 @@ export namespace RGB {
 					}
 					mm('/rgbon', async ({ state, logObj }) => {
 						rgbOn(state);
-						await new External.Handler(logObj).power('on');
-						return `Turned it on`;
+						if (await new External.Handler(logObj).power('on')) {
+							return `Turned it on`;
+						} else {
+							return 'Failed to turn it on';
+						}
 					});
 					mm('/rgboff', async ({ state, logObj }) => {
 						rgbOff(state);
-						await new External.Handler(logObj).power('off');
-						return `Turned it off`;
+						if (await new External.Handler(logObj).power('off')) {
+							return `Turned it off`;
+						} else {
+							return 'Failed tot turn it on';
+						}
 					});
 					mm(
 						/turn (on|off) (rgb|led)/,
@@ -1724,10 +1804,15 @@ export namespace RGB {
 							} else {
 								rgbOff(state);
 							}
-							await new External.Handler(logObj).power(
-								targetState as 'on' | 'off'
-							);
-							return `Turned it ${targetState}`;
+							if (
+								await new External.Handler(logObj).power(
+									targetState as 'on' | 'off'
+								)
+							) {
+								return `Turned it ${targetState}`;
+							} else {
+								return `Failed to turn it ${targetState}`;
+							}
 						}
 					);
 					mm(
@@ -1746,11 +1831,25 @@ export namespace RGB {
 									type: 'off'
 								};
 							}
-							attachMessage(
-								logObj,
-								`Turned ${targetState} ${Clients.arduinoClients.length} arduino clients`
-							);
-							return `Turned ${targetState} ${Clients.arduinoClients.length} arduino clients`;
+							if (
+								(
+									await Promise.all(
+										Clients.arduinoClients.map(c =>
+											targetState === 'on'
+												? c.turnOn()
+												: c.turnOff()
+										)
+									)
+								).every(v => v)
+							) {
+								attachMessage(
+									logObj,
+									`Turned ${targetState} ${Clients.arduinoClients.length} arduino clients`
+								);
+								return `Turned ${targetState} ${Clients.arduinoClients.length} arduino clients`;
+							} else {
+								return `Failed to turn ${targetState} ${Clients.arduinoClients.length} arduino clients`;
+							}
 						}
 					);
 					mm(
@@ -1760,23 +1859,25 @@ export namespace RGB {
 							const targetState =
 								match.length === 0 ? 'off' : match[1];
 
-							await Promise.all(
-								Clients.magicHomeClients.map(
-									c =>
-										new Promise(resolve => {
-											if (targetState === 'on') {
-												c.turnOff(resolve);
-											} else {
-												c.turnOff(resolve);
-											}
-										})
-								)
-							);
-							attachMessage(
-								logObj,
-								`Turned ${targetState} ${Clients.magicHomeClients.length} magichome clients`
-							);
-							return `Turned ${targetState} ${Clients.magicHomeClients.length} magichome clients`;
+							if (
+								(
+									await Promise.all(
+										Clients.magicHomeClients.map(c =>
+											targetState === 'on'
+												? c.turnOff()
+												: c.turnOff()
+										)
+									)
+								).every(v => v)
+							) {
+								attachMessage(
+									logObj,
+									`Turned ${targetState} ${Clients.magicHomeClients.length} magichome clients`
+								);
+								return `Turned ${targetState} ${Clients.magicHomeClients.length} magichome clients`;
+							} else {
+								return `Failed to turn ${targetState} ${Clients.magicHomeClients.length} magichome clients`;
+							}
 						}
 					);
 					mm(
@@ -1813,20 +1914,22 @@ export namespace RGB {
 							} else {
 								state.states.RGB.lastConfig = null;
 							}
-							if (resolvedColor) {
-								await new External.Handler(logObj).rgb(
+							if (
+								resolvedColor &&
+								(await new External.Handler(logObj).rgb(
 									resolvedColor.r + '',
 									resolvedColor.g + '',
 									resolvedColor.b + '',
 									intensity?.length
 										? parseInt(intensity, 10)
 										: 0
-								);
+								))
+							) {
 								return `Set color to ${JSON.stringify(
 									resolvedColor
 								)}`;
 							} else {
-								return 'Failed to set color (invalid color)';
+								return 'Failed to set color (invalid color or bad connection to board)';
 							}
 						}
 					);
@@ -1948,16 +2051,21 @@ export namespace RGB {
 								return `Effect "${effect}" does not exist`;
 							}
 
-							await new External.Handler(logObj).effect(
-								effect,
-								config
-							);
-							return `Started effect "${effect}" with config ${JSON.stringify(
-								Bot.mergeObj(
-									ArduinoAPI.arduinoEffects[effect],
-									Bot.unsetUndefined(config)
+							if (
+								await new External.Handler(logObj).effect(
+									effect,
+									config
 								)
-							)}`;
+							) {
+								return `Started effect "${effect}" with config ${JSON.stringify(
+									Bot.mergeObj(
+										ArduinoAPI.arduinoEffects[effect],
+										Bot.unsetUndefined(config)
+									)
+								)}`;
+							} else {
+								return 'Failed to start effect';
+							}
 						}
 					);
 					mm(
@@ -2068,10 +2176,15 @@ export namespace RGB {
 								state.states.RGB.lastConfig.data.intensity
 							})`;
 							attachMessage(logObj, msg);
-							await new External.Handler(logObj).runConfig(
-								state.states.RGB.lastConfig
-							);
-							return msg;
+							if (
+								await new External.Handler(logObj).runConfig(
+									state.states.RGB.lastConfig
+								)
+							) {
+								return msg;
+							} else {
+								return 'Failed to set intensity';
+							}
 						}
 					);
 					mm(
@@ -2094,10 +2207,15 @@ export namespace RGB {
 								state.states.RGB.lastConfig.data.blockSize
 							})`;
 							attachMessage(logObj, msg);
-							await new External.Handler(logObj).runConfig(
-								state.states.RGB.lastConfig
-							);
-							return msg;
+							if (
+								await new External.Handler(logObj).runConfig(
+									state.states.RGB.lastConfig
+								)
+							) {
+								return msg;
+							} else {
+								return 'Failed to set blocksize';
+							}
 						}
 					);
 					mm(
@@ -2118,10 +2236,15 @@ export namespace RGB {
 								state.states.RGB.lastConfig
 							)} (r->${state.states.RGB.lastConfig.data.r})`;
 							attachMessage(logObj, msg);
-							await new External.Handler(logObj).runConfig(
-								state.states.RGB.lastConfig
-							);
-							return msg;
+							if (
+								await new External.Handler(logObj).runConfig(
+									state.states.RGB.lastConfig
+								)
+							) {
+								return msg;
+							} else {
+								return 'Failed to set red';
+							}
 						}
 					);
 					mm(
@@ -2142,10 +2265,15 @@ export namespace RGB {
 								state.states.RGB.lastConfig
 							)} (g->${state.states.RGB.lastConfig.data.g})`;
 							attachMessage(logObj, msg);
-							await new External.Handler(logObj).runConfig(
-								state.states.RGB.lastConfig
-							);
-							return msg;
+							if (
+								await new External.Handler(logObj).runConfig(
+									state.states.RGB.lastConfig
+								)
+							) {
+								return msg;
+							} else {
+								return 'Failed to set green';
+							}
 						}
 					);
 					mm(
@@ -2166,10 +2294,15 @@ export namespace RGB {
 								state.states.RGB.lastConfig
 							)} (b->${state.states.RGB.lastConfig.data.b})`;
 							attachMessage(logObj, msg);
-							await new External.Handler(logObj).runConfig(
-								state.states.RGB.lastConfig
-							);
-							return msg;
+							if (
+								await new External.Handler(logObj).runConfig(
+									state.states.RGB.lastConfig
+								)
+							) {
+								return msg;
+							} else {
+								return 'Failed to set blue';
+							}
 						}
 					);
 					mm(
@@ -2228,10 +2361,15 @@ export namespace RGB {
 								state.states.RGB.lastConfig
 							)} (color->${JSON.stringify(color)})`;
 							attachMessage(logObj, msg);
-							await new External.Handler(logObj).runConfig(
-								state.states.RGB.lastConfig
-							);
-							return msg;
+							if (
+								await new External.Handler(logObj).runConfig(
+									state.states.RGB.lastConfig
+								)
+							) {
+								return msg;
+							} else {
+								return 'Failed to set config';
+							}
 						}
 					);
 					mm(
@@ -2277,10 +2415,15 @@ export namespace RGB {
 								state.states.RGB.lastConfig
 							)} (color->${JSON.stringify(color)})`;
 							attachMessage(logObj, msg);
-							await new External.Handler(logObj).runConfig(
-								state.states.RGB.lastConfig
-							);
-							return msg;
+							if (
+								await new External.Handler(logObj).runConfig(
+									state.states.RGB.lastConfig
+								)
+							) {
+								return msg;
+							} else {
+								return 'Failed to set background';
+							}
 						}
 					);
 					mm(
@@ -2310,10 +2453,15 @@ export namespace RGB {
 								state.states.RGB.lastConfig
 							)} (dot[${dotIndex}].${prop}->${value})`;
 							attachMessage(logObj, msg);
-							await new External.Handler(logObj).runConfig(
-								state.states.RGB.lastConfig
-							);
-							return msg;
+							if (
+								await new External.Handler(logObj).runConfig(
+									state.states.RGB.lastConfig
+								)
+							) {
+								return msg;
+							} else {
+								return 'Failed to set dot';
+							}
 						}
 					);
 					mm(
@@ -2336,10 +2484,15 @@ export namespace RGB {
 								state.states.RGB.lastConfig.data.updateTime
 							})`;
 							attachMessage(logObj, msg);
-							await new External.Handler(logObj).runConfig(
-								state.states.RGB.lastConfig
-							);
-							return msg;
+							if (
+								await new External.Handler(logObj).runConfig(
+									state.states.RGB.lastConfig
+								)
+							) {
+								return msg;
+							} else {
+								return 'Failed to set updatetime';
+							}
 						}
 					);
 					mm(
@@ -2359,10 +2512,15 @@ export namespace RGB {
 								state.states.RGB.lastConfig
 							)} (dir->${state.states.RGB.lastConfig.data.dir})`;
 							attachMessage(logObj, msg);
-							await new External.Handler(logObj).runConfig(
-								state.states.RGB.lastConfig
-							);
-							return msg;
+							if (
+								await new External.Handler(logObj).runConfig(
+									state.states.RGB.lastConfig
+								)
+							) {
+								return msg;
+							} else {
+								return 'Failed to set dir';
+							}
 						}
 					);
 					mm(
@@ -2382,10 +2540,15 @@ export namespace RGB {
 								state.states.RGB.lastConfig.data.mode
 							})`;
 							attachMessage(logObj, msg);
-							await new External.Handler(logObj).runConfig(
-								state.states.RGB.lastConfig
-							);
-							return msg;
+							if (
+								await new External.Handler(logObj).runConfig(
+									state.states.RGB.lastConfig
+								)
+							) {
+								return msg;
+							} else {
+								return 'Failed to set mode';
+							}
 						}
 					);
 					mm('/effects', /what effects are there(\?)?/, async () => {
@@ -2439,6 +2602,14 @@ export namespace RGB {
 								.join('\n')}`;
 						}
 					);
+					mm('/reconnect', /reconnect( to arduino)?/, async () => {
+						log(
+							getTime(),
+							chalk.red(`[self]`, 'Reconnecting to arduino')
+						);
+						const amount = await Scan.scanArduinos();
+						return `Found ${amount} arduino clients`;
+					});
 					mm(
 						'/restart',
 						/restart( yourself)?/,
@@ -2539,7 +2710,7 @@ export namespace RGB {
 	}
 
 	export namespace Board {
-		async function tryConnectToSerial() {
+		export async function tryConnectToSerial() {
 			return new Promise<{
 				port: SerialPort;
 				updateListener(listener: (line: string) => any): void;
@@ -2633,109 +2804,46 @@ export namespace RGB {
 				});
 			}
 
-			private _busy: number = -1;
-
-			private async _waitForTurn() {
-				return new Promise(resolve => {
-					if (this._busy !== -1) {
-						const interval = setInterval(() => {
-							if (this._busy === -1) {
-								this._busy = 0;
-								clearInterval(interval);
-								resolve();
-							}
-						}, 50);
-					} else {
-						resolve();
+			public async write(data: string): Promise<string | null> {
+				let acked: boolean = false;
+				this.setListener((line: string) => {
+					if (line.indexOf('ack') !== -1) {
+						acked = true;
 					}
 				});
+
+				let attempts: number = 0;
+				while (attempts < 10 && !acked) {
+					this._port.write(data);
+
+					attempts++;
+					await wait(50);
+				}
+				if (acked || process.argv.indexOf('--debug') > -1) return data;
+
+				return null;
 			}
 
-			private _totalConnectTries = 0;
-			private _restartAttempts: number = 0;
-
-			public async write(data: string): Promise<string> {
-				await this._waitForTurn();
-				await new Promise(resolve => {
-					let attempts: number = 0;
-					this.setListener((line: string) => {
-						if (line.indexOf('ack') !== -1) {
-							resolve();
-							clearInterval(interval);
-						}
-					});
-					let pause: boolean = false;
-					const interval = setInterval(() => {
-						if (pause) return;
-						this._port.write(data);
-						attempts++;
-						if (attempts >= SERIAL_MAX_ATTEMPTS) {
-							if (process.argv.indexOf('--debug') > -1) {
-								clearInterval(interval);
-								return;
-							}
-
-							pause = true;
-							this._port.close(async () => {
-								const res = await tryConnectToSerial();
-								if (!res || !res.port || !res.leds) {
-									console.log('Failed to connect to serial');
-
-									if (
-										this._totalConnectTries > 10 &&
-										this._restartAttempts === 0
-									) {
-										// Force restart this program
-										await restartSelf();
-										this._restartAttempts++;
-										this._totalConnectTries++;
-									}
-									pause = false;
-									return;
-								}
-								log(
-									getTime(),
-									chalk.red(`[rgb]`, 'Forcefully restarted')
-								);
-								this._port = res.port;
-								this.leds = res.leds;
-								this.setListener = res.updateListener;
-								this.setListener((line: string) => {
-									if (line.indexOf('ack') !== -1) {
-										resolve();
-										clearInterval(interval);
-									}
-								});
-								attempts = 0;
-								pause = false;
-							});
-						}
-					}, SERIAL_MSG_INTERVAL);
-				});
-				this._busy = -1;
-				return data;
-			}
-
-			public sendCommand(command: string): Promise<string> {
+			public sendCommand(command: string): Promise<string | null> {
 				return this.write(`/ ${command} \\\n`);
 			}
 
-			public sendPrimed(command: string) {
+			public sendPrimed(command: string): Promise<string | null> {
 				return this.write(command + '\n');
 			}
 
-			public setModeOff() {
+			public setModeOff(): Promise<string | null> {
 				return this.sendCommand('off');
 			}
 
-			public getLeds(): Promise<string> {
+			public getLeds(): Promise<string | null> {
 				return this.sendCommand('leds');
 			}
 
 			public runConfig(
 				config: ArduinoAPI.ArduinoConfig,
 				extra: ArduinoAPI.JoinedConfigs = {}
-			): Promise<string> {
+			): Promise<string | null> {
 				switch (config.type) {
 					case 'solid':
 						return this.setSolid(
@@ -2768,7 +2876,12 @@ export namespace RGB {
 				}
 			}
 
-			public setSolid({ intensity = 0, r, g, b }: ArduinoAPI.Solid) {
+			public setSolid({
+				intensity = 0,
+				r,
+				g,
+				b
+			}: ArduinoAPI.Solid): Promise<string | null> {
 				return this.sendCommand(`solid ${intensity} ${r} ${g} ${b}`);
 			}
 
@@ -2778,7 +2891,7 @@ export namespace RGB {
 				backgroundGreen,
 				backgroundBlue,
 				dots
-			}: ArduinoAPI.Dot) {
+			}: ArduinoAPI.Dot): Promise<string | null> {
 				return this.sendCommand(
 					`dot ${intensity} ${backgroundRed} ${backgroundGreen} ${backgroundBlue} ${dots
 						.map(({ size, speed, dir, dotPos, r, g, b }) => {
@@ -2793,7 +2906,7 @@ export namespace RGB {
 				updateTime,
 				dir,
 				parts
-			}: ArduinoAPI.Split) {
+			}: ArduinoAPI.Split): Promise<string | null> {
 				return this.sendCommand(
 					`split ${intensity} ${updateTime} ${dir} ${parts
 						.map(({ r, g, b }) => {
@@ -2809,7 +2922,7 @@ export namespace RGB {
 				updateTime,
 				dir,
 				parts
-			}: ArduinoAPI.Pattern) {
+			}: ArduinoAPI.Pattern): Promise<string | null> {
 				return this.sendCommand(
 					`pattern ${intensity} ${updateTime} ${dir} ${blockSize} ${parts
 						.map(({ r, g, b }) => {
@@ -2819,7 +2932,7 @@ export namespace RGB {
 				);
 			}
 
-			public setPrime() {
+			public setPrime(): Promise<string | null> {
 				return this.sendCommand('prime');
 			}
 
@@ -2829,7 +2942,7 @@ export namespace RGB {
 				blockSize = 2,
 				updateTime,
 				mode
-			}: ArduinoAPI.Flash) {
+			}: ArduinoAPI.Flash): Promise<string | null> {
 				return this.sendCommand(
 					`flash ${intensity} ${updateTime} ${blockSize} ${mode}${
 						colors.length ? ' ' : ''
@@ -2844,7 +2957,7 @@ export namespace RGB {
 			public setRainbow({
 				updateTime = 1,
 				blockSize = 1
-			}: ArduinoAPI.Rainbow) {
+			}: ArduinoAPI.Rainbow): Promise<string | null> {
 				return this.sendCommand(`rainbow ${updateTime} ${blockSize}`);
 			}
 

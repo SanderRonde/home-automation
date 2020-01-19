@@ -850,7 +850,6 @@ export namespace KeyVal {
 		}: ModuleConfig & { apiHandler: API.Handler }) {
 			const webpageHandler = new Webpage.Handler({ randomNum, db });
 
-			debugger;
 			app.post('/keyval/all', async (req, res) => {
 				await apiHandler.all(res, {
 					...req.params,
