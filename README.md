@@ -42,6 +42,10 @@ The remote control module allows remote control of media playing on a given comp
 
 The temperature module allows for the setting of a target temperature of the house. The server then tells a temperature controller what to do based on the currently measured temperature, eventually reaching the target temperature. It also allows for manual turning on and off of a temperature controller (for example for when you leave home).
 
+#### Pressure
+
+The pressure module allows for detection of pressure and reponse to change in the pressure. For example someone is going to bed if additional pressure is felt in bed. Someone is sitting on a chair if additional pressure is felt on that chair.
+
 ### Controllers
 
 #### Telegram bot
@@ -99,6 +103,12 @@ The remote control works by sending any commands it gets to two destinations. Th
 The temperature module works by setting a target temperature and instructing a temperature controller to either increase or decrease the temperature depending on the one that was measured. It also allows for manual turning on and off of the temperature controller. In the future something like knowing how long it takes for the home to heat up X degrees could be used to start pre-heating the home just in time before the user arrives.
 
 The code for the microcontroller driving it can be found [over at this repository](https://github.com/SanderRonde/board-temperature-driver).
+
+#### Pressure
+
+The pressure module works by having microcontrollers report the pressure they measure. They measure this pressure by measuring the resistance between two sides of a sheet of [Velostat](https://en.wikipedia.org/wiki/Velostat). If the pressure changes, so does the resistance of the Velostat. This pressure is reported to the server, which can then act on it based on hooks. For example turn off the light when the pressure in the bed reaches above X for a few seconds and turn it back on when the pressure is lowered again.
+
+The code for the microcontroller driving it can be found [over at this repository](https://github.com/SanderRonde/board-pressure-sensor).
 
 #### Telegram bot
 
