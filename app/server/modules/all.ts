@@ -2,6 +2,7 @@ import {
 	RemoteControl,
 	HomeDetector,
 	Temperature,
+	Pressure,
 	Script,
 	KeyVal,
 	Multi,
@@ -49,6 +50,7 @@ const moduleObj = {
 	multi: Multi,
 	script: Script,
 	keyval: KeyVal,
+	Pressure: Pressure,
 	temperature: Temperature,
 	homeDetector: HomeDetector,
 	remoteControl: RemoteControl

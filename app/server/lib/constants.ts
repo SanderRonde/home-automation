@@ -79,3 +79,10 @@ export const COMMON_SWITCH_MAPPINGS: [RegExp, string][] = [
 
 // Cast
 export const CAST_DEVICE_NAME = 'Home';
+
+// Pressure
+export const MIN_PRESSURE = 0;
+export const MAX_PRESSURE = 1024;
+export const DEFAULT_MIN_TIME = 1000;
+export const PRESSURE_SAMPLE_TIME = 1000;
+export const MAX_PRESSURE_TIME = 10000;

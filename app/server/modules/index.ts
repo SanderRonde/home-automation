@@ -8,5 +8,6 @@ export { RemoteControl } from './remote-control';
 export { RGB } from './rgb';
 export { Script } from './script';
 export { Temperature } from './temperature';
+export { Pressure } from './pressure';
 
 export { getAllModules, AllModules } from './all';
