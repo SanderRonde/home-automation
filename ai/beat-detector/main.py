@@ -3,6 +3,7 @@
 
 from modes.preprocess.preprocess import mode_preprocess
 from modes.train.train import mode_train
+from modes.test.test import mode_test
 from lib.log import error, logline
 import sys
 
@@ -13,8 +14,7 @@ def run_mode(mode):
     elif mode == "train":
         return mode_train()
     elif mode == "test":
-        error("not implemented")
-        # TODO: implement
+        return mode_test()
     elif mode == "realtime_test":
         error("not implemented")
         # TODO: implement

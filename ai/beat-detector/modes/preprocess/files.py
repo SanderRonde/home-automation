@@ -113,7 +113,6 @@ def collect_input_paths(io: IO) -> Union[None, List[str]]:
     wav_files = list(filter(lambda in_file: in_file.split(".")[-1] == "wav", all_files))
 
     if len(wav_files) == 0:
-        print("No input files")
         return None
 
     annotated_files = list(filter(has_json_file, wav_files))

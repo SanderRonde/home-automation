@@ -1,11 +1,13 @@
 """Main entrypoint for preprocess mode"""
 
+from modes.features import Features, ExpectedOutput, OUT_VEC_SIZE, INTERVAL
 from .files import get_files, collect_input_paths, MarkedAudioFile
 from lib.log import logline, error, enter_group, exit_group
-from typing import List, Union
 from lib.io import IO, IOInput
 from lib.timer import Timer
+from typing import List
 from glob import glob
+import numpy as np
 import pickle
 import time
 
@@ -16,11 +18,6 @@ import time
 # It can either be a beat beat or a melody-type beat
 # Use of those two is yet to be determined but it's
 # handy to train on it
-
-# Interval in milliseconds
-INTERVAL = 50
-# The amount of bins in which the sound spectrum is divided
-BINS = 100
 
 
 def get_io() -> IO:
@@ -36,7 +33,7 @@ def get_io() -> IO:
                 is_generic=True,
             ),
             "o": IOInput(
-                "./preprocessed.pickle",
+                "./data/preprocessed.pickle",
                 str,
                 has_input=True,
                 arg_name="output_file",
@@ -47,42 +44,13 @@ def get_io() -> IO:
     )
 
 
-class Features:
-    """A set of features describing one time unit of sound"""
-
-    def __init__(self, hard: int, uptempo: int, spectrum_bins: List[float]):
-        self.hard = hard
-        self.uptemo = uptempo
-        self.spectrum_bins = spectrum_bins
-
-    def to_arr(self) -> List[Union[int, float]]:
-        """A feature array"""
-        return [self.hard, self.uptemo] + self.spectrum_bins
-
-    @staticmethod
-    @property
-    def length():
-        return 1 + 1 + BINS
-
-
-class ExpectedOutput:
-    """A class describing the expected output at a given time unit of sound"""
-
-    def __init__(self, is_beat: bool, is_melody: bool):
-        self.is_beat = is_beat
-        self.is_melody = is_melody
-
-    def to_arr(self):
-        """Convert to an array"""
-        return [int(self.is_beat), int(self.is_melody)]
-
-
-def gen_features(file: MarkedAudioFile) -> Features:
+def gen_features(file: MarkedAudioFile) -> List[Features]:
     """Gen features based on the file"""
     hard = file.json_file.genre.hard
     uptempo = file.json_file.genre.uptempo
     bins = file.bins_file.bins
-    return Features(hard, uptempo, bins)
+
+    return map(lambda bin_set: Features(hard, uptempo, bin_set), bins)
 
 
 def get_closest(timestamp_time: int) -> int:
@@ -150,9 +118,13 @@ def mode_preprocess():
         features = gen_features(file)
         outputs = gen_outputs(file)
 
-        preprocessed.append(
-            {"file_name": file.name, "features": features.to_arr(), "outputs": list(map(lambda x: x.to_arr(), outputs))}
-        )
+        feature_arr = list(map(lambda x: x.to_arr(), features))
+        output_arr = list(map(lambda x: x.to_arr(), outputs))
+
+        assert np.array(feature_arr).shape[1] == Features.length()
+        assert np.array(output_arr).shape[1] == OUT_VEC_SIZE
+
+        preprocessed.append({"file_name": file.name, "features": feature_arr, "outputs": output_arr})
         logline('done with file: "{}"'.format(file.name))
         file.close()
 

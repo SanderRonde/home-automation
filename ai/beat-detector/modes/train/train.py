@@ -1,51 +1,58 @@
 """Main entrypoint for train mode"""
 
+from ..features import Features, OUT_VEC_SIZE, Preprocessed
 from lib.log import logline, enter_group, exit_group
-from ..preprocess.preprocess import Features, BINS
-from typing import Dict, List, Union, Tuple
-from keras.layers.recurrent import LSTM
-from keras.layers.core import Dense
-from keras.models import Sequential
+from typing import List, Tuple
+from ..model import create_model
 from lib.io import IO, IOInput
 from lib.timer import Timer
-import itertools
+import numpy as np
+import warnings
 import random
-import time
+import pickle
 import json
+import time
 
-DROPOUT = 0.5
-RECURRENT_DROPOUT = 0.2
-# 1 for is_beat and 1 for is_melody
-OUT_VEC_SIZE = 2
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    from tensorflow.keras.models import Sequential
 
 
 def get_io() -> IO:
     return IO(
         {
             "i": IOInput(
-                "./preprocessed.pickle",
-                list,
+                "./data/preprocessed.pickle",
+                str,
                 has_input=True,
                 arg_name="input_file",
                 descr="Input preprocessed file",
                 alias="input_file",
                 is_generic=True,
             ),
-            "om": IOInput(
-                "./model.json",
-                str,
-                has_input=True,
-                arg_name="output_model",
-                descr="File in which the model gets stored",
-                alias="output_model",
-            ),
             "ow": IOInput(
-                "./weights.h5",
+                "./data/weights.h5",
                 str,
                 has_input=True,
                 arg_name="output_weights",
                 descr="File in which the weights gets stored",
                 alias="output_weights",
+            ),
+            "ot": IOInput(
+                "./data/train_config.json",
+                str,
+                has_input=True,
+                arg_name="output_train",
+                descr="File in which the training config gets stored",
+                alias="output_train",
+            ),
+            "s": IOInput(
+                80,
+                int,
+                has_input=True,
+                arg_name="split",
+                descr="The split between training and test sets",
+                alias="split",
             ),
             "b": IOInput(32, int, has_input=True, arg_name="batch_size", descr="The batch size", alias="batch_size",),
             "e": IOInput(10, int, has_input=True, arg_name="epochs", descr="The amount of epochs", alias="epochs",),
@@ -53,87 +60,104 @@ def get_io() -> IO:
     )
 
 
-class Preprocessed:
-    """Preprocessed data"""
-
-    def __init__(self, preprocessed_json: List[Dict[str, Union[str, List[float], List[int]]]]):
-        self.file_name = self._get_file_name(preprocessed_json)
-        self.features = self._get_features(preprocessed_json)
-        self.outputs = self._get_outputs(preprocessed_json)
-
-        assert len(self.outputs) == len(self.features)
-
-    def _get_file_name(preprocessed_json: List[Dict[str, Union[str, List[float], List[int]]]]) -> str:
-        return preprocessed_json["file_name"]
-
-    def _get_features(preprocessed_json: List[Dict[str, Union[str, List[float], List[int]]]]) -> List[float]:
-        return preprocessed_json["features"]
-
-    def _get_outputs(preprocessed_json: List[Dict[str, Union[str, List[float], List[int]]]]) -> List[int]:
-        return preprocessed_json["outputs"]
-
-
 def load_preprocessed(io: IO) -> List[Preprocessed]:
-    with open(io.get("input_file", "rb")) as in_file:
-        return list(map(lambda x: Preprocessed(x), json.load(in_file)))
+    with open(io.get("input_file"), "rb") as in_file:
+        return list(map(lambda x: Preprocessed(x), pickle.load(in_file)))
 
 
-def create_model(batch_size: int) -> Sequential:
-    model = Sequential(name="beat_detector")
-
-    model.add(
-        LSTM(
-            BINS,
-            input_shape=(Features.length, 1),
-            batch_size=batch_size,
-            return_sequences=True,
-            stateful=True,
-            dropout=DROPOUT,
-            recurrent_dropout=RECURRENT_DROPOUT,
-        )
-    )
-    model.add(
-        LSTM(
-            BINS,
-            input_shape=(Features.length, 1),
-            batch_size=batch_size,
-            return_sequences=False,
-            stateful=True,
-            dropout=DROPOUT,
-            recurrent_dropout=RECURRENT_DROPOUT,
-        )
-    )
-    model.add(Dense(OUT_VEC_SIZE, activation="relu"))
-    model.compile(loss="mean_squared_error", optimizer="adam")
-
-    return model
+def output_split(all: List[Preprocessed], train: List[Preprocessed], io: IO):
+    obj = {
+        "training_set": list(map(lambda x: x.file_name, train)),
+        "test_set": list(map(lambda x: x.file_name, filter(lambda x: x not in train, all))),
+    }
+    with open(io.get("output_train"), "w+") as out_file:
+        json.dump(obj, out_file)
+        logline("wrote training/testing config to {}".format(io.get("output_train")))
 
 
-def gen_fit_params(preprocessed: List[Preprocessed]) -> Tuple[List[float], List[int]]:
+def gen_split(preprocessed: List[Preprocessed], io: IO) -> List[Preprocessed]:
+    split = io.get("split")
+    if split == 100:
+        output_split(preprocessed, preprocessed, io)
+        return preprocessed
+
     shuffled = random.sample(preprocessed, len(preprocessed))
-    return (
-        itertools.chain.from_iterable(map(lambda x: x.features), shuffled),
-        itertools.chain.from_iterable(map(lambda x: x.outputs), shuffled),
-    )
+
+    total_len = sum(map(lambda x: len(x.features), preprocessed))
+    train_len = (total_len / 100.0) * split
+
+    train_items = list()
+    current_len = 0
+    for i in range(len(preprocessed) - 1):
+        new_len = current_len + len(shuffled[i].features)
+
+        if new_len >= train_len:
+            output_split(preprocessed, train_items, io)
+            return train_items
+
+        current_len = new_len
+        train_items.append(shuffled[i])
+
+    output_split(preprocessed, train_items, io)
+    return train_items
+
+
+def gen_fit_params(preprocessed: List[Preprocessed]) -> Tuple[np.ndarray, np.ndarray]:
+    shuffled = random.sample(preprocessed, len(preprocessed))
+
+    train_x = list()
+    train_y = list()
+    for i in range(len(shuffled)):
+        train_x = train_x + shuffled[i].features
+        train_y = train_y + shuffled[i].outputs
+
+    x_np = np.array(train_x)
+    y_np = np.array(train_y)
+
+    x_np = np.reshape(x_np, (x_np.shape[0], x_np.shape[1], 1))
+
+    assert len(x_np.shape) == 3
+    assert len(y_np.shape) == 2
+
+    x_shape_1, x_shape_2, _ = x_np.shape
+    y_shape_1, y_shape_2 = y_np.shape
+
+    assert x_shape_1 == y_shape_1
+    assert x_shape_2 == Features.length()
+    assert y_shape_2 == OUT_VEC_SIZE
+
+    return x_np, y_np
+
+
+def trim_params(params: Tuple[np.ndarray, np.ndarray], io: IO) -> Tuple[np.ndarray, np.ndarray]:
+    batch_size = io.get("batch_size")
+
+    x_param, y_param = params
+
+    length = x_param.shape[0]
+
+    remainder = length % batch_size
+    if remainder == 0:
+        return params
+    return x_param[:-remainder], y_param[:-remainder]
 
 
 def fit_model(io: IO, model: Sequential, preprocessed: List[Preprocessed]):
     epochs = io.get("epochs")
     model.reset_states()
+
+    logline("splitting into training set and testing set ({}%)".format(io.get("split")))
+    split = gen_split(preprocessed, io)
     for i in range(epochs):
         logline("generating input and expected data for epoch {}/{}".format(i + 1, epochs))
-        input_data, expected_data = gen_fit_params(preprocessed)
+        train_x, train_y = trim_params(gen_fit_params(split), io)
 
         logline("training epoch {}/{}".format(i + 1, epochs))
-        model.fit(input_data, expected_data, batch_size=io.get("batch_size"), epochs=1, shuffle=False)
+        model.fit(train_x, train_y, batch_size=io.get("batch_size"), epochs=1, shuffle=False)
         model.reset_states()
 
 
 def export_model(model: Sequential, io: IO):
-    with open(io.get("output_model"), "wb+") as output_model_file:
-        logline('wrote model to file "{}"'.format(io.get("output_model")))
-        output_model_file.write(model.to_json())
-
     logline('wrote weights to file "{}"'.format(io.get("output_weights")))
     model.save_weights(io.get("output_weights"))
 
@@ -152,7 +176,7 @@ def mode_train():
     preprocessed = load_preprocessed(io)
 
     logline("creating models")
-    train_model = create_model(io, batch_size=io.get("batch_size"))
+    train_model = create_model(batch_size=io.get("batch_size"))
 
     logline("fitting model")
     enter_group()
