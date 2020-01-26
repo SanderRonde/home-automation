@@ -82,3 +82,5 @@ ai/annotator/**/*.js
 app/server/config/**
 boards/ip_list.txt
 TODO
+ai/scripts/*.js
+ai/scripts/*.ts.map
