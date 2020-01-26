@@ -38,3 +38,8 @@ def create_model(batch_size: int) -> Sequential:
     model.compile(loss="mean_squared_error", optimizer="adam")
 
     return model
+
+
+def apply_weights(model: Sequential, weights_file: str) -> Sequential:
+    model.load_weights(io.get("input_weights"))
+    return model

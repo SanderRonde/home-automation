@@ -2,9 +2,9 @@
 
 from ..features import Preprocessed, Features, OUT_VEC_SIZE, is_positive_beat, is_positive_melody
 from lib.log import logline, enter_group, exit_group
+from ..model import create_model, apply_weights
 from sklearn.metrics import mean_squared_error
 from typing import List, Dict, Tuple, Union
-from ..model import create_model
 from lib.io import IO, IOInput
 from lib.timer import Timer
 import numpy as np
@@ -16,7 +16,6 @@ import os
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
-    from tensorflow.keras.models import model_from_json
     from tensorflow.keras.models import Sequential
 
 
@@ -74,17 +73,6 @@ def get_io() -> IO:
             )
         }
     )
-
-
-def reconstruct_model(io: IO) -> Sequential:
-    """Reconstruct the NN"""
-    with open(io.get("input_model"), "rb") as in_file:
-        return model_from_json(in_file.read())
-
-
-def apply_weights(model: Sequential, io: IO) -> Sequential:
-    model.load_weights(io.get("input_weights"))
-    return model
 
 
 def read_test_files(io: IO) -> List[Preprocessed]:
@@ -219,7 +207,7 @@ def mode_test():
     model = create_model(1)
 
     logline("applying learned weights")
-    model = apply_weights(model, io)
+    model = apply_weights(model, io.get("input_weights"))
 
     logline("reading testing files")
     test_files = read_test_files(io)
