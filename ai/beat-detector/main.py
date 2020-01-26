@@ -1,6 +1,7 @@
 #!/usr/bin/python
 """Main file used for launching everything"""
 
+from modes.realtime_test.realtime_test import mode_realtime_test
 from modes.preprocess.preprocess import mode_preprocess
 from modes.train.train import mode_train
 from modes.test.test import mode_test
@@ -16,8 +17,7 @@ def run_mode(mode):
     elif mode == "test":
         return mode_test()
     elif mode == "realtime_test":
-        error("not implemented")
-        # TODO: implement
+        return mode_realtime_test()
     else:
         if mode == "":
             logline("No mode supplied. Choose one of:")
