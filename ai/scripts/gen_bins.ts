@@ -30,7 +30,6 @@ interface PuppetGlobal extends Window {
 
 const HOST_PATH = '__webserver__';
 const PORT = 5123;
-const INTERVAL = 50;
 const BINS = 100;
 
 namespace BinGenerator {
@@ -96,32 +95,64 @@ namespace BinGenerator {
 				return acc;
 			}
 
-			async function getInputFiles() {
+			async function getInputFiles(globs: string[]) {
 				return flat(
 					await Promise.all(
-						process.argv.slice(3).map(globPattern => {
+						globs.map(globPattern => {
 							return globPromise(globPattern);
 						})
 					)
 				);
 			}
 
-			export async function getFiles() {
-				if (process.argv.length < 3) {
-					process.stderr.write(
-						'Please supply an output dir and input file(s)\n'
-					);
+			export interface IO {
+				outDir: string;
+				interval: number;
+				inFiles: string[];
+			}
+
+			export async function getIO() {
+				const io: Partial<IO> = { };
+
+				let inFileGlobs: string[] = [];
+
+				for (let i = 2; i < process.argv.length; i++) {
+					const arg = process.argv[i];
+					if (arg === '-o') {
+						io.outDir = process.argv[++i];
+					} else if (arg === '--output=') {
+						io.outDir = arg.slice('--output='.length);
+					} else if (arg === '-n') {
+						io.interval = parseInt(process.argv[++i], 10);
+					} else if (arg === '--interval=') {
+						io.interval = parseInt(arg.slice('--interval='.length), 10);
+					} else {
+						inFileGlobs.push(arg);
+					}
+				}
+
+				if (!io.outDir) {
+					process.stderr.write('Please supply an output dir\n');
+					process.exit(1);
+				} else if (!io.interval) {
+					process.stderr.write('Please supply an interval\n');
+					process.exit(1);
+				} else if (inFileGlobs.length === 0) {
+					process.stderr.write('Please supply input files\n');
 					process.exit(1);
 				}
 
-				const files = await getInputFiles();
+
+				const files = await getInputFiles(inFileGlobs);
 
 				if (files.length === 0) {
 					process.stderr.write('No files found\n');
 					process.exit(1);
 				}
 
-				return files;
+				io.inFiles = files;
+
+				return io as IO;
 			}
 
 			export namespace Webserver {
@@ -139,11 +170,11 @@ namespace BinGenerator {
 					server.close();
 				}
 
-				export async function copy(files: string[]) {
+				export async function copy(io: IO.Input.IO) {
 					await createDir();
 
 					await Promise.all(
-						files.map(file => {
+						io.inFiles.map(file => {
 							return fs.copy(
 								file,
 								path.join(
@@ -241,7 +272,7 @@ namespace BinGenerator {
 				});
 			}
 
-			export async function insertBinCollection(page: puppeteer.Page) {
+			export async function insertBinCollection(page: puppeteer.Page, io: IO.Input.IO) {
 				await page.evaluate(
 					(BINS, INTERVAL) => {
 						const puppetGlobal: PuppetGlobal = window;
@@ -313,7 +344,7 @@ namespace BinGenerator {
 						return Promise.resolve();
 					},
 					BINS,
-					INTERVAL
+					io.interval
 				);
 			}
 
@@ -458,8 +489,7 @@ namespace BinGenerator {
 			}
 
 			// Max length is 10 minutes
-			// TODO: back to 10 mins
-			const MAX_LEN = 60;
+			const MAX_LEN = 10 * 60;
 			const PRE_PADDING = `${Log.PREFIX}✔ [`.length;
 			const POST_PADDING = ' 10.0s '.length;
 			const FILE_PADDING = BarContent.Bar.FILE_LENGTH + 2;
@@ -509,11 +539,12 @@ namespace BinGenerator {
 
 		export async function setupPage(
 			browser: puppeteer.Browser,
-			file: string
+			file: string,
+			io: IO.Input.IO
 		) {
 			const page = await Browser.createPage(browser, file);
 			await JS.ready(page);
-			await JS.insertBinCollection(page);
+			await JS.insertBinCollection(page, io);
 			return page;
 		}
 
@@ -536,13 +567,13 @@ namespace BinGenerator {
 
 		export async function genPages(
 			browser: puppeteer.Browser,
-			files: string[]
+			io: IO.Input.IO
 		) {
 			return await Promise.all(
-				files.map(async file => {
+				io.inFiles.map(async file => {
 					return {
 						file,
-						page: await setupPage(browser, file)
+						page: await setupPage(browser, file, io)
 					};
 				})
 			);
@@ -574,13 +605,13 @@ namespace BinGenerator {
 
 	export async function main() {
 		Log.groupStart('Input');
-		Log.groupLog('Reading input files');
-		const files = await IO.Input.getFiles();
+		Log.groupLog('Reading IO');
+		const io = await IO.Input.getIO();
 		Log.groupLog('Copying files');
 		Log.groupEnd();
 
 		Log.groupStart('Webserver:');
-		await IO.Input.Webserver.copy(files);
+		await IO.Input.Webserver.copy(io);
 		Log.groupLog('Starting webserver');
 		const server = await IO.Input.Webserver.host();
 		Log.groupLog(`Listening on port ${PORT}`);
@@ -590,7 +621,7 @@ namespace BinGenerator {
 		Log.groupLog('Creating browser');
 		const browser = await Browser.create();
 		Log.groupLog('Generating pages');
-		const pages = await GenBins.genPages(browser, files);
+		const pages = await GenBins.genPages(browser, io);
 		Log.groupEnd();
 
 		Log.groupStart('Bins:');
