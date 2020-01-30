@@ -17,7 +17,7 @@ import { ColorControls } from '../color-controls/color-controls.js';
 import { ColorDisplay } from '../color-display/color-display.js';
 import { PatternButtonHTML } from './pattern-button.html.js';
 import { PatternButtonCSS } from './pattern-button.css.js';
-import { TransitionTypes } from 'magic-home.js';
+import { TransitionTypes } from 'magic-home';
 
 @config({
 	is: 'pattern-button',
