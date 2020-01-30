@@ -92,7 +92,7 @@ export namespace KeyVal {
 			number,
 			{
 				key: string;
-				listener: (value: string, logObj: any) => void;
+				listener: (value: string, logObj: any) => void | Promise<void>;
 				once: boolean;
 			}
 		> = new Map();
@@ -166,7 +166,7 @@ export namespace KeyVal {
 				}
 				if (next) continue;
 
-				listener(value, logObj);
+				await listener(value, logObj);
 				updated++;
 				if (once) {
 					_listeners.delete(index);
@@ -629,6 +629,7 @@ export namespace KeyVal {
 				}
 				res.status(200).write(value);
 				res.end();
+				return;
 			}
 
 			@errorHandle
