@@ -8,7 +8,7 @@ import {
 import { PatternButton } from '../pattern-button/pattern-button.js';
 import { PatternControlsHTML } from './pattern-controls.html.js';
 import { PatternControlsCSS } from './pattern-controls.css.js';
-import { TransitionTypes } from 'magic-home.js';
+import { TransitionTypes } from 'magic-home';
 
 @config({
 	is: 'pattern-controls',
