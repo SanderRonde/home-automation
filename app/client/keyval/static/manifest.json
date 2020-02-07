@@ -6,7 +6,7 @@
 	"short_name": "Switch",
 	"start_url": "/keyval/",
 	"display": "fullscreen",
-	"background_color": "#3f51b5",
+	"background_color": "#5a5b63",
 	"description": "A remote that allows you to switch your automated devices",
 	"serviceworker": {
 		"src": "/keyval/serviceworker.js",
