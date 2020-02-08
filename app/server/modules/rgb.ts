@@ -3096,10 +3096,18 @@ export namespace RGB {
 		return Promise.resolve();
 	}
 
+	let wakelights: NodeJS.Timeout[] = [];
+	function cancelActiveWakelights() {
+		wakelights.forEach(timer => clearInterval(timer));
+		wakelights = [];
+	}
+
 	function initListeners() {
 		KeyVal.GetSetListener.addListener(
 			'room.lights.nightstand',
 			async (value, logObj) => {
+				cancelActiveWakelights();
+
 				const client = Clients.getLed(LED_NAMES.BED_LEDS);
 				if (!client) return;
 				if (value === '1') {
@@ -3129,12 +3137,10 @@ export namespace RGB {
 			}
 		);
 
-		let wakelights: NodeJS.Timeout[] = [];
 		KeyVal.GetSetListener.addListener(
 			'room.leds.wakelight',
 			async (value, logObj) => {
-				wakelights.forEach(w => clearInterval(w));
-				wakelights = [];
+				cancelActiveWakelights();
 
 				const client = Clients.getLed(LED_NAMES.BED_LEDS);
 				if (!client) return;
@@ -3171,8 +3177,7 @@ export namespace RGB {
 						1
 					);
 				} else if (value === '0') {
-					wakelights.forEach(w => clearInterval(w));
-					wakelights = [];
+					cancelActiveWakelights();
 					attachMessage(
 						logObj,
 						`Turned off`,
