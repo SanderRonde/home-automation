@@ -6,7 +6,7 @@ import {
 	PRESSURE_SAMPLE_TIME
 } from '../lib/constants';
 import { errorHandle, requireParams, auth } from '../lib/decorators';
-import { ModuleConfig, ModuleHookables, AllModules } from './all';
+import { ModuleConfig, ModuleHookables, AllModules } from './modules';
 import pressureConfig from '../config/pressures';
 import { attachMessage } from '../lib/logger';
 import { BotState } from '../lib/bot-state';
@@ -87,7 +87,10 @@ export namespace Pressure {
 			allModules = modules;
 		}
 
-		async function createHookables(logObj: any): Promise<ModuleHookables> {
+		async function createHookables(
+			hookName: string,
+			logObj: any
+		): Promise<ModuleHookables> {
 			await awaitCondition(() => {
 				return allModules !== null;
 			}, 100);
@@ -96,7 +99,10 @@ export namespace Pressure {
 				Object.keys(allModules!).map((name: keyof AllModules) => {
 					return [
 						name,
-						new allModules![name].meta.external.Handler(logObj)
+						new allModules![name].meta.external.Handler(
+							logObj,
+							`PRESSURE.${hookName}`
+						)
 					];
 				})
 			) as unknown) as ModuleHookables;
@@ -133,6 +139,7 @@ export namespace Pressure {
 					if (doUpdate) {
 						handler(
 							await createHookables(
+								key,
 								attachMessage(logObj, 'Pressure hooks')
 							)
 						);

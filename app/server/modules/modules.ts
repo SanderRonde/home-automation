@@ -3,6 +3,7 @@ import {
 	HomeDetector,
 	Temperature,
 	Pressure,
+	Explain,
 	Script,
 	KeyVal,
 	Multi,
@@ -10,7 +11,7 @@ import {
 	RGB,
 	Bot,
 	Auth
-} from '../modules';
+} from '.';
 import { WSSimulator, WSWrapper } from '../lib/ws';
 import { AppWrapper } from '../lib/routes';
 import { Database } from '../lib/db';
@@ -50,6 +51,7 @@ const moduleObj = {
 	multi: Multi,
 	script: Script,
 	keyval: KeyVal,
+	explain: Explain,
 	Pressure: Pressure,
 	temperature: Temperature,
 	homeDetector: HomeDetector,
@@ -66,8 +68,8 @@ export async function notifyAllModules() {
 	}
 }
 
-export async function getAllModules() {
-	if (!notified) {
+export async function getAllModules(notify: boolean = true) {
+	if (!notified && notify) {
 		await notifyAllModules();
 	}
 

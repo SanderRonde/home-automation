@@ -4,6 +4,7 @@ import { Auth } from '../modules';
 import * as http from 'http';
 import chalk from 'chalk';
 import { IP_LOG_VERSION } from './constants';
+import { ExplainHook } from '../modules/explain';
 
 interface AssociatedMessage {
 	content: string[];
@@ -12,6 +13,14 @@ interface AssociatedMessage {
 const msgMap: WeakMap<
 	ResponseLike | AssociatedMessage | {},
 	AssociatedMessage[]
+> = new WeakMap();
+const rootMap: WeakMap<
+	any,
+	ResponseLike | AssociatedMessage | {}
+> = new WeakMap();
+const logListeners: WeakMap<
+	any,
+	(captured: LogCapturer) => void
 > = new WeakMap();
 
 let logLevel: number = 1;
@@ -31,7 +40,18 @@ function setDefaultArrValues<T>(arr: T[], len: number, value: T): T[] {
 	return arr;
 }
 
+interface Loggable {
+	log(message?: any, ...optionalParams: any[]): void;
+}
+
+function checkForLogListeners(logObj: any, target: LogCapturer) {
+	if (logListeners.has(logObj)) {
+		logListeners.get(logObj)!(target);
+	}
+}
+
 function logAssociatedMessages(
+	target: LogCapturer,
 	messages: AssociatedMessage[],
 	indent: number = 0,
 	hasNextMessage: boolean[] = []
@@ -48,16 +68,19 @@ function logAssociatedMessages(
 				}
 			})
 			.join('');
+		const message = messages[i];
+		checkForLogListeners(message, target);
 		const timeFiller = getTimeFiller();
 		if (i === messages.length - 1) {
-			console.log(timeFiller, `${padding} \\- `, ...messages[i].content);
+			target.log(timeFiller, `${padding} \\- `, ...message.content);
 			hasNextMessage[indent] = false;
 		} else {
-			console.log(timeFiller, `${padding} |- `, ...messages[i].content);
+			target.log(timeFiller, `${padding} |- `, ...message.content);
 			hasNextMessage[indent] = true;
 		}
 		logAssociatedMessages(
-			msgMap.get(messages[i]) || [],
+			target,
+			msgMap.get(message) || [],
 			indent + 1,
 			hasNextMessage
 		);
@@ -123,14 +146,70 @@ export function genURLLog({
 	];
 }
 
+export class LogCapturer implements Loggable {
+	private _done: boolean = false;
+	private _onDone: ((result: string) => void)[] = [];
+
+	private _lines: string[] = [];
+	private _originalLines: any[][] = [];
+
+	private _logToLine(...params: any[]) {
+		this._lines.push(
+			params
+				.map(param => {
+					if (typeof param === 'string') return param;
+					if (typeof param === 'number') return param + '';
+					return JSON.stringify(param);
+				})
+				.join(' ')
+		);
+		this._originalLines.push(params);
+	}
+
+	log(message?: any, ...params: any[]) {
+		this._logToLine(message, ...params);
+	}
+
+	private _get() {
+		return this._lines.join('\n');
+	}
+
+	async get(): Promise<string> {
+		if (this._done) {
+			return this._get();
+		}
+		return new Promise(resolve => {
+			this._onDone.push(result => {
+				resolve(result);
+			});
+		});
+	}
+
+	logToConsole() {
+		for (const line of this._originalLines) {
+			console.log(...line);
+		}
+		this._done = true;
+		const str = this._get();
+		this._onDone.forEach(fn => fn(str));
+	}
+}
+
 export function logReq(req: express.Request, res: express.Response) {
+	const target = new LogCapturer();
+
 	const start = Date.now();
 	const ip = getIP(req);
 	res.on('finish', async () => {
-		if (logLevel < 1) return;
+		checkForLogListeners(res, target);
+
+		if (logLevel < 1) {
+			target.logToConsole();
+			return;
+		}
 
 		const end = Date.now();
-		console.log(
+		target.log(
 			getTime(),
 			...genURLLog({
 				req,
@@ -141,9 +220,10 @@ export function logReq(req: express.Request, res: express.Response) {
 		);
 
 		// Log attached messages
-		if (logLevel < 2 || !msgMap.has(res)) return;
-
-		logAssociatedMessages(msgMap.get(res)!);
+		if (logLevel >= 2 && msgMap.has(res)) {
+			logAssociatedMessages(target, msgMap.get(res)!);
+		}
+		target.logToConsole();
 	});
 }
 
@@ -162,11 +242,20 @@ export function logOutgoingReq(
 		target: string;
 	}
 ) {
+	const target = new LogCapturer();
+	if (logListeners.has(req)) {
+		logListeners.get(req)!(target);
+	}
+	checkForLogListeners(req, target);
+
 	const ip = req.path;
 
-	if (logLevel < 1) return;
+	if (logLevel < 1) {
+		target.logToConsole();
+		return;
+	}
 
-	console.log(
+	target.log(
 		getTime(),
 		...genURLLog({
 			ip: data.target,
@@ -177,21 +266,27 @@ export function logOutgoingReq(
 	);
 
 	// Log attached messages
-	if (logLevel < 2 || !msgMap.has(req)) return;
-
-	logAssociatedMessages(msgMap.get(req)!);
+	if (logLevel >= 2 && msgMap.has(req)) {
+		logAssociatedMessages(target, msgMap.get(req)!);
+	}
+	target.logToConsole();
 }
 
 export function logFixture(
 	obj: ResponseLike | AssociatedMessage | {},
 	...name: string[]
 ) {
-	console.log(getTime(), ...name);
+	const target = new LogCapturer();
+	checkForLogListeners(obj, target);
+
+	target.log(getTime(), ...name);
 
 	// Log attached messages
-	if (logLevel < 2 || !msgMap.has(obj)) return;
-
-	logAssociatedMessages(msgMap.get(obj)!);
+	// Log attached messages
+	if (logLevel >= 2 && msgMap.has(obj)) {
+		logAssociatedMessages(target, msgMap.get(obj)!);
+	}
+	target.logToConsole();
 }
 
 export function transferAttached(
@@ -208,6 +303,12 @@ export function transferAttached(
 
 	msgMap.set(to, messages);
 	msgMap.delete(from);
+
+	rootMap.set(to, rootMap.get(from)!);
+	if (logListeners.has(from)) {
+		logListeners.set(to, logListeners.get(from)!);
+		logListeners.delete(from);
+	}
 }
 
 export function attachMessage(
@@ -224,13 +325,62 @@ export function attachMessage(
 	}
 
 	const prevMessages = msgMap.get(obj)!;
-	const msg = {
-		content: messages,
-		children: []
+	const msg: AssociatedMessage = {
+		content: messages
 	};
 	prevMessages.push(msg);
 
+	if (!rootMap.has(obj)) {
+		rootMap.set(obj, obj);
+	}
+	rootMap.set(msg, rootMap.get(obj)!);
 	return msg;
+}
+
+export function attachSourcedMessage(
+	obj: ResponseLike | AssociatedMessage | {},
+	source: string,
+	hook: ExplainHook | null,
+	...messages: string[]
+) {
+	if (typeof obj !== 'object' && typeof obj !== 'function') {
+		console.warn('Invalid log target', obj);
+		console.trace();
+		return {};
+	}
+	if (!msgMap.has(obj)) {
+		msgMap.set(obj, []);
+	}
+
+	if (hook) {
+		hook(messages.join(' '), source, obj);
+	}
+
+	const prevMessages = msgMap.get(obj)!;
+	const msg: AssociatedMessage = {
+		content: messages
+	};
+	prevMessages.push(msg);
+
+	if (!rootMap.has(obj)) {
+		rootMap.set(obj, obj);
+	}
+	rootMap.set(msg, rootMap.get(obj)!);
+	return msg;
+}
+
+export function addLogListener(
+	obj: any,
+	listener: (captured: LogCapturer) => void
+) {
+	if (typeof obj !== 'object' || !obj) return;
+
+	logListeners.set(obj, listener);
+}
+
+export function getRootLogObj(obj: any) {
+	if (typeof obj !== 'object' || !obj) return;
+	return rootMap.get(obj);
 }
 
 export class ResDummy implements ResponseLike {
@@ -254,6 +404,11 @@ export class ProgressLogger {
 	constructor(private _name: string, private _max: number) {}
 
 	private _getProgressBar() {
+		if (this._max - this._progress < 0) {
+			console.log(
+				chalk.red('Increment got called more often than configured')
+			);
+		}
 		return `[${new Array(this._progress).fill('*').join('')}${new Array(
 			this._max - this._progress
 		)

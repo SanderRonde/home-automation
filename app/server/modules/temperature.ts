@@ -2,7 +2,7 @@ import { errorHandle, requireParams, authAll, auth } from '../lib/decorators';
 import { attachMessage, ResDummy, log, getTime } from '../lib/logger';
 import { BotState } from '../lib/bot-state';
 import { ResponseLike } from './multi';
-import { ModuleConfig } from './all';
+import { ModuleConfig } from './modules';
 import { Database } from '../lib/db';
 import { Bot as _Bot } from './bot';
 import { KeyVal } from './keyval';
@@ -51,9 +51,17 @@ export namespace Temperature {
 			mode = newMode;
 
 			if (newMode === 'off') {
-				new KeyVal.External.Handler({}).set('room.heating', '0', false);
+				new KeyVal.External.Handler({}, 'HEATING.off').set(
+					'room.heating',
+					'0',
+					false
+				);
 			} else {
-				new KeyVal.External.Handler({}).set('room.heating', '1', false);
+				new KeyVal.External.Handler({}, 'HEATING.on').set(
+					'room.heating',
+					'1',
+					false
+				);
 			}
 		}
 

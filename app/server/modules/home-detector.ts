@@ -13,7 +13,7 @@ import {
 	log,
 	ResDummy
 } from '../lib/logger';
-import { AllModules, ModuleHookables, ModuleConfig } from './all';
+import { AllModules, ModuleHookables, ModuleConfig } from './modules';
 import { arrToObj, awaitCondition } from '../lib/util';
 import { BotState } from '../lib/bot-state';
 import hooks from '../config/home-hooks';
@@ -26,6 +26,7 @@ import { ModuleMeta } from './meta';
 import { Auth } from './auth';
 import * as ping from 'ping';
 import chalk from 'chalk';
+import { ExplainHook } from './explain';
 
 const AWAY_PING_INTERVAL = 5;
 const HOME_PING_INTERVAL = 60;
@@ -72,9 +73,19 @@ export namespace HomeDetector {
 		get bot() {
 			return Bot;
 		}
+
+		addExplainHook(hook: ExplainHook) {
+			Classes.initExplainHook(hook);
+		}
 	})();
 
 	export namespace Classes {
+		let explainHook: ExplainHook | null = null;
+
+		export function initExplainHook(hook: ExplainHook) {
+			explainHook = hook;
+		}
+
 		function wait(time: number) {
 			return new Promise(resolve => {
 				setTimeout(resolve, time);
@@ -95,6 +106,18 @@ export namespace HomeDetector {
 				private _onChange: (newState: HOME_STATE) => void
 			) {
 				this._init();
+			}
+
+			private _change(newState: HOME_STATE) {
+				if (explainHook) {
+					explainHook(
+						`${this._config.name} state changed to ${newState}`,
+						'time',
+						null
+					);
+				}
+
+				this._onChange(newState);
 			}
 
 			private async _ping(ip: string) {
@@ -193,7 +216,7 @@ export namespace HomeDetector {
 							finalState !== this._state &&
 							this._state !== null
 						) {
-							this._onChange(finalState);
+							this._change(finalState);
 						}
 						if (finalState === HOME_STATE.AWAY) {
 							this.leftAt = new Date();
@@ -717,7 +740,10 @@ export namespace HomeDetector {
 			allModules = modules;
 		}
 
-		async function createHookables(logObj: any): Promise<ModuleHookables> {
+		async function createHookables(
+			hookName: string,
+			logObj: any
+		): Promise<ModuleHookables> {
 			await awaitCondition(() => {
 				return allModules !== null;
 			}, 100);
@@ -726,7 +752,10 @@ export namespace HomeDetector {
 				Object.keys(allModules!).map((name: keyof AllModules) => {
 					return [
 						name,
-						new allModules![name].meta.external.Handler(logObj)
+						new allModules![name].meta.external.Handler(
+							logObj,
+							`HOMEHOOK.${hookName}`
+						)
 					];
 				})
 			) as unknown) as ModuleHookables;
@@ -756,6 +785,7 @@ export namespace HomeDetector {
 				const fn = changeHooks[name];
 				await fn(
 					await createHookables(
+						name,
 						attachMessage(
 							logObj,
 							'Hook',

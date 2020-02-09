@@ -6,7 +6,7 @@ import {
 	AppWrapper,
 	initPostRoutes
 } from './lib/routes';
-import { notifyAllModules, NoDBModuleConfig } from './modules/all';
+import { notifyAllModules, NoDBModuleConfig } from './modules/modules';
 import { hasArg, getArg, getNumberArg } from './lib/io';
 import { WSSimulator, WSWrapper } from './lib/ws';
 import { getAllModules, Bot } from './modules';
@@ -43,10 +43,7 @@ class WebServer {
 	private _server!: http.Server;
 
 	private _config: Config;
-	private _initLogger: ProgressLogger = new ProgressLogger(
-		'Server start',
-		19
-	);
+	private _initLogger!: ProgressLogger;
 
 	private _setConfigDefaults(config: PartialConfig): Config {
 		return {
@@ -70,7 +67,6 @@ class WebServer {
 	constructor(config: PartialConfig = {}) {
 		this._config = this._setConfigDefaults(config);
 		startInit();
-		this._initLogger.increment('IO');
 	}
 
 	private async _initModules() {
@@ -97,6 +93,12 @@ class WebServer {
 	}
 
 	public async init() {
+		this._initLogger = new ProgressLogger(
+			'Server start',
+			8 + Object.keys(await getAllModules(false)).length
+		);
+		this._initLogger.increment('IO');
+
 		this.app = express();
 		this._initLogger.increment('express');
 		await initMiddleware(this.app);

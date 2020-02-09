@@ -1,13 +1,14 @@
-import { ModuleConfig, AllModules } from './all';
+import { ModuleConfig, AllModules } from './modules';
 import { BotState } from '../lib/bot-state';
+import { ExplainHook } from './explain';
 
 export declare class Handler {
-	constructor(_logObj: any);
+	constructor(_logObj: any, _source: string);
 }
 
 class HandlerDefault implements Handler {
 	// @ts-ignore
-	constructor(private _logObj: any) {}
+	constructor(private _logObj: any, private _source: string) {}
 }
 
 export class BotBase extends BotState.Base {
@@ -45,6 +46,8 @@ export abstract class ModuleMeta {
 	}
 
 	async notifyModules(_modules: AllModules): Promise<any> {}
+
+	addExplainHook(_onAction: ExplainHook) {}
 
 	get dbName() {
 		return this._dbName || this.name;

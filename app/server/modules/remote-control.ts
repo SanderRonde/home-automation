@@ -11,12 +11,12 @@ import telnet_client, * as TelnetClient from 'telnet-client';
 import { TELNET_IPS_FILE } from '../lib/constants';
 import { BotState } from '../lib/bot-state';
 import { ResponseLike } from './multi';
-import { ModuleConfig } from './all';
+import { ModuleConfig } from './modules';
+import { ModuleMeta } from './meta';
 import { Bot as _Bot } from './bot';
 import * as express from 'express';
 import * as fs from 'fs-extra';
 import { Auth } from './auth';
-import { ModuleMeta } from './meta';
 import chalk from 'chalk';
 
 export namespace RemoteControl {
