@@ -83,3 +83,7 @@ app/server/config/**
 boards/ip_list.txt
 TODO
 venv
+ai/**/*.js
+ai/**/*.ts.map
+
+ai/beat-detector/modes/realtime_test/public/files/

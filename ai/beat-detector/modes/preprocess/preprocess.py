@@ -1,7 +1,7 @@
 """Main entrypoint for preprocess mode"""
 
-from modes.features import Features, ExpectedOutput, OUT_VEC_SIZE, INTERVAL
 from .files import get_files, collect_input_paths, MarkedAudioFile
+from modes.features import Features, ExpectedOutput, OUT_VEC_SIZE
 from lib.log import logline, error, enter_group, exit_group
 from lib.io import IO, IOInput
 from lib.timer import Timer
@@ -40,6 +40,14 @@ def get_io() -> IO:
                 descr="File in which the features and outputs get placed",
                 alias="output_file",
             ),
+            "n": IOInput(
+                50,
+                int,
+                has_input=True,
+                arg_name="interval",
+                descr="Interval at which data is sent",
+                alias="interval"
+            )
         }
     )
 
@@ -53,10 +61,11 @@ def gen_features(file: MarkedAudioFile) -> List[Features]:
     return map(lambda bin_set: Features(hard, uptempo, bin_set), bins)
 
 
-def get_closest(timestamp_time: int) -> int:
+def get_closest(timestamp_time: int, io: IO) -> int:
     """Get the closest multiple of INTERVAL to the timestamp"""
-    lowerbound = (timestamp_time // INTERVAL) * INTERVAL
-    upperbound = lowerbound + INTERVAL
+    interval = io.get("interval")
+    lowerbound = (timestamp_time // interval) * interval
+    upperbound = lowerbound + interval
 
     lowerbound_diff = timestamp_time - lowerbound
     upperbound_diff = upperbound - timestamp_time
@@ -64,17 +73,18 @@ def get_closest(timestamp_time: int) -> int:
     return lowerbound if lowerbound_diff <= upperbound_diff else upperbound
 
 
-def gen_outputs(file: MarkedAudioFile) -> List[ExpectedOutput]:
+def gen_outputs(file: MarkedAudioFile, io: IO) -> List[ExpectedOutput]:
     """Gen a list of marked outputs for given file"""
     out_len = len(file.bins_file.bins)
     outputs = [ExpectedOutput(False, False) for x in range(out_len)]
 
+    interval = io.get("interval")
     for timestamp in file.json_file.timestamps:
         # Round it to the range
         timestamp_time = timestamp.timestamp * 1000
-        closest = get_closest(timestamp_time)
+        closest = get_closest(timestamp_time, io)
 
-        timestamp_index = int(closest / INTERVAL)
+        timestamp_index = int(closest / interval)
 
         if timestamp_index >= out_len:
             continue
@@ -84,7 +94,7 @@ def gen_outputs(file: MarkedAudioFile) -> List[ExpectedOutput]:
             output_mark.is_beat = True
         elif timestamp.beat_type == "melody":
             closest_end = get_closest(timestamp_time + (timestamp.length * 1000))
-            for i in range(int((closest_end - closest) / INTERVAL)):
+            for i in range(int((closest_end - closest) / interval)):
                 outputs[timestamp_index + i].is_melody = True
 
     return outputs
@@ -116,7 +126,7 @@ def mode_preprocess():
             return None
 
         features = gen_features(file)
-        outputs = gen_outputs(file)
+        outputs = gen_outputs(file, io)
 
         feature_arr = list(map(lambda x: x.to_arr(), features))
         output_arr = list(map(lambda x: x.to_arr(), outputs))

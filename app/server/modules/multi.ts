@@ -1,6 +1,6 @@
 import { transferAttached, genURLLog, attachMessage } from '../lib/logger';
 import { AppWrapper } from '../lib/routes';
-import { ModuleConfig } from './all';
+import { ModuleConfig } from './modules';
 import { ModuleMeta } from './meta';
 import * as express from 'express';
 

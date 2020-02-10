@@ -16,9 +16,10 @@ import {
 	getLogLevel,
 	ResDummy,
 	getTime,
-	log
+	log,
+	attachSourcedMessage
 } from '../lib/logger';
-import { AllModules, ModuleHookables, ModuleConfig } from './all';
+import { AllModules, ModuleHookables, ModuleConfig } from './modules';
 import * as ReadLine from '@serialport/parser-readline';
 import { arrToObj, awaitCondition, wait } from '../lib/util';
 import aggregates from '../config/aggregates';
@@ -33,6 +34,7 @@ import * as express from 'express';
 import { ModuleMeta } from './meta';
 import { Auth } from './auth';
 import chalk from 'chalk';
+import { ExplainHook } from './explain';
 
 export interface KeyvalHooks {
 	[key: string]: {
@@ -81,6 +83,10 @@ export namespace KeyVal {
 		get bot() {
 			return Bot;
 		}
+
+		addExplainHook(hook: ExplainHook) {
+			API.initExplainHook(hook);
+		}
 	})();
 
 	function str(value: any | undefined) {
@@ -92,7 +98,7 @@ export namespace KeyVal {
 			number,
 			{
 				key: string;
-				listener: (value: string, logObj: any) => void;
+				listener: (value: string, logObj: any) => void | Promise<void>;
 				once: boolean;
 			}
 		> = new Map();
@@ -166,7 +172,7 @@ export namespace KeyVal {
 				}
 				if (next) continue;
 
-				listener(value, logObj);
+				await listener(value, logObj);
 				updated++;
 				if (once) {
 					_listeners.delete(index);
@@ -198,6 +204,7 @@ export namespace KeyVal {
 		) & {
 			key: string;
 			logObj: any;
+			source: string;
 		};
 
 		export class Handler {
@@ -205,7 +212,7 @@ export namespace KeyVal {
 			private static _db: Database | null = null;
 			private static _apiHandler: API.Handler | null = null;
 
-			constructor(private _logObj: any) {}
+			constructor(private _logObj: any, private _source: string) {}
 
 			static async init({
 				db,
@@ -230,16 +237,23 @@ export namespace KeyVal {
 						key,
 						auth: await Auth.Secret.getKey()
 					});
+
 					resDummy.transferTo(logObj);
 					resolver(value);
 				} else {
-					const { key, value, resolver, update } = request;
-					await this._apiHandler!.set(resDummy, {
-						key,
-						value,
-						update,
-						auth: await Auth.Secret.getKey()
-					});
+					const { key, value, resolver, update, source } = request;
+
+					await this._apiHandler!.set(
+						resDummy,
+						{
+							key,
+							value,
+							update,
+							auth: await Auth.Secret.getKey()
+						},
+						source
+					);
+
 					resDummy.transferTo(logObj);
 					resolver();
 				}
@@ -253,6 +267,7 @@ export namespace KeyVal {
 						value,
 						update,
 						logObj: this._logObj,
+						source: this._source,
 						resolver: resolve
 					};
 					if (Handler._db) {
@@ -269,6 +284,7 @@ export namespace KeyVal {
 						type: 'get',
 						key,
 						logObj: this._logObj,
+						source: this._source,
 						resolver: resolve
 					};
 					if (Handler._db) {
@@ -302,12 +318,13 @@ export namespace KeyVal {
 						'/islighton',
 						/is the light (on|off)/,
 						/are the lights (on|off)/,
-						async ({ match, logObj, state }) => {
+						async ({ match, logObj, state, matchText }) => {
 							const results = (await Promise.all(
 								MAIN_LIGHTS.map(light => {
-									return new External.Handler(logObj).get(
-										light
-									);
+									return new External.Handler(
+										logObj,
+										`BOT.${matchText}`
+									).get(light);
 								})
 							)) as string[];
 
@@ -333,28 +350,28 @@ export namespace KeyVal {
 							}
 						}
 					);
-					mm('/lighton', async ({ logObj, state }) => {
+					mm('/lighton', async ({ logObj, state, matchText }) => {
 						state.states.keyval.lastSubjects = MAIN_LIGHTS;
 						await Promise.all(
 							MAIN_LIGHTS.map(light => {
-								return new External.Handler(logObj).set(
-									light,
-									'1'
-								);
+								return new External.Handler(
+									logObj,
+									`BOT.${matchText}`
+								).set(light, '1');
 							})
 						);
 						return `Turned ${
 							MAIN_LIGHTS.length > 1 ? 'them' : 'it'
 						} on`;
 					});
-					mm('/lightoff', async ({ logObj, state }) => {
+					mm('/lightoff', async ({ logObj, state, matchText }) => {
 						state.states.keyval.lastSubjects = MAIN_LIGHTS;
 						await Promise.all(
 							MAIN_LIGHTS.map(light => {
-								return new External.Handler(logObj).set(
-									light,
-									'0'
-								);
+								return new External.Handler(
+									logObj,
+									`BOT.${matchText}`
+								).set(light, '0');
 							})
 						);
 						return `Turned ${
@@ -364,10 +381,13 @@ export namespace KeyVal {
 					for (const [reg, switchName] of COMMON_SWITCH_MAPPINGS) {
 						mm(
 							new RegExp('turn (on|off) ' + reg.source),
-							async ({ logObj, state, match }) => {
+							async ({ logObj, state, match, matchText }) => {
 								const keyvalState = match[1];
 								state.states.keyval.lastSubjects = [switchName];
-								await new External.Handler(logObj).set(
+								await new External.Handler(
+									logObj,
+									`BOT.${matchText}`
+								).set(
 									switchName,
 									keyvalState === 'on' ? '1' : '0'
 								);
@@ -376,11 +396,12 @@ export namespace KeyVal {
 						);
 						mm(
 							new RegExp('is ' + reg.source + ' (on|off)'),
-							async ({ logObj, state, match }) => {
+							async ({ logObj, state, match, matchText }) => {
 								const keyvalState = match.pop();
 								state.states.keyval.lastSubjects = [switchName];
 								const res = await new External.Handler(
-									logObj
+									logObj,
+									`BOT.${matchText}`
 								).get(switchName);
 								if ((res === '1') === (keyvalState === 'on')) {
 									return 'Yep';
@@ -393,10 +414,13 @@ export namespace KeyVal {
 					conditional(
 						mm(
 							/turn (it|them) (on|off)( again)?/,
-							async ({ state, logObj, match }) => {
+							async ({ state, logObj, match, matchText }) => {
 								for (const lastSubject of state.states.keyval
 									.lastSubjects!) {
-									await new External.Handler(logObj).set(
+									await new External.Handler(
+										logObj,
+										`BOT.${matchText}`
+									).set(
 										lastSubject,
 										match[2] === 'on' ? '1' : '0'
 									);
@@ -464,6 +488,12 @@ export namespace KeyVal {
 	}
 
 	export namespace API {
+		let explainHook: ExplainHook | null = null;
+
+		export function initExplainHook(hook: ExplainHook) {
+			explainHook = hook;
+		}
+
 		export class Handler {
 			private _db: Database;
 
@@ -500,13 +530,16 @@ export namespace KeyVal {
 				}: {
 					key: string;
 					auth?: string;
-				}
+				},
+				source: string
 			) {
 				const original = this._db.get(key);
 				const value = original === '0' ? '1' : '0';
 				await this._db.setVal(key, value);
-				const msg = attachMessage(
+				const msg = attachSourcedMessage(
 					res,
+					source,
+					explainHook,
 					`Toggling key: "${key}", to val: "${str(value)}"`
 				);
 				const nextMessage = attachMessage(
@@ -607,12 +640,15 @@ export namespace KeyVal {
 					value: string;
 					auth?: string;
 					update?: boolean;
-				}
+				},
+				source: string
 			) {
 				const original = this._db.get(key);
 				await this._db.setVal(key, value);
-				const msg = attachMessage(
+				const msg = attachSourcedMessage(
 					res,
+					source,
+					explainHook,
 					`Key: "${key}", val: "${str(value)}"`
 				);
 				const nextMessage = attachMessage(
@@ -629,6 +665,7 @@ export namespace KeyVal {
 				}
 				res.status(200).write(value);
 				res.end();
+				return;
 			}
 
 			@errorHandle
@@ -780,7 +817,10 @@ export namespace KeyVal {
 			}
 		}
 
-		async function createHookables(logObj: any): Promise<ModuleHookables> {
+		async function createHookables(
+			key: string,
+			logObj: any
+		): Promise<ModuleHookables> {
 			await awaitCondition(() => {
 				return allModules !== null;
 			}, 100);
@@ -789,7 +829,10 @@ export namespace KeyVal {
 				Object.keys(allModules!).map((name: keyof AllModules) => {
 					return [
 						name,
-						new allModules![name].meta.external.Handler(logObj)
+						new allModules![name].meta.external.Handler(
+							logObj,
+							`AGGREGATE.${key}`
+						)
 					];
 				})
 			) as unknown) as ModuleHookables;
@@ -815,6 +858,7 @@ export namespace KeyVal {
 						const fn = handlers[key];
 						await fn(
 							await createHookables(
+								key,
 								attachMessage(
 									logObj,
 									'Aggregate',
@@ -882,18 +926,26 @@ export namespace KeyVal {
 				});
 			});
 			app.post('/keyval/toggle/:key', async (req, res) => {
-				await apiHandler.toggle(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
+				await apiHandler.toggle(
+					res,
+					{
+						...req.params,
+						...req.body,
+						cookies: req.cookies
+					},
+					`API.${req.url}`
+				);
 			});
 			app.post('/keyval/:key/:value', async (req, res) => {
-				await apiHandler.set(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
+				await apiHandler.set(
+					res,
+					{
+						...req.params,
+						...req.body,
+						cookies: req.cookies
+					},
+					`API.${req.url}`
+				);
 			});
 
 			websocketSim.all(

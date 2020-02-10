@@ -1,10 +1,10 @@
 """Main entrypoint for testing mode"""
 
-from ..features import Preprocessed, INTERVAL, Features, OUT_VEC_SIZE, is_positive_beat, is_positive_melody
+from ..features import Preprocessed, Features, OUT_VEC_SIZE, is_positive_beat, is_positive_melody
 from lib.log import logline, enter_group, exit_group
+from ..model import create_model, apply_weights
 from sklearn.metrics import mean_squared_error
 from typing import List, Dict, Tuple, Union
-from ..model import create_model
 from lib.io import IO, IOInput
 from lib.timer import Timer
 import numpy as np
@@ -16,7 +16,6 @@ import os
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
-    from tensorflow.keras.models import model_from_json
     from tensorflow.keras.models import Sequential
 
 
@@ -64,19 +63,11 @@ def get_io() -> IO:
                 descr="Directory where annotated files are stored",
                 alias="output_annotated",
             ),
+            "n": IOInput(
+                50, int, has_input=True, arg_name="interval", descr="Interval at which data is sent", alias="interval"
+            ),
         }
     )
-
-
-def reconstruct_model(io: IO) -> Sequential:
-    """Reconstruct the NN"""
-    with open(io.get("input_model"), "rb") as in_file:
-        return model_from_json(in_file.read())
-
-
-def apply_weights(model: Sequential, io: IO) -> Sequential:
-    model.load_weights(io.get("input_weights"))
-    return model
 
 
 def read_test_files(io: IO) -> List[Preprocessed]:
@@ -113,14 +104,15 @@ def get_test_params(file: Preprocessed) -> Tuple[np.ndarray, np.ndarray]:
     return x_np, y_np
 
 
-def stitch_melodies(obj: List[Dict[str, Union[str, float]]]) -> List[Dict[str, Union[str, float]]]:
+def stitch_melodies(obj: List[Dict[str, Union[str, float]]], io: IO) -> List[Dict[str, Union[str, float]]]:
     new_melodies = list()
+    interval = io.get("interval")
 
     i = 0
     while i < len(obj):
         if len(new_melodies) > 0:
-            if new_melodies[-1]["time"] == obj[i]["time"] - INTERVAL:
-                new_melodies[-1]["time"] += INTERVAL
+            if new_melodies[-1]["time"] == obj[i]["time"] - interval:
+                new_melodies[-1]["time"] += interval
                 i += 1
                 continue
         new_melodies.append(obj[i])
@@ -129,8 +121,9 @@ def stitch_melodies(obj: List[Dict[str, Union[str, float]]]) -> List[Dict[str, U
     return new_melodies
 
 
-def predictions_to_out_file(predictions: np.array):
+def predictions_to_out_file(predictions: np.array, io: IO):
     obj = {"items": [], "genre": {"hard": 0.5, "uptempo": 0.5}}
+    interval = io.get("interval")
 
     melodies = list()
 
@@ -148,12 +141,12 @@ def predictions_to_out_file(predictions: np.array):
             cur_obj = {}
             cur_obj["type"] = "melody"
             cur_obj["time"] = cur_time
-            cur_obj["duration"] = INTERVAL
+            cur_obj["duration"] = interval
             melodies.append(cur_obj)
 
-        cur_time += INTERVAL
+        cur_time += interval
 
-    obj["items"] = obj["items"] + stitch_melodies(melodies)
+    obj["items"] = obj["items"] + stitch_melodies(melodies, io)
     return obj
 
 
@@ -187,7 +180,7 @@ def run_tests(io: IO, model: Sequential, test_files: List[Preprocessed]):
             )
         )
 
-        out_obj = predictions_to_out_file(predictions)
+        out_obj = predictions_to_out_file(predictions, io)
 
         out_path = os.path.join(io.get("output_annotated"), "{}.json".format(file.file_name))
         with open(out_path, "w+") as out_file:

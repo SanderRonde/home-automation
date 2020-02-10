@@ -3,7 +3,7 @@
 		"baseUrl": ".",
 		"alwaysStrict": true,
 		"paths": {
-			"*": ["../../types/*"]
+			"*": ["../types/*"]
 		},
 		"forceConsistentCasingInFileNames": true,
 		"module": "esnext",
@@ -28,5 +28,5 @@
 	},
 	"compileOnSave": true,
 	"allowJs": true,
-	"include": ["./"]
+	"include": ["./ai", "./beat-detector"]
 }

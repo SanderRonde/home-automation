@@ -1,6 +1,6 @@
 import { AUTH_SECRET_FILE, BOT_SECRET_FILE } from '../lib/constants';
 import { attachMessage } from '../lib/logger';
-import { ModuleConfig } from './all';
+import { ModuleConfig } from './modules';
 import * as fs from 'fs-extra';
 import { ModuleMeta } from './meta';
 import chalk from 'chalk';

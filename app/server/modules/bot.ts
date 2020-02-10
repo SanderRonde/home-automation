@@ -1,6 +1,6 @@
 import { BOT_SECRET_FILE, TELEGRAM_IPS, TELEGRAM_API } from '../lib/constants';
 import { attachMessage, logOutgoingReq } from '../lib/logger';
-import { ModuleConfig, AllModules, InstanceOf } from './all';
+import { ModuleConfig, AllModules, InstanceOf } from './modules';
 import { awaitCondition } from '../lib/util';
 import { BotState } from '../lib/bot-state';
 import { ResponseLike } from './multi';
@@ -275,7 +275,7 @@ export namespace Bot {
 			}
 
 			async sendMessage(
-				text: string | number,
+				text: string,
 				type: RESPONSE_TYPE,
 				chatId: number
 			) {
@@ -524,6 +524,16 @@ export namespace Bot {
 				];
 			}
 
+			private _splitLongText(text: string) {
+				if (text.length <= 4096) return [text];
+				const parts = [];
+				while (text.length >= 4096) {
+					parts.push(text.slice(0, 4096));
+					text = text.slice(4096);
+				}
+				return parts;
+			}
+
 			async handleMessage(req: TelegramReq, res: ResponseLike) {
 				const { message, edited_message } = req.body;
 				const logObj = attachMessage(
@@ -561,15 +571,25 @@ export namespace Bot {
 				if (
 					(
 						await Promise.all(
-							responses.map(response => {
+							responses.map(async response => {
 								const chatId =
 									message?.chat.id || edited_message?.chat.id;
 								if (chatId === undefined) return false;
-								return this.sendMessage(
-									response.text,
-									response.type,
-									chatId
+								const textParts = this._splitLongText(
+									response.text + ''
 								);
+								for (const textPart of textParts) {
+									if (
+										!(await this.sendMessage(
+											textPart,
+											response.type,
+											chatId
+										))
+									) {
+										return false;
+									}
+								}
+								return true;
 							})
 						)
 					).every(v => v)

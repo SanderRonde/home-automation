@@ -5,7 +5,7 @@ import { BotState } from '../lib/bot-state';
 import { AppWrapper } from '../lib/routes';
 import { AuthError } from '../lib/errors';
 import { ResponseLike } from './multi';
-import { ModuleConfig } from './all';
+import { ModuleConfig } from './modules';
 import { Bot as _Bot } from './bot';
 import { Config } from '../app';
 import { ModuleMeta } from './meta';

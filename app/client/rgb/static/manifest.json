@@ -6,7 +6,7 @@
 	"short_name": "RGB",
 	"start_url": "/rgb/",
 	"display": "fullscreen",
-	"background-color": "#ffd000",
+	"background_color": "#ffd000",
 	"description": "A remote that allows you to control the color of RGB strips",
 	"serviceworker": {
 		"src": "/rgb/serviceworker.js",

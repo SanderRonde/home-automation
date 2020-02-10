@@ -9,12 +9,13 @@ import { requireParams } from '../lib/decorators';
 import { errorHandle } from '../lib/decorators';
 import { BotState } from '../lib/bot-state';
 import { auth } from '../lib/decorators';
+import { ExplainHook } from './explain';
 import * as castv2 from 'castv2-player';
 import { ResponseLike } from './multi';
-import { ModuleConfig } from './all';
+import { ModuleConfig } from './modules';
 import { Bot as _Bot } from './bot';
-import { Auth } from './auth';
 import { ModuleMeta } from './meta';
+import { Auth } from './auth';
 
 class DummyLog {
 	constructor(public componentName: string = 'castv2') {}
@@ -54,6 +55,10 @@ export namespace Cast {
 		get bot() {
 			return Bot;
 		}
+
+		addExplainHook(hook: ExplainHook) {
+			TTS.initExplainHook(hook);
+		}
 	})();
 
 	export namespace Scanning {
@@ -69,6 +74,8 @@ export namespace Cast {
 	}
 
 	namespace TTS {
+		let explainHook: ExplainHook | null = null;
+
 		function splitTTSParts(text: string) {
 			const words = text.split(' ');
 			const parts: string[] = [];
@@ -87,13 +94,27 @@ export namespace Cast {
 			return parts;
 		}
 
+		export function initExplainHook(hook: ExplainHook) {
+			explainHook = hook;
+		}
+
 		export function tts(text: string, lang: string) {
-			const parts = splitTTSParts(text);
-			return parts.map(part => {
-				return `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&q=${encodeURIComponent(
-					part
-				)}&client=tw-ob`;
-			});
+			return (source: string, loggable: any) => {
+				if (explainHook) {
+					explainHook(
+						`Casting TTS ${text} in lang ${lang}`,
+						source,
+						loggable
+					);
+				}
+
+				const parts = splitTTSParts(text);
+				return parts.map(part => {
+					return `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&q=${encodeURIComponent(
+						part
+					)}&client=tw-ob`;
+				});
+			};
 		}
 	}
 
@@ -474,7 +495,7 @@ export namespace Cast {
 					auth?: string;
 				}
 			) {
-				const urls = TTS.tts(text, lang);
+				const urls = TTS.tts(text, lang)('API.say', res);
 				attachMessage(res, `Got urls ${urls.join(', ')}`);
 
 				const mediaPlayers = await Casting.Media.playURLs(urls);
@@ -514,7 +535,7 @@ export namespace Cast {
 					return;
 				}
 				const { lang, text } = Pasta.PASTAS[pasta];
-				const urls = TTS.tts(text, lang);
+				const urls = TTS.tts(text, lang)('API.pasta', res);
 
 				attachMessage(res, `Got urls ${urls.join(', ')}`);
 				const mediaPlayers = await Casting.Media.playURLs(urls);

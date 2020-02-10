@@ -25,6 +25,7 @@ export namespace BotState {
 		message: Bot.TelegramMessage;
 		state: Bot.Message.StateKeeping.ChatState;
 		match: RegExpMatchArray;
+		matchText: string;
 		logObj: any;
 	}) => MatchHandlerRet;
 
@@ -154,7 +155,8 @@ export namespace BotState {
 					response: await earliestMatch!.fn({
 						...config,
 						logObj: newLogObj,
-						match: earliestMatch!.match
+						match: earliestMatch!.match,
+						matchText: earliestMatch!.matchText
 					})
 				};
 			}
