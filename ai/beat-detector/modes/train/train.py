@@ -12,7 +12,9 @@ import random
 import pickle
 import json
 import time
+import os
 
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     from tensorflow.keras.models import Sequential
