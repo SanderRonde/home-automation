@@ -67,6 +67,7 @@ export namespace SpotifyBeats {
 				private _clientSecret: string;
 				private _redirectURI: string;
 				private _token?: string;
+				private _db: Database;
 
 				private _refreshToken?: string;
 				public endpoints = new Endpoints.Endpoints(this);
@@ -75,21 +76,26 @@ export namespace SpotifyBeats {
 					clientId,
 					clientSecret,
 					redirectURI,
-					token
+					token,
+					db
 				}: {
 					clientId: string;
 					clientSecret: string;
 					redirectURI: string;
 					token?: string;
+					db: Database;
 				}) {
 					this._clientId = clientId;
 					this._clientSecret = clientSecret;
 					this._redirectURI = redirectURI;
 					this._token = token;
+					this._db = db;
 				}
 
 				setToken(token: string) {
 					this._token = token;
+
+					this._db.setVal('token', token);
 				}
 
 				private _refresher: NodeJS.Timeout | null = null;
@@ -98,6 +104,7 @@ export namespace SpotifyBeats {
 						clearTimeout(this._refresher);
 					}
 					this._refreshToken = token;
+					this._db.setVal('refresh', token);
 
 					this._refresher = setTimeout(() => {
 						this.refreshToken();
@@ -300,19 +307,19 @@ export namespace SpotifyBeats {
 				}
 			}
 
-			let api: API | null = null;
-			export async function get() {
-				if (api) return api;
+			let _api: API | null = null;
+			export async function create(db: Database) {
 				try {
 					const { id, secret, redirect_url_base } = JSON.parse(
 						await fs.readFile(SPOTIFY_SECRETS_FILE, {
 							encoding: 'utf8'
 						})
 					);
-					return (api = new API({
+					return (_api = new API({
 						clientId: id,
 						clientSecret: secret,
-						redirectURI: `${redirect_url_base}/spotify/redirect`
+						redirectURI: `${redirect_url_base}/spotify/redirect`,
+						db
 					}));
 				} catch (e) {
 					log(
@@ -325,12 +332,8 @@ export namespace SpotifyBeats {
 				}
 			}
 
-			export async function getAPIOrThrow() {
-				const api = await get();
-				if (!api) {
-					throw new Error('Failed to get API');
-				}
-				return api;
+			export function get() {
+				return _api!;
 			}
 
 			export interface PlaybackState {
@@ -339,7 +342,7 @@ export namespace SpotifyBeats {
 				playStart?: number;
 			}
 			export async function getPlayState(): Promise<PlaybackState> {
-				const api = await getAPIOrThrow();
+				const api = get();
 				const response = await api.endpoints.player();
 				const responseTime = Date.now();
 				if (!response) return { playing: false };
@@ -367,7 +370,7 @@ export namespace SpotifyBeats {
 			export async function getSongInfo(
 				id: string
 			): Promise<SongInfo | null> {
-				const api = await getAPIOrThrow();
+				const api = get();
 				const response = await api.endpoints.audioAnalysis(id);
 				if (!response) return null;
 
@@ -457,7 +460,7 @@ export namespace SpotifyBeats {
 
 		export namespace Auth {
 			export async function authFromToken(token: string) {
-				const api = await API.getAPIOrThrow();
+				const api = API.get();
 				if (!(await api.grantAuthCode(token))) return;
 			}
 
@@ -501,11 +504,14 @@ export namespace SpotifyBeats {
 		}
 
 		export async function init(db: Database) {
-			const api = await API.get();
+			const api = await API.create(db);
 			if (!api) return;
 
 			let token = db.get('token', 'default');
+			let refresh = db.get('refresh', 'default');
 			api.setToken(token);
+			api.setRefresh(refresh, 100000);
+
 			// Test it
 			if (!(await api.testAuth())) {
 				await Auth.loopForToken();
