@@ -46,6 +46,7 @@ import { KeyVal } from './keyval';
 import { Auth } from './auth';
 import chalk from 'chalk';
 import { ExplainHook } from './explain';
+import { BeatChanges } from './spotify-beats';
 
 function speedToMs(speed: number) {
 	return 1000 / speed;
@@ -772,6 +773,9 @@ export namespace RGB {
 			  }
 			| {
 					type: 'prime';
+			  }
+			| {
+					type: 'beats';
 			  };
 
 		export type JoinedConfigs = Partial<
@@ -793,7 +797,8 @@ export namespace RGB {
 			| 'quickfade'
 			| 'slowfade'
 			| 'rainbow2'
-			| 'desk';
+			| 'desk'
+			| 'beats';
 
 		function interpolate(
 			c1: Color,
@@ -1100,6 +1105,9 @@ export namespace RGB {
 						new Color(0, 0, 0)
 					]
 				}
+			},
+			beats: {
+				type: 'beats'
 			}
 		};
 	}
@@ -2956,6 +2964,8 @@ export namespace RGB {
 				config: ArduinoAPI.ArduinoConfig,
 				extra: ArduinoAPI.JoinedConfigs = {}
 			): Promise<string | null> {
+				BeatFlash.setEnabled(this, config.type === 'beats');
+
 				switch (config.type) {
 					case 'solid':
 						return this.setSolid(
@@ -2985,6 +2995,8 @@ export namespace RGB {
 						return this.setModeOff();
 					case 'prime':
 						return this.setPrime();
+					case 'beats':
+						return this.setBeats();
 				}
 			}
 
@@ -3048,6 +3060,10 @@ export namespace RGB {
 				return this.sendCommand('prime');
 			}
 
+			public setBeats(): Promise<string | null> {
+				return this.sendCommand('beats');
+			}
+
 			public setFlash({
 				intensity = 0,
 				colors = [],
@@ -3081,6 +3097,55 @@ export namespace RGB {
 						resolve();
 					});
 				});
+			}
+		}
+
+		export namespace BeatFlash {
+			let enabledMap: WeakMap<Board.Board, boolean> = new Map();
+
+			export function setEnabled(board: Board.Board, enabled: boolean) {
+				enabledMap.set(board, enabled);
+			}
+
+			export async function notifyChanges(changes: BeatChanges) {
+				console.log('Got changes');
+				console.log('state', changes.playState);
+				console.log('start', changes.playStart);
+				console.log('beats', !!changes.beats);
+				await Promise.all(
+					Clients.arduinoBoards
+						.filter(board => {
+							return (
+								enabledMap.has(board) && enabledMap.get(board)
+							);
+						})
+						.map(async board => {
+							if (changes.playState) {
+								await board.sendCommand(
+									`b p ${changes.playState ? '1' : '0'}`
+								);
+							}
+							if (changes.playStart) {
+								await board.sendCommand(
+									`b s ${changes.playStart}`
+								);
+							}
+							if (changes.beats) {
+								const beatArr: number[] = [];
+								changes.beats.forEach(
+									({ start, confidence }) => {
+										beatArr.push(
+											Math.round(start * 1000),
+											Math.round(confidence * 100)
+										);
+									}
+								);
+								await board.sendCommand(
+									`b b ${beatArr.join(',')}`
+								);
+							}
+						})
+				);
 			}
 		}
 	}
