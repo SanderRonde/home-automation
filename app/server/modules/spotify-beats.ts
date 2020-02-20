@@ -471,7 +471,7 @@ export namespace SpotifyBeats {
 				}
 			}
 			export async function generateNew() {
-				const api = await API.get()!;
+				const api = API.get()!;
 				console.log(
 					api!.createAuthURL(
 						[
