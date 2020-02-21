@@ -6,7 +6,8 @@ import {
 	ARDUINO_LEDS,
 	LED_IPS,
 	WAKELIGHT_TIME,
-	NAME_MAP
+	NAME_MAP,
+	MAX_BEATS_ARR_LENGTH
 } from '../lib/constants';
 import {
 	errorHandle,
@@ -47,6 +48,7 @@ import { Auth } from './auth';
 import chalk from 'chalk';
 import { ExplainHook } from './explain';
 import { BeatChanges } from './spotify-beats';
+import { SpotifyTypes } from '../types/spotify';
 
 function speedToMs(speed: number) {
 	return 1000 / speed;
@@ -116,13 +118,21 @@ export namespace RGB {
 	export const meta = new (class Meta extends ModuleMeta {
 		name = 'rgb';
 
-		async init(config: ModuleConfig) {
-			await Scan.scanRGBControllers(true);
-			setInterval(Scan.scanRGBControllers, 1000 * 60 * 60);
-			await External.Handler.init();
-			initListeners();
+		setup!: Promise<void>;
 
-			Routing.init(config);
+		async init(config: ModuleConfig) {
+			this.setup = new Promise(async resolve => {
+				await Scan.scanRGBControllers(true);
+				setInterval(Scan.scanRGBControllers, 1000 * 60 * 60);
+				await External.Handler.init();
+				initListeners();
+
+				Routing.init(config);
+
+				await new External.Handler({}, '').effect('beats4');
+
+				resolve();
+			});
 		}
 
 		get external() {
@@ -743,6 +753,14 @@ export namespace RGB {
 			blockSize?: number;
 		}
 
+		export interface Beats {
+			backgroundRed: number;
+			backgroundGreen: number;
+			backgroundBlue: number;
+			color: Color;
+			progress?: Color;
+		}
+
 		export type ArduinoConfig =
 			| {
 					type: 'solid';
@@ -776,6 +794,7 @@ export namespace RGB {
 			  }
 			| {
 					type: 'beats';
+					data: Beats;
 			  };
 
 		export type JoinedConfigs = Partial<
@@ -798,7 +817,10 @@ export namespace RGB {
 			| 'slowfade'
 			| 'rainbow2'
 			| 'desk'
-			| 'beats';
+			| 'beats1' // Red on black
+			| 'beats2' // Red on blue
+			| 'beats3' // Blue on black
+			| 'beats4'; // Red on black with a green progress bar
 
 		function interpolate(
 			c1: Color,
@@ -1106,8 +1128,45 @@ export namespace RGB {
 					]
 				}
 			},
-			beats: {
-				type: 'beats'
+			beats1: {
+				type: 'beats',
+				data: {
+					color: new Color(255, 0, 0),
+					backgroundRed: 0,
+					backgroundGreen: 0,
+					backgroundBlue: 0,
+					progress: new Color(0, 0, 0)
+				}
+			},
+			beats2: {
+				type: 'beats',
+				data: {
+					color: new Color(255, 0, 0),
+					backgroundRed: 0,
+					backgroundGreen: 0,
+					backgroundBlue: 255,
+					progress: new Color(0, 0, 0)
+				}
+			},
+			beats3: {
+				type: 'beats',
+				data: {
+					color: new Color(0, 0, 255),
+					backgroundRed: 0,
+					backgroundGreen: 0,
+					backgroundBlue: 0,
+					progress: new Color(0, 0, 0)
+				}
+			},
+			beats4: {
+				type: 'beats',
+				data: {
+					color: new Color(255, 0, 0),
+					backgroundRed: 0,
+					backgroundGreen: 0,
+					backgroundBlue: 0,
+					progress: new Color(0, 100, 0)
+				}
 			}
 		};
 	}
@@ -2996,7 +3055,9 @@ export namespace RGB {
 					case 'prime':
 						return this.setPrime();
 					case 'beats':
-						return this.setBeats();
+						return this.setBeats(
+							BotUtil.BotUtil.mergeObj(config.data, extra)
+						);
 				}
 			}
 
@@ -3060,8 +3121,20 @@ export namespace RGB {
 				return this.sendCommand('prime');
 			}
 
-			public setBeats(): Promise<string | null> {
-				return this.sendCommand('beats');
+			public setBeats({
+				color,
+				backgroundBlue,
+				backgroundGreen,
+				backgroundRed,
+				progress = {
+					r: 0,
+					g: 0,
+					b: 0
+				}
+			}: ArduinoAPI.Beats): Promise<string | null> {
+				return this.sendCommand(
+					`beats ${color.r} ${color.g} ${color.b} ${backgroundRed} ${backgroundGreen} ${backgroundBlue} ${progress.r} ${progress.g} ${progress.b}`
+				);
 			}
 
 			public setFlash({
@@ -3108,9 +3181,12 @@ export namespace RGB {
 			}
 
 			export async function notifyChanges(changes: BeatChanges) {
+				await meta.setup;
+
 				console.log('Got changes');
 				console.log('state', changes.playState);
 				console.log('start', changes.playStart);
+				console.log('duration', changes.duration);
 				console.log('beats', !!changes.beats);
 				await Promise.all(
 					Clients.arduinoBoards
@@ -3120,28 +3196,54 @@ export namespace RGB {
 							);
 						})
 						.map(async board => {
-							if (changes.playState) {
+							console.log('doing something for board');
+							if (changes.playState !== undefined) {
 								await board.sendCommand(
-									`b p ${changes.playState ? '1' : '0'}`
+									`bp${changes.playState ? '1' : '0'}`
 								);
 							}
-							if (changes.playStart) {
+							if (changes.playStart !== undefined) {
 								await board.sendCommand(
-									`b s ${changes.playStart}`
+									`bs${changes.playStart}`
 								);
 							}
-							if (changes.beats) {
+							if (changes.duration !== undefined) {
+								await board.sendCommand(
+									`bd${changes.duration}`
+								);
+							}
+							if (changes.beats !== undefined) {
 								const beatArr: number[] = [];
-								changes.beats.forEach(
-									({ start, confidence }) => {
+								const playbackTime = changes.playbackTime;
+								let beatChanges: SpotifyTypes.TimeInterval[] = changes.beats!;
+								if (
+									changes.beats.length > MAX_BEATS_ARR_LENGTH
+								) {
+									let index = 0;
+									while (
+										playbackTime >
+											changes.beats[index].start +
+												changes.beats[index].duration &&
+										index < changes.beats.length
+									) {
+										index++;
+									}
+									beatChanges = changes.beats.slice(
+										index,
+										index + MAX_BEATS_ARR_LENGTH
+									);
+								}
+								beatChanges.forEach(
+									({ start, confidence, duration }) => {
 										beatArr.push(
 											Math.round(start * 1000),
+											Math.round(duration * 1000),
 											Math.round(confidence * 100)
 										);
 									}
 								);
 								await board.sendCommand(
-									`b b ${beatArr.join(',')}`
+									`bb${beatArr.length} ${beatArr.join(',')}`
 								);
 							}
 						})

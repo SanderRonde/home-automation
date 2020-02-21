@@ -92,3 +92,4 @@ export const MAX_PRESSURE_TIME = 10000;
 export const PLAYSTATE_CHECK_INTERVAL = 1000;
 export const BEAT_CACHE_CLEAR_INTERVAL = 1000 * 60 * 60;
 export const PLAYBACK_CLOSE_RANGE = 4;
+export const MAX_BEATS_ARR_LENGTH = 2000;

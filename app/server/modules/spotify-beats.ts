@@ -21,6 +21,9 @@ export interface BeatChanges {
 	playState?: boolean;
 	beats?: SpotifyTypes.TimeInterval[];
 	playStart?: number;
+	duration?: number;
+
+	playbackTime: number;
 }
 
 export namespace SpotifyBeats {
@@ -340,26 +343,30 @@ export namespace SpotifyBeats {
 				playing: boolean;
 				playingID?: string;
 				playStart?: number;
+				duration?: number;
+				playTime?: number;
 			}
 			export async function getPlayState(): Promise<PlaybackState> {
 				const api = get();
 				const response = await api.endpoints.player();
 				const responseTime = Date.now();
 				if (!response) return { playing: false };
-				const { is_playing, item, progress_ms } = await response.json();
-				const playStart = responseTime - progress_ms;
 
 				if (response.status === 204) {
 					return {
-						playing: false,
-						playStart
+						playing: false
 					};
 				}
+
+				const { is_playing, item, progress_ms } = await response.json();
+				const playStart = responseTime - progress_ms;
 
 				return {
 					playing: is_playing,
 					playStart,
-					playingID: (item && item.id) || undefined
+					playingID: (item && item.id) || undefined,
+					duration: (item && item.duration_ms) || undefined,
+					playTime: progress_ms
 				};
 			}
 
@@ -396,7 +403,9 @@ export namespace SpotifyBeats {
 				oldState: API.PlaybackState | null,
 				newState: API.PlaybackState
 			): Promise<BeatChanges> {
-				const changes: BeatChanges = {};
+				const changes: BeatChanges = {
+					playbackTime: newState.playTime!
+				};
 				if (!oldState || oldState.playing !== newState.playing) {
 					changes.playState = newState.playing;
 				}
@@ -430,9 +439,14 @@ export namespace SpotifyBeats {
 						newState.playStart,
 						PLAYBACK_CLOSE_RANGE
 					) &&
-					(oldState?.playing !== false || newState.playing !== false)
+					// Don't send time difference when we are pausing and don't
+					// keep sending time differences while paused
+					newState.playing !== false
 				) {
 					changes.playStart = newState.playStart;
+				}
+				if (oldState?.duration !== newState.duration) {
+					changes.duration = newState.duration;
 				}
 				return changes;
 			}
@@ -444,7 +458,7 @@ export namespace SpotifyBeats {
 					const changes = await checkForChanges(lastState, state);
 					lastState = state;
 
-					if (Object.keys(changes).length) {
+					if (Object.keys(changes).length > 1) {
 						await Transfer.notifyChanges(changes);
 					}
 					await wait(PLAYSTATE_CHECK_INTERVAL);
