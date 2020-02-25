@@ -742,6 +742,11 @@ export namespace RGB {
 			blockSize?: number;
 		}
 
+		export interface Random {
+			blockSize?: number;
+			updateTime: number;
+		}
+
 		export type ArduinoConfig =
 			| {
 					type: 'solid';
@@ -772,6 +777,10 @@ export namespace RGB {
 			  }
 			| {
 					type: 'prime';
+			  }
+			| {
+					type: 'random';
+					data: Random;
 			  };
 
 		export type JoinedConfigs = Partial<
@@ -793,7 +802,12 @@ export namespace RGB {
 			| 'quickfade'
 			| 'slowfade'
 			| 'rainbow2'
-			| 'desk';
+			| 'desk'
+			| 'randomslow'
+			| 'randomslowbig'
+			| 'randomfast'
+			| 'randomblocks'
+			| 'randomparty';
 
 		function interpolate(
 			c1: Color,
@@ -1099,6 +1113,41 @@ export namespace RGB {
 						new Color(0, 0, 0),
 						new Color(0, 0, 0)
 					]
+				}
+			},
+			randomslow: {
+				type: 'random',
+				data: {
+					updateTime: 1000,
+					blockSize: 1
+				}
+			},
+			randomslowbig: {
+				type: 'random',
+				data: {
+					updateTime: 1000,
+					blockSize: 10
+				}
+			},
+			randomblocks: {
+				type: 'random',
+				data: {
+					updateTime: 1,
+					blockSize: 20
+				}
+			},
+			randomfast: {
+				type: 'random',
+				data: {
+					updateTime: 1,
+					blockSize: 1
+				}
+			},
+			randomparty: {
+				type: 'random',
+				data: {
+					updateTime: 20,
+					blockSize: 75
 				}
 			}
 		};
@@ -2985,6 +3034,10 @@ export namespace RGB {
 						return this.setModeOff();
 					case 'prime':
 						return this.setPrime();
+					case 'random':
+						return this.setRandom(
+							BotUtil.BotUtil.mergeObj(config.data, extra)
+						);
 				}
 			}
 
@@ -3042,6 +3095,13 @@ export namespace RGB {
 						})
 						.join(' ')}`
 				);
+			}
+
+			public setRandom({
+				blockSize = 0,
+				updateTime
+			}: ArduinoAPI.Random): Promise<string | null> {
+				return this.sendCommand(`random ${updateTime} ${blockSize}`);
 			}
 
 			public setPrime(): Promise<string | null> {
