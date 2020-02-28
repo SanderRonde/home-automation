@@ -96,7 +96,7 @@ export class Database {
 			// Set every child of this object to that value
 			const final = current[parts[parts.length - 1]];
 			for (const child in final) {
-				this.setVal(`${key}.${child}`, val, true);
+				await this.setVal(`${key}.${child}`, val, true);
 			}
 		} else {
 			current[parts[parts.length - 1]] = val;

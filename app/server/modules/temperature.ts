@@ -17,9 +17,9 @@ export namespace Temperature {
 		name = 'temperature';
 
 		async init(config: ModuleConfig) {
-			TempControl.init(config.db);
+			await TempControl.init(config.db);
 
-			Routing.init(config);
+			await Routing.init(config);
 		}
 
 		get external() {
@@ -41,13 +41,13 @@ export namespace Temperature {
 		let lastLogTime: number = 0;
 		let lastLoggedTemp: number = -1;
 
-		export function setTarget(targetTemp: number) {
-			db!.setVal('target', targetTemp);
+		export async function setTarget(targetTemp: number) {
+			await db!.setVal('target', targetTemp);
 			target = targetTemp;
 		}
 
-		export function setMode(newMode: Mode) {
-			db!.setVal('mode', newMode);
+		export async function setMode(newMode: Mode) {
+			await db!.setVal('mode', newMode);
 			mode = newMode;
 
 			if (newMode === 'off') {
@@ -65,7 +65,7 @@ export namespace Temperature {
 			}
 		}
 
-		export function setLastTemp(
+		export async function setLastTemp(
 			temp: number,
 			store: boolean = true,
 			doLog: boolean = true
@@ -88,8 +88,8 @@ export namespace Temperature {
 					temp: temp,
 					state: getHeaterState()
 				});
-				db!.setVal('history', tempHistory);
-				db!.setVal('temp', temp);
+				await db!.setVal('history', tempHistory);
+				await db!.setVal('temp', temp);
 			}
 
 			if (
@@ -128,16 +128,16 @@ export namespace Temperature {
 			return 'on';
 		}
 
-		export function init(database: Database) {
+		export async function init(database: Database) {
 			db = database;
 
 			const target = database.get('target', 20.0);
 			const prevMode = database.get('mode', 'auto');
 			const temp = database.get('temp', 20.0);
 
-			setTarget(target);
-			setMode(prevMode);
-			setLastTemp(temp, false, false);
+			await setTarget(target);
+			await setMode(prevMode);
+			await setLastTemp(temp, false, false);
 		}
 	}
 
@@ -167,13 +167,13 @@ export namespace Temperature {
 							auth: await Auth.Secret.getKey()
 						});
 					case 'setMode':
-						API.Handler.setMode(resDummy, {
+						await API.Handler.setMode(resDummy, {
 							auth: await Auth.Secret.getKey(),
 							mode: request.mode
 						});
 						break;
 					case 'setTarget':
-						API.Handler.setTargetTemp(resDummy, {
+						await API.Handler.setTargetTemp(resDummy, {
 							auth: await Auth.Secret.getKey(),
 							target: request.target
 						});
@@ -367,7 +367,7 @@ export namespace Temperature {
 			@errorHandle
 			@requireParams('mode')
 			@auth
-			public static setMode(
+			public static async setMode(
 				res: ResponseLike,
 				{
 					mode
@@ -378,7 +378,7 @@ export namespace Temperature {
 			) {
 				const oldMode = TempControl.getMode();
 				attachMessage(res, `Setting mode to ${mode} from ${oldMode}`);
-				TempControl.setMode(mode);
+				await TempControl.setMode(mode);
 				res.status(200);
 				res.end();
 			}
@@ -386,7 +386,7 @@ export namespace Temperature {
 			@errorHandle
 			@requireParams('target')
 			@auth
-			public static setTargetTemp(
+			public static async setTargetTemp(
 				res: ResponseLike,
 				{
 					target
@@ -400,7 +400,7 @@ export namespace Temperature {
 					res,
 					`Setting target temp to ${target} from ${oldTemp}`
 				);
-				TempControl.setTarget(target);
+				await TempControl.setTarget(target);
 				res.status(200);
 				res.end();
 			}
@@ -434,14 +434,14 @@ export namespace Temperature {
 	export namespace Routing {
 		export async function init({ app }: ModuleConfig) {
 			app.post('/temperature/target/:target?', async (req, res) => {
-				API.Handler.setTargetTemp(res, {
+				await API.Handler.setTargetTemp(res, {
 					...req.params,
 					...req.body,
 					cookies: req.cookies
 				});
 			});
 			app.post('/temperature/mode/:mode?', async (req, res) => {
-				API.Handler.setMode(res, {
+				await API.Handler.setMode(res, {
 					...req.params,
 					...req.body,
 					cookies: req.cookies
@@ -472,7 +472,7 @@ export namespace Temperature {
 				}
 
 				// Set last temp
-				TempControl.setLastTemp(temp);
+				await TempControl.setLastTemp(temp);
 
 				const advice = TempControl.getHeaterState();
 				attachMessage(
@@ -490,7 +490,7 @@ export namespace Temperature {
 			KeyVal.GetSetListener.addListener(
 				'room.heating',
 				async (value, logObj) => {
-					await new External.Handler(logObj).setMode(
+					new External.Handler(logObj).setMode(
 						value === '1' ? 'on' : 'off'
 					);
 				}
