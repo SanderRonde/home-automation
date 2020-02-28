@@ -1,4 +1,4 @@
-#!/usr/bin/node
+#!/usr/bin/env node
 
 import * as ReadLine from '@serialport/parser-readline';
 import * as SerialPort from 'serialport';
