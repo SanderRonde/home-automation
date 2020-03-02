@@ -756,13 +756,19 @@ export namespace RGB {
 			updateTime: number;
 		}
 
-		export interface Beats {
-			backgroundRed: number;
-			backgroundGreen: number;
-			backgroundBlue: number;
-			color: Color;
-			progress?: Color;
-		}
+		export type Beats =
+			| {
+					random?: false;
+					backgroundRed: number;
+					backgroundGreen: number;
+					backgroundBlue: number;
+					color: Color;
+					progress?: Color;
+			  }
+			| {
+					random: true;
+					blockSize: number;
+			  };
 
 		export type ArduinoConfig =
 			| {
@@ -813,6 +819,7 @@ export namespace RGB {
 			| 'reddot'
 			| 'reddotbluebg'
 			| 'multidot'
+			| 'multidotdiffspeed'
 			| 'split'
 			| 'rgb'
 			| 'quickstrobe'
@@ -829,6 +836,8 @@ export namespace RGB {
 			| 'randomfast'
 			| 'randomblocks'
 			| 'randomparty'
+			| 'randomfull'
+			| 'randomfullfast'
 			| 'beats1' // Red on black
 			| 'beats2' // Red on blue
 			| 'beats3' // Blue on black
@@ -876,9 +885,12 @@ export namespace RGB {
 
 		export const arduinoEffects: Object &
 			{
-				[K in Effects]: ArduinoConfig;
+				[K in Effects]: ArduinoConfig & {
+					description: string;
+				};
 			} = {
 			rainbow: {
+				description: 'Forwards moving rainbow pattern',
 				type: 'pattern',
 				data: {
 					updateTime: 1,
@@ -908,6 +920,7 @@ export namespace RGB {
 				}
 			},
 			rainbow2: {
+				description: 'Slightly bigger block size rainbow',
 				type: 'rainbow',
 				data: {
 					updateTime: 1,
@@ -915,6 +928,7 @@ export namespace RGB {
 				}
 			},
 			reddot: {
+				description: 'Single red dot moving',
 				type: 'dot',
 				data: {
 					backgroundBlue: 0,
@@ -935,6 +949,7 @@ export namespace RGB {
 				}
 			},
 			multidot: {
+				description: 'A bunch of dots moving',
 				type: 'dot',
 				data: {
 					backgroundBlue: 0,
@@ -999,7 +1014,74 @@ export namespace RGB {
 					]
 				}
 			},
+			multidotdiffspeed: {
+				description: 'A bunch of dots moving at different speeds',
+				type: 'dot',
+				data: {
+					backgroundBlue: 0,
+					backgroundGreen: 0,
+					backgroundRed: 0,
+					intensity: getIntensityPercentage(100),
+					dots: [
+						{
+							r: 255,
+							g: 0,
+							b: 0,
+							dir: DIR.DIR_FORWARDS,
+							dotPos: 0,
+							size: 5,
+							speed: 1
+						},
+						{
+							r: 0,
+							g: 255,
+							b: 0,
+							dir: DIR.DIR_FORWARDS,
+							dotPos: 12,
+							size: 5,
+							speed: 2
+						},
+						{
+							r: 0,
+							g: 0,
+							b: 255,
+							dir: DIR.DIR_FORWARDS,
+							dotPos: 24,
+							size: 5,
+							speed: 3
+						},
+						{
+							r: 255,
+							g: 0,
+							b: 255,
+							dir: DIR.DIR_FORWARDS,
+							dotPos: 36,
+							size: 5,
+							speed: 1
+						},
+						{
+							r: 255,
+							g: 255,
+							b: 0,
+							dir: DIR.DIR_FORWARDS,
+							dotPos: 48,
+							size: 5,
+							speed: 2
+						},
+						{
+							r: 0,
+							g: 255,
+							b: 255,
+							dir: DIR.DIR_FORWARDS,
+							dotPos: 60,
+							size: 5,
+							speed: 1
+						}
+					]
+				}
+			},
 			reddotbluebg: {
+				description: 'A red dot moving on a blue background',
 				type: 'dot',
 				data: {
 					backgroundBlue: 255,
@@ -1020,6 +1102,7 @@ export namespace RGB {
 				}
 			},
 			split: {
+				description: 'A bunch of moving chunks of colors',
 				type: 'split',
 				data: {
 					intensity: getIntensityPercentage(100),
@@ -1034,6 +1117,7 @@ export namespace RGB {
 				}
 			},
 			rgb: {
+				description: 'Red green and blue dots moving in a pattern',
 				type: 'pattern',
 				data: {
 					blockSize: 1,
@@ -1048,6 +1132,7 @@ export namespace RGB {
 				}
 			},
 			quickstrobe: {
+				description: 'A very fast strobe',
 				type: 'flash',
 				data: {
 					mode: 'strobe',
@@ -1057,6 +1142,7 @@ export namespace RGB {
 				}
 			},
 			strobe: {
+				description: 'A bunch of moving chunks of colors',
 				type: 'flash',
 				data: {
 					mode: 'strobe',
@@ -1066,6 +1152,7 @@ export namespace RGB {
 				}
 			},
 			slowstrobe: {
+				description: 'A slow strobe',
 				type: 'flash',
 				data: {
 					mode: 'strobe',
@@ -1075,6 +1162,7 @@ export namespace RGB {
 				}
 			},
 			brightstrobe: {
+				description: 'A very bright, annoying strobe',
 				type: 'flash',
 				data: {
 					mode: 'strobe',
@@ -1084,6 +1172,7 @@ export namespace RGB {
 				}
 			},
 			epileptisch: {
+				description: 'A superfast flash',
 				type: 'flash',
 				data: {
 					mode: 'fade',
@@ -1098,6 +1187,7 @@ export namespace RGB {
 				}
 			},
 			quickfade: {
+				description: 'A quickly fading in and out white color',
 				type: 'flash',
 				data: {
 					mode: 'fade',
@@ -1112,6 +1202,7 @@ export namespace RGB {
 				}
 			},
 			slowfade: {
+				description: 'A slowly fading white color',
 				type: 'flash',
 				data: {
 					mode: 'fade',
@@ -1126,6 +1217,7 @@ export namespace RGB {
 				}
 			},
 			desk: {
+				description: 'An illumination of just my desk',
 				type: 'split',
 				data: {
 					intensity: 100,
@@ -1145,6 +1237,7 @@ export namespace RGB {
 				}
 			},
 			randomslow: {
+				description: 'A slow flash of random colors of block size 1',
 				type: 'random',
 				data: {
 					updateTime: 1000,
@@ -1152,6 +1245,7 @@ export namespace RGB {
 				}
 			},
 			randomslowbig: {
+				description: 'A slow flash of random colors of block size 10',
 				type: 'random',
 				data: {
 					updateTime: 1000,
@@ -1159,6 +1253,7 @@ export namespace RGB {
 				}
 			},
 			randomblocks: {
+				description: 'A fast flash of big chunks of random colors',
 				type: 'random',
 				data: {
 					updateTime: 1,
@@ -1166,6 +1261,7 @@ export namespace RGB {
 				}
 			},
 			randomfast: {
+				description: 'A fast flash of random colors of block size 1',
 				type: 'random',
 				data: {
 					updateTime: 1,
@@ -1173,13 +1269,32 @@ export namespace RGB {
 				}
 			},
 			randomparty: {
+				description: 'Big slow chunks',
 				type: 'random',
 				data: {
 					updateTime: 150,
 					blockSize: 75
 				}
 			},
+			randomfull: {
+				description: 'A single random color updating slowly',
+				type: 'random',
+				data: {
+					updateTime: 150,
+					blockSize: 10000
+				}
+			},
+			randomfullfast: {
+				description: 'A single random color updating quickly',
+				type: 'random',
+				data: {
+					updateTime: 1,
+					blockSize: 10000
+				}
+			},
 			beats1: {
+				description:
+					'Red beats on a black background with no progress bar',
 				type: 'beats',
 				data: {
 					color: new Color(255, 0, 0),
@@ -1190,16 +1305,20 @@ export namespace RGB {
 				}
 			},
 			beats2: {
+				description:
+					'Red beats on a blue background with no progress bar',
 				type: 'beats',
 				data: {
 					color: new Color(255, 0, 0),
 					backgroundRed: 0,
 					backgroundGreen: 0,
-					backgroundBlue: 255,
+					backgroundBlue: 100,
 					progress: new Color(0, 0, 0)
 				}
 			},
 			beats3: {
+				description:
+					'Blue beats on a black background with no progress bar',
 				type: 'beats',
 				data: {
 					color: new Color(0, 0, 255),
@@ -1210,6 +1329,8 @@ export namespace RGB {
 				}
 			},
 			beats4: {
+				description:
+					'Red beats on a black background with a green progress bar',
 				type: 'beats',
 				data: {
 					color: new Color(255, 0, 0),
@@ -1220,6 +1341,8 @@ export namespace RGB {
 				}
 			},
 			beats5: {
+				description:
+					'REd beats on a blue background with a green progress bar',
 				type: 'beats',
 				data: {
 					color: new Color(255, 0, 0),
@@ -1230,6 +1353,7 @@ export namespace RGB {
 				}
 			},
 			beatrandomsmall: {
+				description: 'Random colors of size 1 updating on the beat',
 				type: 'beats',
 				data: {
 					random: true,
@@ -1237,6 +1361,7 @@ export namespace RGB {
 				}
 			},
 			beatrandommedium: {
+				description: 'Random colors of size 20 updating on the beat',
 				type: 'beats',
 				data: {
 					random: true,
@@ -1244,6 +1369,7 @@ export namespace RGB {
 				}
 			},
 			beatrandombig: {
+				description: 'Random colors of size 75 updating on the beat',
 				type: 'beats',
 				data: {
 					random: true,
