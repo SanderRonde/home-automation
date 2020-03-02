@@ -147,7 +147,6 @@ export namespace Bot {
 						const bot = modules[key].meta.bot.Bot;
 						this.states[key] = new bot(json[key] || {}) as any;
 					});
-					console.log('initialized chat state');
 					return this;
 				}
 

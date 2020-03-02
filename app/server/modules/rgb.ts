@@ -3055,8 +3055,6 @@ export namespace RGB {
 				data: string,
 				response: string | null = 'ack'
 			): Promise<string | null> {
-				console.log('Sending', data);
-
 				if (response === null) {
 					this._port.write(data);
 					return data;
@@ -3065,7 +3063,6 @@ export namespace RGB {
 				let acked: boolean = false;
 				let ackPromise = new Promise(resolve => {
 					this.setListener((line: string) => {
-						console.log(line);
 						if (line.indexOf(response) !== -1) {
 							acked = true;
 							resolve();
@@ -3082,7 +3079,7 @@ export namespace RGB {
 					await Promise.race([ackPromise, wait(200)]);
 				}
 				if (!acked) {
-					console.log('Not acknowledged', data);
+					log(chalk.yellow('Not acknowledged', data));
 				}
 				if (acked || process.argv.indexOf('--debug') > -1) return data;
 
@@ -3367,9 +3364,6 @@ export namespace RGB {
 								);
 							}
 							if (boardChanges.playStart !== undefined) {
-								console.log(
-									new Date(boardChanges.playStart).toString()
-								);
 								// Start time is always in the past,
 								// send NOW - start_time to get diff
 								commands.push(
@@ -3459,10 +3453,6 @@ export namespace RGB {
 
 					static parse(data: string) {
 						const transformed = applyTransform(JSON.parse(data));
-						console.log(
-							'Writing',
-							this.colorFromIntensity(transformed)
-						);
 						Clients.arduinoClients.forEach(c =>
 							c.board.sendPrimed(
 								this.colorFromIntensity(transformed)
