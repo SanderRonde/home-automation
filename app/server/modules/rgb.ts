@@ -833,7 +833,10 @@ export namespace RGB {
 			| 'beats2' // Red on blue
 			| 'beats3' // Blue on black
 			| 'beats4' // Red on black with a green progress bar
-			| 'beats5'; // Red on blue with a green progress bar
+			| 'beats5' // Red on blue with a green progress bar
+			| 'beatrandomsmall'
+			| 'beatrandommedium'
+			| 'beatrandombig';
 
 		function interpolate(
 			c1: Color,
@@ -1224,6 +1227,27 @@ export namespace RGB {
 					backgroundGreen: 0,
 					backgroundBlue: 255,
 					progress: new Color(0, 100, 0)
+				}
+			},
+			beatrandomsmall: {
+				type: 'beats',
+				data: {
+					random: true,
+					blockSize: 1
+				}
+			},
+			beatrandommedium: {
+				type: 'beats',
+				data: {
+					random: true,
+					blockSize: 20
+				}
+			},
+			beatrandombig: {
+				type: 'beats',
+				data: {
+					random: true,
+					blockSize: 75
 				}
 			}
 		};
@@ -3229,20 +3253,28 @@ export namespace RGB {
 				return this.sendCommand('prime');
 			}
 
-			public setBeats({
-				color,
-				backgroundBlue,
-				backgroundGreen,
-				backgroundRed,
-				progress = {
-					r: 0,
-					g: 0,
-					b: 0
+			public setBeats(config: ArduinoAPI.Beats): Promise<string | null> {
+				if (config.random) {
+					const { blockSize } = config;
+					return this.sendCommand(
+						`beats 1 ${blockSize} ${0} ${0} ${0} ${0} ${0} ${0} ${0} ${0} ${0}`
+					);
+				} else {
+					const {
+						color,
+						backgroundBlue,
+						backgroundGreen,
+						backgroundRed,
+						progress = {
+							r: 0,
+							g: 0,
+							b: 0
+						}
+					} = config;
+					return this.sendCommand(
+						`beats 0 0 ${color.r} ${color.g} ${color.b} ${backgroundRed} ${backgroundGreen} ${backgroundBlue} ${progress.r} ${progress.g} ${progress.b}`
+					);
 				}
-			}: ArduinoAPI.Beats): Promise<string | null> {
-				return this.sendCommand(
-					`beats ${color.r} ${color.g} ${color.b} ${backgroundRed} ${backgroundGreen} ${backgroundBlue} ${progress.r} ${progress.g} ${progress.b}`
-				);
 			}
 
 			public setFlash({
