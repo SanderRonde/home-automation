@@ -32,13 +32,16 @@ import {
 	attachSourcedMessage
 } from '../lib/logger';
 import * as ReadLine from '@serialport/parser-readline';
+import { BeatChanges, FullState } from './spotify-beats';
+import { SpotifyTypes } from '../types/spotify';
 import { BotState } from '../lib/bot-state';
 import SerialPort = require('serialport');
 import { BotUtil } from '../lib/bot-util';
+import { ModuleConfig } from './modules';
+import { ExplainHook } from './explain';
 import { colorList } from '../lib/data';
 import { ResponseLike } from './multi';
 import { exec } from 'child_process';
-import { ModuleConfig } from './modules';
 import { ModuleMeta } from './meta';
 import { Bot as _Bot } from './bot';
 import * as express from 'express';
@@ -46,9 +49,6 @@ import { wait } from '../lib/util';
 import { KeyVal } from './keyval';
 import { Auth } from './auth';
 import chalk from 'chalk';
-import { ExplainHook } from './explain';
-import { BeatChanges } from './spotify-beats';
-import { SpotifyTypes } from '../types/spotify';
 
 function speedToMs(speed: number) {
 	return 1000 / speed;
@@ -121,7 +121,7 @@ export namespace RGB {
 		setup!: Promise<void>;
 
 		async init(config: ModuleConfig) {
-			this.setup = new Promise(async resolve => {
+			await (this.setup = new Promise(async resolve => {
 				await Scan.scanRGBControllers(true);
 				setInterval(Scan.scanRGBControllers, 1000 * 60 * 60);
 				await External.Handler.init();
@@ -129,10 +129,8 @@ export namespace RGB {
 
 				Routing.init(config);
 
-				await new External.Handler({}, '').effect('beats4');
-
 				resolve();
-			});
+			}));
 		}
 
 		get external() {
@@ -820,7 +818,8 @@ export namespace RGB {
 			| 'beats1' // Red on black
 			| 'beats2' // Red on blue
 			| 'beats3' // Blue on black
-			| 'beats4'; // Red on black with a green progress bar
+			| 'beats4' // Red on black with a green progress bar
+			| 'beats5'; // Red on blue with a green progress bar
 
 		function interpolate(
 			c1: Color,
@@ -1165,6 +1164,16 @@ export namespace RGB {
 					backgroundRed: 0,
 					backgroundGreen: 0,
 					backgroundBlue: 0,
+					progress: new Color(0, 100, 0)
+				}
+			},
+			beats5: {
+				type: 'beats',
+				data: {
+					color: new Color(255, 0, 0),
+					backgroundRed: 0,
+					backgroundGreen: 0,
+					backgroundBlue: 255,
 					progress: new Color(0, 100, 0)
 				}
 			}
@@ -1851,8 +1860,6 @@ export namespace RGB {
 					}
 				});
 			}
-
-			static x() {}
 		}
 	}
 
@@ -2757,6 +2764,7 @@ export namespace RGB {
 											logObj,
 											`${client.address}: ${str}`
 										);
+										client.board.resetListener();
 										resolve(str);
 									});
 									client.board.sendCommand('perf main');
@@ -2975,6 +2983,7 @@ export namespace RGB {
 				return new Promise<boolean>(resolve => {
 					this.setListener((_line: string) => {
 						resolve(true);
+						this.resetListener();
 					});
 					this.getLeds();
 					setTimeout(() => {
@@ -2983,12 +2992,37 @@ export namespace RGB {
 				});
 			}
 
-			public async write(data: string): Promise<string | null> {
+			public resetListener() {
+				this.setListener(line => {
+					log(
+						getTime(),
+						chalk.cyan(`[${this.name}]`),
+						`# ${line.toString()}`
+					);
+				});
+			}
+
+			public async write(
+				data: string,
+				response: string | null = 'ack'
+			): Promise<string | null> {
+				console.log('Sending', data);
+
+				if (response === null) {
+					this._port.write(data);
+					return data;
+				}
+
 				let acked: boolean = false;
-				this.setListener((line: string) => {
-					if (line.indexOf('ack') !== -1) {
-						acked = true;
-					}
+				let ackPromise = new Promise(resolve => {
+					this.setListener((line: string) => {
+						console.log(line);
+						if (line.indexOf(response) !== -1) {
+							acked = true;
+							resolve();
+							this.resetListener();
+						}
+					});
 				});
 
 				let attempts: number = 0;
@@ -2996,15 +3030,32 @@ export namespace RGB {
 					this._port.write(data);
 
 					attempts++;
-					await wait(50);
+					await Promise.race([ackPromise, wait(200)]);
+				}
+				if (!acked) {
+					console.log('Not acknowledged', data);
 				}
 				if (acked || process.argv.indexOf('--debug') > -1) return data;
 
 				return null;
 			}
 
-			public sendCommand(command: string): Promise<string | null> {
-				return this.write(`/ ${command} \\\n`);
+			public sendCommand(
+				command: string,
+				waitForAck: boolean = true
+			): Promise<string | null> {
+				return this.write(
+					`/ ${command} \\\n`,
+					waitForAck ? 'ack' : null
+				);
+			}
+
+			public primeForCommands() {
+				return this.write('>\n', '|1');
+			}
+
+			public cancelPrime() {
+				return this.write('<\n', null);
 			}
 
 			public sendPrimed(command: string): Promise<string | null> {
@@ -3174,20 +3225,37 @@ export namespace RGB {
 		}
 
 		export namespace BeatFlash {
-			let enabledMap: WeakMap<Board.Board, boolean> = new Map();
+			type UpdateMap = {
+				[K in keyof FullState]-?: number | null;
+			};
+
+			let enabledMap: WeakMap<Board.Board, boolean> = new WeakMap();
+			const boardLastUpdateMap: WeakMap<
+				Board.Board,
+				UpdateMap
+			> = new WeakMap();
+			const stateLastUpdateMap: UpdateMap = {
+				beats: null,
+				duration: null,
+				playStart: null,
+				playState: null,
+				playbackTime: null
+			};
 
 			export function setEnabled(board: Board.Board, enabled: boolean) {
 				enabledMap.set(board, enabled);
 			}
 
-			export async function notifyChanges(changes: BeatChanges) {
+			export async function notifyChanges(
+				state: FullState,
+				changes: BeatChanges
+			) {
 				await meta.setup;
 
-				console.log('Got changes');
-				console.log('state', changes.playState);
-				console.log('start', changes.playStart);
-				console.log('duration', changes.duration);
-				console.log('beats', !!changes.beats);
+				for (const change in changes) {
+					stateLastUpdateMap[change as keyof FullState] = Date.now();
+				}
+
 				await Promise.all(
 					Clients.arduinoBoards
 						.filter(board => {
@@ -3196,39 +3264,80 @@ export namespace RGB {
 							);
 						})
 						.map(async board => {
-							console.log('doing something for board');
-							if (changes.playState !== undefined) {
-								await board.sendCommand(
-									`bp${changes.playState ? '1' : '0'}`
-								);
+							if (!boardLastUpdateMap.has(board)) {
+								boardLastUpdateMap.set(board, {
+									beats: null,
+									duration: null,
+									playStart: null,
+									playState: null,
+									playbackTime: null
+								});
 							}
-							if (changes.playStart !== undefined) {
-								await board.sendCommand(
-									`bs${changes.playStart}`
-								);
-							}
-							if (changes.duration !== undefined) {
-								await board.sendCommand(
-									`bd${changes.duration}`
-								);
-							}
-							if (changes.beats !== undefined) {
-								const beatArr: number[] = [];
-								const playbackTime = changes.playbackTime;
-								let beatChanges: SpotifyTypes.TimeInterval[] = changes.beats!;
+							const boardUpdateMap = boardLastUpdateMap.get(
+								board
+							)!;
+
+							const boardChanges: BeatChanges = { ...changes };
+							for (const key in boardUpdateMap) {
+								const changeKey = key as keyof BeatChanges;
+								const boardKeyState = boardUpdateMap[changeKey];
+								const globalKeyState =
+									stateLastUpdateMap[changeKey];
+
 								if (
-									changes.beats.length > MAX_BEATS_ARR_LENGTH
+									boardKeyState === null ||
+									(globalKeyState !== null &&
+										globalKeyState > boardKeyState)
+								) {
+									(boardChanges[changeKey] as any) = state[
+										changeKey
+									] as any;
+								}
+
+								boardUpdateMap[changeKey] = Date.now();
+								boardLastUpdateMap.set(board, boardUpdateMap);
+							}
+
+							const commands: string[] = [];
+
+							// Say we're going to be sending something and wait for the marker
+							if (boardChanges.playState !== undefined) {
+								commands.push(
+									`bp${boardChanges.playState ? '1' : '0'}`
+								);
+							}
+							if (boardChanges.playStart !== undefined) {
+								console.log(
+									new Date(boardChanges.playStart).toString()
+								);
+								// Start time is always in the past,
+								// send NOW - start_time to get diff
+								commands.push(
+									`bs${Date.now() - boardChanges.playStart}`
+								);
+							}
+							if (boardChanges.duration !== undefined) {
+								commands.push(`bd${boardChanges.duration}`);
+							}
+							if (boardChanges.beats !== undefined) {
+								const beatArr: number[] = [];
+								const playbackTime = boardChanges.playbackTime;
+								let beatChanges: SpotifyTypes.TimeInterval[] = boardChanges.beats!;
+								if (
+									boardChanges.beats.length >
+									MAX_BEATS_ARR_LENGTH
 								) {
 									let index = 0;
 									while (
 										playbackTime >
-											changes.beats[index].start +
-												changes.beats[index].duration &&
-										index < changes.beats.length
+											boardChanges.beats[index].start +
+												boardChanges.beats[index]
+													.duration &&
+										index < boardChanges.beats.length
 									) {
 										index++;
 									}
-									beatChanges = changes.beats.slice(
+									beatChanges = boardChanges.beats.slice(
 										index,
 										index + MAX_BEATS_ARR_LENGTH
 									);
@@ -3242,9 +3351,22 @@ export namespace RGB {
 										);
 									}
 								);
+
+								await board.primeForCommands();
+								for (const command of commands) {
+									await board.sendCommand(command, false);
+								}
 								await board.sendCommand(
-									`bb${beatArr.length} ${beatArr.join(',')}`
+									`bb${beatArr.length / 3} ${beatArr.join(
+										','
+									)}`,
+									false
 								);
+								await board.cancelPrime();
+							} else {
+								for (const command of commands) {
+									await board.sendCommand(command, true);
+								}
 							}
 						})
 				);

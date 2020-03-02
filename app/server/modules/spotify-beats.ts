@@ -6,6 +6,7 @@ import {
 } from '../lib/constants';
 import { SpotifyTypes } from '../types/spotify';
 import { log, getTime } from '../lib/logger';
+import { BotState } from '../lib/bot-state';
 import { AllModules } from './modules';
 import { Bot as _Bot } from './index';
 import { Database } from '../lib/db';
@@ -26,6 +27,10 @@ export interface BeatChanges {
 	playbackTime: number;
 }
 
+export type FullState = {
+	[K in keyof BeatChanges]-?: BeatChanges[K];
+};
+
 export namespace SpotifyBeats {
 	export const meta = new (class Meta extends ModuleMeta {
 		name = 'spotify-beats';
@@ -37,6 +42,10 @@ export namespace SpotifyBeats {
 
 		async notifyModules(modules: AllModules) {
 			Transfer.setModules(modules);
+		}
+
+		get bot() {
+			return Bot;
 		}
 	})();
 
@@ -95,19 +104,19 @@ export namespace SpotifyBeats {
 					this._db = db;
 				}
 
-				setToken(token: string) {
+				async setToken(token: string) {
 					this._token = token;
 
-					this._db.setVal('token', token);
+					await this._db.setVal('token', token);
 				}
 
 				private _refresher: NodeJS.Timeout | null = null;
-				setRefresh(token: string, expireTime: number) {
+				async setRefresh(token: string, expireTime: number) {
 					if (this._refresher) {
 						clearTimeout(this._refresher);
 					}
 					this._refreshToken = token;
-					this._db.setVal('refresh', token);
+					await this._db.setVal('refresh', token);
 
 					this._refresher = setTimeout(() => {
 						this.refreshToken();
@@ -126,8 +135,8 @@ export namespace SpotifyBeats {
 						expires_in
 					} = await response.json();
 
-					this.setToken(access_token);
-					this.setRefresh(refresh_token, expires_in);
+					await this.setToken(access_token);
+					await this.setRefresh(refresh_token, expires_in);
 
 					return await this.testAuth();
 				}
@@ -202,6 +211,11 @@ export namespace SpotifyBeats {
 										await Auth.generateNew()
 									);
 								}
+								log(
+									getTime(),
+									chalk.cyan('[spotify]'),
+									`Refreshed token`
+								);
 								return this.wrapRequest(path, request);
 							case 429:
 								const retryAfter = response.headers.get(
@@ -451,6 +465,16 @@ export namespace SpotifyBeats {
 				return changes;
 			}
 
+			function getFullState(state: API.PlaybackState): FullState {
+				return {
+					beats: beatCache.get(state.playingID!)!,
+					duration: state.duration!,
+					playStart: state.playStart!,
+					playState: state.playing,
+					playbackTime: state.playTime!
+				};
+			}
+
 			export async function start() {
 				let lastState: API.PlaybackState | null = null;
 				while (true) {
@@ -458,9 +482,7 @@ export namespace SpotifyBeats {
 					const changes = await checkForChanges(lastState, state);
 					lastState = state;
 
-					if (Object.keys(changes).length > 1) {
-						await Transfer.notifyChanges(changes);
-					}
+					await Transfer.notifyChanges(getFullState(state), changes);
 					await wait(PLAYSTATE_CHECK_INTERVAL);
 				}
 			}
@@ -484,19 +506,22 @@ export namespace SpotifyBeats {
 					_resolveGenerateNew(token);
 				}
 			}
+
+			export let lastURL: string | null = null;
 			export async function generateNew() {
 				const api = API.get()!;
-				console.log(
-					api!.createAuthURL(
-						[
-							'user-read-currently-playing',
-							'user-read-playback-state',
-							'user-read-private',
-							'user-read-email'
-						],
-						'generate-new'
-					)
+				const url = api!.createAuthURL(
+					[
+						'user-read-currently-playing',
+						'user-read-playback-state',
+						'user-read-private',
+						'user-read-email'
+					],
+					'generate-new'
 				);
+				lastURL = url;
+				console.log(url);
+
 				return new Promise<string>(resolve => {
 					_resolveGenerateNew = resolve;
 				});
@@ -523,8 +548,8 @@ export namespace SpotifyBeats {
 
 			let token = db.get('token', 'default');
 			let refresh = db.get('refresh', 'default');
-			api.setToken(token);
-			api.setRefresh(refresh, 100000);
+			await api.setToken(token);
+			await api.setRefresh(refresh, 100000);
 
 			// Test it
 			if (!(await api.testAuth())) {
@@ -537,21 +562,102 @@ export namespace SpotifyBeats {
 		}
 	}
 
+	export namespace Bot {
+		export interface JSON {}
+
+		export class Bot extends BotState.Base {
+			static readonly commands = {
+				'/auth': 'Authenticate spotify (if needed)'
+			};
+
+			static readonly botName = 'Spotify';
+
+			static readonly matches = Bot.createMatchMaker(
+				({ matchMaker: mm, fallbackSetter: fallback }) => {
+					mm('/auth', /auth(enticate)?( spotify)?/, async () => {
+						const api = Spotify.API.get();
+						if (await api.testAuth()) {
+							return 'Authenticated!';
+						}
+						return `Please authenticate with URL ${Spotify.Auth.lastURL}`;
+					});
+					mm(
+						'/help_spotify',
+						/what commands are there for keyval/,
+						async () => {
+							return `Commands are:\n${Bot.matches.matches
+								.map(match => {
+									return `RegExps: ${match.regexps
+										.map(r => r.source)
+										.join(', ')}. Texts: ${match.texts.join(
+										', '
+									)}}`;
+								})
+								.join('\n')}`;
+						}
+					);
+
+					fallback(({ state }) => {
+						Bot.resetState(state);
+					});
+				}
+			);
+
+			lastSubjects: string[] | null = null;
+
+			constructor(_json?: JSON) {
+				super();
+			}
+
+			static async match(config: {
+				logObj: any;
+				text: string;
+				message: _Bot.TelegramMessage;
+				state: _Bot.Message.StateKeeping.ChatState;
+			}): Promise<_Bot.Message.MatchResponse | undefined> {
+				return await this.matchLines({
+					...config,
+					matchConfig: Bot.matches
+				});
+			}
+
+			toJSON(): JSON {
+				return {};
+			}
+		}
+	}
+
 	export namespace Transfer {
 		let _modules: AllModules | null = null;
+		let _modulePromiseResolve: () => void;
+		let _modulesPromise: Promise<void> = new Promise(resolve => {
+			_modulePromiseResolve = resolve;
+		});
+		export async function getModules() {
+			if (_modules) return _modules;
+			await _modulesPromise;
+			return _modules!;
+		}
 
 		export function setModules(modules: AllModules) {
 			_modules = modules;
+			_modulePromiseResolve();
 		}
 
 		export async function init(db: Database) {
 			await Spotify.init(db);
 		}
 
-		export async function notifyChanges(changes: BeatChanges) {
+		export async function notifyChanges(
+			fullState: FullState,
+			changes: BeatChanges
+		) {
 			if (!_modules) return;
 
-			await _modules.RGB.Board.BeatFlash.notifyChanges(changes);
+			await _modules.RGB.Board.BeatFlash.notifyChanges(
+				fullState,
+				changes
+			);
 		}
 	}
 
