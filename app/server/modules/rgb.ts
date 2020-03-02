@@ -6,7 +6,8 @@ import {
 	ARDUINO_LEDS,
 	LED_IPS,
 	WAKELIGHT_TIME,
-	NAME_MAP
+	NAME_MAP,
+	MAX_BEATS_ARR_LENGTH
 } from '../lib/constants';
 import {
 	errorHandle,
@@ -31,13 +32,16 @@ import {
 	attachSourcedMessage
 } from '../lib/logger';
 import * as ReadLine from '@serialport/parser-readline';
+import { BeatChanges, FullState } from './spotify-beats';
+import { SpotifyTypes } from '../types/spotify';
 import { BotState } from '../lib/bot-state';
 import SerialPort = require('serialport');
 import { BotUtil } from '../lib/bot-util';
+import { ModuleConfig } from './modules';
+import { ExplainHook } from './explain';
 import { colorList } from '../lib/data';
 import { ResponseLike } from './multi';
 import { exec } from 'child_process';
-import { ModuleConfig } from './modules';
 import { ModuleMeta } from './meta';
 import { Bot as _Bot } from './bot';
 import * as express from 'express';
@@ -45,7 +49,6 @@ import { wait } from '../lib/util';
 import { KeyVal } from './keyval';
 import { Auth } from './auth';
 import chalk from 'chalk';
-import { ExplainHook } from './explain';
 
 function speedToMs(speed: number) {
 	return 1000 / speed;
@@ -115,13 +118,19 @@ export namespace RGB {
 	export const meta = new (class Meta extends ModuleMeta {
 		name = 'rgb';
 
-		async init(config: ModuleConfig) {
-			await Scan.scanRGBControllers(true);
-			setInterval(Scan.scanRGBControllers, 1000 * 60 * 60);
-			await External.Handler.init();
-			initListeners();
+		setup!: Promise<void>;
 
-			Routing.init(config);
+		async init(config: ModuleConfig) {
+			await (this.setup = new Promise(async resolve => {
+				await Scan.scanRGBControllers(true);
+				setInterval(Scan.scanRGBControllers, 1000 * 60 * 60);
+				await External.Handler.init();
+				initListeners();
+
+				Routing.init(config);
+
+				resolve();
+			}));
 		}
 
 		get external() {
@@ -747,6 +756,14 @@ export namespace RGB {
 			updateTime: number;
 		}
 
+		export interface Beats {
+			backgroundRed: number;
+			backgroundGreen: number;
+			backgroundBlue: number;
+			color: Color;
+			progress?: Color;
+		}
+
 		export type ArduinoConfig =
 			| {
 					type: 'solid';
@@ -781,6 +798,10 @@ export namespace RGB {
 			| {
 					type: 'random';
 					data: Random;
+			  }
+			| {
+					type: 'beats';
+					data: Beats;
 			  };
 
 		export type JoinedConfigs = Partial<
@@ -807,7 +828,12 @@ export namespace RGB {
 			| 'randomslowbig'
 			| 'randomfast'
 			| 'randomblocks'
-			| 'randomparty';
+			| 'randomparty'
+			| 'beats1' // Red on black
+			| 'beats2' // Red on blue
+			| 'beats3' // Blue on black
+			| 'beats4' // Red on black with a green progress bar
+			| 'beats5'; // Red on blue with a green progress bar
 
 		function interpolate(
 			c1: Color,
@@ -1148,6 +1174,56 @@ export namespace RGB {
 				data: {
 					updateTime: 20,
 					blockSize: 75
+				}
+			},
+			beats1: {
+				type: 'beats',
+				data: {
+					color: new Color(255, 0, 0),
+					backgroundRed: 0,
+					backgroundGreen: 0,
+					backgroundBlue: 0,
+					progress: new Color(0, 0, 0)
+				}
+			},
+			beats2: {
+				type: 'beats',
+				data: {
+					color: new Color(255, 0, 0),
+					backgroundRed: 0,
+					backgroundGreen: 0,
+					backgroundBlue: 255,
+					progress: new Color(0, 0, 0)
+				}
+			},
+			beats3: {
+				type: 'beats',
+				data: {
+					color: new Color(0, 0, 255),
+					backgroundRed: 0,
+					backgroundGreen: 0,
+					backgroundBlue: 0,
+					progress: new Color(0, 0, 0)
+				}
+			},
+			beats4: {
+				type: 'beats',
+				data: {
+					color: new Color(255, 0, 0),
+					backgroundRed: 0,
+					backgroundGreen: 0,
+					backgroundBlue: 0,
+					progress: new Color(0, 100, 0)
+				}
+			},
+			beats5: {
+				type: 'beats',
+				data: {
+					color: new Color(255, 0, 0),
+					backgroundRed: 0,
+					backgroundGreen: 0,
+					backgroundBlue: 255,
+					progress: new Color(0, 100, 0)
 				}
 			}
 		};
@@ -1833,8 +1909,6 @@ export namespace RGB {
 					}
 				});
 			}
-
-			static x() {}
 		}
 	}
 
@@ -2739,6 +2813,7 @@ export namespace RGB {
 											logObj,
 											`${client.address}: ${str}`
 										);
+										client.board.resetListener();
 										resolve(str);
 									});
 									client.board.sendCommand('perf main');
@@ -2957,6 +3032,7 @@ export namespace RGB {
 				return new Promise<boolean>(resolve => {
 					this.setListener((_line: string) => {
 						resolve(true);
+						this.resetListener();
 					});
 					this.getLeds();
 					setTimeout(() => {
@@ -2965,12 +3041,37 @@ export namespace RGB {
 				});
 			}
 
-			public async write(data: string): Promise<string | null> {
+			public resetListener() {
+				this.setListener(line => {
+					log(
+						getTime(),
+						chalk.cyan(`[${this.name}]`),
+						`# ${line.toString()}`
+					);
+				});
+			}
+
+			public async write(
+				data: string,
+				response: string | null = 'ack'
+			): Promise<string | null> {
+				console.log('Sending', data);
+
+				if (response === null) {
+					this._port.write(data);
+					return data;
+				}
+
 				let acked: boolean = false;
-				this.setListener((line: string) => {
-					if (line.indexOf('ack') !== -1) {
-						acked = true;
-					}
+				let ackPromise = new Promise(resolve => {
+					this.setListener((line: string) => {
+						console.log(line);
+						if (line.indexOf(response) !== -1) {
+							acked = true;
+							resolve();
+							this.resetListener();
+						}
+					});
 				});
 
 				let attempts: number = 0;
@@ -2978,15 +3079,32 @@ export namespace RGB {
 					this._port.write(data);
 
 					attempts++;
-					await wait(50);
+					await Promise.race([ackPromise, wait(200)]);
+				}
+				if (!acked) {
+					console.log('Not acknowledged', data);
 				}
 				if (acked || process.argv.indexOf('--debug') > -1) return data;
 
 				return null;
 			}
 
-			public sendCommand(command: string): Promise<string | null> {
-				return this.write(`/ ${command} \\\n`);
+			public sendCommand(
+				command: string,
+				waitForAck: boolean = true
+			): Promise<string | null> {
+				return this.write(
+					`/ ${command} \\\n`,
+					waitForAck ? 'ack' : null
+				);
+			}
+
+			public primeForCommands() {
+				return this.write('>\n', '|1');
+			}
+
+			public cancelPrime() {
+				return this.write('<\n', null);
 			}
 
 			public sendPrimed(command: string): Promise<string | null> {
@@ -3005,6 +3123,8 @@ export namespace RGB {
 				config: ArduinoAPI.ArduinoConfig,
 				extra: ArduinoAPI.JoinedConfigs = {}
 			): Promise<string | null> {
+				BeatFlash.setEnabled(this, config.type === 'beats');
+
 				switch (config.type) {
 					case 'solid':
 						return this.setSolid(
@@ -3036,6 +3156,10 @@ export namespace RGB {
 						return this.setPrime();
 					case 'random':
 						return this.setRandom(
+							BotUtil.BotUtil.mergeObj(config.data, extra)
+						);
+					case 'beats':
+						return this.setBeats(
 							BotUtil.BotUtil.mergeObj(config.data, extra)
 						);
 				}
@@ -3108,6 +3232,22 @@ export namespace RGB {
 				return this.sendCommand('prime');
 			}
 
+			public setBeats({
+				color,
+				backgroundBlue,
+				backgroundGreen,
+				backgroundRed,
+				progress = {
+					r: 0,
+					g: 0,
+					b: 0
+				}
+			}: ArduinoAPI.Beats): Promise<string | null> {
+				return this.sendCommand(
+					`beats ${color.r} ${color.g} ${color.b} ${backgroundRed} ${backgroundGreen} ${backgroundBlue} ${progress.r} ${progress.g} ${progress.b}`
+				);
+			}
+
 			public setFlash({
 				intensity = 0,
 				colors = [],
@@ -3141,6 +3281,155 @@ export namespace RGB {
 						resolve();
 					});
 				});
+			}
+		}
+
+		export namespace BeatFlash {
+			type UpdateMap = {
+				[K in keyof FullState]-?: number | null;
+			};
+
+			let enabledMap: WeakMap<Board.Board, boolean> = new WeakMap();
+			const boardLastUpdateMap: WeakMap<
+				Board.Board,
+				UpdateMap
+			> = new WeakMap();
+			const stateLastUpdateMap: UpdateMap = {
+				beats: null,
+				duration: null,
+				playStart: null,
+				playState: null,
+				playbackTime: null
+			};
+
+			export function setEnabled(board: Board.Board, enabled: boolean) {
+				enabledMap.set(board, enabled);
+			}
+
+			export async function notifyChanges(
+				state: FullState,
+				changes: BeatChanges
+			) {
+				await meta.setup;
+
+				for (const change in changes) {
+					stateLastUpdateMap[change as keyof FullState] = Date.now();
+				}
+
+				await Promise.all(
+					Clients.arduinoBoards
+						.filter(board => {
+							return (
+								enabledMap.has(board) && enabledMap.get(board)
+							);
+						})
+						.map(async board => {
+							if (!boardLastUpdateMap.has(board)) {
+								boardLastUpdateMap.set(board, {
+									beats: null,
+									duration: null,
+									playStart: null,
+									playState: null,
+									playbackTime: null
+								});
+							}
+							const boardUpdateMap = boardLastUpdateMap.get(
+								board
+							)!;
+
+							const boardChanges: BeatChanges = { ...changes };
+							for (const key in boardUpdateMap) {
+								const changeKey = key as keyof BeatChanges;
+								const boardKeyState = boardUpdateMap[changeKey];
+								const globalKeyState =
+									stateLastUpdateMap[changeKey];
+
+								if (
+									boardKeyState === null ||
+									(globalKeyState !== null &&
+										globalKeyState > boardKeyState)
+								) {
+									(boardChanges[changeKey] as any) = state[
+										changeKey
+									] as any;
+								}
+
+								boardUpdateMap[changeKey] = Date.now();
+								boardLastUpdateMap.set(board, boardUpdateMap);
+							}
+
+							const commands: string[] = [];
+
+							// Say we're going to be sending something and wait for the marker
+							if (boardChanges.playState !== undefined) {
+								commands.push(
+									`bp${boardChanges.playState ? '1' : '0'}`
+								);
+							}
+							if (boardChanges.playStart !== undefined) {
+								console.log(
+									new Date(boardChanges.playStart).toString()
+								);
+								// Start time is always in the past,
+								// send NOW - start_time to get diff
+								commands.push(
+									`bs${Date.now() - boardChanges.playStart}`
+								);
+							}
+							if (boardChanges.duration !== undefined) {
+								commands.push(`bd${boardChanges.duration}`);
+							}
+							if (boardChanges.beats !== undefined) {
+								const beatArr: number[] = [];
+								const playbackTime = boardChanges.playbackTime;
+								let beatChanges: SpotifyTypes.TimeInterval[] = boardChanges.beats!;
+								if (
+									boardChanges.beats.length >
+									MAX_BEATS_ARR_LENGTH
+								) {
+									let index = 0;
+									while (
+										playbackTime >
+											boardChanges.beats[index].start +
+												boardChanges.beats[index]
+													.duration &&
+										index < boardChanges.beats.length
+									) {
+										index++;
+									}
+									beatChanges = boardChanges.beats.slice(
+										index,
+										index + MAX_BEATS_ARR_LENGTH
+									);
+								}
+								beatChanges.forEach(
+									({ start, confidence, duration }) => {
+										beatArr.push(
+											Math.round(start * 1000),
+											Math.round(duration * 1000),
+											Math.round(confidence * 100)
+										);
+									}
+								);
+
+								await board.primeForCommands();
+								for (const command of commands) {
+									await board.sendCommand(command, false);
+								}
+								await board.sendCommand(
+									`bb${beatArr.length / 3} ${beatArr.join(
+										','
+									)}`,
+									false
+								);
+								await board.cancelPrime();
+							} else {
+								for (const command of commands) {
+									await board.sendCommand(command, true);
+								}
+							}
+						})
+				);
 			}
 		}
 	}

@@ -27,10 +27,15 @@ export namespace Bot {
 
 		async init(config: ModuleConfig) {
 			await Routing.init(config);
+			await External.Handler.init();
 		}
 
 		async notifyModules(modules: AllModules) {
 			_modules = modules;
+		}
+
+		get external() {
+			return External;
 		}
 	})();
 
@@ -270,15 +275,22 @@ export namespace Bot {
 			async init() {
 				this._stateKeeper = await new StateKeeping.StateKeeper(
 					this._db
-				);
+				).init();
 				return this;
 			}
 
 			async sendMessage(
 				text: string,
 				type: RESPONSE_TYPE,
-				chatId: number
+				chatId?: number
 			) {
+				if (!this._lastChatID) {
+					log(
+						`Did not send message ${text} because no last chat ID is known`
+					);
+					return Promise.resolve(false);
+				}
+				chatId = chatId || this._lastChatID;
 				return new Promise<boolean>(resolve => {
 					const msg = JSON.stringify({
 						...{
@@ -534,6 +546,7 @@ export namespace Bot {
 				return parts;
 			}
 
+			private _lastChatID: number = 0;
 			async handleMessage(req: TelegramReq, res: ResponseLike) {
 				const { message, edited_message } = req.body;
 				const logObj = attachMessage(
@@ -575,6 +588,7 @@ export namespace Bot {
 								const chatId =
 									message?.chat.id || edited_message?.chat.id;
 								if (chatId === undefined) return false;
+								this._lastChatID = chatId;
 								const textParts = this._splitLongText(
 									response.text + ''
 								);
@@ -599,6 +613,68 @@ export namespace Bot {
 					res.write('Error : failed to respond');
 				}
 				res.end();
+			}
+		}
+	}
+
+	export namespace External {
+		type ExternalRequest = {
+			type: 'sendMessage';
+			text: string;
+			msgType: RESPONSE_TYPE;
+			chatID?: number;
+		} & {
+			logObj: any;
+			resolver: (result: boolean) => void;
+			source: string;
+		};
+
+		export class Handler {
+			private static _requests: ExternalRequest[] = [];
+
+			private static _ready: boolean = false;
+			static async init() {
+				this._ready = true;
+				for (const req of this._requests) {
+					await this._handleRequest(req);
+				}
+			}
+
+			constructor(private _logObj: any, private _source: string) {}
+
+			private static async _handleRequest(request: ExternalRequest) {
+				const { resolver } = request;
+				if (request.type === 'sendMessage') {
+					const result = await Routing.handler!.sendMessage(
+						request.text,
+						request.msgType,
+						request.chatID
+					);
+					resolver(result);
+				}
+			}
+
+			async sendMessage(
+				text: string,
+				type: RESPONSE_TYPE,
+				chatID?: number
+			): Promise<boolean> {
+				return new Promise<boolean>(resolve => {
+					const req: ExternalRequest = {
+						type: 'sendMessage',
+						text,
+						msgType: type,
+						chatID,
+						logObj: this._logObj,
+						resolver: resolve,
+						source: this._source
+					};
+					if (Handler._ready) {
+						Handler._handleRequest(req);
+					} else {
+						Handler._requests.push(req);
+					}
+				});
 			}
 		}
 	}
@@ -630,15 +706,16 @@ export namespace Bot {
 			return TELEGRAM_IPS.some(r => isInIPRange(ipBlocks, r));
 		}
 
+		export let handler: Message.Handler | null = null;
 		export async function init({ app, db }: ModuleConfig) {
 			const secret = await fs.readFile(BOT_SECRET_FILE, {
 				encoding: 'utf8'
 			});
-			const handler = await new Message.Handler(secret, db).init();
+			handler = await new Message.Handler(secret, db).init();
 
 			app.post('/bot/msg', async (req, res) => {
 				if (isFromTelegram(req)) {
-					await handler.handleMessage(req, res);
+					await handler!.handleMessage(req, res);
 				} else {
 					res.write('Error: auth problem');
 					res.end();

@@ -9,6 +9,7 @@ export const SECRETS_FOLDER = path.join(ROOT, 'secrets');
 export const AUTH_SECRET_FILE = path.join(SECRETS_FOLDER, 'auth.txt');
 export const BOT_SECRET_FILE = path.join(SECRETS_FOLDER, 'bot.txt');
 export const TELNET_IPS_FILE = path.join(SECRETS_FOLDER, 'telnet-ips.txt');
+export const SPOTIFY_SECRETS_FILE = path.join(SECRETS_FOLDER, 'spotify.json');
 
 // Logging
 export const IP_LOG_VERSION: 'ipv4' | 'ipv6' = 'ipv6';
@@ -30,7 +31,7 @@ export const TELEGRAM_API = 'api.telegram.org';
 
 // Serial
 export const SCREEN_DEVICE_NAME = '/dev/ttyUSB0';
-export const LED_DEVICE_NAME = '/dev/ttyACM0';
+export const LED_DEVICE_NAME = '/dev/ttyACM1';
 
 // Rgb
 export const enum LED_NAMES {
@@ -86,3 +87,9 @@ export const MAX_PRESSURE = 1024;
 export const DEFAULT_MIN_TIME = 1000;
 export const PRESSURE_SAMPLE_TIME = 1000;
 export const MAX_PRESSURE_TIME = 10000;
+
+// Spotify
+export const PLAYSTATE_CHECK_INTERVAL = 1000;
+export const BEAT_CACHE_CLEAR_INTERVAL = 1000 * 60 * 60;
+export const PLAYBACK_CLOSE_RANGE = 10;
+export const MAX_BEATS_ARR_LENGTH = 2000;

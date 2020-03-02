@@ -1,6 +1,7 @@
 import {
 	RemoteControl,
 	HomeDetector,
+	SpotifyBeats,
 	Temperature,
 	Pressure,
 	Explain,
@@ -52,8 +53,9 @@ const moduleObj = {
 	script: Script,
 	keyval: KeyVal,
 	explain: Explain,
-	Pressure: Pressure,
+	pressure: Pressure,
 	temperature: Temperature,
+	spotifyBeats: SpotifyBeats,
 	homeDetector: HomeDetector,
 	remoteControl: RemoteControl
 };

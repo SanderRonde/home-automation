@@ -67,14 +67,14 @@ export namespace Pressure {
 	namespace Register {
 		let enabled: boolean | null = null;
 		let _db: Database;
-		export function enable() {
+		export async function enable() {
 			enabled = true;
-			_db.setVal('enabled', enabled);
+			await _db.setVal('enabled', enabled);
 		}
 
-		export function disable() {
+		export async function disable() {
 			enabled = false;
-			_db.setVal('enabled', enabled);
+			await _db.setVal('enabled', enabled);
 		}
 
 		export function init(db: Database) {
@@ -195,13 +195,13 @@ export namespace Pressure {
 		export class Handler {
 			constructor(private _logObj: any) {}
 
-			private static _handleRequest(request: ExternalRequest) {
+			private static async _handleRequest(request: ExternalRequest) {
 				const { logObj } = request;
 				if (request.type === 'enable') {
-					Register.enable();
+					await Register.enable();
 					attachMessage(logObj, 'Enabled pressure module');
 				} else if (request.type === 'disable') {
-					Register.disable();
+					await Register.disable();
 					attachMessage(logObj, 'Disabled pressure module');
 				} else if (request.type === 'get') {
 					const pressure = Register.getPressure(request.key);
@@ -214,29 +214,29 @@ export namespace Pressure {
 				return undefined;
 			}
 
-			enable() {
+			async enable() {
 				const req: ExternalRequest = {
 					type: 'enable',
 					logObj: this._logObj
 				};
-				Handler._handleRequest(req);
+				await Handler._handleRequest(req);
 			}
 
-			disable() {
+			async disable() {
 				const req: ExternalRequest = {
 					type: 'disable',
 					logObj: this._logObj
 				};
-				Handler._handleRequest(req);
+				await Handler._handleRequest(req);
 			}
 
-			get(key: string): number | null {
+			async get(key: string): Promise<number | null> {
 				const req: ExternalRequest = {
 					type: 'get',
 					key,
 					logObj: this._logObj
 				};
-				return Handler._handleRequest(req) as number | null;
+				return (await Handler._handleRequest(req)) as number | null;
 			}
 		}
 	}

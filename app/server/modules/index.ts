@@ -10,5 +10,6 @@ export { Script } from './script';
 export { Temperature } from './temperature';
 export { Pressure } from './pressure';
 export { Explain } from './explain';
+export { SpotifyBeats } from './spotify-beats';
 
 export { getAllModules, AllModules } from './modules';
