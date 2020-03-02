@@ -35,6 +35,7 @@ import * as ReadLine from '@serialport/parser-readline';
 import { BeatChanges, FullState } from './spotify-beats';
 import { SpotifyTypes } from '../types/spotify';
 import { BotState } from '../lib/bot-state';
+import { wait, arrToObj } from '../lib/util';
 import SerialPort = require('serialport');
 import { BotUtil } from '../lib/bot-util';
 import { ModuleConfig } from './modules';
@@ -45,7 +46,6 @@ import { exec } from 'child_process';
 import { ModuleMeta } from './meta';
 import { Bot as _Bot } from './bot';
 import * as express from 'express';
-import { wait } from '../lib/util';
 import { KeyVal } from './keyval';
 import { Auth } from './auth';
 import chalk from 'chalk';
@@ -2094,7 +2094,19 @@ export namespace RGB {
 				'/refresh': 'Refresh LEDs',
 				'/help_rgb': 'Print help comands for RGB',
 				'/reconnect': 'Reconnect to arduino board',
-				'/restart': 'Restart the server'
+				'/restart': 'Restart the server',
+				...arrToObj(
+					Object.keys(ArduinoAPI.arduinoEffects).map(key => {
+						const value =
+							ArduinoAPI.arduinoEffects[
+								key as ArduinoAPI.Effects
+							];
+						return [
+							`/effect${key}`,
+							`Effect. ${value.description}`
+						];
+					})
+				)
 			};
 
 			static readonly botName = 'RGB';
@@ -2936,10 +2948,45 @@ export namespace RGB {
 							}
 						}
 					);
+					mm(
+						/\/effect([^s](\w*))/,
+						async ({ logObj, match, state, matchText }) => {
+							const effectName = match[1] as ArduinoAPI.Effects;
+							if (effectName in ArduinoAPI.arduinoEffects) {
+								state.states.RGB.lastConfig = {
+									...ArduinoAPI.arduinoEffects[effectName]
+								};
+							} else {
+								state.states.RGB.lastConfig = null;
+								return `Effect "${effectName}" does not exist`;
+							}
+
+							if (
+								await new External.Handler(
+									logObj,
+									`BOT.${matchText}`
+								).effect(effectName, {})
+							) {
+								return `Started effect "${effectName}" with config ${JSON.stringify(
+									ArduinoAPI.arduinoEffects[effectName]
+								)}`;
+							} else {
+								return 'Failed to start effect';
+							}
+						}
+					);
 					mm('/effects', /what effects are there(\?)?/, async () => {
-						return `Effects are ${Bot.formatList(
-							Object.keys(ArduinoAPI.arduinoEffects)
-						)}`;
+						return `Effects are:\n${Object.keys(
+							ArduinoAPI.arduinoEffects
+						)
+							.map(key => {
+								const value =
+									ArduinoAPI.arduinoEffects[
+										key as ArduinoAPI.Effects
+									];
+								return `/effect${key} - ${value.description}`;
+							})
+							.join('\n')}`;
 					});
 					mm('/refresh', /refresh (rgb|led)/, async ({ logObj }) => {
 						return `Found ${await Scan.scanRGBControllers(
