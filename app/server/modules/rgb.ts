@@ -1172,7 +1172,7 @@ export namespace RGB {
 			randomparty: {
 				type: 'random',
 				data: {
-					updateTime: 20,
+					updateTime: 150,
 					blockSize: 75
 				}
 			},
