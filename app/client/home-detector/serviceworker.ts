@@ -33,7 +33,7 @@ function indexPage() {
 	return new Response(
 		`
 		<!DOCTYPE HTML>
-		<html style="background-color: rgb(40, 40, 40);">
+		<html lang="en" style="background-color: rgb(40, 40, 40);">
 		<head>
 			<link rel="icon" href="/home-detector/favicon.ico" type="image/x-icon" />
 			<meta name="viewport" content="width=device-width, initial-scale=1">

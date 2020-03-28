@@ -689,7 +689,8 @@ export namespace KeyVal {
 
 	export namespace Webpage {
 		async function keyvalHTML(json: string, randomNum: number) {
-			return `<html style="background-color: rgb(70,70,70);">
+			return `<!DOCTYPE HTML>
+			<html lang="en" style="background-color: rgb(70,70,70);">
 				<head>
 					<link rel="icon" href="/keyval/favicon.ico" type="image/x-icon" />
 					<link rel="manifest" href="/keyval/static/manifest.json">
