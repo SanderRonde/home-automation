@@ -33,6 +33,9 @@ export default ENTRYPOINTS.map(entrypoint => {
 			entrypoint,
 			`${entrypoint}.js`
 		),
+		treeshake: {
+			moduleSideEffects: false
+		},
 		output: {
 			file: path.join(
 				__dirname,
