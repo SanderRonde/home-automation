@@ -36,4 +36,7 @@ function registerServiceworker() {
 }
 
 registerElements();
-registerServiceworker();
+
+document.addEventListener('load', () => {
+	registerServiceworker();
+});
