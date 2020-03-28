@@ -7,6 +7,7 @@
 	"start_url": "/keyval/",
 	"display": "fullscreen",
 	"background_color": "#5a5b63",
+	"theme_color": "#464646",
 	"description": "A remote that allows you to switch your automated devices",
 	"serviceworker": {
 		"src": "/keyval/serviceworker.js",
@@ -42,6 +43,11 @@
 		{
 			"src": "/keyval/static/images/192.png",
 			"sizes": "192x192",
+			"type": "image/png"
+		},
+		{
+			"src": "/keyval/static/images/512.png",
+			"sizes": "512x512",
 			"type": "image/png"
 		}
 	]

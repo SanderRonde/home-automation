@@ -45,11 +45,12 @@ function indexPage() {
 		<head>
 			<link rel="icon" href="/keyval/favicon.ico" type="image/x-icon" />
 			<link rel="manifest" href="/keyval/static/manifest.json">
+			<link rel="apple-touch-icon" href="/keyval/static/apple-touch-icon.png">
 			<meta name="viewport" content="width=device-width, initial-scale=1">
 			<title>KeyVal Switch</title>
 		</head>
 		<body style="margin: 0;overflow-x: hidden;">
-			<json-switches></json-switches>
+			<json-switches>Javascript should be enabled</json-switches>
 			<script type="module" src="./keyval.bundle.js"></script>
 		</body>
 	</html>`,
