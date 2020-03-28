@@ -694,6 +694,7 @@ export namespace KeyVal {
 				<head>
 					<link rel="icon" href="/keyval/favicon.ico" type="image/x-icon" />
 					<link rel="manifest" href="/keyval/static/manifest.json">
+					<meta name="description" content="An app for controlling keyval entries">
 					<meta name="viewport" content="width=device-width, initial-scale=1">
 					<title>KeyVal Switch</title>
 				</head>
