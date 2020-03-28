@@ -1,4 +1,3 @@
-const uglify = require('rollup-plugin-uglify-es');
 const path = require('path');
 
 const ENTRYPOINTS = ['home-detector', 'keyval', 'rgb'];
@@ -43,9 +42,6 @@ export default ENTRYPOINTS.map(entrypoint => {
 			),
 			name: dashesToCasing(entrypoint),
 			format: 'iife'
-		},
-		plugins: [
-			// uglify()
-		]
+		}
 	};
 });
