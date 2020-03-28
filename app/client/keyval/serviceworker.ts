@@ -48,7 +48,7 @@ function indexPage() {
 			<meta name="viewport" content="width=device-width, initial-scale=1">
 			<title>KeyVal Switch</title>
 		</head>
-		<body style="margin: 0">
+		<body style="margin: 0;overflow-x: hidden;">
 			<json-switches></json-switches>
 			<script type="module" src="./keyval.bundle.js"></script>
 		</body>

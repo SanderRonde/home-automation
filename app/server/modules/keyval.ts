@@ -698,7 +698,7 @@ export namespace KeyVal {
 					<meta name="viewport" content="width=device-width, initial-scale=1">
 					<title>KeyVal Switch</title>
 				</head>
-				<body style="margin: 0">
+				<body style="margin: 0;overflow-x: hidden;">
 					<json-switches json='${json}' key="${await Auth.Secret.getKey()}"></json-switches>
 					<script type="module" src="/keyval/keyval.bundle.js?n=${randomNum}"></script>
 				</body>
