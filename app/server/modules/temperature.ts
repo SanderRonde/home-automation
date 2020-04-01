@@ -455,6 +455,33 @@ export namespace Temperature {
 				});
 			});
 
+			app.post('/temperature/report/:temp?', async (req, res) => {
+				const body = { ...req.params, ...req.body };
+				if (!('temp' in body)) {
+					res.write(`Missing key "temp"`);
+					res.status(400);
+					res.end();
+					return;
+				}
+				const temp = parseFloat(body['temp']);
+				if (Number.isNaN(temp) || temp === 0) {
+					res.write(`Invalid temperature "${body['temp']}"`);
+					res.status(400);
+					res.end();
+					return;
+				}
+
+				// Set last temp
+				await TempControl.setLastTemp(temp);
+
+				attachMessage(
+					res,
+					`Reported temperature: "${TempControl.getLastTemp()}`
+				);
+				res.status(200);
+				res.end();
+			});
+
 			app.post('/temperature/advise/:temp?', async (req, res) => {
 				const body = { ...req.params, ...req.body };
 				if (!('temp' in body)) {
