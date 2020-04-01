@@ -30,8 +30,8 @@ export const TELEGRAM_IPS = [
 export const TELEGRAM_API = 'api.telegram.org';
 
 // Serial
-export const SCREEN_DEVICE_NAME = '/dev/ttyUSB1';
-export const LED_DEVICE_NAME = '/dev/ttyACM1';
+export const SCREEN_DEVICE_NAME = '/dev/ttyUSB0';
+export const LED_DEVICE_NAME = '/dev/ttyACM0';
 
 // Rgb
 export const enum LED_NAMES {
