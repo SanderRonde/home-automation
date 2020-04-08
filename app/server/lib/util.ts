@@ -1,3 +1,8 @@
+import { attachMessage, logOutgoingReq, log } from './logger';
+import * as querystring from 'querystring';
+import * as http from 'http';
+import chalk from 'chalk';
+
 export function wait(time: number) {
 	return new Promise(resolve => {
 		setTimeout(resolve, time);
@@ -85,4 +90,44 @@ export function splitIntoGroups<V>(arr: V[], size: number): V[][] {
 		result.push(arr.slice(i, i + size));
 	}
 	return result;
+}
+
+export namespace XHR {
+	export function get(
+		url: string,
+		name: string,
+		params: {
+			[key: string]: string;
+		} = {}
+	) {
+		return new Promise(resolve => {
+			const qs = Object.keys(params).length
+				? `?${querystring.stringify(params)}`
+				: '';
+			const fullURL = `${url}${qs}`;
+			const req = http
+				.get(fullURL, res => {
+					res.on('end', () => {
+						attachMessage(
+							req,
+							chalk.cyan(`[${name}]`),
+							url,
+							JSON.stringify(params)
+						);
+						logOutgoingReq(req, {
+							method: 'GET',
+							target: url
+						});
+						resolve();
+					});
+				})
+				.on('error', e => {
+					log(
+						chalk.red(
+							`Error while sending request "${name}" with URL "${url}": "${e.message}"`
+						)
+					);
+				});
+		});
+	}
 }
