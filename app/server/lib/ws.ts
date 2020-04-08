@@ -169,7 +169,8 @@ export class WSSimInstance<
 			res.end();
 			return;
 		}
-		const [, msgType, msgData] = (<string>req.body).split(' ');
+		const [, msgType, ...msgDataParts] = (<string>req.body).split(' ');
+		const msgData = msgDataParts.join(' ');
 		for (const { type, handler } of this._listeners) {
 			if (type === msgType) {
 				attachMessage(
