@@ -1224,15 +1224,15 @@ export namespace RGB {
 					updateTime: 0,
 					dir: DIR.DIR_FORWARDS,
 					parts: [
+						new Color(255, 255, 255),
+						new Color(0, 0, 0),
+						new Color(0, 0, 0),
 						new Color(0, 0, 0),
 						new Color(0, 0, 0),
 						new Color(0, 0, 0),
 						new Color(255, 255, 255),
 						new Color(255, 255, 255),
-						new Color(255, 255, 255),
-						new Color(255, 255, 255),
-						new Color(0, 0, 0),
-						new Color(0, 0, 0)
+						new Color(255, 255, 255)
 					]
 				}
 			},
