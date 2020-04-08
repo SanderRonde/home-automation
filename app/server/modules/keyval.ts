@@ -6,27 +6,21 @@ import {
 	authAll,
 	upgradeToHTTPS
 } from '../lib/decorators';
-import {
-	SCREEN_DEVICE_NAME,
-	MAIN_LIGHTS,
-	COMMON_SWITCH_MAPPINGS
-} from '../lib/constants';
+import { MAIN_LIGHTS, COMMON_SWITCH_MAPPINGS } from '../lib/constants';
 import {
 	attachMessage,
-	getLogLevel,
 	ResDummy,
 	getTime,
 	log,
 	attachSourcedMessage
 } from '../lib/logger';
 import { AllModules, ModuleHookables, ModuleConfig } from './modules';
-import * as ReadLine from '@serialport/parser-readline';
-import { arrToObj, awaitCondition, wait } from '../lib/util';
+import { arrToObj, awaitCondition } from '../lib/util';
 import aggregates from '../config/aggregates';
 import groups from '../config/keyval-groups';
 import { BotState } from '../lib/bot-state';
 import { WSSimInstance } from '../lib/ws';
-import * as SerialPort from 'serialport';
+import { ExplainHook } from './explain';
 import { ResponseLike } from './multi';
 import { Database } from '../lib/db';
 import { Bot as _Bot } from './bot';
@@ -34,7 +28,6 @@ import * as express from 'express';
 import { ModuleMeta } from './meta';
 import { Auth } from './auth';
 import chalk from 'chalk';
-import { ExplainHook } from './explain';
 
 export interface KeyvalHooks {
 	[key: string]: {
@@ -65,7 +58,6 @@ export namespace KeyVal {
 			const { db } = config;
 			GetSetListener.setDB(db);
 			const apiHandler = new API.Handler({ db });
-			new Screen.Handler({ db });
 			await External.Handler.init({ db, apiHandler });
 			await Aggregates.init(db);
 
@@ -735,76 +727,6 @@ export namespace KeyVal {
 		}
 	}
 
-	export namespace Screen {
-		export class Handler {
-			private _port: SerialPort;
-			// @ts-ignore
-			private _parser = new ReadLine();
-			private _db: Database;
-			static readonly DEVICE_NAME = SCREEN_DEVICE_NAME;
-
-			constructor({ db }: { db: Database }) {
-				this._db = db;
-
-				this._port = new SerialPort(Handler.DEVICE_NAME, {
-					baudRate: 9600
-				});
-				this._port.on('error', e => {
-					log(getTime(), chalk.red('Failed to connect to screen', e));
-				});
-
-				//@ts-ignore
-				this._port.pipe(this._parser);
-				this._parser.on('data', async (line: string) => {
-					if (line.startsWith('#')) {
-						if (getLogLevel() > 1) {
-							log(
-								getTime(),
-								chalk.gray(`[${Handler.DEVICE_NAME}]`),
-								line.slice(2)
-							);
-						}
-						return;
-					}
-					const [key, value] = line.split(' ');
-					log(
-						getTime(),
-						chalk.cyan(`[${Handler.DEVICE_NAME}]`),
-						chalk.bold(line)
-					);
-					await this._db.setVal(key, value.trim());
-					await GetSetListener.update(key, value.trim(), {});
-				});
-
-				GetSetListener.addListener(
-					'room.lights.ceiling',
-					(value, logObj) => {
-						attachMessage(
-							logObj,
-							`Writing "s${value}" to screen port - screen`
-						);
-						this._port.write(`s${value}\n`);
-					}
-				);
-				GetSetListener.addListener(
-					'room.devices.beamer',
-					(value, logObj) => {
-						attachMessage(
-							logObj,
-							`Writing "i${value}" to screen port - IR`
-						);
-						this._port.write(`i${value}\n`);
-					}
-				);
-
-				wait(1000).then(async () => {
-					const value = this._db.get('room.lights.ceiling', '1');
-					this._port.write(`s${value}\n`);
-				});
-			}
-		}
-	}
-
 	namespace Aggregates {
 		let allModules: AllModules | null = null;
 		export function setModules(modules: AllModules) {
@@ -885,7 +807,7 @@ export namespace KeyVal {
 	export namespace Routing {
 		type WSMessages = {
 			send: 'authid' | 'authfail' | 'authsuccess' | 'valChange';
-			receive: 'auth' | 'listen';
+			receive: 'auth' | 'listen' | 'button';
 		};
 
 		export async function init({
@@ -979,6 +901,20 @@ export namespace KeyVal {
 							instance.onClose = () => {
 								GetSetListener.removeListener(listener);
 							};
+						},
+						instance.ip
+					);
+					instance.listen(
+						'button',
+						async data => {
+							log(
+								getTime(),
+								chalk.cyan(`[touch-screen]`),
+								chalk.bold(data)
+							);
+							const [key, value] = data.split(' ');
+							await db.setVal(key, value.trim());
+							await GetSetListener.update(key, value.trim(), {});
 						},
 						instance.ip
 					);
