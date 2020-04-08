@@ -1,0 +1,29 @@
+{
+	"name": "home-automation",
+	"version": "1.0.0",
+	"main": "gen_bins.js",
+	"repository": "https://github.com/SanderRonde/home-automation",
+	"author": "Sander Ronde <awsdfgvhbjn@gmail.com>",
+	"license": "MIT",
+	"private": true,
+	"dependencies": {
+		"chalk": "^3.0.0",
+		"fs-extra": "^9.0.0",
+		"glob": "^7.1.6",
+		"http": "^0.0.1-security",
+		"http-server": "^0.12.1",
+		"log-symbols": "^3.0.0",
+		"multi-progress": "^2.0.0",
+		"path": "^0.12.7",
+		"progress": "^2.0.3",
+		"puppeteer": "^2.1.1"
+	},
+	"devDependencies": {
+		"@types/chalk": "^2.2.0",
+		"@types/fs-extra": "^8.1.0",
+		"@types/glob": "^7.1.1",
+		"@types/http-server": "^0.10.0",
+		"@types/multi-progress": "^2.0.3",
+		"@types/puppeteer": "^2.0.1"
+	}
+}

@@ -24,9 +24,11 @@
 		"strictBindCallApply": true,
 		"composite": true,
 		"declaration": true,
-		"declarationMap": true
+		"declarationMap": true,
+		"esModuleInterop": true
 	},
 	"compileOnSave": true,
 	"allowJs": true,
-	"include": ["./ai", "./beat-detector"]
+	"include": ["./ai", "./beat-detector"],
+	"exclude": ["./node_modules"]
 }
