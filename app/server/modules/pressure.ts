@@ -5,8 +5,9 @@ import {
 	MAX_PRESSURE_TIME,
 	PRESSURE_SAMPLE_TIME
 } from '../lib/constants';
-import { errorHandle, requireParams, auth } from '../lib/decorators';
 import { ModuleConfig, ModuleHookables, AllModules } from './modules';
+import { errorHandle, requireParams, auth } from '../lib/decorators';
+import { awaitCondition, arrToObj } from '../lib/util';
 import pressureConfig from '../config/pressures';
 import { attachMessage } from '../lib/logger';
 import { BotState } from '../lib/bot-state';
@@ -14,9 +15,14 @@ import { ResponseLike } from './multi';
 import { Database } from '../lib/db';
 import { Bot as _Bot } from './index';
 import { ModuleMeta } from './meta';
-import { awaitCondition, arrToObj } from '../lib/util';
+
+export const enum PRESSURE_CHANGE_DIRECTION {
+	UP,
+	DOWN
+}
 
 export interface PressureRange {
+	type: 'range';
 	/**
 	 * A starting range, minimum value is 0.
 	 * Set to 0 if omitted
@@ -38,8 +44,29 @@ export interface PressureRange {
 	handler: (hookables: ModuleHookables) => any | Promise<any>;
 }
 
+export interface PressureChange {
+	type: 'change';
+	/**
+	 * The size of the jump
+	 */
+	amount: number;
+	/**
+	 * The direction in which the change occurs
+	 */
+	direction: PRESSURE_CHANGE_DIRECTION;
+	/**
+	 * How long the range should be held for the handler to be
+	 * triggered (in ms)
+	 */
+	minTime?: number;
+	/**
+	 * A handler that is executed when the pressure falls in given range
+	 */
+	handler: (hookables: ModuleHookables) => any | Promise<any>;
+}
+
 export interface PressureHooks {
-	[key: string]: PressureRange[];
+	[key: string]: (PressureRange | PressureChange)[];
 }
 
 export namespace Pressure {
@@ -113,34 +140,69 @@ export namespace Pressure {
 
 			const ranges = pressureConfig[key];
 			for (const range of ranges) {
-				const {
-					from = MIN_PRESSURE,
-					to = MAX_PRESSURE,
-					minTime = DEFAULT_MIN_TIME,
-					handler
-				} = range;
-				if (minTime >= MAX_PRESSURE_TIME) {
-					throw new Error('MinTime too big');
-				}
+				if (range.type === 'range') {
+					const {
+						from = MIN_PRESSURE,
+						to = MAX_PRESSURE,
+						minTime = DEFAULT_MIN_TIME,
+						handler
+					} = range;
+					if (minTime >= MAX_PRESSURE_TIME) {
+						throw new Error('MinTime too big');
+					}
 
-				const currentRange = currentRanges.get(key);
-				if (currentRange === range) continue;
+					const currentRange = currentRanges.get(key);
+					if (currentRange === range) continue;
 
-				if (
-					lastPressures
+					if (
+						lastPressures
+							.get(key)!
+							.slice(-(minTime / PRESSURE_SAMPLE_TIME))
+							.every(value => {
+								return value >= from && value <= to;
+							})
+					) {
+						let doUpdate: boolean = currentRanges.has(key);
+						currentRanges.set(key, range);
+						if (doUpdate) {
+							handler(
+								await createHookables(
+									key,
+									attachMessage(
+										logObj,
+										'Pressure hooks range'
+									)
+								)
+							);
+						}
+					}
+				} else {
+					const {
+						amount,
+						direction,
+						handler,
+						minTime = DEFAULT_MIN_TIME
+					} = range;
+
+					const samples = minTime / PRESSURE_SAMPLE_TIME;
+					const [initial, ...rest] = lastPressures
 						.get(key)!
-						.slice(-(minTime / PRESSURE_SAMPLE_TIME))
-						.every(value => {
-							return value >= from && value <= to;
+						.slice(-samples)
+						.map(v => ~~v);
+					if (rest.length < samples - 1) continue;
+					if (
+						rest.every(value => {
+							if (direction === PRESSURE_CHANGE_DIRECTION.UP) {
+								return value >= initial + amount;
+							} else {
+								return value <= initial - amount;
+							}
 						})
-				) {
-					let doUpdate: boolean = currentRanges.has(key);
-					currentRanges.set(key, range);
-					if (doUpdate) {
+					) {
 						handler(
 							await createHookables(
 								key,
-								attachMessage(logObj, 'Pressure hooks')
+								attachMessage(logObj, 'Pressure hooks jump')
 							)
 						);
 					}
@@ -338,14 +400,14 @@ export namespace Pressure {
 				}: {
 					auth?: string;
 					key: string;
-					pressure: number;
+					pressure: string;
 				}
 			) {
 				attachMessage(
 					res,
 					`Setting pressure key ${key} to ${pressure}`
 				);
-				Register.setPressure(key, pressure, res);
+				Register.setPressure(key, ~~pressure, res);
 				res.status(200);
 				res.end();
 			}
