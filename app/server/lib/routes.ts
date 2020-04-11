@@ -161,7 +161,6 @@ export class AppWrapper {
 
 export async function initAnnotatorRoutes(app: express.Express) {
 	app.all('/annotator/files', (_req, res) => {
-		console.log(path.join(__dirname, '../../../', 'ai/files', '*.wav'));
 		glob(
 			path.join(__dirname, '../../../', 'ai/files', '*.wav'),
 			{},
