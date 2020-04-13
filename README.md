@@ -50,6 +50,10 @@ The pressure module allows for detection of pressure and reponse to change in th
 
 The explain module records actions and how they occurred on top of the regular logging. This can then be used to later ask the server why it did something. Since there are quite a few input methods to this system, things sometimes occur without knowing the cause. While sifting through logs is possible, it's not a great experience. Simply saying "explain what you did" and hearing a step-by-step summary is a lot better.
 
+#### Info-screen
+
+The info-screen module powers a screen containing some basic info like the temperature outside and inside (thanks to the temperature module), as well as the upcoming calender events etc. It is basically an HTML page hosted on localhost that talks to the server via a separate entrypoint. In my case the actual screen is mounted behind some mirror foil to have a sort of smart-mirror.
+
 ### Controllers
 
 #### Telegram bot
@@ -117,6 +121,10 @@ The code for the microcontroller driving it can be found [over at this repositor
 #### Explain
 
 The explain module works by adding another layer on top of the regular logging layer. When certain actions that are deemed important are performed (for example turning off the lights or LEDs), the source of the command is stored. For example this action could have been performed through the bot, through the app or through the API. This data can later be requested and a summary of what happened in the last X minutes can be sent to telegram or read aloud using the Cast module.
+
+#### Info-screen
+
+The info-screen module works through some fairly simple REST API's hosted on localhost. Because it's all hosted on and only accessible from localhost, there isn't much need for complexity. Getting the temperature from inside is done through the temperature module and getting the temperature outside is done through the [openweathermap API](https://openweathermap.org/api). The upcoming calendar is fetched through google's calendar API, first requring the user to give permission to the app for their google account.
 
 #### Telegram bot
 
