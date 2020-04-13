@@ -15,6 +15,11 @@ interface ExtendedEvent extends calendar_v3.Schema$Event {
 	};
 }
 
+interface TimedEvent extends ExtendedEvent {
+	startTime: string;
+	endTime: string;
+}
+
 @config({
 	is: 'calendar-overview',
 	css: CalendarOverviewCSS,
@@ -42,6 +47,18 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 		return day;
 	}
 
+	getEndOfDay(daysOffset: number) {
+		const day = this.getDay(daysOffset);
+		day.setHours(23, 59, 59);
+		return day;
+	}
+
+	getStartOfDay(daysOffset: number) {
+		const day = this.getDay(daysOffset);
+		day.setHours(0, 0, 0);
+		return day;
+	}
+
 	getDayIndex(date: Date, weekdays: Date[]) {
 		if (date < weekdays[0]) return 0;
 		for (let i = 1; i < weekdays.length; i++) {
@@ -58,7 +75,7 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 			...weekdayEvents.map(weekDay => weekDay.events.length)
 		);
 
-		const arr: (ExtendedEvent | null)[][] = new Array(max)
+		const arr: (TimedEvent | null)[][] = new Array(max)
 			.fill('')
 			.map(_ => new Array(7).fill(null));
 		for (let i = 0; i < arr.length; i++) {
@@ -75,11 +92,15 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 		});
 		const dayEvents: {
 			date: Date;
-			events: ExtendedEvent[];
+			events: TimedEvent[];
 		}[] = days.map(d => ({
 			date: d,
 			events: []
 		}));
+		const formatter = new Intl.DateTimeFormat('nl-NL', {
+			hour: '2-digit',
+			minute: '2-digit'
+		});
 		for (const event of this.props.events) {
 			const eventStart = new Date(event.start?.dateTime || 0);
 			const eventEnd = new Date(event.end?.dateTime || 0);
@@ -95,11 +116,28 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 			) {
 				// Multi-day event
 				for (let i = startIndex; i <= endIndex; i++) {
-					dayEvents[i].events.push(event);
+					dayEvents[i].events.push({
+						...event,
+						startTime:
+							this.getStartOfDay(i) > eventStart
+								? formatter.format(this.getStartOfDay(i))
+								: formatter.format(eventStart),
+						endTime:
+							this.getEndOfDay(i) < eventEnd
+								? formatter.format(this.getEndOfDay(i))
+								: formatter.format(eventEnd)
+					});
 				}
 			} else {
 				// Single-day event
-				dayEvents[startIndex].events.push(event);
+				dayEvents[startIndex].events.push({
+					...event,
+					startTime: formatter.format(eventStart),
+					endTime:
+						this.getEndOfDay(startIndex) < eventEnd
+							? formatter.format(this.getEndOfDay(startIndex))
+							: formatter.format(eventEnd)
+				});
 			}
 		}
 

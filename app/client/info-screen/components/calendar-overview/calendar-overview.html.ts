@@ -44,6 +44,10 @@ export const CalendarOverviewHTML = new TemplateFn<CalendarOverview>(
 													<div class="event-name">
 														${event.summary}
 													</div>
+													<div class="event-time">
+														${event.startTime} -
+														${event.endTime}
+													</div>
 													${event.location &&
 														html`
 															<div
