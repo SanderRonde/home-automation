@@ -17,6 +17,7 @@ import * as http from 'http';
 
 interface PartialConfig {
 	ports?: {
+		info?: number | void;
 		http?: number | void;
 		https?: number | void;
 	};
@@ -49,7 +50,8 @@ class WebServer {
 		return {
 			ports: {
 				http: (config.ports && config.ports.http) || 1234,
-				https: (config.ports && config.ports.https) || 1235
+				https: (config.ports && config.ports.https) || 1235,
+				info: (config.ports && config.ports.info) || 1337
 			},
 			scripts: {
 				uid: (config.scripts && config.scripts.uid) || 0,
@@ -185,7 +187,8 @@ function getVerbosity() {
 new WebServer({
 	ports: {
 		http: getNumberArg('http'),
-		https: getNumberArg('https')
+		https: getNumberArg('https'),
+		info: getNumberArg('info-port')
 	},
 	scripts: {
 		scriptDir: getArg('scripts'),

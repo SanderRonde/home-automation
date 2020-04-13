@@ -7,10 +7,9 @@ import {
 import { SpotifyTypes } from '../types/spotify';
 import { log, getTime } from '../lib/logger';
 import { BotState } from '../lib/bot-state';
-import { AllModules } from './modules';
+import { AllModules, ModuleConfig } from './modules';
 import { Bot as _Bot } from './index';
 import { Database } from '../lib/db';
-import { ModuleConfig } from './all';
 import { Response } from 'node-fetch';
 import { ModuleMeta } from './meta';
 import { wait } from '../lib/util';

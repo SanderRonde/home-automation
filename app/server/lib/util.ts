@@ -100,13 +100,18 @@ export namespace XHR {
 			[key: string]: string;
 		} = {}
 	) {
-		return new Promise(resolve => {
+		return new Promise<string>(resolve => {
 			const qs = Object.keys(params).length
 				? `?${querystring.stringify(params)}`
 				: '';
 			const fullURL = `${url}${qs}`;
 			const req = http
 				.get(fullURL, res => {
+					let data: string = '';
+
+					res.on('data', (chunk: string | Buffer) => {
+						data += chunk.toString();
+					});
 					res.on('end', () => {
 						attachMessage(
 							req,
@@ -118,7 +123,7 @@ export namespace XHR {
 							method: 'GET',
 							target: url
 						});
-						resolve();
+						resolve(data);
 					});
 				})
 				.on('error', e => {
@@ -130,4 +135,27 @@ export namespace XHR {
 				});
 		});
 	}
+}
+
+const CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'.split(
+	''
+);
+export function generateRandomString(length: number = 64) {
+	let str = '';
+	for (let i = 0; i < length; i++) {
+		str += CHARS[Math.floor(CHARS.length * Math.random())];
+	}
+	return str;
+}
+
+export function flatten<V>(arr: V[][]): V[] {
+	const flattened: V[] = [];
+	for (const value of arr) {
+		if (Array.isArray(value)) {
+			flattened.push(...(flatten(value as any) as V[]));
+		} else {
+			flattened.push(value);
+		}
+	}
+	return flattened;
 }

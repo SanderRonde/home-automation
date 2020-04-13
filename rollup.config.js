@@ -1,6 +1,6 @@
 const path = require('path');
 
-const ENTRYPOINTS = ['home-detector', 'keyval', 'rgb'];
+const ENTRYPOINTS = ['home-detector', 'keyval', 'rgb', 'info-screen'];
 
 /**
  * Converts a string with dashes in

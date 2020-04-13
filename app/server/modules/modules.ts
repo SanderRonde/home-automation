@@ -14,6 +14,7 @@ import {
 	Auth
 } from '.';
 import { WSSimulator, WSWrapper } from '../lib/ws';
+import { InfoScreen } from './info-screen';
 import { AppWrapper } from '../lib/routes';
 import { Database } from '../lib/db';
 import { Config } from '../app';
@@ -54,6 +55,7 @@ const moduleObj = {
 	keyval: KeyVal,
 	explain: Explain,
 	pressure: Pressure,
+	infoScreen: InfoScreen,
 	temperature: Temperature,
 	spotifyBeats: SpotifyBeats,
 	homeDetector: HomeDetector,
