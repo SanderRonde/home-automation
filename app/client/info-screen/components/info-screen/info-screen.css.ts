@@ -16,6 +16,7 @@ export const InfoScreenCSS = new TemplateFn<InfoScreen>(
 					color: white;
 					font-size: 120%;
 					font-family: 'Roboto', Arial, Helvetica, sans-serif;
+					cursor: none;
 				}
 
 				#background.blank > * {
