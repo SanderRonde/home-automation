@@ -141,6 +141,16 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 			}
 		}
 
+		dayEvents.forEach(({ events }) => {
+			events.sort((a, b) => {
+				const aDate = new Date(a.start!.dateTime!);
+				const bDate = new Date(b.start!.dateTime!);
+				if (aDate < bDate) return -1;
+				if (aDate === bDate) return 0;
+				return 1;
+			});
+		});
+
 		return dayEvents;
 	}
 
