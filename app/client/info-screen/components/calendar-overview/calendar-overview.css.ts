@@ -47,9 +47,12 @@ export const CalendarOverviewCSS = new TemplateFn<CalendarOverview>(
 					height: 100%;
 				}
 
-				.event-location,
-				.event-time {
+				.event-location {
 					color: #d7d7d7;
+				}
+
+				.event-time {
+					font-weight: bold;
 				}
 
 				.event-background {
