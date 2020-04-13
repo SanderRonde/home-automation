@@ -29,6 +29,7 @@ interface PartialConfig {
 		level?: number;
 		secrets: boolean;
 	};
+	debug?: boolean;
 }
 
 type DeepRequired<T> = {
@@ -62,7 +63,8 @@ class WebServer {
 			log: {
 				level: (config.log && config.log.level) || 1,
 				secrets: (config.log && config.log.secrets) || false
-			}
+			},
+			debug: config.debug || false
 		};
 	}
 
@@ -197,5 +199,6 @@ new WebServer({
 	log: {
 		level: getVerbosity(),
 		secrets: hasArg('log-secrets') || false
-	}
+	},
+	debug: hasArg('debug')
 }).init();

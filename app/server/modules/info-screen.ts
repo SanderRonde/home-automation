@@ -467,11 +467,19 @@ export namespace InfoScreen {
 				});
 			});
 
-			server.listen(config.ports.info, () => {
-				console.log(
-					`Info-screen server listening on port ${config.ports.info}`
-				);
-			});
+			if (config.debug) {
+				server.listen(config.ports.info, () => {
+					console.log(
+						`Info-screen server listening on port ${config.ports.info}`
+					);
+				});
+			} else {
+				server.listen(config.ports.info, '127.0.0.1', () => {
+					console.log(
+						`Info-screen server listening on port ${config.ports.info} on localhost only`
+					);
+				});
+			}
 		}
 	}
 }
