@@ -336,11 +336,13 @@ export class WSSimulator {
 	}
 }
 
-type WSHandler = (args: {
+export interface WSClient {
 	send: (message: string) => void;
 	addListener: (listener: (message: string) => void) => void;
 	onDead(handler: () => void): void;
-}) => void;
+}
+
+type WSHandler = (args: WSClient) => void;
 
 export class WSWrapper {
 	routes: {

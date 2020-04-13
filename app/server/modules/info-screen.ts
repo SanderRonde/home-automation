@@ -7,9 +7,11 @@ import { OAuth2Client } from 'google-auth-library';
 import { SECRETS_FOLDER } from '../lib/constants';
 import { initMiddleware } from '../lib/routes';
 import { attachMessage } from '../lib/logger';
+import { BotState } from '../lib/bot-state';
 import { XHR, flatten } from '../lib/util';
 import { ResponseLike } from './multi';
-import { WSWrapper } from '../lib/ws';
+import { WSWrapper, WSClient } from '../lib/ws';
+import { Bot as _Bot } from './bot';
 import { ModuleMeta } from './meta';
 import { google } from 'googleapis';
 import * as express from 'express';
@@ -34,6 +36,10 @@ export namespace InfoScreen {
 
 		async notifyModules(modules: AllModules) {
 			Temperature.Internal.initModules(modules);
+		}
+
+		get bot() {
+			return Bot;
 		}
 	})();
 
@@ -171,6 +177,55 @@ export namespace InfoScreen {
 				res.contentType('.html');
 				res.write(await infoScreenHTML(this._randomNum));
 				res.end();
+			}
+		}
+	}
+
+	export namespace Bot {
+		export interface JSON {}
+
+		export class Bot extends BotState.Base {
+			static readonly commands = {
+				'/info_refesh': 'Refresh info-screen'
+			};
+
+			static readonly botName = 'InfoScreen';
+
+			static readonly matches = Bot.createMatchMaker(
+				({ matchMaker: mm }) => {
+					mm(
+						'/info_refresh',
+						/refresh info screen/,
+						async ({ logObj }) => {
+							const amount = Routing.refreshClients();
+							attachMessage(
+								logObj,
+								`Refreshed ${amount} clients`
+							);
+							return `Refreshed ${amount} clients`;
+						}
+					);
+				}
+			);
+
+			constructor(_json?: JSON) {
+				super();
+			}
+
+			static async match(config: {
+				logObj: any;
+				text: string;
+				message: _Bot.TelegramMessage;
+				state: _Bot.Message.StateKeeping.ChatState;
+			}): Promise<_Bot.Message.MatchResponse | undefined> {
+				return await this.matchLines({
+					...config,
+					matchConfig: Bot.matches
+				});
+			}
+
+			toJSON(): JSON {
+				return {};
 			}
 		}
 	}
@@ -394,6 +449,19 @@ export namespace InfoScreen {
 	}
 
 	export namespace Routing {
+		const clients: Set<WSClient> = new Set();
+
+		export function refreshClients() {
+			clients.forEach(client => {
+				client.send(
+					JSON.stringify({
+						refresh: true
+					})
+				);
+			});
+			return clients.size;
+		}
+
 		export async function init({ config, randomNum }: ModuleConfig) {
 			const app = express();
 			const webpageHandler = new Webpage.Handler({
@@ -442,7 +510,9 @@ export namespace InfoScreen {
 				});
 			});
 
-			ws.all('/blanking', async ({ send, onDead }) => {
+			ws.all('/blanking', async client => {
+				const { send, onDead } = client;
+				clients.add(client);
 				const listener = KeyVal.GetSetListener.addListener(
 					'room.lights.ceiling',
 					async value => {
@@ -464,6 +534,7 @@ export namespace InfoScreen {
 				);
 				onDead(() => {
 					KeyVal.GetSetListener.removeListener(listener);
+					clients.delete(client);
 				});
 			});
 
