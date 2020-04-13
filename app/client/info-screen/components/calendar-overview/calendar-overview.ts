@@ -63,7 +63,7 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 		if (date < weekdays[0]) return 0;
 		for (let i = 1; i < weekdays.length; i++) {
 			if (date < weekdays[i]) {
-				return i - 1;
+				return i;
 			}
 		}
 		return weekdays.length - 1;
@@ -90,6 +90,11 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 		const days = new Array(7).fill('').map((_, index) => {
 			return this.getDay(index);
 		});
+		const endsOfDays = days.map(day => {
+			const copy = new Date(day);
+			copy.setHours(23, 59, 59);
+			return copy;
+		});
 		const dayEvents: {
 			date: Date;
 			events: TimedEvent[];
@@ -101,34 +106,24 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 			hour: '2-digit',
 			minute: '2-digit'
 		});
+		debugger;
 		for (const event of this.props.events) {
 			const eventStart = new Date(event.start?.dateTime || 0);
 			const eventEnd = new Date(event.end?.dateTime || 0);
 
-			const startIndex = this.getDayIndex(eventStart, days);
-			const endIndex = this.getDayIndex(eventEnd, days);
-			const startDay = days[startIndex];
-			const endDay = days[endIndex];
+			const startIndex = this.getDayIndex(eventStart, endsOfDays);
+			const endIndex = this.getDayIndex(eventEnd, endsOfDays);
 
 			if (
-				startIndex < endIndex &&
-				(startDay.getHours() <= 18 || endDay.getHours() >= 12)
+				// If the event is either on the same day
+				startIndex === endIndex ||
+				// Or the next day
+				(startIndex + 1 === endIndex &&
+					// Starting after 18:00 and ending before 12:00
+					((eventStart.getHours() > 18 && eventEnd.getHours() < 12) ||
+						// Or just ending before 4 again
+						eventEnd.getHours() < 4))
 			) {
-				// Multi-day event
-				for (let i = startIndex; i <= endIndex; i++) {
-					dayEvents[i].events.push({
-						...event,
-						startTime:
-							this.getStartOfDay(i) > eventStart
-								? formatter.format(this.getStartOfDay(i))
-								: formatter.format(eventStart),
-						endTime:
-							this.getEndOfDay(i) < eventEnd
-								? formatter.format(this.getEndOfDay(i))
-								: formatter.format(eventEnd)
-					});
-				}
-			} else {
 				// Single-day event
 				dayEvents[startIndex].events.push({
 					...event,
@@ -138,6 +133,21 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 							? formatter.format(this.getEndOfDay(startIndex))
 							: formatter.format(eventEnd)
 				});
+			} else {
+				// Multi-day event
+				for (let i = startIndex; i <= endIndex; i++) {
+					dayEvents[i].events.push({
+						...event,
+						startTime:
+							days[i] > eventStart
+								? formatter.format(days[i])
+								: formatter.format(eventStart),
+						endTime:
+							endsOfDays[i] < eventEnd
+								? formatter.format(endsOfDays[i])
+								: formatter.format(eventEnd)
+					});
+				}
 			}
 		}
 
@@ -150,6 +160,8 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 				return 1;
 			});
 		});
+
+		console.log(dayEvents);
 
 		return dayEvents;
 	}
