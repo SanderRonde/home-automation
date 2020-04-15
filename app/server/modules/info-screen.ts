@@ -394,9 +394,9 @@ export namespace InfoScreen {
 			await authTokens(tokens, false);
 		}
 
-		function getStartOfDayDate() {
+		function getDay(dayOffset: number) {
 			const date = new Date();
-			date.setHours(0, 0, 0, 0);
+			date.setDate(date.getDate() + dayOffset);
 			return date;
 		}
 
@@ -406,9 +406,10 @@ export namespace InfoScreen {
 
 			const colors = await calendar!.colors.get();
 
-			const startTime = getStartOfDayDate();
-			const endTime = getStartOfDayDate();
-			endTime.setDate(endTime.getDate() + days);
+			const startTime = getDay(0);
+			startTime.setHours(0, 0, 0);
+			const endTime = getDay(days - 1);
+			endTime.setHours(23, 59, 59);
 			const events = await Promise.all(
 				calendars.map(async calendarObj => {
 					return {
