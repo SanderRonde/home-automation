@@ -11,7 +11,7 @@ export const CurrentDateCSS = new TemplateFn<CurrentDate>(
 			<style>
 				#date-line {
 					text-align: center;
-					font-size: 180%;
+					font-size: 170%;
 					margin-top: 2.5vh;
 				}
 
