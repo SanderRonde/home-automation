@@ -66,7 +66,7 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 				return i;
 			}
 		}
-		return weekdays.length - 1;
+		return Infinity;
 	}
 
 	getTimeSpacedEvents() {
@@ -113,6 +113,8 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 
 			const startIndex = this.getDayIndex(eventStart, endsOfDays);
 			const endIndex = this.getDayIndex(eventEnd, endsOfDays);
+
+			if (startIndex === Infinity || endIndex === Infinity) continue;
 
 			if (
 				// If the event is either on the same day
