@@ -106,7 +106,6 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 			hour: '2-digit',
 			minute: '2-digit'
 		});
-		debugger;
 		for (const event of this.props.events) {
 			const eventStart = new Date(event.start?.dateTime || 0);
 			const eventEnd = new Date(event.end?.dateTime || 0);
