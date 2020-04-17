@@ -107,8 +107,12 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 			minute: '2-digit'
 		});
 		for (const event of this.props.events) {
-			const eventStart = new Date(event.start?.dateTime || 0);
-			const eventEnd = new Date(event.end?.dateTime || 0);
+			const eventStart = new Date(
+				event.start?.dateTime || event.start?.date || 0
+			);
+			const eventEnd = new Date(
+				event.end?.dateTime || event.start?.date || 0
+			);
 
 			const startIndex = this.getDayIndex(eventStart, endsOfDays);
 			const endIndex = this.getDayIndex(eventEnd, endsOfDays);
