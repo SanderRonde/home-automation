@@ -3150,6 +3150,10 @@ export namespace RGB {
 				leds: number;
 				name: string;
 			} | null>(resolve => {
+				setTimeout(() => {
+					resolve(null);
+				}, 1000 * 60);
+
 				const port = new SerialPort(LED_DEVICE_NAME, {
 					baudRate: 115200
 				});
