@@ -245,7 +245,7 @@ export namespace Cast {
 					case 'url':
 						await API.Handler.url(resDummy, {
 							url: request.url,
-							auth: await Auth.Secret.getKey()
+							auth: Auth.Secret.getKey()
 						});
 						resDummy.transferTo(logObj);
 						request.resolver();
@@ -254,7 +254,7 @@ export namespace Cast {
 						await API.Handler.say(resDummy, {
 							text: request.text,
 							lang: request.lang,
-							auth: await Auth.Secret.getKey()
+							auth: Auth.Secret.getKey()
 						});
 						resDummy.transferTo(logObj);
 						request.resolver();
@@ -262,14 +262,14 @@ export namespace Cast {
 					case 'pasta':
 						await API.Handler.pasta(resDummy, {
 							pasta: request.pasta,
-							auth: await Auth.Secret.getKey()
+							auth: Auth.Secret.getKey()
 						});
 						resDummy.transferTo(logObj);
 						request.resolver();
 						break;
 					case 'stop':
 						await API.Handler.stop(resDummy, {
-							auth: await Auth.Secret.getKey()
+							auth: Auth.Secret.getKey()
 						});
 						resDummy.transferTo(logObj);
 						request.resolver();

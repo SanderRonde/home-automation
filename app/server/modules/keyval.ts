@@ -225,9 +225,9 @@ export namespace KeyVal {
 				const resDummy = new ResDummy();
 				if (request.type === 'get') {
 					const { key, resolver } = request;
-					const value = await this._apiHandler!.get(resDummy, {
+					const value = this._apiHandler!.get(resDummy, {
 						key,
-						auth: await Auth.Secret.getKey()
+						auth: Auth.Secret.getKey()
 					});
 
 					resDummy.transferTo(logObj);
@@ -241,7 +241,7 @@ export namespace KeyVal {
 							key,
 							value,
 							update,
-							auth: await Auth.Secret.getKey()
+							auth: Auth.Secret.getKey()
 						},
 						source
 					);
@@ -680,7 +680,7 @@ export namespace KeyVal {
 	}
 
 	export namespace Webpage {
-		async function keyvalHTML(json: string, randomNum: number) {
+		function keyvalHTML(json: string, randomNum: number) {
 			return `<!DOCTYPE HTML>
 			<html lang="en" style="background-color: rgb(70,70,70);">
 				<head>
@@ -692,7 +692,7 @@ export namespace KeyVal {
 					<title>KeyVal Switch</title>
 				</head>
 				<body style="margin: 0;overflow-x: hidden;">
-					<json-switches json='${json}' key="${await Auth.Secret.getKey()}">Javascript should be enabled</json-switches>
+					<json-switches json='${json}' key="${Auth.Secret.getKey()}">Javascript should be enabled</json-switches>
 					<script type="module" src="/keyval/keyval.bundle.js?n=${randomNum}"></script>
 				</body>
 			</html>`;
@@ -720,7 +720,7 @@ export namespace KeyVal {
 				res.status(200);
 				res.contentType('.html');
 				res.write(
-					await keyvalHTML(await this._db.json(true), this._randomNum)
+					keyvalHTML(await this._db.json(true), this._randomNum)
 				);
 				res.end();
 			}

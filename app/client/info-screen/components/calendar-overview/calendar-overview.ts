@@ -166,8 +166,6 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 			});
 		});
 
-		console.log(dayEvents);
-
 		return dayEvents;
 	}
 

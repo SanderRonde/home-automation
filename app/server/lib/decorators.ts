@@ -39,17 +39,12 @@ export function auth(
 	requireParams('auth')(target, propertyKey, descriptor);
 
 	const original = descriptor.value;
-	descriptor.value = async function(
+	descriptor.value = function(
 		res: express.Response,
 		params: KeyVal,
 		...args: any[]
 	) {
-		if (
-			!(await Auth.ClientSecret.authenticate(
-				params.auth,
-				params.id || '0'
-			))
-		) {
+		if (!Auth.ClientSecret.authenticate(params.auth, params.id || '0')) {
 			throw new AuthError('Invalid auth key');
 		}
 
@@ -63,7 +58,7 @@ export function authCookie(
 	descriptor: PropertyDescriptor
 ) {
 	const original = descriptor.value;
-	descriptor.value = async function(
+	descriptor.value = function(
 		res: express.Response,
 		req:
 			| express.Request
@@ -74,7 +69,7 @@ export function authCookie(
 			  },
 		...args: any[]
 	) {
-		if (!(await Auth.Cookie.checkCookie(req))) {
+		if (!Auth.Cookie.checkCookie(req)) {
 			throw new AuthError('Invalid or missing auth cookie');
 		}
 
@@ -88,7 +83,7 @@ export function authAll(
 	descriptor: PropertyDescriptor
 ) {
 	const original = descriptor.value;
-	descriptor.value = async function(
+	descriptor.value = function(
 		res: express.Response,
 		params: KeyVal & {
 			cookies: {
@@ -97,7 +92,7 @@ export function authAll(
 		},
 		...args: any[]
 	) {
-		if (await Auth.Cookie.checkCookie(params)) {
+		if (Auth.Cookie.checkCookie(params)) {
 			return original.bind(this)(res, params, ...args);
 		} else if (params.cookies && params.cookies['key']) {
 			throw new AuthError('Invalid auth cookie');
@@ -106,9 +101,7 @@ export function authAll(
 		if (!params || !params['auth']) {
 			throw new KeyError(`Missing key "auth"`);
 		}
-		if (
-			await Auth.ClientSecret.authenticate(params.auth, params.id || '0')
-		) {
+		if (Auth.ClientSecret.authenticate(params.auth, params.id || '0')) {
 			return original.bind(this)(res, params, ...args);
 		} else {
 			throw new AuthError('Invalid auth key');

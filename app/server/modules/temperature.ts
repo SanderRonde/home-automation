@@ -164,17 +164,17 @@ export namespace Temperature {
 				switch (request.action) {
 					case 'getTemp':
 						return API.Handler.getTemp(resDummy, {
-							auth: await Auth.Secret.getKey()
+							auth: Auth.Secret.getKey()
 						});
 					case 'setMode':
 						await API.Handler.setMode(resDummy, {
-							auth: await Auth.Secret.getKey(),
+							auth: Auth.Secret.getKey(),
 							mode: request.mode
 						});
 						break;
 					case 'setTarget':
 						await API.Handler.setTargetTemp(resDummy, {
-							auth: await Auth.Secret.getKey(),
+							auth: Auth.Secret.getKey(),
 							target: request.target
 						});
 						break;

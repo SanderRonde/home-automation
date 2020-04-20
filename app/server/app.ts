@@ -1,3 +1,11 @@
+import * as dotenv from 'dotenv';
+dotenv.config({
+	path: (require('path') as typeof import('path')).join(
+		__dirname,
+		'../../',
+		'.env'
+	)
+});
 import { setLogLevel, ProgressLogger, startInit, endInit } from './lib/logger';
 import {
 	initRoutes,
@@ -7,7 +15,7 @@ import {
 	initPostRoutes
 } from './lib/routes';
 import { notifyAllModules, NoDBModuleConfig } from './modules/modules';
-import { hasArg, getArg, getNumberArg } from './lib/io';
+import { hasArg, getArg, getNumberArg, getNumberEnv, getEnv } from './lib/io';
 import { WSSimulator, WSWrapper } from './lib/ws';
 import { getAllModules, Bot } from './modules';
 import { Database } from './lib/db';
@@ -188,17 +196,17 @@ function getVerbosity() {
 }
 new WebServer({
 	ports: {
-		http: getNumberArg('http'),
-		https: getNumberArg('https'),
-		info: getNumberArg('info-port')
+		http: getNumberArg('http') || getNumberEnv('IO_PORT_HTTP'),
+		https: getNumberArg('https') || getNumberEnv('IO_PORT_HTTPS'),
+		info: getNumberArg('info-port') || getNumberEnv('IO_PORT_INFO')
 	},
 	scripts: {
-		scriptDir: getArg('scripts'),
-		uid: getNumberArg('uid')
+		scriptDir: getArg('scripts') || getEnv('IO_SCRIPT_DIR'),
+		uid: getNumberArg('uid') || getNumberEnv('IO_UID')
 	},
 	log: {
 		level: getVerbosity(),
 		secrets: hasArg('log-secrets') || false
 	},
-	debug: hasArg('debug')
+	debug: hasArg('debug') || !!getArg('IO_DEBUG')
 }).init();

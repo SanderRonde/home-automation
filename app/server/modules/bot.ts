@@ -1,6 +1,6 @@
-import { BOT_SECRET_FILE, TELEGRAM_IPS, TELEGRAM_API } from '../lib/constants';
-import { attachMessage, logOutgoingReq } from '../lib/logger';
 import { ModuleConfig, AllModules, InstanceOf } from './modules';
+import { attachMessage, logOutgoingReq } from '../lib/logger';
+import { TELEGRAM_IPS, TELEGRAM_API } from '../lib/constants';
 import { awaitCondition } from '../lib/util';
 import { BotState } from '../lib/bot-state';
 import { ResponseLike } from './multi';
@@ -8,7 +8,7 @@ import { Database } from '../lib/db';
 import { log } from '../lib/logger';
 import { ModuleMeta } from './meta';
 import * as express from 'express';
-import * as fs from 'fs-extra';
+import { getEnv } from '../lib/io';
 import * as https from 'https';
 import chalk from 'chalk';
 
@@ -707,9 +707,7 @@ export namespace Bot {
 
 		export let handler: Message.Handler | null = null;
 		export async function init({ app, db }: ModuleConfig) {
-			const secret = await fs.readFile(BOT_SECRET_FILE, {
-				encoding: 'utf8'
-			});
+			const secret = getEnv('SECRET_BOT', true);
 			handler = await new Message.Handler(secret, db).init();
 
 			app.post('/bot/msg', async (req, res) => {

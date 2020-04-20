@@ -1871,7 +1871,7 @@ export namespace RGB {
 							{
 								color: request.color,
 								intensity: request.intensity,
-								auth: await Auth.Secret.getKey()
+								auth: Auth.Secret.getKey()
 							},
 							source
 						);
@@ -1884,7 +1884,7 @@ export namespace RGB {
 								green: g,
 								blue: b,
 								intensity: request.intensity,
-								auth: await Auth.Secret.getKey()
+								auth: Auth.Secret.getKey()
 							},
 							source
 						);
@@ -1894,7 +1894,7 @@ export namespace RGB {
 						resDummy,
 						{
 							power: request.state,
-							auth: await Auth.Secret.getKey()
+							auth: Auth.Secret.getKey()
 						},
 						source
 					);
@@ -1903,7 +1903,7 @@ export namespace RGB {
 						resDummy,
 						{
 							effect: request.name,
-							auth: await Auth.Secret.getKey(),
+							auth: Auth.Secret.getKey(),
 							...request.extra
 						},
 						source
@@ -1913,7 +1913,7 @@ export namespace RGB {
 						resDummy,
 						{
 							config: request.config,
-							auth: await Auth.Secret.getKey()
+							auth: Auth.Secret.getKey()
 						},
 						source
 					);
@@ -1925,7 +1925,7 @@ export namespace RGB {
 							pattern: name as any,
 							speed,
 							transition,
-							auth: await Auth.Secret.getKey()
+							auth: Auth.Secret.getKey()
 						},
 						source
 					);
@@ -3110,7 +3110,7 @@ export namespace RGB {
 			})
 		);
 
-		async function rgbHTML(randomNum: number) {
+		function rgbHTML(randomNum: number) {
 			return `<html style="background-color: rgb(70,70,70);">
 				<head>
 					<link rel="icon" href="/rgb/favicon.ico" type="image/x-icon" />
@@ -3119,7 +3119,7 @@ export namespace RGB {
 					<title>RGB controller</title>
 				</head>
 				<body style="margin: 0">
-					<rgb-controller key="${await Auth.Secret.getKey()}" patterns='${patternPreviews}'></rgb-controller>
+					<rgb-controller key="${Auth.Secret.getKey()}" patterns='${patternPreviews}'></rgb-controller>
 					<script type="module" src="/rgb/rgb.bundle.js?n=${randomNum}"></script>
 				</body>
 			</html>`;
@@ -3129,14 +3129,14 @@ export namespace RGB {
 			@errorHandle
 			@authCookie
 			@upgradeToHTTPS
-			public static async index(
+			public static index(
 				res: ResponseLike,
 				_req: express.Request,
 				randomNum: number
 			) {
 				res.status(200);
 				res.contentType('.html');
-				res.write(await rgbHTML(randomNum));
+				res.write(rgbHTML(randomNum));
 				res.end();
 			}
 		}

@@ -29,3 +29,29 @@ export function getNumberArg(name: string): number | void {
 	if (arg === void 0) return void 0;
 	return ~~arg;
 }
+
+export function getEnv(name: string): string | void;
+export function getEnv(name: string, required: false): string | void;
+export function getEnv(name: string, required: true): string;
+export function getEnv(name: string, required: boolean): string | void;
+export function getEnv(name: string, required: boolean = false): string | void {
+	const value = process.env[name];
+	if (value === void 0) {
+		if (!required) return void 0;
+		console.log(`Missing env variable "${name}"`);
+		process.exit(1);
+	}
+	return value;
+}
+
+export function getNumberEnv(name: string): number | void;
+export function getNumberEnv(name: string, required: false): number | void;
+export function getNumberEnv(name: string, required: true): number;
+export function getNumberEnv(
+	name: string,
+	required: boolean = false
+): number | void {
+	const value = getEnv(name, required);
+	if (typeof value !== 'string') return value;
+	return ~~value;
+}

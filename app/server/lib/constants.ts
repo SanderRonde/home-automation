@@ -1,15 +1,12 @@
 import { Color } from '../modules/rgb';
 import * as path from 'path';
+import { getEnv, getNumberEnv } from './io';
 
 const ROOT = path.join(__dirname, '../../../');
 export const DB_FOLDER = path.join(ROOT, 'database');
 
 // Secret stuff
 export const SECRETS_FOLDER = path.join(ROOT, 'secrets');
-export const AUTH_SECRET_FILE = path.join(SECRETS_FOLDER, 'auth.txt');
-export const BOT_SECRET_FILE = path.join(SECRETS_FOLDER, 'bot.txt');
-export const TELNET_IPS_FILE = path.join(SECRETS_FOLDER, 'telnet-ips.txt');
-export const SPOTIFY_SECRETS_FILE = path.join(SECRETS_FOLDER, 'spotify.json');
 
 // Logging
 export const IP_LOG_VERSION: 'ipv4' | 'ipv6' = 'ipv6';
@@ -30,7 +27,7 @@ export const TELEGRAM_IPS = [
 export const TELEGRAM_API = 'api.telegram.org';
 
 // Serial
-export const LED_DEVICE_NAME = '/dev/ttyACM0';
+export const LED_DEVICE_NAME = getEnv('MODULE_LED_DEVICE_NAME', true);
 
 // Rgb
 export const enum LED_NAMES {
@@ -43,27 +40,30 @@ export const ARDUINO_LEDS = [LED_NAMES.CEILING_LEDS];
 export const LED_IPS: {
 	[key: string]: LED_NAMES;
 } = {
-	'192.168.1.2': LED_NAMES.DESK_LEDS,
-	'192.168.1.4': LED_NAMES.BED_LEDS
+	[getEnv('MODULE_LED_DESK_LED_IP', true)]: LED_NAMES.DESK_LEDS,
+	[getEnv('MODULE_LED_BED_LED_IP', true)]: LED_NAMES.BED_LEDS
 };
 export const NAME_MAP = {
-	'192.168.1.2': ['room.leds.desk'],
-	'192.168.1.4': [
+	[getEnv('MODULE_LED_DESK_LED_IP', true)]: ['room.leds.desk'],
+	[getEnv('MODULE_LED_BED_LED_IP', true)]: [
 		'room.leds.bed',
 		'room.lights.nightstand',
 		'room.leds.wakelight'
 	],
-	[LED_DEVICE_NAME]: ['room.leds.ceiling']
+	[LED_DEVICE_NAME as string]: ['room.leds.ceiling']
 };
-export const NIGHTSTAND_COLOR: Color = {
-	r: 177,
-	g: 22,
-	b: 0
-};
-export const WAKELIGHT_TIME = 60 * 5 * 1000;
+export const NIGHTSTAND_COLOR: Color = (() => {
+	const [r, g, b] = getEnv('MODULE_LED_NIGHTSTAND_COLOR', true).split(',');
+	return { r: ~~r, g: ~~g, b: ~~b };
+})();
+export const WAKELIGHT_TIME = getNumberEnv('MODULE_LED_WAKELIGHT_TIME', true);
 
 // Keyval
-export const MAIN_LIGHTS = ['room.lights.ceiling'];
+export const MAIN_LIGHTS = (() => {
+	const str = getEnv('MODULE_LED_MAIN_LIGHTS', true);
+	if (!str) return [];
+	return str.split(',');
+})();
 export const COMMON_SWITCH_MAPPINGS: [RegExp, string][] = [
 	[/((ceiling|the|my)\s+)?light/, 'room.lights.ceiling'],
 	[/((the)\s+)?lights/, 'room.lights.ceiling'],
@@ -78,7 +78,7 @@ export const COMMON_SWITCH_MAPPINGS: [RegExp, string][] = [
 ];
 
 // Cast
-export const CAST_DEVICE_NAME = 'Home';
+export const CAST_DEVICE_NAME = getEnv('CAST_DEVICE_NAME', true);
 
 // Pressure
 export const MIN_PRESSURE = 0;

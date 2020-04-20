@@ -157,13 +157,13 @@ export namespace Explain {
 					value = await API.Handler.getLastXMins(resDummy, {
 						mins: request.mins,
 						announce: request.announce,
-						auth: await Auth.Secret.getKey()
+						auth: Auth.Secret.getKey()
 					});
 				} else {
 					value = await API.Handler.getLastX(resDummy, {
 						amount: request.amount,
 						announce: request.announce,
-						auth: await Auth.Secret.getKey()
+						auth: Auth.Secret.getKey()
 					});
 				}
 				resDummy.transferTo(logObj);

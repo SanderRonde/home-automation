@@ -8,14 +8,13 @@ import {
 import { remoteControlHTML } from '../templates/remote-control-template';
 import { attachMessage, ResDummy, log, getTime } from '../lib/logger';
 import telnet_client, * as TelnetClient from 'telnet-client';
-import { TELNET_IPS_FILE } from '../lib/constants';
 import { BotState } from '../lib/bot-state';
 import { ResponseLike } from './multi';
 import { ModuleConfig } from './modules';
 import { ModuleMeta } from './meta';
 import { Bot as _Bot } from './bot';
 import * as express from 'express';
-import * as fs from 'fs-extra';
+import { getEnv } from '../lib/io';
 import { Auth } from './auth';
 import chalk from 'chalk';
 
@@ -67,19 +66,19 @@ export namespace RemoteControl {
 					case 'playpause':
 					case 'close':
 						await API.Handler![request.action](resDummy, {
-							auth: await Auth.Secret.getKey()
+							auth: Auth.Secret.getKey()
 						});
 						break;
 					case 'volumeUp':
 					case 'volumeDown':
-						await API.Handler![request.action](resDummy, {
-							auth: await Auth.Secret.getKey(),
+						API.Handler![request.action](resDummy, {
+							auth: Auth.Secret.getKey(),
 							amount: request.amount
 						});
 						break;
 					case 'setVolume':
-						await API.Handler!.setVolume(resDummy, {
-							auth: await Auth.Secret.getKey(),
+						API.Handler!.setVolume(resDummy, {
+							auth: Auth.Secret.getKey(),
 							amount: request.amount
 						});
 						break;
@@ -686,11 +685,7 @@ export namespace RemoteControl {
 			}
 
 			(async () => {
-				TELNET_IPS = (
-					await fs.readFile(TELNET_IPS_FILE, {
-						encoding: 'utf8'
-					})
-				)
+				TELNET_IPS = getEnv('SECRET_REMOTE_CONTROL', true)
 					.split('\n')
 					.filter(l => l.length)
 					.map(l => l.split(':')) as [string, string, string][];

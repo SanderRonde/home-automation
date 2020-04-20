@@ -57,7 +57,7 @@ export namespace Script {
 					dummy,
 					{
 						name: request.name,
-						auth: await Auth.Secret.getKey()
+						auth: Auth.Secret.getKey()
 					},
 					this._config!
 				);

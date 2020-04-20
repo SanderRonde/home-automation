@@ -370,7 +370,7 @@ export namespace HomeDetector {
 							const all = await Bot._config!.apiHandler.getAll(
 								resDummy,
 								{
-									auth: await Auth.Secret.getKey()
+									auth: Auth.Secret.getKey()
 								},
 								true
 							);
@@ -415,7 +415,7 @@ export namespace HomeDetector {
 							const homeState = await Bot._config!.apiHandler.get(
 								resDummy,
 								{
-									auth: await Auth.Secret.getKey(),
+									auth: Auth.Secret.getKey(),
 									name: match[1]
 								}
 							);
@@ -647,7 +647,7 @@ export namespace HomeDetector {
 	}
 
 	export namespace Webpage {
-		async function homeDetectorHTML(json: string, randomNum: number) {
+		function homeDetectorHTML(json: string, randomNum: number) {
 			return `<html style="background-color: rgb(40, 40, 40);">
 				<head>
 					<link rel="icon" href="/home-detector/favicon.ico" type="image/x-icon" />
@@ -655,7 +655,7 @@ export namespace HomeDetector {
 					<title>Who is home</title>
 				</head>
 				<body style="margin: 0">
-					<home-detector-display json='${json}' key="${await Auth.Secret.getKey()}"></home-detector-display>
+					<home-detector-display json='${json}' key="${Auth.Secret.getKey()}"></home-detector-display>
 					<script type="module" src="/home-detector/home-detector.bundle.js?n=${randomNum}"></script>
 				</body>
 			</html>`;
@@ -679,7 +679,7 @@ export namespace HomeDetector {
 			@errorHandle
 			@authCookie
 			@upgradeToHTTPS
-			public async index(
+			public index(
 				res: ResponseLike,
 				_req: express.Request,
 				extended: boolean = false
@@ -687,7 +687,7 @@ export namespace HomeDetector {
 				res.status(200);
 				res.contentType('.html');
 				res.write(
-					await homeDetectorHTML(
+					homeDetectorHTML(
 						JSON.stringify(this._detector.getAll(extended)),
 						this._randomNum
 					)

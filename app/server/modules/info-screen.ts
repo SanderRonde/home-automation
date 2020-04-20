@@ -5,12 +5,12 @@ const optionalRequire = require('optional-require')(require);
 import { ModuleConfig, AllModules } from './modules';
 import { OAuth2Client } from 'google-auth-library';
 import { SECRETS_FOLDER } from '../lib/constants';
+import { WSWrapper, WSClient } from '../lib/ws';
 import { initMiddleware } from '../lib/routes';
 import { attachMessage } from '../lib/logger';
 import { BotState } from '../lib/bot-state';
 import { XHR, flatten } from '../lib/util';
 import { ResponseLike } from './multi';
-import { WSWrapper, WSClient } from '../lib/ws';
 import { Bot as _Bot } from './bot';
 import { ModuleMeta } from './meta';
 import { google } from 'googleapis';
@@ -19,6 +19,7 @@ import { KeyVal } from './keyval';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import * as http from 'http';
+import { getEnv } from '../lib/io';
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
 
@@ -31,7 +32,6 @@ export namespace InfoScreen {
 		async init(config: ModuleConfig) {
 			await Routing.init(config);
 			await Calendar.refresh();
-			await Temperature.External.init();
 		}
 
 		async notifyModules(modules: AllModules) {
@@ -58,24 +58,11 @@ export namespace InfoScreen {
 		}
 
 		export namespace External {
-			let openweathermapSecrets:
-				| typeof import('../../../secrets/openweathermap')
-				| null = null;
-
-			export async function init() {
-				try {
-					openweathermapSecrets = JSON.parse(
-						await fs.readFile(
-							path.join(SECRETS_FOLDER, 'openweathermap.json'),
-							{
-								encoding: 'utf8'
-							}
-						)
-					);
-				} catch (e) {
-					console.log('Failed to read openweathermap secrets');
-				}
-			}
+			const openweathermapSecrets = {
+				api_key: getEnv('SECRET_OPENWEATHERMAP_API_KEY', true),
+				city: getEnv('SECRET_OPENWEATHERMAP_CITY', true),
+				units: getEnv('SECRET_OPENWEATHERMAP_UNITS', true)
+			};
 
 			export async function get() {
 				if (!openweathermapSecrets) return null;
@@ -316,34 +303,24 @@ export namespace InfoScreen {
 			}
 		}
 
-		let secrets:
-			| typeof import('../../../secrets/google-token')
-			| null = null;
+		let secrets: {
+			client_id: string;
+			client_secret: string;
+			redirect_url: string;
+		} = {
+			client_id: getEnv('SECRET_GOOGLE_CLIENT_ID', true),
+			client_secret: getEnv('SECRET_GOOGLE_CLIENT_SECRET', true),
+			redirect_url: getEnv('SECRET_GOOGLE_REDIRECT_URL', true)
+		};
 		async function createClient() {
 			if (client) return;
-			try {
-				const _secrets = JSON.parse(
-					await fs.readFile(
-						path.join(SECRETS_FOLDER, 'google-token.json'),
-						{
-							encoding: 'utf8'
-						}
-					)
-				) as typeof import('../../../secrets/google-token');
-				secrets = _secrets;
+			const { client_id, client_secret, redirect_url } = secrets;
 
-				const { client_id, client_secret, redirect_url } = secrets;
-
-				client =
-					client ||
-					new google.auth.OAuth2(
-						client_id,
-						client_secret,
-						redirect_url
-					);
-			} catch (e) {
-				console.log('Failed to read google token', e);
-			}
+			client = new google.auth.OAuth2(
+				client_id,
+				client_secret,
+				redirect_url
+			);
 		}
 
 		let client: OAuth2Client | null = null;

@@ -1,20 +1,19 @@
 import {
 	PLAYSTATE_CHECK_INTERVAL,
-	SPOTIFY_SECRETS_FILE,
 	BEAT_CACHE_CLEAR_INTERVAL,
 	PLAYBACK_CLOSE_RANGE
 } from '../lib/constants';
+import { AllModules, ModuleConfig } from './modules';
 import { SpotifyTypes } from '../types/spotify';
 import { log, getTime } from '../lib/logger';
 import { BotState } from '../lib/bot-state';
-import { AllModules, ModuleConfig } from './modules';
 import { Bot as _Bot } from './index';
 import { Database } from '../lib/db';
 import { Response } from 'node-fetch';
 import { ModuleMeta } from './meta';
+import { getEnv } from '../lib/io';
 import { wait } from '../lib/util';
 import fetch from 'node-fetch';
-import * as fs from 'fs-extra';
 import chalk from 'chalk';
 
 export interface BeatChanges {
@@ -326,11 +325,14 @@ export namespace SpotifyBeats {
 			let _api: API | null = null;
 			export async function create(db: Database) {
 				try {
-					const { id, secret, redirect_url_base } = JSON.parse(
-						await fs.readFile(SPOTIFY_SECRETS_FILE, {
-							encoding: 'utf8'
-						})
-					);
+					const { id, secret, redirect_url_base } = {
+						id: getEnv('SECRET_SPOTIFY_ID', true),
+						secret: getEnv('SECRET_SPOTIFY_SECRET', true),
+						redirect_url_base: getEnv(
+							'SECRET_SPOTIFY_REDIRECT_URL_BASE',
+							true
+						)
+					};
 					return (_api = new API({
 						clientId: id,
 						clientSecret: secret,
