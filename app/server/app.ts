@@ -50,19 +50,19 @@ class WebServer {
 	private _setConfigDefaults(config: PartialConfig): Config {
 		return {
 			ports: {
-				http: (config.ports && config.ports.http) || 1234,
-				https: (config.ports && config.ports.https) || 1235,
-				info: (config.ports && config.ports.info) || 1337
+				http: config.ports?.http || 1234,
+				https: config.ports?.https || 1235,
+				info: config.ports?.info || 1337
 			},
 			scripts: {
-				uid: (config.scripts && config.scripts.uid) || 0,
+				uid: config.scripts?.uid || 0,
 				scriptDir:
-					(config.scripts && config.scripts.scriptDir) ||
+					config.scripts?.scriptDir ||
 					path.join(__dirname, '../../', 'scripts')
 			},
 			log: {
-				level: (config.log && config.log.level) || 1,
-				secrets: (config.log && config.log.secrets) || false
+				level: config.log?.level || 1,
+				secrets: config.log?.secrets || false
 			},
 			debug: config.debug || false
 		};
