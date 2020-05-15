@@ -50,10 +50,10 @@ export namespace InfoScreen {
 				_modules = modules;
 			}
 
-			export async function get(logObj?: any) {
+			export async function get(name: string, logObj?: any) {
 				return await new _modules!.temperature.External.Handler(
 					logObj || {}
-				).getTemp();
+				).getTemp(name);
 			}
 		}
 
@@ -129,7 +129,7 @@ export namespace InfoScreen {
 		}
 
 		export function getInternal(logObj?: any) {
-			return Internal.get(logObj);
+			return Internal.get('room', logObj);
 		}
 
 		export function getExternal() {
