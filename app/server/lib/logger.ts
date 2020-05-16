@@ -1,10 +1,11 @@
+import { stdout } from '@sanderronde/write-buffer';
+import { ExplainHook } from '../modules/explain';
 import { ResponseLike } from '../modules/multi';
+import { IP_LOG_VERSION } from './constants';
 import * as express from 'express';
 import { Auth } from '../modules';
 import * as http from 'http';
 import chalk from 'chalk';
-import { IP_LOG_VERSION } from './constants';
-import { ExplainHook } from '../modules/explain';
 
 interface AssociatedMessage {
 	content: string[];
@@ -187,7 +188,7 @@ export class LogCapturer implements Loggable {
 
 	logToConsole() {
 		for (const line of this._originalLines) {
-			console.log(...line);
+			stdout(...line);
 		}
 		this._done = true;
 		const str = this._get();
