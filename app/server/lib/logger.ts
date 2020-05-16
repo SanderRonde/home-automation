@@ -490,6 +490,6 @@ export function log(...args: any[]) {
 	if (isInit) {
 		initMessages.push(args);
 	} else {
-		console.log(...args);
+		stdout(...args);
 	}
 }
