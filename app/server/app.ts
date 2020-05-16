@@ -39,6 +39,7 @@ interface PartialConfig {
 		secrets: boolean;
 	};
 	debug?: boolean;
+	instant?: boolean;
 }
 
 type DeepRequired<T> = {
@@ -73,7 +74,8 @@ class WebServer {
 				level: config.log?.level || 1,
 				secrets: config.log?.secrets || false
 			},
-			debug: config.debug || false
+			debug: config.debug || false,
+			instant: config.instant || false
 		};
 	}
 
@@ -127,8 +129,8 @@ class WebServer {
 		setLogLevel(this._config.log.level);
 		await Bot.printCommands();
 		writeBufferInit({
-			maxLogs: 1000,
-			maxSeconds: 60 * 5,
+			maxLogs: this._config.instant ? 0 : 1000,
+			maxSeconds: this._config.instant ? 0 : 60 * 5,
 			onLog: (...args: any[]) => console.log(...args)
 		});
 		this._listen();
@@ -214,5 +216,6 @@ new WebServer({
 		level: getVerbosity(),
 		secrets: hasArg('log-secrets') || false
 	},
-	debug: hasArg('debug') || !!getArg('IO_DEBUG')
+	debug: hasArg('debug') || !!getArg('IO_DEBUG'),
+	instant: hasArg('instant')
 }).init();
