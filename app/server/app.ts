@@ -217,5 +217,5 @@ new WebServer({
 		secrets: hasArg('log-secrets') || false
 	},
 	debug: hasArg('debug') || !!getArg('IO_DEBUG'),
-	instant: hasArg('instant')
+	instant: hasArg('instant', 'i')
 }).init();
