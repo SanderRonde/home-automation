@@ -505,7 +505,7 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 	}
 
 	async mounted() {
-		this.listen('propChange', (name: string) => {
+		(this.listen as any)('propChange', (name: string) => {
 			if (name === 'filename') {
 				this.props.length = 0;
 				this._fileNameChange();

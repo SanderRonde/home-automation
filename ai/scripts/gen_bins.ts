@@ -9,7 +9,7 @@ import * as fs from 'fs-extra';
 import * as glob from 'glob';
 import * as http from 'http';
 import * as path from 'path';
-import chalk from 'chalk';
+import * as chalk from 'chalk';
 
 interface HTTPServer {
 	server: http.Server;
@@ -112,7 +112,7 @@ namespace BinGenerator {
 			}
 
 			export async function getIO() {
-				const io: Partial<IO> = { };
+				const io: Partial<IO> = {};
 
 				let inFileGlobs: string[] = [];
 
@@ -125,7 +125,10 @@ namespace BinGenerator {
 					} else if (arg === '-n') {
 						io.interval = parseInt(process.argv[++i], 10);
 					} else if (arg === '--interval=') {
-						io.interval = parseInt(arg.slice('--interval='.length), 10);
+						io.interval = parseInt(
+							arg.slice('--interval='.length),
+							10
+						);
 					} else {
 						inFileGlobs.push(arg);
 					}
@@ -141,7 +144,6 @@ namespace BinGenerator {
 					process.stderr.write('Please supply input files\n');
 					process.exit(1);
 				}
-
 
 				const files = await getInputFiles(inFileGlobs);
 
@@ -272,7 +274,10 @@ namespace BinGenerator {
 				});
 			}
 
-			export async function insertBinCollection(page: puppeteer.Page, io: IO.Input.IO) {
+			export async function insertBinCollection(
+				page: puppeteer.Page,
+				io: IO.Input.IO
+			) {
 				await page.evaluate(
 					(BINS, INTERVAL) => {
 						const puppetGlobal: PuppetGlobal = window;
@@ -459,7 +464,8 @@ namespace BinGenerator {
 						this._bar.update(this._progressPercent, {
 							done: this._done ? symbols.success : ' ',
 							file: `| ${this._clipFile()}`,
-							padding: BarContent.leftpad(' ',
+							padding: BarContent.leftpad(
+								' ',
 								getPadding(this._barLength, this._timeRemaining)
 							)
 						});
@@ -498,11 +504,20 @@ namespace BinGenerator {
 				PRE_PADDING + POST_PADDING + FILE_PADDING + EDGE_PADDING;
 			function getScaledLength(duration: number) {
 				const scale = duration / MAX_LEN;
-				return Math.max(Math.round((process.stdout.columns - TOTAL_PADDING) * scale), 10);
+				return Math.max(
+					Math.round(
+						(process.stdout.columns - TOTAL_PADDING) * scale
+					),
+					10
+				);
 			}
 
 			function getPadding(barLength: number, timeRemaining: number) {
-				const target = process.stdout.columns - POST_PADDING - FILE_PADDING - EDGE_PADDING;
+				const target =
+					process.stdout.columns -
+					POST_PADDING -
+					FILE_PADDING -
+					EDGE_PADDING;
 				const padding = target - barLength;
 				if (timeRemaining < 10) {
 					return padding + 1;
