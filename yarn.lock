@@ -55,10 +55,10 @@
   resolved "https://registry.yarnpkg.com/@protobufjs/utf8/-/utf8-1.1.0.tgz#a777360b5b39a1a2e5106f8e858f2fd2d060c570"
   integrity sha1-p3c2C1s5oaLlEG+OhY8v0tBgxXA=
 
-"@sanderronde/write-buffer@^1.0.6":
-  version "1.0.6"
-  resolved "https://registry.yarnpkg.com/@sanderronde/write-buffer/-/write-buffer-1.0.6.tgz#155f74dccd9ebf6817d532a6a79d787763764421"
-  integrity sha512-hq0qStYJJbR5TVhFypaCy5Zp4I/bzAhTr0Z5cmyATFeKZ83g+tWH6wPGHabdR6CTj49F0f5+qGqK8/R3wcn5Og==
+"@sanderronde/write-buffer@^1.0.7":
+  version "1.0.7"
+  resolved "https://registry.yarnpkg.com/@sanderronde/write-buffer/-/write-buffer-1.0.7.tgz#2eeb027dea112f1c0fb9942aba33d50e1c508bd4"
+  integrity sha512-DlqtRgZ6bJbWE9odSEuep+yJbP9hNnkJBl7a0uzLVvlVOCEFjY05eJTs4Oz2NGccP5L68dfMdGCsPMQYZ1vPUA==
 
 "@serialport/binding-abstract@^8.0.6":
   version "8.0.6"
