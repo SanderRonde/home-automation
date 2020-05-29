@@ -21,7 +21,6 @@ import { WSSimulator, WSWrapper } from './lib/ws';
 import { getAllModules, Bot } from './modules';
 import { Database } from './lib/db';
 import * as express from 'express';
-import * as fs from 'fs-extra';
 import * as path from 'path';
 import * as http from 'http';
 
@@ -133,10 +132,7 @@ class WebServer {
 			maxLogs: 1000,
 			maxSeconds: 60 * 5,
 			onLog: (...args: any[]) => console.log(...args),
-			disabled: this._config.instant,
-			shouldBeEnabled() {
-				return fs.pathExists(path.join(__dirname, '../', 'sync'));
-			}
+			disabled: this._config.instant
 		});
 		this._listen();
 	}
