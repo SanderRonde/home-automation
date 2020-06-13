@@ -21,6 +21,11 @@ export const enum PRESSURE_CHANGE_DIRECTION {
 	DOWN
 }
 
+export const enum PRESSURE_REGISTER {
+	REGISTER_CHANGED,
+	IGNORE_CHANGE
+}
+
 export interface PressureRange {
 	type: 'range';
 	/**
@@ -41,7 +46,9 @@ export interface PressureRange {
 	/**
 	 * A handler that is executed when the pressure falls in given range
 	 */
-	handler: (hookables: ModuleHookables) => any | Promise<any>;
+	handler: (
+		hookables: ModuleHookables
+	) => PRESSURE_REGISTER | Promise<PRESSURE_REGISTER>;
 }
 
 export interface PressureChange {
@@ -163,9 +170,9 @@ export namespace Pressure {
 							})
 					) {
 						let doUpdate: boolean = currentRanges.has(key);
-						currentRanges.set(key, range);
-						if (doUpdate) {
-							handler(
+						if (
+							!doUpdate ||
+							(await handler(
 								await createHookables(
 									key,
 									attachMessage(
@@ -173,7 +180,9 @@ export namespace Pressure {
 										'Pressure hooks range'
 									)
 								)
-							);
+							)) === PRESSURE_REGISTER.REGISTER_CHANGED
+						) {
+							currentRanges.set(key, range);
 						}
 					}
 				} else {

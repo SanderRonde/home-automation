@@ -1,4 +1,4 @@
-import { PressureHooks } from '../modules/pressure';
+import { PressureHooks, PRESSURE_REGISTER } from '../modules/pressure';
 
 export default {
 	bed: [
@@ -9,6 +9,7 @@ export default {
 			minTime: 2500,
 			handler: _modules => {
 				// Do something
+				return PRESSURE_REGISTER.REGISTER_CHANGED;
 			}
 		},
 		{
@@ -18,6 +19,7 @@ export default {
 			minTime: 2500,
 			handler: _modules => {
 				// Do something else
+				return PRESSURE_REGISTER.REGISTER_CHANGED;
 			}
 		}
 	],
@@ -27,6 +29,7 @@ export default {
 			to: 500,
 			handler: _modules => {
 				// Do something
+				return PRESSURE_REGISTER.REGISTER_CHANGED;
 			}
 		},
 		{
@@ -35,6 +38,7 @@ export default {
 			minTime: 5000,
 			handler: _modules => {
 				// Do something else
+				return PRESSURE_REGISTER.REGISTER_CHANGED;
 			}
 		}
 	]
