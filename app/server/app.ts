@@ -16,7 +16,6 @@ import {
 } from './lib/routes';
 import { hasArg, getArg, getNumberArg, getNumberEnv, getEnv } from './lib/io';
 import { notifyAllModules, NoDBModuleConfig } from './modules/modules';
-import { writeBufferInit } from '@sanderronde/write-buffer';
 import { WSSimulator, WSWrapper } from './lib/ws';
 import { getAllModules, Bot } from './modules';
 import { Database } from './lib/db';
@@ -128,12 +127,6 @@ class WebServer {
 		await initPostRoutes(this.app);
 		setLogLevel(this._config.log.level);
 		await Bot.printCommands();
-		writeBufferInit({
-			maxLogs: 1000,
-			maxSeconds: 60 * 5,
-			onLog: (...args: any[]) => console.log(...args),
-			disabled: this._config.instant
-		});
 		this._listen();
 	}
 

@@ -1,4 +1,3 @@
-import { stdout } from '@sanderronde/write-buffer';
 import { logReq, attachMessage } from './logger';
 import { ResponseLike } from '../modules/multi';
 import * as pathToRegexp from 'path-to-regexp';
@@ -244,7 +243,7 @@ export async function initPostRoutes(app: express.Express) {
 		) => {
 			if (err && err.message) {
 				if (res.headersSent) {
-					stdout(
+					console.log(
 						chalk.bgRed(
 							chalk.black(
 								'Got error after headers were sent',

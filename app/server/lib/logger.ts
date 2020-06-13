@@ -1,4 +1,3 @@
-import { stdout } from '@sanderronde/write-buffer';
 import { ExplainHook } from '../modules/explain';
 import { ResponseLike } from '../modules/multi';
 import { IP_LOG_VERSION } from './constants';
@@ -188,7 +187,7 @@ export class LogCapturer implements Loggable {
 
 	logToConsole() {
 		for (const line of this._originalLines) {
-			stdout(...line);
+			console.log(...line);
 		}
 		this._done = true;
 		const str = this._get();
@@ -490,6 +489,6 @@ export function log(...args: any[]) {
 	if (isInit) {
 		initMessages.push(args);
 	} else {
-		stdout(...args);
+		console.log(...args);
 	}
 }
