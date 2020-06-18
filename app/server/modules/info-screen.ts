@@ -128,8 +128,8 @@ export namespace InfoScreen {
 			}
 		}
 
-		export function getInternal(logObj?: any) {
-			return Internal.get('room', logObj);
+		export function getInternal(logObj?: any, name: string = 'room') {
+			return Internal.get(name, logObj);
 		}
 
 		export function getExternal() {
@@ -228,7 +228,7 @@ export namespace InfoScreen {
 				{
 					type
 				}: {
-					type: 'inside' | 'outside';
+					type: 'inside' | 'outside' | 'server';
 				}
 			) {
 				const { temp, icon } = await (async (): Promise<{
@@ -239,6 +239,12 @@ export namespace InfoScreen {
 						// Use temperature module
 						const temp = await Temperature.getInternal(res);
 						return { temp: temp!.temp, icon: 'inside.png' };
+					} else if (type === 'server') {
+						const temp = await Temperature.getInternal(
+							res,
+							'server'
+						);
+						return { temp: temp!.temp, icon: 'server.png' };
 					} else {
 						// Use openweathermap
 						const openweathermapResponse = await Temperature.getExternal();

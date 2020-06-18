@@ -54,14 +54,21 @@ export const InfoScreenCSS = new TemplateFn<InfoScreen>(
 					grid-row-end: 3;
 				}
 
+				#server-temp {
+					grid-column-start: 4;
+					grid-column-end: 5;
+					grid-row-start: 3;
+					grid-row-end: 5;
+				}
+
 				#calendar {
 					bottom: 3vh;
 					position: absolute;
 				}
 
 				#offline {
-					grid-column-start: 4;
-					grid-column-end: 5;
+					grid-column-start: 1;
+					grid-column-end: 2;
 					grid-row-start: 3;
 					grid-row-end: 4;
 					width: 10vw;

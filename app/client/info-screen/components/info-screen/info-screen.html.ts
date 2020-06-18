@@ -25,6 +25,10 @@ export const InfoScreenHTML = new TemplateFn<InfoScreen>(
 						id="right-temp"
 						temp-type="${TEMPERATURE_DISPLAY_TYPE.INSIDE}"
 					></temperature-display>
+					<temperature-display
+						id="server-temp"
+						temp-type="${TEMPERATURE_DISPLAY_TYPE.SERVER}"
+					></temperature-display>
 					<calendar-overview id="calendar"></calendar-overview>
 					${props.offline
 						? html`

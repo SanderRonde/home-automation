@@ -9,7 +9,8 @@ import { TemperatureDisplayCSS } from './temperature-display.css.js';
 
 export const enum TEMPERATURE_DISPLAY_TYPE {
 	INSIDE = 'inside',
-	OUTSIDE = 'outside'
+	OUTSIDE = 'outside',
+	SERVER = 'server'
 }
 
 @config({
@@ -86,9 +87,9 @@ export class TemperatureDisplay extends ConfigurableWebComponent<{
 			() => {
 				this.updateWeather();
 			},
-			this.props.tempType === TEMPERATURE_DISPLAY_TYPE.INSIDE
-				? 1000 * 60
-				: 1000 * 60 * 60
+			this.props.tempType === TEMPERATURE_DISPLAY_TYPE.OUTSIDE
+				? 1000 * 60 * 60
+				: 1000 * 60
 		);
 	}
 
