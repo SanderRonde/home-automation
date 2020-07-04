@@ -54,6 +54,10 @@ The explain module records actions and how they occurred on top of the regular l
 
 The info-screen module powers a screen containing some basic info like the temperature outside and inside (thanks to the temperature module), as well as the upcoming calender events etc. It is basically an HTML page hosted on localhost that talks to the server via a separate entrypoint. In my case the actual screen is mounted behind some mirror foil to have a sort of smart-mirror.
 
+#### Webhook
+
+The webhook module is a fairly simple interface with the outside world. When a webhook endpoint is reached, the webhook with that name is ran. Webhooks can be configured in a config file to interface with any other module, allowing you to do anything from a webhook.
+
 ### Controllers
 
 #### Telegram bot
@@ -125,6 +129,10 @@ The explain module works by adding another layer on top of the regular logging l
 #### Info-screen
 
 The info-screen module works through some fairly simple REST API's hosted on localhost. Because it's all hosted on and only accessible from localhost, there isn't much need for complexity. Getting the temperature from inside is done through the temperature module and getting the temperature outside is done through the [openweathermap API](https://openweathermap.org/api). The upcoming calendar is fetched through google's calendar API, first requring the user to give permission to the app for their google account.
+
+#### Webhook
+
+The webhook module uses a simple config file, in which the webhook with given name is called when its endpoint has been hit.
 
 #### Telegram bot
 
