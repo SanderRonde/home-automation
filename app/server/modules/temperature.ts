@@ -1,16 +1,18 @@
 import { errorHandle, requireParams, authAll, auth } from '../lib/decorators';
 import { attachMessage, ResDummy, log, getTime } from '../lib/logger';
 import { BotState } from '../lib/bot-state';
-import { ResponseLike } from './multi';
 import { ModuleConfig } from './modules';
+import { ResponseLike } from './multi';
 import { Database } from '../lib/db';
 import { Bot as _Bot } from './bot';
+import { ModuleMeta } from './meta';
+import { getEnv } from '../lib/io';
 import { KeyVal } from './keyval';
 import { Auth } from './auth';
-import { ModuleMeta } from './meta';
 import chalk from 'chalk';
 
 const LOG_INTERVAL_SECS = 60;
+const ENABLE_HEATING = getEnv('ENABLE_HEATING', false) === 'true';
 
 export namespace Temperature {
 	export const meta = new (class Meta extends ModuleMeta {
@@ -154,12 +156,16 @@ export namespace Temperature {
 			this.db = database;
 			this.name = name;
 
-			const target = database.get(`${name}.target`, 20.0);
-			const prevMode = database.get(`${name}.mode`, 'auto');
+			if (ENABLE_HEATING) {
+				const target = database.get(`${name}.target`, 20.0);
+				const prevMode = database.get(`${name}.mode`, 'auto');
+
+				await this.setTarget(target);
+				await this.setMode(prevMode);
+			}
+
 			const temp = database.get(`${name}.temp`, 20.0);
 
-			await this.setTarget(target);
-			await this.setMode(prevMode);
 			await this.setLastTemp(temp, false, false);
 
 			return this;
@@ -588,15 +594,17 @@ export namespace Temperature {
 				res.end();
 			});
 
-			KeyVal.GetSetListener.addListener(
-				'room.heating',
-				async (value, logObj) => {
-					new External.Handler(logObj).setMode(
-						'default',
-						value === '1' ? 'on' : 'off'
-					);
-				}
-			);
+			if (ENABLE_HEATING) {
+				KeyVal.GetSetListener.addListener(
+					'room.heating',
+					async (value, logObj) => {
+						new External.Handler(logObj).setMode(
+							'default',
+							value === '1' ? 'on' : 'off'
+						);
+					}
+				);
+			}
 		}
 	}
 }
