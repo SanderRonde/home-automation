@@ -1372,10 +1372,10 @@ lru-cache@^5.0.0:
   dependencies:
     yallist "^3.0.2"
 
-magic-home@^2.1.1:
-  version "2.3.1"
-  resolved "https://registry.yarnpkg.com/magic-home/-/magic-home-2.3.1.tgz#d49c8a9ffc5c3995193d3fb69f4516263bc034ee"
-  integrity sha512-x2oCB5GniAGL5sCQTnrmhEdD/pIbqItwNpiYhkgstuYVfJsugOErksqpfftuV/wceySb2L4KLWnhYBpHiTkRgA==
+magic-home@^2.6.0:
+  version "2.6.0"
+  resolved "https://registry.yarnpkg.com/magic-home/-/magic-home-2.6.0.tgz#6f18d4f2c9c5c09a35baeb4df1741fb2fe0b5d86"
+  integrity sha512-UNHYmbgm/GsS82JurRjPKOkmVj8dAGUK2Cq6/gAHL22yP7y1R/F4Zyqtb1zzI79QALiYzg9AW80KPbUuX/TbKg==
   dependencies:
     commander "^2.20.0"
     merge-options "^1.0.1"

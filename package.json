@@ -59,7 +59,7 @@
 		"glob": "^7.1.6",
 		"googleapis": "39",
 		"lit-html": "^1.1.0",
-		"magic-home": "^2.1.1",
+		"magic-home": "^2.6.0",
 		"node-fetch": "^2.6.0",
 		"optional-require": "^1.0.0",
 		"path-to-regexp": "^3.0.0",
