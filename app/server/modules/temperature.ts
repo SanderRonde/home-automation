@@ -74,18 +74,20 @@ export namespace Temperature {
 			await this.db!.setVal(`${this.name}.mode`, newMode);
 			this.mode = newMode;
 
-			if (newMode === 'off') {
-				new KeyVal.External.Handler({}, 'HEATING.off').set(
-					'room.heating',
-					'0',
-					false
-				);
-			} else {
-				new KeyVal.External.Handler({}, 'HEATING.on').set(
-					'room.heating',
-					'1',
-					false
-				);
+			if (ENABLE_HEATING) {
+				if (newMode === 'off') {
+					new KeyVal.External.Handler({}, 'HEATING.off').set(
+						'room.heating',
+						'0',
+						false
+					);
+				} else {
+					new KeyVal.External.Handler({}, 'HEATING.on').set(
+						'room.heating',
+						'1',
+						false
+					);
+				}
 			}
 		}
 

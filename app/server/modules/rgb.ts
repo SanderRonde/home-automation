@@ -3787,7 +3787,7 @@ export namespace RGB {
 					chalk.bold(client.address),
 					`to color rgb(255, 255, 255)`
 				),
-				chalk.bgHex(API.colorToHex(NIGHTSTAND_COLOR))('   ')
+				chalk.bgHex(API.colorToHex(new Color(255)))('   ')
 			);
 			if (Routing.explainHook) {
 				Routing.explainHook(
@@ -3910,23 +3910,16 @@ export namespace RGB {
 				return Promise.resolve();
 			}
 		);
-		KeyVal.GetSetListener.addListener(
-			'room.leds.ceiling',
-			async (value, logObj) => {
-				await switchLed(LED_NAMES.CEILING_LEDS, value, logObj);
-			}
-		);
-		KeyVal.GetSetListener.addListener(
-			'room.leds.bed',
-			async (value, logObj) => {
-				await switchLed(LED_NAMES.BED_LEDS, value, logObj);
-			}
-		);
-		KeyVal.GetSetListener.addListener(
-			'room.leds.desk',
-			async (value, logObj) => {
-				await switchLed(LED_NAMES.DESK_LEDS, value, logObj);
-			}
-		);
+		Object.entries({
+			'room.leds.ceiling': LED_NAMES.CEILING_LEDS,
+			'room.leds.bed': LED_NAMES.BED_LEDS,
+			'room.leds.desk': LED_NAMES.DESK_LEDS,
+			'room.leds.wall': LED_NAMES.WALL_LEDS,
+			'room.leds.couch': LED_NAMES.COUCH_LEDS
+		}).forEach(([key, ledName]) => {
+			KeyVal.GetSetListener.addListener(key, async (value, logObj) => {
+				await switchLed(ledName, value, logObj);
+			});
+		});
 	}
 }

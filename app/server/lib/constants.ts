@@ -33,18 +33,29 @@ export const LED_DEVICE_NAME = getEnv('MODULE_LED_DEVICE_NAME', true);
 export const enum LED_NAMES {
 	BED_LEDS,
 	DESK_LEDS,
+	COUCH_LEDS,
+	WALL_LEDS,
 	CEILING_LEDS
 }
-export const MAGIC_LEDS = [LED_NAMES.BED_LEDS, LED_NAMES.DESK_LEDS];
+export const MAGIC_LEDS = [
+	LED_NAMES.BED_LEDS,
+	LED_NAMES.DESK_LEDS,
+	LED_NAMES.COUCH_LEDS,
+	LED_NAMES.WALL_LEDS
+];
 export const ARDUINO_LEDS = [LED_NAMES.CEILING_LEDS];
 export const LED_IPS: {
 	[key: string]: LED_NAMES;
 } = {
 	[getEnv('MODULE_LED_DESK_LED_IP', true)]: LED_NAMES.DESK_LEDS,
-	[getEnv('MODULE_LED_BED_LED_IP', true)]: LED_NAMES.BED_LEDS
+	[getEnv('MODULE_LED_BED_LED_IP', true)]: LED_NAMES.BED_LEDS,
+	[getEnv('MODULE_LED_COUCH_LED_IP', true)]: LED_NAMES.COUCH_LEDS,
+	[getEnv('MODULE_LED_WALL_LED_IP', true)]: LED_NAMES.WALL_LEDS
 };
 export const NAME_MAP = {
 	[getEnv('MODULE_LED_DESK_LED_IP', true)]: ['room.leds.desk'],
+	[getEnv('MODULE_LED_WALL_LED_IP', true)]: ['room.leds.wall'],
+	[getEnv('MODULE_LED_COUCH_LED_IP', true)]: ['room.leds.couch'],
 	[getEnv('MODULE_LED_BED_LED_IP', true)]: [
 		'room.leds.bed',
 		'room.lights.nightstand',
