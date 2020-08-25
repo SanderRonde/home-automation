@@ -223,7 +223,7 @@ namespace BinGenerator {
 			}
 
 			export async function writeBin(binFile: BinFile) {
-				await fs.writeFile(getFileOutPath(binFile), binFile.data, {
+				await fs.writeFile(getFileOutPath(binFile), JSON.stringify(binFile.data), {
 					encoding: 'utf8'
 				});
 			}
