@@ -172,7 +172,8 @@ export namespace SpotifyBeats {
 
 				async wrapRequest<R>(
 					path: string,
-					request: () => Promise<ExtendedResponse<R>>
+					request: () => Promise<ExtendedResponse<R>>,
+					silent: boolean = false
 				): Promise<ExtendedResponse<R> | null> {
 					const url = `${API.SPOTIFY_BASE}${path}`;
 					try {
@@ -185,36 +186,21 @@ export namespace SpotifyBeats {
 							case 304:
 								return response;
 							case 400:
+							case 401:
 							case 403:
 							case 500:
 							case 502:
-								log(
-									getTime(),
-									chalk.cyan('[spotify]'),
-									chalk.red(
-										`Spotify API request failed on URL ${url}`
-									),
-									await response.text()
-								);
-								return null;
-							case 401:
-								log(
-									getTime(),
-									chalk.cyan('[spotify]'),
-									`Spotify API request failed (on URL ${url})`,
-									await response.text()
-								);
-								if (!(await this.refreshToken())) {
-									await Auth.authFromToken(
-										await Auth.generateNew()
+								if (!silent) {
+									log(
+										getTime(),
+										chalk.cyan('[spotify]'),
+										chalk.red(
+											`Spotify API request failed on URL ${url}`
+										),
+										await response.text()
 									);
 								}
-								log(
-									getTime(),
-									chalk.cyan('[spotify]'),
-									`Refreshed token`
-								);
-								return this.wrapRequest(path, request);
+								return null;
 							case 429:
 								const retryAfter = response.headers.get(
 									'Retry-After'
@@ -223,19 +209,21 @@ export namespace SpotifyBeats {
 									1000 *
 										(parseInt(retryAfter || '60', 10) + 1)
 								);
-								return this.wrapRequest(path, request);
+								return this.wrapRequest(path, request, silent);
 							case 503:
 								await wait(1000 * 60);
-								return this.wrapRequest(path, request);
+								return this.wrapRequest(path, request, silent);
 						}
-						log(
-							getTime(),
-							chalk.cyan('[spotify]'),
-							chalk.red(
-								`Unknown status code ${response.status} on URL ${url}`
-							),
-							await response.text()
-						);
+						if (!silent) {
+							log(
+								getTime(),
+								chalk.cyan('[spotify]'),
+								chalk.red(
+									`Unknown status code ${response.status} on URL ${url}`
+								),
+								await response.text()
+							);
+						}
 						return null;
 					} catch (e) {
 						log(
@@ -249,13 +237,18 @@ export namespace SpotifyBeats {
 				}
 
 				async get<R>(
-					path: string
+					path: string,
+					silent: boolean = false
 				): Promise<ExtendedResponse<R> | null> {
-					const ret = await this.wrapRequest(path, () => {
-						return fetch(`${API.SPOTIFY_BASE}${path}`, {
-							headers: this._getHeaders()
-						});
-					});
+					const ret = await this.wrapRequest(
+						path,
+						() => {
+							return fetch(`${API.SPOTIFY_BASE}${path}`, {
+								headers: this._getHeaders()
+							});
+						},
+						silent
+					);
 					return ret;
 				}
 
@@ -267,21 +260,26 @@ export namespace SpotifyBeats {
 							[key: string]: string;
 						};
 						base?: string;
+						silent?: boolean;
 					} = {}
 				): Promise<ExtendedResponse<R> | null> {
-					return this.wrapRequest(path, () => {
-						return fetch(
-							`${options.base || API.SPOTIFY_BASE}${path}`,
-							{
-								method: 'post',
-								headers: {
-									...this._getHeaders(),
-									...(options.headers || {})
-								},
-								body: data
-							}
-						);
-					});
+					return this.wrapRequest(
+						path,
+						() => {
+							return fetch(
+								`${options.base || API.SPOTIFY_BASE}${path}`,
+								{
+									method: 'post',
+									headers: {
+										...this._getHeaders(),
+										...(options.headers || {})
+									},
+									body: data
+								}
+							);
+						},
+						options.silent || false
+					);
 				}
 
 				createAuthURL(scopes: string[], state: string = '') {
@@ -315,9 +313,11 @@ export namespace SpotifyBeats {
 
 				async testAuth() {
 					try {
-						const response = await this.get('/v1/me');
+						const response = await this.get('/v1/me', true);
 						return response && response.status === 200;
-					} catch (e) {}
+					} catch (e) {
+						console.log('error', e);
+					}
 					return false;
 				}
 			}
@@ -405,6 +405,8 @@ export namespace SpotifyBeats {
 		}
 
 		export namespace Checking {
+			let active: boolean = false;
+
 			function isInRange(base: number, target: number, diff: number) {
 				return Math.abs(base - target) <= diff;
 			}
@@ -478,7 +480,7 @@ export namespace SpotifyBeats {
 
 			export async function start() {
 				let lastState: API.PlaybackState | null = null;
-				while (true) {
+				while (active) {
 					const state = await API.getPlayState();
 					const changes = await checkForChanges(lastState, state);
 					lastState = state;
@@ -486,6 +488,17 @@ export namespace SpotifyBeats {
 					await Transfer.notifyChanges(getFullState(state), changes);
 					await wait(PLAYSTATE_CHECK_INTERVAL);
 				}
+			}
+
+			export async function enable() {
+				if (!active) {
+					active = true;
+					start();
+				}
+			}
+
+			export async function disable() {
+				active = false;
 			}
 
 			export function init() {
@@ -501,14 +514,11 @@ export namespace SpotifyBeats {
 				if (!(await api.grantAuthCode(token))) return;
 			}
 
-			let _resolveGenerateNew: null | ((token: string) => void) = null;
 			export async function finishManualAuth(token: string) {
-				if (_resolveGenerateNew) {
-					_resolveGenerateNew(token);
-				}
+				await Auth.authFromToken(token);
 			}
 
-			export let lastURL: string | null = null;
+			let lastURL: string | null = null;
 			export async function generateNew() {
 				const api = API.get()!;
 				const url = api!.createAuthURL(
@@ -521,25 +531,11 @@ export namespace SpotifyBeats {
 					'generate-new'
 				);
 				lastURL = url;
-				console.log(url);
-
-				return new Promise<string>(resolve => {
-					_resolveGenerateNew = resolve;
-				});
+				return url;
 			}
 
-			export async function loopForToken() {
-				let token = await Auth.generateNew();
-				do {
-					try {
-						await Auth.authFromToken(token);
-						break;
-					} catch (e) {
-						console.log('Failed', e);
-						// We need to get a fresh token
-						token = await Auth.generateNew();
-					}
-				} while (true);
+			export async function getURL() {
+				return lastURL || (await generateNew());
 			}
 		}
 
@@ -553,13 +549,11 @@ export namespace SpotifyBeats {
 			await api.setRefresh(refresh, 100000);
 
 			// Test it
-			if (!(await api.testAuth())) {
-				await Auth.loopForToken();
+			if (await api.testAuth()) {
+				log(getTime(), chalk.cyan('[spotify]'), 'Authenticated');
+			} else {
+				log(getTime(), chalk.cyan('[spotify]'), 'Not Authenticated');
 			}
-
-			log(getTime(), chalk.cyan('[spotify]'), 'Authenticated');
-
-			Checking.start();
 		}
 	}
 
@@ -577,10 +571,19 @@ export namespace SpotifyBeats {
 				({ matchMaker: mm, fallbackSetter: fallback }) => {
 					mm('/auth', /auth(enticate)?( spotify)?/, async () => {
 						const api = Spotify.API.get();
+						console.log('checking spotify authentiction');
 						if (await api.testAuth()) {
 							return 'Authenticated!';
 						}
-						return `Please authenticate with URL ${Spotify.Auth.lastURL}`;
+						return `Please authenticate with URL ${await Spotify.Auth.getURL()}`;
+					});
+					mm('/enable_beats', async () => {
+						Spotify.Checking.enable();
+						return 'Enabled!';
+					});
+					mm('/disable_beats', async () => {
+						Spotify.Checking.disable();
+						return 'Disabled!';
 					});
 					mm(
 						'/help_spotify',
