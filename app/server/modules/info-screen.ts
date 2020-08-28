@@ -7,7 +7,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { SECRETS_FOLDER } from '../lib/constants';
 import { WSWrapper, WSClient } from '../lib/ws';
 import { initMiddleware } from '../lib/routes';
-import { attachMessage } from '../lib/logger';
+import { attachMessage, log, getTime } from '../lib/logger';
 import { BotState } from '../lib/bot-state';
 import { XHR, flatten } from '../lib/util';
 import { ResponseLike } from './multi';
@@ -20,6 +20,7 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import * as http from 'http';
 import { getEnv } from '../lib/io';
+import chalk from 'chalk';
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
 
@@ -359,7 +360,7 @@ export namespace InfoScreen {
 
 			client?.setCredentials(tokens);
 			if (reAuth) {
-				await client?.refreshAccessToken();
+				await client?.getRequestHeaders();
 			}
 
 			calendar = google.calendar({
@@ -524,14 +525,18 @@ export namespace InfoScreen {
 
 			if (config.debug) {
 				server.listen(config.ports.info, () => {
-					console.log(
-						`Info-screen server listening on port ${config.ports.info}`
+					log(
+						getTime(),
+						chalk.magenta('[info-screen]'),
+						`server listening on port ${config.ports.info}`
 					);
 				});
 			} else {
 				server.listen(config.ports.info, '127.0.0.1', () => {
-					console.log(
-						`Info-screen server listening on port ${config.ports.info} on localhost only`
+					log(
+						getTime(),
+						chalk.magenta('[info-screen]'),
+						`server listening on port ${config.ports.info} on localhost only`
 					);
 				});
 			}

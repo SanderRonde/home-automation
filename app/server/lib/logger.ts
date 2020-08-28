@@ -473,7 +473,7 @@ export class ProgressLogger {
 }
 
 let isInit: boolean = false;
-const initMessages: any[][] = [];
+let initMessages: any[][] = [];
 export function startInit() {
 	isInit = true;
 }
@@ -483,6 +483,14 @@ export function endInit() {
 	initMessages.forEach(args => {
 		console.log(...args);
 	});
+}
+
+export function logFirst(...args: any[]) {
+	if (isInit) {
+		initMessages = [args, ...initMessages];
+	} else {
+		console.log(...args);
+	}
 }
 
 export function log(...args: any[]) {

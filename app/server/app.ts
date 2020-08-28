@@ -6,7 +6,14 @@ dotenv.config({
 		'.env'
 	)
 });
-import { setLogLevel, ProgressLogger, startInit, endInit } from './lib/logger';
+import {
+	setLogLevel,
+	ProgressLogger,
+	startInit,
+	endInit,
+	log,
+	getTime
+} from './lib/logger';
 import {
 	initRoutes,
 	initMiddleware,
@@ -22,6 +29,7 @@ import { Database } from './lib/db';
 import * as express from 'express';
 import * as path from 'path';
 import * as http from 'http';
+import chalk from 'chalk';
 
 interface PartialConfig {
 	ports?: {
@@ -146,8 +154,11 @@ class WebServer {
 			this._initLogger.increment('listening');
 			this._initLogger.done();
 			endInit();
-			console.log(
-				`HTTP server listening on port ${this._config.ports.http}`
+
+			log(
+				getTime(),
+				chalk.magenta('[HTTP server]'),
+				`listening on port ${this._config.ports.http}`
 			);
 		});
 	}

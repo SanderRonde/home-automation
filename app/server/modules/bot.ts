@@ -1,5 +1,5 @@
+import { attachMessage, logOutgoingReq, logFirst } from '../lib/logger';
 import { ModuleConfig, AllModules, InstanceOf } from './modules';
-import { attachMessage, logOutgoingReq } from '../lib/logger';
 import { TELEGRAM_IPS, TELEGRAM_API } from '../lib/constants';
 import { awaitCondition } from '../lib/util';
 import { BotState } from '../lib/bot-state';
@@ -722,7 +722,7 @@ export namespace Bot {
 	}
 
 	export async function printCommands() {
-		log(
+		logFirst(
 			`${chalk.bold('Available commands are')}:\n\n${Object.values(
 				await getAllModules()
 			)
