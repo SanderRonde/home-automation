@@ -331,7 +331,7 @@ export namespace Pressure {
 						/turn off pressure( module)?/,
 						async ({ logObj }) => {
 							new External.Handler(logObj).disable();
-							return 'Turned on pressure module';
+							return 'Turned off pressure module';
 						}
 					);
 					mm('/pressures', /what are the pressures/, async () => {
