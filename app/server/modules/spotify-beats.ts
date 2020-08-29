@@ -5,7 +5,7 @@ import {
 } from '../lib/constants';
 import { AllModules, ModuleConfig } from './modules';
 import { SpotifyTypes } from '../types/spotify';
-import { log, getTime } from '../lib/logger';
+import { log, getTime, ResDummy, logOutgoingRes } from '../lib/logger';
 import { BotState } from '../lib/bot-state';
 import { Bot as _Bot } from './index';
 import { Database } from '../lib/db';
@@ -35,11 +35,16 @@ export namespace SpotifyBeats {
 
 		async init(config: ModuleConfig) {
 			Transfer.init(config.db);
+			await External.Handler.init();
 			Routing.init(config);
 		}
 
 		async notifyModules(modules: AllModules) {
 			Transfer.setModules(modules);
+		}
+
+		get external() {
+			return External;
 		}
 
 		get bot() {
@@ -49,7 +54,7 @@ export namespace SpotifyBeats {
 
 	export namespace Spotify {
 		export namespace API {
-			interface ExtendedResponse<R> extends Response {
+			export interface ExtendedResponse<R> extends Response {
 				clone(): ExtendedResponse<R>;
 				json(): Promise<R>;
 			}
@@ -68,6 +73,21 @@ export namespace SpotifyBeats {
 						return this.api.get<
 							SpotifyTypes.Endpoints.AudioAnalysis
 						>(`/v1/audio-analysis/${id}`);
+					}
+
+					getDevices() {
+						return this.api.get<SpotifyTypes.Endpoints.Devices>(
+							'/v1/me/player/devices'
+						);
+					}
+
+					play(uri: string, deviceId: string) {
+						return this.api.put<SpotifyTypes.Endpoints.Play>(
+							`/v1/me/player/play?device_id=${deviceId}`,
+							JSON.stringify({
+								uris: [uri]
+							})
+						);
 					}
 				}
 			}
@@ -173,11 +193,16 @@ export namespace SpotifyBeats {
 				async wrapRequest<R>(
 					path: string,
 					request: () => Promise<ExtendedResponse<R>>,
+					method: string,
 					silent: boolean = false
 				): Promise<ExtendedResponse<R> | null> {
 					const url = `${API.SPOTIFY_BASE}${path}`;
 					try {
 						const response = await request();
+						logOutgoingRes(response, {
+							method,
+							path
+						});
 						switch (response.status) {
 							case 200:
 							case 201:
@@ -209,10 +234,20 @@ export namespace SpotifyBeats {
 									1000 *
 										(parseInt(retryAfter || '60', 10) + 1)
 								);
-								return this.wrapRequest(path, request, silent);
+								return this.wrapRequest(
+									path,
+									request,
+									method,
+									silent
+								);
 							case 503:
 								await wait(1000 * 60);
-								return this.wrapRequest(path, request, silent);
+								return this.wrapRequest(
+									path,
+									request,
+									method,
+									silent
+								);
 						}
 						if (!silent) {
 							log(
@@ -247,6 +282,7 @@ export namespace SpotifyBeats {
 								headers: this._getHeaders()
 							});
 						},
+						'get',
 						silent
 					);
 					return ret;
@@ -278,6 +314,38 @@ export namespace SpotifyBeats {
 								}
 							);
 						},
+						'post',
+						options.silent || false
+					);
+				}
+
+				put<R>(
+					path: string,
+					data: string,
+					options: {
+						headers?: {
+							[key: string]: string;
+						};
+						base?: string;
+						silent?: boolean;
+					} = {}
+				): Promise<ExtendedResponse<R> | null> {
+					return this.wrapRequest(
+						path,
+						() => {
+							return fetch(
+								`${options.base || API.SPOTIFY_BASE}${path}`,
+								{
+									method: 'put',
+									headers: {
+										...this._getHeaders(),
+										...(options.headers || {})
+									},
+									body: data
+								}
+							);
+						},
+						'put',
 						options.silent || false
 					);
 				}
@@ -526,7 +594,9 @@ export namespace SpotifyBeats {
 						'user-read-currently-playing',
 						'user-read-playback-state',
 						'user-read-private',
-						'user-read-email'
+						'user-read-email',
+						'user-read-playback-state',
+						'user-modify-playback-state'
 					],
 					'generate-new'
 				);
@@ -538,6 +608,8 @@ export namespace SpotifyBeats {
 				return lastURL || (await generateNew());
 			}
 		}
+
+		export namespace Playing {}
 
 		export async function init(db: Database) {
 			const api = await API.create(db);
@@ -553,6 +625,109 @@ export namespace SpotifyBeats {
 				log(getTime(), chalk.cyan('[spotify]'), 'Authenticated');
 			} else {
 				log(getTime(), chalk.cyan('[spotify]'), 'Not Authenticated');
+			}
+		}
+	}
+
+	export namespace External {
+		type ExternalRequest = (
+			| {
+					type: 'testConnection';
+			  }
+			| {
+					type: 'play';
+					uri: string;
+					device: string;
+			  }
+			| {
+					type: 'getDevices';
+			  }
+		) & {
+			logObj: any;
+			resolver: (value: any) => void;
+		};
+
+		export class Handler {
+			private static _requests: ExternalRequest[] = [];
+
+			private static _ready: boolean = false;
+			static async init() {
+				this._ready = true;
+				for (const req of this._requests) {
+					await this._handleRequest(req);
+				}
+			}
+
+			constructor(private _logObj: any) {}
+
+			private static async _handleRequest(request: ExternalRequest) {
+				const { logObj, resolver } = request;
+				const resDummy = new ResDummy();
+				let value = undefined;
+				const api = Spotify.API.get();
+				if (request.type === 'testConnection') {
+					value = await api.testAuth();
+				} else if (request.type == 'play') {
+					value = await api.endpoints.play(
+						request.uri,
+						request.device
+					);
+				} else if (request.type === 'getDevices') {
+					value = await api.endpoints.getDevices();
+				}
+				resDummy.transferTo(logObj);
+				resolver(value);
+			}
+
+			async test() {
+				return new Promise<boolean>(resolve => {
+					const req: ExternalRequest = {
+						type: 'testConnection',
+						logObj: this._logObj,
+						resolver: resolve
+					};
+					if (Handler._ready) {
+						Handler._handleRequest(req);
+					} else {
+						Handler._requests.push(req);
+					}
+				});
+			}
+
+			async play(uri: string, device: string) {
+				return new Promise<
+					Spotify.API.ExtendedResponse<SpotifyTypes.Endpoints.Play>
+				>(resolve => {
+					const req: ExternalRequest = {
+						type: 'play',
+						uri: uri,
+						logObj: this._logObj,
+						device,
+						resolver: resolve
+					};
+					if (Handler._ready) {
+						Handler._handleRequest(req);
+					} else {
+						Handler._requests.push(req);
+					}
+				});
+			}
+
+			async getDevices() {
+				return new Promise<
+					Spotify.API.ExtendedResponse<SpotifyTypes.Endpoints.Devices>
+				>(resolve => {
+					const req: ExternalRequest = {
+						type: 'getDevices',
+						logObj: this._logObj,
+						resolver: resolve
+					};
+					if (Handler._ready) {
+						Handler._handleRequest(req);
+					} else {
+						Handler._requests.push(req);
+					}
+				});
 			}
 		}
 	}
@@ -613,12 +788,9 @@ export namespace SpotifyBeats {
 				super();
 			}
 
-			static async match(config: {
-				logObj: any;
-				text: string;
-				message: _Bot.TelegramMessage;
-				state: _Bot.Message.StateKeeping.ChatState;
-			}): Promise<_Bot.Message.MatchResponse | undefined> {
+			static async match(
+				config: _Bot.Message.MatchParameters
+			): Promise<_Bot.Message.MatchResponse | undefined> {
 				return await this.matchLines({
 					...config,
 					matchConfig: Bot.matches

@@ -7,7 +7,8 @@ import {
 	LED_IPS,
 	WAKELIGHT_TIME,
 	NAME_MAP,
-	MAX_BEATS_ARR_LENGTH
+	MAX_BEATS_ARR_LENGTH,
+	MARKED_AUDIO_FOLDER
 } from '../lib/constants';
 import {
 	errorHandle,
@@ -38,7 +39,7 @@ import { BotState } from '../lib/bot-state';
 import { wait, arrToObj } from '../lib/util';
 import SerialPort = require('serialport');
 import { BotUtil } from '../lib/bot-util';
-import { ModuleConfig } from './modules';
+import { ModuleConfig, AllModules } from './modules';
 import { ExplainHook } from './explain';
 import { colorList } from '../lib/data';
 import { ResponseLike } from './multi';
@@ -48,6 +49,8 @@ import { Bot as _Bot } from './bot';
 import * as express from 'express';
 import { KeyVal } from './keyval';
 import { Auth } from './auth';
+import * as fs from 'fs-extra';
+import * as path from 'path';
 import chalk from 'chalk';
 
 function speedToMs(speed: number) {
@@ -58,11 +61,12 @@ function getIntensityPercentage(percentage: number) {
 	return Math.round((percentage / 100) * 255);
 }
 
-export interface Color {
+export interface IColor {
 	r: number;
 	g: number;
 	b: number;
 }
+export interface Color extends IColor {}
 export class Color implements Color {
 	constructor(r: number);
 	constructor(r: number, g: number, b: number);
@@ -134,6 +138,10 @@ export namespace RGB {
 
 				resolve();
 			}));
+		}
+
+		async notifyModules(modules: AllModules) {
+			MarkedAudio.setModules(modules);
 		}
 
 		get external() {
@@ -759,6 +767,11 @@ export namespace RGB {
 			updateTime: number;
 		}
 
+		export interface Marked {
+			color: Color;
+			startTime: number;
+		}
+
 		export type Beats =
 			| {
 					random?: false;
@@ -811,6 +824,10 @@ export namespace RGB {
 			| {
 					type: 'beats';
 					data: Beats;
+			  }
+			| {
+					type: 'marked';
+					data: Marked;
 			  };
 
 		export type JoinedConfigs = Partial<
@@ -1844,9 +1861,17 @@ export namespace RGB {
 					type: 'config';
 					config: ArduinoAPI.ArduinoConfig;
 			  }
+			| {
+					type: 'markedAudio';
+					file: string;
+					helpers: Pick<
+						BotState.MatchHandlerParams,
+						'ask' | 'sendText' | 'askCancelable'
+					>;
+			  }
 		) & {
 			logObj: any;
-			resolver: (value: boolean) => void;
+			resolver: (value: any) => void;
 			source: string;
 		};
 
@@ -1919,6 +1944,12 @@ export namespace RGB {
 							auth: Auth.Secret.getKey()
 						},
 						source
+					);
+				} else if (request.type === 'markedAudio') {
+					value = await MarkedAudio.play(
+						request.file,
+						logObj,
+						request.helpers
 					);
 				} else {
 					const { name, speed, transition } = request;
@@ -2062,6 +2093,32 @@ export namespace RGB {
 					}
 				});
 			}
+
+			async markedAudio(
+				file: string,
+				helpers: Pick<
+					BotState.MatchHandlerParams,
+					'ask' | 'sendText' | 'askCancelable'
+				>
+			): ReturnType<typeof MarkedAudio.play> {
+				return new Promise<ReturnType<typeof MarkedAudio.play>>(
+					resolve => {
+						const req: ExternalRequest = {
+							type: 'markedAudio',
+							file,
+							helpers,
+							logObj: this._logObj,
+							resolver: resolve,
+							source: this._source
+						};
+						if (Handler._ready) {
+							Handler._handleRequest(req);
+						} else {
+							Handler._requests.push(req);
+						}
+					}
+				);
+			}
 		}
 	}
 
@@ -2098,6 +2155,7 @@ export namespace RGB {
 				'/help_rgb': 'Print help comands for RGB',
 				'/reconnect': 'Reconnect to arduino board',
 				'/restart': 'Restart the server',
+				'/marked': 'Play marked audio file',
 				...arrToObj(
 					Object.keys(ArduinoAPI.arduinoEffects).map(key => {
 						const value =
@@ -3061,6 +3119,34 @@ export namespace RGB {
 							return 'Restarting...';
 						}
 					);
+					mm(
+						/\/marked ([^ ]+)/,
+						async ({
+							logObj,
+							match,
+							ask,
+							sendText,
+							askCancelable
+						}) => {
+							const file = match[1] as string;
+							const {
+								message,
+								success
+							} = await new External.Handler(
+								logObj,
+								'BOT.marked'
+							).markedAudio(file, {
+								ask,
+								sendText,
+								askCancelable
+							});
+
+							if (success) {
+								return message || 'Playing!';
+							}
+							return message!;
+						}
+					);
 				}
 			);
 
@@ -3077,12 +3163,9 @@ export namespace RGB {
 				  })
 				| null = null;
 
-			static async match(config: {
-				logObj: any;
-				text: string;
-				message: _Bot.TelegramMessage;
-				state: _Bot.Message.StateKeeping.ChatState;
-			}): Promise<_Bot.Message.MatchResponse | undefined> {
+			static async match(
+				config: _Bot.Message.MatchParameters
+			): Promise<_Bot.Message.MatchResponse | undefined> {
 				return await this.matchLines({
 					...config,
 					matchConfig: Bot.matches
@@ -3195,6 +3278,11 @@ export namespace RGB {
 					resolve({
 						port,
 						updateListener: (listener: (line: string) => any) => {
+							log(
+								getTime(),
+								chalk.cyan(`[${LED_DEVICE_NAME}] <-`),
+								`# ${line.toString()}`
+							);
 							onData = listener;
 						},
 						leds: LED_NUM,
@@ -3246,13 +3334,7 @@ export namespace RGB {
 			}
 
 			public resetListener() {
-				this.setListener(line => {
-					log(
-						getTime(),
-						chalk.cyan(`[${this.name}]`),
-						`# ${line.toString()}`
-					);
-				});
+				this.setListener(() => {});
 			}
 
 			public async write(
@@ -3285,7 +3367,11 @@ export namespace RGB {
 				if (!acked) {
 					log(chalk.yellow('Not acknowledged', data));
 				}
-				if (acked || process.argv.indexOf('--debug') > -1) return data;
+
+				if (acked || process.argv.indexOf('--debug') > -1) {
+					log(getTime(), chalk.cyan(`[${this.name}] ->`), `${data}`);
+					return data;
+				}
 
 				return null;
 			}
@@ -3361,6 +3447,10 @@ export namespace RGB {
 						);
 					case 'beats':
 						return this.setBeats(
+							BotUtil.BotUtil.mergeObj(config.data, extra)
+						);
+					case 'marked':
+						return this.setMarked(
 							BotUtil.BotUtil.mergeObj(config.data, extra)
 						);
 				}
@@ -3455,6 +3545,15 @@ export namespace RGB {
 						`beats 0 0 ${color.r} ${color.g} ${color.b} ${backgroundRed} ${backgroundGreen} ${backgroundBlue} ${progress.r} ${progress.g} ${progress.b}`
 					);
 				}
+			}
+
+			public setMarked(
+				config: ArduinoAPI.Marked
+			): Promise<string | null> {
+				const { color } = config;
+				return this.sendCommand(
+					`marked ${config.startTime} ${color.r} ${color.g} ${color.b}`
+				);
 			}
 
 			public setFlash({
@@ -3673,6 +3772,230 @@ export namespace RGB {
 					}
 				}
 			}
+		}
+	}
+
+	export namespace MarkedAudio {
+		let modules: AllModules | null = null;
+
+		export function setModules(passedModules: AllModules) {
+			modules = passedModules;
+		}
+
+		interface ParsedMarked {
+			'spotify-uri': string;
+			color: IColor;
+			offset?: number;
+			items: {
+				type: 'melody';
+				time: number;
+				duration: number;
+			}[];
+		}
+
+		async function getData(
+			name: string,
+			logObj: any
+		): Promise<
+			| { success: true; message: string | null }
+			| { success: false; message: string }
+			| ParsedMarked
+		> {
+			// Find the file first
+			const filePath = path.join(MARKED_AUDIO_FOLDER, `${name}.json`);
+			if (!(await fs.pathExists(filePath))) {
+				return {
+					success: false,
+					message: 'File does not exist'
+				};
+			}
+
+			// Read it
+			const file = await fs.readFile(filePath, {
+				encoding: 'utf8'
+			});
+
+			// Parse it
+			let parsed: ParsedMarked | null = null;
+			try {
+				parsed = JSON.parse(file);
+			} catch (e) {
+				return {
+					success: false,
+					message: 'Failed to parse file'
+				};
+			}
+
+			// Try and authenticate
+			const authenticated = await new modules!.spotifyBeats.External.Handler(
+				logObj
+			).test();
+			if (!authenticated) {
+				return {
+					success: false,
+					message: 'Unauthenticated'
+				};
+			}
+
+			return parsed!;
+		}
+
+		async function startPlay(
+			logObj: any,
+			helpers: Pick<BotState.MatchHandlerParams, 'ask' | 'sendText'>,
+			parsed: ParsedMarked
+		): Promise<
+			| { success: true; message: string | null }
+			| { success: false; message: string }
+			| null
+		> {
+			// Get devices
+			const devices = await new modules!.spotifyBeats.External.Handler(
+				logObj
+			).getDevices();
+
+			const devicesParsed = devices && (await devices.json());
+
+			if (
+				!devices ||
+				!devicesParsed ||
+				devicesParsed.devices.length === 0
+			) {
+				return {
+					success: false,
+					message: 'Failed to find devices'
+				};
+			}
+
+			// Ask user what device to use
+			const response = await helpers.ask(
+				`On what device do you want to play? Type the name to choose and type "cancel" to cancel.\n${devicesParsed.devices.map(
+					device => {
+						return device.name;
+					}
+				)}`
+			);
+			if (!response || response.toLowerCase() === 'cancel') {
+				return {
+					success: true,
+					message: 'Canceled by user'
+				};
+			}
+
+			// Get chosen device
+			const chosen = devicesParsed.devices.find(
+				d => d.name.toLowerCase() === response!.toLowerCase()
+			);
+
+			if (!chosen) {
+				return {
+					success: false,
+					message: 'Unknown device'
+				};
+			}
+
+			// Play
+			const playResponse = await new modules!.spotifyBeats.External.Handler(
+				logObj
+			).play(parsed!['spotify-uri'], chosen.id);
+
+			if (
+				!playResponse ||
+				playResponse.status >= 300 ||
+				playResponse.status < 200
+			) {
+				return {
+					success: false,
+					message: 'Failed to play'
+				};
+			}
+
+			return null;
+		}
+
+		export async function play(
+			name: string,
+			logObj: any,
+			helpers: Pick<
+				BotState.MatchHandlerParams,
+				'ask' | 'sendText' | 'askCancelable'
+			>
+		): Promise<
+			| { success: true; message: string | null }
+			| { success: false; message: string }
+		> {
+			// Parse data and make sure everything can run
+			const parsed = await getData(name, logObj);
+			if ('success' in parsed) {
+				return parsed;
+			}
+
+			// Start playing the music
+			const playing = await startPlay(logObj, helpers, parsed);
+			if (playing !== null) {
+				return playing;
+			}
+
+			await wait(1000 * 2);
+
+			// Fetch playstate at this time, which should allow us to
+			// calculate exactly when the song started playing
+			const playState = await modules!.spotifyBeats.Spotify.API.getPlayState();
+			if (!playState) {
+				return {
+					success: false,
+					message: 'Failed to play'
+				};
+			}
+
+			const playingTime =
+				Date.now() - playState.playStart! + (parsed.offset ?? 0);
+
+			let timeouts: NodeJS.Timeout[] = [];
+			parsed.items.forEach(item => {
+				timeouts.push(
+					setTimeout(() => {
+						Clients.arduinoClients.forEach(c =>
+							c.setColor(
+								parsed.color.r,
+								parsed.color.g,
+								parsed.color.b
+							)
+						);
+						timeouts.push(
+							setTimeout(() => {
+								Clients.arduinoClients.forEach(c =>
+									c.setColor(0, 0, 0)
+								);
+							}, Math.min(item.duration, 1) * 1000)
+						);
+					}, item.time * 1000 - playingTime)
+				);
+			});
+
+			const { cancel, prom } = helpers.askCancelable(
+				`Tell me when I need to stop by saying anything`
+			);
+
+			prom.then(async () => {
+				timeouts.forEach(t => clearTimeout(t));
+				await wait(1000);
+				Clients.arduinoClients.forEach(c => c.setColor(0, 0, 0));
+
+				await helpers.sendText('stopped');
+			});
+
+			const lastItem = parsed.items[parsed.items.length - 1];
+			await wait(
+				lastItem.time * 1000 - playingTime + lastItem.duration * 1000
+			);
+
+			cancel();
+
+			return {
+				success: true,
+				message: 'Done playing'
+			};
 		}
 	}
 

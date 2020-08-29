@@ -9,7 +9,7 @@ import { ModuleConfig, ModuleHookables, AllModules } from './modules';
 import { errorHandle, requireParams, auth } from '../lib/decorators';
 import { awaitCondition, arrToObj } from '../lib/util';
 import pressureConfig from '../config/pressures';
-import { attachMessage } from '../lib/logger';
+import { attachMessage, disableMessages } from '../lib/logger';
 import { BotState } from '../lib/bot-state';
 import { ResponseLike } from './multi';
 import { Database } from '../lib/db';
@@ -374,12 +374,9 @@ export namespace Pressure {
 				}
 			);
 
-			static async match(config: {
-				logObj: any;
-				text: string;
-				message: _Bot.TelegramMessage;
-				state: _Bot.Message.StateKeeping.ChatState;
-			}): Promise<_Bot.Message.MatchResponse | undefined> {
+			static async match(
+				config: _Bot.Message.MatchParameters
+			): Promise<_Bot.Message.MatchResponse | undefined> {
 				return await this.matchLines({
 					...config,
 					matchConfig: Bot.matches
@@ -424,8 +421,11 @@ export namespace Pressure {
 	}
 
 	namespace Routing {
-		export function init({ app }: ModuleConfig) {
+		export function init({ app, config }: ModuleConfig) {
 			app.post('/pressure/:key/:pressure', async (req, res) => {
+				if (config.log.ignorePressure) {
+					disableMessages(res);
+				}
 				API.Handler.reportPressure(res, {
 					...req.params,
 					...req.body,

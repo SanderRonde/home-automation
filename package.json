@@ -8,7 +8,7 @@
 	"private": true,
 	"nodemonConfig": {
 		"ext": "js",
-		"exec": "node app/server/app.js --http 1272 --https 1273 -v* --log-secrets",
+		"exec": "node --enable-source-maps app/server/app.js --http 1272 --https 1273 -v* --log-secrets",
 		"watch": [
 			"app/server/"
 		]
@@ -45,7 +45,7 @@
 		"prettier": "^1.19.1",
 		"pretty-quick": "^2.0.1",
 		"rollup": "^1.20.3",
-		"typescript": "^3.8.3"
+		"typescript": "^4.0.2"
 	},
 	"dependencies": {
 		"@sanderronde/write-buffer": "1.0.3",

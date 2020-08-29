@@ -20,19 +20,28 @@ export namespace BotState {
 				  }
 		  >;
 
-	export type MatchHandler = (config: {
+	export interface MatchHandlerParams {
 		text: string;
 		message: Bot.TelegramMessage;
 		state: Bot.Message.StateKeeping.ChatState;
 		match: RegExpMatchArray;
 		matchText: string;
 		logObj: any;
-	}) => MatchHandlerRet;
+		ask(question: string): Promise<string | undefined>;
+		askCancelable(
+			question: string
+		): { cancel(): void; prom: Promise<string | undefined> };
+		sendText(text: string): Promise<boolean>;
+	}
+
+	export type MatchHandler = (config: MatchHandlerParams) => MatchHandlerRet;
 
 	export interface MatchBaseParams {
 		text: string;
 		message: Bot.TelegramMessage;
 		state: Bot.Message.StateKeeping.ChatState;
+		bot: Bot.Message.Handler;
+		res: Bot.Message.ResWrapper;
 	}
 
 	export interface MatchParams extends MatchBaseParams {
@@ -156,7 +165,37 @@ export namespace BotState {
 						...config,
 						logObj: newLogObj,
 						match: earliestMatch!.match,
-						matchText: earliestMatch!.matchText
+						matchText: earliestMatch!.matchText,
+						ask(question: string) {
+							return config.bot.askQuestion(
+								question,
+								config.message,
+								config.res
+							);
+						},
+						askCancelable(question: string) {
+							let _cancel: () => void;
+							return {
+								prom: config.bot.askCancelable(
+									question,
+									config.message,
+									config.res,
+									cancel => {
+										_cancel = cancel;
+									}
+								),
+								cancel() {
+									_cancel && _cancel();
+								}
+							};
+						},
+						sendText(text: string) {
+							return config.bot.sendText(
+								text,
+								config.message,
+								config.res
+							);
+						}
 					})
 				};
 			}

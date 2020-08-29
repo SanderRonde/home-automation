@@ -18,6 +18,7 @@ export interface ResponseLike {
 	end(): void;
 	contentType(type: string): void;
 	cookie(name: string, value: string, options?: express.CookieOptions): void;
+	_headersSent?: boolean;
 }
 
 export class SubDummy implements ResponseLike {
@@ -27,6 +28,7 @@ export class SubDummy implements ResponseLike {
 	private _written: string = '';
 	private _start: number = Date.now();
 	private _duration: string | number = '?';
+	private _sent: boolean = false;
 
 	constructor(private _config: MultiRequestRequest) {}
 
@@ -41,6 +43,7 @@ export class SubDummy implements ResponseLike {
 
 	end() {
 		this._duration = Date.now() - this._start;
+		this._sent = true;
 	}
 
 	contentType(type: string) {
@@ -61,6 +64,10 @@ export class SubDummy implements ResponseLike {
 			duration: this._duration,
 			config: this._config
 		};
+	}
+
+	get _headersSent() {
+		return this._sent;
 	}
 }
 

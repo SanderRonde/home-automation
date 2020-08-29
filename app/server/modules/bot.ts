@@ -206,6 +206,21 @@ export namespace Bot {
 			}
 		}
 
+		export interface MatchParameters {
+			logObj: any;
+			text: string;
+			message: Bot.TelegramMessage;
+			state: Bot.Message.StateKeeping.ChatState;
+			bot: Bot.Message.Handler;
+			res: ResWrapper;
+		}
+
+		export class ResWrapper {
+			public sent: boolean = false;
+
+			constructor(public res: ResponseLike) {}
+		}
+
 		export class Handler extends BotState.Matchable {
 			private static _bootedAt = new Date();
 			private _stateKeeper!: StateKeeping.StateKeeper;
@@ -283,7 +298,7 @@ export namespace Bot {
 				type: RESPONSE_TYPE,
 				chatId?: number
 			) {
-				if (!this._lastChatID) {
+				if (!this._lastChatID && !chatId) {
 					log(
 						`Did not send message ${text} because no last chat ID is known`
 					);
@@ -339,12 +354,9 @@ export namespace Bot {
 				});
 			}
 
-			private static async _matchSelf(config: {
-				logObj: any;
-				text: string;
-				message: Bot.TelegramMessage;
-				state: Bot.Message.StateKeeping.ChatState;
-			}): Promise<MatchResponse | undefined> {
+			private static async _matchSelf(
+				config: MatchParameters
+			): Promise<MatchResponse | undefined> {
 				return await BotState.Matchable.matchLines({
 					...config,
 					matchConfig: Handler.matches
@@ -352,12 +364,7 @@ export namespace Bot {
 			}
 
 			private static async _matchMatchables(
-				config: {
-					logObj: any;
-					text: string;
-					message: Bot.TelegramMessage;
-					state: Bot.Message.StateKeeping.ChatState;
-				},
+				config: MatchParameters,
 				value: any,
 				...matchables: typeof BotState.Matchable[]
 			) {
@@ -371,12 +378,9 @@ export namespace Bot {
 				return value;
 			}
 
-			static async match(config: {
-				logObj: any;
-				text: string;
-				message: Bot.TelegramMessage;
-				state: Bot.Message.StateKeeping.ChatState;
-			}): Promise<MatchResponse | undefined> {
+			static async match(
+				config: MatchParameters
+			): Promise<MatchResponse | undefined> {
 				return this._matchMatchables(
 					config,
 					await this._matchSelf(config),
@@ -390,13 +394,10 @@ export namespace Bot {
 				logObj,
 				text,
 				message,
-				state
-			}: {
-				logObj: any;
-				text: string;
-				message: Bot.TelegramMessage;
-				state: Bot.Message.StateKeeping.ChatState;
-			}): Promise<
+				state,
+				res,
+				bot
+			}: MatchParameters): Promise<
 				| {
 						type: RESPONSE_TYPE;
 						text: string | number;
@@ -415,7 +416,9 @@ export namespace Bot {
 						logObj,
 						text,
 						message,
-						state
+						state,
+						res,
+						bot
 					}))
 				) {
 					// Push response
@@ -464,7 +467,8 @@ export namespace Bot {
 
 			async handleTextMessage(
 				logObj: any,
-				message: TelegramMessage<TelegramText>
+				message: TelegramMessage<TelegramText>,
+				res: ResWrapper
 			) {
 				attachMessage(
 					logObj,
@@ -482,7 +486,11 @@ export namespace Bot {
 						logObj: matchMsg,
 						text: message.text,
 						message,
-						state: await this._stateKeeper.getState(message.chat.id)
+						state: await this._stateKeeper.getState(
+							message.chat.id
+						),
+						res,
+						bot: this
 					})) ||
 					(attachMessage(matchMsg, 'None') && [
 						{
@@ -495,7 +503,8 @@ export namespace Bot {
 
 			async handleReplyMessage(
 				logObj: any,
-				message: TelegramMessage<TelegramReply>
+				message: TelegramMessage<TelegramReply>,
+				res: ResWrapper
 			): Promise<
 				{
 					type: RESPONSE_TYPE;
@@ -516,7 +525,8 @@ export namespace Bot {
 				if ('text' in message.reply_to_message) {
 					return this.handleTextMessage(
 						replyObj,
-						message.reply_to_message
+						message.reply_to_message,
+						res
 					);
 				}
 				if ('reply_to_message' in message) {
@@ -524,7 +534,8 @@ export namespace Bot {
 						replyObj,
 						((message as unknown) as TelegramMessage<
 							TelegramReply<TelegramReply>
-						>).reply_to_message
+						>).reply_to_message,
+						res
 					);
 				}
 				return [
@@ -545,6 +556,99 @@ export namespace Bot {
 				return parts;
 			}
 
+			private _finishRes(wrapped: ResWrapper) {
+				if (wrapped.sent) return;
+				wrapped.res.write('ok');
+				wrapped.res.end();
+				wrapped.sent = true;
+			}
+
+			private _openQuestions: ((response: string) => void)[] = [];
+			async askQuestion(
+				question: string,
+				message: TelegramMessage,
+				res: ResWrapper
+			) {
+				// Send early
+				this._finishRes(res);
+
+				const chatId = message?.chat.id;
+				if (chatId === undefined) return undefined;
+				this._lastChatID = chatId;
+
+				if (
+					!(await this.sendMessage(
+						question,
+						RESPONSE_TYPE.TEXT,
+						chatId
+					))
+				) {
+					return undefined;
+				}
+
+				return new Promise<string>(resolve => {
+					this._openQuestions.push(resolve);
+				});
+			}
+
+			async askCancelable(
+				question: string,
+				message: TelegramMessage,
+				res: ResWrapper,
+				setCancelable: (cancel: () => void) => void
+			) {
+				// Send early
+				this._finishRes(res);
+
+				const chatId = message?.chat.id;
+				if (chatId === undefined) return undefined;
+				this._lastChatID = chatId;
+
+				if (
+					!(await this.sendMessage(
+						question,
+						RESPONSE_TYPE.TEXT,
+						chatId
+					))
+				) {
+					return undefined;
+				}
+
+				return new Promise<string>(resolve => {
+					this._openQuestions.push(resolve);
+					setCancelable(() => {
+						this._openQuestions.splice(
+							this._openQuestions.indexOf(resolve),
+							1
+						);
+					});
+				});
+			}
+
+			async sendText(
+				text: string,
+				message: TelegramMessage,
+				res: ResWrapper
+			): Promise<boolean> {
+				// Send early
+				this._finishRes(res);
+
+				const chatId = message?.chat.id;
+				if (chatId === undefined) return false;
+				this._lastChatID = chatId;
+
+				return await this.sendMessage(text, RESPONSE_TYPE.TEXT, chatId);
+			}
+
+			isQuestion(message: TelegramMessage) {
+				return this._openQuestions.length > 0 && 'text' in message;
+			}
+
+			handleQuestion(message: TelegramMessage<TelegramText>) {
+				const firstQuestion = this._openQuestions.shift();
+				firstQuestion!(message.text);
+			}
+
 			private _lastChatID: number = 0;
 			async handleMessage(req: TelegramReq, res: ResponseLike) {
 				const { message, edited_message } = req.body;
@@ -553,6 +657,7 @@ export namespace Bot {
 					chalk.bold(chalk.cyan('[bot]'))
 				);
 
+				const resWrapped = new ResWrapper(res);
 				const responses = await (() => {
 					if (edited_message) {
 						return [
@@ -562,11 +667,25 @@ export namespace Bot {
 							}
 						];
 					}
+					if (this.isQuestion(message)) {
+						this.handleQuestion(
+							message as TelegramMessage<TelegramText>
+						);
+						return [];
+					}
 					if ('reply_to_message' in message) {
-						return this.handleTextMessage(logObj, message);
+						return this.handleTextMessage(
+							logObj,
+							message,
+							resWrapped
+						);
 					}
 					if ('text' in message) {
-						return this.handleTextMessage(logObj, message);
+						return this.handleTextMessage(
+							logObj,
+							message,
+							resWrapped
+						);
 					}
 					return [
 						{
@@ -580,38 +699,40 @@ export namespace Bot {
 					'Return value(s)',
 					chalk.bold(JSON.stringify(responses))
 				);
-				if (
-					(
-						await Promise.all(
-							responses.map(async response => {
-								const chatId =
-									message?.chat.id || edited_message?.chat.id;
-								if (chatId === undefined) return false;
-								this._lastChatID = chatId;
-								const textParts = this._splitLongText(
-									response.text + ''
-								);
-								for (const textPart of textParts) {
-									if (
-										!(await this.sendMessage(
-											textPart,
-											response.type,
-											chatId
-										))
-									) {
-										return false;
-									}
+				const sendSuccesful = (
+					await Promise.all(
+						responses.map(async response => {
+							const chatId =
+								message?.chat.id || edited_message?.chat.id;
+							if (chatId === undefined) return false;
+							this._lastChatID = chatId;
+							const textParts = this._splitLongText(
+								response.text + ''
+							);
+							for (const textPart of textParts) {
+								if (
+									!(await this.sendMessage(
+										textPart,
+										response.type,
+										chatId
+									))
+								) {
+									return false;
 								}
-								return true;
-							})
-						)
-					).every(v => v)
-				) {
-					res.write('ok');
-				} else {
-					res.write('Error : failed to respond');
+							}
+							return true;
+						})
+					)
+				).every(v => v);
+
+				if (!resWrapped.sent) {
+					if (sendSuccesful) {
+						resWrapped.res.write('ok');
+					} else {
+						resWrapped.res.write('Error : failed to respond');
+					}
+					resWrapped.res.end();
 				}
-				res.end();
 			}
 		}
 	}

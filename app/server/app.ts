@@ -44,6 +44,7 @@ interface PartialConfig {
 	log?: {
 		level?: number;
 		secrets: boolean;
+		ignorePressure?: boolean;
 	};
 	debug?: boolean;
 	instant?: boolean;
@@ -79,7 +80,8 @@ class WebServer {
 			},
 			log: {
 				level: config.log?.level || 1,
-				secrets: config.log?.secrets || false
+				secrets: config.log?.secrets || false,
+				ignorePressure: config?.log?.ignorePressure || false
 			},
 			debug: config.debug || false,
 			instant: config.instant || false
@@ -185,6 +187,7 @@ if (hasArg('help', 'h')) {
 	console.log(
 		"-v*, --verbose*			Logs all data (equivalent of adding a lot of v's"
 	);
+	console.log('--ignore-pressure		Ignore pressure report logs');
 	process.exit(0);
 }
 function getVerbosity() {
@@ -219,7 +222,8 @@ new WebServer({
 	},
 	log: {
 		level: getVerbosity(),
-		secrets: hasArg('log-secrets') || false
+		secrets: hasArg('log-secrets') || false,
+		ignorePressure: hasArg('ignore-pressure')
 	},
 	debug: hasArg('debug') || !!getArg('IO_DEBUG'),
 	instant: hasArg('instant', 'i')

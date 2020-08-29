@@ -1,6 +1,7 @@
 import { ExplainHook } from '../modules/explain';
 import { ResponseLike } from '../modules/multi';
 import { IP_LOG_VERSION } from './constants';
+import { Response } from 'node-fetch';
 import * as express from 'express';
 import { Auth } from '../modules';
 import * as http from 'http';
@@ -14,6 +15,9 @@ const msgMap: WeakMap<
 	ResponseLike | AssociatedMessage | {},
 	AssociatedMessage[]
 > = new WeakMap();
+const ignoredMap: WeakSet<
+	ResponseLike | AssociatedMessage | {}
+> = new WeakSet();
 const rootMap: WeakMap<
 	any,
 	ResponseLike | AssociatedMessage | {}
@@ -203,7 +207,7 @@ export function logReq(req: express.Request, res: express.Response) {
 	res.on('finish', async () => {
 		checkForLogListeners(res, target);
 
-		if (logLevel < 1) {
+		if (logLevel < 1 || ignoredMap.has(res)) {
 			target.logToConsole();
 			return;
 		}
@@ -233,6 +237,41 @@ export function getTime() {
 
 function getTimeFiller() {
 	return new Array(new Date().toLocaleString().length + 2).fill(' ').join('');
+}
+
+export function logOutgoingRes(
+	res: Response,
+	data: {
+		method: string;
+		path: string;
+	}
+) {
+	const target = new LogCapturer();
+	if (logListeners.has(res)) {
+		logListeners.get(res)!(target);
+	}
+	checkForLogListeners(res, target);
+
+	if (logLevel < 1) {
+		target.logToConsole();
+		return;
+	}
+
+	target.log(
+		getTime(),
+		...genURLLog({
+			ip: data.path,
+			method: data.method,
+			url: data.path,
+			isSend: true
+		})
+	);
+
+	// Log attached messages
+	if (logLevel >= 2 && msgMap.has(res)) {
+		logAssociatedMessages(target, msgMap.get(res)!);
+	}
+	target.logToConsole();
 }
 
 export function logOutgoingReq(
@@ -309,6 +348,10 @@ export function transferAttached(
 		logListeners.set(to, logListeners.get(from)!);
 		logListeners.delete(from);
 	}
+}
+
+export function disableMessages(obj: ResponseLike | AssociatedMessage | {}) {
+	ignoredMap.add(obj);
 }
 
 export function attachMessage(
@@ -395,6 +438,7 @@ export class ResDummy implements ResponseLike {
 	transferTo(obj: ResponseLike | AssociatedMessage | {}) {
 		transferAttached(this, obj);
 	}
+	_headersSent = false;
 }
 
 export class ProgressLogger {
@@ -498,5 +542,13 @@ export function log(...args: any[]) {
 		initMessages.push(args);
 	} else {
 		console.log(...args);
+	}
+}
+
+export function logTimed(...args: any[]) {
+	if (isInit) {
+		initMessages.push([...getTime(), args]);
+	} else {
+		console.log(...[getTime(), ...args]);
 	}
 }

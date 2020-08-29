@@ -413,12 +413,9 @@ export namespace Cast {
 				super();
 			}
 
-			static async match(config: {
-				logObj: any;
-				text: string;
-				message: _Bot.TelegramMessage;
-				state: _Bot.Message.StateKeeping.ChatState;
-			}): Promise<_Bot.Message.MatchResponse | undefined> {
+			static async match(
+				config: _Bot.Message.MatchParameters
+			): Promise<_Bot.Message.MatchResponse | undefined> {
 				return await this.matchLines({
 					...config,
 					matchConfig: Bot.matches
