@@ -7,7 +7,7 @@ import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { JSONSwitches } from './json-switches.js';
 
 export const JSONSwitchesHTML = new TemplateFn<JSONSwitches>(
-	(html, props) => {
+	(html, { props }) => {
 		return html`
 			<div id="background">
 				<json-value

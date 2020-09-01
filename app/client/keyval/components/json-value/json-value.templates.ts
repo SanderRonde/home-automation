@@ -38,7 +38,7 @@ export function jsonValue(
 }
 
 export const JSONValueHTML = new TemplateFn<JSONValue>(
-	(html, props) => {
+	(html, { props }) => {
 		return html`
 			${jsonValue(html, props.value, props.path)}
 		`;

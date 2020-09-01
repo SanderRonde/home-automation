@@ -5,7 +5,7 @@ import {
 	PROP_TYPE,
 	config,
 	bindToClass,
-	awaitConnected
+	Mounting
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import {
 	RGBController,
@@ -112,7 +112,7 @@ export class ColorButton extends ConfigurableWebComponent
 			return this._controls;
 		}
 		this._controls = document.createElement('rgb-controls') as RgbControls;
-		awaitConnected(this._controls).then(() => {
+		Mounting.awaitMounted(this._controls).then(() => {
 			this._controls!.props.parent = this;
 		});
 		return this._controls;

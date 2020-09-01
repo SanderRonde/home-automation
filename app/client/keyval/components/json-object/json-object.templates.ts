@@ -32,7 +32,7 @@ function getDeepValues(value: any): any[] {
 }
 
 export const JSONObjectHTML = new TemplateFn<JSONObject>(
-	function(html, props) {
+	function(html, { props }) {
 		return html`
 			<div id="header">
 				<div id="name">${props.name}</div>

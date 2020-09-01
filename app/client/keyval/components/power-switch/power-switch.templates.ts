@@ -6,7 +6,7 @@ import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { PowerSwitch } from './power-switch.js';
 
 export const PowerSwitchHTML = new TemplateFn<PowerSwitch>(
-	function(html, props) {
+	function(html, { props }) {
 		return html`
 			<label
 				id="label"
@@ -36,7 +36,7 @@ export const PowerSwitchHTML = new TemplateFn<PowerSwitch>(
 );
 
 export const PowerSwitchCSS = new TemplateFn<PowerSwitch>(
-	(html, props) => {
+	(html, { props }) => {
 		const scale = (props.scale || 100) / 100;
 		return html`
 			<style>

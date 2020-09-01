@@ -10,7 +10,7 @@ import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { JSONBoolean } from './json-boolean.js';
 
 export const JSONBooleanHTML = new TemplateFn<JSONBoolean>(
-	function(html, props) {
+	function(html, { props }) {
 		return html`
 			<div id="container">
 				<div title="${props.path!.join('.')}" id="name">

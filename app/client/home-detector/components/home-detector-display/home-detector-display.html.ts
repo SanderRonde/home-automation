@@ -6,7 +6,7 @@ import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { HomeDetectorDisplay } from './home-detector-display.js';
 
 export const HomeDetectorDisplayHTML = new TemplateFn<HomeDetectorDisplay>(
-	(html, props) => {
+	(html, { props }) => {
 		return html`
 			<div id="background">
 				<div id="horizontal-center">

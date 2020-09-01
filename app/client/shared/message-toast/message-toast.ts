@@ -21,7 +21,7 @@ interface CreateConfig {
 @config({
 	is: 'message-toast',
 	html: new TemplateFn<MessageToast>(
-		function(html, props) {
+		function(html, { props }) {
 			return html`
 				<div id="toast">
 					<div id="text">${props.message}</div>

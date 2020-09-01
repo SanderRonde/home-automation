@@ -6,7 +6,7 @@ import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { PatternControls } from './pattern-controls.js';
 
 export const PatternControlsHTML = new TemplateFn<PatternControls>(
-	function(html, props) {
+	function(html, { props }) {
 		return html`
 			<div id="container">
 				<div id="sliderContainer">

@@ -5,7 +5,7 @@ import {
 	ComplexType,
 	PROP_TYPE,
 	bindToClass,
-	awaitConnected
+	Mounting
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import {
 	PatternConfig,
@@ -71,7 +71,7 @@ export class PatternButton extends ConfigurableWebComponent
 			'defaultTransition',
 			this.props.pattern!.transitionType + ''
 		);
-		awaitConnected(controller).then(() => {
+		Mounting.awaitMounted(controller).then(() => {
 			controller!.props.parent = this;
 		});
 		controls.appendElement(controller);

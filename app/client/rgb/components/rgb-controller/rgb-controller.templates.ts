@@ -19,7 +19,7 @@ function fillPatterns(patterns: PatternConfig[]): PatternConfig[] {
 }
 
 export const RGBControllerHTML = new TemplateFn<RGBController>(
-	function(html, props) {
+	function(html, { props }) {
 		return html`
 			<div id="background">
 				<color-display id="display"></color-display>

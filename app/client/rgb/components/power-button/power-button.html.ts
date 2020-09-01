@@ -6,7 +6,7 @@ import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { PowerButton } from './power-button.js';
 
 export const PowerButtonHTML = new TemplateFn<PowerButton>(
-	function(html, props) {
+	function(html, { props }) {
 		return html`
 			<div
 				class="${{
