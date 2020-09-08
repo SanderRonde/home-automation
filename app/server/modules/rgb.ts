@@ -3036,19 +3036,49 @@ export namespace RGB {
 							}
 						}
 					);
-					mm('/effects', /what effects are there(\?)?/, async () => {
-						return `Effects are:\n${Object.keys(
-							ArduinoAPI.arduinoEffects
-						)
-							.map(key => {
-								const value =
-									ArduinoAPI.arduinoEffects[
-										key as ArduinoAPI.Effects
-									];
-								return `/effect${key} - ${value.description}`;
-							})
-							.join('\n')}`;
-					});
+					mm(
+						'/effects',
+						/\/effects([^s](\w*))/,
+						/what effects are there(\?)?/,
+						async ({ logObj, match, state, matchText }) => {
+							if (match && match[1] !== '') {
+								const effectName = `s${match[1]}` as ArduinoAPI.Effects;
+								if (effectName in ArduinoAPI.arduinoEffects) {
+									state.states.RGB.lastConfig = {
+										...ArduinoAPI.arduinoEffects[effectName]
+									};
+								} else {
+									state.states.RGB.lastConfig = null;
+									return `Effect "${effectName}" does not exist`;
+								}
+
+								if (
+									await new External.Handler(
+										logObj,
+										`BOT.${matchText}`
+									).effect(effectName, {})
+								) {
+									return `Started effect "${effectName}" with config ${JSON.stringify(
+										ArduinoAPI.arduinoEffects[effectName]
+									)}`;
+								} else {
+									return 'Failed to start effect';
+								}
+							}
+
+							return `Effects are:\n${Object.keys(
+								ArduinoAPI.arduinoEffects
+							)
+								.map(key => {
+									const value =
+										ArduinoAPI.arduinoEffects[
+											key as ArduinoAPI.Effects
+										];
+									return `/effect${key} - ${value.description}`;
+								})
+								.join('\n')}`;
+						}
+					);
 					mm('/refresh', /refresh (rgb|led)/, async ({ logObj }) => {
 						return `Found ${await Scan.scanRGBControllers(
 							false,
