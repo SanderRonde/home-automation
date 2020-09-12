@@ -60,7 +60,7 @@
 		"googleapis": "39",
 		"lit-html": "^1.1.0",
 		"magic-home": "^2.6.0",
-		"node-fetch": "^2.6.0",
+		"node-fetch": "^2.6.1",
 		"optional-require": "^1.0.0",
 		"path-to-regexp": "^3.0.0",
 		"ping": "^0.2.2",
