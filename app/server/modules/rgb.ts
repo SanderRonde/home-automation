@@ -3041,7 +3041,7 @@ export namespace RGB {
 						/\/effects([^s](\w*))/,
 						/what effects are there(\?)?/,
 						async ({ logObj, match, state, matchText }) => {
-							if (match && match[1] !== '') {
+							if (match && match[1]) {
 								const effectName = `s${match[1]}` as ArduinoAPI.Effects;
 								if (effectName in ArduinoAPI.arduinoEffects) {
 									state.states.RGB.lastConfig = {
