@@ -2254,6 +2254,27 @@ export namespace RGB {
 						}
 					);
 					mm(
+						/turn (on|off) (desk|couch|wall|bed)/,
+						async ({ logObj, match }) => {
+							const targetState = match[1];
+							const ledName = getLedFromName(match[2])!;
+							const client = Clients.getLed(ledName);
+							if (!client) {
+								return 'Failed to find client';
+							}
+
+							if (targetState === 'on') {
+								attachMessage(logObj, 'Turned it on');
+								client.turnOn();
+								return 'Turned it on';
+							} else {
+								attachMessage(logObj, 'Turned it off');
+								client.turnOff();
+								return 'Turned it off';
+							}
+						}
+					);
+					mm(
 						'/arduinooff',
 						/turn (on|off) (ceiling|arduino|duino)/,
 						async ({ logObj, match, state }) => {
@@ -4128,6 +4149,20 @@ export namespace RGB {
 				});
 			});
 		}
+	}
+
+	function getLedFromName(name: string) {
+		switch (name) {
+			case 'desk':
+				return LED_NAMES.DESK_LEDS;
+			case 'couch':
+				return LED_NAMES.COUCH_LEDS;
+			case 'wall':
+				return LED_NAMES.WALL_LEDS;
+			case 'bed':
+				return LED_NAMES.BED_LEDS;
+		}
+		return null;
 	}
 
 	async function switchLed(name: LED_NAMES, value: string, logObj: any) {
