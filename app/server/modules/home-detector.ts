@@ -57,6 +57,7 @@ export namespace HomeDetector {
 			const detector = new Classes.Detector({ db: config.db });
 			const apiHandler = new API.Handler({ detector });
 			Bot.Bot.init({ apiHandler, detector });
+			External.Handler.init({ detector });
 
 			initListeners();
 			Routing.init({ ...config, detector, apiHandler });
@@ -695,13 +696,21 @@ export namespace HomeDetector {
 	}
 
 	export namespace External {
-		type ExternalRequest = {
-			action: 'triggerHook';
-			newState: HOME_STATE;
-			name: string;
-		};
+		type ExternalRequest =
+			| {
+					action: 'triggerHook';
+					newState: HOME_STATE;
+					name: string;
+			  }
+			| {
+					action: 'isHome';
+					name: string;
+					resolve: (isHome: HOME_STATE | '?') => void;
+			  };
 
 		export class Handler {
+			private static _detector: Classes.Detector;
+
 			constructor(private _logObj: any) {}
 
 			private async _handleRequest(request: ExternalRequest) {
@@ -715,6 +724,9 @@ export namespace HomeDetector {
 							resDummy
 						);
 						break;
+					case 'isHome':
+						request.resolve(Handler._detector.get(request.name));
+						break;
 				}
 				resDummy.transferTo(this._logObj);
 				return;
@@ -727,6 +739,21 @@ export namespace HomeDetector {
 					newState
 				};
 				this._handleRequest(req);
+			}
+
+			public getState(name: string): Promise<HOME_STATE | '?'> {
+				return new Promise(resolve => {
+					const req: ExternalRequest = {
+						action: 'isHome',
+						name,
+						resolve
+					};
+					this._handleRequest(req);
+				});
+			}
+
+			static init({ detector }: { detector: Classes.Detector }) {
+				this._detector = detector;
 			}
 		}
 	}
