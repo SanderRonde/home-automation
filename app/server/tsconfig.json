@@ -17,10 +17,7 @@
 		"experimentalDecorators": true,
 		"strictPropertyInitialization": true,
 		"strictNullChecks": true,
-		"strictBindCallApply": true,
-		"composite": true,
-		"declaration": true,
-		"declarationMap": true
+		"strictBindCallApply": true
 	},
 	"compileOnSave": true,
 	"allowJs": true,
