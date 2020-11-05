@@ -6,12 +6,12 @@ import { render } from '../../../../node_modules/lit-html/lit-html.js';
 import { AnnotatorMain } from './annotator-main.js';
 
 export const AnnotatorMainHTML = new TemplateFn<AnnotatorMain>(
-	function(html, props) {
+	function(html, { props }) {
 		return html`
 			<div id="selecter">
 				<button @click=${this.prevSong} id="prev">Previous</button>
 				<select @change=${this.onSelect} id="select">
-					${props.fileNames.map(fileName => {
+					${(props.fileNames as string[]).map(fileName => {
 						return html`
 							<option value="${fileName}">${fileName}</option>
 						`;
