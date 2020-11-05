@@ -15,7 +15,7 @@ export const CalendarOverviewCSS = new TemplateFn<CalendarOverview>(
 					display: flex;
 					flex-direction: row;
 					justify-content: center;
-					max-height: 23vh;
+					max-height: 40vh;
 				}
 
 				#table {
