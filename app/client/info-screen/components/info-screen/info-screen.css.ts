@@ -9,6 +9,11 @@ export const InfoScreenCSS = new TemplateFn<InfoScreen>(
 	html => {
 		return html`
 			<style>
+				@font-face {
+					font-family: 'Roboto';
+					src: url('/fonts/Roboto-Regular.ttf');
+				}
+
 				#background {
 					width: 100vw;
 					height: 100vh;
