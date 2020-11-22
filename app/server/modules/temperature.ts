@@ -552,39 +552,19 @@ export namespace Temperature {
 				res.end();
 			});
 
-			app.post('/temperature/advise/:temp?', async (req, res) => {
+			app.post('/temperature/advise/', async (req, res) => {
 				const body = { ...req.params, ...req.body };
-				if (!('temp' in body)) {
-					res.write(`Missing key "temp"`);
-					res.status(400);
-					res.end();
-					return;
-				}
-				if (!('name' in body)) {
-					res.write(`Missing key "name"`);
-					res.status(400);
-					res.end();
-					return;
-				}
-				const temp = parseFloat(body['temp']);
-				if (Number.isNaN(temp) || temp === 0) {
-					res.write(`Invalid temperature "${body['temp']}"`);
-					res.status(400);
-					res.end();
-					return;
-				}
 
 				// Set last temp
 				const controller = await TempControllers.getController(
 					body['name']
 				);
-				await controller.setLastTemp(temp);
 
 				const advice = controller.getHeaterState();
 				attachMessage(
 					attachMessage(
 						res,
-						`Returning advice: "${advice}" for temp ${temp}°`
+						`Returning advice: "${advice}" for temp ${controller.getLastTemp()}°`
 					),
 					`Heater mode: "${controller.getMode()}, target: ${controller.getTarget()}`
 				);
