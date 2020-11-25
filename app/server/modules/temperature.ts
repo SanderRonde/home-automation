@@ -552,13 +552,8 @@ export namespace Temperature {
 				res.end();
 			});
 
-			app.post('/temperature/advise/', async (req, res) => {
-				const body = { ...req.params, ...req.body };
-
-				// Set last temp
-				const controller = await TempControllers.getController(
-					body['name']
-				);
+			app.post('/temperature/advise/', async (_req, res) => {
+				const controller = await TempControllers.getController();
 
 				const advice = controller.getHeaterState();
 				attachMessage(
