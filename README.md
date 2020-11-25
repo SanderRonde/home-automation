@@ -114,7 +114,9 @@ The remote control works by sending any commands it gets to two destinations. Th
 
 The temperature module works by setting a target temperature and instructing a temperature controller to either increase or decrease the temperature depending on the one that was measured. It also allows for manual turning on and off of the temperature controller. In the future something like knowing how long it takes for the home to heat up X degrees could be used to start pre-heating the home just in time before the user arrives.
 
-The code for the microcontroller driving it can be found [over at this repository](https://github.com/SanderRonde/board-temperature-driver).
+The code for the microcontroller measuring the temperature can be found [over at this repository](https://github.com/SanderRonde/board-temperature-driver).
+
+The code for the microcontroller driving it can be found [over at this repository](https://github.com/SanderRonde/board-temperature-controller-driver).
 
 #### Pressure
 
