@@ -297,7 +297,8 @@ export namespace Temperature {
 										[
 											'Target temperature',
 											controller.getTarget() + ''
-										]
+										],
+										['', '']
 									]
 								);
 							}
@@ -308,51 +309,56 @@ export namespace Temperature {
 						}
 					);
 					mm(
-						'/heatoff',
-						/stop heating/,
-						/make it cold/,
-						async ({ logObj }) => {
+						/\/heatoff (\w+)/,
+						/stop heating (\w+)/,
+						/make (\w+) cold/,
+						async ({ logObj, match }) => {
+							const tempName = match[1];
 							new External.Handler(
 								attachMessage(logObj, 'Stopping heating')
-							).setMode('default', 'off');
+							).setMode(tempName, 'off');
 							return 'Stopping heating';
 						}
 					);
-					mm('/heatauto', async ({ logObj }) => {
+					mm(/\/heatauto (\w+)/, async ({ logObj, match }) => {
+						const tempName = match[1];
 						new External.Handler(
 							attachMessage(logObj, 'Set heat mode to auto')
-						).setMode('default', 'auto');
+						).setMode(tempName, 'auto');
 						return 'Set heat mode to auto';
 					});
 					mm(
-						'/heat',
-						/start heating/,
-						/make it hot/,
-						/heat/,
-						async ({ logObj }) => {
+						/\/heat (\w+)/,
+						/start heating (\w+)/,
+						/make (\w+) hot/,
+						/heat (\w+)/,
+						async ({ logObj, match }) => {
+							const tempName = match[1];
 							new External.Handler(
 								attachMessage(logObj, 'Heating')
-							).setMode('default', 'on');
+							).setMode(tempName, 'on');
 							return 'Heating';
 						}
 					);
 					mm(
-						/set(?: temp(?:erature)?) mode to (\w+)/,
+						/set(?: temp(?:erature)?) mode to (\w+) for (\w+)/,
 						async ({ logObj, match }) => {
 							const mode = match[1];
+							const tempName = match[2];
 							if (['on', 'off', 'auto'].indexOf(mode) === -1) {
 								return 'Invalid mode';
 							}
 							new External.Handler(
 								attachMessage(logObj, `Setting mode to ${mode}`)
-							).setMode('default', mode as Mode);
+							).setMode(tempName, mode as Mode);
 							return `Set mode to ${mode}`;
 						}
 					);
 					mm(
-						/set(?: temp(?:erature)?) target to ((\d+)(\.\d+)?)/,
+						/set(?: temp(?:erature)?) target to ((\d+)(\.\d+)?) for (\w+)/,
 						async ({ logObj, match }) => {
 							const target = parseFloat(match[1]);
+							const tempName = match[2];
 							if (
 								Number.isNaN(target) ||
 								target === 0 ||
@@ -365,7 +371,7 @@ export namespace Temperature {
 									logObj,
 									`Setting temp to ${target}`
 								)
-							).setTarget('default', target);
+							).setTarget(tempName, target);
 							return `Set target to ${target}`;
 						}
 					);
@@ -546,8 +552,12 @@ export namespace Temperature {
 				res.end();
 			});
 
-			app.post('/temperature/advise/', async (_req, res) => {
-				const controller = await TempControllers.getController();
+			app.post('/temperature/advise/:name', async (req, res) => {
+				const body = { ...req.params, ...req.body };
+
+				const controller = await TempControllers.getController(
+					body['name']
+				);
 
 				const advice = controller.getHeaterState();
 				attachMessage(
