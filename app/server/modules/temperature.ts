@@ -6,13 +6,11 @@ import { ResponseLike } from './multi';
 import { Database } from '../lib/db';
 import { Bot as _Bot } from './bot';
 import { ModuleMeta } from './meta';
-import { getEnv } from '../lib/io';
 import { KeyVal } from './keyval';
 import { Auth } from './auth';
 import chalk from 'chalk';
 
 const LOG_INTERVAL_SECS = 60;
-const ENABLE_HEATING = getEnv('ENABLE_HEATING', false) === 'true';
 
 export namespace Temperature {
 	export const meta = new (class Meta extends ModuleMeta {
@@ -74,20 +72,18 @@ export namespace Temperature {
 			await this.db!.setVal(`${this.name}.mode`, newMode);
 			this.mode = newMode;
 
-			if (ENABLE_HEATING) {
-				if (newMode === 'off') {
-					new KeyVal.External.Handler({}, 'HEATING.off').set(
-						'room.heating',
-						'0',
-						false
-					);
-				} else {
-					new KeyVal.External.Handler({}, 'HEATING.on').set(
-						'room.heating',
-						'1',
-						false
-					);
-				}
+			if (newMode === 'off') {
+				new KeyVal.External.Handler({}, 'HEATING.off').set(
+					'room.heating',
+					'0',
+					false
+				);
+			} else {
+				new KeyVal.External.Handler({}, 'HEATING.on').set(
+					'room.heating',
+					'1',
+					false
+				);
 			}
 		}
 
@@ -158,13 +154,11 @@ export namespace Temperature {
 			this.db = database;
 			this.name = name;
 
-			if (ENABLE_HEATING) {
-				const target = database.get(`${name}.target`, 20.0);
-				const prevMode = database.get(`${name}.mode`, 'auto');
+			const target = database.get(`${name}.target`, 20.0);
+			const prevMode = database.get(`${name}.mode`, 'auto');
 
-				await this.setTarget(target);
-				await this.setMode(prevMode);
-			}
+			await this.setTarget(target);
+			await this.setMode(prevMode);
 
 			const temp = database.get(`${name}.temp`, 20.0);
 
@@ -568,17 +562,15 @@ export namespace Temperature {
 				res.end();
 			});
 
-			if (ENABLE_HEATING) {
-				KeyVal.GetSetListener.addListener(
-					'room.heating',
-					async (value, logObj) => {
-						new External.Handler(logObj).setMode(
-							'default',
-							value === '1' ? 'on' : 'off'
-						);
-					}
-				);
-			}
+			KeyVal.GetSetListener.addListener(
+				'room.heating',
+				async (value, logObj) => {
+					new External.Handler(logObj).setMode(
+						'default',
+						value === '1' ? 'on' : 'off'
+					);
+				}
+			);
 		}
 	}
 }
