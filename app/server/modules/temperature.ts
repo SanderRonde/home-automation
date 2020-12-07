@@ -72,7 +72,7 @@ export namespace Temperature {
 			await this.db!.setVal(`${this.name}.mode`, newMode);
 			this.mode = newMode;
 
-			if (newMode === 'off') {
+			if (newMode === 'off' && this.name === 'room') {
 				new KeyVal.External.Handler({}, 'HEATING.off').set(
 					'room.heating',
 					'0',
@@ -576,7 +576,7 @@ export namespace Temperature {
 				'room.heating',
 				async (value, logObj) => {
 					new External.Handler(logObj).setMode(
-						'default',
+						'room',
 						value === '1' ? 'on' : 'off'
 					);
 				}
