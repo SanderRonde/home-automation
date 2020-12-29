@@ -7,8 +7,8 @@ import {
 	LED_IPS,
 	WAKELIGHT_TIME,
 	NAME_MAP,
-	MAX_BEATS_ARR_LENGTH,
-	MARKED_AUDIO_FOLDER
+	MARKED_AUDIO_FOLDER,
+	NUM_LEDS
 } from '../lib/constants';
 import {
 	errorHandle,
@@ -33,13 +33,11 @@ import {
 	attachSourcedMessage
 } from '../lib/logger';
 import * as ReadLine from '@serialport/parser-readline';
-import { BeatChanges, FullState } from './spotify-beats';
-import { SpotifyTypes } from '../types/spotify';
-import { BotState } from '../lib/bot-state';
-import { wait, arrToObj } from '../lib/util';
-import SerialPort = require('serialport');
-import { BotUtil } from '../lib/bot-util';
 import { ModuleConfig, AllModules } from './modules';
+import { Color, IColor } from '../lib/types';
+import { wait, arrToObj } from '../lib/util';
+import { BotState } from '../lib/bot-state';
+import SerialPort = require('serialport');
 import { ExplainHook } from './explain';
 import { colorList } from '../lib/data';
 import { ResponseLike } from './multi';
@@ -53,36 +51,8 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import chalk from 'chalk';
 
-function speedToMs(speed: number) {
-	return 1000 / speed;
-}
-
 function getIntensityPercentage(percentage: number) {
 	return Math.round((percentage / 100) * 255);
-}
-
-export interface IColor {
-	r: number;
-	g: number;
-	b: number;
-}
-export interface Color extends IColor {}
-export class Color implements Color {
-	constructor(r: number);
-	constructor(r: number, g: number, b: number);
-	constructor(r: number, g: number = r, b: number = r) {
-		this.r = r;
-		this.g = g;
-		this.b = b;
-	}
-
-	toJSON?() {
-		return {
-			r: this.r,
-			g: this.g,
-			b: this.b
-		};
-	}
 }
 
 function restartSelf() {
@@ -158,6 +128,309 @@ export namespace RGB {
 		}
 	})();
 
+	export namespace EffectConfig {
+		const BYTE_BITS = 8;
+		const MAX_BYTE_VAL = Math.pow(2, BYTE_BITS) - 1;
+
+		export enum MOVING_STATUS {
+			OFF = 0,
+			FORWARDS = 1,
+			BACKWARDS = 2
+		}
+
+		function flatten<V>(arr: V[][]): V[] {
+			const resultArr: V[] = [];
+			for (const value of arr) {
+				resultArr.push(...value);
+			}
+			return resultArr;
+		}
+
+		function assert(condition: boolean, message: string) {
+			if (!condition) {
+				throw new Error(message);
+			}
+		}
+
+		function shortToBytes(short: number) {
+			return [
+				(short & (MAX_BYTE_VAL << BYTE_BITS)) >> BYTE_BITS,
+				short & MAX_BYTE_VAL
+			];
+		}
+
+		export class Leds {
+			private _leds!: (ColorSequence | SingleColor)[];
+
+			constructor(private _numLeds: number) {}
+
+			private _assertTotalLeds() {
+				assert(
+					this._leds.reduce((prev, current) => {
+						return prev + current.length;
+					}, 0) <= this._numLeds,
+					'Number of LEDs exceeds total'
+				);
+				assert(
+					this._leds.reduce((prev, current) => {
+						return prev + current.length;
+					}, 0) >= this._numLeds,
+					'Number of LEDs is lower than total'
+				);
+			}
+
+			fillWithColors(colors: Color[]) {
+				const numFullSequences = Math.floor(
+					this._numLeds / colors.length
+				);
+				this._leds = [];
+				this._leds.push(new ColorSequence(colors, numFullSequences));
+				if (numFullSequences * colors.length !== this._numLeds) {
+					const remainingColors =
+						this._numLeds - numFullSequences * colors.length;
+					for (let i = 0; i < remainingColors; i++) {
+						this._leds.push(new SingleColor(colors[i]));
+					}
+				}
+
+				this._assertTotalLeds();
+
+				return this;
+			}
+
+			toSequence() {
+				return this._leds;
+			}
+		}
+
+		export class MoveData {
+			static readonly MOVING_STATUS = MOVING_STATUS;
+
+			constructor(
+				_moving: MOVING_STATUS.BACKWARDS | MOVING_STATUS.FORWARDS,
+				_movingConfig: {
+					jumpSize: number;
+					jumpDelay: number;
+				},
+				_alternateConfig?:
+					| {
+							alternate: true;
+							alternateDelay: number;
+					  }
+					| {
+							alternate: false;
+					  }
+			);
+			constructor(_moving: MOVING_STATUS.OFF);
+			constructor(
+				private _moving: MOVING_STATUS,
+				private _movingConfig: {
+					jumpSize: number;
+					jumpDelay: number;
+				} = {
+					jumpSize: 0,
+					jumpDelay: 0
+				},
+				private _alternateConfig:
+					| {
+							alternate: true;
+							alternateDelay: number;
+					  }
+					| {
+							alternate: false;
+					  } = {
+					alternate: false
+				}
+			) {}
+
+			toBytes() {
+				return [
+					this._moving,
+					...shortToBytes(this._movingConfig.jumpSize),
+					...shortToBytes(this._movingConfig.jumpDelay),
+					~~this._alternateConfig.alternate,
+					...shortToBytes(
+						this._alternateConfig.alternate
+							? this._alternateConfig.alternateDelay
+							: 0
+					)
+				];
+			}
+		}
+
+		export class ColorSequence {
+			public colors: Color[];
+
+			constructor(colors: Color[] | Color, public repetitions: number) {
+				this.colors = Array.isArray(colors) ? colors : [colors];
+			}
+
+			toBytes(): number[] {
+				return [
+					ColorType.COLOR_SEQUENCE,
+					...shortToBytes(this.colors.length),
+					...shortToBytes(this.repetitions),
+					...flatten(this.colors.map(color => color.toBytes()))
+				];
+			}
+
+			get length() {
+				return (
+					(Array.isArray(this.colors) ? this.colors.length : 1) *
+					this.repetitions
+				);
+			}
+		}
+
+		export class TransparentSequence {
+			constructor(public length: number) {}
+
+			toBytes(): number[] {
+				return [ColorType.TRANSPARENT, ...shortToBytes(this.length)];
+			}
+		}
+
+		export enum ColorType {
+			SINGLE_COLOR = 0,
+			COLOR_SEQUENCE = 1,
+			RANDOM_COLOR = 2,
+			TRANSPARENT = 3,
+			REPEAT = 4
+		}
+
+		export class SingleColor {
+			constructor(public color: Color) {}
+
+			toBytes() {
+				return [ColorType.SINGLE_COLOR, ...this.color.toBytes()];
+			}
+
+			get length() {
+				return 1;
+			}
+		}
+
+		export class RandomColor {
+			constructor(
+				public size: number,
+				public randomTime: number,
+				public randomEveryTime: boolean
+			) {}
+
+			toBytes() {
+				return [
+					ColorType.RANDOM_COLOR,
+					~~this.randomEveryTime,
+					...shortToBytes(this.randomTime),
+					...shortToBytes(this.size)
+				];
+			}
+		}
+
+		export class Repeat {
+			constructor(
+				public repetitions: number,
+				public sequence:
+					| SingleColor
+					| ColorSequence
+					| RandomColor
+					| TransparentSequence
+			) {}
+
+			toBytes() {
+				return [
+					ColorType.REPEAT,
+					...shortToBytes(this.repetitions),
+					...this.sequence.toBytes()
+				];
+			}
+		}
+
+		export class LedSpecStep {
+			public moveData: MoveData;
+			public background: Color;
+			public sequences: (
+				| SingleColor
+				| ColorSequence
+				| RandomColor
+				| TransparentSequence
+				| Repeat
+			)[];
+
+			constructor(
+				{
+					background,
+					moveData,
+					sequences
+				}: {
+					moveData: MoveData;
+					background: Color;
+					sequences: (
+						| SingleColor
+						| ColorSequence
+						| RandomColor
+						| Repeat
+						| TransparentSequence
+					)[];
+				},
+				public delayUntilNext: number = 0
+			) {
+				this.moveData = moveData;
+				this.background = background;
+				this.sequences = sequences;
+			}
+
+			toBytes() {
+				return [
+					...shortToBytes(this.delayUntilNext),
+					...this.moveData.toBytes(),
+					...this.background.toBytes(),
+					...shortToBytes(
+						this.sequences
+							.map(sequence => {
+								if (sequence instanceof Repeat) {
+									return sequence.repetitions;
+								}
+								return 1;
+							})
+							.reduce((p, c) => p + c, 0)
+					),
+					...flatten(
+						this.sequences.map(sequence => sequence.toBytes())
+					)
+				];
+			}
+		}
+
+		export class LedEffect {
+			constructor(public effect: LedSpecStep[]) {}
+
+			toBytes() {
+				debugger;
+				return [
+					...shortToBytes(this.effect.length),
+					...flatten(
+						this.effect.map(step => {
+							return step.toBytes();
+						})
+					)
+				];
+			}
+		}
+
+		export class LedSpec {
+			constructor(public steps: LedEffect) {}
+
+			toBytes(): number[] {
+				return [
+					'<'.charCodeAt(0),
+					...this.steps.toBytes(),
+					'>'.charCodeAt(0)
+				];
+			}
+		}
+	}
+
 	export namespace Clients {
 		abstract class RGBClient {
 			static patternNames: {
@@ -207,11 +480,6 @@ export namespace RGB {
 				brightness: number,
 				intensity?: number,
 				callback?: (err: Error | null, success: boolean) => void
-			): Promise<boolean>;
-			abstract setCustomPattern(
-				pattern: CustomMode,
-				speed: number,
-				callback?: () => void
 			): Promise<boolean>;
 			abstract setPattern(
 				pattern: BuiltinPatterns,
@@ -284,14 +552,6 @@ export namespace RGB {
 					callback
 				);
 			}
-			async setCustomPattern(
-				pattern: CustomMode,
-				speed: number,
-				callback?: () => void
-			): Promise<boolean> {
-				await this._turnedOn();
-				return this._control.setCustomPattern(pattern, speed, callback);
-			}
 			async setPattern(
 				pattern: BuiltinPatterns,
 				speed: number,
@@ -347,33 +607,20 @@ export namespace RGB {
 				return true;
 			}
 
-			private _sendFailure(
-				callback?: (err: Error | null, success: boolean) => void
-			) {
-				callback && callback({} as any, false);
-				return false;
-			}
-
 			async setColor(
 				red: number,
 				green: number,
 				blue: number,
-				intensity?: number,
+				_intensity?: number,
 				callback?: (err: Error | null, success: boolean) => void
 			): Promise<boolean> {
 				await this._turnedOn();
-				if (
-					await this.board.setSolid({
-						r: red,
-						g: green,
-						b: blue,
-						intensity
-					})
-				) {
-					return this._sendSuccess(callback);
-				} else {
-					return this._sendFailure(callback);
-				}
+				this.board.setSolid({
+					r: red,
+					g: green,
+					b: blue
+				});
+				return this._sendSuccess(callback);
 			}
 			async setColorAndWarmWhite(
 				red: number,
@@ -383,55 +630,25 @@ export namespace RGB {
 				callback?: (err: Error | null, success: boolean) => void
 			): Promise<boolean> {
 				await this._turnedOn();
-				if (await this.board.setSolid({ r: red, g: green, b: blue })) {
-					return this._sendSuccess(callback);
-				} else {
-					return this._sendFailure(callback);
-				}
+				this.board.setSolid({ r: red, g: green, b: blue });
+				return this._sendSuccess(callback);
 			}
 			async setColorWithBrightness(
 				red: number,
 				green: number,
 				blue: number,
 				brightness: number,
-				intensity?: number,
+				_intensity?: number,
 				callback?: (err: Error | null, success: boolean) => void
 			): Promise<boolean> {
 				await this._turnedOn();
 				const brightnessScale = brightness / 100;
-				if (
-					await this.board.setSolid({
-						r: red * brightnessScale,
-						g: green * brightnessScale,
-						b: blue * brightnessScale,
-						intensity
-					})
-				) {
-					return this._sendSuccess(callback);
-				} else {
-					return this._sendFailure(callback);
-				}
-			}
-			async setCustomPattern(
-				pattern: CustomMode,
-				speed: number,
-				callback?: () => void
-			): Promise<boolean> {
-				await this._turnedOn();
-				if (
-					await this.board.setFlash({
-						colors: pattern.colors.map(
-							({ red, green, blue }) =>
-								new Color(red, green, blue)
-						),
-						mode: pattern.transitionType,
-						updateTime: speedToMs(speed)
-					})
-				) {
-					return this._sendSuccess(callback);
-				} else {
-					return this._sendFailure(callback);
-				}
+				this.board.setSolid({
+					r: red * brightnessScale,
+					g: green * brightnessScale,
+					b: blue * brightnessScale
+				});
+				return this._sendSuccess(callback);
 			}
 			async setPattern(
 				_pattern: BuiltinPatterns,
@@ -458,19 +675,13 @@ export namespace RGB {
 				callback?: (err: Error | null, success: boolean) => void
 			): Promise<boolean> {
 				await this._turnedOn();
-				if (await this.board.setSolid(new Color(ww))) {
-					return this._sendSuccess(callback);
-				} else {
-					return this._sendFailure(callback);
-				}
+				this.board.setSolid(new Color(ww));
+				return this._sendSuccess(callback);
 			}
 			async turnOff(callback?: () => void): Promise<boolean> {
 				await this._turnedOff();
-				if (await this.board.setModeOff()) {
-					return this._sendSuccess(callback);
-				} else {
-					return this._sendFailure(callback);
-				}
+				this.board.setModeOff();
+				return this._sendSuccess(callback);
 			}
 			async turnOn(callback?: () => void): Promise<boolean> {
 				await this._turnedOn();
@@ -712,7 +923,6 @@ export namespace RGB {
 		}
 
 		export interface Solid {
-			intensity?: number;
 			r: number;
 			g: number;
 			b: number;
@@ -834,38 +1044,7 @@ export namespace RGB {
 			Solid & Dot & Split & Pattern & Flash
 		>;
 
-		export type Effects =
-			| 'rainbow'
-			| 'reddot'
-			| 'reddotbluebg'
-			| 'multidot'
-			| 'multidotdiffspeed'
-			| 'split'
-			| 'rgb'
-			| 'quickstrobe'
-			| 'strobe'
-			| 'slowstrobe'
-			| 'brightstrobe'
-			| 'epileptisch'
-			| 'quickfade'
-			| 'slowfade'
-			| 'rainbow2'
-			| 'desk'
-			| 'randomslow'
-			| 'randomslowbig'
-			| 'randomfast'
-			| 'randomblocks'
-			| 'randomparty'
-			| 'randomfull'
-			| 'randomfullfast'
-			| 'beats1' // Red on black
-			| 'beats2' // Red on blue
-			| 'beats3' // Blue on black
-			| 'beats4' // Red on black with a green progress bar
-			| 'beats5' // Red on blue with a green progress bar
-			| 'beatrandomsmall'
-			| 'beatrandommedium'
-			| 'beatrandombig';
+		export type Effects = keyof typeof arduinoEffects;
 
 		function interpolate(
 			c1: Color,
@@ -903,21 +1082,390 @@ export namespace RGB {
 			return stops;
 		}
 
-		export const arduinoEffects: Object &
-			{
-				[K in Effects]: ArduinoConfig & {
-					description: string;
-				};
-			} = {
+		function HSVtoRGB(h: number, s: number, v: number) {
+			let r: number;
+			let g: number;
+			let b: number;
+
+			let i, f, p, q, t;
+			i = Math.floor(h * 6);
+			f = h * 6 - i;
+			p = v * (1 - s);
+			q = v * (1 - f * s);
+			t = v * (1 - (1 - f) * s);
+			switch (i % 6) {
+				case 0:
+					(r = v), (g = t), (b = p);
+					break;
+				case 1:
+					(r = q), (g = v), (b = p);
+					break;
+				case 2:
+					(r = p), (g = v), (b = t);
+					break;
+				case 3:
+					(r = p), (g = q), (b = v);
+					break;
+				case 4:
+					(r = t), (g = p), (b = v);
+					break;
+				case 5:
+					(r = v), (g = p), (b = q);
+					break;
+			}
+			return {
+				r: Math.round(r! * 255),
+				g: Math.round(g! * 255),
+				b: Math.round(b! * 255)
+			};
+		}
+
+		function flatten<V>(arr: V[][]): V[] {
+			const flattened: V[] = [];
+			for (const value of arr) {
+				flattened.push(...value);
+			}
+			return flattened;
+		}
+
+		function getRandomColor() {
+			const h = Math.round(Math.random() * 255);
+			const { b, g, r } = HSVtoRGB(h, 255, 255);
+			return new Color(r, g, b);
+		}
+
+		export const arduinoEffects = {
 			rainbow: {
 				description: 'Forwards moving rainbow pattern',
-				type: 'pattern',
+				effect: new EffectConfig.LedEffect([
+					new EffectConfig.LedSpecStep({
+						moveData: new EffectConfig.MoveData(
+							EffectConfig.MOVING_STATUS.FORWARDS,
+							{
+								jumpSize: 1,
+								jumpDelay: 1
+							}
+						),
+						background: new Color(0, 0, 0),
+						sequences: new EffectConfig.Leds(NUM_LEDS)
+							.fillWithColors([
+								...interpolate(
+									new Color(255, 0, 0),
+									new Color(0, 255, 0),
+									5,
+									{ end: false }
+								),
+								...interpolate(
+									new Color(0, 255, 0),
+									new Color(0, 0, 255),
+									5,
+									{ end: false }
+								),
+								...interpolate(
+									new Color(0, 0, 255),
+									new Color(255, 0, 0),
+									5,
+									{ end: false }
+								)
+							])
+							.toSequence()
+					})
+				])
+			},
+			rainbow2: {
+				description: 'Slightly bigger block size rainbow',
+				effect: new EffectConfig.LedEffect([
+					new EffectConfig.LedSpecStep({
+						moveData: new EffectConfig.MoveData(
+							EffectConfig.MOVING_STATUS.FORWARDS,
+							{
+								jumpSize: 1,
+								jumpDelay: 1
+							}
+						),
+						background: new Color(0, 0, 0),
+						sequences: new EffectConfig.Leds(NUM_LEDS)
+							.fillWithColors([
+								...interpolate(
+									new Color(255, 0, 0),
+									new Color(0, 255, 0),
+									15,
+									{ end: false }
+								),
+								...interpolate(
+									new Color(0, 255, 0),
+									new Color(0, 0, 255),
+									15,
+									{ end: false }
+								),
+								...interpolate(
+									new Color(0, 0, 255),
+									new Color(255, 0, 0),
+									15,
+									{ end: false }
+								)
+							])
+							.toSequence()
+					})
+				])
+			},
+			reddot: {
+				description: 'Single red dot moving',
+				effect: new EffectConfig.LedEffect([
+					new EffectConfig.LedSpecStep({
+						moveData: new EffectConfig.MoveData(
+							EffectConfig.MOVING_STATUS.FORWARDS,
+							{
+								jumpSize: 1,
+								jumpDelay: 1
+							}
+						),
+						background: new Color(0, 0, 0),
+						sequences: [
+							new EffectConfig.ColorSequence(
+								new Color(255, 0, 0),
+								5
+							)
+						]
+					})
+				])
+			},
+			multidot: {
+				description: 'A bunch of dots moving',
+				effect: new EffectConfig.LedEffect([
+					new EffectConfig.LedSpecStep({
+						moveData: new EffectConfig.MoveData(
+							EffectConfig.MOVING_STATUS.FORWARDS,
+							{
+								jumpSize: 1,
+								jumpDelay: 1
+							}
+						),
+						background: new Color(0, 0, 0),
+						sequences: [
+							new EffectConfig.ColorSequence(
+								new Color(255, 0, 0),
+								1
+							),
+							new EffectConfig.TransparentSequence(11),
+							new EffectConfig.ColorSequence(
+								new Color(255, 0, 0),
+								1
+							),
+							new EffectConfig.TransparentSequence(11),
+							new EffectConfig.ColorSequence(
+								new Color(255, 0, 0),
+								1
+							),
+							new EffectConfig.TransparentSequence(11),
+							new EffectConfig.ColorSequence(
+								new Color(255, 0, 0),
+								1
+							),
+							new EffectConfig.TransparentSequence(11),
+							new EffectConfig.ColorSequence(
+								new Color(255, 0, 0),
+								1
+							),
+							new EffectConfig.TransparentSequence(11)
+						]
+					})
+				])
+			},
+
+			reddotbluebg: {
+				description: 'A red dot moving on a blue background',
+				effect: new EffectConfig.LedEffect([
+					new EffectConfig.LedSpecStep({
+						moveData: new EffectConfig.MoveData(
+							EffectConfig.MOVING_STATUS.FORWARDS,
+							{
+								jumpSize: 1,
+								jumpDelay: 1
+							}
+						),
+						background: new Color(0, 0, 255),
+						sequences: [
+							new EffectConfig.ColorSequence(
+								new Color(255, 0, 0),
+								5
+							)
+						]
+					})
+				])
+			},
+			split: {
+				description: 'A bunch of moving chunks of colors',
+				effect: new EffectConfig.LedEffect([
+					new EffectConfig.LedSpecStep({
+						moveData: new EffectConfig.MoveData(
+							EffectConfig.MOVING_STATUS.FORWARDS,
+							{
+								jumpSize: 1,
+								jumpDelay: 1
+							}
+						),
+						background: new Color(0, 0, 0),
+						sequences: [
+							new EffectConfig.ColorSequence(
+								new Color(0, 0, 255),
+								NUM_LEDS / 4
+							),
+							new EffectConfig.ColorSequence(
+								new Color(255, 0, 0),
+								NUM_LEDS / 4
+							),
+							new EffectConfig.ColorSequence(
+								new Color(255, 0, 255),
+								NUM_LEDS / 4
+							),
+							new EffectConfig.ColorSequence(
+								new Color(0, 255, 0),
+								NUM_LEDS / 4
+							)
+						]
+					})
+				])
+			},
+			rgb: {
+				description: 'Red green and blue dots moving in a pattern',
+				effect: new EffectConfig.LedEffect([
+					new EffectConfig.LedSpecStep({
+						moveData: new EffectConfig.MoveData(
+							EffectConfig.MOVING_STATUS.FORWARDS,
+							{
+								jumpSize: 1,
+								jumpDelay: 1
+							}
+						),
+						background: new Color(0, 0, 0),
+						sequences: new EffectConfig.Leds(NUM_LEDS)
+							.fillWithColors([
+								new Color(255, 0, 0),
+								new Color(0, 255, 0),
+								new Color(0, 0, 255)
+							])
+							.toSequence()
+					})
+				])
+			},
+			quickstrobe: {
+				description: 'A very fast strobe',
+				effect: new EffectConfig.LedEffect([
+					new EffectConfig.LedSpecStep(
+						{
+							moveData: new EffectConfig.MoveData(
+								EffectConfig.MOVING_STATUS.OFF
+							),
+							background: new Color(0, 0, 0),
+							sequences: []
+						},
+						1
+					),
+					new EffectConfig.LedSpecStep(
+						{
+							moveData: new EffectConfig.MoveData(
+								EffectConfig.MOVING_STATUS.OFF
+							),
+							background: new Color(255, 255, 255),
+							sequences: []
+						},
+						1
+					)
+				])
+			},
+			strobe: {
+				description: 'A bunch of moving chunks of colors',
+				effect: new EffectConfig.LedEffect([
+					new EffectConfig.LedSpecStep(
+						{
+							moveData: new EffectConfig.MoveData(
+								EffectConfig.MOVING_STATUS.OFF
+							),
+							background: new Color(0, 0, 0),
+							sequences: []
+						},
+						60
+					),
+					new EffectConfig.LedSpecStep(
+						{
+							moveData: new EffectConfig.MoveData(
+								EffectConfig.MOVING_STATUS.OFF
+							),
+							background: new Color(255, 255, 255),
+							sequences: []
+						},
+						60
+					)
+				])
+			},
+			slowstrobe: {
+				description: 'A slow strobe',
+				effect: new EffectConfig.LedEffect([
+					new EffectConfig.LedSpecStep(
+						{
+							moveData: new EffectConfig.MoveData(
+								EffectConfig.MOVING_STATUS.OFF
+							),
+							background: new Color(0, 0, 0),
+							sequences: []
+						},
+						500
+					),
+					new EffectConfig.LedSpecStep(
+						{
+							moveData: new EffectConfig.MoveData(
+								EffectConfig.MOVING_STATUS.OFF
+							),
+							background: new Color(255, 255, 255),
+							sequences: []
+						},
+						500
+					)
+				])
+			},
+			epileptisch: {
+				description: 'A superfast flash',
+				effect: new EffectConfig.LedEffect([
+					new EffectConfig.LedSpecStep({
+						moveData: new EffectConfig.MoveData(
+							EffectConfig.MOVING_STATUS.OFF
+						),
+						background: new Color(255, 0, 0),
+						sequences: []
+					}),
+					new EffectConfig.LedSpecStep({
+						moveData: new EffectConfig.MoveData(
+							EffectConfig.MOVING_STATUS.OFF
+						),
+						background: new Color(0, 255, 0),
+						sequences: []
+					}),
+					new EffectConfig.LedSpecStep({
+						moveData: new EffectConfig.MoveData(
+							EffectConfig.MOVING_STATUS.OFF
+						),
+						background: new Color(0, 0, 255),
+						sequences: []
+					})
+				]),
+				type: 'flash',
 				data: {
-					updateTime: 1,
-					dir: DIR.DIR_FORWARDS,
+					mode: 'fade',
 					blockSize: 1,
-					intensity: 0,
-					parts: [
+					intensity: getIntensityPercentage(100),
+					updateTime: 10,
+					colors: [
+						new Color(255, 0, 0),
+						new Color(0, 0, 255),
+						new Color(0, 255, 0)
+					]
+				}
+			},
+			fade: {
+				description: 'A fading rainbow',
+				effect: new EffectConfig.LedEffect(
+					[
 						...interpolate(
 							new Color(255, 0, 0),
 							new Color(0, 255, 0),
@@ -936,467 +1484,268 @@ export namespace RGB {
 							5,
 							{ end: false }
 						)
-					]
-				}
-			},
-			rainbow2: {
-				description: 'Slightly bigger block size rainbow',
-				type: 'rainbow',
-				data: {
-					updateTime: 1,
-					blockSize: 2
-				}
-			},
-			reddot: {
-				description: 'Single red dot moving',
-				type: 'dot',
-				data: {
-					backgroundBlue: 0,
-					backgroundGreen: 0,
-					backgroundRed: 0,
-					intensity: getIntensityPercentage(100),
-					dots: [
-						{
-							r: 255,
-							g: 0,
-							b: 0,
-							dir: DIR.DIR_FORWARDS,
-							dotPos: 0,
-							size: 5,
-							speed: 1
-						}
-					]
-				}
-			},
-			multidot: {
-				description: 'A bunch of dots moving',
-				type: 'dot',
-				data: {
-					backgroundBlue: 0,
-					backgroundGreen: 0,
-					backgroundRed: 0,
-					intensity: getIntensityPercentage(100),
-					dots: [
-						{
-							r: 255,
-							g: 0,
-							b: 0,
-							dir: DIR.DIR_FORWARDS,
-							dotPos: 0,
-							size: 5,
-							speed: 1
-						},
-						{
-							r: 0,
-							g: 255,
-							b: 0,
-							dir: DIR.DIR_FORWARDS,
-							dotPos: 12,
-							size: 5,
-							speed: 1
-						},
-						{
-							r: 0,
-							g: 0,
-							b: 255,
-							dir: DIR.DIR_FORWARDS,
-							dotPos: 24,
-							size: 5,
-							speed: 1
-						},
-						{
-							r: 255,
-							g: 0,
-							b: 255,
-							dir: DIR.DIR_FORWARDS,
-							dotPos: 36,
-							size: 5,
-							speed: 1
-						},
-						{
-							r: 255,
-							g: 255,
-							b: 0,
-							dir: DIR.DIR_FORWARDS,
-							dotPos: 48,
-							size: 5,
-							speed: 1
-						},
-						{
-							r: 0,
-							g: 255,
-							b: 255,
-							dir: DIR.DIR_FORWARDS,
-							dotPos: 60,
-							size: 5,
-							speed: 1
-						}
-					]
-				}
-			},
-			multidotdiffspeed: {
-				description: 'A bunch of dots moving at different speeds',
-				type: 'dot',
-				data: {
-					backgroundBlue: 0,
-					backgroundGreen: 0,
-					backgroundRed: 0,
-					intensity: getIntensityPercentage(100),
-					dots: [
-						{
-							r: 255,
-							g: 0,
-							b: 0,
-							dir: DIR.DIR_FORWARDS,
-							dotPos: 0,
-							size: 5,
-							speed: 1
-						},
-						{
-							r: 0,
-							g: 255,
-							b: 0,
-							dir: DIR.DIR_FORWARDS,
-							dotPos: 12,
-							size: 5,
-							speed: 2
-						},
-						{
-							r: 0,
-							g: 0,
-							b: 255,
-							dir: DIR.DIR_FORWARDS,
-							dotPos: 24,
-							size: 5,
-							speed: 3
-						},
-						{
-							r: 255,
-							g: 0,
-							b: 255,
-							dir: DIR.DIR_FORWARDS,
-							dotPos: 36,
-							size: 5,
-							speed: 1
-						},
-						{
-							r: 255,
-							g: 255,
-							b: 0,
-							dir: DIR.DIR_FORWARDS,
-							dotPos: 48,
-							size: 5,
-							speed: 2
-						},
-						{
-							r: 0,
-							g: 255,
-							b: 255,
-							dir: DIR.DIR_FORWARDS,
-							dotPos: 60,
-							size: 5,
-							speed: 1
-						}
-					]
-				}
-			},
-			reddotbluebg: {
-				description: 'A red dot moving on a blue background',
-				type: 'dot',
-				data: {
-					backgroundBlue: 255,
-					backgroundGreen: 0,
-					backgroundRed: 0,
-					intensity: getIntensityPercentage(100),
-					dots: [
-						{
-							r: 255,
-							g: 0,
-							b: 0,
-							dir: DIR.DIR_FORWARDS,
-							dotPos: 0,
-							size: 5,
-							speed: 1
-						}
-					]
-				}
-			},
-			split: {
-				description: 'A bunch of moving chunks of colors',
-				type: 'split',
-				data: {
-					intensity: getIntensityPercentage(100),
-					updateTime: 100,
-					dir: DIR.DIR_FORWARDS,
-					parts: [
-						new Color(0, 0, 255),
-						new Color(255, 0, 0),
-						new Color(255, 0, 255),
-						new Color(0, 255, 0)
-					]
-				}
-			},
-			rgb: {
-				description: 'Red green and blue dots moving in a pattern',
-				type: 'pattern',
-				data: {
-					blockSize: 1,
-					intensity: getIntensityPercentage(100),
-					dir: DIR.DIR_FORWARDS,
-					updateTime: 1,
-					parts: [
-						new Color(255, 0, 0),
-						new Color(0, 255, 0),
-						new Color(0, 0, 255)
-					]
-				}
-			},
-			quickstrobe: {
-				description: 'A very fast strobe',
-				type: 'flash',
-				data: {
-					mode: 'strobe',
-					blockSize: 2,
-					intensity: getIntensityPercentage(100),
-					updateTime: 1
-				}
-			},
-			strobe: {
-				description: 'A bunch of moving chunks of colors',
-				type: 'flash',
-				data: {
-					mode: 'strobe',
-					blockSize: 7,
-					intensity: getIntensityPercentage(100),
-					updateTime: 60
-				}
-			},
-			slowstrobe: {
-				description: 'A slow strobe',
-				type: 'flash',
-				data: {
-					mode: 'strobe',
-					blockSize: 3,
-					intensity: getIntensityPercentage(100),
-					updateTime: 500
-				}
-			},
-			brightstrobe: {
-				description: 'A very bright, annoying strobe',
-				type: 'flash',
-				data: {
-					mode: 'strobe',
-					blockSize: 3,
-					intensity: getIntensityPercentage(100),
-					updateTime: 1000
-				}
-			},
-			epileptisch: {
-				description: 'A superfast flash',
-				type: 'flash',
-				data: {
-					mode: 'fade',
-					blockSize: 1,
-					intensity: getIntensityPercentage(100),
-					updateTime: 10,
-					colors: [
-						new Color(255, 0, 0),
-						new Color(0, 0, 255),
-						new Color(0, 255, 0)
-					]
-				}
-			},
-			quickfade: {
-				description: 'A quickly fading in and out white color',
-				type: 'flash',
-				data: {
-					mode: 'fade',
-					blockSize: 1,
-					intensity: getIntensityPercentage(100),
-					updateTime: 100,
-					colors: [
-						new Color(255, 0, 0),
-						new Color(0, 0, 255),
-						new Color(0, 255, 0)
-					]
-				}
-			},
-			slowfade: {
-				description: 'A slowly fading white color',
-				type: 'flash',
-				data: {
-					mode: 'fade',
-					blockSize: 1,
-					intensity: getIntensityPercentage(100),
-					updateTime: 2500,
-					colors: [
-						new Color(255, 0, 0),
-						new Color(0, 0, 255),
-						new Color(0, 255, 0)
-					]
-				}
+					].map(
+						color =>
+							new EffectConfig.LedSpecStep({
+								moveData: new EffectConfig.MoveData(
+									EffectConfig.MOVING_STATUS.OFF
+								),
+								background: color,
+								sequences: []
+							})
+					)
+				)
 			},
 			desk: {
 				description: 'An illumination of just my desk',
-				type: 'split',
-				data: {
-					intensity: 100,
-					updateTime: 0,
-					dir: DIR.DIR_FORWARDS,
-					parts: [
-						new Color(255, 255, 255),
-						new Color(0, 0, 0),
-						new Color(0, 0, 0),
-						new Color(0, 0, 0),
-						new Color(0, 0, 0),
-						new Color(0, 0, 0),
-						new Color(255, 255, 255),
-						new Color(255, 255, 255),
-						new Color(255, 255, 255)
-					]
-				}
+				effect: new EffectConfig.LedEffect([
+					new EffectConfig.LedSpecStep({
+						moveData: new EffectConfig.MoveData(
+							EffectConfig.MOVING_STATUS.OFF
+						),
+						background: new Color(0, 0, 0),
+						sequences: [
+							new EffectConfig.ColorSequence(
+								new Color(255, 255, 255),
+								75
+							),
+							new EffectConfig.TransparentSequence(550),
+							new EffectConfig.ColorSequence(
+								new Color(255, 255, 255),
+								275
+							)
+						]
+					})
+				])
 			},
 			randomslow: {
 				description: 'A slow flash of random colors of block size 1',
-				type: 'random',
-				data: {
-					updateTime: 1000,
-					blockSize: 1
-				}
+				effect: new EffectConfig.LedEffect([
+					new EffectConfig.LedSpecStep({
+						moveData: new EffectConfig.MoveData(
+							EffectConfig.MOVING_STATUS.OFF
+						),
+						background: new Color(0, 0, 0),
+						sequences: [
+							new EffectConfig.Repeat(
+								NUM_LEDS,
+								new EffectConfig.RandomColor(1, 1000, true)
+							)
+						]
+					})
+				])
 			},
 			randomslowbig: {
 				description: 'A slow flash of random colors of block size 10',
-				type: 'random',
-				data: {
-					updateTime: 1000,
-					blockSize: 10
-				}
+				effect: new EffectConfig.LedEffect([
+					new EffectConfig.LedSpecStep({
+						moveData: new EffectConfig.MoveData(
+							EffectConfig.MOVING_STATUS.OFF
+						),
+						background: new Color(0, 0, 0),
+						sequences: [
+							new EffectConfig.Repeat(
+								NUM_LEDS / 10,
+								new EffectConfig.RandomColor(10, 1000, true)
+							)
+						]
+					})
+				])
 			},
 			randomblocks: {
 				description: 'A fast flash of big chunks of random colors',
-				type: 'random',
-				data: {
-					updateTime: 1,
-					blockSize: 20
-				}
+				effect: new EffectConfig.LedEffect([
+					new EffectConfig.LedSpecStep({
+						moveData: new EffectConfig.MoveData(
+							EffectConfig.MOVING_STATUS.OFF
+						),
+						background: new Color(0, 0, 0),
+						sequences: [
+							new EffectConfig.Repeat(
+								NUM_LEDS / 20,
+								new EffectConfig.RandomColor(20, 1, true)
+							)
+						]
+					})
+				])
 			},
 			randomfast: {
 				description: 'A fast flash of random colors of block size 1',
-				type: 'random',
-				data: {
-					updateTime: 1,
-					blockSize: 1
-				}
+				effect: new EffectConfig.LedEffect([
+					new EffectConfig.LedSpecStep({
+						moveData: new EffectConfig.MoveData(
+							EffectConfig.MOVING_STATUS.OFF
+						),
+						background: new Color(0, 0, 0),
+						sequences: [
+							new EffectConfig.Repeat(
+								NUM_LEDS,
+								new EffectConfig.RandomColor(1, 1, true)
+							)
+						]
+					})
+				])
 			},
 			randomparty: {
 				description: 'Big slow chunks',
-				type: 'random',
-				data: {
-					updateTime: 150,
-					blockSize: 75
-				}
+				effect: new EffectConfig.LedEffect([
+					new EffectConfig.LedSpecStep({
+						moveData: new EffectConfig.MoveData(
+							EffectConfig.MOVING_STATUS.OFF
+						),
+						background: new Color(0, 0, 0),
+						sequences: [
+							new EffectConfig.Repeat(
+								NUM_LEDS / 75,
+								new EffectConfig.RandomColor(75, 150, true)
+							)
+						]
+					})
+				])
 			},
 			randomfull: {
 				description: 'A single random color updating slowly',
-				type: 'random',
-				data: {
-					updateTime: 150,
-					blockSize: 10000
-				}
+				effect: new EffectConfig.LedEffect([
+					new EffectConfig.LedSpecStep({
+						moveData: new EffectConfig.MoveData(
+							EffectConfig.MOVING_STATUS.OFF
+						),
+						background: new Color(0, 0, 0),
+						sequences: [
+							new EffectConfig.RandomColor(NUM_LEDS, 1000, true)
+						]
+					})
+				])
 			},
 			randomfullfast: {
 				description: 'A single random color updating quickly',
-				type: 'random',
-				data: {
-					updateTime: 1,
-					blockSize: 10000
-				}
+				effect: new EffectConfig.LedEffect([
+					new EffectConfig.LedSpecStep({
+						moveData: new EffectConfig.MoveData(
+							EffectConfig.MOVING_STATUS.OFF
+						),
+						background: new Color(0, 0, 0),
+						sequences: [
+							new EffectConfig.RandomColor(NUM_LEDS, 1, true)
+						]
+					})
+				])
 			},
-			beats1: {
-				description:
-					'Red beats on a black background with no progress bar',
-				type: 'beats',
-				data: {
-					color: new Color(255, 0, 0),
-					backgroundRed: 0,
-					backgroundGreen: 0,
-					backgroundBlue: 0,
-					progress: new Color(0, 0, 0)
-				}
+			shrinkingreddots: {
+				description: 'Shrinking red dots',
+				effect: new EffectConfig.LedEffect([
+					new EffectConfig.LedSpecStep({
+						moveData: new EffectConfig.MoveData(
+							EffectConfig.MOVING_STATUS.FORWARDS,
+							{
+								jumpDelay: 1,
+								jumpSize: 1
+							}
+						),
+						background: new Color(0, 0, 0),
+						sequences: new EffectConfig.Leds(NUM_LEDS)
+							.fillWithColors(
+								interpolate(
+									new Color(0, 0, 0),
+									new Color(255, 0, 0),
+									5,
+									{
+										start: true,
+										end: true
+									}
+								)
+							)
+							.toSequence()
+					})
+				])
 			},
-			beats2: {
-				description:
-					'Red beats on a blue background with no progress bar',
-				type: 'beats',
-				data: {
-					color: new Color(255, 0, 0),
-					backgroundRed: 0,
-					backgroundGreen: 0,
-					backgroundBlue: 100,
-					progress: new Color(0, 0, 0)
-				}
+			shrinkingmulticolor: {
+				description: 'Shrinking dots of multiple colors',
+				effect: new EffectConfig.LedEffect([
+					new EffectConfig.LedSpecStep({
+						moveData: new EffectConfig.MoveData(
+							EffectConfig.MOVING_STATUS.FORWARDS,
+							{
+								jumpDelay: 1,
+								jumpSize: 1
+							}
+						),
+						background: new Color(0, 0, 0),
+						sequences: flatten(
+							new Array(90).fill('').map(() =>
+								interpolate(
+									new Color(0, 0, 0),
+									getRandomColor(),
+									10,
+									{
+										start: true,
+										end: true
+									}
+								).map(
+									color => new EffectConfig.SingleColor(color)
+								)
+							)
+						)
+					})
+				])
 			},
-			beats3: {
-				description:
-					'Blue beats on a black background with no progress bar',
-				type: 'beats',
-				data: {
-					color: new Color(0, 0, 255),
-					backgroundRed: 0,
-					backgroundGreen: 0,
-					backgroundBlue: 0,
-					progress: new Color(0, 0, 0)
-				}
+			shrinkingrainbows: {
+				description: 'Shrinking rainbows',
+				effect: new EffectConfig.LedEffect([
+					new EffectConfig.LedSpecStep({
+						moveData: new EffectConfig.MoveData(
+							EffectConfig.MOVING_STATUS.FORWARDS,
+							{
+								jumpDelay: 1,
+								jumpSize: 1
+							}
+						),
+						background: new Color(0, 0, 0),
+						sequences: new EffectConfig.Leds(NUM_LEDS)
+							.fillWithColors([
+								new Color(0, 0, 0),
+								new Color(19, 0, 26),
+								new Color(19, 0, 33),
+								new Color(0, 0, 96),
+								new Color(0, 128, 0),
+								new Color(160, 160, 0),
+								new Color(191, 96, 0),
+								new Color(255, 0, 0)
+							])
+							.toSequence()
+					})
+				])
 			},
-			beats4: {
-				description:
-					'Red beats on a black background with a green progress bar',
-				type: 'beats',
-				data: {
-					color: new Color(255, 0, 0),
-					backgroundRed: 0,
-					backgroundGreen: 0,
-					backgroundBlue: 0,
-					progress: new Color(0, 100, 0)
-				}
-			},
-			beats5: {
-				description:
-					'REd beats on a blue background with a green progress bar',
-				type: 'beats',
-				data: {
-					color: new Color(255, 0, 0),
-					backgroundRed: 0,
-					backgroundGreen: 0,
-					backgroundBlue: 255,
-					progress: new Color(0, 100, 0)
-				}
-			},
-			beatrandomsmall: {
-				description: 'Random colors of size 1 updating on the beat',
-				type: 'beats',
-				data: {
-					random: true,
-					blockSize: 1
-				}
-			},
-			beatrandommedium: {
-				description: 'Random colors of size 20 updating on the beat',
-				type: 'beats',
-				data: {
-					random: true,
-					blockSize: 20
-				}
-			},
-			beatrandombig: {
-				description: 'Random colors of size 75 updating on the beat',
-				type: 'beats',
-				data: {
-					random: true,
-					blockSize: 75
-				}
+			wiebel: {
+				description: 'Wiebelend ding',
+				effect: new EffectConfig.LedEffect([
+					new EffectConfig.LedSpecStep({
+						moveData: new EffectConfig.MoveData(
+							EffectConfig.MOVING_STATUS.FORWARDS,
+							{
+								jumpDelay: 1,
+								jumpSize: 1
+							}
+						),
+						background: new Color(0, 0, 0),
+						sequences: new EffectConfig.Leds(NUM_LEDS)
+							.fillWithColors([
+								new Color(0, 255, 0),
+								new Color(0, 0, 255)
+							])
+							.toSequence()
+					})
+				])
 			}
 		};
+		const typeCheck = arduinoEffects as {
+			[key: string]: {
+				effect: EffectConfig.LedEffect;
+				description: string;
+			};
+		};
+		// @ts-ignore
+		typeCheck;
 	}
 
 	export namespace API {
@@ -1627,89 +1976,6 @@ export namespace RGB {
 			}
 
 			@errorHandle
-			@requireParams('pattern')
-			@authAll
-			public static async runPattern(
-				res: ResponseLike,
-				{
-					pattern: patternName,
-					speed,
-					transition
-				}: {
-					pattern: CustomPattern;
-					speed?: number;
-					transition?: string;
-					auth?: string;
-				},
-				source: string
-			) {
-				if (!patterns.hasOwnProperty(patternName)) {
-					attachMessage(res, `Pattern ${patternName} does not exist`);
-					res.status(400).write('Unknown pattern');
-					res.end();
-					return false;
-				}
-
-				let { pattern, defaultSpeed, arduinoOnly = false } = patterns[
-					patternName as CustomPattern
-				];
-				if (transition) {
-					if (['fade', 'jump', 'strobe'].indexOf(transition) === -1) {
-						attachMessage(
-							res,
-							`Invalid transition mode ${transition}`
-						);
-						res.status(400).write('Invalid transiton mode');
-						res.end();
-						return false;
-					}
-
-					pattern = this.overrideTransition(
-						pattern,
-						transition as TransitionTypes
-					);
-				}
-
-				const usedClients = arduinoOnly
-					? Clients.arduinoClients
-					: Clients.clients;
-				attachMessage(
-					attachSourcedMessage(
-						res,
-						source,
-						explainHook,
-						`Running pattern ${patternName}`
-					),
-					`Updated ${usedClients!.length} clients`
-				);
-				try {
-					if (
-						(
-							await Promise.all(
-								usedClients!.map(async c => {
-									return (
-										await Promise.all([
-											c.setCustomPattern(
-												pattern,
-												speed || defaultSpeed
-											),
-											c.turnOn()
-										])
-									).every(v => v);
-								})
-							)
-						).every(v => v)
-					) {
-						res.status(200).end();
-						return true;
-					}
-				} catch (e) {}
-				res.status(400).write('Failed to run pattern');
-				res.end();
-				return false;
-			}
-
-			@errorHandle
 			@requireParams('effect')
 			@auth
 			public static async runEffect(
@@ -1735,10 +2001,7 @@ export namespace RGB {
 				try {
 					const strings = await Promise.all(
 						Clients.arduinoClients.map(async c => {
-							return c.board.runConfig(
-								effect,
-								body as ArduinoAPI.JoinedConfigs
-							);
+							return c.board.runEffect(effect.effect);
 						})
 					);
 					attachMessage(
@@ -1765,53 +2028,6 @@ export namespace RGB {
 						`Updated ${Clients.arduinoClients.length} clients`
 					);
 					res.status(400).write('Failed to run effect');
-					res.end();
-					return false;
-				}
-			}
-
-			@errorHandle
-			@requireParams('config')
-			@auth
-			public static async runConfig(
-				res: ResponseLike,
-				{
-					config
-				}: {
-					config: ArduinoAPI.ArduinoConfig;
-					auth?: string;
-				},
-				source: string
-			) {
-				attachMessage(
-					attachSourcedMessage(
-						res,
-						source,
-						explainHook,
-						`Running config ${JSON.stringify(config)}`
-					),
-					`Updated ${Clients.arduinoClients.length} clients`
-				);
-				try {
-					const strings = await Promise.all(
-						Clients.arduinoClients.map(async c => {
-							return c.board.runConfig(config);
-						})
-					);
-					attachMessage(
-						attachMessage(
-							attachMessage(
-								res,
-								`Running config ${JSON.stringify(config)}`
-							),
-							`Updated ${Clients.arduinoClients.length} clients`
-						),
-						`Sent string "${strings[0]}"`
-					);
-					res.status(200).end();
-					return true;
-				} catch (e) {
-					res.status(400).write('Failed to run config');
 					res.end();
 					return false;
 				}
@@ -1856,10 +2072,6 @@ export namespace RGB {
 					type: 'effect';
 					name: ArduinoAPI.Effects;
 					extra: ArduinoAPI.JoinedConfigs;
-			  }
-			| {
-					type: 'config';
-					config: ArduinoAPI.ArduinoConfig;
 			  }
 			| {
 					type: 'markedAudio';
@@ -1936,32 +2148,11 @@ export namespace RGB {
 						},
 						source
 					);
-				} else if (request.type === 'config') {
-					value = await API.Handler.runConfig(
-						resDummy,
-						{
-							config: request.config,
-							auth: Auth.Secret.getKey()
-						},
-						source
-					);
 				} else if (request.type === 'markedAudio') {
 					value = await MarkedAudio.play(
 						request.file,
 						logObj,
 						request.helpers
-					);
-				} else {
-					const { name, speed, transition } = request;
-					value = await API.Handler.runPattern(
-						resDummy,
-						{
-							pattern: name as any,
-							speed,
-							transition,
-							auth: Auth.Secret.getKey()
-						},
-						source
 					);
 				}
 				resDummy.transferTo(logObj);
@@ -2075,25 +2266,6 @@ export namespace RGB {
 				});
 			}
 
-			async runConfig(
-				config: ArduinoAPI.ArduinoConfig
-			): Promise<boolean> {
-				return new Promise(resolve => {
-					const req: ExternalRequest = {
-						type: 'config',
-						config,
-						logObj: this._logObj,
-						resolver: resolve,
-						source: this._source
-					};
-					if (Handler._ready) {
-						Handler._handleRequest(req);
-					} else {
-						Handler._requests.push(req);
-					}
-				});
-			}
-
 			async markedAudio(
 				file: string,
 				helpers: Pick<
@@ -2123,13 +2295,7 @@ export namespace RGB {
 	}
 
 	export namespace Bot {
-		export interface JSON {
-			lastConfig:
-				| (ArduinoAPI.ArduinoConfig & {
-						data?: ArduinoAPI.JoinedConfigs;
-				  })
-				| null;
-		}
+		export interface JSON {}
 
 		export class Bot extends BotState.Base {
 			static readonly commands = {
@@ -2193,21 +2359,7 @@ export namespace RGB {
 
 			static readonly matches = Bot.createMatchMaker(
 				({ matchMaker: mm }) => {
-					function rgbOff(
-						state: _Bot.Message.StateKeeping.ChatState
-					) {
-						state.states.RGB.lastConfig = {
-							type: 'off'
-						};
-					}
-					function rgbOn(state: _Bot.Message.StateKeeping.ChatState) {
-						state.states.RGB.lastConfig = {
-							type: 'solid',
-							data: new Color(100)
-						};
-					}
-					mm('/rgbon', async ({ state, logObj, matchText }) => {
-						rgbOn(state);
+					mm('/rgbon', async ({ logObj, matchText }) => {
 						if (
 							await new External.Handler(
 								logObj,
@@ -2219,8 +2371,7 @@ export namespace RGB {
 							return 'Failed to turn it on';
 						}
 					});
-					mm('/rgboff', async ({ state, logObj, matchText }) => {
-						rgbOff(state);
+					mm('/rgboff', async ({ logObj, matchText }) => {
 						if (
 							await new External.Handler(
 								logObj,
@@ -2234,13 +2385,8 @@ export namespace RGB {
 					});
 					mm(
 						/turn (on|off) (rgb|led)/,
-						async ({ logObj, match, state, matchText }) => {
+						async ({ logObj, match, matchText }) => {
 							const targetState = match[1];
-							if (targetState === 'on') {
-								rgbOn(state);
-							} else {
-								rgbOff(state);
-							}
 							if (
 								await new External.Handler(
 									logObj,
@@ -2277,19 +2423,9 @@ export namespace RGB {
 					mm(
 						'/arduinooff',
 						/turn (on|off) (ceiling|arduino|duino)/,
-						async ({ logObj, match, state }) => {
+						async ({ logObj, match }) => {
 							const targetState =
 								match.length === 0 ? 'off' : match[1];
-							if (targetState === 'on') {
-								state.states.RGB.lastConfig = {
-									type: 'solid',
-									data: new Color(100)
-								};
-							} else {
-								state.states.RGB.lastConfig = {
-									type: 'off'
-								};
-							}
 							if (
 								(
 									await Promise.all(
@@ -2342,7 +2478,7 @@ export namespace RGB {
 					mm(
 						/\/color (?:(?:(\d+) (\d+) (\d+))|([^ ]+))/,
 						/set (?:rgb|led(?:s)?|it|them|color) to (?:(?:(\d+) (\d+) (\d+))|([^ ]+))(\s+with intensity (\d+))?/,
-						async ({ logObj, match, state, matchText }) => {
+						async ({ logObj, match, matchText }) => {
 							const colorR = match[1];
 							const colorG = match[2];
 							const colorB = match[3];
@@ -2361,18 +2497,6 @@ export namespace RGB {
 								}
 								return undefined;
 							})();
-							if (resolvedColor) {
-								state.states.RGB.lastConfig = {
-									type: 'solid',
-									data: new Color(
-										resolvedColor.r,
-										resolvedColor.g,
-										resolvedColor.b
-									)
-								};
-							} else {
-								state.states.RGB.lastConfig = null;
-							}
 							if (
 								resolvedColor &&
 								(await new External.Handler(
@@ -2396,650 +2520,10 @@ export namespace RGB {
 						}
 					);
 					mm(
-						/\/pattern ([^ ]+)/,
-						/(?:start|launch) pattern ([^ ]+)(\s+with speed ([^ ]+))?(\s*and\s*)?(with transition ([^ ]+))?(\s*and\s*)?(\s*with speed ([^ ]+))?/,
-						async ({ logObj, match, state, matchText }) => {
-							const [
-								,
-								pattern,
-								,
-								speed1,
-								,
-								,
-								transition,
-								,
-								,
-								speed2
-							] = match;
-							const speed = speed1 || speed2;
-
-							state.states.RGB.lastConfig = null;
-
-							if (
-								await new External.Handler(
-									logObj,
-									`BOT.${matchText}`
-								).pattern(
-									pattern,
-									parseInt(speed, 10) || undefined,
-									(transition as any) || undefined
-								)
-							) {
-								return `Started pattern ${pattern}`;
-							} else {
-								return 'Failed to start pattern';
-							}
-						}
-					);
-					mm(
-						/\/effect ([^ ]+)/,
-						/(?:(?:start effect)|(?:launch effect)|(?:run effect)|(?:set effect to)) ([^ ]+)(\s+with intensity ([^ ]+))?(\s*and\s*)?(\s*with background (((\d+) (\d+) (\d+))|([^ ]+)))?(\s*and\s*)?(\s*with update(-| )?time ([^ ]+))?(\s*and\s*)?(\s*with dir(ection)? ([^ ]+))?(\s*and\s*)?(\s*with (?:(?:block(-| )?size)|per(-| )?strobe) ([^ ]+))?(\s*and\s*)?(\s*with mode ([^ ]+))?(\s*and\s*)?(\s*with color (((\d+) (\d+) (\d+))|([^ ]+)))?/,
-						async ({ logObj, match, state, matchText }) => {
-							const effect = match[1] as ArduinoAPI.Effects;
-							const intensity = match[3];
-							const bgR = match[8];
-							const bgG = match[9];
-							const bgB = match[10];
-							const bg = match[11];
-							const updateTime = match[15];
-							const dir = match[19];
-							const blockSize = match[23];
-							const mode = match[26];
-							const colorR = match[31];
-							const colorG = match[32];
-							const colorB = match[33];
-							const colorStr = match[34];
-
-							const background = (() => {
-								if (bg) {
-									return Bot.colorTextToColor(bg);
-								}
-								if (bgR && bgG && bgB) {
-									return new Color(
-										parseInt(bgR, 10),
-										parseInt(bgG, 10),
-										parseInt(bgB, 10)
-									);
-								}
-								return undefined;
-							})();
-							const color = (() => {
-								if (colorStr) {
-									return Bot.colorTextToColor(colorStr);
-								}
-								if (colorR && colorG && colorB) {
-									return new Color(
-										parseInt(colorR, 10),
-										parseInt(colorG, 10),
-										parseInt(colorB, 10)
-									);
-								}
-								return undefined;
-							})();
-							const config = {
-								intensity:
-									intensity !== undefined
-										? parseInt(intensity, 10)
-										: undefined,
-								backgroundRed: background
-									? background.r
-									: undefined,
-								backgroundGreen: background
-									? background.g
-									: undefined,
-								backgroundBlue: background
-									? background.b
-									: undefined,
-								updateTime: updateTime
-									? parseInt(updateTime, 10)
-									: undefined,
-								dir: dir ? Bot.parseDir(dir) : undefined,
-								blockSize: blockSize
-									? parseInt(blockSize, 10)
-									: undefined,
-								mode: mode as TransitionTypes,
-								colors: color ? [color] : undefined
-							};
-
-							if (effect in ArduinoAPI.arduinoEffects) {
-								state.states.RGB.lastConfig = {
-									...ArduinoAPI.arduinoEffects[effect]
-								};
-								if ('data' in state.states.RGB.lastConfig) {
-									state.states.RGB.lastConfig.data = Bot.mergeObj(
-										state.states.RGB.lastConfig.data,
-										Bot.unsetUndefined(config)
-									);
-								}
-							} else {
-								state.states.RGB.lastConfig = null;
-								return `Effect "${effect}" does not exist`;
-							}
-
-							if (
-								await new External.Handler(
-									logObj,
-									`BOT.${matchText}`
-								).effect(effect, config)
-							) {
-								return `Started effect "${effect}" with config ${JSON.stringify(
-									Bot.mergeObj(
-										ArduinoAPI.arduinoEffects[effect],
-										Bot.unsetUndefined(config)
-									)
-								)}`;
-							} else {
-								return 'Failed to start effect';
-							}
-						}
-					);
-					mm(
-						/(create) effect ([^ ]+)(\s+with intensity ([^ ]+))?(\s*and\s*)?(\s*with background (((\d+) (\d+) (\d+))|([^ ]+)))?(\s*and\s*)?(\s*with update(-| )?time ([^ ]+))?(\s*and\s*)?(\s*with dir(ection)? ([^ ]+))?(\s*and\s*)?(\s*with (?:(?:block(-| )?size)|per(-| )?strobe) ([^ ]+))?(\s*and\s*)?(\s*with mode ([^ ]+))?(\s*and\s*)?(\s*with color (((\d+) (\d+) (\d+))|([^ ]+)))?/,
-						async ({ logObj, match, state, matchText }) => {
-							const type = match[2] as ArduinoAPI.ArduinoConfig['type'];
-							const intensity = match[4];
-							const bgR = match[9];
-							const bgG = match[10];
-							const bgB = match[11];
-							const bg = match[12];
-							const updateTime = match[16];
-							const dir = match[20];
-							const blockSize = match[24];
-							const mode = match[27];
-							const colorR = match[32];
-							const colorG = match[33];
-							const colorB = match[34];
-							const colorStr = match[35];
-
-							const background = (() => {
-								if (bg) {
-									return Bot.colorTextToColor(bg);
-								}
-								if (bgR && bgG && bgB) {
-									return new Color(
-										parseInt(bgR, 10),
-										parseInt(bgG, 10),
-										parseInt(bgB, 10)
-									);
-								}
-								return undefined;
-							})();
-							const color = (() => {
-								if (colorStr) {
-									return Bot.colorTextToColor(colorStr);
-								}
-								if (colorR && colorG && colorB) {
-									return new Color(
-										parseInt(colorR, 10),
-										parseInt(colorG, 10),
-										parseInt(colorB, 10)
-									);
-								}
-								return undefined;
-							})();
-							const config = {
-								intensity:
-									intensity !== undefined
-										? parseInt(intensity, 10)
-										: undefined,
-								backgroundRed: background
-									? background.r
-									: undefined,
-								backgroundGreen: background
-									? background.g
-									: undefined,
-								backgroundBlue: background
-									? background.b
-									: undefined,
-								updateTime: updateTime
-									? parseInt(updateTime, 10)
-									: undefined,
-								dir: dir ? Bot.parseDir(dir) : undefined,
-								blockSize: blockSize
-									? parseInt(blockSize, 10)
-									: undefined,
-								mode: mode,
-								colors: color ? [color] : undefined
-							};
-
-							state.states.RGB.lastConfig = {
-								type,
-								data: { ...config }
-							} as any;
-
-							if (
-								await new External.Handler(
-									logObj,
-									`BOT.${matchText}`
-								).runConfig({
-									type,
-									data: config as any
-								})
-							) {
-								return `Started effect of type ${type} with config ${JSON.stringify(
-									config
-								)}`;
-							} else {
-								return 'Failed to start effect';
-							}
-						}
-					);
-					mm(
-						/\/intensity ([^ ]+)/,
-						/(?:change|set) intensity to ([^ ]+)/,
-						async ({ logObj, state, match, matchText }) => {
-							if (state.states.RGB.lastConfig === null) {
-								attachMessage(logObj, 'No lastConfig for RGB');
-								return 'I don\'t know what to edit';
-							}
-							state.states.RGB.lastConfig.data =
-								state.states.RGB.lastConfig.data || {};
-							state.states.RGB.lastConfig.data.intensity = parseInt(
-								match[1],
-								10
-							);
-							const msg = `Changed config to ${JSON.stringify(
-								state.states.RGB.lastConfig
-							)} (intensity->${
-								state.states.RGB.lastConfig.data.intensity
-							})`;
-							attachMessage(logObj, msg);
-							if (
-								await new External.Handler(
-									logObj,
-									`BOT.${matchText}`
-								).runConfig(state.states.RGB.lastConfig)
-							) {
-								return msg;
-							} else {
-								return 'Failed to set intensity';
-							}
-						}
-					);
-					mm(
-						/\/blocksize ([^ ]+)/,
-						/(?:change|set) (?:(?:block(?:-| )?size)|per(?:-| )?strobe) to ([^ ]+)/,
-						async ({ logObj, state, match, matchText }) => {
-							if (state.states.RGB.lastConfig === null) {
-								attachMessage(logObj, 'No lastConfig for RGB');
-								return 'I don\'t know what to edit';
-							}
-							state.states.RGB.lastConfig.data =
-								state.states.RGB.lastConfig.data || {};
-							state.states.RGB.lastConfig.data.blockSize = parseInt(
-								match[1],
-								10
-							);
-							const msg = `Changed config to ${JSON.stringify(
-								state.states.RGB.lastConfig
-							)} (blockSize->${
-								state.states.RGB.lastConfig.data.blockSize
-							})`;
-							attachMessage(logObj, msg);
-							if (
-								await new External.Handler(
-									logObj,
-									`BOT.${matchText}`
-								).runConfig(state.states.RGB.lastConfig)
-							) {
-								return msg;
-							} else {
-								return 'Failed to set blocksize';
-							}
-						}
-					);
-					mm(
-						/\/red (\d+)/,
-						/(?:change|set) r(?:ed)? to (\d+)/,
-						async ({ logObj, state, match, matchText }) => {
-							if (state.states.RGB.lastConfig === null) {
-								attachMessage(logObj, 'No lastConfig for RGB');
-								return 'I don\'t know what to edit';
-							}
-							state.states.RGB.lastConfig.data =
-								state.states.RGB.lastConfig.data || {};
-							state.states.RGB.lastConfig.data.r = parseInt(
-								match[1],
-								10
-							);
-							const msg = `Changed config to ${JSON.stringify(
-								state.states.RGB.lastConfig
-							)} (r->${state.states.RGB.lastConfig.data.r})`;
-							attachMessage(logObj, msg);
-							if (
-								await new External.Handler(
-									logObj,
-									`BOT.${matchText}`
-								).runConfig(state.states.RGB.lastConfig)
-							) {
-								return msg;
-							} else {
-								return 'Failed to set red';
-							}
-						}
-					);
-					mm(
-						/\/green (\d+)/,
-						/(?:change|set) g(?:reen)? to (\d+)/,
-						async ({ logObj, state, match, matchText }) => {
-							if (state.states.RGB.lastConfig === null) {
-								attachMessage(logObj, 'No lastConfig for RGB');
-								return 'I don\'t know what to edit';
-							}
-							state.states.RGB.lastConfig.data =
-								state.states.RGB.lastConfig.data || {};
-							state.states.RGB.lastConfig.data.g = parseInt(
-								match[1],
-								10
-							);
-							const msg = `Changed config to ${JSON.stringify(
-								state.states.RGB.lastConfig
-							)} (g->${state.states.RGB.lastConfig.data.g})`;
-							attachMessage(logObj, msg);
-							if (
-								await new External.Handler(
-									logObj,
-									`BOT.${matchText}`
-								).runConfig(state.states.RGB.lastConfig)
-							) {
-								return msg;
-							} else {
-								return 'Failed to set green';
-							}
-						}
-					);
-					mm(
-						/\/blue (\d+)/,
-						/(?:change|set) r(?:blue)? to (\d+)/,
-						async ({ logObj, state, match, matchText }) => {
-							if (state.states.RGB.lastConfig === null) {
-								attachMessage(logObj, 'No lastConfig for RGB');
-								return 'I don\'t know what to edit';
-							}
-							state.states.RGB.lastConfig.data =
-								state.states.RGB.lastConfig.data || {};
-							state.states.RGB.lastConfig.data.b = parseInt(
-								match[1],
-								10
-							);
-							const msg = `Changed config to ${JSON.stringify(
-								state.states.RGB.lastConfig
-							)} (b->${state.states.RGB.lastConfig.data.b})`;
-							attachMessage(logObj, msg);
-							if (
-								await new External.Handler(
-									logObj,
-									`BOT.${matchText}`
-								).runConfig(state.states.RGB.lastConfig)
-							) {
-								return msg;
-							} else {
-								return 'Failed to set blue';
-							}
-						}
-					);
-					mm(
-						/(?:change|set) (color|part)( \d+)? to (((\d+) (\d+) (\d+))|([^ ]+))/,
-						async ({ logObj, state, match, matchText }) => {
-							if (state.states.RGB.lastConfig === null) {
-								attachMessage(logObj, 'No lastConfig for RGB');
-								return 'I don\'t know what to edit';
-							}
-
-							const colorIndex = match[2]
-								? parseInt(match[2], 10)
-								: 0;
-							const colorR = match[5];
-							const colorG = match[6];
-							const colorB = match[7];
-							const colorStr = match[8];
-							const color = (() => {
-								if (colorStr) {
-									return Bot.colorTextToColor(colorStr);
-								}
-								if (colorR && colorG && colorB) {
-									return new Color(
-										parseInt(colorR, 10),
-										parseInt(colorG, 10),
-										parseInt(colorB, 10)
-									);
-								}
-								return undefined;
-							})();
-							if (!color) {
-								attachMessage(logObj, 'Unknown color');
-								return 'Unknown color';
-							}
-
-							state.states.RGB.lastConfig.data =
-								state.states.RGB.lastConfig.data || {};
-							state.states.RGB.lastConfig.data.r = color.r;
-							state.states.RGB.lastConfig.data.g = color.g;
-							state.states.RGB.lastConfig.data.b = color.b;
-							state.states.RGB.lastConfig.data.colors =
-								state.states.RGB.lastConfig.data.colors || [];
-							state.states.RGB.lastConfig.data.parts =
-								state.states.RGB.lastConfig.data.parts || [];
-							state.states.RGB.lastConfig.data.colors[
-								colorIndex
-							] = {
-								...color
-							};
-							state.states.RGB.lastConfig.data.parts[
-								colorIndex
-							] = {
-								...color
-							};
-							const msg = `Changed config to ${JSON.stringify(
-								state.states.RGB.lastConfig
-							)} (color->${JSON.stringify(color)})`;
-							attachMessage(logObj, msg);
-							if (
-								await new External.Handler(
-									logObj,
-									`BOT.${matchText}`
-								).runConfig(state.states.RGB.lastConfig)
-							) {
-								return msg;
-							} else {
-								return 'Failed to set config';
-							}
-						}
-					);
-					mm(
-						/\/background (?:(?:(\d+) (\d+) (\d+))|([^ ]+))/,
-						/(?:change|set) background(?:-| )?(?:color)? to (?:(?:(\d+) (\d+) (\d+))|([^ ]+))/,
-						async ({ logObj, state, match, matchText }) => {
-							if (state.states.RGB.lastConfig === null) {
-								attachMessage(logObj, 'No lastConfig for RGB');
-								return 'I don\'t know what to edit';
-							}
-
-							const colorR = match[1];
-							const colorG = match[2];
-							const colorB = match[3];
-							const colorStr = match[4];
-							const color = (() => {
-								if (colorStr) {
-									return Bot.colorTextToColor(colorStr);
-								}
-								if (colorR && colorG && colorB) {
-									return new Color(
-										parseInt(colorR, 10),
-										parseInt(colorG, 10),
-										parseInt(colorB, 10)
-									);
-								}
-								return undefined;
-							})();
-							if (!color) {
-								attachMessage(logObj, 'Unknown color');
-								return 'Unknown color';
-							}
-
-							state.states.RGB.lastConfig.data =
-								state.states.RGB.lastConfig.data || {};
-							state.states.RGB.lastConfig.data.backgroundRed =
-								color.r;
-							state.states.RGB.lastConfig.data.backgroundGreen =
-								color.g;
-							state.states.RGB.lastConfig.data.backgroundBlue =
-								color.b;
-							const msg = `Changed config to ${JSON.stringify(
-								state.states.RGB.lastConfig
-							)} (color->${JSON.stringify(color)})`;
-							attachMessage(logObj, msg);
-							if (
-								await new External.Handler(
-									logObj,
-									`BOT.${matchText}`
-								).runConfig(state.states.RGB.lastConfig)
-							) {
-								return msg;
-							} else {
-								return 'Failed to set background';
-							}
-						}
-					);
-					mm(
-						/\/dot (?:(?:(\d+) (\d+) (\d+))|([^ ]+))/,
-						/(?:change|set) dot (\d+)?('s)? ([^ ]+) to ([^ ]+)/,
-						async ({ logObj, state, match, matchText }) => {
-							if (state.states.RGB.lastConfig === null) {
-								attachMessage(logObj, 'No lastConfig for RGB');
-								return 'I don\'t know what to edit';
-							}
-
-							const dotIndex = parseInt(match[1], 10);
-							const prop = match[3];
-							const value =
-								prop === 'dir'
-									? Bot.parseDir(match[4])
-									: parseInt(match[4], 10);
-
-							state.states.RGB.lastConfig.data =
-								state.states.RGB.lastConfig.data || {};
-							state.states.RGB.lastConfig.data.dots =
-								state.states.RGB.lastConfig.data.dots || [];
-							(state.states.RGB.lastConfig.data.dots[
-								dotIndex
-							] as any)[prop] = value;
-							const msg = `Changed config to ${JSON.stringify(
-								state.states.RGB.lastConfig
-							)} (dot[${dotIndex}].${prop}->${value})`;
-							attachMessage(logObj, msg);
-							if (
-								await new External.Handler(
-									logObj,
-									`BOT.${matchText}`
-								).runConfig(state.states.RGB.lastConfig)
-							) {
-								return msg;
-							} else {
-								return 'Failed to set dot';
-							}
-						}
-					);
-					mm(
-						/\/updatetime ([^ ]+)/,
-						/(?:change|set) update(?:-| )?time to ([^ ]+)/,
-						async ({ logObj, state, match, matchText }) => {
-							if (state.states.RGB.lastConfig === null) {
-								attachMessage(logObj, 'No lastConfig for RGB');
-								return 'I don\'t know what to edit';
-							}
-							state.states.RGB.lastConfig.data =
-								state.states.RGB.lastConfig.data || {};
-							state.states.RGB.lastConfig.data.updateTime = parseInt(
-								match[1],
-								10
-							);
-							const msg = `Changed config to ${JSON.stringify(
-								state.states.RGB.lastConfig
-							)} (updateTime->${
-								state.states.RGB.lastConfig.data.updateTime
-							})`;
-							attachMessage(logObj, msg);
-							if (
-								await new External.Handler(
-									logObj,
-									`BOT.${matchText}`
-								).runConfig(state.states.RGB.lastConfig)
-							) {
-								return msg;
-							} else {
-								return 'Failed to set updatetime';
-							}
-						}
-					);
-					mm(
-						/\/dir ([^ ]+)/,
-						/(?:change|set) dir to ([^ ]+)/,
-						async ({ logObj, state, match, matchText }) => {
-							if (state.states.RGB.lastConfig === null) {
-								attachMessage(logObj, 'No lastConfig for RGB');
-								return 'I don\'t know what to edit';
-							}
-							state.states.RGB.lastConfig.data =
-								state.states.RGB.lastConfig.data || {};
-							state.states.RGB.lastConfig.data.dir = Bot.parseDir(
-								match[1]
-							);
-							const msg = `Changed config to ${JSON.stringify(
-								state.states.RGB.lastConfig
-							)} (dir->${state.states.RGB.lastConfig.data.dir})`;
-							attachMessage(logObj, msg);
-							if (
-								await new External.Handler(
-									logObj,
-									`BOT.${matchText}`
-								).runConfig(state.states.RGB.lastConfig)
-							) {
-								return msg;
-							} else {
-								return 'Failed to set dir';
-							}
-						}
-					);
-					mm(
-						/\/mode ([^ ]+)/,
-						/(?:change|set) mode to ([^ ]+)/,
-						async ({ logObj, state, match, matchText }) => {
-							if (state.states.RGB.lastConfig === null) {
-								attachMessage(logObj, 'No lastConfig for RGB');
-								return 'I don\'t know what to edit';
-							}
-							state.states.RGB.lastConfig.data =
-								state.states.RGB.lastConfig.data || {};
-							state.states.RGB.lastConfig.data.mode = match[1] as TransitionTypes;
-							const msg = `Changed config to ${JSON.stringify(
-								state.states.RGB.lastConfig
-							)} (mode->${
-								state.states.RGB.lastConfig.data.mode
-							})`;
-							attachMessage(logObj, msg);
-							if (
-								await new External.Handler(
-									logObj,
-									`BOT.${matchText}`
-								).runConfig(state.states.RGB.lastConfig)
-							) {
-								return msg;
-							} else {
-								return 'Failed to set mode';
-							}
-						}
-					);
-					mm(
 						/\/effect([^s](\w*))/,
-						async ({ logObj, match, state, matchText }) => {
+						async ({ logObj, match, matchText }) => {
 							const effectName = match[1] as ArduinoAPI.Effects;
-							if (effectName in ArduinoAPI.arduinoEffects) {
-								state.states.RGB.lastConfig = {
-									...ArduinoAPI.arduinoEffects[effectName]
-								};
-							} else {
-								state.states.RGB.lastConfig = null;
+							if (!(effectName in ArduinoAPI.arduinoEffects)) {
 								return `Effect "${effectName}" does not exist`;
 							}
 
@@ -3061,15 +2545,12 @@ export namespace RGB {
 						'/effects',
 						/\/effects([^s](\w*))/,
 						/what effects are there(\?)?/,
-						async ({ logObj, match, state, matchText }) => {
+						async ({ logObj, match, matchText }) => {
 							if (match && match[1]) {
 								const effectName = `s${match[1]}` as ArduinoAPI.Effects;
-								if (effectName in ArduinoAPI.arduinoEffects) {
-									state.states.RGB.lastConfig = {
-										...ArduinoAPI.arduinoEffects[effectName]
-									};
-								} else {
-									state.states.RGB.lastConfig = null;
+								if (
+									!(effectName in ArduinoAPI.arduinoEffects)
+								) {
 									return `Effect "${effectName}" does not exist`;
 								}
 
@@ -3105,32 +2586,6 @@ export namespace RGB {
 							false,
 							logObj
 						)} RGB controllers`;
-					});
-					mm('/perf', /get perf(ormance)?/, async ({ logObj }) => {
-						const perfs = await Promise.all(
-							Clients.arduinoClients.map(client => {
-								return new Promise<string>(resolve => {
-									client.board.setListener((res: string) => {
-										const [
-											section,
-											min,
-											max,
-											avg
-										] = res.split(',');
-										const str = `${section}: min: ${min}, max: ${max}, avg: ${avg}`;
-										attachMessage(
-											logObj,
-											`${client.address}: ${str}`
-										);
-										client.board.resetListener();
-										resolve(str);
-									});
-									client.board.sendCommand('perf main');
-									client.board.sendCommand('perf loop');
-								});
-							})
-						);
-						return perfs.join(',');
 					});
 					mm(
 						'/help_rgb',
@@ -3201,11 +2656,8 @@ export namespace RGB {
 				}
 			);
 
-			constructor(json?: JSON) {
+			constructor(_json?: JSON) {
 				super();
-				if (json) {
-					this.lastConfig = json.lastConfig;
-				}
 			}
 
 			public lastConfig:
@@ -3224,9 +2676,7 @@ export namespace RGB {
 			}
 
 			toJSON(): JSON {
-				return {
-					lastConfig: this.lastConfig
-				};
+				return {};
 			}
 		}
 	}
@@ -3297,6 +2747,7 @@ export namespace RGB {
 
 				let err: boolean = false;
 				port.on('error', e => {
+					console.log('immediately got an error', e);
 					log(
 						getTime(),
 						chalk.red('Failed to connect to LED arduino', e)
@@ -3310,10 +2761,14 @@ export namespace RGB {
 				//@ts-ignore
 				port.pipe(parser);
 
+				if (err) {
+					resolve(null);
+					return;
+				}
+
 				// Get LEDS
 				setTimeout(() => {
-					if (err) return;
-					port.write('/ leds \\\n');
+					port.write('leds\n');
 				}, 2500);
 
 				let onData = async (line: string) => {
@@ -3369,6 +2824,13 @@ export namespace RGB {
 				public name: string
 			) {
 				Clients.arduinoBoards.push(this);
+				this._port.addListener('data', chunk => {
+					log(
+						getTime(),
+						chalk.cyan(`[${this.name}] ->`),
+						`${chunk.toString()}`
+					);
+				});
 			}
 
 			public ping() {
@@ -3388,248 +2850,64 @@ export namespace RGB {
 				this.setListener(() => {});
 			}
 
-			public async write(
-				data: string,
-				response: string | null = 'ack'
-			): Promise<string | null> {
-				if (response === null) {
-					this._port.write(data);
-					return data;
-				}
+			public writeString(data: string): string {
+				this._port.write(data);
+				return data;
+			}
 
-				let acked: boolean = false;
-				let ackPromise = new Promise(resolve => {
-					this.setListener((line: string) => {
-						if (line.indexOf(response) !== -1) {
-							acked = true;
-							resolve();
-							this.resetListener();
+			public async runEffect(
+				effect: EffectConfig.LedEffect
+			): Promise<number[]> {
+				return new Promise(resolve => {
+					let responded: boolean = false;
+					const listener = (chunk: string | Buffer) => {
+						if (!responded && chunk.toString().includes('ready')) {
+							responded = true;
+							this._port.removeListener('data', listener);
+							const bytes = new EffectConfig.LedSpec(
+								effect
+							).toBytes();
+							this._port.write(bytes);
+							log(
+								getTime(),
+								chalk.cyan(`[${this.name}] <-`),
+								`${bytes}`
+							);
+							resolve(bytes);
 						}
-					});
+					};
+					this._port.on('data', listener);
+
+					const interval = setInterval(() => {
+						if (responded) {
+							clearInterval(interval);
+							return;
+						}
+						this._port.write('manual\n');
+					}, 500);
 				});
-
-				let attempts: number = 0;
-				while (attempts < 10 && !acked) {
-					this._port.write(data);
-
-					attempts++;
-					await Promise.race([ackPromise, wait(200)]);
-				}
-				if (!acked) {
-					log(chalk.yellow('Not acknowledged', data));
-				}
-
-				if (acked || process.argv.indexOf('--debug') > -1) {
-					log(getTime(), chalk.cyan(`[${this.name}] ->`), `${data}`);
-					return data;
-				}
-
-				return null;
 			}
 
-			public sendCommand(
-				command: string,
-				waitForAck: boolean = true
-			): Promise<string | null> {
-				return this.write(
-					`/ ${command} \\\n`,
-					waitForAck ? 'ack' : null
-				);
-			}
-
-			public primeForCommands() {
-				return this.write('>\n', '|1');
-			}
-
-			public cancelPrime() {
-				return this.write('<\n', null);
-			}
-
-			public sendPrimed(command: string): Promise<string | null> {
-				return this.write(command + '\n');
-			}
-
-			public setModeOff(): Promise<string | null> {
-				return this.sendCommand('off');
-			}
-
-			public getLeds(): Promise<string | null> {
-				return this.sendCommand('leds');
-			}
-
-			public runConfig(
-				config: ArduinoAPI.ArduinoConfig,
-				extra: ArduinoAPI.JoinedConfigs = {}
-			): Promise<string | null> {
-				BeatFlash.setEnabled(this, config.type === 'beats');
-
-				switch (config.type) {
-					case 'solid':
-						return this.setSolid(
-							BotUtil.BotUtil.mergeObj(config.data, extra)
-						);
-					case 'dot':
-						return this.setDot(
-							BotUtil.BotUtil.mergeObj(config.data, extra)
-						);
-					case 'split':
-						return this.setSplit(
-							BotUtil.BotUtil.mergeObj(config.data, extra)
-						);
-					case 'pattern':
-						return this.setPattern(
-							BotUtil.BotUtil.mergeObj(config.data, extra)
-						);
-					case 'flash':
-						return this.setFlash(
-							BotUtil.BotUtil.mergeObj(config.data, extra)
-						);
-					case 'rainbow':
-						return this.setRainbow(
-							BotUtil.BotUtil.mergeObj(config.data, extra)
-						);
-					case 'off':
-						return this.setModeOff();
-					case 'prime':
-						return this.setPrime();
-					case 'random':
-						return this.setRandom(
-							BotUtil.BotUtil.mergeObj(config.data, extra)
-						);
-					case 'beats':
-						return this.setBeats(
-							BotUtil.BotUtil.mergeObj(config.data, extra)
-						);
-					case 'marked':
-						return this.setMarked(
-							BotUtil.BotUtil.mergeObj(config.data, extra)
-						);
-				}
-			}
-
-			public setSolid({
-				intensity = 0,
-				r,
-				g,
-				b
-			}: ArduinoAPI.Solid): Promise<string | null> {
-				return this.sendCommand(`solid ${intensity} ${r} ${g} ${b}`);
-			}
-
-			public setDot({
-				intensity = 0,
-				backgroundRed,
-				backgroundGreen,
-				backgroundBlue,
-				dots
-			}: ArduinoAPI.Dot): Promise<string | null> {
-				return this.sendCommand(
-					`dot ${intensity} ${backgroundRed} ${backgroundGreen} ${backgroundBlue} ${dots
-						.map(({ size, speed, dir, dotPos, r, g, b }) => {
-							return `${size} ${speed} ${dir} ${dotPos} ${r} ${g} ${b}`;
+			public setSolid({ r, g, b }: { r: number; g: number; b: number }) {
+				return this.runEffect(
+					new EffectConfig.LedEffect([
+						new EffectConfig.LedSpecStep({
+							moveData: new EffectConfig.MoveData(
+								EffectConfig.MOVING_STATUS.OFF
+							),
+							background: new Color(r, g, b),
+							sequences: []
 						})
-						.join(' ')}`
+					])
 				);
 			}
 
-			public setSplit({
-				intensity = 0,
-				updateTime,
-				dir,
-				parts
-			}: ArduinoAPI.Split): Promise<string | null> {
-				return this.sendCommand(
-					`split ${intensity} ${updateTime} ${dir} ${parts
-						.map(({ r, g, b }) => {
-							return `${r} ${g} ${b}`;
-						})
-						.join(' ')}`
-				);
+			public setModeOff(): string {
+				return this.writeString('off');
 			}
 
-			public setPattern({
-				intensity = 0,
-				blockSize = 0,
-				updateTime,
-				dir,
-				parts
-			}: ArduinoAPI.Pattern): Promise<string | null> {
-				return this.sendCommand(
-					`pattern ${intensity} ${updateTime} ${dir} ${blockSize} ${parts
-						.map(({ r, g, b }) => {
-							return `${r} ${g} ${b}`;
-						})
-						.join(' ')}`
-				);
-			}
-
-			public setRandom({
-				blockSize = 0,
-				updateTime
-			}: ArduinoAPI.Random): Promise<string | null> {
-				return this.sendCommand(`random ${updateTime} ${blockSize}`);
-			}
-
-			public setPrime(): Promise<string | null> {
-				return this.sendCommand('prime');
-			}
-
-			public setBeats(config: ArduinoAPI.Beats): Promise<string | null> {
-				if (config.random) {
-					const { blockSize } = config;
-					return this.sendCommand(
-						`beats 1 ${blockSize} ${0} ${0} ${0} ${0} ${0} ${0} ${0} ${0} ${0}`
-					);
-				} else {
-					const {
-						color,
-						backgroundBlue,
-						backgroundGreen,
-						backgroundRed,
-						progress = {
-							r: 0,
-							g: 0,
-							b: 0
-						}
-					} = config;
-					return this.sendCommand(
-						`beats 0 0 ${color.r} ${color.g} ${color.b} ${backgroundRed} ${backgroundGreen} ${backgroundBlue} ${progress.r} ${progress.g} ${progress.b}`
-					);
-				}
-			}
-
-			public setMarked(
-				config: ArduinoAPI.Marked
-			): Promise<string | null> {
-				const { color } = config;
-				return this.sendCommand(
-					`marked ${config.startTime} ${color.r} ${color.g} ${color.b}`
-				);
-			}
-
-			public setFlash({
-				intensity = 0,
-				colors = [],
-				blockSize = 2,
-				updateTime,
-				mode
-			}: ArduinoAPI.Flash): Promise<string | null> {
-				return this.sendCommand(
-					`flash ${intensity} ${updateTime} ${blockSize} ${mode}${
-						colors.length ? ' ' : ''
-					}${colors
-						.map(({ r, g, b }) => {
-							return `${r} ${g} ${b}`;
-						})
-						.join(' ')}`
-				);
-			}
-
-			public setRainbow({
-				updateTime = 1,
-				blockSize = 1
-			}: ArduinoAPI.Rainbow): Promise<string | null> {
-				return this.sendCommand(`rainbow ${updateTime} ${blockSize}`);
+			public getLeds(): string {
+				return this.writeString('leds');
 			}
 
 			public destroy() {
@@ -3640,188 +2918,6 @@ export namespace RGB {
 						resolve();
 					});
 				});
-			}
-		}
-
-		export namespace BeatFlash {
-			type UpdateMap = {
-				[K in keyof FullState]-?: number | null;
-			};
-
-			let enabledMap: WeakMap<Board.Board, boolean> = new WeakMap();
-			const boardLastUpdateMap: WeakMap<
-				Board.Board,
-				UpdateMap
-			> = new WeakMap();
-			const stateLastUpdateMap: UpdateMap = {
-				beats: null,
-				duration: null,
-				playStart: null,
-				playState: null,
-				playbackTime: null
-			};
-
-			export function setEnabled(board: Board.Board, enabled: boolean) {
-				enabledMap.set(board, enabled);
-			}
-
-			export async function notifyChanges(
-				state: FullState,
-				changes: BeatChanges
-			) {
-				await meta.setup;
-
-				for (const change in changes) {
-					stateLastUpdateMap[change as keyof FullState] = Date.now();
-				}
-
-				await Promise.all(
-					Clients.arduinoBoards
-						.filter(board => {
-							return (
-								enabledMap.has(board) && enabledMap.get(board)
-							);
-						})
-						.map(async board => {
-							if (!boardLastUpdateMap.has(board)) {
-								boardLastUpdateMap.set(board, {
-									beats: null,
-									duration: null,
-									playStart: null,
-									playState: null,
-									playbackTime: null
-								});
-							}
-							const boardUpdateMap = boardLastUpdateMap.get(
-								board
-							)!;
-
-							const boardChanges: BeatChanges = { ...changes };
-							for (const key in boardUpdateMap) {
-								const changeKey = key as keyof BeatChanges;
-								const boardKeyState = boardUpdateMap[changeKey];
-								const globalKeyState =
-									stateLastUpdateMap[changeKey];
-
-								if (
-									boardKeyState === null ||
-									(globalKeyState !== null &&
-										globalKeyState > boardKeyState)
-								) {
-									(boardChanges[changeKey] as any) = state[
-										changeKey
-									] as any;
-								}
-
-								boardUpdateMap[changeKey] = Date.now();
-								boardLastUpdateMap.set(board, boardUpdateMap);
-							}
-
-							const commands: string[] = [];
-
-							// Say we're going to be sending something and wait for the marker
-							if (boardChanges.playState !== undefined) {
-								commands.push(
-									`bp${boardChanges.playState ? '1' : '0'}`
-								);
-							}
-							if (boardChanges.playStart !== undefined) {
-								// Start time is always in the past,
-								// send NOW - start_time to get diff
-								commands.push(
-									`bs${Date.now() - boardChanges.playStart}`
-								);
-							}
-							if (boardChanges.duration !== undefined) {
-								commands.push(`bd${boardChanges.duration}`);
-							}
-							if (boardChanges.beats !== undefined) {
-								const beatArr: number[] = [];
-								const playbackTime = boardChanges.playbackTime;
-								let beatChanges: SpotifyTypes.TimeInterval[] = boardChanges.beats!;
-								if (
-									boardChanges.beats.length >
-									MAX_BEATS_ARR_LENGTH
-								) {
-									let index = 0;
-									while (
-										playbackTime >
-											boardChanges.beats[index].start +
-												boardChanges.beats[index]
-													.duration &&
-										index < boardChanges.beats.length
-									) {
-										index++;
-									}
-									beatChanges = boardChanges.beats.slice(
-										index,
-										index + MAX_BEATS_ARR_LENGTH
-									);
-								}
-								beatChanges.forEach(
-									({ start, confidence, duration }) => {
-										beatArr.push(
-											Math.round(start * 1000),
-											Math.round(duration * 1000),
-											Math.round(confidence * 100)
-										);
-									}
-								);
-
-								await board.primeForCommands();
-								for (const command of commands) {
-									await board.sendCommand(command, false);
-								}
-								await board.sendCommand(
-									`bb${beatArr.length / 3} ${beatArr.join(
-										','
-									)}`,
-									false
-								);
-								await board.cancelPrime();
-							} else {
-								for (const command of commands) {
-									await board.sendCommand(command, true);
-								}
-							}
-						})
-				);
-			}
-		}
-	}
-
-	export namespace Visualizer {
-		export namespace Music {
-			function applyTransform(data: number[]) {
-				return data.reduce((prev, current) => {
-					return prev + current;
-				}, 0);
-			}
-
-			export namespace Youtube {
-				export class Handler {
-					static readonly MAX_INTENSITY = 50;
-					static colorFromIntensity(intensity: number) {
-						const clamped = Math.min(intensity, this.MAX_INTENSITY);
-						const relativeIntensity = clamped / this.MAX_INTENSITY;
-						const rgbIntensity = Math.round(
-							relativeIntensity * 255
-						);
-						const redColor = rgbIntensity.toString(16);
-						const redLonger =
-							redColor.length === 1 ? '0' + redColor : redColor;
-						return `${redLonger}0000`;
-					}
-
-					static parse(data: string) {
-						const transformed = applyTransform(JSON.parse(data));
-						Clients.arduinoClients.forEach(c =>
-							c.board.sendPrimed(
-								this.colorFromIntensity(transformed)
-							)
-						);
-					}
-				}
 			}
 		}
 	}
@@ -4057,11 +3153,7 @@ export namespace RGB {
 			explainHook = hook;
 		}
 
-		export async function init({
-			app,
-			randomNum,
-			websocket
-		}: ModuleConfig) {
+		export async function init({ app, randomNum }: ModuleConfig) {
 			app.post('/rgb/color', async (req, res) => {
 				await API.Handler.setColor(
 					res,
@@ -4105,19 +3197,6 @@ export namespace RGB {
 					`API.${req.url}`
 				);
 			});
-			app.post(
-				'/rgb/pattern/:pattern/:speed?/:transition?',
-				async (req, res) => {
-					await API.Handler.runPattern(
-						res,
-						{
-							...req.params,
-							...req.body
-						},
-						`API.${req.url}`
-					);
-				}
-			);
 			app.post('/rgb/effect/:effect', async (req, res) => {
 				await API.Handler.runEffect(
 					res,
@@ -4133,20 +3212,6 @@ export namespace RGB {
 			});
 			app.all('/rgb', async (req, res) => {
 				await WebPage.Handler.index(res, req, randomNum);
-			});
-
-			websocket.all('/music_visualize', async ({ addListener }) => {
-				// Prime it
-				if (Clients.arduinoClients.length === 0) {
-					if ((await Scan.scanArduinos()) == 0) return;
-				}
-				Clients.arduinoClients.forEach(c =>
-					c.board.sendCommand('prime')
-				);
-
-				addListener((message: string) => {
-					Visualizer.Music.Youtube.Handler.parse(message);
-				});
 			});
 		}
 	}

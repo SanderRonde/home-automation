@@ -1,4 +1,4 @@
-import { Color } from '../modules/rgb';
+import { Color } from './types';
 import * as path from 'path';
 import { getEnv, getNumberEnv } from './io';
 
@@ -67,9 +67,10 @@ export const NAME_MAP = {
 };
 export const NIGHTSTAND_COLOR: Color = (() => {
 	const [r, g, b] = getEnv('MODULE_LED_NIGHTSTAND_COLOR', true).split(',');
-	return { r: ~~r, g: ~~g, b: ~~b };
+	return new Color(~~r, ~~g, ~~b);
 })();
 export const WAKELIGHT_TIME = getNumberEnv('MODULE_LED_WAKELIGHT_TIME', true);
+export const NUM_LEDS = 900;
 
 // Keyval
 export const MAIN_LIGHTS = (() => {
@@ -97,6 +98,7 @@ export const CAST_DEVICE_NAME = getEnv('CAST_DEVICE_NAME', true);
 export const MIN_PRESSURE = 0;
 export const MAX_PRESSURE = 1024;
 export const DEFAULT_MIN_TIME = 500;
+export const DEFAULT_TIME_DIFF = 2000;
 export const PRESSURE_SAMPLE_TIME = 500;
 export const MAX_PRESSURE_TIME = 10000;
 

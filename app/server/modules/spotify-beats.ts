@@ -825,15 +825,15 @@ export namespace SpotifyBeats {
 		}
 
 		export async function notifyChanges(
-			fullState: FullState,
-			changes: BeatChanges
+			_fullState: FullState,
+			_changes: BeatChanges
 		) {
 			if (!_modules) return;
 
-			await _modules.RGB.Board.BeatFlash.notifyChanges(
-				fullState,
-				changes
-			);
+			// await _modules.RGB.Board.BeatFlash.notifyChanges(
+			// 	fullState,
+			// 	changes
+			// );
 		}
 	}
 

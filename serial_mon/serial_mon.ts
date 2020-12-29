@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+// @ts-ignore
 import * as ReadLine from '@serialport/parser-readline';
 import * as SerialPort from 'serialport';
 import * as readline from 'readline';

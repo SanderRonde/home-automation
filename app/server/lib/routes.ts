@@ -4,7 +4,7 @@ import * as pathToRegexp from 'path-to-regexp';
 import * as cookieParser from 'cookie-parser';
 import * as serveStatic from 'serve-static';
 import * as bodyParser from 'body-parser';
-import { RGB } from '../modules';
+import { RGB } from '../modules/rgb';
 import * as express from 'express';
 import * as path from 'path';
 import * as glob from 'glob';

@@ -14,21 +14,16 @@
 		"noFallthroughCasesInSwitch": true,
 		"noImplicitReturns": true,
 		"noUnusedLocals": true,
-		"target": "es6",
+		"target": "esnext",
 		"noUnusedParameters": true,
 		"experimentalDecorators": true,
 		"strictPropertyInitialization": true,
 		"strictNullChecks": true,
-		"strictBindCallApply": true
+		"strictBindCallApply": true,
+		"lib": ["ES2018", "ESNext.Array"],
+		"noEmit": true
 	},
 	"compileOnSave": true,
 	"allowJs": true,
-	"references": [
-		{
-			"path": "app/server/tsconfig.json"
-		},
-		{
-			"path": "app/client/tsconfig.json"
-		}
-	]
+	"include": ["serial_mon/manual_led"]
 }

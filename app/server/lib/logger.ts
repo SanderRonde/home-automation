@@ -1,9 +1,9 @@
 import { ExplainHook } from '../modules/explain';
 import { ResponseLike } from '../modules/multi';
 import { IP_LOG_VERSION } from './constants';
+import { Auth } from '../modules/auth';
 import { Response } from 'node-fetch';
 import * as express from 'express';
-import { Auth } from '../modules';
 import * as http from 'http';
 import chalk from 'chalk';
 
