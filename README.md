@@ -58,6 +58,11 @@ The info-screen module powers a screen containing some basic info like the tempe
 
 The webhook module is a fairly simple interface with the outside world. When a webhook endpoint is reached, the webhook with that name is ran. Webhooks can be configured in a config file to interface with any other module, allowing you to do anything from a webhook.
 
+
+#### Movement
+
+The movement module handles any motion detection and runs the associated actions. For example lights can trigger using hand gestures and the lights can go on when you enter a room.
+
 ### Controllers
 
 #### Telegram bot
@@ -135,6 +140,10 @@ The info-screen module works through some fairly simple REST API's hosted on loc
 #### Webhook
 
 The webhook module uses a simple config file, in which the webhook with given name is called when its endpoint has been hit.
+
+#### Movement
+
+Most of the movement module's magic is in [the boards](https://github.com/SanderRonde/board-movement-sensor). The boards signal when movement occurs, after which the module simply runs the associated configuration.
 
 #### Telegram bot
 
