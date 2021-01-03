@@ -57,35 +57,16 @@ function getIntensityPercentage(percentage: number) {
 
 function restartSelf() {
 	return new Promise(resolve => {
-		// Find this program in the forever list
+		// Restart this program
 		exec(
-			'sudo -u root su -c "zsh -c "source /root/.zshrc && forever list""',
-			(err, stdout, stderr) => {
+			`sudo -u root su -c "zsh -c \"source /root/.zshrc ; forever restart automation\""`,
+			(err, _stdout, stderr) => {
 				if (err) {
 					console.log('Failed to restart :(', stderr);
 					resolve();
 					return;
 				}
-
-				const lines = stdout.split('\n');
-				for (const line of lines) {
-					if (line.indexOf('automation') !== -1) {
-						const index = line.split('[')[1].split(']')[0];
-
-						// Restart that (this) program
-						exec(
-							`sudo -u root su -c "zsh -c \"source /root/.zshrc ; forever restart ${index}\""`,
-							(err, _stdout, stderr) => {
-								if (err) {
-									console.log('Failed to restart :(', stderr);
-									resolve();
-									return;
-								}
-								resolve();
-							}
-						);
-					}
-				}
+				resolve();
 			}
 		);
 	});
