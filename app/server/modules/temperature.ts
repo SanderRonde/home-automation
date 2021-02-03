@@ -63,6 +63,11 @@ export namespace Temperature {
 		lastLoggedTemp: number = -1;
 		name!: string;
 
+		move: {
+			direction: 'left' | 'right';
+			ms: number;
+		} | null = null;
+
 		async setTarget(targetTemp: number) {
 			await this.db!.setVal(`${this.name}.target`, targetTemp);
 			this.target = targetTemp;
@@ -85,6 +90,13 @@ export namespace Temperature {
 					false
 				);
 			}
+		}
+
+		setMove(direction: 'left' | 'right', ms: number) {
+			this.move = {
+				direction,
+				ms
+			};
 		}
 
 		async setLastTemp(
@@ -150,6 +162,12 @@ export namespace Temperature {
 			return 'on';
 		}
 
+		getMove() {
+			const move = this.move;
+			this.move = null;
+			return move;
+		}
+
 		async init(database: Database, name: string) {
 			this.db = database;
 			this.name = name;
@@ -183,6 +201,12 @@ export namespace Temperature {
 			| {
 					action: 'getTemp';
 					name: string;
+			  }
+			| {
+					action: 'moveDir';
+					name: string;
+					direction: 'left' | 'right';
+					ms: number;
 			  };
 
 		export class Handler {
@@ -209,6 +233,14 @@ export namespace Temperature {
 							auth: Auth.Secret.getKey(),
 							target: request.target,
 							name: request.name
+						});
+						break;
+					case 'moveDir':
+						await API.Handler.moveDir(resDummy, {
+							auth: Auth.Secret.getKey(),
+							name: request.name,
+							direction: request.direction,
+							ms: request.ms
 						});
 						break;
 				}
@@ -238,6 +270,20 @@ export namespace Temperature {
 				const req: ExternalRequest = {
 					action: 'getTemp',
 					name
+				};
+				return this._handleRequest(req);
+			}
+
+			public moveDir(
+				name: string,
+				direction: 'left' | 'right',
+				ms: number
+			) {
+				const req: ExternalRequest = {
+					action: 'moveDir',
+					name,
+					direction,
+					ms
 				};
 				return this._handleRequest(req);
 			}
@@ -338,6 +384,20 @@ export namespace Temperature {
 								attachMessage(logObj, 'Heating')
 							).setMode(tempName, 'on');
 							return 'Heating';
+						}
+					);
+					mm(
+						/\/move (\w+) (left|right) for (\d+)ms/,
+						async ({ logObj, match }) => {
+							const tempName = match[1];
+							new External.Handler(
+								attachMessage(logObj, 'Moving')
+							).moveDir(
+								tempName,
+								match[2] as 'left' | 'right',
+								parseInt(match[3], 10)
+							);
+							return 'Moving temporarily';
 						}
 					);
 					mm(
@@ -489,6 +549,33 @@ export namespace Temperature {
 					temp: controller.getLastTemp()
 				};
 			}
+
+			@errorHandle
+			@authAll
+			public static async moveDir(
+				res: ResponseLike,
+				{
+					name,
+					direction,
+					ms
+				}: {
+					auth?: string;
+					name: string;
+					direction: 'left' | 'right';
+					ms: number;
+				}
+			) {
+				const controller = await TempControllers.getController(name);
+				attachMessage(
+					res,
+					`Setting move for controller ${name} to ${ms}ms in the direction ${direction}`
+				);
+				controller.setMove(direction, ms);
+				res.status(200);
+				res.write('OK');
+				res.end();
+				return 'OK';
+			}
 		}
 	}
 
@@ -568,6 +655,33 @@ export namespace Temperature {
 					`Heater mode: "${controller.getMode()}, target: ${controller.getTarget()}`
 				);
 				res.write(`${advice} ${controller.getMode()}`);
+				res.status(200);
+				res.end();
+			});
+
+			app.post('/temperature/moves/:name', async (req, res) => {
+				const body = { ...req.params, ...req.body };
+
+				const controller = await TempControllers.getController(
+					body['name']
+				);
+
+				const move = controller.getMove();
+				if (!move) {
+					attachMessage(
+						res,
+						`Returning no move for controller ${body['name']}`
+					);
+					res.write(`0 l`);
+				} else {
+					attachMessage(
+						res,
+						`Returning move ${move.ms}ms in direction ${move.direction} for controller ${body['name']}`
+					);
+					res.write(
+						`${move.ms} ${move.direction === 'left' ? 'l' : 'r'}`
+					);
+				}
 				res.status(200);
 				res.end();
 			});
