@@ -59,7 +59,7 @@ function restartSelf() {
 	return new Promise(resolve => {
 		// Restart this program
 		exec(
-			`sudo -u root su -c "zsh -c \"source /root/.zshrc ; forever restart automation\""`,
+			`sudo -u root su -c "zsh -c \\"source /root/.zshrc ; forever restart automation\\""`,
 			(err, _stdout, stderr) => {
 				if (err) {
 					console.log('Failed to restart :(', stderr);
