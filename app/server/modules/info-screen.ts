@@ -174,7 +174,7 @@ export namespace InfoScreen {
 
 		export class Bot extends BotState.Base {
 			static readonly commands = {
-				'/info_refesh': 'Refresh info-screen'
+				'/info_refresh': 'Refresh info-screen'
 			};
 
 			static readonly botName = 'InfoScreen';
