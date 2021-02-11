@@ -106,6 +106,10 @@ export namespace Pressure {
 			await _db.setVal('enabled', enabled);
 		}
 
+		export function isEnabled() {
+			return enabled || false;
+		}
+
 		export async function disable() {
 			enabled = false;
 			await _db.setVal('enabled', enabled);
@@ -259,6 +263,10 @@ export namespace Pressure {
 					type: 'get';
 					key: string;
 			  }
+			| {
+					type: 'isEnabled';
+					resolve: (value: boolean) => void;
+			  }
 		) & {
 			logObj: any;
 		};
@@ -274,6 +282,12 @@ export namespace Pressure {
 				} else if (request.type === 'disable') {
 					await Register.disable();
 					attachMessage(logObj, 'Disabled pressure module');
+				} else if (request.type === 'isEnabled') {
+					request.resolve(Register.isEnabled());
+					attachMessage(
+						logObj,
+						'Got enabled status of pressure module'
+					);
 				} else if (request.type === 'get') {
 					const pressure = Register.getPressure(request.key);
 					attachMessage(
@@ -299,6 +313,17 @@ export namespace Pressure {
 					logObj: this._logObj
 				};
 				await Handler._handleRequest(req);
+			}
+
+			async isEnabled() {
+				return new Promise<boolean>(async resolve => {
+					const req: ExternalRequest = {
+						type: 'isEnabled',
+						logObj: this._logObj,
+						resolve
+					};
+					await Handler._handleRequest(req);
+				});
 			}
 
 			async get(key: string): Promise<number | null> {
