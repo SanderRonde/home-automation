@@ -251,13 +251,13 @@ export namespace KeyVal {
 				}
 			}
 
-			async set(key: string, value: string, update: boolean = true) {
+			async set(key: string, value: string, notify: boolean = true) {
 				return new Promise(resolve => {
 					const req: ExternalRequest = {
 						type: 'set',
 						key,
 						value,
-						update,
+						update: notify,
 						logObj: this._logObj,
 						source: this._source,
 						resolver: resolve
@@ -285,6 +285,12 @@ export namespace KeyVal {
 						Handler._requests.push(req);
 					}
 				});
+			}
+
+			async toggle(key: string) {
+				const value = await this.get(key);
+				const newValue = value === '1' ? '0' : '1';
+				await this.set(key, newValue);
 			}
 		}
 	}
