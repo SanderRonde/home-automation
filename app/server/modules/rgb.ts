@@ -2501,7 +2501,7 @@ export namespace RGB {
 						}
 					);
 					mm(
-						/\/effect([^s](\w*))/,
+						/\/effect((\w{2,})|[^s])/,
 						async ({ logObj, match, matchText }) => {
 							const effectName = match[1] as ArduinoAPI.Effects;
 							if (!(effectName in ArduinoAPI.arduinoEffects)) {
@@ -2524,7 +2524,6 @@ export namespace RGB {
 					);
 					mm(
 						'/effects',
-						/\/effects([^s](\w*))/,
 						/what effects are there(\?)?/,
 						async ({ logObj, match, matchText }) => {
 							if (match && match[1]) {
