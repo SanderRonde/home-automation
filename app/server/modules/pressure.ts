@@ -87,6 +87,18 @@ export namespace Pressure {
 
 		async notifyModules(modules: AllModules) {
 			Register.setModules(modules);
+
+			modules.keyval.GetSetListener.addListener(
+				'state.pressure',
+				async (value, logObj) => {
+					const handler = new External.Handler(logObj);
+					if (value === '1') {
+						await handler.enable();
+					} else {
+						await handler.disable();
+					}
+				}
+			);
 		}
 
 		get external() {
@@ -101,9 +113,18 @@ export namespace Pressure {
 	namespace Register {
 		let enabled: boolean | null = null;
 		let _db: Database;
+		let allModules: AllModules | null = null;
+
 		export async function enable() {
 			enabled = true;
 			await _db.setVal('enabled', enabled);
+			if (allModules) {
+				new allModules.keyval.External.Handler({}, 'PRESSURE.OFF').set(
+					'state.pressure',
+					'1',
+					false
+				);
+			}
 		}
 
 		export function isEnabled() {
@@ -113,6 +134,13 @@ export namespace Pressure {
 		export async function disable() {
 			enabled = false;
 			await _db.setVal('enabled', enabled);
+			if (allModules) {
+				new allModules.keyval.External.Handler({}, 'PRESSURE.OFF').set(
+					'state.pressure',
+					'0',
+					false
+				);
+			}
 		}
 
 		export function init(db: Database) {
@@ -120,7 +148,6 @@ export namespace Pressure {
 			enabled = db.get('enabled', true);
 		}
 
-		let allModules: AllModules | null = null;
 		export function setModules(modules: AllModules) {
 			allModules = modules;
 		}
