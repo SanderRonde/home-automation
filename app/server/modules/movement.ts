@@ -6,6 +6,7 @@ import { attachMessage } from '../lib/logger';
 import { ResponseLike } from './multi';
 import { Bot as _Bot } from './index';
 import { ModuleMeta } from './meta';
+import { Database } from '../lib/db';
 
 export interface MovementHooks {
 	[key: string]: ((hookables: ModuleHookables) => any)[];
@@ -16,11 +17,23 @@ export namespace Movement {
 		name = 'movement';
 
 		async init(config: ModuleConfig) {
+			Register.init(config.db);
 			Routing.init(config);
 		}
 
 		async notifyModules(modules: AllModules) {
 			Register.setModules(modules);
+
+			modules.keyval.GetSetListener.addListener(
+				'state.movement',
+				async value => {
+					if (value === '1') {
+						await Register.enable();
+					} else {
+						await Register.disable();
+					}
+				}
+			);
 		}
 	})();
 
@@ -28,6 +41,37 @@ export namespace Movement {
 		let allModules: AllModules | null = null;
 		export function setModules(modules: AllModules) {
 			allModules = modules;
+		}
+
+		let enabled: boolean | null = null;
+		let db: Database;
+		export function init(_db: Database) {
+			db = _db;
+			enabled = db.get('enabled', true);
+		}
+
+		export async function enable() {
+			enabled = true;
+			await db.setVal('enabled', enabled);
+			if (allModules) {
+				new allModules.keyval.External.Handler({}, 'MOVEMENT.ON').set(
+					'state.movement',
+					'1',
+					false
+				);
+			}
+		}
+
+		export async function disable() {
+			enabled = false;
+			await db.setVal('enabled', enabled);
+			if (allModules) {
+				new allModules.keyval.External.Handler({}, 'MOVEMENT.OFF').set(
+					'state.movement',
+					'0',
+					false
+				);
+			}
 		}
 
 		async function createHookables(
@@ -52,7 +96,7 @@ export namespace Movement {
 		}
 
 		async function handleChange(key: string, logObj: any) {
-			if (!(key in movementConfig)) return;
+			if (!enabled || !(key in movementConfig)) return;
 
 			const handlers = movementConfig[key];
 			for (const handler of handlers) {

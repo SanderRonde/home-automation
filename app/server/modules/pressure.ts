@@ -112,14 +112,14 @@ export namespace Pressure {
 
 	namespace Register {
 		let enabled: boolean | null = null;
-		let _db: Database;
+		let db: Database;
 		let allModules: AllModules | null = null;
 
 		export async function enable() {
 			enabled = true;
-			await _db.setVal('enabled', enabled);
+			await db.setVal('enabled', enabled);
 			if (allModules) {
-				new allModules.keyval.External.Handler({}, 'PRESSURE.OFF').set(
+				new allModules.keyval.External.Handler({}, 'PRESSURE.ON').set(
 					'state.pressure',
 					'1',
 					false
@@ -133,7 +133,7 @@ export namespace Pressure {
 
 		export async function disable() {
 			enabled = false;
-			await _db.setVal('enabled', enabled);
+			await db.setVal('enabled', enabled);
 			if (allModules) {
 				new allModules.keyval.External.Handler({}, 'PRESSURE.OFF').set(
 					'state.pressure',
@@ -143,9 +143,9 @@ export namespace Pressure {
 			}
 		}
 
-		export function init(db: Database) {
-			_db = db;
-			enabled = db.get('enabled', true);
+		export function init(_db: Database) {
+			db = _db;
+			enabled = _db.get('enabled', true);
 		}
 
 		export function setModules(modules: AllModules) {
