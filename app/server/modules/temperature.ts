@@ -1,12 +1,11 @@
 import { errorHandle, requireParams, authAll, auth } from '../lib/decorators';
 import { attachMessage, ResDummy, log, getTime } from '../lib/logger';
+import { AllModules, ModuleConfig } from './modules';
 import { BotState } from '../lib/bot-state';
-import { ModuleConfig } from './modules';
 import { ResponseLike } from './multi';
 import { Database } from '../lib/db';
 import { Bot as _Bot } from './bot';
 import { ModuleMeta } from './meta';
-import { KeyVal } from './keyval';
 import { Auth } from './auth';
 import chalk from 'chalk';
 
@@ -24,6 +23,20 @@ export namespace Temperature {
 
 		get external() {
 			return External;
+		}
+
+		async notifyModules(modules: AllModules): Promise<any> {
+			TempControl.allModules = modules;
+
+			modules.keyval.GetSetListener.addListener(
+				'room.heating',
+				async (value, logObj) => {
+					new External.Handler(logObj).setMode(
+						'room',
+						value === '1' ? 'on' : 'off'
+					);
+				}
+			);
 		}
 
 		get bot() {
@@ -68,6 +81,8 @@ export namespace Temperature {
 			ms: number;
 		} | null = null;
 
+		static allModules: AllModules | null = null;
+
 		async setTarget(targetTemp: number) {
 			await this.db!.setVal(`${this.name}.target`, targetTemp);
 			this.target = targetTemp;
@@ -77,18 +92,18 @@ export namespace Temperature {
 			await this.db!.setVal(`${this.name}.mode`, newMode);
 			this.mode = newMode;
 
-			if (newMode === 'off' && this.name === 'room') {
-				new KeyVal.External.Handler({}, 'HEATING.off').set(
-					'room.heating',
-					'0',
-					false
-				);
-			} else {
-				new KeyVal.External.Handler({}, 'HEATING.on').set(
-					'room.heating',
-					'1',
-					false
-				);
+			if (TempControl.allModules && this.name === 'room') {
+				if (newMode === 'off') {
+					new TempControl.allModules.keyval.External.Handler(
+						{},
+						'HEATING.off'
+					).set('room.heating', '0', false);
+				} else {
+					new TempControl.allModules.keyval.External.Handler(
+						{},
+						'HEATING.on'
+					).set('room.heating', '1', false);
+				}
 			}
 		}
 
@@ -685,16 +700,6 @@ export namespace Temperature {
 				res.status(200);
 				res.end();
 			});
-
-			KeyVal.GetSetListener.addListener(
-				'room.heating',
-				async (value, logObj) => {
-					new External.Handler(logObj).setMode(
-						'room',
-						value === '1' ? 'on' : 'off'
-					);
-				}
-			);
 		}
 	}
 }
