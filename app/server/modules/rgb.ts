@@ -3545,16 +3545,13 @@ export namespace RGB {
 		const client = Clients.getLed(name);
 		if (!client) return;
 		if (value === '1') {
-			attachMessage(
-				attachSourcedMessage(
-					logObj,
-					'keyval listener',
-					Routing.explainHook,
-					`Setting`,
-					chalk.bold(client.address),
-					`to color rgb(255, 255, 255)`
-				),
-				chalk.bgHex(API.colorToHex(new Color(255)))('   ')
+			attachSourcedMessage(
+				logObj,
+				'keyval listener',
+				Routing.explainHook,
+				`Setting`,
+				chalk.bold(client.address),
+				`to on`
 			);
 			if (Routing.explainHook) {
 				Routing.explainHook(
@@ -3562,6 +3559,9 @@ export namespace RGB {
 					'keyval listener',
 					logObj
 				);
+			}
+			if ([LED_NAMES.HEX_LEDS].includes(name)) {
+				return client.turnOn();
 			}
 			return client.setColor(255, 255, 255);
 		} else if (value === '0') {
