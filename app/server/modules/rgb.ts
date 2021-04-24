@@ -1920,7 +1920,8 @@ export namespace RGB {
 						wait_time_min: '500',
 						wait_time_max: '3000',
 						neighbour_influence: '128',
-						use_pastel: 'false'
+						use_pastel: 'false',
+						use_split: 'false'
 					}
 				}
 			},
@@ -1932,7 +1933,8 @@ export namespace RGB {
 						wait_time_min: '500',
 						wait_time_max: '3000',
 						neighbour_influence: '128',
-						use_pastel: 'true'
+						use_pastel: 'true',
+						use_split: 'false',
 					}
 				}
 			},
@@ -1945,7 +1947,8 @@ export namespace RGB {
 						wait_time_min: '500',
 						wait_time_max: '3000',
 						neighbour_influence: '255',
-						use_pastel: 'false'
+						use_pastel: 'false',
+						use_split: 'false',
 					}
 				}
 			},
@@ -1954,10 +1957,11 @@ export namespace RGB {
 				effect: {
 					name: 'random_colors_gradual',
 					params: {
-						wait_time_min: '2000',
+						wait_time_min: '500',
 						wait_time_max: '5000',
 						neighbour_influence: '128',
-						use_pastel: 'false'
+						use_pastel: 'false',
+						use_split: 'false',
 					}
 				}
 			},
@@ -1967,10 +1971,25 @@ export namespace RGB {
 				effect: {
 					name: 'random_colors_gradual',
 					params: {
-						wait_time_min: '2000',
+						wait_time_min: '500',
 						wait_time_max: '5000',
 						neighbour_influence: '0',
-						use_pastel: 'true'
+						use_pastel: 'true',
+						use_split: 'false',
+					}
+				}
+			},
+			hexgradualsplit: {
+				description:
+					'Gradual color changes that are split',
+				effect: {
+					name: 'random_colors_gradual',
+					params: {
+						wait_time_min: '500',
+						wait_time_max: '5000',
+						neighbour_influence: '0',
+						use_pastel: 'true',
+						use_split: 'true',
 					}
 				}
 			}
