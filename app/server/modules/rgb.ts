@@ -536,7 +536,7 @@ export namespace RGB {
 			}
 			async setPattern(pattern: BuiltinPatterns): Promise<boolean> {
 				await XHR.post(
-					`http://${this.address}/effect/${pattern}`,
+					`http://${this.address}/effects/${pattern}`,
 					`hex-${this.address}-pattern`
 				);
 				return Promise.resolve(true);
@@ -1867,7 +1867,7 @@ export namespace RGB {
 
 	namespace HexAPI {
 		export const hexEffects = {
-			hexRainbowFast: {
+			hexrainbowfast: {
 				description: 'A quickly rotating rainbow',
 				effect: {
 					name: 'rainbow',
@@ -1876,7 +1876,7 @@ export namespace RGB {
 					}
 				}
 			},
-			hexRainbowSlow: {
+			hexrainbowslow: {
 				description: 'A slowly rotating rainbow',
 				effect: {
 					name: 'rainbow',
@@ -1885,7 +1885,7 @@ export namespace RGB {
 					}
 				}
 			},
-			hexRandomColorsSlow: {
+			hexrandomcolorsslow: {
 				description: 'Random colors changing slowly (1s)',
 				effect: {
 					name: 'random_colors',
@@ -1894,7 +1894,7 @@ export namespace RGB {
 					}
 				}
 			},
-			hexRandomColorsFast: {
+			hexrandomcolorsfast: {
 				description: 'Random colors changing quickly (250ms)',
 				effect: {
 					name: 'random_colors',
@@ -1903,7 +1903,7 @@ export namespace RGB {
 					}
 				}
 			},
-			hexRandomColorsFastest: {
+			hexrandomcolorsfastest: {
 				description: 'Random colors changing very quickly (25ms)',
 				effect: {
 					name: 'random_colors',
@@ -1912,7 +1912,7 @@ export namespace RGB {
 					}
 				}
 			},
-			hexGradual: {
+			hexgradual: {
 				description: 'Gradual color changes',
 				effect: {
 					name: 'random_colors_gradual',
@@ -1924,7 +1924,7 @@ export namespace RGB {
 					}
 				}
 			},
-			hexGradualPastel: {
+			hexgradualpastel: {
 				description: 'Gradual color changes (pastel)',
 				effect: {
 					name: 'random_colors_gradual',
@@ -1936,7 +1936,7 @@ export namespace RGB {
 					}
 				}
 			},
-			hexGradualBigInfluence: {
+			hexgradualbiginfluence: {
 				description:
 					'Gradual color changes with high neighbour influence',
 				effect: {
@@ -1949,7 +1949,7 @@ export namespace RGB {
 					}
 				}
 			},
-			hexGradualSlow: {
+			hexgradualslow: {
 				description: 'Gradual color changes slowly',
 				effect: {
 					name: 'random_colors_gradual',
@@ -1961,7 +1961,7 @@ export namespace RGB {
 					}
 				}
 			},
-			hexGradualNoInfluence: {
+			hexgradualnoinfluence: {
 				description:
 					'Gradual color changes without neighbour influence',
 				effect: {
