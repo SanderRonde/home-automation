@@ -97,7 +97,7 @@ When a keyval value changes, a listener is fired which then sends the changed va
 
 This module uses two types of led strips. Those powered by magic-home RGB controllers and those powered by an arduino. Controlling the magic-home led strips is actually quite easy since there's a library for it. The other led strips are a bit harder to control. They are individually addressable led strips and as such can do a bit more than regular led strips. Because of this I wrote some code for an arduino that then controls the led strips directly. Since it's not possible to constantly send a constant state to the arduino over serial for every write (this would take too long), a bunch of configurable patterns had to be made. For example the flash pattern, the solid color pattern, the single dot pattern and some more. The server then controls the current mode and its configuration through a serial connection with the arduino.
 
-Check out the arduino driver for the individually addressible LEDs [over here](https://github.com/SanderRonde/arduino-board-led-driver).
+Check out the arduino driver for the individually addressible LEDs [over here](https://github.com/SanderRonde/arduino-board-led-driver) and check out the ESP8266 driver for the hexagonal individually addressible LEDs [over here](https://github.com/SanderRonde/board-hex-leds).
 
 #### Home-detector
 
