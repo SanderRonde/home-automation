@@ -105,11 +105,12 @@ export namespace XHR {
 				? `?${querystring.stringify(params)}`
 				: '';
 			const fullURL = `${url}${qs}`;
+			const parsedURL = new URL(fullURL);
 			const req = http
 				.request({
-					hostname: new URL(fullURL).hostname,
+					hostname: parsedURL.hostname,
 					port: 80,
-					path: new URL(fullURL).pathname,
+					path: `${parsedURL.pathname}${parsedURL.search}`,
 					method: 'POST'
 				 }, (res) => {
 					let data: string = '';
@@ -138,6 +139,7 @@ export namespace XHR {
 						)
 					);
 				});
+				req.end();
 		});
 	}
 
