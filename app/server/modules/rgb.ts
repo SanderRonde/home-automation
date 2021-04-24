@@ -1944,7 +1944,7 @@ export namespace RGB {
 					params: {
 						wait_time_min: '500',
 						wait_time_max: '3000',
-						neighbour_influence: '256',
+						neighbour_influence: '255',
 						use_pastel: 'false'
 					}
 				}
