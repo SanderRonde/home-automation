@@ -486,10 +486,18 @@ export namespace RGB {
 				super();
 			}
 
+			private _numToHex(num: number) {
+				const hexed = Math.round(num).toString(16);
+				if (hexed.length === 1) {
+					return `${hexed}0`;
+				}
+				return hexed;
+			}
+
 			private _colorToHex(color: Color) {
-				return `#${Math.round(color.r).toString(16)}${Math.round(
+				return `#${this._numToHex(color.r)}${this._numToHex(
 					color.g
-				).toString(16)}${Math.round(color.b).toString(16)}`;
+				)}${this._numToHex(color.b)}`;
 			}
 
 			async setColor(
@@ -1934,7 +1942,7 @@ export namespace RGB {
 						wait_time_max: '3000',
 						neighbour_influence: '128',
 						use_pastel: 'true',
-						use_split: 'false',
+						use_split: 'false'
 					}
 				}
 			},
@@ -1948,7 +1956,7 @@ export namespace RGB {
 						wait_time_max: '3000',
 						neighbour_influence: '255',
 						use_pastel: 'false',
-						use_split: 'false',
+						use_split: 'false'
 					}
 				}
 			},
@@ -1961,7 +1969,7 @@ export namespace RGB {
 						wait_time_max: '5000',
 						neighbour_influence: '128',
 						use_pastel: 'false',
-						use_split: 'false',
+						use_split: 'false'
 					}
 				}
 			},
@@ -1975,13 +1983,12 @@ export namespace RGB {
 						wait_time_max: '5000',
 						neighbour_influence: '0',
 						use_pastel: 'true',
-						use_split: 'false',
+						use_split: 'false'
 					}
 				}
 			},
 			hexgradualsplit: {
-				description:
-					'Gradual color changes that are split',
+				description: 'Gradual color changes that are split',
 				effect: {
 					name: 'random_colors_gradual',
 					params: {
@@ -1989,7 +1996,7 @@ export namespace RGB {
 						wait_time_max: '5000',
 						neighbour_influence: '0',
 						use_pastel: 'true',
-						use_split: 'true',
+						use_split: 'true'
 					}
 				}
 			}
@@ -2033,6 +2040,26 @@ export namespace RGB {
 		}
 
 		export class Handler {
+			private static _getClientSetFromTarget(target: string) {
+				switch (target) {
+					case 'hex':
+					case 'hexes':
+						return Clients.hexClients;
+					case 'magic':
+					case 'magichome':
+					case 'magic-home':
+						return Clients.magicHomeClients;
+					case 'ceiling':
+					case 'ceilingled':
+					case 'ceiling-led':
+					case 'arduino':
+						return Clients.arduinoClients;
+					case 'all':
+					default:
+						return Clients.clients;
+				}
+			}
+
 			@errorHandle
 			@requireParams('color')
 			@auth
@@ -2040,11 +2067,13 @@ export namespace RGB {
 				res: ResponseLike,
 				{
 					color,
-					intensity
+					intensity,
+					target = 'all'
 				}: {
 					color: string;
 					intensity?: number;
 					auth?: string;
+					target?: string;
 				},
 				source: string
 			) {
@@ -2057,6 +2086,7 @@ export namespace RGB {
 				const hexColor = colorList[color as keyof typeof colorList];
 				const { r, g, b } = hexToRGB(hexColor);
 
+				const clientSet = this._getClientSetFromTarget(target);
 				attachMessage(
 					attachMessage(
 						attachSourcedMessage(
@@ -2067,25 +2097,20 @@ export namespace RGB {
 						),
 						chalk.bgHex(hexColor)('   ')
 					),
-					`Updated ${Clients.clients!.length} clients`
+					`Updated ${clientSet!.length} clients`
 				);
 
 				if (
 					(
 						await Promise.all(
-							Clients.clients!.map(async client => {
-								return (
-									await Promise.all([
-										client.setColorWithBrightness(
-											r,
-											g,
-											b,
-											100,
-											intensity
-										),
-										client.turnOn()
-									])
-								).every(v => v);
+							clientSet!.map(async client => {
+								return client.setColorWithBrightness(
+									r,
+									g,
+									b,
+									100,
+									intensity
+								);
 							})
 						)
 					).every(v => v)
@@ -2108,13 +2133,15 @@ export namespace RGB {
 					red,
 					green,
 					blue,
-					intensity
+					intensity,
+					target = 'all'
 				}: {
 					red: string;
 					green: string;
 					blue: string;
 					auth?: string;
 					intensity?: number;
+					target?: string;
 				},
 				source: string
 			) {
@@ -2124,6 +2151,7 @@ export namespace RGB {
 					Math.max(0, parseInt(green, 10))
 				);
 				const blueNum = Math.min(255, Math.max(0, parseInt(blue, 10)));
+				const clientSet = this._getClientSetFromTarget(target);
 				attachMessage(
 					attachMessage(
 						attachSourcedMessage(
@@ -2134,25 +2162,20 @@ export namespace RGB {
 						),
 						chalk.bgHex(rgbToHex(redNum, greenNum, blueNum))('   ')
 					),
-					`Updated ${Clients.clients!.length} clients`
+					`Updated ${clientSet!.length} clients`
 				);
 
 				if (
 					(
 						await Promise.all(
-							Clients.clients!.map(async client => {
-								return (
-									await Promise.all([
-										client.setColorWithBrightness(
-											redNum,
-											greenNum,
-											blueNum,
-											100,
-											intensity
-										),
-										client.turnOn()
-									])
-								).every(v => v);
+							clientSet!.map(async client => {
+								return client.setColorWithBrightness(
+									redNum,
+									greenNum,
+									blueNum,
+									100,
+									intensity
+								);
 							})
 						)
 					).every(v => v)
@@ -2311,6 +2334,7 @@ export namespace RGB {
 			| ({
 					type: 'color';
 					intensity: number;
+					target: string;
 			  } & (
 					| {
 							color: string;
@@ -2374,7 +2398,8 @@ export namespace RGB {
 							{
 								color: request.color,
 								intensity: request.intensity,
-								auth: Auth.Secret.getKey()
+								auth: Auth.Secret.getKey(),
+								target: request.target
 							},
 							source
 						);
@@ -2387,7 +2412,8 @@ export namespace RGB {
 								green: g,
 								blue: b,
 								intensity: request.intensity,
-								auth: Auth.Secret.getKey()
+								auth: Auth.Secret.getKey(),
+								target: request.target
 							},
 							source
 						);
@@ -2424,6 +2450,7 @@ export namespace RGB {
 
 			async color(
 				color: string,
+				target: string = 'all',
 				intensity: number = 0
 			): Promise<boolean> {
 				return new Promise<boolean>(resolve => {
@@ -2431,6 +2458,7 @@ export namespace RGB {
 						type: 'color',
 						color: color,
 						intensity,
+						target,
 						logObj: this._logObj,
 						resolver: resolve,
 						source: this._source
@@ -2447,7 +2475,8 @@ export namespace RGB {
 				red: string,
 				green: string,
 				blue: string,
-				intensity: number = 0
+				intensity: number = 0,
+				target: string = 'all'
 			): Promise<boolean> {
 				return new Promise(resolve => {
 					const req: ExternalRequest = {
@@ -2456,6 +2485,7 @@ export namespace RGB {
 						g: green,
 						b: blue,
 						intensity,
+						target,
 						logObj: this._logObj,
 						resolver: resolve,
 						source: this._source
@@ -2743,13 +2773,14 @@ export namespace RGB {
 					);
 					mm(
 						/\/color (?:(?:(\d+) (\d+) (\d+))|([^ ]+))/,
-						/set (?:rgb|led(?:s)?|it|them|color) to (?:(?:(\d+) (\d+) (\d+))|([^ ]+))(\s+with intensity (\d+))?/,
+						/set (rgb|led(?:s)?|it|them|color|hexes|hex|ceiling|ceilingled|arduino|magic|magichome) to (?:(?:(\d+) (\d+) (\d+))|([^ ]+))(\s+with intensity (\d+))?/,
 						async ({ logObj, match, matchText }) => {
-							const colorR = match[1];
-							const colorG = match[2];
-							const colorB = match[3];
-							const colorStr = match[4];
-							const intensity = match[6];
+							const target = match[1];
+							const colorR = match[2];
+							const colorG = match[3];
+							const colorB = match[4];
+							const colorStr = match[5];
+							const intensity = match[7];
 							const resolvedColor = (() => {
 								if (colorStr) {
 									return Bot.colorTextToColor(colorStr);
@@ -2774,7 +2805,8 @@ export namespace RGB {
 									resolvedColor.b + '',
 									intensity?.length
 										? parseInt(intensity, 10)
-										: 0
+										: 0,
+									target
 								))
 							) {
 								return `Set color to ${JSON.stringify(
@@ -3650,7 +3682,8 @@ export namespace RGB {
 			'room.leds.bed': LED_NAMES.BED_LEDS,
 			'room.leds.desk': LED_NAMES.DESK_LEDS,
 			'room.leds.wall': LED_NAMES.WALL_LEDS,
-			'room.leds.couch': LED_NAMES.COUCH_LEDS
+			'room.leds.couch': LED_NAMES.COUCH_LEDS,
+			'room.leds.hexes': LED_NAMES.HEX_LEDS
 		}).forEach(([key, ledName]) => {
 			KeyVal.GetSetListener.addListener(key, async (value, logObj) => {
 				await switchLed(ledName, value, logObj);
