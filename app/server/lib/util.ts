@@ -93,6 +93,54 @@ export function splitIntoGroups<V>(arr: V[], size: number): V[][] {
 }
 
 export namespace XHR {
+	export function post(
+		url: string,
+		name: string,
+		params: {
+			[key: string]: string;
+		} = {}
+	) {
+		return new Promise<string>(resolve => {
+			const qs = Object.keys(params).length
+				? `?${querystring.stringify(params)}`
+				: '';
+			const fullURL = `${url}${qs}`;
+			const req = http
+				.request({
+					hostname: new URL(fullURL).hostname,
+					port: 80,
+					path: new URL(fullURL).pathname,
+					method: 'POST'
+				 }, (res) => {
+					let data: string = '';
+
+					res.on('data', (chunk: string | Buffer) => {
+						data += chunk.toString();
+					});
+					res.on('end', () => {
+						attachMessage(
+							req,
+							chalk.cyan(`[${name}]`),
+							url,
+							JSON.stringify(params)
+						);
+						logOutgoingReq(req, {
+							method: 'GET',
+							target: url
+						});
+						resolve(data);
+					});
+				})
+				.on('error', e => {
+					log(
+						chalk.red(
+							`Error while sending request "${name}" with URL "${url}": "${e.message}"`
+						)
+					);
+				});
+		});
+	}
+
 	export function get(
 		url: string,
 		name: string,

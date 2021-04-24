@@ -8,7 +8,8 @@ import {
 	WAKELIGHT_TIME,
 	NAME_MAP,
 	MARKED_AUDIO_FOLDER,
-	NUM_LEDS
+	NUM_LEDS,
+	HEX_LEDS
 } from '../lib/constants';
 import {
 	errorHandle,
@@ -35,7 +36,7 @@ import {
 import * as ReadLine from '@serialport/parser-readline';
 import { ModuleConfig, AllModules } from './modules';
 import { Color, IColor } from '../lib/types';
-import { wait, arrToObj } from '../lib/util';
+import { wait, arrToObj, XHR } from '../lib/util';
 import { BotState } from '../lib/bot-state';
 import SerialPort = require('serialport');
 import { ExplainHook } from './explain';
@@ -50,13 +51,14 @@ import { Auth } from './auth';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import chalk from 'chalk';
+import { getEnv } from '../lib/io';
 
 function getIntensityPercentage(percentage: number) {
 	return Math.round((percentage / 100) * 255);
 }
 
 function restartSelf() {
-	return new Promise(resolve => {
+	return new Promise<void>(resolve => {
 		// Restart this program
 		exec(
 			`sudo -u root su -c "zsh -c \\"source /root/.zshrc ; forever restart automation\\""`,
@@ -479,6 +481,114 @@ export namespace RGB {
 			abstract turnOn(callback?: () => void): Promise<boolean>;
 		}
 
+		export class HexClient extends RGBClient {
+			constructor(public address: string) {
+				super();
+			}
+
+			private _colorToHex(color: Color) {
+				return `#${Math.round(color.r).toString(16)}${Math.round(
+					color.g
+				).toString(16)}${Math.round(color.b).toString(16)}`;
+			}
+
+			async setColor(
+				red: number,
+				green: number,
+				blue: number,
+				intensity?: number
+			): Promise<boolean> {
+				return this.setColorWithBrightness(
+					red,
+					green,
+					blue,
+					intensity || 100
+				);
+			}
+			async setColorAndWarmWhite(
+				red: number,
+				green: number,
+				blue: number,
+				ww: number
+			): Promise<boolean> {
+				return this.setColorWithBrightness(red, green, blue, ww);
+			}
+			async setColorWithBrightness(
+				red: number,
+				green: number,
+				blue: number,
+				brightness: number
+			): Promise<boolean> {
+				await XHR.post(
+					`http://${this.address}/set_all`,
+					`hex-${this.address}-color-with-brightness`,
+					{
+						color: this._colorToHex(
+							new Color(
+								red * (brightness / 100),
+								green * (brightness / 100),
+								blue * (brightness / 100)
+							)
+						)
+					}
+				);
+				return Promise.resolve(true);
+			}
+			async setPattern(pattern: BuiltinPatterns): Promise<boolean> {
+				await XHR.post(
+					`http://${this.address}/effect/${pattern}`,
+					`hex-${this.address}-pattern`
+				);
+				return Promise.resolve(true);
+			}
+			async setPower(on: boolean): Promise<boolean> {
+				if (on) {
+					await this._turnedOn();
+					await this.turnOn();
+				} else {
+					await this._turnedOff();
+					await this.turnOff();
+				}
+				return Promise.resolve(true);
+			}
+
+			async setWarmWhite(ww: number): Promise<boolean> {
+				await XHR.post(
+					`http://${this.address}/set_all`,
+					`hex-${this.address}-color-warm-white`,
+					{
+						color: this._colorToHex(
+							new Color(ww / 100, ww / 100, ww / 100)
+						)
+					}
+				);
+				return Promise.resolve(true);
+			}
+			async turnOff(): Promise<boolean> {
+				await XHR.post(
+					`http://${this.address}/off`,
+					`hex-${this.address}-off`
+				);
+				return Promise.resolve(true);
+			}
+			async turnOn(): Promise<boolean> {
+				await XHR.post(
+					`http://${this.address}/on`,
+					`hex-${this.address}-on`
+				);
+				return Promise.resolve(true);
+			}
+
+			async runEffect(name: string, params: Record<string, any>) {
+				await XHR.post(
+					`http://${this.address}/effect/${name}`,
+					`hex-${this.address}-effect-${name}`,
+					params
+				);
+				return Promise.resolve(true);
+			}
+		}
+
 		export class MagicHomeClient extends RGBClient {
 			constructor(private _control: Control, public address: string) {
 				super();
@@ -672,13 +782,14 @@ export namespace RGB {
 
 		export let magicHomeClients: MagicHomeClient[] = [];
 		export let arduinoClients: ArduinoClient[] = [];
+		export let hexClients: HexClient[] = [];
 		export let clients: RGBClient[] = [];
 
 		export let arduinoBoards: Board.Board[] = [];
 
 		export function getLed(
 			name: LED_NAMES
-		): MagicHomeClient | ArduinoClient | null {
+		): MagicHomeClient | ArduinoClient | HexClient | null {
 			if (MAGIC_LEDS.includes(name)) {
 				return (
 					magicHomeClients.filter(client => {
@@ -687,6 +798,8 @@ export namespace RGB {
 				);
 			} else if (ARDUINO_LEDS.includes(name)) {
 				return arduinoClients[0] || null;
+			} else if (HEX_LEDS.includes(name)) {
+				return hexClients[0] || null;
 			}
 			return null;
 		}
@@ -718,7 +831,8 @@ export namespace RGB {
 			Clients.magicHomeClients = clients;
 			Clients.clients = [
 				...Clients.magicHomeClients,
-				...Clients.arduinoClients
+				...Clients.arduinoClients,
+				...Clients.hexClients
 			];
 
 			return clients.length;
@@ -736,21 +850,43 @@ export namespace RGB {
 
 			Clients.clients = [
 				...Clients.magicHomeClients,
-				...Clients.arduinoClients
+				...Clients.arduinoClients,
+				...Clients.hexClients
 			];
 
 			return Clients.arduinoClients.length;
+		}
+
+		export async function scanHex() {
+			const ip = getEnv('MODULE_LED_HEX_IP', false);
+			if (!ip) {
+				return 0;
+			}
+
+			Clients.hexClients = [new Clients.HexClient(ip)];
+			Clients.clients = [
+				...Clients.magicHomeClients,
+				...Clients.arduinoClients,
+				...Clients.hexClients
+			];
+
+			return 1;
 		}
 
 		export async function scanRGBControllers(
 			first: boolean = false,
 			logObj: any = undefined
 		) {
-			const [magicHomeClients, arduinoClients] = await Promise.all([
+			const [
+				magicHomeClients,
+				arduinoClients,
+				hexClients
+			] = await Promise.all([
 				scanMagicHomeControllers(first),
-				scanArduinos()
+				scanArduinos(),
+				scanHex()
 			]);
-			const clients = magicHomeClients + arduinoClients;
+			const clients = magicHomeClients + arduinoClients + hexClients;
 
 			if (magicHomeClients === 0) {
 				if (magicHomeTimer !== null) {
@@ -1729,6 +1865,118 @@ export namespace RGB {
 		typeCheck;
 	}
 
+	namespace HexAPI {
+		export const hexEffects = {
+			hexRainbowFast: {
+				description: 'A quickly rotating rainbow',
+				effect: {
+					name: 'rainbow',
+					params: {
+						revolve_time: '500'
+					}
+				}
+			},
+			hexRainbowSlow: {
+				description: 'A slowly rotating rainbow',
+				effect: {
+					name: 'rainbow',
+					params: {
+						revolve_time: '25000'
+					}
+				}
+			},
+			hexRandomColorsSlow: {
+				description: 'Random colors changing slowly (1s)',
+				effect: {
+					name: 'random_colors',
+					params: {
+						wait_time: '1000'
+					}
+				}
+			},
+			hexRandomColorsFast: {
+				description: 'Random colors changing quickly (250ms)',
+				effect: {
+					name: 'random_colors',
+					params: {
+						wait_time: '250'
+					}
+				}
+			},
+			hexRandomColorsFastest: {
+				description: 'Random colors changing very quickly (25ms)',
+				effect: {
+					name: 'random_colors',
+					params: {
+						wait_time: '25'
+					}
+				}
+			},
+			hexGradual: {
+				description: 'Gradual color changes',
+				effect: {
+					name: 'random_colors_gradual',
+					params: {
+						wait_time_min: '500',
+						wait_time_max: '3000',
+						neighbour_influence: '128',
+						use_pastel: 'false'
+					}
+				}
+			},
+			hexGradualPastel: {
+				description: 'Gradual color changes (pastel)',
+				effect: {
+					name: 'random_colors_gradual',
+					params: {
+						wait_time_min: '500',
+						wait_time_max: '3000',
+						neighbour_influence: '128',
+						use_pastel: 'true'
+					}
+				}
+			},
+			hexGradualBigInfluence: {
+				description:
+					'Gradual color changes with high neighbour influence',
+				effect: {
+					name: 'random_colors_gradual',
+					params: {
+						wait_time_min: '500',
+						wait_time_max: '3000',
+						neighbour_influence: '256',
+						use_pastel: 'false'
+					}
+				}
+			},
+			hexGradualSlow: {
+				description: 'Gradual color changes slowly',
+				effect: {
+					name: 'random_colors_gradual',
+					params: {
+						wait_time_min: '2000',
+						wait_time_max: '5000',
+						neighbour_influence: '128',
+						use_pastel: 'false'
+					}
+				}
+			},
+			hexGradualNoInfluence: {
+				description:
+					'Gradual color changes without neighbour influence',
+				effect: {
+					name: 'random_colors_gradual',
+					params: {
+						wait_time_min: '2000',
+						wait_time_max: '5000',
+						neighbour_influence: '0',
+						use_pastel: 'true'
+					}
+				}
+			}
+		};
+	}
+
 	export namespace API {
 		export const HEX_REGEX = /#([a-fA-F\d]{2})([a-fA-F\d]{2})([a-fA-F\d]{2})/;
 		export function hexToRGB(hex: string) {
@@ -1970,21 +2218,36 @@ export namespace RGB {
 				source: string
 			) {
 				const { effect: effectName } = body;
-				if (!ArduinoAPI.arduinoEffects.hasOwnProperty(effectName)) {
+				if (
+					!ArduinoAPI.arduinoEffects.hasOwnProperty(effectName) &&
+					!HexAPI.hexEffects.hasOwnProperty(effectName)
+				) {
 					attachMessage(res, `Effect ${effectName} does not exist`);
 					res.status(400).write('Unknown effect');
 					res.end();
 					return false;
 				}
 
-				const effect = ArduinoAPI.arduinoEffects[effectName];
+				const isArduinoEffect = !!ArduinoAPI.arduinoEffects[effectName];
+				const effect =
+					ArduinoAPI.arduinoEffects[effectName] ||
+					(HexAPI.hexEffects as any)[effectName];
 
 				try {
-					const strings = await Promise.all(
-						Clients.arduinoClients.map(async c => {
-							return c.board.runEffect(effect.effect);
-						})
-					);
+					const strings = isArduinoEffect
+						? await Promise.all(
+								Clients.arduinoClients.map(async c => {
+									return c.board.runEffect(effect.effect);
+								})
+						  )
+						: await Promise.all(
+								Clients.hexClients.map(async c =>
+									c.runEffect(
+										(effect.effect as any).name,
+										(effect.effect as any).params
+									)
+								)
+						  );
 					attachMessage(
 						attachMessage(
 							attachSourcedMessage(
@@ -2304,11 +2567,14 @@ export namespace RGB {
 				'/restart': 'Restart the server',
 				'/marked': 'Play marked audio file',
 				...arrToObj(
-					Object.keys(ArduinoAPI.arduinoEffects).map(key => {
+					[
+						...Object.keys(ArduinoAPI.arduinoEffects),
+						...Object.keys(HexAPI.hexEffects)
+					].map(key => {
 						const value =
 							ArduinoAPI.arduinoEffects[
 								key as ArduinoAPI.Effects
-							];
+							] || (HexAPI.hexEffects as any)[key];
 						return [
 							`/effect${key}`,
 							`Effect. ${value.description}`
@@ -2504,7 +2770,10 @@ export namespace RGB {
 						/\/effect((\w{2,})|[^s])/,
 						async ({ logObj, match, matchText }) => {
 							const effectName = match[1] as ArduinoAPI.Effects;
-							if (!(effectName in ArduinoAPI.arduinoEffects)) {
+							if (
+								!(effectName in ArduinoAPI.arduinoEffects) &&
+								!(effectName in HexAPI.hexEffects)
+							) {
 								return `Effect "${effectName}" does not exist`;
 							}
 
@@ -2515,7 +2784,8 @@ export namespace RGB {
 								).effect(effectName, {})
 							) {
 								return `Started effect "${effectName}" with config ${JSON.stringify(
-									ArduinoAPI.arduinoEffects[effectName]
+									ArduinoAPI.arduinoEffects[effectName] ||
+										(HexAPI.hexEffects as any)[effectName]
 								)}`;
 							} else {
 								return 'Failed to start effect';
@@ -2529,7 +2799,10 @@ export namespace RGB {
 							if (match && match[1]) {
 								const effectName = `s${match[1]}` as ArduinoAPI.Effects;
 								if (
-									!(effectName in ArduinoAPI.arduinoEffects)
+									!(
+										effectName in ArduinoAPI.arduinoEffects
+									) &&
+									!(effectName in HexAPI.hexEffects)
 								) {
 									return `Effect "${effectName}" does not exist`;
 								}
@@ -2541,20 +2814,27 @@ export namespace RGB {
 									).effect(effectName, {})
 								) {
 									return `Started effect "${effectName}" with config ${JSON.stringify(
-										ArduinoAPI.arduinoEffects[effectName]
+										ArduinoAPI.arduinoEffects[effectName] ||
+											(HexAPI.hexEffects as any)[
+												effectName
+											]
 									)}`;
 								} else {
 									return 'Failed to start effect';
 								}
 							}
 
-							return `Effects are:\n${Object.keys(
-								ArduinoAPI.arduinoEffects
-							)
+							return `Effects are:\n${[
+								...Object.keys(ArduinoAPI.arduinoEffects),
+								...Object.keys(HexAPI.hexEffects)
+							]
 								.map(key => {
 									const value =
 										ArduinoAPI.arduinoEffects[
 											key as ArduinoAPI.Effects
+										] ||
+										HexAPI.hexEffects[
+											key as keyof typeof HexAPI.hexEffects
 										];
 									return `/effect${key} - ${value.description}`;
 								})
@@ -2893,7 +3173,7 @@ export namespace RGB {
 			public destroy() {
 				if (this._dead) return;
 
-				return new Promise(resolve => {
+				return new Promise<void>(resolve => {
 					this._port.close(() => {
 						resolve();
 					});

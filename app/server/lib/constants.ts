@@ -37,7 +37,8 @@ export const enum LED_NAMES {
 	DESK_LEDS,
 	COUCH_LEDS,
 	WALL_LEDS,
-	CEILING_LEDS
+	CEILING_LEDS,
+	HEX_LEDS
 }
 export const MAGIC_LEDS = [
 	LED_NAMES.BED_LEDS,
@@ -46,6 +47,7 @@ export const MAGIC_LEDS = [
 	LED_NAMES.WALL_LEDS
 ];
 export const ARDUINO_LEDS = [LED_NAMES.CEILING_LEDS];
+export const HEX_LEDS = [LED_NAMES.HEX_LEDS];
 export const LED_IPS: {
 	[key: string]: LED_NAMES;
 } = {
@@ -54,6 +56,9 @@ export const LED_IPS: {
 	[getEnv('MODULE_LED_COUCH_LED_IP', true)]: LED_NAMES.COUCH_LEDS,
 	[getEnv('MODULE_LED_WALL_LED_IP', true)]: LED_NAMES.WALL_LEDS
 };
+if (getEnv('MODULE_LED_HEX_IP', false)) {
+	LED_IPS[getEnv('MODULE_LED_HEX_IP', false) as string] = LED_NAMES.HEX_LEDS;
+}
 export const NAME_MAP = {
 	[getEnv('MODULE_LED_DESK_LED_IP', true)]: ['room.leds.desk'],
 	[getEnv('MODULE_LED_WALL_LED_IP', true)]: ['room.leds.wall'],
@@ -65,6 +70,11 @@ export const NAME_MAP = {
 	],
 	[LED_DEVICE_NAME as string]: ['room.leds.ceiling']
 };
+if (getEnv('MODULE_LED_HEX_IP', false)) {
+	NAME_MAP[getEnv('MODULE_LED_HEX_IP', false) as string] = [
+		'room.leds.hexes'
+	];
+}
 export const NIGHTSTAND_COLOR: Color = (() => {
 	const [r, g, b] = getEnv('MODULE_LED_NIGHTSTAND_COLOR', true).split(',');
 	return new Color(~~r, ~~g, ~~b);
@@ -88,7 +98,8 @@ export const COMMON_SWITCH_MAPPINGS: [RegExp, string][] = [
 	[/all\s+lights/, 'room.lights'],
 	[/((all|the|my)\s+)?speakers/, 'room.speakers'],
 	[/((the|my)\s+)?couch\s+speakers/, 'room.speakers.couch'],
-	[/((the|my)\s+)?desk\s+speakers/, 'room.speakers.desk']
+	[/((the|my)\s+)?desk\s+speakers/, 'room.speakers.desk'],
+	[/((the|my)\s+)?hex(es)?/, 'room.leds.hexes']
 ];
 
 // Cast
