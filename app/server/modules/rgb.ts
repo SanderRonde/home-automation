@@ -581,7 +581,7 @@ export namespace RGB {
 
 			async runEffect(name: string, params: Record<string, any>) {
 				await XHR.post(
-					`http://${this.address}/effect/${name}`,
+					`http://${this.address}/effects/${name}`,
 					`hex-${this.address}-effect-${name}`,
 					params
 				);
