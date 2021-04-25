@@ -135,6 +135,12 @@ export namespace KeyVal {
 			for (const key in group) {
 				const opposite = value === '1' ? '0' : '1';
 				const effect = group[key];
+				attachMessage(
+					logObj,
+					`Setting "${key}" to "${
+						effect === KEYVAL_GROUP_EFFECT.SAME ? value : opposite
+					}" (db only)`
+				);
 				await _db!.setVal(
 					key,
 					effect === KEYVAL_GROUP_EFFECT.SAME ? value : opposite
