@@ -80,7 +80,7 @@ export const NIGHTSTAND_COLOR: Color = (() => {
 	return new Color(~~r, ~~g, ~~b);
 })();
 export const WAKELIGHT_TIME = getNumberEnv('MODULE_LED_WAKELIGHT_TIME', true);
-export const NUM_LEDS = 900;
+export const NUM_LEDS = 1025;
 
 // Keyval
 export const MAIN_LIGHTS = (() => {
