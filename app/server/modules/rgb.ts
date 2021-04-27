@@ -1933,6 +1933,19 @@ export namespace RGB {
 					}
 				}
 			},
+			hexgradualslower: {
+				description: 'Gradual color changes (a little slower)',
+				effect: {
+					name: 'random_colors_gradual',
+					params: {
+						wait_time_min: '100',
+						wait_time_max: '5000',
+						neighbour_influence: '128',
+						use_pastel: 'false',
+						use_split: 'false'
+					}
+				}
+			},
 			hexgradualpastel: {
 				description: 'Gradual color changes (pastel)',
 				effect: {
