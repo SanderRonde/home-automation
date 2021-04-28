@@ -2068,6 +2068,12 @@ export namespace RGB {
 					case 'arduino':
 						return Clients.arduinoClients;
 					case 'all':
+					case 'rgb':
+					case 'led':
+					case 'leds':
+					case 'it':
+					case 'them':
+					case 'color':
 					default:
 						return Clients.clients;
 				}
@@ -2785,7 +2791,6 @@ export namespace RGB {
 						}
 					);
 					mm(
-						/\/color (?:(?:(\d+) (\d+) (\d+))|([^ ]+))/,
 						/set (rgb|led(?:s)?|it|them|color|hexes|hex|ceiling|ceilingled|arduino|magic|magichome) to (?:(?:(\d+) (\d+) (\d+))|([^ ]+))(\s+with intensity (\d+))?/,
 						async ({ logObj, match, matchText }) => {
 							const target = match[1];
@@ -2820,6 +2825,49 @@ export namespace RGB {
 										? parseInt(intensity, 10)
 										: 0,
 									target
+								))
+							) {
+								return `Set color to ${JSON.stringify(
+									resolvedColor
+								)}`;
+							} else {
+								return 'Failed to set color (invalid color or bad connection to board)';
+							}
+						}
+					);
+					mm(
+						/\/color (?:(?:(\d+) (\d+) (\d+))|([^ ]+))/,
+						async ({ logObj, match, matchText }) => {
+							const colorR = match[1];
+							const colorG = match[2];
+							const colorB = match[3];
+							const colorStr = match[4];
+							const intensity = match[6];
+							const resolvedColor = (() => {
+								if (colorStr) {
+									return Bot.colorTextToColor(colorStr);
+								}
+								if (colorR && colorG && colorB) {
+									return new Color(
+										parseInt(colorR, 10),
+										parseInt(colorG, 10),
+										parseInt(colorB, 10)
+									);
+								}
+								return undefined;
+							})();
+							if (
+								resolvedColor &&
+								(await new External.Handler(
+									logObj,
+									`BOT.${matchText}`
+								).rgb(
+									resolvedColor.r + '',
+									resolvedColor.g + '',
+									resolvedColor.b + '',
+									intensity?.length
+										? parseInt(intensity, 10)
+										: 0
 								))
 							) {
 								return `Set color to ${JSON.stringify(
