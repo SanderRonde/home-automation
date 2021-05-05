@@ -97,7 +97,8 @@ export namespace Pressure {
 					} else {
 						await handler.disable();
 					}
-				}
+				},
+				{ notifyOnInitial: true }
 			);
 		}
 

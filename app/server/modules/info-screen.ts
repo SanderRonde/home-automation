@@ -504,7 +504,8 @@ export namespace InfoScreen {
 								blank: value === '0'
 							})
 						);
-					}
+					},
+					{ notifyOnInitial: true }
 				);
 				send(
 					JSON.stringify({

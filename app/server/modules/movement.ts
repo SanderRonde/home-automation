@@ -32,7 +32,8 @@ export namespace Movement {
 					} else {
 						await Register.disable();
 					}
-				}
+				},
+				{ notifyOnInitial: true }
 			);
 		}
 	})();

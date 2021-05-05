@@ -104,8 +104,17 @@ export namespace KeyVal {
 		export function addListener(
 			key: string,
 			listener: (value: string, logObj: any) => void,
-			once: boolean = false
+			{
+				once = false,
+				notifyOnInitial = false
+			}: { once?: boolean; notifyOnInitial?: boolean } = {}
 		) {
+			if (notifyOnInitial) {
+				const logObj = {};
+				new External.Handler(logObj, 'KEYVAL.ADD_LISTENER').get(key).then((value) => {
+					listener(value as string, logObj);
+				})
+			}
 			const index = _lastIndex++;
 			_listeners.set(index, {
 				key,
@@ -610,7 +619,7 @@ export namespace KeyVal {
 						res.status(200).write(value === undefined ? '' : value);
 						res.end();
 					},
-					true
+					{ once: true }
 				);
 				setTimeout(() => {
 					if (!triggered) {
