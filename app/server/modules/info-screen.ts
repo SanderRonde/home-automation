@@ -279,6 +279,7 @@ export namespace InfoScreen {
 					res.end();
 					return events;
 				} catch (e) {
+					console.log(e);
 					res.status(500);
 					res.write('calendar API not authenticated');
 					res.end();
