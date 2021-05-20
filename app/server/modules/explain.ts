@@ -1,9 +1,9 @@
 import { errorHandle, requireParams, auth } from '../lib/decorators';
 import {
 	attachMessage,
-	ResDummy,
 	LogCapturer,
-	addLogListener
+	addLogListener,
+	attachSourcedMessage
 } from '../lib/logger';
 import { AllModules, ModuleConfig } from './modules';
 import { BotState } from '../lib/bot-state';
@@ -12,6 +12,8 @@ import { Bot as _Bot } from './bot';
 import { ModuleMeta } from './meta';
 import { Auth } from './auth';
 import { Cast } from './cast';
+import { ExternalClass } from '../lib/external';
+import { createAPIHandler } from '../lib/api';
 
 export type ExplainHook = (
 	description: string,
@@ -49,7 +51,7 @@ export namespace Explain {
 				descr: string,
 				actions: Explaining.Action[]
 			) {
-				new Cast.External.Handler(logObj).say(
+				new Cast.External.Handler(logObj, 'EXPLAIN.API').say(
 					`${descr}. ${actions.map(action => {
 						return `At ${new Date(
 							action.timestamp
@@ -74,11 +76,14 @@ export namespace Explain {
 					amount: number;
 					announce?: boolean;
 					auth?: string;
-				}
+				},
+				source: string
 			) {
 				const actions = Explaining.getLastX(amount);
-				const msg = attachMessage(
+				const msg = attachSourcedMessage(
 					res,
+					source,
+					await meta.explainHook,
 					`Showing last ${amount} actions`,
 					JSON.stringify(actions)
 				);
@@ -106,11 +111,14 @@ export namespace Explain {
 					mins: number;
 					announce?: boolean;
 					auth?: string;
-				}
+				},
+				source: string
 			) {
 				const actions = Explaining.getInTimeWindow(mins);
-				const msg = attachMessage(
+				const msg = attachSourcedMessage(
 					res,
+					source,
+					await meta.explainHook,
 					`Showing last ${mins}ms of actions`,
 					JSON.stringify(actions)
 				);
@@ -129,60 +137,23 @@ export namespace Explain {
 	}
 
 	export namespace External {
-		type ExternalRequest = (
-			| {
-					type: 'explainTime';
-					mins: number;
-					announce: boolean;
-					resolver: (actions: Explaining.Action[]) => void;
-			  }
-			| {
-					type: 'explainActions';
-					amount: number;
-					announce: boolean;
-					resolver: (actions: Explaining.Action[]) => void;
-			  }
-		) & {
-			logObj: any;
-		};
-
-		export class Handler {
-			constructor(private _logObj: any) {}
-
-			private static async _handleRequest(request: ExternalRequest) {
-				const { logObj, resolver } = request;
-				let value = undefined;
-				const resDummy = new ResDummy();
-				if (request.type === 'explainTime') {
-					value = await API.Handler.getLastXMins(resDummy, {
-						mins: request.mins,
-						announce: request.announce,
-						auth: Auth.Secret.getKey()
-					});
-				} else {
-					value = await API.Handler.getLastX(resDummy, {
-						amount: request.amount,
-						announce: request.announce,
-						auth: Auth.Secret.getKey()
-					});
-				}
-				resDummy.transferTo(logObj);
-				resolver(value);
-			}
+		export class Handler extends ExternalClass {
+			requiresInit = false;
 
 			explainTime(
 				mins: number,
 				announce: boolean = false
 			): Promise<Explaining.Action[]> {
-				return new Promise(resolve => {
-					const req: ExternalRequest = {
-						type: 'explainTime',
-						mins: mins,
-						announce,
-						resolver: resolve,
-						logObj: this._logObj
-					};
-					Handler._handleRequest(req);
+				return this.runRequest((res, source) => {
+					return API.Handler.getLastXMins(
+						res,
+						{
+							mins,
+							announce: announce,
+							auth: Auth.Secret.getKey()
+						},
+						source
+					);
 				});
 			}
 
@@ -190,15 +161,16 @@ export namespace Explain {
 				amount: number,
 				announce: boolean = false
 			): Promise<Explaining.Action[]> {
-				return new Promise(resolve => {
-					const req: ExternalRequest = {
-						type: 'explainActions',
-						amount,
-						announce,
-						resolver: resolve,
-						logObj: this._logObj
-					};
-					Handler._handleRequest(req);
+				return this.runRequest((res, source) => {
+					return API.Handler.getLastX(
+						res,
+						{
+							amount,
+							announce: announce,
+							auth: Auth.Secret.getKey()
+						},
+						source
+					);
 				});
 			}
 		}
@@ -386,9 +358,11 @@ export namespace Explain {
 		export function initHooks(modules: AllModules) {
 			for (const moduleName in modules) {
 				const moduleObj = modules[moduleName as keyof AllModules];
-				moduleObj.meta.addExplainHook((description, source, logObj) => {
-					hook(moduleName, description, source, logObj);
-				});
+				moduleObj.meta.addExplainHookFromExternal(
+					(description, source, logObj) => {
+						hook(moduleName, description, source, logObj);
+					}
+				);
 			}
 		}
 
@@ -423,18 +397,14 @@ export namespace Explain {
 
 	export namespace Routing {
 		export async function init({ app }: ModuleConfig) {
-			app.post('/explain/time/:mins', async (req, res) => {
-				await API.Handler.getLastXMins(res, {
-					...req.params,
-					...req.body
-				});
-			});
-			app.post('/explain/amount/:amount', async (req, res) => {
-				await API.Handler.getLastX(res, {
-					...req.params,
-					...req.body
-				});
-			});
+			app.post(
+				'/explain/time/:mins',
+				createAPIHandler(Explain, API.Handler.getLastXMins)
+			);
+			app.post(
+				'/explain/amount/:amount',
+				createAPIHandler(Explain, API.Handler.getLastX)
+			);
 		}
 	}
 }

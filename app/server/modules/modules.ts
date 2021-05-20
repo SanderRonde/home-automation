@@ -19,6 +19,7 @@ import { InfoScreen } from './info-screen';
 import { AppWrapper } from '../lib/routes';
 import { Database } from '../lib/db';
 import { Config } from '../app';
+import { arrToObj } from '../lib/util';
 
 export { RemoteControl } from './remote-control';
 export { SpotifyBeats } from './spotify-beats';
@@ -87,7 +88,7 @@ export async function notifyAllModules() {
 	notified = true;
 
 	for (const mod of moduleArr) {
-		await mod.meta.notifyModules(moduleObj);
+		await mod.meta.notifyModulesFromExternal(moduleObj);
 	}
 }
 
@@ -97,4 +98,23 @@ export async function getAllModules(notify: boolean = true) {
 	}
 
 	return moduleObj;
+}
+
+export async function createHookables(
+	modules: AllModules,
+	sourceName: string,
+	hookName: string,
+	logObj: any
+): Promise<ModuleHookables> {
+	return (arrToObj(
+		Object.keys(modules).map((name: keyof AllModules) => {
+			return [
+				name,
+				new modules[name].meta.external.Handler(
+					logObj,
+					`${sourceName}.${hookName}`
+				)
+			];
+		})
+	) as unknown) as ModuleHookables;
 }

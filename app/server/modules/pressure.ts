@@ -5,9 +5,13 @@ import {
 	MAX_PRESSURE_TIME,
 	PRESSURE_SAMPLE_TIME
 } from '../lib/constants';
-import { ModuleConfig, ModuleHookables, AllModules } from './modules';
+import {
+	ModuleConfig,
+	ModuleHookables,
+	AllModules,
+	createHookables
+} from './modules';
 import { errorHandle, requireParams, auth } from '../lib/decorators';
-import { awaitCondition, arrToObj } from '../lib/util';
 import pressureConfig from '../config/pressures';
 import { attachMessage, disableMessages } from '../lib/logger';
 import { BotState } from '../lib/bot-state';
@@ -15,6 +19,7 @@ import { ResponseLike } from './multi';
 import { Database } from '../lib/db';
 import { Bot as _Bot } from './index';
 import { ModuleMeta } from './meta';
+import { ExternalClass } from '../lib/external';
 
 export const enum PRESSURE_CHANGE_DIRECTION {
 	UP,
@@ -91,7 +96,7 @@ export namespace Pressure {
 			modules.keyval.GetSetListener.addListener(
 				'state.pressure',
 				async (value, logObj) => {
-					const handler = new External.Handler(logObj);
+					const handler = new External.Handler(logObj, 'KEYVAL');
 					if (value === '1') {
 						await handler.enable();
 					} else {
@@ -115,7 +120,7 @@ export namespace Pressure {
 		let enabled: boolean | null = null;
 		let db: Database;
 		let resolveDbPromise: () => void;
-		let dbSet: Promise<void> = new Promise((resolve) => {
+		let dbSet: Promise<void> = new Promise(resolve => {
 			resolveDbPromise = resolve;
 		});
 		let allModules: AllModules | null = null;
@@ -160,27 +165,6 @@ export namespace Pressure {
 			allModules = modules;
 		}
 
-		async function createHookables(
-			hookName: string,
-			logObj: any
-		): Promise<ModuleHookables> {
-			await awaitCondition(() => {
-				return allModules !== null;
-			}, 100);
-
-			return (arrToObj(
-				Object.keys(allModules!).map((name: keyof AllModules) => {
-					return [
-						name,
-						new allModules![name].meta.external.Handler(
-							logObj,
-							`PRESSURE.${hookName}`
-						)
-					];
-				})
-			) as unknown) as ModuleHookables;
-		}
-
 		async function handleChange(key: string, logObj: any) {
 			if (!(key in pressureConfig)) return;
 
@@ -213,6 +197,8 @@ export namespace Pressure {
 							!doUpdate ||
 							(await handler(
 								await createHookables(
+									await meta.modules,
+									'PRESSURE',
 									key,
 									attachMessage(
 										logObj,
@@ -249,6 +235,8 @@ export namespace Pressure {
 					) {
 						handler(
 							await createHookables(
+								await meta.modules,
+								'PRESSURE',
 								key,
 								attachMessage(logObj, 'Pressure hooks jump')
 							)
@@ -290,84 +278,43 @@ export namespace Pressure {
 	}
 
 	export namespace External {
-		type ExternalRequest = (
-			| {
-					type: 'enable' | 'disable';
-			  }
-			| {
-					type: 'get';
-					key: string;
-			  }
-			| {
-					type: 'isEnabled';
-					resolve: (value: boolean) => void;
-			  }
-		) & {
-			logObj: any;
-		};
+		export class Handler extends ExternalClass {
+			requiresInit = false;
 
-		export class Handler {
-			constructor(private _logObj: any) {}
-
-			private static async _handleRequest(request: ExternalRequest) {
-				const { logObj } = request;
-				if (request.type === 'enable') {
+			async enable() {
+				return this.runRequest(async (_res, _source, logObj) => {
 					await Register.enable();
 					attachMessage(logObj, 'Enabled pressure module');
-				} else if (request.type === 'disable') {
+				});
+			}
+
+			async disable() {
+				return this.runRequest(async (_res, _source, logObj) => {
 					await Register.disable();
 					attachMessage(logObj, 'Disabled pressure module');
-				} else if (request.type === 'isEnabled') {
-					request.resolve(Register.isEnabled());
+				});
+			}
+
+			async isEnabled() {
+				return this.runRequest(async (_res, _source, logObj) => {
+					const isEnabled = await Register.isEnabled();
 					attachMessage(
 						logObj,
 						'Got enabled status of pressure module'
 					);
-				} else if (request.type === 'get') {
-					const pressure = Register.getPressure(request.key);
-					attachMessage(
-						logObj,
-						`Returning pressure ${pressure} for key ${request.key}`
-					);
-					return pressure;
-				}
-				return undefined;
-			}
-
-			async enable() {
-				const req: ExternalRequest = {
-					type: 'enable',
-					logObj: this._logObj
-				};
-				await Handler._handleRequest(req);
-			}
-
-			async disable() {
-				const req: ExternalRequest = {
-					type: 'disable',
-					logObj: this._logObj
-				};
-				await Handler._handleRequest(req);
-			}
-
-			async isEnabled() {
-				return new Promise<boolean>(async resolve => {
-					const req: ExternalRequest = {
-						type: 'isEnabled',
-						logObj: this._logObj,
-						resolve
-					};
-					await Handler._handleRequest(req);
+					return isEnabled;
 				});
 			}
 
 			async get(key: string): Promise<number | null> {
-				const req: ExternalRequest = {
-					type: 'get',
-					key,
-					logObj: this._logObj
-				};
-				return (await Handler._handleRequest(req)) as number | null;
+				return this.runRequest(async (_res, _source, logObj) => {
+					const pressure = await Register.getPressure(key);
+					attachMessage(
+						logObj,
+						`Returning pressure ${pressure} for key ${key}`
+					);
+					return pressure;
+				});
 			}
 		}
 	}
@@ -390,7 +337,10 @@ export namespace Pressure {
 						'/pressureoff',
 						/turn off pressure( module)?/,
 						async ({ logObj }) => {
-							new External.Handler(logObj).disable();
+							new External.Handler(
+								logObj,
+								'PRESSURE.BOT'
+							).disable();
 							return 'Turned off pressure module';
 						}
 					);
@@ -408,7 +358,10 @@ export namespace Pressure {
 						'/pressure',
 						/turn on pressure( module)?/,
 						async ({ logObj }) => {
-							new External.Handler(logObj).enable();
+							new External.Handler(
+								logObj,
+								'PRESSURE.BOT'
+							).enable();
 							return 'Turned on pressure module';
 						}
 					);

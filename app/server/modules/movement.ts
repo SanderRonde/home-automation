@@ -1,12 +1,18 @@
-import { ModuleConfig, ModuleHookables, AllModules } from './modules';
+import {
+	ModuleConfig,
+	ModuleHookables,
+	AllModules,
+	createHookables
+} from './modules';
 import { errorHandle, requireParams, auth } from '../lib/decorators';
-import { awaitCondition, arrToObj } from '../lib/util';
 import movementConfig from '../config/movements';
-import { attachMessage } from '../lib/logger';
+import { attachMessage, attachSourcedMessage } from '../lib/logger';
 import { ResponseLike } from './multi';
 import { Bot as _Bot } from './index';
 import { ModuleMeta } from './meta';
 import { Database } from '../lib/db';
+import { SettablePromise } from '../lib/util';
+import { createAPIHandler } from '../lib/api';
 
 export interface MovementHooks {
 	[key: string]: ((hookables: ModuleHookables) => any)[];
@@ -22,8 +28,6 @@ export namespace Movement {
 		}
 
 		async notifyModules(modules: AllModules) {
-			Register.setModules(modules);
-
 			modules.keyval.GetSetListener.addListener(
 				'state.movement',
 				async value => {
@@ -39,68 +43,34 @@ export namespace Movement {
 	})();
 
 	namespace Register {
-		let allModules: AllModules | null = null;
-		export function setModules(modules: AllModules) {
-			allModules = modules;
-		}
-
 		let enabled: boolean | null = null;
-		let db: Database;
-		let resolveDbPromise: () => void;
-		let dbSet: Promise<void> = new Promise((resolve) => {
-			resolveDbPromise = resolve;
-		});
+		const db = new SettablePromise<Database>();
+
 		export function init(_db: Database) {
-			db = _db;
-			enabled = db.get('enabled', true);
-			resolveDbPromise();
+			enabled = _db.get('enabled', true);
+			db.set(_db);
 		}
 
 		export async function enable() {
 			enabled = true;
-			await dbSet;
-			await db.setVal('enabled', enabled);
-			if (allModules) {
-				new allModules.keyval.External.Handler({}, 'MOVEMENT.ON').set(
-					'state.movement',
-					'1',
-					false
-				);
-			}
+			(await db.value).setVal('enabled', enabled);
+			const modules = await meta.modules;
+			new modules.keyval.External.Handler({}, 'MOVEMENT.ON').set(
+				'state.movement',
+				'1',
+				false
+			);
 		}
 
 		export async function disable() {
 			enabled = false;
-			await dbSet;
-			await db.setVal('enabled', enabled);
-			if (allModules) {
-				new allModules.keyval.External.Handler({}, 'MOVEMENT.OFF').set(
-					'state.movement',
-					'0',
-					false
-				);
-			}
-		}
-
-		async function createHookables(
-			hookName: string,
-			logObj: any
-		): Promise<ModuleHookables> {
-			await awaitCondition(() => {
-				return allModules !== null;
-			}, 100);
-
-			return (arrToObj(
-				Object.keys(allModules!).map((name: keyof AllModules) => {
-					return [
-						name,
-						new allModules![name].meta.external.Handler(
-							logObj,
-							`MOVEMENT.${hookName}`
-						)
-					];
-				})
-			) as unknown) as ModuleHookables;
+			(await db.value).setVal('enabled', enabled);
+			const modules = await meta.modules;
+			new modules.keyval.External.Handler({}, 'MOVEMENT.OFF').set(
+				'state.movement',
+				'0',
+				false
+			);
 		}
 
 		async function handleChange(key: string, logObj: any) {
@@ -110,6 +80,8 @@ export namespace Movement {
 			for (const handler of handlers) {
 				await handler(
 					await createHookables(
+						await meta.modules,
+						'MOVEMENT',
 						key,
 						attachMessage(logObj, 'Movement hook')
 					)
@@ -127,16 +99,22 @@ export namespace Movement {
 			@errorHandle
 			@requireParams('key')
 			@auth
-			public static reportMovement(
+			public static async reportMovement(
 				res: ResponseLike,
 				{
 					key
 				}: {
 					auth?: string;
 					key: string;
-				}
+				},
+				source: string
 			) {
-				attachMessage(res, `Reporting movement for key ${key}`);
+				attachSourcedMessage(
+					res,
+					source,
+					await meta.explainHook,
+					`Reporting movement for key ${key}`
+				);
 				Register.reportMovement(key, res);
 				res.status(200);
 				res.end();
@@ -146,13 +124,10 @@ export namespace Movement {
 
 	namespace Routing {
 		export function init({ app }: ModuleConfig) {
-			app.post('/movement/:key', async (req, res) => {
-				API.Handler.reportMovement(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
-			});
+			app.post(
+				'/movement/:key',
+				createAPIHandler(Movement, API.Handler.reportMovement)
+			);
 		}
 	}
 }

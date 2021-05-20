@@ -28,18 +28,16 @@ import {
 } from 'magic-home';
 import {
 	attachMessage,
-	ResDummy,
 	getTime,
 	log,
 	attachSourcedMessage
 } from '../lib/logger';
 import * as ReadLine from '@serialport/parser-readline';
-import { ModuleConfig, AllModules } from './modules';
+import { ModuleConfig } from './modules';
 import { Color, IColor } from '../lib/types';
 import { wait, arrToObj, XHR } from '../lib/util';
 import { BotState } from '../lib/bot-state';
 import SerialPort = require('serialport');
-import { ExplainHook } from './explain';
 import { colorList } from '../lib/data';
 import { ResponseLike } from './multi';
 import { exec } from 'child_process';
@@ -52,6 +50,8 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import chalk from 'chalk';
 import { getEnv } from '../lib/io';
+import { ExternalClass } from '../lib/external';
+import { createAPIHandler } from '../lib/api';
 
 function getIntensityPercentage(percentage: number) {
 	return Math.round((percentage / 100) * 255);
@@ -93,21 +93,12 @@ export namespace RGB {
 			}));
 		}
 
-		async notifyModules(modules: AllModules) {
-			MarkedAudio.setModules(modules);
-		}
-
 		get external() {
 			return External;
 		}
 
 		get bot() {
 			return Bot;
-		}
-
-		addExplainHook(hook: ExplainHook) {
-			Routing.initExplainHook(hook);
-			API.initExplainHook(hook);
 		}
 	})();
 
@@ -2046,12 +2037,6 @@ export namespace RGB {
 			return rgbToHex(color.r, color.g, color.b);
 		}
 
-		let explainHook: ExplainHook | null = null;
-
-		export function initExplainHook(hook: ExplainHook) {
-			explainHook = hook;
-		}
-
 		export class Handler {
 			private static _getClientSetFromTarget(target: string) {
 				switch (target) {
@@ -2111,7 +2096,7 @@ export namespace RGB {
 						attachSourcedMessage(
 							res,
 							source,
-							explainHook,
+							await meta.explainHook,
 							`rgb(${r}, ${g}, ${b})`
 						),
 						chalk.bgHex(hexColor)('   ')
@@ -2176,7 +2161,7 @@ export namespace RGB {
 						attachSourcedMessage(
 							res,
 							source,
-							explainHook,
+							await meta.explainHook,
 							`rgb(${red}, ${green}, ${blue})`
 						),
 						chalk.bgHex(rgbToHex(redNum, greenNum, blueNum))('   ')
@@ -2225,7 +2210,7 @@ export namespace RGB {
 					attachSourcedMessage(
 						res,
 						source,
-						explainHook,
+						await meta.explainHook,
 						`Turned ${power}`
 					),
 					`Updated ${Clients.clients!.length} clients`
@@ -2314,7 +2299,7 @@ export namespace RGB {
 							attachSourcedMessage(
 								res,
 								source,
-								explainHook,
+								await meta.explainHook,
 								`Running effect ${effectName}`
 							),
 							`Updated ${Clients.arduinoClients.length} clients`
@@ -2349,144 +2334,25 @@ export namespace RGB {
 	}
 
 	export namespace External {
-		type ExternalRequest = (
-			| ({
-					type: 'color';
-					intensity: number;
-					target: string;
-			  } & (
-					| {
-							color: string;
-					  }
-					| {
-							r: string;
-							g: string;
-							b: string;
-					  }
-			  ))
-			| {
-					type: 'power';
-					state: 'on' | 'off';
-			  }
-			| {
-					type: 'pattern';
-					name: string;
-					speed?: number;
-					transition?: 'fade' | 'jump' | 'strobe';
-			  }
-			| {
-					type: 'effect';
-					name: ArduinoAPI.Effects;
-					extra: ArduinoAPI.JoinedConfigs;
-			  }
-			| {
-					type: 'markedAudio';
-					file: string;
-					helpers: Pick<
-						BotState.MatchHandlerParams,
-						'ask' | 'sendText' | 'askCancelable'
-					>;
-			  }
-		) & {
-			logObj: any;
-			resolver: (value: any) => void;
-			source: string;
-		};
-
-		export class Handler {
-			private static _requests: ExternalRequest[] = [];
-
-			private static _ready: boolean = false;
-			static async init() {
-				this._ready = true;
-				for (const req of this._requests) {
-					await this._handleRequest(req);
-				}
-			}
-
-			constructor(private _logObj: any, private _source: string) {}
-
-			private static async _handleRequest(request: ExternalRequest) {
-				const { logObj, resolver, source } = request;
-				const resDummy = new ResDummy();
-				let value = undefined;
-				if (request.type === 'color') {
-					if ('color' in request) {
-						value = await API.Handler.setColor(
-							resDummy,
-							{
-								color: request.color,
-								intensity: request.intensity,
-								auth: Auth.Secret.getKey(),
-								target: request.target
-							},
-							source
-						);
-					} else {
-						const { r, g, b } = request;
-						value = await API.Handler.setRGB(
-							resDummy,
-							{
-								red: r,
-								green: g,
-								blue: b,
-								intensity: request.intensity,
-								auth: Auth.Secret.getKey(),
-								target: request.target
-							},
-							source
-						);
-					}
-				} else if (request.type == 'power') {
-					value = await API.Handler.setPower(
-						resDummy,
-						{
-							power: request.state,
-							auth: Auth.Secret.getKey()
-						},
-						source
-					);
-				} else if (request.type === 'effect') {
-					value = await API.Handler.runEffect(
-						resDummy,
-						{
-							effect: request.name,
-							auth: Auth.Secret.getKey(),
-							...request.extra
-						},
-						source
-					);
-				} else if (request.type === 'markedAudio') {
-					value = await MarkedAudio.play(
-						request.file,
-						logObj,
-						request.helpers
-					);
-				}
-				resDummy.transferTo(logObj);
-				resolver(value);
-			}
+		export class Handler extends ExternalClass {
+			requiresInit = true;
 
 			async color(
 				color: string,
 				target: string = 'all',
 				intensity: number = 0
 			): Promise<boolean> {
-				return new Promise<boolean>(resolve => {
-					const req: ExternalRequest = {
-						type: 'color',
-						color: color,
-						intensity,
-						target,
-						logObj: this._logObj,
-						resolver: resolve,
-						source: this._source
-					};
-					if (Handler._ready) {
-						Handler._handleRequest(req);
-					} else {
-						Handler._requests.push(req);
-					}
+				return this.runRequest((res, source) => {
+					return API.Handler.setColor(
+						res,
+						{
+							color,
+							intensity: intensity,
+							auth: Auth.Secret.getKey(),
+							target: target
+						},
+						source
+					);
 				});
 			}
 
@@ -2497,63 +2363,32 @@ export namespace RGB {
 				intensity: number = 0,
 				target: string = 'all'
 			): Promise<boolean> {
-				return new Promise(resolve => {
-					const req: ExternalRequest = {
-						type: 'color',
-						r: red,
-						g: green,
-						b: blue,
-						intensity,
-						target,
-						logObj: this._logObj,
-						resolver: resolve,
-						source: this._source
-					};
-					if (Handler._ready) {
-						Handler._handleRequest(req);
-					} else {
-						Handler._requests.push(req);
-					}
+				return this.runRequest((res, source) => {
+					return API.Handler.setRGB(
+						res,
+						{
+							red,
+							green,
+							blue,
+							intensity: intensity,
+							auth: Auth.Secret.getKey(),
+							target: target
+						},
+						source
+					);
 				});
 			}
 
 			async power(state: 'on' | 'off'): Promise<boolean> {
-				return new Promise(resolve => {
-					const req: ExternalRequest = {
-						type: 'power',
-						state: state,
-						logObj: this._logObj,
-						resolver: resolve,
-						source: this._source
-					};
-					if (Handler._ready) {
-						Handler._handleRequest(req);
-					} else {
-						Handler._requests.push(req);
-					}
-				});
-			}
-
-			async pattern(
-				name: string,
-				speed?: number,
-				transition?: 'fade' | 'jump' | 'strobe'
-			): Promise<boolean> {
-				return new Promise(resolve => {
-					const req: ExternalRequest = {
-						type: 'pattern',
-						name,
-						speed,
-						transition,
-						logObj: this._logObj,
-						resolver: resolve,
-						source: this._source
-					};
-					if (Handler._ready) {
-						Handler._handleRequest(req);
-					} else {
-						Handler._requests.push(req);
-					}
+				return this.runRequest((res, source) => {
+					return API.Handler.setPower(
+						res,
+						{
+							power: state,
+							auth: Auth.Secret.getKey()
+						},
+						source
+					);
 				});
 			}
 
@@ -2561,20 +2396,16 @@ export namespace RGB {
 				name: ArduinoAPI.Effects,
 				extra: ArduinoAPI.JoinedConfigs = {}
 			): Promise<boolean> {
-				return new Promise(resolve => {
-					const req: ExternalRequest = {
-						type: 'effect',
-						name,
-						extra,
-						logObj: this._logObj,
-						resolver: resolve,
-						source: this._source
-					};
-					if (Handler._ready) {
-						Handler._handleRequest(req);
-					} else {
-						Handler._requests.push(req);
-					}
+				return this.runRequest((res, source) => {
+					return API.Handler.runEffect(
+						res,
+						{
+							effect: name,
+							auth: Auth.Secret.getKey(),
+							...extra
+						},
+						source
+					);
 				});
 			}
 
@@ -2585,23 +2416,9 @@ export namespace RGB {
 					'ask' | 'sendText' | 'askCancelable'
 				>
 			): ReturnType<typeof MarkedAudio.play> {
-				return new Promise<ReturnType<typeof MarkedAudio.play>>(
-					resolve => {
-						const req: ExternalRequest = {
-							type: 'markedAudio',
-							file,
-							helpers,
-							logObj: this._logObj,
-							resolver: resolve,
-							source: this._source
-						};
-						if (Handler._ready) {
-							Handler._handleRequest(req);
-						} else {
-							Handler._requests.push(req);
-						}
-					}
-				);
+				return this.runRequest((_res, _source, logObj) => {
+					return MarkedAudio.play(file, logObj, helpers);
+				});
 			}
 		}
 	}
@@ -3295,12 +3112,6 @@ export namespace RGB {
 	}
 
 	export namespace MarkedAudio {
-		let modules: AllModules | null = null;
-
-		export function setModules(passedModules: AllModules) {
-			modules = passedModules;
-		}
-
 		interface ParsedMarked {
 			'spotify-uri': string;
 			color: IColor;
@@ -3346,8 +3157,10 @@ export namespace RGB {
 			}
 
 			// Try and authenticate
+			const modules = await meta.modules;
 			const authenticated = await new modules!.spotifyBeats.External.Handler(
-				logObj
+				logObj,
+				'RGB.MARKED'
 			).test();
 			if (!authenticated) {
 				return {
@@ -3369,8 +3182,10 @@ export namespace RGB {
 			| null
 		> {
 			// Get devices
+			const modules = await meta.modules;
 			const devices = await new modules!.spotifyBeats.External.Handler(
-				logObj
+				logObj,
+				'RGB.MARKED'
 			).getDevices();
 
 			const devicesParsed = devices && (await devices.json());
@@ -3415,7 +3230,8 @@ export namespace RGB {
 
 			// Play
 			const playResponse = await new modules!.spotifyBeats.External.Handler(
-				logObj
+				logObj,
+				'RGB.MARKED'
 			).play(parsed!['spotify-uri'], chosen.id);
 
 			if (
@@ -3459,6 +3275,7 @@ export namespace RGB {
 
 			// Fetch playstate at this time, which should allow us to
 			// calculate exactly when the song started playing
+			const modules = await meta.modules;
 			const playState = await modules!.spotifyBeats.Spotify.API.getPlayState();
 			if (!playState) {
 				return {
@@ -3519,69 +3336,25 @@ export namespace RGB {
 	}
 
 	export namespace Routing {
-		export let explainHook: ExplainHook | null = null;
-
-		export function initExplainHook(hook: ExplainHook) {
-			explainHook = hook;
-		}
-
 		export async function init({ app, randomNum }: ModuleConfig) {
-			app.post('/rgb/color', async (req, res) => {
-				await API.Handler.setColor(
-					res,
-					{
-						...req.params,
-						...req.body
-					},
-					`API.${req.url}`
-				);
-			});
-			app.post('/rgb/color/:color/:instensity?', async (req, res) => {
-				await API.Handler.setColor(
-					res,
-					{
-						...req.params,
-						...req.body
-					},
-					`API.${req.url}`
-				);
-			});
+			app.post('/rgb/color', createAPIHandler(RGB, API.Handler.setColor));
+			app.post(
+				'/rgb/color/:color/:instensity?',
+				createAPIHandler(RGB, API.Handler.setColor)
+			);
 			app.post(
 				'/rgb/color/:red/:green/:blue/:intensity?',
-				async (req, res) => {
-					await API.Handler.setRGB(
-						res,
-						{
-							...req.params,
-							...req.body
-						},
-						`API.${req.url}`
-					);
-				}
+				createAPIHandler(RGB, API.Handler.setRGB)
 			);
-			app.post('/rgb/power/:power', async (req, res) => {
-				await API.Handler.setPower(
-					res,
-					{
-						...req.params,
-						...req.body
-					},
-					`API.${req.url}`
-				);
-			});
-			app.post('/rgb/effect/:effect', async (req, res) => {
-				await API.Handler.runEffect(
-					res,
-					{
-						...req.params,
-						...req.body
-					},
-					`API.${req.url}`
-				);
-			});
-			app.all('/rgb/refresh', async (_req, res) => {
-				await API.Handler.refresh(res);
-			});
+			app.post(
+				'/rgb/power/:power',
+				createAPIHandler(RGB, API.Handler.setPower)
+			);
+			app.post(
+				'/rgb/effect/:effect',
+				createAPIHandler(RGB, API.Handler.runEffect)
+			);
+			app.all('/rgb/refresh', createAPIHandler(RGB, API.Handler.refresh));
 			app.all('/rgb', async (req, res) => {
 				await WebPage.Handler.index(res, req, randomNum);
 			});
@@ -3609,18 +3382,16 @@ export namespace RGB {
 			attachSourcedMessage(
 				logObj,
 				'keyval listener',
-				Routing.explainHook,
+				await meta.explainHook,
 				`Setting`,
 				chalk.bold(client.address),
 				`to on`
 			);
-			if (Routing.explainHook) {
-				Routing.explainHook(
-					`Set rgb ${name} to white`,
-					'keyval listener',
-					logObj
-				);
-			}
+			(await meta.explainHook)(
+				`Set rgb ${name} to white`,
+				'keyval listener',
+				logObj
+			);
 			if ([LED_NAMES.HEX_LEDS].includes(name)) {
 				return client.turnOn();
 			}
@@ -3629,7 +3400,7 @@ export namespace RGB {
 			attachSourcedMessage(
 				logObj,
 				'keyval listener',
-				Routing.explainHook,
+				await meta.explainHook,
 				`Turned off`,
 				chalk.bold(client.address)
 			);
@@ -3657,7 +3428,7 @@ export namespace RGB {
 						attachSourcedMessage(
 							logObj,
 							'keyval listener',
-							Routing.explainHook,
+							await meta.explainHook,
 							`Setting`,
 							chalk.bold(client.address),
 							`to color rgb(${NIGHTSTAND_COLOR.r}, ${NIGHTSTAND_COLOR.g}, ${NIGHTSTAND_COLOR.b})`
@@ -3673,7 +3444,7 @@ export namespace RGB {
 					attachSourcedMessage(
 						logObj,
 						'keyval listener',
-						Routing.explainHook,
+						await meta.explainHook,
 						`Turned off`,
 						chalk.bold(client.address)
 					);
@@ -3695,7 +3466,7 @@ export namespace RGB {
 						attachSourcedMessage(
 							logObj,
 							'keyval listener',
-							Routing.explainHook,
+							await meta.explainHook,
 							`Fading in`,
 							chalk.bold(client.address),
 							`to color rgb(${NIGHTSTAND_COLOR.r}, ${NIGHTSTAND_COLOR.g}, ${NIGHTSTAND_COLOR.b})`
@@ -3729,7 +3500,7 @@ export namespace RGB {
 					attachSourcedMessage(
 						logObj,
 						'keyval listener',
-						Routing.explainHook,
+						await meta.explainHook,
 						`Turned off`,
 						chalk.bold(client.address)
 					);

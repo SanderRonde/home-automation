@@ -9,18 +9,16 @@ import {
 import { MAIN_LIGHTS, COMMON_SWITCH_MAPPINGS } from '../lib/constants';
 import {
 	attachMessage,
-	ResDummy,
 	getTime,
 	log,
 	attachSourcedMessage
 } from '../lib/logger';
-import { AllModules, ModuleHookables, ModuleConfig } from './modules';
-import { arrToObj, awaitCondition } from '../lib/util';
+import { ModuleHookables, ModuleConfig, createHookables } from './modules';
+import { awaitCondition } from '../lib/util';
 import aggregates from '../config/aggregates';
 import groups from '../config/keyval-groups';
 import { BotState } from '../lib/bot-state';
 import { WSSimInstance } from '../lib/ws';
-import { ExplainHook } from './explain';
 import { ResponseLike } from './multi';
 import { Database } from '../lib/db';
 import { Bot as _Bot } from './bot';
@@ -28,6 +26,8 @@ import * as express from 'express';
 import { ModuleMeta } from './meta';
 import { Auth } from './auth';
 import chalk from 'chalk';
+import { ExternalClass } from '../lib/external';
+import { createAPIHandler } from '../lib/api';
 
 export interface KeyvalHooks {
 	[key: string]: {
@@ -64,20 +64,12 @@ export namespace KeyVal {
 			await Routing.init({ ...config, apiHandler });
 		}
 
-		async notifyModules(modules: AllModules) {
-			Aggregates.setModules(modules);
-		}
-
 		get external() {
 			return External;
 		}
 
 		get bot() {
 			return Bot;
-		}
-
-		addExplainHook(hook: ExplainHook) {
-			API.initExplainHook(hook);
 		}
 	})();
 
@@ -111,9 +103,11 @@ export namespace KeyVal {
 		) {
 			if (notifyOnInitial) {
 				const logObj = {};
-				new External.Handler(logObj, 'KEYVAL.ADD_LISTENER').get(key).then((value) => {
-					listener(value as string, logObj);
-				})
+				new External.Handler(logObj, 'KEYVAL.ADD_LISTENER')
+					.get(key)
+					.then(value => {
+						listener(value as string, logObj);
+					});
 			}
 			const index = _lastIndex++;
 			_listeners.set(index, {
@@ -197,108 +191,46 @@ export namespace KeyVal {
 	}
 
 	export namespace External {
-		type ExternalRequest = (
-			| {
-					type: 'get';
-					resolver: (value: any) => void;
-			  }
-			| {
-					type: 'set';
-					value: string;
-					resolver: () => void;
-					update?: boolean;
-			  }
-		) & {
-			key: string;
-			logObj: any;
-			source: string;
-		};
+		export class Handler extends ExternalClass {
+			requiresInit = true;
 
-		export class Handler {
-			private static _requests: ExternalRequest[] = [];
-			private static _db: Database | null = null;
 			private static _apiHandler: API.Handler | null = null;
 
-			constructor(private _logObj: any, private _source: string) {}
-
 			static async init({
-				db,
 				apiHandler
 			}: {
 				db: Database;
 				apiHandler: API.Handler;
 			}) {
-				this._db = db;
 				this._apiHandler = apiHandler;
-				for (const req of this._requests) {
-					await this._handleRequest(req);
-				}
+				super.init();
 			}
 
-			private static async _handleRequest(request: ExternalRequest) {
-				const { logObj } = request;
-				const resDummy = new ResDummy();
-				if (request.type === 'get') {
-					const { key, resolver } = request;
-					const value = this._apiHandler!.get(resDummy, {
-						key,
-						auth: Auth.Secret.getKey()
-					});
-
-					resDummy.transferTo(logObj);
-					resolver(value);
-				} else {
-					const { key, value, resolver, update, source } = request;
-
-					await this._apiHandler!.set(
-						resDummy,
+			async set(key: string, value: string, notify: boolean = true) {
+				return this.runRequest((res, source) => {
+					return Handler._apiHandler!.set(
+						res,
 						{
 							key,
 							value,
-							update,
+							update: notify,
 							auth: Auth.Secret.getKey()
 						},
 						source
 					);
-
-					resDummy.transferTo(logObj);
-					resolver();
-				}
-			}
-
-			async set(key: string, value: string, notify: boolean = true) {
-				return new Promise(resolve => {
-					const req: ExternalRequest = {
-						type: 'set',
-						key,
-						value,
-						update: notify,
-						logObj: this._logObj,
-						source: this._source,
-						resolver: resolve
-					};
-					if (Handler._db) {
-						Handler._handleRequest(req);
-					} else {
-						Handler._requests.push(req);
-					}
 				});
 			}
 
-			async get<V>(key: string) {
-				return new Promise<V>(resolve => {
-					const req: ExternalRequest = {
-						type: 'get',
-						key,
-						logObj: this._logObj,
-						source: this._source,
-						resolver: resolve
-					};
-					if (Handler._db) {
-						Handler._handleRequest(req);
-					} else {
-						Handler._requests.push(req);
-					}
+			async get(key: string) {
+				return this.runRequest((res, source) => {
+					return Handler._apiHandler!.get(
+						res,
+						{
+							key,
+							auth: Auth.Secret.getKey()
+						},
+						source
+					);
 				});
 			}
 
@@ -498,12 +430,6 @@ export namespace KeyVal {
 	}
 
 	export namespace API {
-		let explainHook: ExplainHook | null = null;
-
-		export function initExplainHook(hook: ExplainHook) {
-			explainHook = hook;
-		}
-
 		export class Handler {
 			private _db: Database;
 
@@ -514,17 +440,23 @@ export namespace KeyVal {
 			@errorHandle
 			@requireParams('key')
 			@auth
-			public get(
+			public async get(
 				res: ResponseLike,
 				{
 					key
 				}: {
 					key: string;
 					auth?: string;
-				}
+				},
+				source: string
 			) {
 				const value = this._db.get(key, '0');
-				attachMessage(res, `Key: "${key}", val: "${str(value)}"`);
+				attachSourcedMessage(
+					res,
+					source,
+					await meta.explainHook,
+					`Key: "${key}", val: "${str(value)}"`
+				);
 				res.status(200).write(value === undefined ? '' : value);
 				res.end();
 				return value;
@@ -549,7 +481,7 @@ export namespace KeyVal {
 				const msg = attachSourcedMessage(
 					res,
 					source,
-					explainHook,
+					await meta.explainHook,
 					`Toggling key: "${key}", to val: "${str(value)}"`
 				);
 				const nextMessage = attachMessage(
@@ -570,7 +502,7 @@ export namespace KeyVal {
 			@errorHandle
 			@requireParams('key', 'maxtime', 'expected')
 			@auth
-			public getLongPoll(
+			public async getLongPoll(
 				res: ResponseLike,
 				{
 					key,
@@ -581,12 +513,15 @@ export namespace KeyVal {
 					expected: string;
 					auth: string;
 					maxtime: string;
-				}
+				},
+				source: string
 			) {
 				const value = this._db.get(key, '0');
 				if (value !== expected) {
-					const msg = attachMessage(
+					const msg = attachSourcedMessage(
 						res,
+						source,
+						await meta.explainHook,
 						`Key: "${key}", val: "${str(value)}"`
 					);
 					attachMessage(
@@ -658,7 +593,7 @@ export namespace KeyVal {
 				const msg = attachSourcedMessage(
 					res,
 					source,
-					explainHook,
+					await meta.explainHook,
 					`Key: "${key}", val: "${str(value)}"`
 				);
 				const nextMessage = attachMessage(
@@ -686,10 +621,16 @@ export namespace KeyVal {
 					force = false
 				}: {
 					force?: boolean;
-				}
+				},
+				source: string
 			) {
 				const data = await this._db.json(force);
-				const msg = attachMessage(res, data);
+				const msg = attachSourcedMessage(
+					res,
+					source,
+					await meta.explainHook,
+					data
+				);
 				attachMessage(msg, `Force? ${force ? 'true' : 'false'}`);
 				res.status(200).write(data);
 				res.end();
@@ -746,11 +687,6 @@ export namespace KeyVal {
 	}
 
 	namespace Aggregates {
-		let allModules: AllModules | null = null;
-		export function setModules(modules: AllModules) {
-			allModules = modules;
-		}
-
 		async function registerAggregates(db: Database) {
 			for (const key in aggregates) {
 				const fullName = `aggregates.${key}`;
@@ -758,27 +694,6 @@ export namespace KeyVal {
 					await db.setVal(fullName, '0');
 				}
 			}
-		}
-
-		async function createHookables(
-			key: string,
-			logObj: any
-		): Promise<ModuleHookables> {
-			await awaitCondition(() => {
-				return allModules !== null;
-			}, 100);
-
-			return (arrToObj(
-				Object.keys(allModules!).map((name: keyof AllModules) => {
-					return [
-						name,
-						new allModules![name].meta.external.Handler(
-							logObj,
-							`AGGREGATE.${key}`
-						)
-					];
-				})
-			) as unknown) as ModuleHookables;
 		}
 
 		function registerListeners() {
@@ -801,6 +716,8 @@ export namespace KeyVal {
 						const fn = handlers[key];
 						await fn(
 							await createHookables(
+								await meta.modules,
+								'AGGREGATES',
 								key,
 								attachMessage(
 									logObj,
@@ -837,59 +754,24 @@ export namespace KeyVal {
 		}: ModuleConfig & { apiHandler: API.Handler }) {
 			const webpageHandler = new Webpage.Handler({ randomNum, db });
 
-			app.post('/keyval/all', async (req, res) => {
-				await apiHandler.all(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
-			});
-			app.post('/keyval/long/:key', async (req, res) => {
-				await apiHandler.getLongPoll(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
-			});
+			app.post('/keyval/all', createAPIHandler(KeyVal, apiHandler.all));
+			app.post(
+				'/keyval/long/:key',
+				createAPIHandler(KeyVal, apiHandler.getLongPoll)
+			);
 			app.get(
 				'/keyval/long/:maxtime/:auth/:key/:expected',
-				async (req, res) => {
-					await apiHandler.getLongPoll(res, {
-						...req.params,
-						...req.body,
-						cookies: req.cookies
-					});
-				}
+				createAPIHandler(KeyVal, apiHandler.getLongPoll)
 			);
-			app.post('/keyval/:key', async (req, res) => {
-				await apiHandler.get(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
-			});
-			app.post('/keyval/toggle/:key', async (req, res) => {
-				await apiHandler.toggle(
-					res,
-					{
-						...req.params,
-						...req.body,
-						cookies: req.cookies
-					},
-					`API.${req.url}`
-				);
-			});
-			app.post('/keyval/:key/:value', async (req, res) => {
-				await apiHandler.set(
-					res,
-					{
-						...req.params,
-						...req.body,
-						cookies: req.cookies
-					},
-					`API.${req.url}`
-				);
-			});
+			app.post('/keyval/:key', createAPIHandler(KeyVal, apiHandler.get));
+			app.post(
+				'/keyval/toggle/:key',
+				createAPIHandler(KeyVal, apiHandler.toggle)
+			);
+			app.post(
+				'/keyval/:key/:value',
+				createAPIHandler(KeyVal, apiHandler.set)
+			);
 
 			websocketSim.all(
 				'/keyval/websocket',

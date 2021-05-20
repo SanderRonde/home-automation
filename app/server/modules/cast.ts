@@ -3,16 +3,17 @@ import {
 	PASTAS as _PASTAS,
 	CAST_DEVICE_NAMES
 } from '../config/casts';
-import { attachMessage, ResDummy } from '../lib/logger';
+import { attachMessage, attachSourcedMessage } from '../lib/logger';
 import * as playlist from 'castv2-player/lib/playlist';
 import { requireParams } from '../lib/decorators';
 import { errorHandle } from '../lib/decorators';
+import { ExternalClass } from '../lib/external';
+import { createAPIHandler } from '../lib/api';
 import { BotState } from '../lib/bot-state';
+import { ModuleConfig } from './modules';
 import { auth } from '../lib/decorators';
-import { ExplainHook } from './explain';
 import * as castv2 from 'castv2-player';
 import { ResponseLike } from './multi';
-import { ModuleConfig } from './modules';
 import { Bot as _Bot } from './bot';
 import { ModuleMeta } from './meta';
 import { Auth } from './auth';
@@ -55,10 +56,6 @@ export namespace Cast {
 		get bot() {
 			return Bot;
 		}
-
-		addExplainHook(hook: ExplainHook) {
-			TTS.initExplainHook(hook);
-		}
 	})();
 
 	export namespace Scanning {
@@ -74,8 +71,6 @@ export namespace Cast {
 	}
 
 	namespace TTS {
-		let explainHook: ExplainHook | null = null;
-
 		function splitTTSParts(text: string) {
 			const words = text.split(' ');
 			const parts: string[] = [];
@@ -94,14 +89,10 @@ export namespace Cast {
 			return parts;
 		}
 
-		export function initExplainHook(hook: ExplainHook) {
-			explainHook = hook;
-		}
-
 		export function tts(text: string, lang: string) {
-			return (source: string, loggable: any) => {
-				if (explainHook) {
-					explainHook(
+			return async (source: string, loggable: any) => {
+				if (await meta.explainHook) {
+					(await meta.explainHook)(
 						`Casting TTS ${text} in lang ${lang}`,
 						source,
 						loggable
@@ -203,141 +194,58 @@ export namespace Cast {
 	}
 
 	export namespace External {
-		type ExternalRequest = (
-			| {
-					type: 'stop';
-			  }
-			| {
-					type: 'pasta';
-					pasta: string;
-			  }
-			| {
-					type: 'say';
-					text: string;
-					lang?: string;
-			  }
-			| {
-					type: 'url';
-					url: string;
-			  }
-		) & {
-			logObj: any;
-			resolver: () => void;
-		};
-
-		export class Handler {
-			private static _requests: ExternalRequest[] = [];
-			private static _ready: boolean = false;
-
-			constructor(private _logObj: any) {}
-
-			static async init() {
-				this._ready = true;
-				for (const req of this._requests) {
-					await this._handleRequest(req);
-				}
-			}
-
-			private static async _handleRequest(request: ExternalRequest) {
-				const { logObj } = request;
-				const resDummy = new ResDummy();
-				switch (request.type) {
-					case 'url':
-						await API.Handler.url(resDummy, {
-							url: request.url,
-							auth: Auth.Secret.getKey()
-						});
-						resDummy.transferTo(logObj);
-						request.resolver();
-						break;
-					case 'say':
-						await API.Handler.say(resDummy, {
-							text: request.text,
-							lang: request.lang,
-							auth: Auth.Secret.getKey()
-						});
-						resDummy.transferTo(logObj);
-						request.resolver();
-						break;
-					case 'pasta':
-						await API.Handler.pasta(resDummy, {
-							pasta: request.pasta,
-							auth: Auth.Secret.getKey()
-						});
-						resDummy.transferTo(logObj);
-						request.resolver();
-						break;
-					case 'stop':
-						await API.Handler.stop(resDummy, {
-							auth: Auth.Secret.getKey()
-						});
-						resDummy.transferTo(logObj);
-						request.resolver();
-						break;
-				}
-			}
+		export class Handler extends ExternalClass {
+			requiresInit = true;
 
 			async stop() {
-				return new Promise(resolve => {
-					const req: ExternalRequest = {
-						type: 'stop',
-						logObj: this._logObj,
-						resolver: resolve
-					};
-					if (Handler._ready) {
-						Handler._handleRequest(req);
-					} else {
-						Handler._requests.push(req);
-					}
+				return this.runRequest((res, source) => {
+					return API.Handler.stop(
+						res,
+						{
+							auth: Auth.Secret.getKey()
+						},
+						source
+					);
 				});
 			}
 
 			async pasta(pasta: string) {
-				return new Promise(resolve => {
-					const req: ExternalRequest = {
-						type: 'pasta',
-						pasta: pasta,
-						logObj: this._logObj,
-						resolver: resolve
-					};
-					if (Handler._ready) {
-						Handler._handleRequest(req);
-					} else {
-						Handler._requests.push(req);
-					}
+				return this.runRequest((res, source) => {
+					return API.Handler.pasta(
+						res,
+						{
+							pasta: pasta,
+							auth: Auth.Secret.getKey()
+						},
+						source
+					);
 				});
 			}
 
 			async say(text: string, lang: string = 'en') {
-				return new Promise(resolve => {
-					const req: ExternalRequest = {
-						type: 'say',
-						text,
-						lang,
-						logObj: this._logObj,
-						resolver: resolve
-					};
-					if (Handler._ready) {
-						Handler._handleRequest(req);
-					} else {
-						Handler._requests.push(req);
-					}
+				return this.runRequest((res, source) => {
+					return API.Handler.say(
+						res,
+						{
+							text,
+							lang,
+							auth: Auth.Secret.getKey()
+						},
+						source
+					);
 				});
 			}
 
 			async url(url: string) {
-				return new Promise(resolve => {
-					const req: ExternalRequest = {
-						type: 'url',
-						url,
-						logObj: this._logObj,
-						resolver: resolve
-					};
-					if (Handler._ready) {
-						Handler._handleRequest(req);
-					} else {
-						Handler._requests.push(req);
-					}
+				return this.runRequest((res, source) => {
+					return API.Handler.url(
+						res,
+						{
+							url,
+							auth: Auth.Secret.getKey()
+						},
+						source
+					);
 				});
 			}
 		}
@@ -361,13 +269,15 @@ export namespace Cast {
 			static readonly matches = Bot.createMatchMaker(
 				({ matchMaker: mm }) => {
 					mm('/castoff', /stop cast(ing)?/, async ({ logObj }) => {
-						await new External.Handler(logObj).stop();
+						await new External.Handler(logObj, 'CAST.BOT').stop();
 						return 'Stopped casting';
 					});
 					mm(
 						/(cast url|\/casturl)(\s*)(.*)/,
 						async ({ logObj, match }) => {
-							await new External.Handler(logObj).url(match[3]);
+							await new External.Handler(logObj, 'CAST.BOT').url(
+								match[3]
+							);
 							return `Casting URL "${match[3]}"`;
 						}
 					);
@@ -376,7 +286,10 @@ export namespace Cast {
 						async ({ logObj, match }) => {
 							const lang = match[6] || 'en';
 							const text = match[8];
-							await new External.Handler(logObj).say(text, lang);
+							await new External.Handler(logObj, 'CAST.BOT').say(
+								text,
+								lang
+							);
 							return `Saying "${text}" in lang "${lang}"`;
 						}
 					);
@@ -397,7 +310,10 @@ export namespace Cast {
 							if (!(pasta in Pasta.PASTAS)) {
 								return 'We don\'t have that pasta';
 							}
-							await new External.Handler(logObj).pasta(pasta);
+							await new External.Handler(
+								logObj,
+								'CAST.BOT'
+							).pasta(pasta);
 							return `Played pasta: "${pasta}"`;
 						}
 					);
@@ -440,15 +356,18 @@ export namespace Cast {
 				}: {
 					url: string;
 					auth?: string;
-				}
+				},
+				source: string
 			) {
 				if (url in LocalURLS.LOCAL_URLS) {
 					url = LocalURLS.LOCAL_URLS[url];
 				}
 
 				const mediaPlayers = await Casting.Media.playURL(url);
-				const playerLog = attachMessage(
+				const playerLog = attachSourcedMessage(
 					res,
+					source,
+					await meta.explainHook,
 					`Playing on ${mediaPlayers.length} players`
 				);
 				attachMessage(
@@ -470,10 +389,16 @@ export namespace Cast {
 				res: ResponseLike,
 				{}: {
 					auth?: string;
-				}
+				},
+				source: string
 			) {
 				const mediaPlayers = await Casting.Media.stop();
-				attachMessage(res, `Stopped ${mediaPlayers.length} players`);
+				attachSourcedMessage(
+					res,
+					source,
+					await meta.explainHook,
+					`Stopped ${mediaPlayers.length} players`
+				);
 				res.status(200).write('Success');
 				res.end();
 				return mediaPlayers;
@@ -490,13 +415,19 @@ export namespace Cast {
 					text: string;
 					lang?: string;
 					auth?: string;
-				}
+				},
+				source: string
 			) {
-				const urls = TTS.tts(text, lang)('API.say', res);
+				const urls = await TTS.tts(text, lang)('API.say', res);
 				attachMessage(res, `Got urls ${urls.join(', ')}`);
 
 				const mediaPlayers = await Casting.Media.playURLs(urls);
-				attachMessage(res, `Saying in lang "${lang}": "${text}"`);
+				attachSourcedMessage(
+					res,
+					source,
+					await meta.explainHook,
+					`Saying in lang "${lang}": "${text}"`
+				);
 				const playerLog = attachMessage(
 					res,
 					`Playing on ${mediaPlayers.length} players`
@@ -524,7 +455,8 @@ export namespace Cast {
 				}: {
 					pasta: string;
 					auth?: string;
-				}
+				},
+				source: string
 			) {
 				if (!(pasta in Pasta.PASTAS)) {
 					res.status(400).write('Unknown pasta');
@@ -532,11 +464,16 @@ export namespace Cast {
 					return;
 				}
 				const { lang, text } = Pasta.PASTAS[pasta];
-				const urls = TTS.tts(text, lang)('API.pasta', res);
+				const urls = await TTS.tts(text, lang)('API.pasta', res);
 
 				attachMessage(res, `Got urls ${urls.join(', ')}`);
 				const mediaPlayers = await Casting.Media.playURLs(urls);
-				attachMessage(res, `Saying pasta in lang "${lang}": "${text}"`);
+				attachSourcedMessage(
+					res,
+					source,
+					await meta.explainHook,
+					`Saying pasta in lang "${lang}": "${text}"`
+				);
 				const playerLog = attachMessage(
 					res,
 					`Playing on ${mediaPlayers.length} players`
@@ -560,55 +497,31 @@ export namespace Cast {
 		export async function init({ app }: ModuleConfig) {
 			await External.Handler.init();
 
-			app.get('/cast/:auth/stop', async (req, res) => {
-				await API.Handler.stop(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
-			});
-			app.post('/cast/stop', async (req, res) => {
-				await API.Handler.stop(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
-			});
-			app.get('/cast/:auth/cast/:url', async (req, res) => {
-				await API.Handler.url(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
-			});
-			app.post('/cast/cast/:url?', async (req, res) => {
-				await API.Handler.url(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
-			});
-			app.get('/cast/:auth/say/:text/:lang?', async (req, res) => {
-				await API.Handler.say(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
-			});
-			app.post('/cast/say/:text?/:lang?', async (req, res) => {
-				await API.Handler.say(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
-			});
-			app.post('/cast/pasta/:pasta?', async (req, res) => {
-				await API.Handler.pasta(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
-			});
+			app.get(
+				'/cast/:auth/stop',
+				createAPIHandler(Cast, API.Handler.stop)
+			);
+			app.post('/cast/stop', createAPIHandler(Cast, API.Handler.stop));
+			app.get(
+				'/cast/:auth/cast/:url',
+				createAPIHandler(Cast, API.Handler.url)
+			);
+			app.post(
+				'/cast/cast/:url?',
+				createAPIHandler(Cast, API.Handler.url)
+			);
+			app.get(
+				'/cast/:auth/say/:text/:lang?',
+				createAPIHandler(Cast, API.Handler.say)
+			);
+			app.post(
+				'/cast/say/:text?/:lang?',
+				createAPIHandler(Cast, API.Handler.say)
+			);
+			app.post(
+				'/cast/pasta/:pasta?',
+				createAPIHandler(Cast, API.Handler.pasta)
+			);
 		}
 	}
 }

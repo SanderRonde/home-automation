@@ -3,9 +3,9 @@ import {
 	BEAT_CACHE_CLEAR_INTERVAL,
 	PLAYBACK_CLOSE_RANGE
 } from '../lib/constants';
-import { AllModules, ModuleConfig } from './modules';
+import { ModuleConfig } from './modules';
 import { SpotifyTypes } from '../types/spotify';
-import { log, getTime, ResDummy, logOutgoingRes } from '../lib/logger';
+import { log, getTime, logOutgoingRes } from '../lib/logger';
 import { BotState } from '../lib/bot-state';
 import { Bot as _Bot } from './index';
 import { Database } from '../lib/db';
@@ -15,6 +15,7 @@ import { getEnv } from '../lib/io';
 import { wait } from '../lib/util';
 import fetch from 'node-fetch';
 import chalk from 'chalk';
+import { ExternalClass } from '../lib/external';
 
 export interface BeatChanges {
 	playState?: boolean;
@@ -34,13 +35,8 @@ export namespace SpotifyBeats {
 		name = 'spotify-beats';
 
 		async init(config: ModuleConfig) {
-			Transfer.init(config.db);
 			await External.Handler.init();
 			Routing.init(config);
-		}
-
-		async notifyModules(modules: AllModules) {
-			Transfer.setModules(modules);
 		}
 
 		get external() {
@@ -630,103 +626,24 @@ export namespace SpotifyBeats {
 	}
 
 	export namespace External {
-		type ExternalRequest = (
-			| {
-					type: 'testConnection';
-			  }
-			| {
-					type: 'play';
-					uri: string;
-					device: string;
-			  }
-			| {
-					type: 'getDevices';
-			  }
-		) & {
-			logObj: any;
-			resolver: (value: any) => void;
-		};
-
-		export class Handler {
-			private static _requests: ExternalRequest[] = [];
-
-			private static _ready: boolean = false;
-			static async init() {
-				this._ready = true;
-				for (const req of this._requests) {
-					await this._handleRequest(req);
-				}
-			}
-
-			constructor(private _logObj: any) {}
-
-			private static async _handleRequest(request: ExternalRequest) {
-				const { logObj, resolver } = request;
-				const resDummy = new ResDummy();
-				let value = undefined;
-				const api = Spotify.API.get();
-				if (request.type === 'testConnection') {
-					value = await api.testAuth();
-				} else if (request.type == 'play') {
-					value = await api.endpoints.play(
-						request.uri,
-						request.device
-					);
-				} else if (request.type === 'getDevices') {
-					value = await api.endpoints.getDevices();
-				}
-				resDummy.transferTo(logObj);
-				resolver(value);
-			}
+		export class Handler extends ExternalClass {
+			requiresInit = true;
 
 			async test() {
-				return new Promise<boolean>(resolve => {
-					const req: ExternalRequest = {
-						type: 'testConnection',
-						logObj: this._logObj,
-						resolver: resolve
-					};
-					if (Handler._ready) {
-						Handler._handleRequest(req);
-					} else {
-						Handler._requests.push(req);
-					}
+				return this.runRequest(() => {
+					return Spotify.API.get().testAuth();
 				});
 			}
 
 			async play(uri: string, device: string) {
-				return new Promise<
-					Spotify.API.ExtendedResponse<SpotifyTypes.Endpoints.Play>
-				>(resolve => {
-					const req: ExternalRequest = {
-						type: 'play',
-						uri: uri,
-						logObj: this._logObj,
-						device,
-						resolver: resolve
-					};
-					if (Handler._ready) {
-						Handler._handleRequest(req);
-					} else {
-						Handler._requests.push(req);
-					}
+				return this.runRequest(() => {
+					return Spotify.API.get().endpoints.play(uri, device);
 				});
 			}
 
 			async getDevices() {
-				return new Promise<
-					Spotify.API.ExtendedResponse<SpotifyTypes.Endpoints.Devices>
-				>(resolve => {
-					const req: ExternalRequest = {
-						type: 'getDevices',
-						logObj: this._logObj,
-						resolver: resolve
-					};
-					if (Handler._ready) {
-						Handler._handleRequest(req);
-					} else {
-						Handler._requests.push(req);
-					}
+				return this.runRequest(() => {
+					return Spotify.API.get().endpoints.getDevices();
 				});
 			}
 		}
@@ -804,22 +721,6 @@ export namespace SpotifyBeats {
 	}
 
 	export namespace Transfer {
-		let _modules: AllModules | null = null;
-		let _modulePromiseResolve: () => void;
-		let _modulesPromise: Promise<void> = new Promise(resolve => {
-			_modulePromiseResolve = resolve;
-		});
-		export async function getModules() {
-			if (_modules) return _modules;
-			await _modulesPromise;
-			return _modules!;
-		}
-
-		export function setModules(modules: AllModules) {
-			_modules = modules;
-			_modulePromiseResolve();
-		}
-
 		export async function init(db: Database) {
 			await Spotify.init(db);
 		}
@@ -828,8 +729,7 @@ export namespace SpotifyBeats {
 			_fullState: FullState,
 			_changes: BeatChanges
 		) {
-			if (!_modules) return;
-
+			// const modules = await meta.modules;
 			// await _modules.RGB.Board.BeatFlash.notifyChanges(
 			// 	fullState,
 			// 	changes

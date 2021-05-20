@@ -50,7 +50,7 @@ export class WSSimInstance<
 	];
 	private _ip!: string;
 	private _alive: boolean = true;
-	private static readonly TIMEOUT = 10 * 60 * 1000;
+	private static readonly TIMEOUT = 10 * 60 * 60 * 1000;
 	private _listener: NodeJS.Timeout | null = null;
 
 	private _init(req: express.Request, res: express.Response) {

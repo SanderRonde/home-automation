@@ -6,7 +6,7 @@ import {
 	upgradeToHTTPS
 } from '../lib/decorators';
 import { remoteControlHTML } from '../templates/remote-control-template';
-import { attachMessage, ResDummy, log, getTime } from '../lib/logger';
+import { attachMessage, log, getTime } from '../lib/logger';
 import telnet_client, * as TelnetClient from 'telnet-client';
 import { BotState } from '../lib/bot-state';
 import { ResponseLike } from './multi';
@@ -17,6 +17,8 @@ import * as express from 'express';
 import { getEnv } from '../lib/io';
 import { Auth } from './auth';
 import chalk from 'chalk';
+import { ExternalClass } from '../lib/external';
+import { createAPIHandler } from '../lib/api';
 
 export namespace RemoteControl {
 	export const meta = new (class Meta extends ModuleMeta {
@@ -49,100 +51,66 @@ export namespace RemoteControl {
 		  };
 
 	export namespace External {
-		type ExternalRequest = Commands & {
-			logObj: any;
-		};
-
-		export class Handler {
-			constructor(private _logObj: any) {}
-
-			private static async _handleRequest(request: ExternalRequest) {
-				const { logObj } = request;
-				const resDummy = new ResDummy();
-
-				switch (request.action) {
-					case 'play':
-					case 'pause':
-					case 'playpause':
-					case 'close':
-						await API.Handler![request.action](resDummy, {
-							auth: Auth.Secret.getKey()
-						});
-						break;
-					case 'volumeUp':
-					case 'volumeDown':
-						API.Handler![request.action](resDummy, {
-							auth: Auth.Secret.getKey(),
-							amount: request.amount
-						});
-						break;
-					case 'setVolume':
-						API.Handler!.setVolume(resDummy, {
-							auth: Auth.Secret.getKey(),
-							amount: request.amount
-						});
-						break;
-				}
-				resDummy.transferTo(logObj);
-			}
+		export class Handler extends ExternalClass {
+			requiresInit = false;
 
 			public play() {
-				const req: ExternalRequest = {
-					action: 'play',
-					logObj: this._logObj
-				};
-				Handler._handleRequest(req);
+				return this.runRequest(res => {
+					return API.Handler.play(res, {
+						auth: Auth.Secret.getKey()
+					});
+				});
 			}
 
 			public pause() {
-				const req: ExternalRequest = {
-					action: 'pause',
-					logObj: this._logObj
-				};
-				Handler._handleRequest(req);
+				return this.runRequest(res => {
+					return API.Handler.pause(res, {
+						auth: Auth.Secret.getKey()
+					});
+				});
 			}
 
 			public playpause() {
-				const req: ExternalRequest = {
-					action: 'playpause',
-					logObj: this._logObj
-				};
-				Handler._handleRequest(req);
+				return this.runRequest(res => {
+					return API.Handler.playpause(res, {
+						auth: Auth.Secret.getKey()
+					});
+				});
 			}
 
 			public close() {
-				const req: ExternalRequest = {
-					action: 'close',
-					logObj: this._logObj
-				};
-				Handler._handleRequest(req);
+				return this.runRequest(res => {
+					return API.Handler.close(res, {
+						auth: Auth.Secret.getKey()
+					});
+				});
 			}
 
 			public volumeUp(amount: number = 10) {
-				const req: ExternalRequest = {
-					action: 'volumeUp',
-					amount,
-					logObj: this._logObj
-				};
-				Handler._handleRequest(req);
+				return this.runRequest(res => {
+					return API.Handler.volumeUp(res, {
+						auth: Auth.Secret.getKey(),
+						amount
+					});
+				});
 			}
 
 			public volumeDown(amount: number = 10) {
-				const req: ExternalRequest = {
-					action: 'volumeDown',
-					amount,
-					logObj: this._logObj
-				};
-				Handler._handleRequest(req);
+				return this.runRequest(res => {
+					return API.Handler.volumeDown(res, {
+						auth: Auth.Secret.getKey(),
+						amount
+					});
+				});
 			}
 
 			async setVolume(amount: number) {
-				const req: ExternalRequest = {
-					action: 'setVolume',
-					amount,
-					logObj: this._logObj
-				};
-				Handler._handleRequest(req);
+				return this.runRequest(res => {
+					return API.Handler.setVolume(res, {
+						auth: Auth.Secret.getKey(),
+						amount
+					});
+				});
 			}
 		}
 	}
@@ -263,7 +231,8 @@ export namespace RemoteControl {
 						/play( (music|netflix|youtube|vlc|movie))?/,
 						async ({ logObj }) => {
 							new External.Handler(
-								attachMessage(logObj, 'Playing')
+								attachMessage(logObj, 'Playing'),
+								'REMOTE_CONTROL.BOT'
 							).play();
 							return 'Playing';
 						}
@@ -272,7 +241,8 @@ export namespace RemoteControl {
 						/pause( (music|netflix|youtube|vlc|movie))?/,
 						async ({ logObj }) => {
 							new External.Handler(
-								attachMessage(logObj, 'Pausing')
+								attachMessage(logObj, 'Pausing'),
+								'REMOTE_CONTROL.BOT'
 							).play();
 							return 'Pausing';
 						}
@@ -281,7 +251,8 @@ export namespace RemoteControl {
 						/playpause( (music|netflix|youtube|vlc|movie))?/,
 						async ({ logObj }) => {
 							new External.Handler(
-								attachMessage(logObj, 'Playpausing')
+								attachMessage(logObj, 'Playpausing'),
+								'REMOTE_CONTROL.BOT'
 							).play();
 							return 'Playpausing';
 						}
@@ -290,7 +261,8 @@ export namespace RemoteControl {
 						/close( (music|netflix|youtube|vlc|movie))?/,
 						async ({ logObj }) => {
 							new External.Handler(
-								attachMessage(logObj, 'Closing')
+								attachMessage(logObj, 'Closing'),
+								'REMOTE_CONTROL.BOT'
 							).play();
 							return 'Closing';
 						}
@@ -300,7 +272,8 @@ export namespace RemoteControl {
 						/(?:increase|up) volume( by (\d+))?/,
 						async ({ logObj, match }) => {
 							new External.Handler(
-								attachMessage(logObj, 'Increasing Volume')
+								attachMessage(logObj, 'Increasing Volume'),
+								'REMOTE_CONTROL.BOT'
 							).volumeUp(
 								match[1] ? parseInt(match[1], 10) : undefined
 							);
@@ -311,7 +284,8 @@ export namespace RemoteControl {
 						/(?:decrease|reduce|down) volume( by (\d+))?/,
 						async ({ logObj, match }) => {
 							new External.Handler(
-								attachMessage(logObj, 'Decreasing Volume')
+								attachMessage(logObj, 'Decreasing Volume'),
+								'REMOTE_CONTROL.BOT'
 							).volumeUp(
 								match[1] ? parseInt(match[1], 10) : undefined
 							);
@@ -321,7 +295,8 @@ export namespace RemoteControl {
 
 					mm(/set volume to (\d+)/, async ({ logObj, match }) => {
 						new External.Handler(
-							attachMessage(logObj, 'Setting Volume')
+							attachMessage(logObj, 'Setting Volume'),
+							'REMOTE_CONTROL.BOT'
 						).setVolume(parseInt(match[1], 10));
 						return 'Setting Volume';
 					});
@@ -696,60 +671,36 @@ export namespace RemoteControl {
 		}: ModuleConfig) {
 			const webpageHandler = new Webpage.Handler(randomNum);
 
-			app.post('/remote-control/play', async (req, res) => {
-				API.Handler.play(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
-			});
-			app.post('/remote-control/pause', async (req, res) => {
-				API.Handler.pause(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
-			});
-			app.post('/remote-control/playpause', async (req, res) => {
-				API.Handler.playpause(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
-			});
-			app.post('/remote-control/close', async (req, res) => {
-				API.Handler.close(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
-			});
-
-			app.post('/remote-control/volumeup/:amount?', async (req, res) => {
-				API.Handler.volumeUp(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
-			});
 			app.post(
-				'/remote-control/volumedown/:amount?',
-				async (req, res) => {
-					API.Handler.volumeDown(res, {
-						...req.params,
-						...req.body,
-						cookies: req.cookies
-					});
-				}
+				'/remote-control/play',
+				createAPIHandler(RemoteControl, API.Handler.play)
+			);
+			app.post(
+				'/remote-control/pause',
+				createAPIHandler(RemoteControl, API.Handler.pause)
+			);
+			app.post(
+				'/remote-control/playpause',
+				createAPIHandler(RemoteControl, API.Handler.playpause)
+			);
+			app.post(
+				'/remote-control/close',
+				createAPIHandler(RemoteControl, API.Handler.close)
 			);
 
-			app.post('/remote-control/setvolume/:amount', async (req, res) => {
-				API.Handler.setVolume(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
-			});
+			app.post(
+				'/remote-control/volumeup/:amount?',
+				createAPIHandler(RemoteControl, API.Handler.volumeUp)
+			);
+			app.post(
+				'/remote-control/volumedown/:amount?',
+				createAPIHandler(RemoteControl, API.Handler.volumeDown)
+			);
+
+			app.post(
+				'/remote-control/setvolume/:amount',
+				createAPIHandler(RemoteControl, API.Handler.setVolume)
+			);
 
 			websocket.all(
 				'/remote-control/listen',

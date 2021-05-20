@@ -1,13 +1,14 @@
 import { errorHandle, requireParams, authAll } from '../lib/decorators';
-import { ModuleConfig, ModuleHookables, AllModules } from './modules';
-import { attachMessage, ResDummy } from '../lib/logger';
-import { arrToObj, awaitCondition } from '../lib/util';
+import { ModuleConfig, ModuleHookables, createHookables } from './modules';
+import { attachMessage, attachSourcedMessage } from '../lib/logger';
 import webhooks from '../config/webhook';
 import { ResponseLike } from './multi';
 import { Bot as _Bot } from './bot';
 import { ModuleMeta } from './meta';
 import { Auth } from './auth';
 import chalk from 'chalk';
+import { ExternalClass } from '../lib/external';
+import { createAPIHandler } from '../lib/api';
 
 export type WebHookConfig = {
 	[key: string]: (hookables: ModuleHookables) => any | Promise<any>;
@@ -21,42 +22,12 @@ export namespace Webhook {
 			await Routing.init(config);
 		}
 
-		async notifyModules(modules: AllModules) {
-			Webhooks.setModules(modules);
-		}
-
 		get external() {
 			return External;
 		}
 	})();
 
 	namespace Webhooks {
-		let allModules: AllModules | null = null;
-		export function setModules(modules: AllModules) {
-			allModules = modules;
-		}
-
-		async function createHookables(
-			hookName: string,
-			logObj: any
-		): Promise<ModuleHookables> {
-			await awaitCondition(() => {
-				return allModules !== null;
-			}, 100);
-
-			return (arrToObj(
-				Object.keys(allModules!).map((name: keyof AllModules) => {
-					return [
-						name,
-						new allModules![name].meta.external.Handler(
-							logObj,
-							`WEBHOOK.${hookName}`
-						)
-					];
-				})
-			) as unknown) as ModuleHookables;
-		}
-
 		export async function trigger(name: string, logObj: any) {
 			if (!(name in webhooks)) {
 				attachMessage(logObj, chalk.red('Webhook not found'));
@@ -64,40 +35,32 @@ export namespace Webhook {
 			}
 
 			const webhook = webhooks[name];
-			await webhook(await createHookables(name, logObj));
+			await webhook(
+				await createHookables(
+					await meta.modules,
+					'WEBHOOK',
+					name,
+					logObj
+				)
+			);
 		}
 	}
 
 	export namespace External {
-		type ExternalRequest = {
-			action: 'triggerWebhook';
-			name: string;
-		};
-
-		export class Handler {
-			constructor(private _logObj: any) {}
-
-			private async _handleRequest(request: ExternalRequest) {
-				const resDummy = new ResDummy();
-
-				switch (request.action) {
-					case 'triggerWebhook':
-						await API.Handler.webhook(resDummy, {
-							auth: Auth.Secret.getKey(),
-							name: request.name
-						});
-						break;
-				}
-				resDummy.transferTo(this._logObj);
-				return;
-			}
+		export class Handler extends ExternalClass {
+			requiresInit = true;
 
 			public triggerWebhook<N extends string>(name: N) {
-				const req: ExternalRequest = {
-					action: 'triggerWebhook',
-					name
-				};
-				this._handleRequest(req);
+				return this.runRequest((res, source) => {
+					return API.Handler.webhook(
+						res,
+						{
+							auth: Auth.Secret.getKey(),
+							name: name
+						},
+						source
+					);
+				});
 			}
 		}
 	}
@@ -114,11 +77,17 @@ export namespace Webhook {
 				}: {
 					auth?: string;
 					name: string;
-				}
+				},
+				source: string
 			) {
 				await Webhooks.trigger(
 					name,
-					attachMessage(res, `Webhook ${name}`)
+					attachSourcedMessage(
+						res,
+						source,
+						await meta.explainHook,
+						`Webhook ${name}`
+					)
 				);
 				res.status(200);
 				res.end();
@@ -128,13 +97,10 @@ export namespace Webhook {
 
 	export namespace Routing {
 		export async function init({ app }: ModuleConfig) {
-			app.post('/webhook/:name', async (req, res) => {
-				await API.Handler.webhook(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
-			});
+			app.post(
+				'/webhook/:name',
+				createAPIHandler(Webhook, API.Handler.webhook)
+			);
 		}
 	}
 }

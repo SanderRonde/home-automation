@@ -2,7 +2,7 @@ import { Credentials } from 'google-auth-library/build/src/auth/credentials';
 import { calendar_v3 } from 'googleapis/build/src/apis/calendar/v3';
 import { errorHandle, requireParams } from '../lib/decorators';
 const optionalRequire = require('optional-require')(require);
-import { ModuleConfig, AllModules } from './modules';
+import { ModuleConfig } from './modules';
 import { OAuth2Client } from 'google-auth-library';
 import { SECRETS_FOLDER } from '../lib/constants';
 import { WSWrapper, WSClient } from '../lib/ws';
@@ -21,6 +21,7 @@ import * as path from 'path';
 import * as http from 'http';
 import { getEnv } from '../lib/io';
 import chalk from 'chalk';
+import { createAPIHandler } from '../lib/api';
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
 
@@ -35,10 +36,6 @@ export namespace InfoScreen {
 			await Calendar.refresh();
 		}
 
-		async notifyModules(modules: AllModules) {
-			Temperature.Internal.initModules(modules);
-		}
-
 		get bot() {
 			return Bot;
 		}
@@ -46,15 +43,10 @@ export namespace InfoScreen {
 
 	export namespace Temperature {
 		export namespace Internal {
-			let _modules: AllModules | null = null;
-			export function initModules(modules: AllModules) {
-				_modules = modules;
-			}
-
 			export async function get(name: string, logObj?: any) {
-				return await new _modules!.temperature.External.Handler(
-					logObj || {}
-				).getTemp(name);
+				return await new (
+					await meta.modules
+				).temperature.External.Handler(logObj || {}, 'INFO_SCREEN.TEMPERATURE').getTemp(name);
 			}
 		}
 
@@ -477,21 +469,15 @@ export namespace InfoScreen {
 				res.redirect('/');
 			});
 
-			app.post('/weather', async (req, res) => {
-				await apiHandler.getTemperature(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
-			});
+			app.post(
+				'/weather',
+				createAPIHandler(InfoScreen, apiHandler.getTemperature)
+			);
 
-			app.post('/calendar', async (req, res) => {
-				await apiHandler.getEvents(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
-			});
+			app.post(
+				'/calendar',
+				createAPIHandler(InfoScreen, apiHandler.getEvents)
+			);
 
 			ws.all('/blanking', async client => {
 				const { send, onDead } = client;

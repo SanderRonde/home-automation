@@ -107,31 +107,34 @@ export namespace XHR {
 			const fullURL = `${url}${qs}`;
 			const parsedURL = new URL(fullURL);
 			const req = http
-				.request({
-					hostname: parsedURL.hostname,
-					port: 80,
-					path: `${parsedURL.pathname}${parsedURL.search}`,
-					method: 'POST'
-				 }, (res) => {
-					let data: string = '';
+				.request(
+					{
+						hostname: parsedURL.hostname,
+						port: 80,
+						path: `${parsedURL.pathname}${parsedURL.search}`,
+						method: 'POST'
+					},
+					res => {
+						let data: string = '';
 
-					res.on('data', (chunk: string | Buffer) => {
-						data += chunk.toString();
-					});
-					res.on('end', () => {
-						attachMessage(
-							req,
-							chalk.cyan(`[${name}]`),
-							url,
-							JSON.stringify(params)
-						);
-						logOutgoingReq(req, {
-							method: 'GET',
-							target: url
+						res.on('data', (chunk: string | Buffer) => {
+							data += chunk.toString();
 						});
-						resolve(data);
-					});
-				})
+						res.on('end', () => {
+							attachMessage(
+								req,
+								chalk.cyan(`[${name}]`),
+								url,
+								JSON.stringify(params)
+							);
+							logOutgoingReq(req, {
+								method: 'GET',
+								target: url
+							});
+							resolve(data);
+						});
+					}
+				)
 				.on('error', e => {
 					log(
 						chalk.red(
@@ -139,7 +142,7 @@ export namespace XHR {
 						)
 					);
 				});
-				req.end();
+			req.end();
 		});
 	}
 
@@ -208,4 +211,25 @@ export function flatten<V>(arr: V[][]): V[] {
 		}
 	}
 	return flattened;
+}
+
+export class SettablePromise<V> {
+	private _isSet: boolean = false;
+	private _resolver!: (value: V) => void;
+	private _promise = new Promise<V>(resolve => {
+		this._resolver = resolve;
+	});
+
+	set(value: V) {
+		this._resolver(value);
+		this._isSet = true;
+	}
+
+	get isSet() {
+		return this._isSet;
+	}
+
+	get value() {
+		return this._promise;
+	}
 }

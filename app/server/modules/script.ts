@@ -1,5 +1,5 @@
 import { errorHandle, requireParams, authAll } from '../lib/decorators';
-import { attachMessage, ResDummy } from '../lib/logger';
+import { attachMessage, attachSourcedMessage } from '../lib/logger';
 import * as childProcess from 'child_process';
 import { BotState } from '../lib/bot-state';
 import { AppWrapper } from '../lib/routes';
@@ -12,6 +12,7 @@ import { ModuleMeta } from './meta';
 import { Auth } from './auth';
 import * as path from 'path';
 import chalk from 'chalk';
+import { ExternalClass } from '../lib/external';
 
 export namespace Script {
 	export const meta = new (class Meta extends ModuleMeta {
@@ -31,53 +32,27 @@ export namespace Script {
 	})();
 
 	export namespace External {
-		interface ExternalRequest {
-			type: 'script';
-			name: string;
-			logObj: any;
-			resolver: (value: any) => void;
-		}
+		export class Handler extends ExternalClass {
+			requiresInit = true;
 
-		export class Handler {
 			private static _config: Config | null = null;
-			private static _requests: ExternalRequest[] = [];
-
-			constructor(private _logObj: any) {}
 
 			static async init({ config }: { config: Config }) {
 				this._config = config;
-				for (const req of this._requests) {
-					await this._handleRequest(req);
-				}
-			}
-
-			private static async _handleRequest(request: ExternalRequest) {
-				const dummy = new ResDummy();
-				const value = await API.Handler.script(
-					dummy,
-					{
-						name: request.name,
-						auth: Auth.Secret.getKey()
-					},
-					this._config!
-				);
-				dummy.transferTo(request.logObj);
-				request.resolver(value);
+				super.init();
 			}
 
 			async script(name: string) {
-				return new Promise<any>(resolve => {
-					const req: ExternalRequest = {
-						type: 'script',
-						name,
-						logObj: this._logObj,
-						resolver: resolve
-					};
-					if (Handler._config) {
-						Handler._handleRequest(req);
-					} else {
-						Handler._requests.push(req);
-					}
+				return this.runRequest((res, source) => {
+					return API.Handler.script(
+						res,
+						{
+							name,
+							auth: Auth.Secret.getKey()
+						},
+						Handler._config!,
+						source
+					);
 				});
 			}
 		}
@@ -104,7 +79,8 @@ export namespace Script {
 						async ({ logObj, match }) => {
 							const script = match[1];
 							const output = await new External.Handler(
-								logObj
+								logObj,
+								'SCRIPT.BOT'
 							).script(script);
 							if (output) {
 								return `Script output: ${output}`;
@@ -117,9 +93,10 @@ export namespace Script {
 						'/killpc',
 						/(shutdown|kill) desktop/,
 						async ({ logObj }) => {
-							await new External.Handler(logObj).script(
-								'shutdown_desktop'
-							);
+							await new External.Handler(
+								logObj,
+								'SCRIPT.BOT'
+							).script('shutdown_desktop');
 							return 'Shut it down';
 						}
 					);
@@ -127,9 +104,10 @@ export namespace Script {
 						'/wakepc',
 						/(wake|start|boot) desktop/,
 						async ({ logObj }) => {
-							await new External.Handler(logObj).script(
-								'wake_desktop'
-							);
+							await new External.Handler(
+								logObj,
+								'SCRIPT.BOT'
+							).script('wake_desktop');
 							return 'Started it';
 						}
 					);
@@ -181,7 +159,8 @@ export namespace Script {
 					auth?: string;
 					name: string;
 				},
-				config: Config
+				config: Config,
+				source: string
 			) {
 				if (
 					params.name.indexOf('..') > -1 ||
@@ -193,7 +172,12 @@ export namespace Script {
 					config.scripts.scriptDir,
 					params.name
 				);
-				attachMessage(res, `Script: "${scriptPath}"`);
+				attachSourcedMessage(
+					res,
+					source,
+					await meta.explainHook,
+					`Script: "${scriptPath}"`
+				);
 				try {
 					const output = childProcess
 						.execFileSync(
@@ -236,7 +220,8 @@ export namespace Script {
 				await API.Handler.script(
 					res,
 					{ ...req.params, ...req.body, cookies: req.cookies },
-					config
+					config,
+					`${Script.meta.name}.API.${req.url}`
 				);
 			});
 		}

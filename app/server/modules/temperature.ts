@@ -1,5 +1,10 @@
 import { errorHandle, requireParams, authAll, auth } from '../lib/decorators';
-import { attachMessage, ResDummy, log, getTime } from '../lib/logger';
+import {
+	attachMessage,
+	log,
+	getTime,
+	attachSourcedMessage
+} from '../lib/logger';
 import { AllModules, ModuleConfig } from './modules';
 import { BotState } from '../lib/bot-state';
 import { ResponseLike } from './multi';
@@ -8,6 +13,8 @@ import { Bot as _Bot } from './bot';
 import { ModuleMeta } from './meta';
 import { Auth } from './auth';
 import chalk from 'chalk';
+import { ExternalClass } from '../lib/external';
+import { createAPIHandler } from '../lib/api';
 
 const LOG_INTERVAL_SECS = 60;
 
@@ -26,12 +33,10 @@ export namespace Temperature {
 		}
 
 		async notifyModules(modules: AllModules): Promise<any> {
-			TempControl.allModules = modules;
-
 			modules.keyval.GetSetListener.addListener(
 				'room.heating',
 				async (value, logObj) => {
-					new External.Handler(logObj).setMode(
+					new External.Handler(logObj, 'TEMPERATURE.INIT').setMode(
 						'room',
 						value === '1' ? 'on' : 'off'
 					);
@@ -81,8 +86,6 @@ export namespace Temperature {
 			ms: number;
 		} | null = null;
 
-		static allModules: AllModules | null = null;
-
 		async setTarget(targetTemp: number) {
 			await this.db!.setVal(`${this.name}.target`, targetTemp);
 			this.target = targetTemp;
@@ -92,17 +95,20 @@ export namespace Temperature {
 			await this.db!.setVal(`${this.name}.mode`, newMode);
 			this.mode = newMode;
 
-			if (TempControl.allModules && this.name === 'room') {
+			if (this.name === 'room') {
+				const modules = await meta.modules;
 				if (newMode === 'off') {
-					new TempControl.allModules.keyval.External.Handler(
-						{},
-						'HEATING.off'
-					).set('room.heating', '0', false);
+					new modules.keyval.External.Handler({}, 'HEATING.off').set(
+						'room.heating',
+						'0',
+						false
+					);
 				} else {
-					new TempControl.allModules.keyval.External.Handler(
-						{},
-						'HEATING.on'
-					).set('room.heating', '1', false);
+					new modules.keyval.External.Handler({}, 'HEATING.on').set(
+						'room.heating',
+						'1',
+						false
+					);
 				}
 			}
 		}
@@ -202,91 +208,48 @@ export namespace Temperature {
 	}
 
 	export namespace External {
-		type ExternalRequest =
-			| {
-					action: 'setMode';
-					mode: Mode;
-					name: string;
-			  }
-			| {
-					action: 'setTarget';
-					target: number;
-					name: string;
-			  }
-			| {
-					action: 'getTemp';
-					name: string;
-			  }
-			| {
-					action: 'moveDir';
-					name: string;
-					direction: 'left' | 'right';
-					ms: number;
-			  };
-
-		export class Handler {
-			constructor(private _logObj: any) {}
-
-			private async _handleRequest(request: ExternalRequest) {
-				const resDummy = new ResDummy();
-
-				switch (request.action) {
-					case 'getTemp':
-						return API.Handler.getTemp(resDummy, {
-							auth: Auth.Secret.getKey(),
-							name: request.name
-						});
-					case 'setMode':
-						await API.Handler.setMode(resDummy, {
-							auth: Auth.Secret.getKey(),
-							mode: request.mode,
-							name: request.name
-						});
-						break;
-					case 'setTarget':
-						await API.Handler.setTargetTemp(resDummy, {
-							auth: Auth.Secret.getKey(),
-							target: request.target,
-							name: request.name
-						});
-						break;
-					case 'moveDir':
-						await API.Handler.moveDir(resDummy, {
-							auth: Auth.Secret.getKey(),
-							name: request.name,
-							direction: request.direction,
-							ms: request.ms
-						});
-						break;
-				}
-				resDummy.transferTo(this._logObj);
-				return;
-			}
+		export class Handler extends ExternalClass {
+			requiresInit = false;
 
 			public setMode(name: string, mode: Mode) {
-				const req: ExternalRequest = {
-					action: 'setMode',
-					mode,
-					name
-				};
-				this._handleRequest(req);
+				return this.runRequest((res, source) => {
+					return API.Handler.setMode(
+						res,
+						{
+							auth: Auth.Secret.getKey(),
+							mode,
+							name
+						},
+						source
+					);
+				});
 			}
 
 			public setTarget(name: string, target: number) {
-				const req: ExternalRequest = {
-					action: 'setTarget',
-					target,
-					name
-				};
-				this._handleRequest(req);
+				return this.runRequest((res, source) => {
+					return API.Handler.setTargetTemp(
+						res,
+						{
+							auth: Auth.Secret.getKey(),
+							target,
+							name
+						},
+						source
+					);
+				});
 			}
 
 			public getTemp(name: string) {
-				const req: ExternalRequest = {
-					action: 'getTemp',
-					name
-				};
-				return this._handleRequest(req);
+				return this.runRequest((res, source) => {
+					return API.Handler.getTemp(
+						res,
+						{
+							auth: Auth.Secret.getKey(),
+							name
+						},
+						source
+					);
+				});
 			}
 
 			public moveDir(
@@ -294,13 +257,18 @@ export namespace Temperature {
 				direction: 'left' | 'right',
 				ms: number
 			) {
-				const req: ExternalRequest = {
-					action: 'moveDir',
-					name,
-					direction,
-					ms
-				};
-				return this._handleRequest(req);
+				return this.runRequest((res, source) => {
+					return API.Handler.moveDir(
+						res,
+						{
+							auth: Auth.Secret.getKey(),
+							direction,
+							ms,
+							name
+						},
+						source
+					);
+				});
 			}
 		}
 	}
@@ -376,7 +344,8 @@ export namespace Temperature {
 						async ({ logObj, match }) => {
 							const tempName = match[1];
 							new External.Handler(
-								attachMessage(logObj, 'Stopping heating')
+								attachMessage(logObj, 'Stopping heating'),
+								'TEMPERATURE.BOT'
 							).setMode(tempName, 'off');
 							return 'Stopping heating';
 						}
@@ -384,7 +353,8 @@ export namespace Temperature {
 					mm(/\/heatauto (\w+)/, async ({ logObj, match }) => {
 						const tempName = match[1];
 						new External.Handler(
-							attachMessage(logObj, 'Set heat mode to auto')
+							attachMessage(logObj, 'Set heat mode to auto'),
+							'TEMPERATURE.BOT'
 						).setMode(tempName, 'auto');
 						return 'Set heat mode to auto';
 					});
@@ -396,7 +366,8 @@ export namespace Temperature {
 						async ({ logObj, match }) => {
 							const tempName = match[1];
 							new External.Handler(
-								attachMessage(logObj, 'Heating')
+								attachMessage(logObj, 'Heating'),
+								'TEMPERATURE.BOT'
 							).setMode(tempName, 'on');
 							return 'Heating';
 						}
@@ -406,7 +377,8 @@ export namespace Temperature {
 						async ({ logObj, match }) => {
 							const tempName = match[1];
 							new External.Handler(
-								attachMessage(logObj, 'Moving')
+								attachMessage(logObj, 'Moving'),
+								'TEMPERATURE.BOT'
 							).moveDir(
 								tempName,
 								match[2] as 'left' | 'right',
@@ -424,7 +396,11 @@ export namespace Temperature {
 								return 'Invalid mode';
 							}
 							new External.Handler(
-								attachMessage(logObj, `Setting mode to ${mode}`)
+								attachMessage(
+									logObj,
+									`Setting mode to ${mode}`
+								),
+								'TEMPERATURE.BOT'
 							).setMode(tempName, mode as Mode);
 							return `Set mode to ${mode}`;
 						}
@@ -445,7 +421,8 @@ export namespace Temperature {
 								attachMessage(
 									logObj,
 									`Setting temp to ${target}`
-								)
+								),
+								'TEMPERATURE.BOT'
 							).setTarget(tempName, target);
 							return `Set target to ${target}`;
 						}
@@ -502,11 +479,17 @@ export namespace Temperature {
 					auth?: string;
 					mode: Mode;
 					name: string;
-				}
+				},
+				source: string
 			) {
 				const controller = await TempControllers.getController(name);
 				const oldMode = controller.getMode();
-				attachMessage(res, `Setting mode to ${mode} from ${oldMode}`);
+				attachSourcedMessage(
+					res,
+					source,
+					await meta.explainHook,
+					`Setting mode to ${mode} from ${oldMode}`
+				);
 				await controller.setMode(mode);
 				res.status(200);
 				res.end();
@@ -524,12 +507,15 @@ export namespace Temperature {
 					auth?: string;
 					target: number;
 					name: string;
-				}
+				},
+				source: string
 			) {
 				const controller = await TempControllers.getController(name);
 				const oldTemp = controller.getTarget();
-				attachMessage(
+				attachSourcedMessage(
 					res,
+					source,
+					await meta.explainHook,
 					`Setting target temp to ${target} from ${oldTemp}`
 				);
 				await controller.setTarget(target);
@@ -546,11 +532,14 @@ export namespace Temperature {
 				}: {
 					auth?: string;
 					name: string;
-				}
+				},
+				source: string
 			) {
 				const controller = await TempControllers.getController(name);
-				attachMessage(
+				attachSourcedMessage(
 					res,
+					source,
+					await meta.explainHook,
 					`Getting temp. Returning ${controller.getLastTemp()}`
 				);
 				res.status(200);
@@ -578,11 +567,14 @@ export namespace Temperature {
 					name: string;
 					direction: 'left' | 'right';
 					ms: number;
-				}
+				},
+				source: string
 			) {
 				const controller = await TempControllers.getController(name);
-				attachMessage(
+				attachSourcedMessage(
 					res,
+					source,
+					await meta.explainHook,
 					`Setting move for controller ${name} to ${ms}ms in the direction ${direction}`
 				);
 				controller.setMove(direction, ms);
@@ -596,27 +588,18 @@ export namespace Temperature {
 
 	export namespace Routing {
 		export async function init({ app }: ModuleConfig) {
-			app.post('/temperature/target/:target?', async (req, res) => {
-				await API.Handler.setTargetTemp(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
-			});
-			app.post('/temperature/mode/:mode?', async (req, res) => {
-				await API.Handler.setMode(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
-			});
-			app.all('/temperature/temp', async (req, res) => {
-				API.Handler.getTemp(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
-			});
+			app.post(
+				'/temperature/target/:target?',
+				createAPIHandler(Temperature, API.Handler.setTargetTemp)
+			);
+			app.post(
+				'/temperature/mode/:mode?',
+				createAPIHandler(Temperature, API.Handler.setMode)
+			);
+			app.all(
+				'/temperature/temp',
+				createAPIHandler(Temperature, API.Handler.getTemp)
+			);
 
 			app.post('/temperature/report/:name/:temp?', async (req, res) => {
 				const body = { ...req.params, ...req.body };

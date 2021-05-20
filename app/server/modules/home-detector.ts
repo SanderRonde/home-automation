@@ -11,10 +11,10 @@ import {
 	logFixture,
 	getTime,
 	log,
-	ResDummy
+	ResDummy,
+	attachSourcedMessage
 } from '../lib/logger';
-import { AllModules, ModuleHookables, ModuleConfig } from './modules';
-import { arrToObj, awaitCondition } from '../lib/util';
+import { ModuleHookables, ModuleConfig, createHookables } from './modules';
 import { BotState } from '../lib/bot-state';
 import hooks from '../config/home-hooks';
 import config from '../config/home-ips';
@@ -26,7 +26,8 @@ import { ModuleMeta } from './meta';
 import { Auth } from './auth';
 import * as ping from 'ping';
 import chalk from 'chalk';
-import { ExplainHook } from './explain';
+import { ExternalClass } from '../lib/external';
+import { createAPIHandler } from '../lib/api';
 
 const AWAY_PING_INTERVAL = 5;
 const HOME_PING_INTERVAL = 60;
@@ -63,10 +64,6 @@ export namespace HomeDetector {
 			Routing.init({ ...config, detector, apiHandler });
 		}
 
-		async notifyModules(modules: AllModules) {
-			Hooks.setModules(modules);
-		}
-
 		get external() {
 			return External;
 		}
@@ -74,19 +71,9 @@ export namespace HomeDetector {
 		get bot() {
 			return Bot;
 		}
-
-		addExplainHook(hook: ExplainHook) {
-			Classes.initExplainHook(hook);
-		}
 	})();
 
 	export namespace Classes {
-		let explainHook: ExplainHook | null = null;
-
-		export function initExplainHook(hook: ExplainHook) {
-			explainHook = hook;
-		}
-
 		function wait(time: number) {
 			return new Promise(resolve => {
 				setTimeout(resolve, time);
@@ -109,9 +96,9 @@ export namespace HomeDetector {
 				this._init();
 			}
 
-			private _change(newState: HOME_STATE) {
-				if (explainHook) {
-					explainHook(
+			private async _change(newState: HOME_STATE) {
+				if (await meta.explainHook) {
+					(await meta.explainHook)(
 						`${this._config.name} state changed to ${newState}`,
 						'time',
 						null
@@ -217,7 +204,7 @@ export namespace HomeDetector {
 							finalState !== this._state &&
 							this._state !== null
 						) {
-							this._change(finalState);
+							await this._change(finalState);
 						}
 						if (finalState === HOME_STATE.AWAY) {
 							this.leftAt = new Date();
@@ -373,7 +360,7 @@ export namespace HomeDetector {
 								{
 									auth: Auth.Secret.getKey()
 								},
-								true
+								'BOT.WHOSHOME'
 							);
 							resDummy.transferTo(logObj);
 
@@ -418,7 +405,8 @@ export namespace HomeDetector {
 								{
 									auth: Auth.Secret.getKey(),
 									name: match[1]
-								}
+								},
+								'BOT.IS_HOME'
 							);
 							resDummy.transferTo(logObj);
 
@@ -616,10 +604,16 @@ export namespace HomeDetector {
 				}: {
 					name: string;
 					auth: string;
-				}
+				},
+				source: string
 			) {
 				const result = this._detector.get(name);
-				attachMessage(res, `Name: ${name}, val: ${result}`);
+				attachSourcedMessage(
+					res,
+					source,
+					await meta.explainHook,
+					`Name: ${name}, val: ${result}`
+				);
 				res.write(result);
 				res.end();
 				return result;
@@ -632,11 +626,16 @@ export namespace HomeDetector {
 				_params: {
 					auth: string;
 				},
-				extended: boolean = false
+				source: string
 			) {
-				const all = this._detector.getAll(extended);
+				const all = this._detector.getAll(true);
 				const result = JSON.stringify(all);
-				attachMessage(res, `JSON: ${result}`);
+				attachSourcedMessage(
+					res,
+					source,
+					await meta.explainHook,
+					`JSON: ${result}`
+				);
 				res.write(result);
 				res.end();
 				return all;
@@ -696,95 +695,31 @@ export namespace HomeDetector {
 	}
 
 	export namespace External {
-		type ExternalRequest =
-			| {
-					action: 'triggerHook';
-					newState: HOME_STATE;
-					name: string;
-			  }
-			| {
-					action: 'isHome';
-					name: string;
-					resolve: (isHome: HOME_STATE | '?') => void;
-			  };
+		export class Handler extends ExternalClass {
+			requiresInit = true;
 
-		export class Handler {
 			private static _detector: Classes.Detector;
 
-			constructor(private _logObj: any) {}
-
-			private async _handleRequest(request: ExternalRequest) {
-				const resDummy = new ResDummy();
-
-				switch (request.action) {
-					case 'triggerHook':
-						await Hooks.handle(
-							request.newState,
-							request.name,
-							resDummy
-						);
-						break;
-					case 'isHome':
-						request.resolve(Handler._detector.get(request.name));
-						break;
-				}
-				resDummy.transferTo(this._logObj);
-				return;
-			}
-
 			public triggerHook(newState: HOME_STATE, name: string) {
-				const req: ExternalRequest = {
-					action: 'triggerHook',
-					name,
-					newState
-				};
-				this._handleRequest(req);
-			}
-
-			public getState(name: string): Promise<HOME_STATE | '?'> {
-				return new Promise(resolve => {
-					const req: ExternalRequest = {
-						action: 'isHome',
-						name,
-						resolve
-					};
-					this._handleRequest(req);
+				return this.runRequest((_res, _source, logObj) => {
+					return Hooks.handle(newState, name, logObj);
 				});
 			}
 
-			static init({ detector }: { detector: Classes.Detector }) {
+			public getState(name: string): Promise<HOME_STATE | '?'> {
+				return this.runRequest(() => {
+					return Handler._detector.get(name);
+				});
+			}
+
+			static async init({ detector }: { detector: Classes.Detector }) {
 				this._detector = detector;
+				super.init();
 			}
 		}
 	}
 
 	export namespace Hooks {
-		let allModules: AllModules | null = null;
-		export function setModules(modules: AllModules) {
-			allModules = modules;
-		}
-
-		async function createHookables(
-			hookName: string,
-			logObj: any
-		): Promise<ModuleHookables> {
-			await awaitCondition(() => {
-				return allModules !== null;
-			}, 100);
-
-			return (arrToObj(
-				Object.keys(allModules!).map((name: keyof AllModules) => {
-					return [
-						name,
-						new allModules![name].meta.external.Handler(
-							logObj,
-							`HOMEHOOK.${hookName}`
-						)
-					];
-				})
-			) as unknown) as ModuleHookables;
-		}
-
 		export async function handle(
 			newState: HOME_STATE,
 			name: string,
@@ -809,6 +744,8 @@ export namespace HomeDetector {
 				const fn = changeHooks[name];
 				await fn(
 					await createHookables(
+						await meta.modules,
+						'HOMEHOOK',
 						name,
 						attachMessage(
 							logObj,
@@ -860,27 +797,14 @@ export namespace HomeDetector {
 		}) {
 			const webpageHandler = new Webpage.Handler({ randomNum, detector });
 
-			app.post('/home-detector/all', async (req, res) => {
-				await apiHandler.getAll(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
-			});
-			app.post('/home-detector/all/e', async (req, res) => {
-				await apiHandler.getAll(
-					res,
-					{ ...req.params, ...req.body, cookies: req.cookies },
-					true
-				);
-			});
-			app.post('/home-detector/:name', async (req, res) => {
-				await apiHandler.get(res, {
-					...req.params,
-					...req.body,
-					cookies: req.cookies
-				});
-			});
+			app.post(
+				'/home-detector/all',
+				createAPIHandler(HomeDetector, apiHandler.getAll)
+			);
+			app.post(
+				'/home-detector/:name',
+				createAPIHandler(HomeDetector, apiHandler.get)
+			);
 
 			app.all(
 				['/home-detector', '/whoishome', '/whoshome'],

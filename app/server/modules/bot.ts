@@ -1,7 +1,7 @@
 import { attachMessage, logOutgoingReq, logFirst } from '../lib/logger';
 import { ModuleConfig, AllModules, InstanceOf } from './modules';
 import { TELEGRAM_IPS, TELEGRAM_API } from '../lib/constants';
-import { awaitCondition } from '../lib/util';
+import { ExternalClass } from '../lib/external';
 import { BotState } from '../lib/bot-state';
 import { ResponseLike } from './multi';
 import { Database } from '../lib/db';
@@ -21,7 +21,6 @@ export const enum RESPONSE_TYPE {
 }
 
 export namespace Bot {
-	let _modules!: AllModules;
 	export const meta = new (class Meta extends ModuleMeta {
 		name = 'bot';
 
@@ -30,18 +29,13 @@ export namespace Bot {
 			await External.Handler.init();
 		}
 
-		async notifyModules(modules: AllModules) {
-			_modules = modules;
-		}
-
 		get external() {
 			return External;
 		}
 	})();
 
 	async function getAllModules() {
-		await awaitCondition(() => !!_modules, 100);
-		return _modules;
+		return meta.modules;
 	}
 
 	export interface TelegramText {
@@ -738,62 +732,16 @@ export namespace Bot {
 	}
 
 	export namespace External {
-		type ExternalRequest = {
-			type: 'sendMessage';
-			text: string;
-			msgType: RESPONSE_TYPE;
-			chatID?: number;
-		} & {
-			logObj: any;
-			resolver: (result: boolean) => void;
-			source: string;
-		};
-
-		export class Handler {
-			private static _requests: ExternalRequest[] = [];
-
-			private static _ready: boolean = false;
-			static async init() {
-				this._ready = true;
-				for (const req of this._requests) {
-					await this._handleRequest(req);
-				}
-			}
-
-			constructor(private _logObj: any, private _source: string) {}
-
-			private static async _handleRequest(request: ExternalRequest) {
-				const { resolver } = request;
-				if (request.type === 'sendMessage') {
-					const result = await Routing.handler!.sendMessage(
-						request.text,
-						request.msgType,
-						request.chatID
-					);
-					resolver(result);
-				}
-			}
+		export class Handler extends ExternalClass {
+			requiresInit = true;
 
 			async sendMessage(
 				text: string,
 				type: RESPONSE_TYPE,
 				chatID?: number
 			): Promise<boolean> {
-				return new Promise<boolean>(resolve => {
-					const req: ExternalRequest = {
-						type: 'sendMessage',
-						text,
-						msgType: type,
-						chatID,
-						logObj: this._logObj,
-						resolver: resolve,
-						source: this._source
-					};
-					if (Handler._ready) {
-						Handler._handleRequest(req);
-					} else {
-						Handler._requests.push(req);
-					}
+				return this.runRequest(() => {
+					return Routing.handler!.sendMessage(text, type, chatID);
 				});
 			}
 		}
