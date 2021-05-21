@@ -3,6 +3,7 @@ import * as path from 'path';
 import { getEnv, getNumberEnv } from './io';
 
 const ROOT = path.join(__dirname, '../../../');
+export const CLIENT_FOLDER = path.join(ROOT, 'app/client')
 export const DB_FOLDER = path.join(ROOT, 'database');
 const STATIC_FOLDER = path.join(ROOT, 'static');
 export const MARKED_AUDIO_FOLDER = path.join(STATIC_FOLDER, 'marked_audio');
