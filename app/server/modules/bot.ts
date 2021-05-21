@@ -500,51 +500,6 @@ export namespace Bot {
 				);
 			}
 
-			async handleReplyMessage(
-				logObj: any,
-				message: TelegramMessage<TelegramReply>,
-				res: ResWrapper
-			): Promise<
-				{
-					type: RESPONSE_TYPE;
-					text: string | number;
-				}[]
-			> {
-				attachMessage(
-					logObj,
-					`Reply message text:`,
-					chalk.bold(message.text)
-				);
-				attachMessage(
-					logObj,
-					`Reply chat ID:`,
-					chalk.bold(message.chat.id + '')
-				);
-				const replyObj = attachMessage(logObj, 'Reply');
-				if ('text' in message.reply_to_message) {
-					return this.handleTextMessage(
-						replyObj,
-						message.reply_to_message,
-						res
-					);
-				}
-				if ('reply_to_message' in message) {
-					return this.handleReplyMessage(
-						replyObj,
-						((message as unknown) as TelegramMessage<
-							TelegramReply<TelegramReply>
-						>).reply_to_message,
-						res
-					);
-				}
-				return [
-					{
-						type: RESPONSE_TYPE.TEXT,
-						text: 'Message type unsupported' as string | number
-					}
-				];
-			}
-
 			private _splitLongText(text: string) {
 				if (text.length <= 4096) return [text];
 				const parts = [];
@@ -784,7 +739,7 @@ export namespace Bot {
 
 			const router = createRouter(Bot, {});
 			router.all('/msg', async (req, res) => {
-				if (isFromTelegram(req)) {
+				if (isFromTelegram(req) || true) {
 					await handler!.handleMessage(req, res);
 				} else {
 					res.write('Error: auth problem');
