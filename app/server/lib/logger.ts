@@ -430,6 +430,8 @@ export class ResDummy implements ResponseLike {
 	status() {
 		return this;
 	}
+	sendFile() {}
+	redirect() {}
 	write() {}
 	end() {}
 	contentType() {}

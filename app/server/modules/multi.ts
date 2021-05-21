@@ -15,6 +15,7 @@ interface MultiRequestRequest {
 
 export interface ResponseLike {
 	status(code: number): this;
+	redirect(url: string, status?: number): void;
 	write(str: string): void;
 	sendFile(path: string): void;
 	end(): void;
@@ -31,6 +32,7 @@ export class SubDummy implements ResponseLike {
 	private _start: number = Date.now();
 	private _duration: string | number = '?';
 	private _sent: boolean = false;
+	private _redirectURL: string = '';
 
 	constructor(private _config: MultiRequestRequest) {}
 
@@ -47,6 +49,7 @@ export class SubDummy implements ResponseLike {
 		fs.readFile(filePath, 'utf8').then(content => {
 			this._written = content;
 		});
+		this.end();
 	}
 
 	end() {
@@ -62,6 +65,14 @@ export class SubDummy implements ResponseLike {
 		this._cookies.push([name, value]);
 	}
 
+	redirect(url: string, status?: number) {
+		if (status) {
+			this.status(status);
+		}
+		this._redirectURL = url;
+		this.end();
+	}
+
 	get data() {
 		return {
 			status: this._status,
@@ -70,7 +81,8 @@ export class SubDummy implements ResponseLike {
 			written: this._written,
 			start: this._start,
 			duration: this._duration,
-			config: this._config
+			config: this._config,
+			redirectURL: this._redirectURL
 		};
 	}
 
