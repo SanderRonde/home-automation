@@ -11,8 +11,7 @@ import {
 	ProgressLogger,
 	startInit,
 	endInit,
-	log,
-	getTime
+	logTag
 } from './lib/logger';
 import {
 	initRoutes,
@@ -29,7 +28,6 @@ import { Database } from './lib/db';
 import * as express from 'express';
 import * as path from 'path';
 import * as http from 'http';
-import chalk from 'chalk';
 
 interface PartialConfig {
 	ports?: {
@@ -157,9 +155,9 @@ class WebServer {
 			this._initLogger.done();
 			endInit();
 
-			log(
-				getTime(),
-				chalk.magenta('[HTTP server]'),
+			logTag(
+				'HTTP server',
+				'magenta',
 				`listening on port ${this._config.ports.http}`
 			);
 		});
