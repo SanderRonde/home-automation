@@ -9,10 +9,9 @@ import {
 import {
 	attachMessage,
 	logFixture,
-	getTime,
-	log,
 	ResDummy,
-	attachSourcedMessage
+	attachSourcedMessage,
+	logTag
 } from '../lib/logger';
 import { ModuleHookables, ModuleConfig } from './modules';
 import { BotState } from '../lib/bot-state';
@@ -769,14 +768,12 @@ export namespace HomeDetector {
 
 	function initListeners() {
 		Classes.Detector.addListener(null, (newState, name) => {
-			log(
-				getTime(),
-				chalk.cyan(
-					`[device:${name}]`,
-					newState === HOME_STATE.HOME
-						? chalk.bold(chalk.blue('now home'))
-						: chalk.blue('just left')
-				)
+			logTag(
+				`[device:${name}]`,
+				'cyan',
+				newState === HOME_STATE.HOME
+					? chalk.bold(chalk.blue('now home'))
+					: chalk.blue('just left')
 			);
 		});
 		Classes.Detector.addListener(null, async (newState, name) => {

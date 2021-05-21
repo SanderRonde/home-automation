@@ -28,9 +28,8 @@ import {
 } from 'magic-home';
 import {
 	attachMessage,
-	getTime,
-	log,
-	attachSourcedMessage
+	attachSourcedMessage,
+	logTag
 } from '../lib/logger';
 import * as ReadLine from '@serialport/parser-readline';
 import { ModuleConfig } from './modules';
@@ -907,18 +906,17 @@ export namespace RGB {
 			}
 
 			if (!logObj) {
-				log(
-					getTime(),
-					chalk.cyan(`[rgb]`),
+				logTag(
+					'rgb',
+					'cyan',
 					'Found',
 					chalk.bold(clients + ''),
 					'clients'
 				);
 			} else {
-				attachMessage(
-					logObj,
-					getTime(),
-					chalk.cyan(`[rgb]`),
+				logTag(
+					'rgb',
+					'cyan',
 					'Found',
 					chalk.bold(clients + ''),
 					'clients'
@@ -2790,10 +2788,7 @@ export namespace RGB {
 						}
 					);
 					mm('/reconnect', /reconnect( to arduino)?/, async () => {
-						log(
-							getTime(),
-							chalk.red(`[self]`, 'Reconnecting to arduino')
-						);
+						logTag('self', 'red', 'Reconnecting to arduino');
 						const amount = await Scan.scanArduinos();
 						return `Found ${amount} arduino clients`;
 					});
@@ -2802,10 +2797,7 @@ export namespace RGB {
 						/restart( yourself)?/,
 						/reboot( yourself)?/,
 						async () => {
-							log(
-								getTime(),
-								chalk.red(`[self]`, 'Restarting self')
-							);
+							logTag('self', 'red', 'Restarting self');
 							setTimeout(() => {
 								restartSelf();
 							}, 50);
@@ -2935,9 +2927,11 @@ export namespace RGB {
 				let err: boolean = false;
 				port.on('error', e => {
 					console.log('immediately got an error', e);
-					log(
-						getTime(),
-						chalk.red('Failed to connect to LED arduino', e)
+					logTag(
+						'arduino',
+						'red',
+						'Failed to connect to LED arduino',
+						e
 					);
 					resolve(null);
 					err = true;
@@ -2961,9 +2955,9 @@ export namespace RGB {
 				let onData = async (line: string) => {
 					const LED_NUM = parseInt(line, 10);
 
-					log(
-						getTime(),
-						chalk.gray(`[${LED_DEVICE_NAME}]`),
+					logTag(
+						LED_DEVICE_NAME,
+						'gray',
 						`Connected, ${LED_NUM} leds detected`
 					);
 
@@ -2971,9 +2965,10 @@ export namespace RGB {
 					resolve({
 						port,
 						updateListener: (listener: (line: string) => any) => {
-							log(
-								getTime(),
-								chalk.cyan(`[${LED_DEVICE_NAME}] <-`),
+							logTag(
+								LED_DEVICE_NAME,
+								'gray',
+								'<-',
 								`# ${line.toString()}`
 							);
 							onData = listener;
@@ -3012,9 +3007,10 @@ export namespace RGB {
 			) {
 				Clients.arduinoBoards.push(this);
 				this._port.addListener('data', chunk => {
-					log(
-						getTime(),
-						chalk.cyan(`[${this.name}] ->`),
+					logTag(
+						LED_DEVICE_NAME,
+						'gray',
+						'->',
 						`${chunk.toString()}`
 					);
 				});
@@ -3055,9 +3051,10 @@ export namespace RGB {
 								effect
 							).toBytes();
 							this._port.write(bytes);
-							log(
-								getTime(),
-								chalk.cyan(`[${this.name}] <-`),
+							logTag(
+								this.name,
+								'cyan',
+								'<-',
 								`${bytes}`
 							);
 							resolve(bytes);

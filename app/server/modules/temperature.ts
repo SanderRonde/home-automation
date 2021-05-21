@@ -1,9 +1,8 @@
 import { errorHandle, requireParams, authAll, auth } from '../lib/decorators';
 import {
 	attachMessage,
-	log,
-	getTime,
-	attachSourcedMessage
+	attachSourcedMessage,
+	logTag
 } from '../lib/logger';
 import { AllModules, ModuleConfig } from './modules';
 import { BotState } from '../lib/bot-state';
@@ -152,12 +151,10 @@ export namespace Temperature {
 				Math.round(this.lastLoggedTemp) != Math.round(temp) &&
 				Date.now() - this.lastLogTime > LOG_INTERVAL_SECS * 1000
 			) {
-				log(
-					getTime(),
-					chalk.cyan(
-						'[temp]',
-						chalk.bold(`Current ${this.name} temperature: ${temp}°`)
-					)
+				logTag(
+					'temp',
+					'cyan',
+					chalk.bold(`Current ${this.name} temperature: ${temp}°`)
 				);
 				this.lastLogTime = Date.now();
 			}

@@ -6,7 +6,7 @@ import {
 	upgradeToHTTPS
 } from '../lib/decorators';
 import { remoteControlHTML } from '../templates/remote-control-template';
-import { attachMessage, log, getTime } from '../lib/logger';
+import { attachMessage, logTag } from '../lib/logger';
 import telnet_client, * as TelnetClient from 'telnet-client';
 import { BotState } from '../lib/bot-state';
 import { ResponseLike } from './multi';
@@ -543,9 +543,9 @@ export namespace RemoteControl {
 								username: '',
 								initialLFCR: true
 							});
-							log(
-								getTime(),
-								chalk.cyan(`[telnet]`),
+							logTag(
+								'telnet',
+								'cyan',
 								chalk.bold(`Connected to host ${host}`)
 							);
 							connections.set(host, {

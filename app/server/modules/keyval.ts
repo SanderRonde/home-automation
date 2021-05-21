@@ -9,9 +9,8 @@ import {
 import { MAIN_LIGHTS, COMMON_SWITCH_MAPPINGS } from '../lib/constants';
 import {
 	attachMessage,
-	getTime,
-	log,
-	attachSourcedMessage
+	attachSourcedMessage,
+	logTag
 } from '../lib/logger';
 import { ModuleHookables, ModuleConfig } from './modules';
 import { awaitCondition, createHookables } from '../lib/util';
@@ -805,11 +804,7 @@ export namespace KeyVal {
 					instance.listen(
 						'button',
 						async data => {
-							log(
-								getTime(),
-								chalk.cyan(`[touch-screen]`),
-								chalk.bold(data)
-							);
+							logTag('touch-screen', 'cyan', chalk.bold(data));
 							const [key, value] = data.split(' ');
 							await db.setVal(key, value.trim());
 							await GetSetListener.update(key, value.trim(), {});

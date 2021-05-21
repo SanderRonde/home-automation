@@ -552,3 +552,31 @@ export function logTimed(...args: any[]) {
 		console.log(...[getTime(), ...args]);
 	}
 }
+
+const chalkColors = [
+	'black',
+	'red',
+	'green',
+	'yellow',
+	'blue',
+	'magenta',
+	'cyan',
+	'white',
+	'gray',
+	'grey',
+	'blackBright',
+	'redBright',
+	'greenBright',
+	'yellowBright',
+	'blueBright',
+	'magentaBright',
+	'cyanBright',
+	'whiteBright'
+] as const;
+export function logTag(
+	tag: string,
+	color: typeof chalkColors[Extract<keyof typeof chalkColors, number>],
+	...messages: any[]
+) {
+	log(getTime(), chalk[color](`[${tag}]`), ...messages);
+}

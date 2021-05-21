@@ -7,7 +7,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { SECRETS_FOLDER } from '../lib/constants';
 import { WSWrapper, WSClient } from '../lib/ws';
 import { initMiddleware } from '../lib/routes';
-import { attachMessage, log, getTime } from '../lib/logger';
+import { attachMessage, logTag } from '../lib/logger';
 import { BotState } from '../lib/bot-state';
 import { XHR, flatten } from '../lib/util';
 import { ResponseLike } from './multi';
@@ -20,7 +20,6 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import * as http from 'http';
 import { getEnv } from '../lib/io';
-import chalk from 'chalk';
 import { createAPIHandler } from '../lib/api';
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
@@ -46,7 +45,10 @@ export namespace InfoScreen {
 			export async function get(name: string, logObj?: any) {
 				return await new (
 					await meta.modules
-				).temperature.External.Handler(logObj || {}, 'INFO_SCREEN.TEMPERATURE').getTemp(name);
+				).temperature.External.Handler(
+					logObj || {},
+					'INFO_SCREEN.TEMPERATURE'
+				).getTemp(name);
 			}
 		}
 
@@ -510,17 +512,17 @@ export namespace InfoScreen {
 
 			if (config.debug) {
 				server.listen(config.ports.info, () => {
-					log(
-						getTime(),
-						chalk.magenta('[info-screen]'),
+					logTag(
+						'info-screen',
+						'magenta',
 						`server listening on port ${config.ports.info}`
 					);
 				});
 			} else {
 				server.listen(config.ports.info, '127.0.0.1', () => {
-					log(
-						getTime(),
-						chalk.magenta('[info-screen]'),
+					logTag(
+						'info-screen',
+						'magenta',
 						`server listening on port ${config.ports.info} on localhost only`
 					);
 				});

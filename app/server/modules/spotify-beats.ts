@@ -5,7 +5,7 @@ import {
 } from '../lib/constants';
 import { ModuleConfig } from './modules';
 import { SpotifyTypes } from '../types/spotify';
-import { log, getTime, logOutgoingRes } from '../lib/logger';
+import { logOutgoingRes, logTag } from '../lib/logger';
 import { BotState } from '../lib/bot-state';
 import { Bot as _Bot } from './index';
 import { Database } from '../lib/db';
@@ -212,9 +212,9 @@ export namespace SpotifyBeats {
 							case 500:
 							case 502:
 								if (!silent) {
-									log(
-										getTime(),
-										chalk.cyan('[spotify]'),
+									logTag(
+										'spotify',
+										'cyan',
 										chalk.red(
 											`Spotify API request failed on URL ${url}`
 										),
@@ -246,9 +246,9 @@ export namespace SpotifyBeats {
 								);
 						}
 						if (!silent) {
-							log(
-								getTime(),
-								chalk.cyan('[spotify]'),
+							logTag(
+								'spotify',
+								'cyan',
 								chalk.red(
 									`Unknown status code ${response.status} on URL ${url}`
 								),
@@ -257,9 +257,9 @@ export namespace SpotifyBeats {
 						}
 						return null;
 					} catch (e) {
-						log(
-							getTime(),
-							chalk.cyan('[spotify]'),
+						logTag(
+							'spotify',
+							'cyan',
 							chalk.red(`Error in making request on URL ${url}`),
 							e
 						);
@@ -404,9 +404,9 @@ export namespace SpotifyBeats {
 						db
 					}));
 				} catch (e) {
-					log(
-						getTime(),
-						chalk.cyan('[spotify]'),
+					logTag(
+						'spotify',
+						'cyan',
 						chalk.red('Failed to set up spotify API'),
 						e
 					);
@@ -618,9 +618,13 @@ export namespace SpotifyBeats {
 
 			// Test it
 			if (await api.testAuth()) {
-				log(getTime(), chalk.cyan('[spotify]'), 'Authenticated');
+				logTag(
+					'spotify',
+					'cyan', 'Authenticated');
 			} else {
-				log(getTime(), chalk.cyan('[spotify]'), 'Not Authenticated');
+				logTag(
+					'spotify',
+					'cyan', 'Not Authenticated');
 			}
 		}
 	}
