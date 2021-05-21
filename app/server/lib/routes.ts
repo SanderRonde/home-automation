@@ -25,7 +25,7 @@ export class AppWrapper {
 			regexp: RegExp;
 			keys: pathToRegexp.Key[];
 		};
-		handler: Handler;
+		handlers: Handler[];
 		method: string;
 	}[] = [];
 
@@ -40,43 +40,43 @@ export class AppWrapper {
 		return [value];
 	}
 
-	get(route: string | string[], handler: Handler) {
+	get(route: string | string[], ...handlers: Handler[]) {
 		const routes = AppWrapper._makeArr(route);
 		routes.forEach(route => {
 			this._routes.push({
 				route,
-				handler,
+				handlers,
 				method: 'get',
 				matching: this._genRegexp(route)
 			});
 		});
-		this.app.get(route, handler);
+		this.app.get(route, ...handlers);
 	}
 
-	post(route: string | string[], handler: Handler) {
+	post(route: string | string[], ...handlers: Handler[]) {
 		const routes = AppWrapper._makeArr(route);
 		routes.forEach(route => {
 			this._routes.push({
 				route,
-				handler,
+				handlers,
 				method: 'post',
 				matching: this._genRegexp(route)
 			});
 		});
-		this.app.post(route, handler);
+		this.app.post(route, ...handlers);
 	}
 
-	all(route: string | string[], handler: Handler) {
+	all(route: string | string[], ...handlers: Handler[]) {
 		const routes = AppWrapper._makeArr(route);
 		routes.forEach(route => {
 			this._routes.push({
 				route,
-				handler,
+				handlers,
 				method: 'all',
 				matching: this._genRegexp(route)
 			});
 		});
-		this.app.all(route, handler);
+		this.app.all(route, ...handlers);
 	}
 
 	private _decodeParam(val: any) {
@@ -143,7 +143,7 @@ export class AppWrapper {
 		}
 	) {
 		for (const {
-			handler,
+			handlers,
 			method: routeMethod,
 			route: expected,
 			matching
@@ -153,7 +153,9 @@ export class AppWrapper {
 			if (!urlParams) continue;
 
 			req.body = { ...bodyParams, ...urlParams };
-			await handler(req, res, () => {});
+			for (const handler of handlers) {
+				await handler(req, res, () => {});
+			}
 			return;
 		}
 	}
