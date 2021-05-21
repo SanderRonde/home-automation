@@ -19,20 +19,27 @@ class DBFileManager {
 			});
 			return this.date;
 		}
-		return JSON.parse(
-			(await fs.readFile(filePath, {
-				encoding: 'utf8'
-			})) || '{}'
-		);
+		try {
+			const parsed = JSON.parse(
+				(await fs.readFile(filePath, {
+					encoding: 'utf8'
+				})) || '{}'
+			);
+			return parsed;
+		} catch (e) {
+			throw new Error(`Failed to parse JSON in file "${filePath}"`);
+		}
 	}
 
-	public static async write(
+	public static write(
 		fileName: string,
 		data: {
 			[key: string]: any;
 		}
 	) {
-		await fs.writeFile(
+		// Synchronously write file to prevent issues with
+		// closing during writing
+		fs.writeFileSync(
 			path.join(DB_FOLDER, fileName),
 			JSON.stringify(
 				{
@@ -69,7 +76,7 @@ export class Database {
 		}
 	}
 
-	async setVal(key: string, val: any, noWrite: boolean = false) {
+	private _getLastTarget(key: string) {
 		this._assertInitialized();
 
 		const parts = key.split('.');
@@ -86,7 +93,21 @@ export class Database {
 			current = current[part];
 		}
 		if (typeof current !== 'object') return;
-		const currentTarget = current[parts[parts.length - 1]];
+		const lastKey = parts[parts.length - 1];
+		const currentTarget = current[lastKey];
+
+		return {
+			currentContainer: current,
+			lastKey,
+			currentTarget
+		};
+	}
+
+	setVal(key: string, val: any, noWrite: boolean = false) {
+		const lastTarget = this._getLastTarget(key);
+		if (!lastTarget) return;
+		const { currentTarget, currentContainer, lastKey } = lastTarget;
+
 		if (
 			(currentTarget &&
 				typeof currentTarget === 'object' &&
@@ -94,16 +115,60 @@ export class Database {
 			typeof val === 'number'
 		) {
 			// Set every child of this object to that value
-			const final = current[parts[parts.length - 1]];
+			const final = currentContainer[lastKey];
 			for (const child in final) {
-				await this.setVal(`${key}.${child}`, val, true);
+				this.setVal(`${key}.${child}`, val, true);
 			}
 		} else {
-			current[parts[parts.length - 1]] = val;
+			currentContainer[lastKey] = val;
 		}
 
 		if (!noWrite) {
-			await DBFileManager.write(this._fileName, this._data);
+			DBFileManager.write(this._fileName, this._data);
+		}
+	}
+
+	pushVal(key: string, val: any, noWrite: boolean = false) {
+		const lastTarget = this._getLastTarget(key);
+		if (!lastTarget) return;
+		const { currentTarget, currentContainer, lastKey } = lastTarget;
+
+		if (
+			typeof currentTarget !== 'object' ||
+			!Array.isArray(currentTarget)
+		) {
+			currentContainer[lastKey] = [val];
+		} else {
+			currentTarget.push(val);
+		}
+
+		if (!noWrite) {
+			DBFileManager.write(this._fileName, this._data);
+		}
+	}
+
+	deleteArrayVal<V>(
+		key: string,
+		filter: (value: V) => boolean,
+		noWrite: boolean = false
+	) {
+		const lastTarget = this._getLastTarget(key);
+		if (!lastTarget) return;
+		const { currentTarget, currentContainer, lastKey } = lastTarget;
+
+		if (
+			typeof currentTarget !== 'object' ||
+			!Array.isArray(currentTarget)
+		) {
+			return;
+		} else {
+			currentContainer[lastKey] = currentTarget.filter(
+				entry => !filter(entry)
+			);
+		}
+
+		if (!noWrite) {
+			DBFileManager.write(this._fileName, this._data);
 		}
 	}
 

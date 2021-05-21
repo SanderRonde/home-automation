@@ -5,11 +5,7 @@ import {
 	MAX_PRESSURE_TIME,
 	PRESSURE_SAMPLE_TIME
 } from '../lib/constants';
-import {
-	ModuleConfig,
-	ModuleHookables,
-	AllModules,
-} from './modules';
+import { ModuleConfig, ModuleHookables, AllModules } from './modules';
 import { errorHandle, requireParams, auth } from '../lib/decorators';
 import pressureConfig from '../config/pressures';
 import { attachMessage, disableMessages } from '../lib/logger';
@@ -19,7 +15,7 @@ import { Database } from '../lib/db';
 import { Bot as _Bot } from './index';
 import { ModuleMeta } from './meta';
 import { createExternalClass } from '../lib/external';
-import { createHookables } from '../lib/util';
+import { createHookables, SettablePromise } from '../lib/util';
 
 export const enum PRESSURE_CHANGE_DIRECTION {
 	UP,
@@ -91,8 +87,6 @@ export namespace Pressure {
 		}
 
 		async notifyModules(modules: AllModules) {
-			Register.setModules(modules);
-
 			modules.keyval.GetSetListener.addListener(
 				'state.pressure',
 				async (value, logObj) => {
@@ -118,24 +112,15 @@ export namespace Pressure {
 
 	namespace Register {
 		let enabled: boolean | null = null;
-		let db: Database;
-		let resolveDbPromise: () => void;
-		let dbSet: Promise<void> = new Promise(resolve => {
-			resolveDbPromise = resolve;
-		});
-		let allModules: AllModules | null = null;
+		const db = new SettablePromise<Database>();
 
 		export async function enable() {
 			enabled = true;
-			await dbSet;
-			await db.setVal('enabled', enabled);
-			if (allModules) {
-				new allModules.keyval.External.Handler({}, 'PRESSURE.ON').set(
-					'state.pressure',
-					'1',
-					false
-				);
-			}
+			(await db.value).setVal('enabled', enabled);
+			new (await meta.modules).keyval.External.Handler(
+				{},
+				'PRESSURE.ON'
+			).set('state.pressure', '1', false);
 		}
 
 		export function isEnabled() {
@@ -144,25 +129,16 @@ export namespace Pressure {
 
 		export async function disable() {
 			enabled = false;
-			await dbSet;
-			await db.setVal('enabled', enabled);
-			if (allModules) {
-				new allModules.keyval.External.Handler({}, 'PRESSURE.OFF').set(
-					'state.pressure',
-					'0',
-					false
-				);
-			}
+			(await db.value).setVal('enabled', enabled);
+			new (await meta.modules).keyval.External.Handler(
+				{},
+				'PRESSURE.OFF'
+			).set('state.pressure', '0', false);
 		}
 
 		export function init(_db: Database) {
-			db = _db;
+			db.set(_db);
 			enabled = _db.get('enabled', true);
-			resolveDbPromise();
-		}
-
-		export function setModules(modules: AllModules) {
-			allModules = modules;
 		}
 
 		async function handleChange(key: string, logObj: any) {

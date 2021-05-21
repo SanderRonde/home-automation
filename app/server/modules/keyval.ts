@@ -7,11 +7,7 @@ import {
 	upgradeToHTTPS
 } from '../lib/decorators';
 import { MAIN_LIGHTS, COMMON_SWITCH_MAPPINGS } from '../lib/constants';
-import {
-	attachMessage,
-	attachSourcedMessage,
-	logTag
-} from '../lib/logger';
+import { attachMessage, attachSourcedMessage, logTag } from '../lib/logger';
 import { ModuleHookables, ModuleConfig } from './modules';
 import { awaitCondition, createHookables } from '../lib/util';
 import aggregates from '../config/aggregates';
@@ -687,8 +683,8 @@ export namespace KeyVal {
 		async function registerAggregates(db: Database) {
 			for (const key in aggregates) {
 				const fullName = `aggregates.${key}`;
-				if ((await db.get(fullName)) === undefined) {
-					await db.setVal(fullName, '0');
+				if (db.get(fullName) === undefined) {
+					db.setVal(fullName, '0');
 				}
 			}
 		}
@@ -806,7 +802,7 @@ export namespace KeyVal {
 						async data => {
 							logTag('touch-screen', 'cyan', chalk.bold(data));
 							const [key, value] = data.split(' ');
-							await db.setVal(key, value.trim());
+							db.setVal(key, value.trim());
 							await GetSetListener.update(key, value.trim(), {});
 						},
 						instance.ip
