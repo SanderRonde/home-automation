@@ -8,6 +8,7 @@ import { Explain } from './explain';
 import { Webhook } from './webhook';
 import { Script } from './script';
 import { KeyVal } from './keyval';
+import { OAuth } from './oauth';
 import { Multi } from './multi';
 import { Auth } from './auth';
 import { Cast } from './cast';
@@ -19,7 +20,6 @@ import { InfoScreen } from './info-screen';
 import { AppWrapper } from '../lib/routes';
 import { Database } from '../lib/db';
 import { Config } from '../app';
-import { arrToObj } from '../lib/util';
 
 export { RemoteControl } from './remote-control';
 export { SpotifyBeats } from './spotify-beats';
@@ -32,6 +32,7 @@ export { Webhook } from './webhook';
 export { Script } from './script';
 export { KeyVal } from './keyval';
 export { Multi } from './multi';
+export { OAuth } from './oauth';
 export { Auth } from './auth';
 export { Cast } from './cast';
 export { Bot } from './bot';
@@ -69,6 +70,7 @@ const moduleObj = {
 	cast: Cast,
 	auth: Auth,
 	multi: Multi,
+	oauth: OAuth,
 	script: Script,
 	keyval: KeyVal,
 	webhook: Webhook,
