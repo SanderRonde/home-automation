@@ -16,6 +16,7 @@ import { wait } from '../lib/util';
 import fetch from 'node-fetch';
 import chalk from 'chalk';
 import { createExternalClass } from '../lib/external';
+import { createRouter } from '../lib/api';
 
 export interface BeatChanges {
 	playState?: boolean;
@@ -618,13 +619,9 @@ export namespace SpotifyBeats {
 
 			// Test it
 			if (await api.testAuth()) {
-				logTag(
-					'spotify',
-					'cyan', 'Authenticated');
+				logTag('spotify', 'cyan', 'Authenticated');
 			} else {
-				logTag(
-					'spotify',
-					'cyan', 'Not Authenticated');
+				logTag('spotify', 'cyan', 'Not Authenticated');
 			}
 		}
 	}
@@ -743,7 +740,8 @@ export namespace SpotifyBeats {
 
 	export namespace Routing {
 		export async function init({ app }: ModuleConfig) {
-			app.get('/spotify/redirect', async (req, res) => {
+			const router = createRouter(SpotifyBeats, {});
+			router.post('/redirect', async (req, res) => {
 				const getParams = req.query;
 				const code = getParams['code'];
 				if (code) {
@@ -754,6 +752,7 @@ export namespace SpotifyBeats {
 				res.status(200);
 				res.end();
 			});
+			router.use(app, '/spotify');
 		}
 	}
 }

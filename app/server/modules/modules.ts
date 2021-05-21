@@ -5,6 +5,7 @@ import { Temperature } from './temperature';
 import { Pressure } from './pressure';
 import { Movement } from './movement';
 import { Explain } from './explain';
+import { Actions } from './actions';
 import { Webhook } from './webhook';
 import { Script } from './script';
 import { KeyVal } from './keyval';
@@ -27,6 +28,7 @@ export { Temperature } from './temperature';
 export { Pressure } from './pressure';
 export { Movement } from './movement';
 export { Explain } from './explain';
+export { Actions } from './actions';
 export { Webhook } from './webhook';
 export { Script } from './script';
 export { KeyVal } from './keyval';
@@ -70,6 +72,7 @@ const moduleObj = {
 	oauth: OAuth,
 	script: Script,
 	keyval: KeyVal,
+	actions: Actions,
 	webhook: Webhook,
 	explain: Explain,
 	pressure: Pressure,

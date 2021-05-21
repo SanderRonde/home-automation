@@ -17,7 +17,7 @@ import { getEnv } from '../lib/io';
 import { Auth } from './auth';
 import chalk from 'chalk';
 import { createExternalClass } from '../lib/external';
-import { createAPIHandler } from '../lib/api';
+import { createRouter } from '../lib/api';
 
 export namespace RemoteControl {
 	export const meta = new (class Meta extends ModuleMeta {
@@ -668,36 +668,15 @@ export namespace RemoteControl {
 		}: ModuleConfig) {
 			const webpageHandler = new Webpage.Handler(randomNum);
 
-			app.post(
-				'/remote-control/play',
-				createAPIHandler(RemoteControl, API.Handler.play)
-			);
-			app.post(
-				'/remote-control/pause',
-				createAPIHandler(RemoteControl, API.Handler.pause)
-			);
-			app.post(
-				'/remote-control/playpause',
-				createAPIHandler(RemoteControl, API.Handler.playpause)
-			);
-			app.post(
-				'/remote-control/close',
-				createAPIHandler(RemoteControl, API.Handler.close)
-			);
-
-			app.post(
-				'/remote-control/volumeup/:amount?',
-				createAPIHandler(RemoteControl, API.Handler.volumeUp)
-			);
-			app.post(
-				'/remote-control/volumedown/:amount?',
-				createAPIHandler(RemoteControl, API.Handler.volumeDown)
-			);
-
-			app.post(
-				'/remote-control/setvolume/:amount',
-				createAPIHandler(RemoteControl, API.Handler.setVolume)
-			);
+			const router = createRouter(RemoteControl, API.Handler);
+			router.post('/play', 'play');
+			router.post('/pause', 'pause');
+			router.post('/playpause', 'playpause');
+			router.post('/close', 'close');
+			router.post('/volumeup/:amount?', 'volumeUp');
+			router.post('/volumedown/:amount?', 'volumeDown');
+			router.post('/setvolume/:amount', 'setVolume');
+			router.use(app);
 
 			websocket.all(
 				'/remote-control/listen',

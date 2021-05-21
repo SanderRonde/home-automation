@@ -15,6 +15,7 @@ import { Bot as _Bot } from './index';
 import { ModuleMeta } from './meta';
 import { createExternalClass } from '../lib/external';
 import { createHookables, SettablePromise } from '../lib/util';
+import { createRouter } from '../lib/api';
 
 export const enum PRESSURE_CHANGE_DIRECTION {
 	UP,
@@ -408,7 +409,8 @@ export namespace Pressure {
 
 	namespace Routing {
 		export function init({ app, config }: ModuleConfig) {
-			app.post('/pressure/:key/:pressure', async (req, res) => {
+			const router = createRouter(Pressure, API.Handler);
+			router.post('/:key/:pressure', async (req, res) => {
 				if (config.log.ignorePressure) {
 					disableMessages(res);
 				}
@@ -419,6 +421,7 @@ export namespace Pressure {
 					cookies: req.cookies
 				});
 			});
+			router.use(app);
 		}
 	}
 }

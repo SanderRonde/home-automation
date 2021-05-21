@@ -1,13 +1,17 @@
 import { errorHandle, requireParams, authAll } from '../lib/decorators';
 import { ModuleConfig, ModuleHookables } from './modules';
-import { attachMessage, attachSourcedMessage, ResponseLike } from '../lib/logger';
+import {
+	attachMessage,
+	attachSourcedMessage,
+	ResponseLike
+} from '../lib/logger';
 import webhooks from '../config/webhook';
 import { Bot as _Bot } from './bot';
 import { ModuleMeta } from './meta';
 import { Auth } from './auth';
 import chalk from 'chalk';
 import { createExternalClass } from '../lib/external';
-import { createAPIHandler } from '../lib/api';
+import { createRouter } from '../lib/api';
 import { createHookables } from '../lib/util';
 
 export type WebHookConfig = {
@@ -97,10 +101,9 @@ export namespace Webhook {
 
 	export namespace Routing {
 		export async function init({ app }: ModuleConfig) {
-			app.post(
-				'/webhook/:name',
-				createAPIHandler(Webhook, API.Handler.webhook)
-			);
+			const router = createRouter(Webhook, API.Handler);
+			router.post('/:name', 'webhook');
+			router.use(app);
 		}
 	}
 }

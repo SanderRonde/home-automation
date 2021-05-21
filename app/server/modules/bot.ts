@@ -1,4 +1,9 @@
-import { attachMessage, logOutgoingReq, logFirst, ResponseLike } from '../lib/logger';
+import {
+	attachMessage,
+	logOutgoingReq,
+	logFirst,
+	ResponseLike
+} from '../lib/logger';
 import { ModuleConfig, AllModules, InstanceOf } from './modules';
 import { TELEGRAM_IPS, TELEGRAM_API } from '../lib/constants';
 import { createExternalClass } from '../lib/external';
@@ -10,6 +15,7 @@ import * as express from 'express';
 import { getEnv } from '../lib/io';
 import * as https from 'https';
 import chalk from 'chalk';
+import { createRouter } from '../lib/api';
 
 const BOT_NAME = 'HuisBot';
 
@@ -776,7 +782,8 @@ export namespace Bot {
 			const secret = getEnv('SECRET_BOT', true);
 			handler = await new Message.Handler(secret, db).init();
 
-			app.post('/bot/msg', async (req, res) => {
+			const router = createRouter(Bot, {});
+			router.all('/msg', async (req, res) => {
 				if (isFromTelegram(req)) {
 					await handler!.handleMessage(req, res);
 				} else {
@@ -784,6 +791,7 @@ export namespace Bot {
 					res.end();
 				}
 			});
+			router.use(app);
 		}
 	}
 

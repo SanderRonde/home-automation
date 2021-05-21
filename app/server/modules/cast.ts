@@ -3,12 +3,15 @@ import {
 	PASTAS as _PASTAS,
 	CAST_DEVICE_NAMES
 } from '../config/casts';
-import { attachMessage, attachSourcedMessage, ResponseLike } from '../lib/logger';
+import {
+	attachMessage,
+	attachSourcedMessage,
+	ResponseLike
+} from '../lib/logger';
 import * as playlist from 'castv2-player/lib/playlist';
 import { requireParams } from '../lib/decorators';
 import { errorHandle } from '../lib/decorators';
 import { createExternalClass } from '../lib/external';
-import { createAPIHandler } from '../lib/api';
 import { BotState } from '../lib/bot-state';
 import { ModuleConfig } from './modules';
 import { auth } from '../lib/decorators';
@@ -16,6 +19,7 @@ import * as castv2 from 'castv2-player';
 import { Bot as _Bot } from './bot';
 import { ModuleMeta } from './meta';
 import { Auth } from './auth';
+import { createRouter } from '../lib/api';
 
 class DummyLog {
 	constructor(public componentName: string = 'castv2') {}
@@ -494,31 +498,15 @@ export namespace Cast {
 		export async function init({ app }: ModuleConfig) {
 			await External.Handler.init();
 
-			app.get(
-				'/cast/:auth/stop',
-				createAPIHandler(Cast, API.Handler.stop)
-			);
-			app.post('/cast/stop', createAPIHandler(Cast, API.Handler.stop));
-			app.get(
-				'/cast/:auth/cast/:url',
-				createAPIHandler(Cast, API.Handler.url)
-			);
-			app.post(
-				'/cast/cast/:url?',
-				createAPIHandler(Cast, API.Handler.url)
-			);
-			app.get(
-				'/cast/:auth/say/:text/:lang?',
-				createAPIHandler(Cast, API.Handler.say)
-			);
-			app.post(
-				'/cast/say/:text?/:lang?',
-				createAPIHandler(Cast, API.Handler.say)
-			);
-			app.post(
-				'/cast/pasta/:pasta?',
-				createAPIHandler(Cast, API.Handler.pasta)
-			);
+			const router = createRouter(Cast, API.Handler);
+			router.get('/:auth/stop', 'stop');
+			router.post('/stop', 'stop');
+			router.get('/:auth/cast/:url', 'url');
+			router.post('/cast/:url?', 'url');
+			router.get('/:auth/say/:text/:lang?', 'say');
+			router.post('/say/:text?/:lang?', 'say');
+			router.post('/pasta/:pasta?', 'pasta');
+			router.use(app);
 		}
 	}
 }

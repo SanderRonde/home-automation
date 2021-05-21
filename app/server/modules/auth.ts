@@ -3,6 +3,7 @@ import { ModuleConfig } from './modules';
 import { ModuleMeta } from './meta';
 import { getEnv } from '../lib/io';
 import chalk from 'chalk';
+import { createRouter } from '../lib/api';
 
 export namespace Auth {
 	export const meta = new (class Meta extends ModuleMeta {
@@ -127,7 +128,9 @@ export namespace Auth {
 			res.status(200).write(id);
 			res.end();
 		});
-		app.all('/auth/:key', (req, res) => {
+
+		const router = createRouter(Auth, {});
+		router.all('/key', (req, res) => {
 			if (Secret.authenticate(req.params.key)) {
 				res.cookie('key', Cookie.genCookie(), {
 					// Expires in quite a few years
@@ -139,5 +142,6 @@ export namespace Auth {
 			}
 			res.end();
 		});
+		router.use(app);
 	}
 }

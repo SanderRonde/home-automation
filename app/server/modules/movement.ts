@@ -1,16 +1,16 @@
-import {
-	ModuleConfig,
-	ModuleHookables,
-	AllModules,
-} from './modules';
+import { ModuleConfig, ModuleHookables, AllModules } from './modules';
 import { errorHandle, requireParams, auth } from '../lib/decorators';
 import movementConfig from '../config/movements';
-import { attachMessage, attachSourcedMessage, ResponseLike } from '../lib/logger';
+import {
+	attachMessage,
+	attachSourcedMessage,
+	ResponseLike
+} from '../lib/logger';
 import { Bot as _Bot } from './index';
 import { ModuleMeta } from './meta';
 import { Database } from '../lib/db';
 import { createHookables, SettablePromise } from '../lib/util';
-import { createAPIHandler } from '../lib/api';
+import { createRouter } from '../lib/api';
 
 export interface MovementHooks {
 	[key: string]: ((hookables: ModuleHookables) => any)[];
@@ -122,10 +122,9 @@ export namespace Movement {
 
 	namespace Routing {
 		export function init({ app }: ModuleConfig) {
-			app.post(
-				'/movement/:key',
-				createAPIHandler(Movement, API.Handler.reportMovement)
-			);
+			const router = createRouter(Movement, API.Handler);
+			router.post('/:key', 'reportMovement');
+			router.use(app);
 		}
 	}
 }

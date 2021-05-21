@@ -11,7 +11,8 @@ import {
 	logFixture,
 	ResDummy,
 	attachSourcedMessage,
-	logTag, ResponseLike
+	logTag,
+	ResponseLike
 } from '../lib/logger';
 import { ModuleHookables, ModuleConfig } from './modules';
 import { BotState } from '../lib/bot-state';
@@ -25,8 +26,8 @@ import { Auth } from './auth';
 import * as ping from 'ping';
 import chalk from 'chalk';
 import { createExternalClass } from '../lib/external';
-import { createAPIHandler } from '../lib/api';
 import { createHookables } from '../lib/util';
+import { createRouter } from '../lib/api';
 
 const AWAY_PING_INTERVAL = 5;
 const HOME_PING_INTERVAL = 60;
@@ -792,14 +793,10 @@ export namespace HomeDetector {
 		}) {
 			const webpageHandler = new Webpage.Handler({ randomNum, detector });
 
-			app.post(
-				'/home-detector/all',
-				createAPIHandler(HomeDetector, apiHandler.getAll)
-			);
-			app.post(
-				'/home-detector/:name',
-				createAPIHandler(HomeDetector, apiHandler.get)
-			);
+			const router = createRouter(HomeDetector, apiHandler);
+			router.post('/all', 'getAll');
+			router.post('/:name', 'get');
+			router.use(app);
 
 			app.all(
 				['/home-detector', '/whoishome', '/whoshome'],

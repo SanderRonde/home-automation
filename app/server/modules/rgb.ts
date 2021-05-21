@@ -50,7 +50,7 @@ import * as path from 'path';
 import chalk from 'chalk';
 import { getEnv } from '../lib/io';
 import { createExternalClass } from '../lib/external';
-import { createAPIHandler } from '../lib/api';
+import { createRouter } from '../lib/api';
 
 function getIntensityPercentage(percentage: number) {
 	return Math.round((percentage / 100) * 255);
@@ -3051,12 +3051,7 @@ export namespace RGB {
 								effect
 							).toBytes();
 							this._port.write(bytes);
-							logTag(
-								this.name,
-								'cyan',
-								'<-',
-								`${bytes}`
-							);
+							logTag(this.name, 'cyan', '<-', `${bytes}`);
 							resolve(bytes);
 						}
 					};
@@ -3332,27 +3327,17 @@ export namespace RGB {
 
 	export namespace Routing {
 		export async function init({ app, randomNum }: ModuleConfig) {
-			app.post('/rgb/color', createAPIHandler(RGB, API.Handler.setColor));
-			app.post(
-				'/rgb/color/:color/:instensity?',
-				createAPIHandler(RGB, API.Handler.setColor)
-			);
-			app.post(
-				'/rgb/color/:red/:green/:blue/:intensity?',
-				createAPIHandler(RGB, API.Handler.setRGB)
-			);
-			app.post(
-				'/rgb/power/:power',
-				createAPIHandler(RGB, API.Handler.setPower)
-			);
-			app.post(
-				'/rgb/effect/:effect',
-				createAPIHandler(RGB, API.Handler.runEffect)
-			);
-			app.all('/rgb/refresh', createAPIHandler(RGB, API.Handler.refresh));
-			app.all('/rgb', async (req, res) => {
+			const router = createRouter(RGB, API.Handler);
+			router.post('/color', 'setColor');
+			router.post('/color/:color/:instensity?', 'setColor');
+			router.post('/color/:red/:green/:blue/:intensity?', 'setRGB');
+			router.post('/power/:power', 'setPower');
+			router.post('/effect/:effect', 'runEffect');
+			router.all('/refresh', 'refresh');
+			router.all('', async (req, res) => {
 				await WebPage.Handler.index(res, req, randomNum);
 			});
+			router.use(app);
 		}
 	}
 

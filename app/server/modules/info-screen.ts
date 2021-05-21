@@ -472,12 +472,18 @@ export namespace InfoScreen {
 
 			app.post(
 				'/weather',
-				createAPIHandler(InfoScreen, apiHandler.getTemperature)
+				createAPIHandler(
+					InfoScreen,
+					apiHandler.getTemperature.bind(apiHandler)
+				)
 			);
 
 			app.post(
 				'/calendar',
-				createAPIHandler(InfoScreen, apiHandler.getEvents)
+				createAPIHandler(
+					InfoScreen,
+					apiHandler.getEvents.bind(apiHandler)
+				)
 			);
 
 			ws.all('/blanking', async client => {

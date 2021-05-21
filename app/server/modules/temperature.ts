@@ -13,7 +13,7 @@ import { ModuleMeta } from './meta';
 import { Auth } from './auth';
 import chalk from 'chalk';
 import { createExternalClass } from '../lib/external';
-import { createAPIHandler } from '../lib/api';
+import { createRouter } from '../lib/api';
 
 const LOG_INTERVAL_SECS = 60;
 
@@ -585,18 +585,10 @@ export namespace Temperature {
 
 	export namespace Routing {
 		export async function init({ app }: ModuleConfig) {
-			app.post(
-				'/temperature/target/:target?',
-				createAPIHandler(Temperature, API.Handler.setTargetTemp)
-			);
-			app.post(
-				'/temperature/mode/:mode?',
-				createAPIHandler(Temperature, API.Handler.setMode)
-			);
-			app.all(
-				'/temperature/temp',
-				createAPIHandler(Temperature, API.Handler.getTemp)
-			);
+			const router = createRouter(Temperature, API.Handler);
+			router.post('/temperature/target/:target?', 'setTargetTemp');
+			router.post('/temperature/mode/:mode?', 'setMode');
+			router.all('/temperature/temp', 'getTemp');
 
 			app.post('/temperature/report/:name/:temp?', async (req, res) => {
 				const body = { ...req.params, ...req.body, ...req.query };
@@ -680,6 +672,8 @@ export namespace Temperature {
 				res.status(200);
 				res.end();
 			});
+
+			router.use(app);
 		}
 	}
 }

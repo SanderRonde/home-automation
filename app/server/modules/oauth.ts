@@ -11,6 +11,7 @@ import { CLIENT_FOLDER } from '../lib/constants';
 import * as express from 'express';
 import type { AuthorizationCodeModel, Token, Client, User, RefreshToken, AuthorizationCode } from 'oauth2-server'
 import * as fs from 'fs-extra';
+import { createRouter } from '../lib/api';
 
 export type OAuthUser = {
 	username: string;
@@ -206,8 +207,9 @@ export namespace OAuth {
 		}
 
 		export async function init({ app }: ModuleConfig) {
-			app.all(
-				'/oauth/authorize',
+			const router = createRouter(OAuth, {});
+			router.all(
+				'/authorize',
 				async (req, res, next) => {
 					attachSourcedMessage(
 						res,
@@ -241,8 +243,8 @@ export namespace OAuth {
 				},
 				(await Authorization.server.value).authorize()
 			);
-			app.get(
-				'/oauth/login',
+			router.get(
+				'/login',
 				async (_req, res) => {
 					attachSourcedMessage(
 						res,
@@ -256,8 +258,8 @@ export namespace OAuth {
 					res.end();
 				}
 			);
-			app.post(
-				'/oauth/token',
+			router.post(
+				'/token',
 				async (_req, res, next) => {
 					attachSourcedMessage(
 						res,
@@ -269,6 +271,7 @@ export namespace OAuth {
 				},
 				(await Authorization.server.value).token({})
 			);
+			router.use(app);
 		}
 	}
 }

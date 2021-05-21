@@ -7,7 +7,12 @@ import {
 	upgradeToHTTPS
 } from '../lib/decorators';
 import { MAIN_LIGHTS, COMMON_SWITCH_MAPPINGS } from '../lib/constants';
-import { attachMessage, attachSourcedMessage, logTag, ResponseLike } from '../lib/logger';
+import {
+	attachMessage,
+	attachSourcedMessage,
+	logTag,
+	ResponseLike
+} from '../lib/logger';
 import { ModuleHookables, ModuleConfig } from './modules';
 import { awaitCondition, createHookables } from '../lib/util';
 import aggregates from '../config/aggregates';
@@ -21,7 +26,7 @@ import { ModuleMeta } from './meta';
 import { Auth } from './auth';
 import chalk from 'chalk';
 import { createExternalClass } from '../lib/external';
-import { createAPIHandler } from '../lib/api';
+import { createRouter } from '../lib/api';
 
 export interface KeyvalHooks {
 	[key: string]: {
@@ -746,24 +751,17 @@ export namespace KeyVal {
 		}: ModuleConfig & { apiHandler: API.Handler }) {
 			const webpageHandler = new Webpage.Handler({ randomNum, db });
 
-			app.post('/keyval/all', createAPIHandler(KeyVal, apiHandler.all));
-			app.post(
-				'/keyval/long/:key',
-				createAPIHandler(KeyVal, apiHandler.getLongPoll)
-			);
-			app.get(
-				'/keyval/long/:maxtime/:auth/:key/:expected',
-				createAPIHandler(KeyVal, apiHandler.getLongPoll)
-			);
-			app.post('/keyval/:key', createAPIHandler(KeyVal, apiHandler.get));
-			app.post(
-				'/keyval/toggle/:key',
-				createAPIHandler(KeyVal, apiHandler.toggle)
-			);
-			app.post(
-				'/keyval/:key/:value',
-				createAPIHandler(KeyVal, apiHandler.set)
-			);
+			const router = createRouter(KeyVal, apiHandler);
+			router.post('/all', 'all');
+			router.post('/long/:key', 'getLongPoll');
+			router.get('/long/:maxtime/:auth/:key/:expected', 'getLongPoll');
+			router.post('/:key', 'get');
+			router.post('/toggle/:key', 'toggle');
+			router.post('/:key/:value', 'set');
+			router.all('/', async (req, res) => {
+				await webpageHandler.index(res, req);
+			});
+			router.use(app);
 
 			websocketSim.all(
 				'/keyval/websocket',
@@ -808,10 +806,6 @@ export namespace KeyVal {
 					);
 				}
 			);
-
-			app.all('/keyval', async (req, res) => {
-				await webpageHandler.index(res, req);
-			});
 		}
 	}
 }

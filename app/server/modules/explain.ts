@@ -3,7 +3,8 @@ import {
 	attachMessage,
 	LogCapturer,
 	addLogListener,
-	attachSourcedMessage, ResponseLike
+	attachSourcedMessage,
+	ResponseLike
 } from '../lib/logger';
 import { AllModules, ModuleConfig } from './modules';
 import { BotState } from '../lib/bot-state';
@@ -12,7 +13,7 @@ import { ModuleMeta } from './meta';
 import { Auth } from './auth';
 import { Cast } from './cast';
 import { createExternalClass } from '../lib/external';
-import { createAPIHandler } from '../lib/api';
+import { createRouter } from '../lib/api';
 
 export type ExplainHook = (
 	description: string,
@@ -396,14 +397,10 @@ export namespace Explain {
 
 	export namespace Routing {
 		export async function init({ app }: ModuleConfig) {
-			app.post(
-				'/explain/time/:mins',
-				createAPIHandler(Explain, API.Handler.getLastXMins)
-			);
-			app.post(
-				'/explain/amount/:amount',
-				createAPIHandler(Explain, API.Handler.getLastX)
-			);
+			const router = createRouter(Explain, API.Handler);
+			router.post('/time/:mins', 'getLastXMins');
+			router.post('/amount/:amount', 'getLastX');
+			router.use(app);
 		}
 	}
 }

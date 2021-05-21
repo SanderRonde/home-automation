@@ -16,6 +16,7 @@ import * as path from 'path';
 import chalk from 'chalk';
 import { createExternalClass } from '../lib/external';
 import * as express from 'express';
+import { createRouter } from '../lib/api';
 
 export namespace Script {
 	export const meta = new (class Meta extends ModuleMeta {
@@ -217,7 +218,8 @@ export namespace Script {
 			app: express.Application;
 			config: Config;
 		}) {
-			app.post('/script/:name', async (req, res, _next) => {
+			const router = createRouter(Script, API.Handler);
+			router.post('/:name', async (req, res, _next) => {
 				await API.Handler.script(
 					res,
 					{
@@ -230,6 +232,7 @@ export namespace Script {
 					`${Script.meta.name}.API.${req.url}`
 				);
 			});
+			router.use(app);
 		}
 	}
 }
