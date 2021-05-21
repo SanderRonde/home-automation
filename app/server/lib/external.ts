@@ -11,9 +11,13 @@ type QueuedRequest<T = any> = {
 	instance: InstanceType<ReturnType<typeof createExternalClass>>;
 };
 
-export function createExternalClass(requiresInit: boolean) {
+const initializedClasses: WeakSet<ReturnType<
+	typeof createExternalClass
+>> = new WeakSet();
+export function createExternalClass(requiresInit: boolean, name?: string) {
 	return class ExternalClass {
-		private static _initialized: boolean = false;
+		protected static _initialized: boolean = false;
+		protected static _name = name;
 		private static get _ready() {
 			if (requiresInit === undefined) {
 				throw new Error('"requiresInit" not set');
@@ -37,6 +41,7 @@ export function createExternalClass(requiresInit: boolean) {
 		}
 
 		static async init(_args?: any) {
+			initializedClasses.add(this);
 			this._initialized = true;
 			for (const req of this._queuedRequests) {
 				this._handleQueuedRequest(req);
@@ -49,13 +54,16 @@ export function createExternalClass(requiresInit: boolean) {
 		 */
 		runRequest<T>(fn: QueuedRequestFn<T>): Promise<T> {
 			return new Promise<T>(resolve => {
-				if (ExternalClass._ready) {
-					ExternalClass._handleQueuedRequest({
-						fn,
-						instance: this
-					}).then(resolve);
+				const constructor = this.constructor as typeof ExternalClass;
+				if (constructor._ready) {
+					constructor
+						._handleQueuedRequest({
+							fn,
+							instance: this
+						})
+						.then(resolve);
 				} else {
-					ExternalClass._queuedRequests.push({
+					constructor._queuedRequests.push({
 						fn: (res, source, logObj) => {
 							const result = fn(res, source, logObj);
 							resolve(result);
