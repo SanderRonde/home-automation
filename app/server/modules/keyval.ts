@@ -57,7 +57,7 @@ export namespace KeyVal {
 			const { db } = config;
 			GetSetListener.setDB(db);
 			const apiHandler = new API.Handler({ db });
-			await External.Handler.init({ db, apiHandler });
+			await External.Handler.init({ apiHandler });
 			await Aggregates.init(db);
 
 			await Routing.init({ ...config, apiHandler });
@@ -196,7 +196,6 @@ export namespace KeyVal {
 			static async init({
 				apiHandler
 			}: {
-				db: Database;
 				apiHandler: API.Handler;
 			}) {
 				this._apiHandler = apiHandler;
