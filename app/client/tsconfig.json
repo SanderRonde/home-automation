@@ -21,7 +21,9 @@
 		"experimentalDecorators": true,
 		"strictPropertyInitialization": true,
 		"strictNullChecks": true,
-		"strictBindCallApply": true
+		"strictBindCallApply": true,
+		"jsx": "react",
+		"skipLibCheck": true
 	},
 	"compileOnSave": true,
 	"allowJs": true,
