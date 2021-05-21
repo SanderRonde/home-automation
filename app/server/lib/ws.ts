@@ -55,7 +55,7 @@ export class WSSimInstance<
 
 	private _init(req: express.Request, res: express.Response) {
 		const id = genUniqueId();
-		this._ip = { ...req.body, ...req.params }.ip;
+		this._ip = { ...req.body, ...req.params, ...req.query }.ip;
 
 		// Store this IP alongside the ID
 		instanceIDs.set(id, {
@@ -300,6 +300,7 @@ export class WSSimulator {
 						!(await __this._authenticate(res, {
 							...req.params,
 							...req.body,
+							...req.query,
 							cookies: req.cookies
 						}))
 					) {

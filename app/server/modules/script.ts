@@ -217,7 +217,12 @@ export namespace Script {
 			app.post('/script/:name', async (req, res, _next) => {
 				await API.Handler.script(
 					res,
-					{ ...req.params, ...req.body, cookies: req.cookies },
+					{
+						...req.params,
+						...req.body,
+						...req.query,
+						cookies: req.cookies
+					},
 					config,
 					`${Script.meta.name}.API.${req.url}`
 				);

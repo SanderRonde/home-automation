@@ -602,7 +602,7 @@ export namespace Temperature {
 			);
 
 			app.post('/temperature/report/:name/:temp?', async (req, res) => {
-				const body = { ...req.params, ...req.body };
+				const body = { ...req.params, ...req.body, ...req.query };
 				if (!('temp' in body)) {
 					res.write(`Missing key "temp"`);
 					res.status(400);
@@ -638,7 +638,7 @@ export namespace Temperature {
 			});
 
 			app.post('/temperature/advise/:name', async (req, res) => {
-				const body = { ...req.params, ...req.body };
+				const body = { ...req.params, ...req.body, ...req.query };
 
 				const controller = await TempControllers.getController(
 					body['name']
@@ -658,7 +658,7 @@ export namespace Temperature {
 			});
 
 			app.post('/temperature/moves/:name', async (req, res) => {
-				const body = { ...req.params, ...req.body };
+				const body = { ...req.params, ...req.body, ...req.query };
 
 				const controller = await TempControllers.getController(
 					body['name']

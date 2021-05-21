@@ -11,6 +11,7 @@ export function createAPIHandler<A extends Record<string, any>, R>(
 	getArgs: (req: express.Request) => A = req => ({
 		...req.params,
 		...req.body,
+		...req.query,
 		cookies: req.cookies
 	})
 ) {

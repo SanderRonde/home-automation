@@ -440,6 +440,7 @@ export namespace Pressure {
 				API.Handler.reportPressure(res, {
 					...req.params,
 					...req.body,
+					...req.query,
 					cookies: req.cookies
 				});
 			});
