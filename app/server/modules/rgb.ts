@@ -50,7 +50,7 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import chalk from 'chalk';
 import { getEnv } from '../lib/io';
-import { ExternalClass } from '../lib/external';
+import { createExternalClass } from '../lib/external';
 import { createAPIHandler } from '../lib/api';
 
 function getIntensityPercentage(percentage: number) {
@@ -2334,9 +2334,7 @@ export namespace RGB {
 	}
 
 	export namespace External {
-		export class Handler extends ExternalClass {
-			requiresInit = true;
-
+		export class Handler extends createExternalClass(true) {
 			async color(
 				color: string,
 				target: string = 'all',

@@ -2,7 +2,6 @@ import {
 	ModuleConfig,
 	ModuleHookables,
 	AllModules,
-	createHookables
 } from './modules';
 import { errorHandle, requireParams, auth } from '../lib/decorators';
 import movementConfig from '../config/movements';
@@ -11,7 +10,7 @@ import { ResponseLike } from './multi';
 import { Bot as _Bot } from './index';
 import { ModuleMeta } from './meta';
 import { Database } from '../lib/db';
-import { SettablePromise } from '../lib/util';
+import { createHookables, SettablePromise } from '../lib/util';
 import { createAPIHandler } from '../lib/api';
 
 export interface MovementHooks {

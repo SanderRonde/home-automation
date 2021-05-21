@@ -17,7 +17,7 @@ import * as express from 'express';
 import { getEnv } from '../lib/io';
 import { Auth } from './auth';
 import chalk from 'chalk';
-import { ExternalClass } from '../lib/external';
+import { createExternalClass } from '../lib/external';
 import { createAPIHandler } from '../lib/api';
 
 export namespace RemoteControl {
@@ -51,9 +51,7 @@ export namespace RemoteControl {
 		  };
 
 	export namespace External {
-		export class Handler extends ExternalClass {
-			requiresInit = false;
-
+		export class Handler extends createExternalClass(false) {
 			public play() {
 				return this.runRequest(res => {
 					return API.Handler.play(res, {

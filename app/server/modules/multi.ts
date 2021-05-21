@@ -3,6 +3,7 @@ import { AppWrapper } from '../lib/routes';
 import { ModuleConfig } from './modules';
 import { ModuleMeta } from './meta';
 import * as express from 'express';
+import * as fs from 'fs-extra';
 
 interface MultiRequestRequest {
 	path: string;
@@ -15,6 +16,7 @@ interface MultiRequestRequest {
 export interface ResponseLike {
 	status(code: number): this;
 	write(str: string): void;
+	sendFile(path: string): void;
 	end(): void;
 	contentType(type: string): void;
 	cookie(name: string, value: string, options?: express.CookieOptions): void;
@@ -39,6 +41,12 @@ export class SubDummy implements ResponseLike {
 
 	write(str: string) {
 		this._written = str;
+	}
+
+	sendFile(filePath: string) {
+		fs.readFile(filePath, 'utf8').then(content => {
+			this._written = content;
+		});
 	}
 
 	end() {

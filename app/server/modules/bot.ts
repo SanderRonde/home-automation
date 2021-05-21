@@ -1,7 +1,7 @@
 import { attachMessage, logOutgoingReq, logFirst } from '../lib/logger';
 import { ModuleConfig, AllModules, InstanceOf } from './modules';
 import { TELEGRAM_IPS, TELEGRAM_API } from '../lib/constants';
-import { ExternalClass } from '../lib/external';
+import { createExternalClass } from '../lib/external';
 import { BotState } from '../lib/bot-state';
 import { ResponseLike } from './multi';
 import { Database } from '../lib/db';
@@ -732,9 +732,7 @@ export namespace Bot {
 	}
 
 	export namespace External {
-		export class Handler extends ExternalClass {
-			requiresInit = true;
-
+		export class Handler extends createExternalClass(true) {
 			async sendMessage(
 				text: string,
 				type: RESPONSE_TYPE,

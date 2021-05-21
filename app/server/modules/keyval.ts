@@ -13,8 +13,8 @@ import {
 	log,
 	attachSourcedMessage
 } from '../lib/logger';
-import { ModuleHookables, ModuleConfig, createHookables } from './modules';
-import { awaitCondition } from '../lib/util';
+import { ModuleHookables, ModuleConfig } from './modules';
+import { awaitCondition, createHookables } from '../lib/util';
 import aggregates from '../config/aggregates';
 import groups from '../config/keyval-groups';
 import { BotState } from '../lib/bot-state';
@@ -26,7 +26,7 @@ import * as express from 'express';
 import { ModuleMeta } from './meta';
 import { Auth } from './auth';
 import chalk from 'chalk';
-import { ExternalClass } from '../lib/external';
+import { createExternalClass } from '../lib/external';
 import { createAPIHandler } from '../lib/api';
 
 export interface KeyvalHooks {
@@ -191,9 +191,7 @@ export namespace KeyVal {
 	}
 
 	export namespace External {
-		export class Handler extends ExternalClass {
-			requiresInit = true;
-
+		export class Handler extends createExternalClass(true) {
 			private static _apiHandler: API.Handler | null = null;
 
 			static async init({

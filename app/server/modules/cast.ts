@@ -7,7 +7,7 @@ import { attachMessage, attachSourcedMessage } from '../lib/logger';
 import * as playlist from 'castv2-player/lib/playlist';
 import { requireParams } from '../lib/decorators';
 import { errorHandle } from '../lib/decorators';
-import { ExternalClass } from '../lib/external';
+import { createExternalClass } from '../lib/external';
 import { createAPIHandler } from '../lib/api';
 import { BotState } from '../lib/bot-state';
 import { ModuleConfig } from './modules';
@@ -194,9 +194,7 @@ export namespace Cast {
 	}
 
 	export namespace External {
-		export class Handler extends ExternalClass {
-			requiresInit = true;
-
+		export class Handler extends createExternalClass(true) {
 			async stop() {
 				return this.runRequest((res, source) => {
 					return API.Handler.stop(

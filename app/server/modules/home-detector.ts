@@ -14,7 +14,7 @@ import {
 	ResDummy,
 	attachSourcedMessage
 } from '../lib/logger';
-import { ModuleHookables, ModuleConfig, createHookables } from './modules';
+import { ModuleHookables, ModuleConfig } from './modules';
 import { BotState } from '../lib/bot-state';
 import hooks from '../config/home-hooks';
 import config from '../config/home-ips';
@@ -26,8 +26,9 @@ import { ModuleMeta } from './meta';
 import { Auth } from './auth';
 import * as ping from 'ping';
 import chalk from 'chalk';
-import { ExternalClass } from '../lib/external';
+import { createExternalClass } from '../lib/external';
 import { createAPIHandler } from '../lib/api';
+import { createHookables } from '../lib/util';
 
 const AWAY_PING_INTERVAL = 5;
 const HOME_PING_INTERVAL = 60;
@@ -695,9 +696,7 @@ export namespace HomeDetector {
 	}
 
 	export namespace External {
-		export class Handler extends ExternalClass {
-			requiresInit = true;
-
+		export class Handler extends createExternalClass(true) {
 			private static _detector: Classes.Detector;
 
 			public triggerHook(newState: HOME_STATE, name: string) {

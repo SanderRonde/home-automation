@@ -9,7 +9,6 @@ import {
 	ModuleConfig,
 	ModuleHookables,
 	AllModules,
-	createHookables
 } from './modules';
 import { errorHandle, requireParams, auth } from '../lib/decorators';
 import pressureConfig from '../config/pressures';
@@ -19,7 +18,8 @@ import { ResponseLike } from './multi';
 import { Database } from '../lib/db';
 import { Bot as _Bot } from './index';
 import { ModuleMeta } from './meta';
-import { ExternalClass } from '../lib/external';
+import { createExternalClass } from '../lib/external';
+import { createHookables } from '../lib/util';
 
 export const enum PRESSURE_CHANGE_DIRECTION {
 	UP,
@@ -278,9 +278,7 @@ export namespace Pressure {
 	}
 
 	export namespace External {
-		export class Handler extends ExternalClass {
-			requiresInit = false;
-
+		export class Handler extends createExternalClass(false) {
 			async enable() {
 				return this.runRequest(async (_res, _source, logObj) => {
 					await Register.enable();

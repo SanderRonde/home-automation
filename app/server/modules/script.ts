@@ -12,7 +12,7 @@ import { ModuleMeta } from './meta';
 import { Auth } from './auth';
 import * as path from 'path';
 import chalk from 'chalk';
-import { ExternalClass } from '../lib/external';
+import { createExternalClass } from '../lib/external';
 
 export namespace Script {
 	export const meta = new (class Meta extends ModuleMeta {
@@ -32,9 +32,7 @@ export namespace Script {
 	})();
 
 	export namespace External {
-		export class Handler extends ExternalClass {
-			requiresInit = true;
-
+		export class Handler extends createExternalClass(true) {
 			private static _config: Config | null = null;
 
 			static async init({ config }: { config: Config }) {

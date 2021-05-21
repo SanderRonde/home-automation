@@ -13,7 +13,7 @@ import { Bot as _Bot } from './bot';
 import { ModuleMeta } from './meta';
 import { Auth } from './auth';
 import chalk from 'chalk';
-import { ExternalClass } from '../lib/external';
+import { createExternalClass } from '../lib/external';
 import { createAPIHandler } from '../lib/api';
 
 const LOG_INTERVAL_SECS = 60;
@@ -208,7 +208,7 @@ export namespace Temperature {
 	}
 
 	export namespace External {
-		export class Handler extends ExternalClass {
+		export class Handler extends createExternalClass(true) {
 			requiresInit = false;
 
 			public setMode(name: string, mode: Mode) {

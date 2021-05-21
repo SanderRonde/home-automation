@@ -15,7 +15,7 @@ import { getEnv } from '../lib/io';
 import { wait } from '../lib/util';
 import fetch from 'node-fetch';
 import chalk from 'chalk';
-import { ExternalClass } from '../lib/external';
+import { createExternalClass } from '../lib/external';
 
 export interface BeatChanges {
 	playState?: boolean;
@@ -626,7 +626,7 @@ export namespace SpotifyBeats {
 	}
 
 	export namespace External {
-		export class Handler extends ExternalClass {
+		export class Handler extends createExternalClass(true) {
 			requiresInit = true;
 
 			async test() {

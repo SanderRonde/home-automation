@@ -12,7 +12,7 @@ import { Bot as _Bot } from './bot';
 import { ModuleMeta } from './meta';
 import { Auth } from './auth';
 import { Cast } from './cast';
-import { ExternalClass } from '../lib/external';
+import { createExternalClass } from '../lib/external';
 import { createAPIHandler } from '../lib/api';
 
 export type ExplainHook = (
@@ -137,7 +137,7 @@ export namespace Explain {
 	}
 
 	export namespace External {
-		export class Handler extends ExternalClass {
+		export class Handler extends createExternalClass(false) {
 			requiresInit = false;
 
 			explainTime(
