@@ -6,10 +6,9 @@ import {
 	upgradeToHTTPS
 } from '../lib/decorators';
 import { remoteControlHTML } from '../templates/remote-control-template';
-import { attachMessage, logTag } from '../lib/logger';
+import { attachMessage, logTag, ResponseLike } from '../lib/logger';
 import telnet_client, * as TelnetClient from 'telnet-client';
 import { BotState } from '../lib/bot-state';
-import { ResponseLike } from './multi';
 import { ModuleConfig } from './modules';
 import { ModuleMeta } from './meta';
 import { Bot as _Bot } from './bot';

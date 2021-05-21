@@ -9,7 +9,6 @@ export {
 	Webhook,
 	Script,
 	KeyVal,
-	Multi,
 	Cast,
 	RGB,
 	Bot,

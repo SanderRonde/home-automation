@@ -1,10 +1,12 @@
 import { errorHandle, requireParams, authAll } from '../lib/decorators';
-import { attachMessage, attachSourcedMessage } from '../lib/logger';
+import {
+	attachMessage,
+	attachSourcedMessage,
+	ResponseLike
+} from '../lib/logger';
 import * as childProcess from 'child_process';
 import { BotState } from '../lib/bot-state';
-import { AppWrapper } from '../lib/routes';
 import { AuthError } from '../lib/errors';
-import { ResponseLike } from './multi';
 import { ModuleConfig } from './modules';
 import { Bot as _Bot } from './bot';
 import { Config } from '../app';
@@ -13,6 +15,7 @@ import { Auth } from './auth';
 import * as path from 'path';
 import chalk from 'chalk';
 import { createExternalClass } from '../lib/external';
+import * as express from 'express';
 
 export namespace Script {
 	export const meta = new (class Meta extends ModuleMeta {
@@ -211,7 +214,7 @@ export namespace Script {
 			app,
 			config
 		}: {
-			app: AppWrapper;
+			app: express.Application;
 			config: Config;
 		}) {
 			app.post('/script/:name', async (req, res, _next) => {

@@ -17,7 +17,6 @@ import {
 	initRoutes,
 	initMiddleware,
 	initAnnotatorRoutes,
-	AppWrapper,
 	initPostRoutes
 } from './lib/routes';
 import { hasArg, getArg, getNumberArg, getNumberEnv, getEnv } from './lib/io';
@@ -97,7 +96,7 @@ class WebServer {
 		const modules = await getAllModules();
 
 		const config: NoDBModuleConfig = {
-			app: new AppWrapper(this.app),
+			app: this.app,
 			websocketSim: this.websocketSim,
 			config: this._config,
 			randomNum: Math.round(Math.random() * 1000000),

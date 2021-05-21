@@ -1,5 +1,4 @@
 import { ExplainHook } from '../modules/explain';
-import { ResponseLike } from '../modules/multi';
 import { IP_LOG_VERSION } from './constants';
 import { Auth } from '../modules/auth';
 import { Response } from 'node-fetch';
@@ -424,6 +423,17 @@ export function addLogListener(
 export function getRootLogObj(obj: any) {
 	if (typeof obj !== 'object' || !obj) return;
 	return rootMap.get(obj);
+}
+
+export interface ResponseLike {
+	status(code: number): this;
+	redirect(url: string, status?: number): void;
+	write(str: string): void;
+	sendFile(path: string): void;
+	end(): void;
+	contentType(type: string): void;
+	cookie(name: string, value: string, options?: express.CookieOptions): void;
+	_headersSent?: boolean;
 }
 
 export class ResDummy implements ResponseLike {

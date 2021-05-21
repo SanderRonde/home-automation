@@ -3,7 +3,7 @@ import {
 	PASTAS as _PASTAS,
 	CAST_DEVICE_NAMES
 } from '../config/casts';
-import { attachMessage, attachSourcedMessage } from '../lib/logger';
+import { attachMessage, attachSourcedMessage, ResponseLike } from '../lib/logger';
 import * as playlist from 'castv2-player/lib/playlist';
 import { requireParams } from '../lib/decorators';
 import { errorHandle } from '../lib/decorators';
@@ -13,7 +13,6 @@ import { BotState } from '../lib/bot-state';
 import { ModuleConfig } from './modules';
 import { auth } from '../lib/decorators';
 import * as castv2 from 'castv2-player';
-import { ResponseLike } from './multi';
 import { Bot as _Bot } from './bot';
 import { ModuleMeta } from './meta';
 import { Auth } from './auth';

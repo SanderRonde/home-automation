@@ -7,14 +7,13 @@ import {
 	upgradeToHTTPS
 } from '../lib/decorators';
 import { MAIN_LIGHTS, COMMON_SWITCH_MAPPINGS } from '../lib/constants';
-import { attachMessage, attachSourcedMessage, logTag } from '../lib/logger';
+import { attachMessage, attachSourcedMessage, logTag, ResponseLike } from '../lib/logger';
 import { ModuleHookables, ModuleConfig } from './modules';
 import { awaitCondition, createHookables } from '../lib/util';
 import aggregates from '../config/aggregates';
 import groups from '../config/keyval-groups';
 import { BotState } from '../lib/bot-state';
 import { WSSimInstance } from '../lib/ws';
-import { ResponseLike } from './multi';
 import { Database } from '../lib/db';
 import { Bot as _Bot } from './bot';
 import * as express from 'express';

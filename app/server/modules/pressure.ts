@@ -8,9 +8,8 @@ import {
 import { ModuleConfig, ModuleHookables, AllModules } from './modules';
 import { errorHandle, requireParams, auth } from '../lib/decorators';
 import pressureConfig from '../config/pressures';
-import { attachMessage, disableMessages } from '../lib/logger';
+import { attachMessage, disableMessages, ResponseLike } from '../lib/logger';
 import { BotState } from '../lib/bot-state';
-import { ResponseLike } from './multi';
 import { Database } from '../lib/db';
 import { Bot as _Bot } from './index';
 import { ModuleMeta } from './meta';

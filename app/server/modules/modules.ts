@@ -9,7 +9,6 @@ import { Webhook } from './webhook';
 import { Script } from './script';
 import { KeyVal } from './keyval';
 import { OAuth } from './oauth';
-import { Multi } from './multi';
 import { Auth } from './auth';
 import { Cast } from './cast';
 import { Bot } from './bot';
@@ -17,8 +16,8 @@ import { RGB } from './rgb';
 
 import { WSSimulator, WSWrapper } from '../lib/ws';
 import { InfoScreen } from './info-screen';
-import { AppWrapper } from '../lib/routes';
 import { Database } from '../lib/db';
+import * as express from 'express';
 import { Config } from '../app';
 
 export { RemoteControl } from './remote-control';
@@ -31,7 +30,6 @@ export { Explain } from './explain';
 export { Webhook } from './webhook';
 export { Script } from './script';
 export { KeyVal } from './keyval';
-export { Multi } from './multi';
 export { OAuth } from './oauth';
 export { Auth } from './auth';
 export { Cast } from './cast';
@@ -53,7 +51,7 @@ export type ModuleHookables = {
 };
 
 export interface NoDBModuleConfig {
-	app: AppWrapper;
+	app: express.Application;
 	websocketSim: WSSimulator;
 	websocket: WSWrapper;
 	config: Config;
@@ -69,7 +67,6 @@ const moduleObj = {
 	RGB: RGB,
 	cast: Cast,
 	auth: Auth,
-	multi: Multi,
 	oauth: OAuth,
 	script: Script,
 	keyval: KeyVal,

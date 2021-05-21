@@ -1,9 +1,8 @@
-import { attachMessage, logOutgoingReq, logFirst } from '../lib/logger';
+import { attachMessage, logOutgoingReq, logFirst, ResponseLike } from '../lib/logger';
 import { ModuleConfig, AllModules, InstanceOf } from './modules';
 import { TELEGRAM_IPS, TELEGRAM_API } from '../lib/constants';
 import { createExternalClass } from '../lib/external';
 import { BotState } from '../lib/bot-state';
-import { ResponseLike } from './multi';
 import { Database } from '../lib/db';
 import { log } from '../lib/logger';
 import { ModuleMeta } from './meta';

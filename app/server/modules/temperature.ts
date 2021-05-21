@@ -2,11 +2,11 @@ import { errorHandle, requireParams, authAll, auth } from '../lib/decorators';
 import {
 	attachMessage,
 	attachSourcedMessage,
-	logTag
+	logTag,
+	ResponseLike
 } from '../lib/logger';
 import { AllModules, ModuleConfig } from './modules';
 import { BotState } from '../lib/bot-state';
-import { ResponseLike } from './multi';
 import { Database } from '../lib/db';
 import { Bot as _Bot } from './bot';
 import { ModuleMeta } from './meta';

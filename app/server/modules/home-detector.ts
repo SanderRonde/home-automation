@@ -11,13 +11,12 @@ import {
 	logFixture,
 	ResDummy,
 	attachSourcedMessage,
-	logTag
+	logTag, ResponseLike
 } from '../lib/logger';
 import { ModuleHookables, ModuleConfig } from './modules';
 import { BotState } from '../lib/bot-state';
 import hooks from '../config/home-hooks';
 import config from '../config/home-ips';
-import { ResponseLike } from './multi';
 import { Database } from '../lib/db';
 import { Bot as _Bot } from './bot';
 import express = require('express');

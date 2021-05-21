@@ -29,7 +29,8 @@ import {
 import {
 	attachMessage,
 	attachSourcedMessage,
-	logTag
+	logTag,
+	ResponseLike
 } from '../lib/logger';
 import * as ReadLine from '@serialport/parser-readline';
 import { ModuleConfig } from './modules';
@@ -38,7 +39,6 @@ import { wait, arrToObj, XHR } from '../lib/util';
 import { BotState } from '../lib/bot-state';
 import SerialPort = require('serialport');
 import { colorList } from '../lib/data';
-import { ResponseLike } from './multi';
 import { exec } from 'child_process';
 import { ModuleMeta } from './meta';
 import { Bot as _Bot } from './bot';

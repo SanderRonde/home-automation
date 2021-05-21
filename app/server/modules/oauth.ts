@@ -1,5 +1,5 @@
 import * as OAuthServer from 'express-oauth-server';
-import { attachMessage, attachSourcedMessage, logTag } from '../lib/logger';
+import { attachMessage, attachSourcedMessage, logTag, ResponseLike } from '../lib/logger';
 import oAuthUsers from '../config/oauth-users';
 import oAuthClients from '../config/oauth-clients';
 import { SettablePromise } from '../lib/util';
@@ -8,7 +8,6 @@ import { ModuleMeta } from './meta';
 import { Database } from '../lib/db';
 import * as path from 'path';
 import { CLIENT_FOLDER } from '../lib/constants';
-import { ResponseLike } from './multi';
 import * as express from 'express';
 import type { AuthorizationCodeModel, Token, Client, User, RefreshToken, AuthorizationCode } from 'oauth2-server'
 import * as fs from 'fs-extra';

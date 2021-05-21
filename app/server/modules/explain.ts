@@ -3,11 +3,10 @@ import {
 	attachMessage,
 	LogCapturer,
 	addLogListener,
-	attachSourcedMessage
+	attachSourcedMessage, ResponseLike
 } from '../lib/logger';
 import { AllModules, ModuleConfig } from './modules';
 import { BotState } from '../lib/bot-state';
-import { ResponseLike } from './multi';
 import { Bot as _Bot } from './bot';
 import { ModuleMeta } from './meta';
 import { Auth } from './auth';

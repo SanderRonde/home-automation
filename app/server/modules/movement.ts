@@ -5,8 +5,7 @@ import {
 } from './modules';
 import { errorHandle, requireParams, auth } from '../lib/decorators';
 import movementConfig from '../config/movements';
-import { attachMessage, attachSourcedMessage } from '../lib/logger';
-import { ResponseLike } from './multi';
+import { attachMessage, attachSourcedMessage, ResponseLike } from '../lib/logger';
 import { Bot as _Bot } from './index';
 import { ModuleMeta } from './meta';
 import { Database } from '../lib/db';

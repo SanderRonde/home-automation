@@ -1,8 +1,7 @@
 import { errorHandle, requireParams, authAll } from '../lib/decorators';
 import { ModuleConfig, ModuleHookables } from './modules';
-import { attachMessage, attachSourcedMessage } from '../lib/logger';
+import { attachMessage, attachSourcedMessage, ResponseLike } from '../lib/logger';
 import webhooks from '../config/webhook';
-import { ResponseLike } from './multi';
 import { Bot as _Bot } from './bot';
 import { ModuleMeta } from './meta';
 import { Auth } from './auth';
