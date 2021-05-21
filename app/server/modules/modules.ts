@@ -99,22 +99,3 @@ export async function getAllModules(notify: boolean = true) {
 
 	return moduleObj;
 }
-
-export async function createHookables(
-	modules: AllModules,
-	sourceName: string,
-	hookName: string,
-	logObj: any
-): Promise<ModuleHookables> {
-	return (arrToObj(
-		Object.keys(modules).map((name: keyof AllModules) => {
-			return [
-				name,
-				new modules[name].meta.external.Handler(
-					logObj,
-					`${sourceName}.${hookName}`
-				)
-			];
-		})
-	) as unknown) as ModuleHookables;
-}

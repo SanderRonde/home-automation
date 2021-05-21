@@ -2,6 +2,8 @@ import { attachMessage, logOutgoingReq, log } from './logger';
 import * as querystring from 'querystring';
 import * as http from 'http';
 import chalk from 'chalk';
+import { AllModules } from '../modules';
+import { ModuleHookables } from '../modules/modules';
 
 export function wait(time: number) {
 	return new Promise(resolve => {
@@ -232,4 +234,23 @@ export class SettablePromise<V> {
 	get value() {
 		return this._promise;
 	}
+}
+
+export async function createHookables(
+	modules: AllModules,
+	sourceName: string,
+	hookName: string,
+	logObj: any
+): Promise<ModuleHookables> {
+	return (arrToObj(
+		Object.keys(modules).map((name: keyof AllModules) => {
+			return [
+				name,
+				new modules[name].meta.external.Handler(
+					logObj,
+					`${sourceName}.${hookName}`
+				)
+			];
+		})
+	) as unknown) as ModuleHookables;
 }
