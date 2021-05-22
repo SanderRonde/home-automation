@@ -584,9 +584,9 @@ export namespace Temperature {
 	export namespace Routing {
 		export async function init({ app }: ModuleConfig) {
 			const router = createRouter(Temperature, API.Handler);
-			router.post('/temperature/target/:target?', 'setTargetTemp');
-			router.post('/temperature/mode/:mode?', 'setMode');
-			router.all('/temperature/temp', 'getTemp');
+			router.post('/target/:target?', 'setTargetTemp');
+			router.post('/mode/:mode?', 'setMode');
+			router.all('/temp', 'getTemp');
 
 			app.post('/temperature/report/:name/:temp?', async (req, res) => {
 				const body = { ...req.params, ...req.body, ...req.query };
