@@ -3,7 +3,7 @@ import {
 	config,
 	Props,
 	ConfigurableWebComponent,
-	PROP_TYPE
+	PROP_TYPE,
 } from '../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { AnnotatorInstance } from '../annotator-instance/annotator-instance.js';
 import { AnnotatorMainHTML } from './annotator-main.templates.js';
@@ -12,7 +12,7 @@ import { AnnotatorMainHTML } from './annotator-main.templates.js';
 	is: 'annotator-main',
 	html: AnnotatorMainHTML,
 	css: null,
-	dependencies: [AnnotatorInstance]
+	dependencies: [AnnotatorInstance],
 })
 export class AnnotatorMain extends ConfigurableWebComponent<{
 	selectors: {
@@ -25,15 +25,15 @@ export class AnnotatorMain extends ConfigurableWebComponent<{
 		priv: {
 			fileNames: {
 				type: ComplexType<string[]>(),
-				value: []
-			}
+				value: [],
+			},
 		},
 		reflect: {
 			selected: {
 				type: PROP_TYPE.NUMBER,
-				value: -1
-			}
-		}
+				value: -1,
+			},
+		},
 	});
 
 	public prevSong() {
@@ -56,7 +56,7 @@ export class AnnotatorMain extends ConfigurableWebComponent<{
 		this.props.fileNames = (
 			await (
 				await fetch(`${location.origin}/annotator/files`, {
-					method: 'POST'
+					method: 'POST',
 				})
 			).json()
 		).files;

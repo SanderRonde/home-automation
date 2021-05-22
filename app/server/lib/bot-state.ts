@@ -28,9 +28,10 @@ export namespace BotState {
 		matchText: string;
 		logObj: any;
 		ask(question: string): Promise<string | undefined>;
-		askCancelable(
-			question: string
-		): { cancel(): void; prom: Promise<string | undefined> };
+		askCancelable(question: string): {
+			cancel(): void;
+			prom: Promise<string | undefined>;
+		};
 		sendText(text: string): Promise<boolean>;
 	}
 
@@ -101,12 +102,12 @@ export namespace BotState {
 				fn,
 				regexps,
 				texts,
-				conditions
+				conditions,
 			} of matchConfig.matches) {
 				for (const matchText of texts) {
 					if (
 						(index = text.indexOf(matchText)) === 0 &&
-						conditions.every(condition => {
+						conditions.every((condition) => {
 							return condition(config);
 						})
 					) {
@@ -116,11 +117,11 @@ export namespace BotState {
 						) {
 							earliestMatch = {
 								type: 'text',
-								match: ([] as unknown) as RegExpExecArray,
+								match: [] as unknown as RegExpExecArray,
 								fn,
 								index,
 								matchText,
-								end: index + matchText.length
+								end: index + matchText.length,
 							};
 						}
 					}
@@ -130,7 +131,7 @@ export namespace BotState {
 						(match = new RegExp('^' + matchRegexp.source).exec(
 							text
 						)) &&
-						conditions.every(condition => {
+						conditions.every((condition) => {
 							return condition(config);
 						})
 					) {
@@ -144,7 +145,7 @@ export namespace BotState {
 								fn,
 								index: match.index,
 								matchText: matchRegexp.source,
-								end: match.index + match[0].length
+								end: match.index + match[0].length,
 							};
 						}
 					}
@@ -180,13 +181,13 @@ export namespace BotState {
 									question,
 									config.message,
 									config.res,
-									cancel => {
+									(cancel) => {
 										_cancel = cancel;
 									}
 								),
 								cancel() {
 									_cancel && _cancel();
-								}
+								},
 							};
 						},
 						sendText(text: string) {
@@ -195,8 +196,8 @@ export namespace BotState {
 								config.message,
 								config.res
 							);
-						}
-					})
+						},
+					}),
 				};
 			}
 
@@ -211,7 +212,7 @@ export namespace BotState {
 			const matchData: Partial<MatchData> = {
 				regexps: [],
 				texts: [],
-				conditions: []
+				conditions: [],
 			};
 
 			for (const arg of args) {
@@ -272,17 +273,17 @@ export namespace BotState {
 
 			if (post.values.length === 0) {
 				// Only one string left, it must be the final one
-				return joinedOptions.map(o => `${o}${post.str[0]}`);
+				return joinedOptions.map((o) => `${o}${post.str[0]}`);
 			}
 
 			return this.flatten(
-				joinedOptions.map(joinedOption => {
+				joinedOptions.map((joinedOption) => {
 					return this.splitAtWord(
 						`${joinedOption}${post.str[0]}`,
 						post.values[0],
 						{
 							str: post.str.slice(1),
-							values: post.values.slice(1)
+							values: post.values.slice(1),
 						}
 					);
 				})
@@ -299,7 +300,7 @@ export namespace BotState {
 
 			return this.splitAtWord(str[0], values[0], {
 				str: str.slice(1),
-				values: values.slice(1)
+				values: values.slice(1),
 			});
 		}
 
@@ -317,7 +318,7 @@ export namespace BotState {
 		): MatchConfig {
 			const config: MatchConfig = {
 				matches: [],
-				fallback: () => {}
+				fallback: () => {},
 			};
 
 			fn({
@@ -334,12 +335,12 @@ export namespace BotState {
 				): string[] => {
 					return this.createJoinedWords(str, ...values);
 				},
-				fallbackSetter: fn => {
+				fallbackSetter: (fn) => {
 					config.fallback = fn;
 				},
 				conditional: (match, condition) => {
 					match.conditions.push(condition);
-				}
+				},
 			});
 
 			return config;

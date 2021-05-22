@@ -81,7 +81,7 @@ const moduleObj = {
 	temperature: Temperature,
 	spotifyBeats: SpotifyBeats,
 	homeDetector: HomeDetector,
-	remoteControl: RemoteControl
+	remoteControl: RemoteControl,
 };
 const moduleArr = Object.values(moduleObj);
 

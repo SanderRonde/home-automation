@@ -6,7 +6,7 @@ import {
 	AttributeCommitter,
 	NodePart,
 	isDirective,
-	noChange
+	noChange,
 } from '../../node_modules/lit-html/lit-html.js';
 import { WebComponent } from '../../node_modules/wc-lib/build/es/wc-lib.js';
 import { AnnotatorMain } from './components/annotator-main/annotator-main.js';
@@ -19,7 +19,7 @@ WebComponent.initComplexTemplateProvider({
 	AttributeCommitter,
 	NodePart,
 	isDirective,
-	noChange
+	noChange,
 });
 
 AnnotatorMain.define();

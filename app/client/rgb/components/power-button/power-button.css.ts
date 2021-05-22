@@ -1,12 +1,12 @@
 import {
 	TemplateFn,
-	CHANGE_TYPE
+	CHANGE_TYPE,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { PowerButton } from './power-button.js';
 
 export const PowerButtonCSS = new TemplateFn<PowerButton>(
-	function(html) {
+	function (html) {
 		return html`
 			<style>
 				span[data-type='html'],

@@ -1,12 +1,12 @@
 import {
 	TemplateFn,
-	CHANGE_TYPE
+	CHANGE_TYPE,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { PatternControls } from './pattern-controls.js';
 
 export const PatternControlsHTML = new TemplateFn<PatternControls>(
-	function(html, { props }) {
+	function (html, { props }) {
 		return html`
 			<div id="container">
 				<div id="sliderContainer">
@@ -23,18 +23,21 @@ export const PatternControlsHTML = new TemplateFn<PatternControls>(
 					<option
 						?selected="${props.defaultTransition === 'jump'}"
 						value="jump"
-						>Jump</option
 					>
+						Jump
+					</option>
 					<option
 						?selected="${props.defaultTransition === 'fade'}"
 						value="fade"
-						>Fade</option
 					>
+						Fade
+					</option>
 					<option
 						?selected="${props.defaultTransition === 'strobe'}"
 						value="strobe"
-						>Strobe</option
 					>
+						Strobe
+					</option>
 				</select>
 			</div>
 		`;

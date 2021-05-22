@@ -4,7 +4,7 @@ import {
 	requireParams,
 	auth,
 	authAll,
-	upgradeToHTTPS
+	upgradeToHTTPS,
 } from '../lib/decorators';
 import {
 	attachMessage,
@@ -12,7 +12,7 @@ import {
 	ResDummy,
 	attachSourcedMessage,
 	logTag,
-	ResponseLike
+	ResponseLike,
 } from '../lib/logger';
 import { ModuleHookables, ModuleConfig } from './modules';
 import { BotState } from '../lib/bot-state';
@@ -47,7 +47,7 @@ export interface HomeHooks {
 
 export const enum HOME_STATE {
 	HOME = 'home',
-	AWAY = 'away'
+	AWAY = 'away',
 }
 
 export namespace HomeDetector {
@@ -75,7 +75,7 @@ export namespace HomeDetector {
 
 	export namespace Classes {
 		function wait(time: number) {
-			return new Promise(resolve => {
+			return new Promise((resolve) => {
 				setTimeout(resolve, time);
 			});
 		}
@@ -110,10 +110,10 @@ export namespace HomeDetector {
 
 			private async _ping(ip: string) {
 				const { alive } = await ping.promise.probe(ip, {
-					timeout: 2000
+					timeout: 2000,
 				});
 				return {
-					state: alive ? HOME_STATE.HOME : HOME_STATE.AWAY
+					state: alive ? HOME_STATE.HOME : HOME_STATE.AWAY,
 				};
 			}
 
@@ -128,9 +128,9 @@ export namespace HomeDetector {
 				  }
 			> {
 				const pings = await Promise.all(
-					this._config.ips.map(ip => {
+					this._config.ips.map((ip) => {
 						return ping.promise.probe(ip, {
-							timeout: 2000
+							timeout: 2000,
 						});
 					})
 				);
@@ -138,12 +138,12 @@ export namespace HomeDetector {
 					if (ping.alive) {
 						return {
 							ip: ping.host,
-							state: HOME_STATE.HOME
+							state: HOME_STATE.HOME,
 						};
 					}
 				}
 				return {
-					state: HOME_STATE.AWAY
+					state: HOME_STATE.AWAY,
 				};
 			}
 
@@ -159,7 +159,7 @@ export namespace HomeDetector {
 				}
 
 				const results = await Promise.all(pings);
-				return results.some(v => v.state === HOME_STATE.HOME)
+				return results.some((v) => v.state === HOME_STATE.HOME)
 					? HOME_STATE.HOME
 					: HOME_STATE.AWAY;
 			}
@@ -180,11 +180,11 @@ export namespace HomeDetector {
 				} else {
 					return (
 						await Promise.all(
-							this._config.ips.map(ip => {
+							this._config.ips.map((ip) => {
 								return this._fastPing(ip);
 							})
 						)
-					).some(v => v === HOME_STATE.HOME)
+					).some((v) => v === HOME_STATE.HOME)
 						? HOME_STATE.HOME
 						: HOME_STATE.AWAY;
 				}
@@ -260,26 +260,26 @@ export namespace HomeDetector {
 
 			private _initPingers() {
 				for (const { key, data, extended } of [
-					...(Object.keys(config.base) || []).map(n => ({
+					...(Object.keys(config.base) || []).map((n) => ({
 						key: n,
 						data: config.base[n],
-						extended: false
+						extended: false,
 					})),
-					...(Object.keys(config.extended) || []).map(n => ({
+					...(Object.keys(config.extended) || []).map((n) => ({
 						key: n,
 						data: config.extended[n],
-						extended: true
-					}))
+						extended: true,
+					})),
 				]) {
 					this._extendedPingers.set(
 						key,
 						new Pinger(
 							{
 								name: key,
-								ips: data
+								ips: data,
 							},
 							this._db,
-							newState => {
+							(newState) => {
 								this._onChange(key, newState);
 							}
 						)
@@ -343,7 +343,7 @@ export namespace HomeDetector {
 		export class Bot extends BotState.Base {
 			static readonly commands = {
 				'/whoshome': 'Check who is home',
-				'/help_homedetector': 'Print help comands for home-detector'
+				'/help_homedetector': 'Print help comands for home-detector',
 			};
 
 			static readonly botName = 'Home-Detector';
@@ -358,7 +358,7 @@ export namespace HomeDetector {
 							const all = await Bot._config!.apiHandler.getAll(
 								resDummy,
 								{
-									auth: Auth.Secret.getKey()
+									auth: Auth.Secret.getKey(),
 								},
 								'BOT.WHOSHOME'
 							);
@@ -404,7 +404,7 @@ export namespace HomeDetector {
 								resDummy,
 								{
 									auth: Auth.Secret.getKey(),
-									name: match[1]
+									name: match[1],
 								},
 								'BOT.IS_HOME'
 							);
@@ -479,7 +479,7 @@ export namespace HomeDetector {
 									header: string[];
 								} = {
 									contents: [],
-									header: ['Name', 'Time']
+									header: ['Name', 'Time'],
 								};
 								for (const target of state.states.homeDetector
 									.lastSubjects!) {
@@ -487,9 +487,10 @@ export namespace HomeDetector {
 										logObj,
 										`Name: ${target}`
 									);
-									const pinger = Bot._config!.detector.getPinger(
-										target.toLowerCase()
-									);
+									const pinger =
+										Bot._config!.detector.getPinger(
+											target.toLowerCase()
+										);
 									if (!pinger) {
 										attachMessage(
 											nameMsg,
@@ -515,7 +516,7 @@ export namespace HomeDetector {
 											: pinger.leftAt.toLocaleString();
 									table.contents.push([
 										Bot.capitalize(target),
-										timeMsg
+										timeMsg,
 									]);
 								}
 
@@ -534,9 +535,9 @@ export namespace HomeDetector {
 						/what commands are there for home(-| )?detector/,
 						async () => {
 							return `Commands are:\n${Bot.matches.matches
-								.map(match => {
+								.map((match) => {
 									return `RegExps: ${match.regexps
-										.map(r => r.source)
+										.map((r) => r.source)
 										.join(', ')}. Texts: ${match.texts.join(
 										', '
 									)}}`;
@@ -570,7 +571,7 @@ export namespace HomeDetector {
 			): Promise<_Bot.Message.MatchResponse | undefined> {
 				return await this.matchLines({
 					...config,
-					matchConfig: Bot.matches
+					matchConfig: Bot.matches,
 				});
 			}
 
@@ -580,7 +581,7 @@ export namespace HomeDetector {
 
 			toJSON(): JSON {
 				return {
-					lastSubjects: this.lastSubjects
+					lastSubjects: this.lastSubjects,
 				};
 			}
 		}
@@ -600,7 +601,7 @@ export namespace HomeDetector {
 			public async get(
 				res: ResponseLike,
 				{
-					name
+					name,
 				}: {
 					name: string;
 					auth: string;
@@ -664,7 +665,7 @@ export namespace HomeDetector {
 
 			constructor({
 				detector,
-				randomNum
+				randomNum,
 			}: {
 				randomNum: number;
 				detector: Classes.Detector;
@@ -786,7 +787,7 @@ export namespace HomeDetector {
 			app,
 			apiHandler,
 			randomNum,
-			detector
+			detector,
 		}: ModuleConfig & {
 			detector: Classes.Detector;
 			apiHandler: API.Handler;

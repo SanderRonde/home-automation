@@ -3,7 +3,7 @@ import {
 	MAX_PRESSURE,
 	DEFAULT_MIN_TIME,
 	MAX_PRESSURE_TIME,
-	PRESSURE_SAMPLE_TIME
+	PRESSURE_SAMPLE_TIME,
 } from '../lib/constants';
 import { ModuleConfig, ModuleHookables, AllModules } from './modules';
 import { errorHandle, requireParams, auth } from '../lib/decorators';
@@ -19,12 +19,12 @@ import { createRouter } from '../lib/api';
 
 export const enum PRESSURE_CHANGE_DIRECTION {
 	UP,
-	DOWN
+	DOWN,
 }
 
 export const enum PRESSURE_REGISTER {
 	REGISTER_CHANGED,
-	IGNORE_CHANGE
+	IGNORE_CHANGE,
 }
 
 export interface PressureRange {
@@ -151,7 +151,7 @@ export namespace Pressure {
 						from = MIN_PRESSURE,
 						to = MAX_PRESSURE,
 						minTime = DEFAULT_MIN_TIME,
-						handler
+						handler,
 					} = range;
 					if (minTime >= MAX_PRESSURE_TIME) {
 						throw new Error('MinTime too big');
@@ -164,7 +164,7 @@ export namespace Pressure {
 						lastPressures
 							.get(key)!
 							.slice(-(minTime / PRESSURE_SAMPLE_TIME))
-							.every(value => {
+							.every((value) => {
 								return value >= from && value <= to;
 							})
 					) {
@@ -191,17 +191,17 @@ export namespace Pressure {
 						amount,
 						direction,
 						handler,
-						minTime = DEFAULT_MIN_TIME
+						minTime = DEFAULT_MIN_TIME,
 					} = range;
 
 					const samples = minTime / PRESSURE_SAMPLE_TIME;
 					const [initial, ...rest] = lastPressures
 						.get(key)!
 						.slice(-samples)
-						.map(v => ~~v);
+						.map((v) => ~~v);
 					if (rest.length < samples - 1) continue;
 					if (
-						rest.every(value => {
+						rest.every((value) => {
 							if (direction === PRESSURE_CHANGE_DIRECTION.UP) {
 								return value >= initial + amount;
 							} else {
@@ -300,7 +300,7 @@ export namespace Pressure {
 			static readonly commands = {
 				'/pressure': 'Turn on pressure module',
 				'/pressureoff': 'Turn off pressure module',
-				'/help_pressure': 'Print help comands for keyval'
+				'/help_pressure': 'Print help comands for keyval',
 			};
 
 			static readonly botName = 'Pressure';
@@ -325,7 +325,7 @@ export namespace Pressure {
 								Register.getAll().entries()
 							).map(([key, pressure]) => {
 								return [key, pressure + ''];
-							})
+							}),
 						});
 					});
 					mm(
@@ -344,9 +344,9 @@ export namespace Pressure {
 						/what commands are there for pressure/,
 						async () => {
 							return `Commands are:\n${Bot.matches.matches
-								.map(match => {
+								.map((match) => {
 									return `RegExps: ${match.regexps
-										.map(r => r.source)
+										.map((r) => r.source)
 										.join(', ')}. Texts: ${match.texts.join(
 										', '
 									)}}`;
@@ -366,7 +366,7 @@ export namespace Pressure {
 			): Promise<_Bot.Message.MatchResponse | undefined> {
 				return await this.matchLines({
 					...config,
-					matchConfig: Bot.matches
+					matchConfig: Bot.matches,
 				});
 			}
 
@@ -389,7 +389,7 @@ export namespace Pressure {
 				res: ResponseLike,
 				{
 					key,
-					pressure
+					pressure,
 				}: {
 					auth?: string;
 					key: string;
@@ -418,7 +418,7 @@ export namespace Pressure {
 					...req.params,
 					...req.body,
 					...req.query,
-					cookies: req.cookies
+					cookies: req.cookies,
 				});
 			});
 			router.use(app);

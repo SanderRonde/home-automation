@@ -4,7 +4,7 @@ import {
 	ConfigurableWebComponent,
 	Props,
 	PROP_TYPE,
-	bindToClass
+	bindToClass,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { MessageToast } from '../../../shared/message-toast/message-toast.js';
 import { JSONObjectHTML, JSONObjectCSS } from './json-object.templates.js';
@@ -15,7 +15,7 @@ import { PowerSwitch } from '../power-switch/power-switch.js';
 	is: 'json-object',
 	html: JSONObjectHTML,
 	css: JSONObjectCSS,
-	dependencies: [PowerSwitch, MessageToast]
+	dependencies: [PowerSwitch, MessageToast],
 })
 export class JSONObject extends ConfigurableWebComponent<{
 	selectors: {
@@ -29,15 +29,15 @@ export class JSONObject extends ConfigurableWebComponent<{
 		reflect: {
 			json: {
 				value: {},
-				type: ComplexType<any>()
+				type: ComplexType<any>(),
 			},
 			name: {
-				type: PROP_TYPE.STRING
+				type: PROP_TYPE.STRING,
 			},
 			path: {
-				type: ComplexType<string[]>()
-			}
-		}
+				type: ComplexType<string[]>(),
+			},
+		},
 	});
 
 	@bindToClass
@@ -46,7 +46,7 @@ export class JSONObject extends ConfigurableWebComponent<{
 		if (!root) {
 			MessageToast.create({
 				message: 'Failed to find root element',
-				duration: 5000
+				duration: 5000,
 			});
 			return;
 		}

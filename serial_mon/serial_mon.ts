@@ -7,7 +7,7 @@ import * as readline from 'readline';
 
 const readLine = readline.createInterface({
 	input: process.stdin,
-	output: process.stdout
+	output: process.stdout,
 });
 
 function getIO() {
@@ -37,7 +37,7 @@ async function connect({
 	baud,
 	file,
 	input,
-	takeInput
+	takeInput,
 }: {
 	baud: number;
 	file: string;
@@ -45,9 +45,9 @@ async function connect({
 	takeInput: boolean;
 }) {
 	const port = new SerialPort(file, {
-		baudRate: baud
+		baudRate: baud,
 	});
-	port.on('error', e => {
+	port.on('error', (e) => {
 		console.log('error', e);
 		process.exit(1);
 	});
@@ -81,10 +81,10 @@ async function connect({
 	}
 
 	while (true) {
-		await new Promise(resolve => {
+		await new Promise((resolve) => {
 			readLine.question(
 				showOutput ? '' : 'Enter command:\n> ',
-				command => {
+				(command) => {
 					if (
 						command === 'exit' ||
 						command === 'e' ||
@@ -96,7 +96,7 @@ async function connect({
 					if (command === 's') {
 						showOutput = true;
 						console.log('Showing output');
-						buffered.forEach(line => {
+						buffered.forEach((line) => {
 							process.stdout.write(line);
 						});
 					} else if (command === 'h') {

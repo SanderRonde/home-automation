@@ -1,7 +1,7 @@
 import {
 	Props,
 	ComplexType,
-	config
+	config,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { HomeDetectorDisplayHTML } from './home-detector-display.html.js';
 import { HomeDetectorDisplayCSS } from './home-detector-display.css.js';
@@ -10,7 +10,7 @@ import { ServerComm } from '../../../shared/server-comm/server-comm.js';
 @config({
 	is: 'home-detector-display',
 	html: HomeDetectorDisplayHTML,
-	css: HomeDetectorDisplayCSS
+	css: HomeDetectorDisplayCSS,
 })
 export class HomeDetectorDisplay extends ServerComm {
 	props = Props.define(
@@ -19,9 +19,9 @@ export class HomeDetectorDisplay extends ServerComm {
 			reflect: {
 				json: {
 					value: {},
-					type: ComplexType<{ [key: string]: 'home' | 'away' }>()
-				}
-			}
+					type: ComplexType<{ [key: string]: 'home' | 'away' }>(),
+				},
+			},
 		},
 		super.props
 	);

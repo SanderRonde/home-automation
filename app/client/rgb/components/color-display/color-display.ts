@@ -1,6 +1,6 @@
 import {
 	ConfigurableWebComponent,
-	config
+	config,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { ColorDisplayHTML } from './color-display.html.js';
 import { ColorDisplayCSS } from './color-display.css.js';
@@ -8,7 +8,7 @@ import { ColorDisplayCSS } from './color-display.css.js';
 @config({
 	is: 'color-display',
 	css: ColorDisplayCSS,
-	html: ColorDisplayHTML
+	html: ColorDisplayHTML,
 })
 export class ColorDisplay extends ConfigurableWebComponent<{
 	selectors: {
@@ -19,7 +19,7 @@ export class ColorDisplay extends ConfigurableWebComponent<{
 	};
 }> {
 	appendElement(el: HTMLElement) {
-		Array.from(this.$.display.children).forEach(el => {
+		Array.from(this.$.display.children).forEach((el) => {
 			el.remove();
 		});
 

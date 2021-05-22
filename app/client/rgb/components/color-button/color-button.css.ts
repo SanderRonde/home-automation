@@ -1,13 +1,13 @@
 import {
 	TemplateFn,
-	CHANGE_TYPE
+	CHANGE_TYPE,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { ColorButton } from './color-button.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 
 export const ColorButtonCSS = [
 	new TemplateFn<ColorButton>(
-		function(html) {
+		function (html) {
 			return html`
 				<style>
 					#image {
@@ -37,7 +37,7 @@ export const ColorButtonCSS = [
 		render
 	),
 	new TemplateFn<ColorButton>(
-		function(html) {
+		function (html) {
 			return html`
 				<style>
 					span[data-type='html'],
@@ -50,5 +50,5 @@ export const ColorButtonCSS = [
 		},
 		CHANGE_TYPE.NEVER,
 		render
-	)
+	),
 ];

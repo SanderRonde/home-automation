@@ -4,7 +4,7 @@ import {
 	config,
 	ConfigurableWebComponent,
 	Props,
-	PROP_TYPE
+	PROP_TYPE,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { JSONBooleanHTML, JSONBooleanCSS } from './json-boolean.templates.js';
 import { MessageToast } from '../../../shared/message-toast/message-toast.js';
@@ -15,7 +15,7 @@ import { PowerSwitch } from '../power-switch/power-switch.js';
 	is: 'json-boolean',
 	html: JSONBooleanHTML,
 	css: JSONBooleanCSS,
-	dependencies: [PowerSwitch, MessageToast]
+	dependencies: [PowerSwitch, MessageToast],
 })
 export class JSONBoolean extends ConfigurableWebComponent<{
 	selectors: {
@@ -28,15 +28,15 @@ export class JSONBoolean extends ConfigurableWebComponent<{
 	props = Props.define(this, {
 		reflect: {
 			value: {
-				type: ComplexType<number | boolean | string>()
+				type: ComplexType<number | boolean | string>(),
 			},
 			name: {
-				type: PROP_TYPE.STRING
+				type: PROP_TYPE.STRING,
 			},
 			path: {
-				type: ComplexType<string[]>()
-			}
-		}
+				type: ComplexType<string[]>(),
+			},
+		},
 	});
 
 	@bindToClass
@@ -45,7 +45,7 @@ export class JSONBoolean extends ConfigurableWebComponent<{
 		if (!root) {
 			MessageToast.create({
 				message: 'Failed to find root element',
-				duration: 5000
+				duration: 5000,
 			});
 			return;
 		}

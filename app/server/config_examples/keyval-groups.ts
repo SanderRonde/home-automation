@@ -6,6 +6,6 @@ import { KEYVAL_GROUP_EFFECT, GroupConfig } from '../modules/keyval';
 export default {
 	'some.key.val': {
 		'other.key.val': KEYVAL_GROUP_EFFECT.SAME,
-		'another.key.val': KEYVAL_GROUP_EFFECT.INVERT
-	}
+		'another.key.val': KEYVAL_GROUP_EFFECT.INVERT,
+	},
 } as GroupConfig;

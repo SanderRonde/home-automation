@@ -1,13 +1,13 @@
 import {
 	TemplateFn,
-	CHANGE_TYPE
+	CHANGE_TYPE,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { PatternButton } from './pattern-button.js';
 
 export const PatternButtonCSS = [
 	new TemplateFn<PatternButton>(
-		function(html, { props }) {
+		function (html, { props }) {
 			return html`
 				<style>
 					#pattern {
@@ -35,7 +35,7 @@ export const PatternButtonCSS = [
 		render
 	),
 	new TemplateFn<PatternButton>(
-		function(html) {
+		function (html) {
 			return html`
 				<style>
 					span[data-type='html'],
@@ -70,5 +70,5 @@ export const PatternButtonCSS = [
 		},
 		CHANGE_TYPE.NEVER,
 		render
-	)
+	),
 ];

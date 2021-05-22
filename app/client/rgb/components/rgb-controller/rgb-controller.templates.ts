@@ -1,6 +1,6 @@
 import {
 	CHANGE_TYPE,
-	TemplateFn
+	TemplateFn,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { RGBController, PatternConfig } from './rgb-controller';
@@ -12,14 +12,14 @@ function fillPatterns(patterns: PatternConfig[]): PatternConfig[] {
 			colors: [],
 			defaultSpeed: 0,
 			name: 'empty',
-			transitionType: 'jump'
+			transitionType: 'jump',
 		});
 	}
 	return newPatterns;
 }
 
 export const RGBControllerHTML = new TemplateFn<RGBController>(
-	function(html, { props }) {
+	function (html, { props }) {
 		return html`
 			<div id="background">
 				<color-display id="display"></color-display>
@@ -29,7 +29,7 @@ export const RGBControllerHTML = new TemplateFn<RGBController>(
 						#parent="${this}"
 						class="button"
 					></color-button>
-					${fillPatterns(props.patterns || []).map(pattern => {
+					${fillPatterns(props.patterns || []).map((pattern) => {
 						return html`
 							<pattern-button
 								#parent="${this}"
@@ -52,7 +52,7 @@ export const RGBControllerHTML = new TemplateFn<RGBController>(
 );
 
 export const RGBControllerCSS = new TemplateFn<RGBController>(
-	html => {
+	(html) => {
 		return html`
 			<style>
 				#background {

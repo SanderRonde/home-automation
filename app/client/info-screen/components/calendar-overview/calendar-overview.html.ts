@@ -1,33 +1,33 @@
 import {
 	TemplateFn,
-	CHANGE_TYPE
+	CHANGE_TYPE,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { CalendarOverview } from './calendar-overview.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 
 export const CalendarOverviewHTML = new TemplateFn<CalendarOverview>(
-	function(html) {
+	function (html) {
 		return html`
 			<div id="container">
 				<table id="table">
 					<tbody>
 						<tr>
-							${this.getWeekDayEvents().map(weekDay => {
+							${this.getWeekDayEvents().map((weekDay) => {
 								return html`
 									<th class="weekday">
 										<div class="day-name">
 											${new Intl.DateTimeFormat('nl-NL', {
-												weekday: 'short'
+												weekday: 'short',
 											}).format(weekDay.date)}
 										</div>
 									</th>
 								`;
 							})}
 						</tr>
-						${this.getTimeSpacedEvents().map(timeslot => {
+						${this.getTimeSpacedEvents().map((timeslot) => {
 							return html`
 								<tr>
-									${timeslot.map(event => {
+									${timeslot.map((event) => {
 										if (!event)
 											return html`
 												<td class="event empty"></td>

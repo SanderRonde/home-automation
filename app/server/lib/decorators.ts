@@ -9,13 +9,13 @@ interface KeyVal {
 }
 
 export function requireParams(...keys: string[]) {
-	return function(
+	return function (
 		_target: any,
 		_propertyKey: string,
 		descriptor: PropertyDescriptor
 	) {
 		const original = descriptor.value;
-		descriptor.value = function(
+		descriptor.value = function (
 			res: express.Response,
 			params: KeyVal,
 			...args: any[]
@@ -39,7 +39,7 @@ export function auth(
 	requireParams('auth')(target, propertyKey, descriptor);
 
 	const original = descriptor.value;
-	descriptor.value = function(
+	descriptor.value = function (
 		res: express.Response,
 		params: KeyVal,
 		...args: any[]
@@ -58,7 +58,7 @@ export function authCookie(
 	descriptor: PropertyDescriptor
 ) {
 	const original = descriptor.value;
-	descriptor.value = function(
+	descriptor.value = function (
 		res: express.Response,
 		req:
 			| express.Request
@@ -83,7 +83,7 @@ export function authAll(
 	descriptor: PropertyDescriptor
 ) {
 	const original = descriptor.value;
-	descriptor.value = function(
+	descriptor.value = function (
 		res: express.Response,
 		params: KeyVal & {
 			cookies: {
@@ -115,7 +115,7 @@ export function errorHandle(
 	descriptor: PropertyDescriptor
 ) {
 	const original = descriptor.value;
-	descriptor.value = async function(res: express.Response, ...args: any[]) {
+	descriptor.value = async function (res: express.Response, ...args: any[]) {
 		try {
 			return await original.bind(this)(res, ...args);
 		} catch (e) {
@@ -144,7 +144,7 @@ export function upgradeToHTTPS(
 	descriptor: PropertyDescriptor
 ) {
 	const original = descriptor.value;
-	descriptor.value = async function(
+	descriptor.value = async function (
 		res: express.Response,
 		req: express.Request,
 		...args: any[]

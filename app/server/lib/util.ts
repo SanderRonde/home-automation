@@ -6,18 +6,16 @@ import { AllModules } from '../modules';
 import { ModuleHookables } from '../modules/modules';
 
 export function wait(time: number) {
-	return new Promise(resolve => {
+	return new Promise((resolve) => {
 		setTimeout(resolve, time);
 	});
 }
 
 export function objToArr<V>(obj: { [key: string]: V }): [string, V][] {
-	return Object.keys(obj).map(k => [k, obj[k]]);
+	return Object.keys(obj).map((k) => [k, obj[k]]);
 }
 
-export function arrToObj<V>(
-	arr: [string, V][]
-): {
+export function arrToObj<V>(arr: [string, V][]): {
 	[key: string]: V;
 } {
 	const obj: {
@@ -48,7 +46,7 @@ export namespace Time {
 		const [hours, minutes] = timeStr.split(':');
 		return {
 			hours: parseInt(hours, 10),
-			minutes: parseInt(minutes, 10)
+			minutes: parseInt(minutes, 10),
 		};
 	}
 
@@ -62,7 +60,7 @@ export namespace Time {
 		const mins = date.getMinutes();
 		return {
 			hours,
-			minutes: mins
+			minutes: mins,
 		};
 	}
 
@@ -102,7 +100,7 @@ export namespace XHR {
 			[key: string]: string;
 		} = {}
 	) {
-		return new Promise<string>(resolve => {
+		return new Promise<string>((resolve) => {
 			const qs = Object.keys(params).length
 				? `?${querystring.stringify(params)}`
 				: '';
@@ -114,9 +112,9 @@ export namespace XHR {
 						hostname: parsedURL.hostname,
 						port: 80,
 						path: `${parsedURL.pathname}${parsedURL.search}`,
-						method: 'POST'
+						method: 'POST',
 					},
-					res => {
+					(res) => {
 						let data: string = '';
 
 						res.on('data', (chunk: string | Buffer) => {
@@ -131,13 +129,13 @@ export namespace XHR {
 							);
 							logOutgoingReq(req, {
 								method: 'GET',
-								target: url
+								target: url,
 							});
 							resolve(data);
 						});
 					}
 				)
-				.on('error', e => {
+				.on('error', (e) => {
 					log(
 						chalk.red(
 							`Error while sending request "${name}" with URL "${url}": "${e.message}"`
@@ -155,13 +153,13 @@ export namespace XHR {
 			[key: string]: string;
 		} = {}
 	) {
-		return new Promise<string>(resolve => {
+		return new Promise<string>((resolve) => {
 			const qs = Object.keys(params).length
 				? `?${querystring.stringify(params)}`
 				: '';
 			const fullURL = `${url}${qs}`;
 			const req = http
-				.get(fullURL, res => {
+				.get(fullURL, (res) => {
 					let data: string = '';
 
 					res.on('data', (chunk: string | Buffer) => {
@@ -176,12 +174,12 @@ export namespace XHR {
 						);
 						logOutgoingReq(req, {
 							method: 'GET',
-							target: url
+							target: url,
 						});
 						resolve(data);
 					});
 				})
-				.on('error', e => {
+				.on('error', (e) => {
 					log(
 						chalk.red(
 							`Error while sending request "${name}" with URL "${url}": "${e.message}"`
@@ -192,9 +190,8 @@ export namespace XHR {
 	}
 }
 
-const CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'.split(
-	''
-);
+const CHARS =
+	'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'.split('');
 export function generateRandomString(length: number = 64) {
 	let str = '';
 	for (let i = 0; i < length; i++) {
@@ -218,7 +215,7 @@ export function flatten<V>(arr: V[][]): V[] {
 export class SettablePromise<V> {
 	private _isSet: boolean = false;
 	private _resolver!: (value: V) => void;
-	private _promise = new Promise<V>(resolve => {
+	private _promise = new Promise<V>((resolve) => {
 		this._resolver = resolve;
 	});
 
@@ -242,15 +239,15 @@ export async function createHookables(
 	hookName: string,
 	logObj: any
 ): Promise<ModuleHookables> {
-	return (arrToObj(
+	return arrToObj(
 		Object.keys(modules).map((name: keyof AllModules) => {
 			return [
 				name,
 				new modules[name].meta.external.Handler(
 					logObj,
 					`${sourceName}.${hookName}`
-				)
+				),
 			];
 		})
-	) as unknown) as ModuleHookables;
+	) as unknown as ModuleHookables;
 }

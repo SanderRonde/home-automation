@@ -2,7 +2,7 @@ import {
 	CHANGE_TYPE,
 	TemplateFn,
 	Templater,
-	TemplateRenderResult
+	TemplateRenderResult,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { JSONValue } from './json-value.js';
@@ -39,9 +39,7 @@ export function jsonValue(
 
 export const JSONValueHTML = new TemplateFn<JSONValue>(
 	(html, { props }) => {
-		return html`
-			${jsonValue(html, props.value, props.path)}
-		`;
+		return html` ${jsonValue(html, props.value, props.path)} `;
 	},
 	CHANGE_TYPE.PROP,
 	render

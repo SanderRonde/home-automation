@@ -1,6 +1,6 @@
 import {
 	CHANGE_TYPE,
-	TemplateFn
+	TemplateFn,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { clampWidthSelector } from '../../../shared/css-util/css-util.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
@@ -23,7 +23,7 @@ export const JSONSwitchesHTML = new TemplateFn<JSONSwitches>(
 );
 
 export const JSONSwitchesCSS = new TemplateFn<JSONSwitches>(
-	html => {
+	(html) => {
 		return html`
 			<style>
 				#background {

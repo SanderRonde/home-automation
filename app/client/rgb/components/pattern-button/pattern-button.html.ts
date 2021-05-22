@@ -1,12 +1,12 @@
 import {
 	TemplateFn,
-	CHANGE_TYPE
+	CHANGE_TYPE,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { PatternButton } from './pattern-button.js';
 
 export const PatternButtonHTML = new TemplateFn<PatternButton>(
-	function(html, { props }) {
+	function (html, { props }) {
 		return html`
 			<div id="container" @click="${this.onClick}">
 				${props.pattern!.colors.length === 0

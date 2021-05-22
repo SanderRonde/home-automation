@@ -6,7 +6,7 @@ import {
 	ConfigurableWebComponent,
 	Props,
 	PROP_TYPE,
-	wait
+	wait,
 } from '../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { render } from '../../../../node_modules/lit-html/lit-html.js';
 import { clampWidthSelector } from '../css-util/css-util.js';
@@ -21,7 +21,7 @@ interface CreateConfig {
 @config({
 	is: 'message-toast',
 	html: new TemplateFn<MessageToast>(
-		function(html, { props }) {
+		function (html, { props }) {
 			return html`
 				<div id="toast">
 					<div id="text">${props.message}</div>
@@ -35,7 +35,7 @@ interface CreateConfig {
 		render
 	),
 	css: new TemplateFn<MessageToast>(
-		html => {
+		(html) => {
 			return html`
 				<style>
 					:host {
@@ -83,7 +83,7 @@ interface CreateConfig {
 		},
 		CHANGE_TYPE.NEVER,
 		render
-	)
+	),
 })
 export class MessageToast extends ConfigurableWebComponent<{
 	selectors: {
@@ -104,13 +104,13 @@ export class MessageToast extends ConfigurableWebComponent<{
 			message: PROP_TYPE.STRING,
 			button: {
 				type: PROP_TYPE.STRING,
-				value: 'hide'
+				value: 'hide',
 			},
 			duration: {
 				type: PROP_TYPE.NUMBER,
-				value: 10000
-			}
-		}
+				value: 10000,
+			},
+		},
 	});
 
 	async hide() {
@@ -143,7 +143,7 @@ export class MessageToast extends ConfigurableWebComponent<{
 		message,
 		onClick,
 		button = 'hide',
-		duration = 10000
+		duration = 10000,
 	}: CreateConfig): MessageToast {
 		const toast = document.createElement('message-toast') as MessageToast;
 		toast.props.message = message;

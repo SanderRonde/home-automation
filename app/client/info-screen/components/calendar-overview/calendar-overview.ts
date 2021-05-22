@@ -2,7 +2,7 @@ import {
 	Props,
 	config,
 	ComplexType,
-	ConfigurableWebComponent
+	ConfigurableWebComponent,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { calendar_v3 } from 'googleapis/build/src/apis/calendar/v3';
 import { CalendarOverviewHTML } from './calendar-overview.html.js';
@@ -23,7 +23,7 @@ interface TimedEvent extends ExtendedEvent {
 @config({
 	is: 'calendar-overview',
 	css: CalendarOverviewCSS,
-	html: CalendarOverviewHTML
+	html: CalendarOverviewHTML,
 })
 export class CalendarOverview extends ConfigurableWebComponent<{
 	events: {
@@ -36,9 +36,9 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 		priv: {
 			events: {
 				type: ComplexType<ExtendedEvent[]>(),
-				value: []
-			}
-		}
+				value: [],
+			},
+		},
 	});
 
 	getDay(daysOffset: number) {
@@ -72,12 +72,12 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 	getTimeSpacedEvents() {
 		const weekdayEvents = this.getWeekDayEvents();
 		const max = Math.max(
-			...weekdayEvents.map(weekDay => weekDay.events.length)
+			...weekdayEvents.map((weekDay) => weekDay.events.length)
 		);
 
 		const arr: (TimedEvent | null)[][] = new Array(max)
 			.fill('')
-			.map(_ => new Array(7).fill(null));
+			.map((_) => new Array(7).fill(null));
 		for (let i = 0; i < arr.length; i++) {
 			for (let j = 0; j < 7; j++) {
 				arr[i][j] = weekdayEvents[j].events[i] || null;
@@ -90,7 +90,7 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 		const days = new Array(7).fill('').map((_, index) => {
 			return this.getDay(index);
 		});
-		const endsOfDays = days.map(day => {
+		const endsOfDays = days.map((day) => {
 			const copy = new Date(day);
 			copy.setHours(23, 59, 59);
 			return copy;
@@ -98,13 +98,13 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 		const dayEvents: {
 			date: Date;
 			events: TimedEvent[];
-		}[] = days.map(d => ({
+		}[] = days.map((d) => ({
 			date: d,
-			events: []
+			events: [],
 		}));
 		const formatter = new Intl.DateTimeFormat('nl-NL', {
 			hour: '2-digit',
-			minute: '2-digit'
+			minute: '2-digit',
 		});
 		for (const event of this.props.events) {
 			const eventStart = new Date(
@@ -136,7 +136,7 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 					endTime:
 						this.getEndOfDay(startIndex) < eventEnd
 							? formatter.format(this.getEndOfDay(startIndex))
-							: formatter.format(eventEnd)
+							: formatter.format(eventEnd),
 				});
 			} else {
 				// Multi-day event
@@ -150,7 +150,7 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 						endTime:
 							endsOfDays[i] < eventEnd
 								? formatter.format(endsOfDays[i])
-								: formatter.format(eventEnd)
+								: formatter.format(eventEnd),
 					});
 				}
 			}
@@ -179,10 +179,10 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 			const response = await fetch(url, {
 				method: 'POST',
 				headers: {
-					'Content-Type': 'application/json'
+					'Content-Type': 'application/json',
 				},
 				body: JSON.stringify({ ...postBody }),
-				credentials: 'include'
+				credentials: 'include',
 			});
 			return response;
 		} catch (e) {

@@ -6,14 +6,14 @@ export const PASTAS: {
 } = {
 	key: {
 		lang: 'lang',
-		text: 'this is the text i want to be said'
-	}
+		text: 'this is the text i want to be said',
+	},
 };
 
 export const LOCAL_URLS: {
 	[key: string]: string;
 } = {
-	file: 'http://www.example.com/somemp3file.mp3'
+	file: 'http://www.example.com/somemp3file.mp3',
 };
 
 export const CAST_DEVICE_NAMES = ['Home'];

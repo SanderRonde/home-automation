@@ -18,7 +18,7 @@ function initRipple() {
 			const ripple = new PaperRipple();
 			rippleTarget.appendChild(ripple.$);
 
-			rippleTarget.addEventListener('mousedown', e => {
+			rippleTarget.addEventListener('mousedown', (e) => {
 				ripple.downAction(e);
 			});
 			rippleTarget.addEventListener('mouseup', () => {
@@ -34,13 +34,13 @@ interface Window {
 
 function initListeners() {
 	['volumeDown', 'volumeUp', 'playpause', 'close', 'play', 'pause'].forEach(
-		externalEvent => {
+		(externalEvent) => {
 			document
 				.getElementById(externalEvent)!
 				.addEventListener('click', () => {
 					fetch(`/remote-control/${externalEvent}`, {
 						method: 'POST',
-						credentials: 'include'
+						credentials: 'include',
 					});
 				});
 		}
@@ -81,7 +81,7 @@ function initSetVolume() {
 
 		fetch(`/remote-control/setvolume/${amount}`, {
 			method: 'POST',
-			credentials: 'include'
+			credentials: 'include',
 		});
 	});
 }

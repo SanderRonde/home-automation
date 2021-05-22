@@ -4,7 +4,7 @@ import movementConfig from '../config/movements';
 import {
 	attachMessage,
 	attachSourcedMessage,
-	ResponseLike
+	ResponseLike,
 } from '../lib/logger';
 import { Bot as _Bot } from './index';
 import { ModuleMeta } from './meta';
@@ -28,7 +28,7 @@ export namespace Movement {
 		async notifyModules(modules: AllModules) {
 			modules.keyval.GetSetListener.addListener(
 				'state.movement',
-				async value => {
+				async (value) => {
 					if (value === '1') {
 						await Register.enable();
 					} else {
@@ -100,7 +100,7 @@ export namespace Movement {
 			public static async reportMovement(
 				res: ResponseLike,
 				{
-					key
+					key,
 				}: {
 					auth?: string;
 					key: string;

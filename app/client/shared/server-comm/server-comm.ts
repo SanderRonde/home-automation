@@ -3,7 +3,7 @@ import {
 	Props,
 	PROP_TYPE,
 	config,
-	EventListenerObj
+	EventListenerObj,
 } from '../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { MessageToast } from '../message-toast/message-toast.js';
 
@@ -11,7 +11,7 @@ import { MessageToast } from '../message-toast/message-toast.js';
 	is: 'server-comm',
 	html: null,
 	css: null,
-	dependencies: [MessageToast]
+	dependencies: [MessageToast],
 })
 export abstract class ServerComm<
 	ELS extends {
@@ -33,17 +33,17 @@ export abstract class ServerComm<
 	props = Props.define(this, {
 		reflect: {
 			key: {
-				type: PROP_TYPE.STRING
-			}
-		}
+				type: PROP_TYPE.STRING,
+			},
+		},
 	});
 
 	protected async assertOnline() {
 		if (navigator.onLine) return;
-		return new Promise(resolve => {
+		return new Promise((resolve) => {
 			const toast = MessageToast.create({
 				message: 'Waiting for internet...',
-				duration: 100000000
+				duration: 100000000,
 			});
 
 			const interval = window.setInterval(() => {
@@ -69,15 +69,15 @@ export abstract class ServerComm<
 			const response = await fetch(url, {
 				method: 'POST',
 				headers: {
-					'Content-Type': 'application/json'
+					'Content-Type': 'application/json',
 				},
 				body: JSON.stringify({ ...postBody }),
-				credentials: 'include'
+				credentials: 'include',
 			});
 			if (!response.ok) {
 				MessageToast.create({
 					message: `${errName} ${response.status}`,
-					duration: 5000
+					duration: 5000,
 				});
 				return false;
 			}
@@ -85,7 +85,7 @@ export abstract class ServerComm<
 		} catch (e) {
 			MessageToast.create({
 				message: `${errName} (network error)`,
-				duration: 5000
+				duration: 5000,
 			});
 			return false;
 		}

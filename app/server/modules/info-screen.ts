@@ -55,7 +55,7 @@ export namespace InfoScreen {
 			const openweathermapSecrets = {
 				api_key: getEnv('SECRET_OPENWEATHERMAP_API_KEY', true),
 				city: getEnv('SECRET_OPENWEATHERMAP_CITY', true),
-				units: getEnv('SECRET_OPENWEATHERMAP_UNITS', true)
+				units: getEnv('SECRET_OPENWEATHERMAP_UNITS', true),
 			};
 
 			export async function get() {
@@ -67,7 +67,7 @@ export namespace InfoScreen {
 						{
 							q: openweathermapSecrets.city,
 							appid: openweathermapSecrets.api_key,
-							units: openweathermapSecrets.units
+							units: openweathermapSecrets.units,
 						}
 					);
 					const parsed = JSON.parse(response) as {
@@ -113,7 +113,7 @@ export namespace InfoScreen {
 					};
 					return {
 						temp: parsed.main.temp,
-						icon: `${parsed.weather[0].icon}.svg`
+						icon: `${parsed.weather[0].icon}.svg`,
 					};
 				} catch (e) {
 					console.log(e);
@@ -167,7 +167,7 @@ export namespace InfoScreen {
 
 		export class Bot extends BotState.Base {
 			static readonly commands = {
-				'/info_refresh': 'Refresh info-screen'
+				'/info_refresh': 'Refresh info-screen',
 			};
 
 			static readonly botName = 'InfoScreen';
@@ -198,7 +198,7 @@ export namespace InfoScreen {
 			): Promise<_Bot.Message.MatchResponse | undefined> {
 				return await this.matchLines({
 					...config,
-					matchConfig: Bot.matches
+					matchConfig: Bot.matches,
 				});
 			}
 
@@ -217,7 +217,7 @@ export namespace InfoScreen {
 			public async getTemperature(
 				res: ResponseLike,
 				{
-					type
+					type,
 				}: {
 					type: 'inside' | 'outside' | 'server';
 				}
@@ -238,11 +238,12 @@ export namespace InfoScreen {
 						return { temp: temp!.temp, icon: 'server.png' };
 					} else {
 						// Use openweathermap
-						const openweathermapResponse = await Temperature.getExternal();
+						const openweathermapResponse =
+							await Temperature.getExternal();
 						if (openweathermapResponse === null)
 							return {
 								temp: 0,
-								icon: 'questionmark.svg'
+								icon: 'questionmark.svg',
 							};
 						return openweathermapResponse;
 					}
@@ -252,7 +253,7 @@ export namespace InfoScreen {
 				res.status(200).write(
 					JSON.stringify({
 						temperature: `${Math.round(temp * 10) / 10}°`,
-						icon: icon
+						icon: icon,
 					})
 				);
 				res.end();
@@ -266,7 +267,7 @@ export namespace InfoScreen {
 					attachMessage(res, `Fetched ${events.length} events`);
 					res.status(200).write(
 						JSON.stringify({
-							events
+							events,
 						})
 					);
 					res.end();
@@ -291,7 +292,7 @@ export namespace InfoScreen {
 					await fs.readFile(
 						path.join(SECRETS_FOLDER, 'last_tokens.json'),
 						{
-							encoding: 'utf8'
+							encoding: 'utf8',
 						}
 					)
 				);
@@ -308,7 +309,7 @@ export namespace InfoScreen {
 		} = {
 			client_id: getEnv('SECRET_GOOGLE_CLIENT_ID', true),
 			client_secret: getEnv('SECRET_GOOGLE_CLIENT_SECRET', true),
-			redirect_url: getEnv('SECRET_GOOGLE_REDIRECT_URL', true)
+			redirect_url: getEnv('SECRET_GOOGLE_REDIRECT_URL', true),
 		};
 		async function createClient() {
 			if (client) return;
@@ -329,7 +330,7 @@ export namespace InfoScreen {
 			if (client) {
 				const url = client.generateAuthUrl({
 					access_type: 'offline',
-					scope: SCOPES
+					scope: SCOPES,
 				});
 				return url;
 			}
@@ -344,7 +345,7 @@ export namespace InfoScreen {
 					path.join(SECRETS_FOLDER, 'last_tokens.json'),
 					JSON.stringify(tokens, null, '\t'),
 					{
-						encoding: 'utf8'
+						encoding: 'utf8',
 					}
 				);
 			}
@@ -356,7 +357,7 @@ export namespace InfoScreen {
 
 			calendar = google.calendar({
 				version: 'v3',
-				auth: client!
+				auth: client!,
 			});
 
 			authenticated = true;
@@ -386,28 +387,28 @@ export namespace InfoScreen {
 			const endTime = getDay(days - 1);
 			endTime.setHours(23, 59, 59);
 			const events = await Promise.all(
-				calendars.map(async calendarObj => {
+				calendars.map(async (calendarObj) => {
 					return {
 						response: await calendar?.events.list({
 							calendarId: calendarObj.id,
 							singleEvents: true,
 							orderBy: 'startTime',
 							timeMin: startTime.toISOString(),
-							timeMax: endTime.toISOString()
+							timeMax: endTime.toISOString(),
 						}),
-						calendar: calendarObj
+						calendar: calendarObj,
 					};
 				})
 			);
 			const joined = events.map(({ response, calendar }) =>
-				[...(response?.data.items || [])].map(event => {
+				[...(response?.data.items || [])].map((event) => {
 					return {
 						...event,
 						color:
 							event.colorId &&
 							colors.data.calendar![event.colorId]
 								? colors.data.calendar![event.colorId]
-								: colors.data.calendar![calendar.colorId!]
+								: colors.data.calendar![calendar.colorId!],
 					};
 				})
 			);
@@ -416,7 +417,7 @@ export namespace InfoScreen {
 				path.join(SECRETS_FOLDER, 'event-filter.js')
 			);
 			if (filter) {
-				return flatEvents.filter(event => {
+				return flatEvents.filter((event) => {
 					return filter(event);
 				});
 			}
@@ -428,10 +429,10 @@ export namespace InfoScreen {
 		const clients: Set<WSClient> = new Set();
 
 		export function refreshClients() {
-			clients.forEach(client => {
+			clients.forEach((client) => {
 				client.send(
 					JSON.stringify({
-						refresh: true
+						refresh: true,
 					})
 				);
 			});
@@ -441,7 +442,7 @@ export namespace InfoScreen {
 		export async function init({ config, randomNum }: ModuleConfig) {
 			const app = express();
 			const webpageHandler = new Webpage.Handler({
-				randomNum
+				randomNum,
 			});
 			const apiHandler = new API.Handler();
 			const server = http.createServer(app);
@@ -486,15 +487,15 @@ export namespace InfoScreen {
 				)
 			);
 
-			ws.all('/blanking', async client => {
+			ws.all('/blanking', async (client) => {
 				const { send, onDead } = client;
 				clients.add(client);
 				const listener = KeyVal.GetSetListener.addListener(
 					'room.lights.ceiling',
-					async value => {
+					async (value) => {
 						send(
 							JSON.stringify({
-								blank: value === '0'
+								blank: value === '0',
 							})
 						);
 					},
@@ -506,7 +507,7 @@ export namespace InfoScreen {
 							(await new KeyVal.External.Handler(
 								{},
 								'INFO_SCREEN.BLANKING'
-							).get('room.lights.ceiling')) === '0'
+							).get('room.lights.ceiling')) === '0',
 					})
 				);
 				onDead(() => {

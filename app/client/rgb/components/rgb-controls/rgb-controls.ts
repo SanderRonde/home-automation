@@ -2,7 +2,7 @@ import {
 	ConfigurableWebComponent,
 	Props,
 	config,
-	ComplexType
+	ComplexType,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { ColorButton } from '../color-button/color-button.js';
 import { RgbControlsHTML } from './rgb-controls.html.js';
@@ -11,7 +11,7 @@ import { RgbControlsCSS } from './rgb-controls.css.js';
 @config({
 	is: 'rgb-controls',
 	css: RgbControlsCSS,
-	html: RgbControlsHTML
+	html: RgbControlsHTML,
 })
 export class RgbControls extends ConfigurableWebComponent<{
 	selectors: {
@@ -23,8 +23,8 @@ export class RgbControls extends ConfigurableWebComponent<{
 }> {
 	props = Props.define(this, {
 		reflect: {
-			parent: ComplexType<ColorButton>()
-		}
+			parent: ComplexType<ColorButton>(),
+		},
 	});
 
 	public lastColor: [number, number, number] = [0, 0, 0];
@@ -36,7 +36,7 @@ export class RgbControls extends ConfigurableWebComponent<{
 		[0, 255, 255],
 		[0, 0, 255],
 		[255, 0, 255],
-		[255, 0, 0]
+		[255, 0, 0],
 	];
 	static getColorAtIndex(index: number): [number, number, number] {
 		const groupSize = 100 / (this.RANGE_COLORS.length - 1);
@@ -45,18 +45,18 @@ export class RgbControls extends ConfigurableWebComponent<{
 			if (index === 100) {
 				return {
 					start: 100 - groupSize,
-					end: 100
+					end: 100,
 				};
 			}
 			if (index < closestGroup) {
 				return {
 					start: closestGroup - groupSize,
-					end: closestGroup
+					end: closestGroup,
 				};
 			} else {
 				return {
 					start: closestGroup,
-					end: closestGroup + groupSize
+					end: closestGroup + groupSize,
 				};
 			}
 		})();
@@ -67,7 +67,7 @@ export class RgbControls extends ConfigurableWebComponent<{
 		const diffColor = startColor.map((color, index) => {
 			return endColor[index] - color;
 		});
-		const percentageDiff = diffColor.map(c => Math.round(c * percentage));
+		const percentageDiff = diffColor.map((c) => Math.round(c * percentage));
 		return startColor.map((value, index) => {
 			return value + percentageDiff[index];
 		}) as [number, number, number];

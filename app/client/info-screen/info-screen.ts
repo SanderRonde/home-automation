@@ -6,7 +6,7 @@ import {
 	AttributeCommitter,
 	NodePart,
 	isDirective,
-	noChange
+	noChange,
 } from '../../../node_modules/lit-html/lit-html.js';
 import { WebComponent } from '../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { InfoScreen } from './components/info-screen/info-screen.js';
@@ -20,7 +20,7 @@ function registerElements() {
 		AttributeCommitter,
 		NodePart,
 		isDirective,
-		noChange
+		noChange,
 	});
 
 	InfoScreen.define();

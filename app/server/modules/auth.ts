@@ -25,11 +25,11 @@ export namespace Auth {
 
 		function createClientSecret(id: number) {
 			const key = Secret.getKey();
-			const idArr = (id + '').split('').map(s => parseInt(s, 10));
+			const idArr = (id + '').split('').map((s) => parseInt(s, 10));
 
 			return key
 				.split('')
-				.map(char => {
+				.map((char) => {
 					let charCode = char.charCodeAt(0);
 					for (const idChar of idArr) {
 						charCode = charCode ^ idChar;
@@ -134,7 +134,7 @@ export namespace Auth {
 			if (Secret.authenticate(req.params.key)) {
 				res.cookie('key', Cookie.genCookie(), {
 					// Expires in quite a few years
-					expires: new Date(2147483647000)
+					expires: new Date(2147483647000),
 				});
 				res.status(200).write('Success');
 			} else {

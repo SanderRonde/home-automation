@@ -5,11 +5,11 @@ import {
 	PROP_TYPE,
 	config,
 	bindToClass,
-	Mounting
+	Mounting,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import {
 	RGBController,
-	ColorOption
+	ColorOption,
 } from '../rgb-controller/rgb-controller.js';
 import { ColorControls } from '../color-controls/color-controls.js';
 import { ColorDisplay } from '../color-display/color-display.js';
@@ -21,15 +21,17 @@ import { ColorButtonCSS } from './color-button.css.js';
 	is: 'color-button',
 	css: ColorButtonCSS,
 	html: ColorButtonHTML,
-	dependencies: [RgbControls]
+	dependencies: [RgbControls],
 })
-export class ColorButton extends ConfigurableWebComponent
-	implements ColorOption {
+export class ColorButton
+	extends ConfigurableWebComponent
+	implements ColorOption
+{
 	props = Props.define(this, {
 		reflect: {
 			selected: PROP_TYPE.BOOL,
-			parent: ComplexType<RGBController>()
-		}
+			parent: ComplexType<RGBController>(),
+		},
 	});
 
 	private _canvasContainer: HTMLElement | null = null;
@@ -54,7 +56,7 @@ export class ColorButton extends ConfigurableWebComponent
 		const { width, height } = this.canvas.getBoundingClientRect();
 		this._canvasDimensions = {
 			width,
-			height
+			height,
 		};
 		return this._canvasDimensions;
 	}
@@ -75,33 +77,33 @@ export class ColorButton extends ConfigurableWebComponent
 		blackShade.style.backgroundImage =
 			'linear-gradient(to bottom, rgba(0, 0, 0, 0), rgb(0, 0, 0))';
 		blackShade.addEventListener('touchmove', this.onDrag, {
-			passive: false
+			passive: false,
 		});
 		blackShade.addEventListener(
 			'touchstart',
-			e => {
+			(e) => {
 				this.onDrag(e, true);
 			},
 			{
-				passive: false
+				passive: false,
 			}
 		);
 		blackShade.addEventListener(
 			'touchend',
-			e => {
+			(e) => {
 				this.onDrag(e, true);
 			},
 			{
-				passive: false
+				passive: false,
 			}
 		);
 		blackShade.addEventListener(
 			'click',
-			e => {
+			(e) => {
 				this.onDrag(e, true);
 			},
 			{
-				passive: false
+				passive: false,
 			}
 		);
 		this._canvasContainer.appendChild(blackShade);
@@ -150,14 +152,14 @@ export class ColorButton extends ConfigurableWebComponent
 		if ('clientX' in e) {
 			const pos = {
 				x: e.clientX,
-				y: e.clientY
+				y: e.clientY,
 			};
 			return (this._lastTouch = pos);
 		} else {
 			if (!e.touches.length) return null;
 			const pos = {
 				x: e.touches[0].clientX,
-				y: e.touches[0].clientY
+				y: e.touches[0].clientY,
 			};
 			return (this._lastTouch = pos);
 		}
@@ -165,7 +167,7 @@ export class ColorButton extends ConfigurableWebComponent
 
 	private _getColorAtCoord({
 		x,
-		y
+		y,
 	}: {
 		x: number;
 		y: number;
@@ -182,11 +184,11 @@ export class ColorButton extends ConfigurableWebComponent
 			.map((color, index) => {
 				return color - this.controls.lastColor[index];
 			})
-			.map(c => Math.round(c * xFactor))
+			.map((c) => Math.round(c * xFactor))
 			.map((diffColor, index) => {
 				return this.controls.lastColor[index] + diffColor;
 			})
-			.map(c => Math.round(c * yFactor)) as [number, number, number];
+			.map((c) => Math.round(c * yFactor)) as [number, number, number];
 	}
 
 	private static readonly _COLOR_UPDATE_INTERVAL = 100;
@@ -218,7 +220,7 @@ export class ColorButton extends ConfigurableWebComponent
 			timeout: window.setTimeout(() => {
 				this._updateColor(color);
 			}, ColorButton._COLOR_UPDATE_INTERVAL - (Date.now() - this._lastColorUpdate)),
-			color
+			color,
 		};
 	}
 
@@ -229,8 +231,9 @@ export class ColorButton extends ConfigurableWebComponent
 		if (!coords) return;
 
 		const offset = ColorButton._touchBallSize / 2;
-		this.touchBall.style.transform = `translate(${coords.x -
-			offset}px, ${coords.y - offset}px)`;
+		this.touchBall.style.transform = `translate(${coords.x - offset}px, ${
+			coords.y - offset
+		}px)`;
 		const color = this._getColorAtCoord(coords);
 		if (force) {
 			this._updateColor(color);

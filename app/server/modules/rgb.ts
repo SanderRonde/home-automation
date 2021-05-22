@@ -9,7 +9,7 @@ import {
 	NAME_MAP,
 	MARKED_AUDIO_FOLDER,
 	NUM_LEDS,
-	HEX_LEDS
+	HEX_LEDS,
 } from '../lib/constants';
 import {
 	errorHandle,
@@ -17,20 +17,20 @@ import {
 	auth,
 	authCookie,
 	authAll,
-	upgradeToHTTPS
+	upgradeToHTTPS,
 } from '../lib/decorators';
 import {
 	Discovery,
 	Control,
 	CustomMode,
 	TransitionTypes,
-	BuiltinPatterns
+	BuiltinPatterns,
 } from 'magic-home';
 import {
 	attachMessage,
 	attachSourcedMessage,
 	logTag,
-	ResponseLike
+	ResponseLike,
 } from '../lib/logger';
 import * as ReadLine from '@serialport/parser-readline';
 import { ModuleConfig } from './modules';
@@ -57,7 +57,7 @@ function getIntensityPercentage(percentage: number) {
 }
 
 function restartSelf() {
-	return new Promise<void>(resolve => {
+	return new Promise<void>((resolve) => {
 		// Restart this program
 		exec(
 			`sudo -u root su -c "zsh -c \\"source /root/.zshrc ; forever restart automation\\""`,
@@ -80,7 +80,7 @@ export namespace RGB {
 		setup!: Promise<void>;
 
 		async init(config: ModuleConfig) {
-			await (this.setup = new Promise(async resolve => {
+			await (this.setup = new Promise(async (resolve) => {
 				await Scan.scanRGBControllers(true);
 				setInterval(Scan.scanRGBControllers, 1000 * 60 * 60);
 				await External.Handler.init();
@@ -108,7 +108,7 @@ export namespace RGB {
 		export enum MOVING_STATUS {
 			OFF = 0,
 			FORWARDS = 1,
-			BACKWARDS = 2
+			BACKWARDS = 2,
 		}
 
 		function flatten<V>(arr: V[][]): V[] {
@@ -128,7 +128,7 @@ export namespace RGB {
 		function shortToBytes(short: number) {
 			return [
 				(short & (MAX_BYTE_VAL << BYTE_BITS)) >> BYTE_BITS,
-				short & MAX_BYTE_VAL
+				short & MAX_BYTE_VAL,
 			];
 		}
 
@@ -202,7 +202,7 @@ export namespace RGB {
 					jumpDelay: number;
 				} = {
 					jumpSize: 0,
-					jumpDelay: 0
+					jumpDelay: 0,
 				},
 				private _alternateConfig:
 					| {
@@ -212,7 +212,7 @@ export namespace RGB {
 					| {
 							alternate: false;
 					  } = {
-					alternate: false
+					alternate: false,
 				}
 			) {}
 
@@ -226,7 +226,7 @@ export namespace RGB {
 						this._alternateConfig.alternate
 							? this._alternateConfig.alternateDelay
 							: 0
-					)
+					),
 				];
 			}
 		}
@@ -243,7 +243,7 @@ export namespace RGB {
 					ColorType.COLOR_SEQUENCE,
 					...shortToBytes(this.colors.length),
 					...shortToBytes(this.repetitions),
-					...flatten(this.colors.map(color => color.toBytes()))
+					...flatten(this.colors.map((color) => color.toBytes())),
 				];
 			}
 
@@ -268,7 +268,7 @@ export namespace RGB {
 			COLOR_SEQUENCE = 1,
 			RANDOM_COLOR = 2,
 			TRANSPARENT = 3,
-			REPEAT = 4
+			REPEAT = 4,
 		}
 
 		export class SingleColor {
@@ -295,7 +295,7 @@ export namespace RGB {
 					ColorType.RANDOM_COLOR,
 					~~this.randomEveryTime,
 					...shortToBytes(this.randomTime),
-					...shortToBytes(this.size)
+					...shortToBytes(this.size),
 				];
 			}
 		}
@@ -314,7 +314,7 @@ export namespace RGB {
 				return [
 					ColorType.REPEAT,
 					...shortToBytes(this.repetitions),
-					...this.sequence.toBytes()
+					...this.sequence.toBytes(),
 				];
 			}
 		}
@@ -334,7 +334,7 @@ export namespace RGB {
 				{
 					background,
 					moveData,
-					sequences
+					sequences,
 				}: {
 					moveData: MoveData;
 					background: Color;
@@ -360,7 +360,7 @@ export namespace RGB {
 					...this.background.toBytes(),
 					...shortToBytes(
 						this.sequences
-							.map(sequence => {
+							.map((sequence) => {
 								if (sequence instanceof Repeat) {
 									return sequence.repetitions;
 								}
@@ -369,8 +369,8 @@ export namespace RGB {
 							.reduce((p, c) => p + c, 0)
 					),
 					...flatten(
-						this.sequences.map(sequence => sequence.toBytes())
-					)
+						this.sequences.map((sequence) => sequence.toBytes())
+					),
 				];
 			}
 		}
@@ -383,10 +383,10 @@ export namespace RGB {
 				return [
 					...shortToBytes(this.effect.length),
 					...flatten(
-						this.effect.map(step => {
+						this.effect.map((step) => {
 							return step.toBytes();
 						})
-					)
+					),
 				];
 			}
 		}
@@ -398,7 +398,7 @@ export namespace RGB {
 				return [
 					'<'.charCodeAt(0),
 					...this.steps.toBytes(),
-					'>'.charCodeAt(0)
+					'>'.charCodeAt(0),
 				];
 			}
 		}
@@ -527,7 +527,7 @@ export namespace RGB {
 								green * (brightness / 100),
 								blue * (brightness / 100)
 							)
-						)
+						),
 					}
 				);
 				return Promise.resolve(true);
@@ -557,7 +557,7 @@ export namespace RGB {
 					{
 						color: this._colorToHex(
 							new Color(ww / 100, ww / 100, ww / 100)
-						)
+						),
 					}
 				);
 				return Promise.resolve(true);
@@ -707,7 +707,7 @@ export namespace RGB {
 				this.board.setSolid({
 					r: red,
 					g: green,
-					b: blue
+					b: blue,
 				});
 				return this._sendSuccess(callback);
 			}
@@ -735,7 +735,7 @@ export namespace RGB {
 				this.board.setSolid({
 					r: red * brightnessScale,
 					g: green * brightnessScale,
-					b: blue * brightnessScale
+					b: blue * brightnessScale,
 				});
 				return this._sendSuccess(callback);
 			}
@@ -790,7 +790,7 @@ export namespace RGB {
 		): MagicHomeClient | ArduinoClient | HexClient | null {
 			if (MAGIC_LEDS.includes(name)) {
 				return (
-					magicHomeClients.filter(client => {
+					magicHomeClients.filter((client) => {
 						return LED_IPS[client.address] === name;
 					})[0] || null
 				);
@@ -812,14 +812,14 @@ export namespace RGB {
 			const scanTime =
 				first && process.argv.indexOf('--debug') > -1 ? 250 : 10000;
 			const clients = (await new Discovery().scan(scanTime))
-				.map(client => ({
+				.map((client) => ({
 					control: new Control(client.address, {
-						wait_for_reply: false
+						wait_for_reply: false,
 					}),
-					address: client.address
+					address: client.address,
 				}))
 				.map(
-					client =>
+					(client) =>
 						new Clients.MagicHomeClient(
 							client.control,
 							client.address
@@ -830,7 +830,7 @@ export namespace RGB {
 			Clients.clients = [
 				...Clients.magicHomeClients,
 				...Clients.arduinoClients,
-				...Clients.hexClients
+				...Clients.hexClients,
 			];
 
 			return clients.length;
@@ -849,7 +849,7 @@ export namespace RGB {
 			Clients.clients = [
 				...Clients.magicHomeClients,
 				...Clients.arduinoClients,
-				...Clients.hexClients
+				...Clients.hexClients,
 			];
 
 			return Clients.arduinoClients.length;
@@ -865,7 +865,7 @@ export namespace RGB {
 			Clients.clients = [
 				...Clients.magicHomeClients,
 				...Clients.arduinoClients,
-				...Clients.hexClients
+				...Clients.hexClients,
 			];
 
 			return 1;
@@ -875,15 +875,12 @@ export namespace RGB {
 			first: boolean = false,
 			logObj: any = undefined
 		) {
-			const [
-				magicHomeClients,
-				arduinoClients,
-				hexClients
-			] = await Promise.all([
-				scanMagicHomeControllers(first),
-				scanArduinos(),
-				scanHex()
-			]);
+			const [magicHomeClients, arduinoClients, hexClients] =
+				await Promise.all([
+					scanMagicHomeControllers(first),
+					scanArduinos(),
+					scanHex(),
+				]);
 			const clients = magicHomeClients + arduinoClients + hexClients;
 
 			if (magicHomeClients === 0) {
@@ -950,7 +947,7 @@ export namespace RGB {
 				.addColor(0, 255, 0)
 				.addColor(0, 0, 255)
 				.setTransitionType('fade'),
-			defaultSpeed: 100
+			defaultSpeed: 100,
 		},
 		rainbow: {
 			pattern: new CustomMode()
@@ -962,14 +959,14 @@ export namespace RGB {
 				.addColor(75, 0, 130)
 				.addColor(143, 0, 255)
 				.setTransitionType('fade'),
-			defaultSpeed: 100
+			defaultSpeed: 100,
 		},
 		christmas: {
 			pattern: new CustomMode()
 				.addColor(255, 61, 42)
 				.addColor(0, 239, 0)
 				.setTransitionType('jump'),
-			defaultSpeed: 70
+			defaultSpeed: 70,
 		},
 		strobe: {
 			pattern: new CustomMode()
@@ -977,7 +974,7 @@ export namespace RGB {
 				.addColor(255, 255, 255)
 				.addColor(255, 255, 255)
 				.setTransitionType('strobe'),
-			defaultSpeed: 100
+			defaultSpeed: 100,
 		},
 		darkcolors: {
 			pattern: new CustomMode()
@@ -996,7 +993,7 @@ export namespace RGB {
 				.addColor(255, 0, 170)
 				.addColor(255, 0, 85)
 				.setTransitionType('fade'),
-			defaultSpeed: 90
+			defaultSpeed: 90,
 		},
 		shittyfire: {
 			pattern: new CustomMode()
@@ -1012,7 +1009,7 @@ export namespace RGB {
 				.addColor(255, 25, 0)
 				.addColor(255, 0, 0)
 				.setTransitionType('fade'),
-			defaultSpeed: 90
+			defaultSpeed: 90,
 		},
 		betterfire: {
 			pattern: new CustomMode()
@@ -1021,19 +1018,19 @@ export namespace RGB {
 						return [
 							255 - Math.random() * 90,
 							200 - Math.random() * 200,
-							0
+							0,
 						] as [number, number, number];
 					})
 				)
 				.setTransitionType('fade'),
-			defaultSpeed: 100
-		}
+			defaultSpeed: 100,
+		},
 	};
 
 	namespace ArduinoAPI {
 		export const enum DIR {
 			DIR_FORWARDS = 1,
-			DIR_BACKWARDS = 0
+			DIR_BACKWARDS = 0,
 		}
 
 		export interface Solid {
@@ -1166,7 +1163,7 @@ export namespace RGB {
 			steps: number,
 			{
 				start = true,
-				end = true
+				end = true,
 			}: {
 				start?: boolean;
 				end?: boolean;
@@ -1230,7 +1227,7 @@ export namespace RGB {
 			return {
 				r: Math.round(r! * 255),
 				g: Math.round(g! * 255),
-				b: Math.round(b! * 255)
+				b: Math.round(b! * 255),
 			};
 		}
 
@@ -1257,7 +1254,7 @@ export namespace RGB {
 							EffectConfig.MOVING_STATUS.FORWARDS,
 							{
 								jumpSize: 1,
-								jumpDelay: 1
+								jumpDelay: 1,
 							}
 						),
 						background: new Color(0, 0, 0),
@@ -1280,11 +1277,11 @@ export namespace RGB {
 									new Color(255, 0, 0),
 									5,
 									{ end: false }
-								)
+								),
 							])
-							.toSequence()
-					})
-				])
+							.toSequence(),
+					}),
+				]),
 			},
 			rainbow2: {
 				description: 'Slightly bigger block size rainbow',
@@ -1294,7 +1291,7 @@ export namespace RGB {
 							EffectConfig.MOVING_STATUS.FORWARDS,
 							{
 								jumpSize: 1,
-								jumpDelay: 1
+								jumpDelay: 1,
 							}
 						),
 						background: new Color(0, 0, 0),
@@ -1317,11 +1314,11 @@ export namespace RGB {
 									new Color(255, 0, 0),
 									15,
 									{ end: false }
-								)
+								),
 							])
-							.toSequence()
-					})
-				])
+							.toSequence(),
+					}),
+				]),
 			},
 			reddot: {
 				description: 'Single red dot moving',
@@ -1331,7 +1328,7 @@ export namespace RGB {
 							EffectConfig.MOVING_STATUS.FORWARDS,
 							{
 								jumpSize: 1,
-								jumpDelay: 1
+								jumpDelay: 1,
 							}
 						),
 						background: new Color(0, 0, 0),
@@ -1339,10 +1336,10 @@ export namespace RGB {
 							new EffectConfig.ColorSequence(
 								new Color(255, 0, 0),
 								5
-							)
-						]
-					})
-				])
+							),
+						],
+					}),
+				]),
 			},
 			multidot: {
 				description: 'A bunch of dots moving',
@@ -1352,7 +1349,7 @@ export namespace RGB {
 							EffectConfig.MOVING_STATUS.FORWARDS,
 							{
 								jumpSize: 1,
-								jumpDelay: 1
+								jumpDelay: 1,
 							}
 						),
 						background: new Color(0, 0, 0),
@@ -1381,10 +1378,10 @@ export namespace RGB {
 								new Color(255, 0, 0),
 								1
 							),
-							new EffectConfig.TransparentSequence(11)
-						]
-					})
-				])
+							new EffectConfig.TransparentSequence(11),
+						],
+					}),
+				]),
 			},
 
 			reddotbluebg: {
@@ -1395,7 +1392,7 @@ export namespace RGB {
 							EffectConfig.MOVING_STATUS.FORWARDS,
 							{
 								jumpSize: 1,
-								jumpDelay: 1
+								jumpDelay: 1,
 							}
 						),
 						background: new Color(0, 0, 255),
@@ -1403,10 +1400,10 @@ export namespace RGB {
 							new EffectConfig.ColorSequence(
 								new Color(255, 0, 0),
 								5
-							)
-						]
-					})
-				])
+							),
+						],
+					}),
+				]),
 			},
 			split: {
 				description: 'A bunch of moving chunks of colors',
@@ -1416,7 +1413,7 @@ export namespace RGB {
 							EffectConfig.MOVING_STATUS.FORWARDS,
 							{
 								jumpSize: 1,
-								jumpDelay: 1
+								jumpDelay: 1,
 							}
 						),
 						background: new Color(0, 0, 0),
@@ -1436,10 +1433,10 @@ export namespace RGB {
 							new EffectConfig.ColorSequence(
 								new Color(0, 255, 0),
 								NUM_LEDS / 4
-							)
-						]
-					})
-				])
+							),
+						],
+					}),
+				]),
 			},
 			rgb: {
 				description: 'Red green and blue dots moving in a pattern',
@@ -1449,7 +1446,7 @@ export namespace RGB {
 							EffectConfig.MOVING_STATUS.FORWARDS,
 							{
 								jumpSize: 1,
-								jumpDelay: 1
+								jumpDelay: 1,
 							}
 						),
 						background: new Color(0, 0, 0),
@@ -1457,11 +1454,11 @@ export namespace RGB {
 							.fillWithColors([
 								new Color(255, 0, 0),
 								new Color(0, 255, 0),
-								new Color(0, 0, 255)
+								new Color(0, 0, 255),
 							])
-							.toSequence()
-					})
-				])
+							.toSequence(),
+					}),
+				]),
 			},
 			quickstrobe: {
 				description: 'A very fast strobe',
@@ -1472,7 +1469,7 @@ export namespace RGB {
 								EffectConfig.MOVING_STATUS.OFF
 							),
 							background: new Color(0, 0, 0),
-							sequences: []
+							sequences: [],
 						},
 						1
 					),
@@ -1482,11 +1479,11 @@ export namespace RGB {
 								EffectConfig.MOVING_STATUS.OFF
 							),
 							background: new Color(255, 255, 255),
-							sequences: []
+							sequences: [],
 						},
 						1
-					)
-				])
+					),
+				]),
 			},
 			strobe: {
 				description: 'A bunch of moving chunks of colors',
@@ -1497,7 +1494,7 @@ export namespace RGB {
 								EffectConfig.MOVING_STATUS.OFF
 							),
 							background: new Color(0, 0, 0),
-							sequences: []
+							sequences: [],
 						},
 						60
 					),
@@ -1507,11 +1504,11 @@ export namespace RGB {
 								EffectConfig.MOVING_STATUS.OFF
 							),
 							background: new Color(255, 255, 255),
-							sequences: []
+							sequences: [],
 						},
 						60
-					)
-				])
+					),
+				]),
 			},
 			slowstrobe: {
 				description: 'A slow strobe',
@@ -1522,7 +1519,7 @@ export namespace RGB {
 								EffectConfig.MOVING_STATUS.OFF
 							),
 							background: new Color(0, 0, 0),
-							sequences: []
+							sequences: [],
 						},
 						500
 					),
@@ -1532,11 +1529,11 @@ export namespace RGB {
 								EffectConfig.MOVING_STATUS.OFF
 							),
 							background: new Color(255, 255, 255),
-							sequences: []
+							sequences: [],
 						},
 						500
-					)
-				])
+					),
+				]),
 			},
 			epileptisch: {
 				description: 'A superfast flash',
@@ -1546,22 +1543,22 @@ export namespace RGB {
 							EffectConfig.MOVING_STATUS.OFF
 						),
 						background: new Color(255, 0, 0),
-						sequences: []
+						sequences: [],
 					}),
 					new EffectConfig.LedSpecStep({
 						moveData: new EffectConfig.MoveData(
 							EffectConfig.MOVING_STATUS.OFF
 						),
 						background: new Color(0, 255, 0),
-						sequences: []
+						sequences: [],
 					}),
 					new EffectConfig.LedSpecStep({
 						moveData: new EffectConfig.MoveData(
 							EffectConfig.MOVING_STATUS.OFF
 						),
 						background: new Color(0, 0, 255),
-						sequences: []
-					})
+						sequences: [],
+					}),
 				]),
 				type: 'flash',
 				data: {
@@ -1572,9 +1569,9 @@ export namespace RGB {
 					colors: [
 						new Color(255, 0, 0),
 						new Color(0, 0, 255),
-						new Color(0, 255, 0)
-					]
-				}
+						new Color(0, 255, 0),
+					],
+				},
 			},
 			fade: {
 				description: 'A fading rainbow',
@@ -1597,18 +1594,18 @@ export namespace RGB {
 							new Color(255, 0, 0),
 							5,
 							{ end: false }
-						)
+						),
 					].map(
-						color =>
+						(color) =>
 							new EffectConfig.LedSpecStep({
 								moveData: new EffectConfig.MoveData(
 									EffectConfig.MOVING_STATUS.OFF
 								),
 								background: color,
-								sequences: []
+								sequences: [],
 							})
 					)
-				)
+				),
 			},
 			desk: {
 				description: 'An illumination of just my desk',
@@ -1627,10 +1624,10 @@ export namespace RGB {
 							new EffectConfig.ColorSequence(
 								new Color(255, 255, 255),
 								275
-							)
-						]
-					})
-				])
+							),
+						],
+					}),
+				]),
 			},
 			randomslow: {
 				description: 'A slow flash of random colors of block size 1',
@@ -1644,10 +1641,10 @@ export namespace RGB {
 							new EffectConfig.Repeat(
 								NUM_LEDS,
 								new EffectConfig.RandomColor(1, 1000, true)
-							)
-						]
-					})
-				])
+							),
+						],
+					}),
+				]),
 			},
 			randomslowbig: {
 				description: 'A slow flash of random colors of block size 10',
@@ -1661,10 +1658,10 @@ export namespace RGB {
 							new EffectConfig.Repeat(
 								NUM_LEDS / 10,
 								new EffectConfig.RandomColor(10, 1000, true)
-							)
-						]
-					})
-				])
+							),
+						],
+					}),
+				]),
 			},
 			randomblocks: {
 				description: 'A fast flash of big chunks of random colors',
@@ -1678,10 +1675,10 @@ export namespace RGB {
 							new EffectConfig.Repeat(
 								NUM_LEDS / 20,
 								new EffectConfig.RandomColor(20, 1, true)
-							)
-						]
-					})
-				])
+							),
+						],
+					}),
+				]),
 			},
 			randomfast: {
 				description: 'A fast flash of random colors of block size 1',
@@ -1695,10 +1692,10 @@ export namespace RGB {
 							new EffectConfig.Repeat(
 								NUM_LEDS,
 								new EffectConfig.RandomColor(1, 1, true)
-							)
-						]
-					})
-				])
+							),
+						],
+					}),
+				]),
 			},
 			randomparty: {
 				description: 'Big slow chunks',
@@ -1712,10 +1709,10 @@ export namespace RGB {
 							new EffectConfig.Repeat(
 								NUM_LEDS / 75,
 								new EffectConfig.RandomColor(75, 150, true)
-							)
-						]
-					})
-				])
+							),
+						],
+					}),
+				]),
 			},
 			randomfull: {
 				description: 'A single random color updating slowly',
@@ -1726,10 +1723,10 @@ export namespace RGB {
 						),
 						background: new Color(0, 0, 0),
 						sequences: [
-							new EffectConfig.RandomColor(NUM_LEDS, 1000, true)
-						]
-					})
-				])
+							new EffectConfig.RandomColor(NUM_LEDS, 1000, true),
+						],
+					}),
+				]),
 			},
 			randomfullfast: {
 				description: 'A single random color updating quickly',
@@ -1740,10 +1737,10 @@ export namespace RGB {
 						),
 						background: new Color(0, 0, 0),
 						sequences: [
-							new EffectConfig.RandomColor(NUM_LEDS, 1, true)
-						]
-					})
-				])
+							new EffectConfig.RandomColor(NUM_LEDS, 1, true),
+						],
+					}),
+				]),
 			},
 			shrinkingreddots: {
 				description: 'Shrinking red dots',
@@ -1753,7 +1750,7 @@ export namespace RGB {
 							EffectConfig.MOVING_STATUS.FORWARDS,
 							{
 								jumpDelay: 1,
-								jumpSize: 1
+								jumpSize: 1,
 							}
 						),
 						background: new Color(0, 0, 0),
@@ -1765,13 +1762,13 @@ export namespace RGB {
 									5,
 									{
 										start: true,
-										end: true
+										end: true,
 									}
 								)
 							)
-							.toSequence()
-					})
-				])
+							.toSequence(),
+					}),
+				]),
 			},
 			shrinkingmulticolor: {
 				description: 'Shrinking dots of multiple colors',
@@ -1781,7 +1778,7 @@ export namespace RGB {
 							EffectConfig.MOVING_STATUS.FORWARDS,
 							{
 								jumpDelay: 1,
-								jumpSize: 1
+								jumpSize: 1,
 							}
 						),
 						background: new Color(0, 0, 0),
@@ -1793,15 +1790,16 @@ export namespace RGB {
 									10,
 									{
 										start: true,
-										end: true
+										end: true,
 									}
 								).map(
-									color => new EffectConfig.SingleColor(color)
+									(color) =>
+										new EffectConfig.SingleColor(color)
 								)
 							)
-						)
-					})
-				])
+						),
+					}),
+				]),
 			},
 			shrinkingrainbows: {
 				description: 'Shrinking rainbows',
@@ -1811,7 +1809,7 @@ export namespace RGB {
 							EffectConfig.MOVING_STATUS.FORWARDS,
 							{
 								jumpDelay: 1,
-								jumpSize: 1
+								jumpSize: 1,
 							}
 						),
 						background: new Color(0, 0, 0),
@@ -1824,11 +1822,11 @@ export namespace RGB {
 								new Color(0, 128, 0),
 								new Color(160, 160, 0),
 								new Color(191, 96, 0),
-								new Color(255, 0, 0)
+								new Color(255, 0, 0),
 							])
-							.toSequence()
-					})
-				])
+							.toSequence(),
+					}),
+				]),
 			},
 			wiebel: {
 				description: 'Wiebelend ding',
@@ -1838,19 +1836,19 @@ export namespace RGB {
 							EffectConfig.MOVING_STATUS.FORWARDS,
 							{
 								jumpDelay: 1,
-								jumpSize: 1
+								jumpSize: 1,
 							}
 						),
 						background: new Color(0, 0, 0),
 						sequences: new EffectConfig.Leds(NUM_LEDS)
 							.fillWithColors([
 								new Color(0, 255, 0),
-								new Color(0, 0, 255)
+								new Color(0, 0, 255),
 							])
-							.toSequence()
-					})
-				])
-			}
+							.toSequence(),
+					}),
+				]),
+			},
 		};
 		const typeCheck = arduinoEffects as {
 			[key: string]: {
@@ -1869,45 +1867,45 @@ export namespace RGB {
 				effect: {
 					name: 'rainbow',
 					params: {
-						revolve_time: '500'
-					}
-				}
+						revolve_time: '500',
+					},
+				},
 			},
 			hexrainbowslow: {
 				description: 'A slowly rotating rainbow',
 				effect: {
 					name: 'rainbow',
 					params: {
-						revolve_time: '25000'
-					}
-				}
+						revolve_time: '25000',
+					},
+				},
 			},
 			hexrandomcolorsslow: {
 				description: 'Random colors changing slowly (1s)',
 				effect: {
 					name: 'random_colors',
 					params: {
-						wait_time: '1000'
-					}
-				}
+						wait_time: '1000',
+					},
+				},
 			},
 			hexrandomcolorsfast: {
 				description: 'Random colors changing quickly (250ms)',
 				effect: {
 					name: 'random_colors',
 					params: {
-						wait_time: '250'
-					}
-				}
+						wait_time: '250',
+					},
+				},
 			},
 			hexrandomcolorsfastest: {
 				description: 'Random colors changing very quickly (25ms)',
 				effect: {
 					name: 'random_colors',
 					params: {
-						wait_time: '25'
-					}
-				}
+						wait_time: '25',
+					},
+				},
 			},
 			hexgradual: {
 				description: 'Gradual color changes',
@@ -1918,9 +1916,9 @@ export namespace RGB {
 						wait_time_max: '3000',
 						neighbour_influence: '128',
 						use_pastel: 'false',
-						use_split: 'false'
-					}
-				}
+						use_split: 'false',
+					},
+				},
 			},
 			hexgradualslower: {
 				description: 'Gradual color changes (a little slower)',
@@ -1931,9 +1929,9 @@ export namespace RGB {
 						wait_time_max: '5000',
 						neighbour_influence: '128',
 						use_pastel: 'false',
-						use_split: 'false'
-					}
-				}
+						use_split: 'false',
+					},
+				},
 			},
 			hexgradualpastel: {
 				description: 'Gradual color changes (pastel)',
@@ -1944,9 +1942,9 @@ export namespace RGB {
 						wait_time_max: '3000',
 						neighbour_influence: '128',
 						use_pastel: 'true',
-						use_split: 'false'
-					}
-				}
+						use_split: 'false',
+					},
+				},
 			},
 			hexgradualbiginfluence: {
 				description:
@@ -1958,9 +1956,9 @@ export namespace RGB {
 						wait_time_max: '3000',
 						neighbour_influence: '255',
 						use_pastel: 'false',
-						use_split: 'false'
-					}
-				}
+						use_split: 'false',
+					},
+				},
 			},
 			hexgradualslow: {
 				description: 'Gradual color changes slowly',
@@ -1971,9 +1969,9 @@ export namespace RGB {
 						wait_time_max: '5000',
 						neighbour_influence: '128',
 						use_pastel: 'false',
-						use_split: 'false'
-					}
-				}
+						use_split: 'false',
+					},
+				},
 			},
 			hexgradualnoinfluence: {
 				description:
@@ -1985,9 +1983,9 @@ export namespace RGB {
 						wait_time_max: '5000',
 						neighbour_influence: '0',
 						use_pastel: 'true',
-						use_split: 'false'
-					}
-				}
+						use_split: 'false',
+					},
+				},
 			},
 			hexgradualsplit: {
 				description: 'Gradual color changes that are split',
@@ -1998,15 +1996,16 @@ export namespace RGB {
 						wait_time_max: '5000',
 						neighbour_influence: '0',
 						use_pastel: 'true',
-						use_split: 'true'
-					}
-				}
-			}
+						use_split: 'true',
+					},
+				},
+			},
 		};
 	}
 
 	export namespace API {
-		export const HEX_REGEX = /#([a-fA-F\d]{2})([a-fA-F\d]{2})([a-fA-F\d]{2})/;
+		export const HEX_REGEX =
+			/#([a-fA-F\d]{2})([a-fA-F\d]{2})([a-fA-F\d]{2})/;
 		export function hexToRGB(hex: string) {
 			const match = HEX_REGEX.exec(hex)!;
 
@@ -2070,7 +2069,7 @@ export namespace RGB {
 				{
 					color,
 					intensity,
-					target = 'all'
+					target = 'all',
 				}: {
 					color: string;
 					intensity?: number;
@@ -2105,7 +2104,7 @@ export namespace RGB {
 				if (
 					(
 						await Promise.all(
-							clientSet!.map(async client => {
+							clientSet!.map(async (client) => {
 								return client.setColorWithBrightness(
 									r,
 									g,
@@ -2115,7 +2114,7 @@ export namespace RGB {
 								);
 							})
 						)
-					).every(v => v)
+					).every((v) => v)
 				) {
 					res.status(200).end();
 					return true;
@@ -2136,7 +2135,7 @@ export namespace RGB {
 					green,
 					blue,
 					intensity,
-					target = 'all'
+					target = 'all',
 				}: {
 					red: string;
 					green: string;
@@ -2170,7 +2169,7 @@ export namespace RGB {
 				if (
 					(
 						await Promise.all(
-							clientSet!.map(async client => {
+							clientSet!.map(async (client) => {
 								return client.setColorWithBrightness(
 									redNum,
 									greenNum,
@@ -2180,7 +2179,7 @@ export namespace RGB {
 								);
 							})
 						)
-					).every(v => v)
+					).every((v) => v)
 				) {
 					res.status(200).end();
 					return true;
@@ -2197,7 +2196,7 @@ export namespace RGB {
 			public static async setPower(
 				res: ResponseLike,
 				{
-					power
+					power,
 				}: {
 					power: string;
 					auth?: string;
@@ -2216,11 +2215,11 @@ export namespace RGB {
 				if (
 					(
 						await Promise.all(
-							Clients.clients!.map(c =>
+							Clients.clients!.map((c) =>
 								power === 'on' ? c.turnOn() : c.turnOff()
 							)
 						)
-					).every(v => v)
+					).every((v) => v)
 				) {
 					res.status(200).end();
 					return true;
@@ -2280,12 +2279,12 @@ export namespace RGB {
 				try {
 					const strings = isArduinoEffect
 						? await Promise.all(
-								Clients.arduinoClients.map(async c => {
+								Clients.arduinoClients.map(async (c) => {
 									return c.board.runEffect(effect.effect);
 								})
 						  )
 						: await Promise.all(
-								Clients.hexClients.map(async c =>
+								Clients.hexClients.map(async (c) =>
 									c.runEffect(
 										(effect.effect as any).name,
 										(effect.effect as any).params
@@ -2345,7 +2344,7 @@ export namespace RGB {
 							color,
 							intensity: intensity,
 							auth: Auth.Secret.getKey(),
-							target: target
+							target: target,
 						},
 						source
 					);
@@ -2368,7 +2367,7 @@ export namespace RGB {
 							blue,
 							intensity: intensity,
 							auth: Auth.Secret.getKey(),
-							target: target
+							target: target,
 						},
 						source
 					);
@@ -2381,7 +2380,7 @@ export namespace RGB {
 						res,
 						{
 							power: state,
-							auth: Auth.Secret.getKey()
+							auth: Auth.Secret.getKey(),
 						},
 						source
 					);
@@ -2398,7 +2397,7 @@ export namespace RGB {
 						{
 							effect: name,
 							auth: Auth.Secret.getKey(),
-							...extra
+							...extra,
 						},
 						source
 					);
@@ -2450,18 +2449,18 @@ export namespace RGB {
 				...arrToObj(
 					[
 						...Object.keys(ArduinoAPI.arduinoEffects),
-						...Object.keys(HexAPI.hexEffects)
-					].map(key => {
+						...Object.keys(HexAPI.hexEffects),
+					].map((key) => {
 						const value =
 							ArduinoAPI.arduinoEffects[
 								key as ArduinoAPI.Effects
 							] || (HexAPI.hexEffects as any)[key];
 						return [
 							`/effect${key}`,
-							`Effect. ${value.description}`
+							`Effect. ${value.description}`,
 						];
 					})
-				)
+				),
 			};
 
 			static readonly botName = 'RGB';
@@ -2557,13 +2556,13 @@ export namespace RGB {
 							if (
 								(
 									await Promise.all(
-										Clients.arduinoClients.map(c =>
+										Clients.arduinoClients.map((c) =>
 											targetState === 'on'
 												? c.turnOn()
 												: c.turnOff()
 										)
 									)
-								).every(v => v)
+								).every((v) => v)
 							) {
 								attachMessage(
 									logObj,
@@ -2585,13 +2584,13 @@ export namespace RGB {
 							if (
 								(
 									await Promise.all(
-										Clients.magicHomeClients.map(c =>
+										Clients.magicHomeClients.map((c) =>
 											targetState === 'on'
 												? c.turnOff()
 												: c.turnOff()
 										)
 									)
-								).every(v => v)
+								).every((v) => v)
 							) {
 								attachMessage(
 									logObj,
@@ -2722,7 +2721,8 @@ export namespace RGB {
 						/what effects are there(\?)?/,
 						async ({ logObj, match, matchText }) => {
 							if (match && match[1]) {
-								const effectName = `s${match[1]}` as ArduinoAPI.Effects;
+								const effectName =
+									`s${match[1]}` as ArduinoAPI.Effects;
 								if (
 									!(
 										effectName in ArduinoAPI.arduinoEffects
@@ -2751,9 +2751,9 @@ export namespace RGB {
 
 							return `Effects are:\n${[
 								...Object.keys(ArduinoAPI.arduinoEffects),
-								...Object.keys(HexAPI.hexEffects)
+								...Object.keys(HexAPI.hexEffects),
 							]
-								.map(key => {
+								.map((key) => {
 									const value =
 										ArduinoAPI.arduinoEffects[
 											key as ArduinoAPI.Effects
@@ -2777,9 +2777,9 @@ export namespace RGB {
 						/what commands are there for rgb/,
 						async () => {
 							return `Commands are:\n${Bot.matches.matches
-								.map(match => {
+								.map((match) => {
 									return `RegExps: ${match.regexps
-										.map(r => r.source)
+										.map((r) => r.source)
 										.join(', ')}. Texts: ${match.texts.join(
 										', '
 									)}}`;
@@ -2811,20 +2811,18 @@ export namespace RGB {
 							match,
 							ask,
 							sendText,
-							askCancelable
+							askCancelable,
 						}) => {
 							const file = match[1] as string;
-							const {
-								message,
-								success
-							} = await new External.Handler(
-								logObj,
-								'BOT.marked'
-							).markedAudio(file, {
-								ask,
-								sendText,
-								askCancelable
-							});
+							const { message, success } =
+								await new External.Handler(
+									logObj,
+									'BOT.marked'
+								).markedAudio(file, {
+									ask,
+									sendText,
+									askCancelable,
+								});
 
 							if (success) {
 								return message || 'Playing!';
@@ -2850,7 +2848,7 @@ export namespace RGB {
 			): Promise<_Bot.Message.MatchResponse | undefined> {
 				return await this.matchLines({
 					...config,
-					matchConfig: Bot.matches
+					matchConfig: Bot.matches,
 				});
 			}
 
@@ -2862,16 +2860,16 @@ export namespace RGB {
 
 	export namespace WebPage {
 		const patternPreviews = JSON.stringify(
-			Object.keys(patterns).map(key => {
+			Object.keys(patterns).map((key) => {
 				const {
 					pattern: { colors, transitionType },
-					defaultSpeed
+					defaultSpeed,
 				} = patterns[key as CustomPattern];
 				return {
 					defaultSpeed,
 					colors,
 					transitionType,
-					name: key
+					name: key,
 				};
 			})
 		);
@@ -2915,17 +2913,17 @@ export namespace RGB {
 				updateListener(listener: (line: string) => any): void;
 				leds: number;
 				name: string;
-			} | null>(resolve => {
+			} | null>((resolve) => {
 				setTimeout(() => {
 					resolve(null);
 				}, 1000 * 60);
 
 				const port = new SerialPort(LED_DEVICE_NAME, {
-					baudRate: 115200
+					baudRate: 115200,
 				});
 
 				let err: boolean = false;
-				port.on('error', e => {
+				port.on('error', (e) => {
 					console.log('immediately got an error', e);
 					logTag(
 						'arduino',
@@ -2974,7 +2972,7 @@ export namespace RGB {
 							onData = listener;
 						},
 						leds: LED_NUM,
-						name: LED_DEVICE_NAME
+						name: LED_DEVICE_NAME,
 					});
 				};
 
@@ -2986,7 +2984,9 @@ export namespace RGB {
 
 		export async function tryConnectRGBBoard(force: boolean = false) {
 			if (force) {
-				await Promise.all(Clients.arduinoBoards.map(b => b.destroy()));
+				await Promise.all(
+					Clients.arduinoBoards.map((b) => b.destroy())
+				);
 			}
 
 			const res = await tryConnectToSerial();
@@ -3006,7 +3006,7 @@ export namespace RGB {
 				public name: string
 			) {
 				Clients.arduinoBoards.push(this);
-				this._port.addListener('data', chunk => {
+				this._port.addListener('data', (chunk) => {
 					logTag(
 						LED_DEVICE_NAME,
 						'gray',
@@ -3017,7 +3017,7 @@ export namespace RGB {
 			}
 
 			public ping() {
-				return new Promise<boolean>(resolve => {
+				return new Promise<boolean>((resolve) => {
 					this.setListener((_line: string) => {
 						resolve(true);
 						this.resetListener();
@@ -3041,7 +3041,7 @@ export namespace RGB {
 			public async runEffect(
 				effect: EffectConfig.LedEffect
 			): Promise<number[]> {
-				return new Promise(resolve => {
+				return new Promise((resolve) => {
 					let responded: boolean = false;
 					const listener = (chunk: string | Buffer) => {
 						if (!responded && chunk.toString().includes('ready')) {
@@ -3075,8 +3075,8 @@ export namespace RGB {
 								EffectConfig.MOVING_STATUS.OFF
 							),
 							background: new Color(r, g, b),
-							sequences: []
-						})
+							sequences: [],
+						}),
 					])
 				);
 			}
@@ -3092,7 +3092,7 @@ export namespace RGB {
 			public destroy() {
 				if (this._dead) return;
 
-				return new Promise<void>(resolve => {
+				return new Promise<void>((resolve) => {
 					this._port.close(() => {
 						resolve();
 					});
@@ -3126,13 +3126,13 @@ export namespace RGB {
 			if (!(await fs.pathExists(filePath))) {
 				return {
 					success: false,
-					message: 'File does not exist'
+					message: 'File does not exist',
 				};
 			}
 
 			// Read it
 			const file = await fs.readFile(filePath, {
-				encoding: 'utf8'
+				encoding: 'utf8',
 			});
 
 			// Parse it
@@ -3142,20 +3142,21 @@ export namespace RGB {
 			} catch (e) {
 				return {
 					success: false,
-					message: 'Failed to parse file'
+					message: 'Failed to parse file',
 				};
 			}
 
 			// Try and authenticate
 			const modules = await meta.modules;
-			const authenticated = await new modules!.spotifyBeats.External.Handler(
-				logObj,
-				'RGB.MARKED'
-			).test();
+			const authenticated =
+				await new modules!.spotifyBeats.External.Handler(
+					logObj,
+					'RGB.MARKED'
+				).test();
 			if (!authenticated) {
 				return {
 					success: false,
-					message: 'Unauthenticated'
+					message: 'Unauthenticated',
 				};
 			}
 
@@ -3187,14 +3188,14 @@ export namespace RGB {
 			) {
 				return {
 					success: false,
-					message: 'Failed to find devices'
+					message: 'Failed to find devices',
 				};
 			}
 
 			// Ask user what device to use
 			const response = await helpers.ask(
 				`On what device do you want to play? Type the name to choose and type "cancel" to cancel.\n${devicesParsed.devices.map(
-					device => {
+					(device) => {
 						return device.name;
 					}
 				)}`
@@ -3202,27 +3203,28 @@ export namespace RGB {
 			if (!response || response.toLowerCase() === 'cancel') {
 				return {
 					success: true,
-					message: 'Canceled by user'
+					message: 'Canceled by user',
 				};
 			}
 
 			// Get chosen device
 			const chosen = devicesParsed.devices.find(
-				d => d.name.toLowerCase() === response!.toLowerCase()
+				(d) => d.name.toLowerCase() === response!.toLowerCase()
 			);
 
 			if (!chosen) {
 				return {
 					success: false,
-					message: 'Unknown device'
+					message: 'Unknown device',
 				};
 			}
 
 			// Play
-			const playResponse = await new modules!.spotifyBeats.External.Handler(
-				logObj,
-				'RGB.MARKED'
-			).play(parsed!['spotify-uri'], chosen.id);
+			const playResponse =
+				await new modules!.spotifyBeats.External.Handler(
+					logObj,
+					'RGB.MARKED'
+				).play(parsed!['spotify-uri'], chosen.id);
 
 			if (
 				!playResponse ||
@@ -3231,7 +3233,7 @@ export namespace RGB {
 			) {
 				return {
 					success: false,
-					message: 'Failed to play'
+					message: 'Failed to play',
 				};
 			}
 
@@ -3266,11 +3268,12 @@ export namespace RGB {
 			// Fetch playstate at this time, which should allow us to
 			// calculate exactly when the song started playing
 			const modules = await meta.modules;
-			const playState = await modules!.spotifyBeats.Spotify.API.getPlayState();
+			const playState =
+				await modules!.spotifyBeats.Spotify.API.getPlayState();
 			if (!playState) {
 				return {
 					success: false,
-					message: 'Failed to play'
+					message: 'Failed to play',
 				};
 			}
 
@@ -3278,10 +3281,10 @@ export namespace RGB {
 				Date.now() - playState.playStart! + (parsed.offset ?? 0);
 
 			let timeouts: NodeJS.Timeout[] = [];
-			parsed.items.forEach(item => {
+			parsed.items.forEach((item) => {
 				timeouts.push(
 					setTimeout(() => {
-						Clients.arduinoClients.forEach(c =>
+						Clients.arduinoClients.forEach((c) =>
 							c.setColor(
 								parsed.color.r,
 								parsed.color.g,
@@ -3290,7 +3293,7 @@ export namespace RGB {
 						);
 						timeouts.push(
 							setTimeout(() => {
-								Clients.arduinoClients.forEach(c =>
+								Clients.arduinoClients.forEach((c) =>
 									c.setColor(0, 0, 0)
 								);
 							}, Math.min(item.duration, 1) * 1000)
@@ -3304,9 +3307,9 @@ export namespace RGB {
 			);
 
 			prom.then(async () => {
-				timeouts.forEach(t => clearTimeout(t));
+				timeouts.forEach((t) => clearTimeout(t));
 				await wait(1000);
-				Clients.arduinoClients.forEach(c => c.setColor(0, 0, 0));
+				Clients.arduinoClients.forEach((c) => c.setColor(0, 0, 0));
 
 				await helpers.sendText('stopped');
 			});
@@ -3320,7 +3323,7 @@ export namespace RGB {
 
 			return {
 				success: true,
-				message: 'Done playing'
+				message: 'Done playing',
 			};
 		}
 	}
@@ -3391,7 +3394,7 @@ export namespace RGB {
 
 	let wakelights: NodeJS.Timeout[] = [];
 	function cancelActiveWakelights() {
-		wakelights.forEach(timer => clearInterval(timer));
+		wakelights.forEach((timer) => clearInterval(timer));
 		wakelights = [];
 	}
 
@@ -3495,7 +3498,7 @@ export namespace RGB {
 			'room.leds.desk': LED_NAMES.DESK_LEDS,
 			'room.leds.wall': LED_NAMES.WALL_LEDS,
 			'room.leds.couch': LED_NAMES.COUCH_LEDS,
-			'room.leds.hexes': LED_NAMES.HEX_LEDS
+			'room.leds.hexes': LED_NAMES.HEX_LEDS,
 		}).forEach(([key, ledName]) => {
 			KeyVal.GetSetListener.addListener(key, async (value, logObj) => {
 				await switchLed(ledName, value, logObj);

@@ -1,11 +1,11 @@
 import {
 	ComplexType,
 	config,
-	Props
+	Props,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import {
 	RGBControllerHTML,
-	RGBControllerCSS
+	RGBControllerCSS,
 } from './rgb-controller.templates.js';
 import { MessageToast } from '../../../shared/message-toast/message-toast.js';
 import { ServerComm } from '../../../shared/server-comm/server-comm.js';
@@ -45,8 +45,8 @@ export interface ColorOption {
 		ColorButton,
 		ColorControls,
 		PowerButton,
-		MessageToast
-	]
+		MessageToast,
+	],
 })
 export class RGBController extends ServerComm<{
 	IDS: {
@@ -60,14 +60,14 @@ export class RGBController extends ServerComm<{
 		this,
 		{
 			reflect: {
-				patterns: ComplexType<PatternConfig[]>()
-			}
+				patterns: ComplexType<PatternConfig[]>(),
+			},
 		},
 		super.props
 	);
 
 	deselectAll() {
-		(<ColorOption[]>(<unknown>this.$$('.button'))).forEach(button => {
+		(<ColorOption[]>(<unknown>this.$$('.button'))).forEach((button) => {
 			button.props.selected = false;
 		});
 	}

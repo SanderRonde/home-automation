@@ -22,7 +22,7 @@ export async function initAnnotatorRoutes(app: express.Express) {
 						JSON.stringify({
 							files: files.map((file: string) =>
 								file.split('/').pop()
-							)
+							),
 						})
 					);
 					res.end();
@@ -40,12 +40,12 @@ export async function initMiddleware(app: express.Express) {
 	app.use(cookieParser());
 	app.use(
 		bodyParser.json({
-			type: '*/json'
+			type: '*/json',
 		})
 	);
 	app.use(
 		bodyParser.urlencoded({
-			extended: true
+			extended: true,
 		})
 	);
 	app.use(bodyParser.text());

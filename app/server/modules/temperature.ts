@@ -3,7 +3,7 @@ import {
 	attachMessage,
 	attachSourcedMessage,
 	logTag,
-	ResponseLike
+	ResponseLike,
 } from '../lib/logger';
 import { AllModules, ModuleConfig } from './modules';
 import { BotState } from '../lib/bot-state';
@@ -115,7 +115,7 @@ export namespace Temperature {
 		setMove(direction: 'left' | 'right', ms: number) {
 			this.move = {
 				direction,
-				ms
+				ms,
 			};
 		}
 
@@ -140,7 +140,7 @@ export namespace Temperature {
 				tempHistory.push({
 					date: Date.now(),
 					temp: temp,
-					state: this.getHeaterState()
+					state: this.getHeaterState(),
 				});
 				await this.db!.setVal(`${this.name}.history`, tempHistory);
 				await this.db!.setVal(`${this.name}.temp`, temp);
@@ -213,7 +213,7 @@ export namespace Temperature {
 						{
 							auth: Auth.Secret.getKey(),
 							mode,
-							name
+							name,
 						},
 						source
 					);
@@ -227,7 +227,7 @@ export namespace Temperature {
 						{
 							auth: Auth.Secret.getKey(),
 							target,
-							name
+							name,
 						},
 						source
 					);
@@ -240,7 +240,7 @@ export namespace Temperature {
 						res,
 						{
 							auth: Auth.Secret.getKey(),
-							name
+							name,
 						},
 						source
 					);
@@ -259,7 +259,7 @@ export namespace Temperature {
 							auth: Auth.Secret.getKey(),
 							direction,
 							ms,
-							name
+							name,
 						},
 						source
 					);
@@ -277,7 +277,7 @@ export namespace Temperature {
 				'/heat': 'Start heating',
 				'/heatoff': 'Stop heating',
 				'/heatauto': 'Set heat mode to auto',
-				'/help_temperature': 'Print help commands for temperature'
+				'/help_temperature': 'Print help commands for temperature',
 			};
 
 			static readonly botName = 'Temperature';
@@ -293,7 +293,7 @@ export namespace Temperature {
 							attachMessage(
 								logObj,
 								`Reporting temperatures ${TempControllers.getAll().map(
-									controller => {
+									(controller) => {
 										return Math.round(
 											controller.getLastTemp()
 										);
@@ -311,24 +311,24 @@ export namespace Temperature {
 												controller.getLastTemp() * 10
 											) /
 												10 +
-												''
+												'',
 										],
 										[
 											'Heater state',
-											controller.getHeaterState()
+											controller.getHeaterState(),
 										],
 										['Heater mode', controller.getMode()],
 										[
 											'Target temperature',
-											controller.getTarget() + ''
+											controller.getTarget() + '',
 										],
-										['', '']
+										['', ''],
 									]
 								);
 							}
 
 							return Bot.makeTable({
-								contents: contents
+								contents: contents,
 							});
 						}
 					);
@@ -428,9 +428,9 @@ export namespace Temperature {
 						/what commands are there for temperature/,
 						async () => {
 							return `Commands are:\n${Bot.matches.matches
-								.map(match => {
+								.map((match) => {
 									return `RegExps: ${match.regexps
-										.map(r => r.source)
+										.map((r) => r.source)
 										.join(', ')}. Texts: ${match.texts.join(
 										', '
 									)}}`;
@@ -450,7 +450,7 @@ export namespace Temperature {
 			): Promise<_Bot.Message.MatchResponse | undefined> {
 				return await this.matchLines({
 					...config,
-					matchConfig: Bot.matches
+					matchConfig: Bot.matches,
 				});
 			}
 
@@ -469,7 +469,7 @@ export namespace Temperature {
 				res: ResponseLike,
 				{
 					mode,
-					name
+					name,
 				}: {
 					auth?: string;
 					mode: Mode;
@@ -497,7 +497,7 @@ export namespace Temperature {
 				res: ResponseLike,
 				{
 					target,
-					name
+					name,
 				}: {
 					auth?: string;
 					target: number;
@@ -523,7 +523,7 @@ export namespace Temperature {
 			public static async getTemp(
 				res: ResponseLike,
 				{
-					name
+					name,
 				}: {
 					auth?: string;
 					name: string;
@@ -540,12 +540,12 @@ export namespace Temperature {
 				res.status(200);
 				res.write(
 					JSON.stringify({
-						temp: controller.getLastTemp()
+						temp: controller.getLastTemp(),
 					})
 				);
 				res.end();
 				return {
-					temp: controller.getLastTemp()
+					temp: controller.getLastTemp(),
 				};
 			}
 
@@ -556,7 +556,7 @@ export namespace Temperature {
 				{
 					name,
 					direction,
-					ms
+					ms,
 				}: {
 					auth?: string;
 					name: string;

@@ -3,7 +3,7 @@ import {
 	Props,
 	config,
 	PROP_TYPE,
-	ComplexType
+	ComplexType,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { PatternButton } from '../pattern-button/pattern-button.js';
 import { PatternControlsHTML } from './pattern-controls.html.js';
@@ -13,7 +13,7 @@ import { TransitionTypes } from 'magic-home';
 @config({
 	is: 'pattern-controls',
 	css: PatternControlsCSS,
-	html: PatternControlsHTML
+	html: PatternControlsHTML,
 })
 export class PatternControls extends ConfigurableWebComponent<{
 	selectors: {
@@ -28,8 +28,8 @@ export class PatternControls extends ConfigurableWebComponent<{
 		reflect: {
 			defaultTransition: PROP_TYPE.STRING,
 			defaultSpeed: PROP_TYPE.NUMBER,
-			parent: ComplexType<PatternButton>()
-		}
+			parent: ComplexType<PatternButton>(),
+		},
 	});
 
 	private _updateParams() {

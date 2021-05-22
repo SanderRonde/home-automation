@@ -35,7 +35,7 @@ const BINS = 100;
 namespace BinGenerator {
 	namespace Util {
 		export function wait(time: number) {
-			return new Promise(resolve => setTimeout(resolve, time));
+			return new Promise((resolve) => setTimeout(resolve, time));
 		}
 
 		export async function waitUntil(
@@ -74,7 +74,7 @@ namespace BinGenerator {
 						globPattern,
 						{
 							cwd,
-							nodir: true
+							nodir: true,
 						},
 						(err, matches) => {
 							if (err) {
@@ -98,7 +98,7 @@ namespace BinGenerator {
 			async function getInputFiles(globs: string[]) {
 				return flat(
 					await Promise.all(
-						globs.map(globPattern => {
+						globs.map((globPattern) => {
 							return globPromise(globPattern);
 						})
 					)
@@ -166,7 +166,7 @@ namespace BinGenerator {
 					const dir = path.join(__dirname, HOST_PATH);
 					const files = await fs.readdir(dir);
 					await Promise.all(
-						files.map(file => fs.unlink(path.join(dir, file)))
+						files.map((file) => fs.unlink(path.join(dir, file)))
 					);
 					await fs.rmdir(dir);
 					server.close();
@@ -176,7 +176,7 @@ namespace BinGenerator {
 					await createDir();
 
 					await Promise.all(
-						io.inFiles.map(file => {
+						io.inFiles.map((file) => {
 							return fs.copy(
 								file,
 								path.join(
@@ -190,10 +190,10 @@ namespace BinGenerator {
 				}
 
 				export function host(): Promise<HTTPServer> {
-					return new Promise(resolve => {
-						const server = (httpServer.createServer({
-							root: path.join(__dirname, HOST_PATH)
-						}) as unknown) as HTTPServer;
+					return new Promise((resolve) => {
+						const server = httpServer.createServer({
+							root: path.join(__dirname, HOST_PATH),
+						}) as unknown as HTTPServer;
 						server.listen(PORT, () => {
 							server.server.unref();
 							resolve(server);
@@ -209,10 +209,7 @@ namespace BinGenerator {
 			}
 
 			function removeExt(file: string) {
-				return file
-					.split('.')
-					.slice(0, -1)
-					.join('.');
+				return file.split('.').slice(0, -1).join('.');
 			}
 
 			function getFileOutPath({ file }: BinFile) {
@@ -223,15 +220,19 @@ namespace BinGenerator {
 			}
 
 			export async function writeBin(binFile: BinFile) {
-				await fs.writeFile(getFileOutPath(binFile), JSON.stringify(binFile.data), {
-					encoding: 'utf8'
-				});
+				await fs.writeFile(
+					getFileOutPath(binFile),
+					JSON.stringify(binFile.data),
+					{
+						encoding: 'utf8',
+					}
+				);
 			}
 
 			export async function writeBins(binFiles: BinFile[]) {
 				let done: number = 0;
 				return Promise.all(
-					binFiles.map(async binFile => {
+					binFiles.map(async (binFile) => {
 						await writeBin(binFile);
 						Log.groupLog(
 							`Wrote file ${chalk.bold(++done + '')}/${chalk.bold(
@@ -269,7 +270,7 @@ namespace BinGenerator {
 
 					return Promise.resolve();
 				});
-				page.on('console', msg => {
+				page.on('console', (msg) => {
 					console.log(`Message from page: ${msg.text()}`);
 				});
 			}
@@ -356,23 +357,21 @@ namespace BinGenerator {
 			export async function getDuration(
 				page: puppeteer.Page
 			): Promise<number> {
-				return await page.evaluate(
-					(): Promise<number> => {
-						const video = document.querySelector('video')!;
-						return new Promise(resolve => {
+				return await page.evaluate((): Promise<number> => {
+					const video = document.querySelector('video')!;
+					return new Promise((resolve) => {
+						if (video.duration) {
+							resolve(video.duration);
+							return;
+						}
+						const interval = window.setInterval(() => {
 							if (video.duration) {
+								window.clearInterval(interval);
 								resolve(video.duration);
-								return;
 							}
-							const interval = window.setInterval(() => {
-								if (video.duration) {
-									window.clearInterval(interval);
-									resolve(video.duration);
-								}
-							}, 100);
-						});
-					}
-				);
+						}, 100);
+					});
+				});
 			}
 
 			export async function play(page: puppeteer.Page) {
@@ -381,35 +380,29 @@ namespace BinGenerator {
 				});
 			}
 
-			export async function check(
-				page: puppeteer.Page
-			): Promise<{
+			export async function check(page: puppeteer.Page): Promise<{
 				done: boolean;
 				time: number;
 			}> {
-				return await page.evaluate(
-					(): Promise<{
-						done: boolean;
-						time: number;
-					}> => {
-						const puppetGlobal = window as PuppetGlobal;
-						return Promise.resolve({
-							done: puppetGlobal.done!,
-							time: document.querySelector('video')!.currentTime
-						});
-					}
-				);
+				return await page.evaluate((): Promise<{
+					done: boolean;
+					time: number;
+				}> => {
+					const puppetGlobal = window as PuppetGlobal;
+					return Promise.resolve({
+						done: puppetGlobal.done!,
+						time: document.querySelector('video')!.currentTime,
+					});
+				});
 			}
 
 			export async function extract(
 				page: puppeteer.Page
 			): Promise<number[][]> {
-				return await page.evaluate(
-					(): Promise<number[][]> => {
-						const puppetGlobal = window as PuppetGlobal;
-						return Promise.resolve(puppetGlobal.data!);
-					}
-				);
+				return await page.evaluate((): Promise<number[][]> => {
+					const puppetGlobal = window as PuppetGlobal;
+					return Promise.resolve(puppetGlobal.data!);
+				});
 			}
 		}
 
@@ -445,7 +438,7 @@ namespace BinGenerator {
 								incomplete: ' ',
 								width: this._barLength,
 								total: this._duration,
-								curr: 0
+								curr: 0,
 							}
 						);
 						this._file = path.basename(file);
@@ -467,7 +460,7 @@ namespace BinGenerator {
 							padding: BarContent.leftpad(
 								' ',
 								getPadding(this._barLength, this._timeRemaining)
-							)
+							),
 						});
 					}
 
@@ -541,14 +534,14 @@ namespace BinGenerator {
 						return {
 							file,
 							page,
-							bar
+							bar,
 						};
 					})
 				);
 			}
 
 			export function terminate(bars: BarContent.Bar[]) {
-				bars.map(bar => bar.terminate());
+				bars.map((bar) => bar.terminate());
 			}
 		}
 
@@ -585,10 +578,10 @@ namespace BinGenerator {
 			io: IO.Input.IO
 		) {
 			return await Promise.all(
-				io.inFiles.map(async file => {
+				io.inFiles.map(async (file) => {
 					return {
 						file,
-						page: await setupPage(browser, file, io)
+						page: await setupPage(browser, file, io),
 					};
 				})
 			);
@@ -607,7 +600,7 @@ namespace BinGenerator {
 					const data = await genFileBins(page, bar);
 					return {
 						file,
-						data
+						data,
 					};
 				})
 			);

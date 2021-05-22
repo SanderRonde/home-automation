@@ -37,7 +37,7 @@ export abstract class ModuleMeta {
 		Handler: typeof Handler;
 	} {
 		return {
-			Handler: HandlerDefault
+			Handler: HandlerDefault,
 		};
 	}
 
@@ -45,7 +45,7 @@ export abstract class ModuleMeta {
 		Bot: typeof BotBase;
 	} {
 		return {
-			Bot: BotBase
+			Bot: BotBase,
 		};
 	}
 

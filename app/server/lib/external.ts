@@ -11,9 +11,8 @@ type QueuedRequest<T = any> = {
 	instance: InstanceType<ReturnType<typeof createExternalClass>>;
 };
 
-const initializedClasses: WeakSet<ReturnType<
-	typeof createExternalClass
->> = new WeakSet();
+const initializedClasses: WeakSet<ReturnType<typeof createExternalClass>> =
+	new WeakSet();
 export function createExternalClass(requiresInit: boolean, name?: string) {
 	return class ExternalClass {
 		protected static _initialized: boolean = false;
@@ -31,7 +30,7 @@ export function createExternalClass(requiresInit: boolean, name?: string) {
 
 		private static async _handleQueuedRequest<T>({
 			fn,
-			instance
+			instance,
 		}: QueuedRequest<T>): Promise<T> {
 			const { _logObj: logObj, _source: source } = instance;
 			const resDummy = new ResDummy();
@@ -53,13 +52,13 @@ export function createExternalClass(requiresInit: boolean, name?: string) {
 		 * or later when it has been intiialized
 		 */
 		runRequest<T>(fn: QueuedRequestFn<T>): Promise<T> {
-			return new Promise<T>(resolve => {
+			return new Promise<T>((resolve) => {
 				const constructor = this.constructor as typeof ExternalClass;
 				if (constructor._isReady(requiresInit)) {
 					constructor
 						._handleQueuedRequest({
 							fn,
-							instance: this
+							instance: this,
 						})
 						.then(resolve);
 				} else {
@@ -69,7 +68,7 @@ export function createExternalClass(requiresInit: boolean, name?: string) {
 							resolve(result);
 							return result;
 						},
-						instance: this
+						instance: this,
 					});
 				}
 			});

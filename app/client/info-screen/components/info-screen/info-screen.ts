@@ -1,7 +1,7 @@
 import {
 	Props,
 	config,
-	PROP_TYPE
+	PROP_TYPE,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { TemperatureDisplay } from '../temperature-display/temperature-display.js';
 import { CalendarOverview } from '../calendar-overview/calendar-overview.js';
@@ -14,7 +14,7 @@ import { InfoScreenCSS } from './info-screen.css.js';
 	is: 'info-screen',
 	html: InfoScreenHTML,
 	css: InfoScreenCSS,
-	dependencies: [CurrentDate, TemperatureDisplay, CalendarOverview]
+	dependencies: [CurrentDate, TemperatureDisplay, CalendarOverview],
 })
 export class InfoScreen extends ServerComm {
 	props = Props.define(
@@ -23,20 +23,20 @@ export class InfoScreen extends ServerComm {
 			reflect: {
 				blank: {
 					type: PROP_TYPE.BOOL,
-					value: false
+					value: false,
 				},
 				offline: {
 					type: PROP_TYPE.BOOL,
-					value: false
-				}
-			}
+					value: false,
+				},
+			},
 		},
 		super.props
 	);
 
 	connectWebsocket() {
 		const connection = new WebSocket(`ws://${location.host}/blanking`);
-		connection.onmessage = m => {
+		connection.onmessage = (m) => {
 			const data = JSON.parse(m.data) as {
 				blank?: boolean;
 				refresh?: boolean;

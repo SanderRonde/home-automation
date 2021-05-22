@@ -1,6 +1,6 @@
 import {
 	CHANGE_TYPE,
-	TemplateFn
+	TemplateFn,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { HomeDetectorDisplay } from './home-detector-display.js';
@@ -12,7 +12,7 @@ export const HomeDetectorDisplayHTML = new TemplateFn<HomeDetectorDisplay>(
 				<div id="horizontal-center">
 					<div id="vertical-center">
 						<div id="content">
-							${Object.keys(props.json || {}).map(key => {
+							${Object.keys(props.json || {}).map((key) => {
 								return html`
 									<div class="row">
 										<div class="name">${key}</div>

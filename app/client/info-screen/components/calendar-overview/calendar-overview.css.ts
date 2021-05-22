@@ -1,12 +1,12 @@
 import {
 	TemplateFn,
-	CHANGE_TYPE
+	CHANGE_TYPE,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { CalendarOverview } from './calendar-overview.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 
 export const CalendarOverviewCSS = new TemplateFn<CalendarOverview>(
-	function(html) {
+	function (html) {
 		return html`
 			<style>
 				#container {

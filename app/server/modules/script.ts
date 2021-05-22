@@ -2,7 +2,7 @@ import { errorHandle, requireParams, authAll } from '../lib/decorators';
 import {
 	attachMessage,
 	attachSourcedMessage,
-	ResponseLike
+	ResponseLike,
 } from '../lib/logger';
 import * as childProcess from 'child_process';
 import { BotState } from '../lib/bot-state';
@@ -50,7 +50,7 @@ export namespace Script {
 						res,
 						{
 							name,
-							auth: Auth.Secret.getKey()
+							auth: Auth.Secret.getKey(),
 						},
 						Handler._config!,
 						source
@@ -68,7 +68,7 @@ export namespace Script {
 				'/runscript': 'Run given script',
 				'/killpc': 'Shut down pc',
 				'/wakepc': 'Start pc',
-				'/help_script': 'Print help comands for script'
+				'/help_script': 'Print help comands for script',
 			};
 
 			static readonly botName = 'Script';
@@ -118,9 +118,9 @@ export namespace Script {
 						/what commands are there for script/,
 						async () => {
 							return `Commands are:\n${Bot.matches.matches
-								.map(match => {
+								.map((match) => {
 									return `RegExps: ${match.regexps
-										.map(r => r.source)
+										.map((r) => r.source)
 										.join(', ')}. Texts: ${match.texts.join(
 										', '
 									)}}`;
@@ -140,7 +140,7 @@ export namespace Script {
 			): Promise<_Bot.Message.MatchResponse | undefined> {
 				return await this.matchLines({
 					...config,
-					matchConfig: Bot.matches
+					matchConfig: Bot.matches,
 				});
 			}
 
@@ -186,7 +186,7 @@ export namespace Script {
 							path.join(config.scripts.scriptDir, params.name),
 							{
 								uid: config.scripts.uid,
-								gid: config.scripts.uid
+								gid: config.scripts.uid,
 							}
 						)
 						.toString();
@@ -213,7 +213,7 @@ export namespace Script {
 	export namespace Routing {
 		export function init({
 			app,
-			config
+			config,
 		}: {
 			app: express.Application;
 			config: Config;
@@ -226,7 +226,7 @@ export namespace Script {
 						...req.params,
 						...req.body,
 						...req.query,
-						cookies: req.cookies
+						cookies: req.cookies,
 					},
 					config,
 					`${Script.meta.name}.API.${req.url}`

@@ -1,7 +1,7 @@
 import {
 	PLAYSTATE_CHECK_INTERVAL,
 	BEAT_CACHE_CLEAR_INTERVAL,
-	PLAYBACK_CLOSE_RANGE
+	PLAYBACK_CLOSE_RANGE,
 } from '../lib/constants';
 import { ModuleConfig } from './modules';
 import { SpotifyTypes } from '../types/spotify';
@@ -67,9 +67,9 @@ export namespace SpotifyBeats {
 					}
 
 					audioAnalysis(id: string) {
-						return this.api.get<
-							SpotifyTypes.Endpoints.AudioAnalysis
-						>(`/v1/audio-analysis/${id}`);
+						return this.api.get<SpotifyTypes.Endpoints.AudioAnalysis>(
+							`/v1/audio-analysis/${id}`
+						);
 					}
 
 					getDevices() {
@@ -82,7 +82,7 @@ export namespace SpotifyBeats {
 						return this.api.put<SpotifyTypes.Endpoints.Play>(
 							`/v1/me/player/play?device_id=${deviceId}`,
 							JSON.stringify({
-								uris: [uri]
+								uris: [uri],
 							})
 						);
 					}
@@ -104,7 +104,7 @@ export namespace SpotifyBeats {
 					clientSecret,
 					redirectURI,
 					token,
-					db
+					db,
 				}: {
 					clientId: string;
 					clientSecret: string;
@@ -144,11 +144,8 @@ export namespace SpotifyBeats {
 				) {
 					if (response.status !== 200) return false;
 
-					const {
-						access_token,
-						refresh_token,
-						expires_in
-					} = await response.json();
+					const { access_token, refresh_token, expires_in } =
+						await response.json();
 
 					await this.setToken(access_token);
 					await this.setRefresh(refresh_token, expires_in);
@@ -157,22 +154,21 @@ export namespace SpotifyBeats {
 				}
 
 				async refreshToken() {
-					const response = await this.post<
-						SpotifyTypes.Endpoints.AuthToken
-					>(
-						'/api/token',
-						`grant_type=refresh_token&refresh_token=${this._refreshToken}`,
-						{
-							headers: {
-								'Content-Type':
-									'application/x-www-form-urlencoded',
-								Authorization: `Basic ${Buffer.from(
-									`${this._clientId}:${this._clientSecret}`
-								).toString('base64')}`
-							},
-							base: 'https://accounts.spotify.com'
-						}
-					);
+					const response =
+						await this.post<SpotifyTypes.Endpoints.AuthToken>(
+							'/api/token',
+							`grant_type=refresh_token&refresh_token=${this._refreshToken}`,
+							{
+								headers: {
+									'Content-Type':
+										'application/x-www-form-urlencoded',
+									Authorization: `Basic ${Buffer.from(
+										`${this._clientId}:${this._clientSecret}`
+									).toString('base64')}`,
+								},
+								base: 'https://accounts.spotify.com',
+							}
+						);
 					if (!response) return false;
 					return this._checkCreatedToken(response);
 				}
@@ -183,7 +179,7 @@ export namespace SpotifyBeats {
 					return {
 						Accept: 'application/json',
 						'Content-Type': 'application/json',
-						Authorization: `Bearer ${this._token}`
+						Authorization: `Bearer ${this._token}`,
 					};
 				}
 
@@ -198,7 +194,7 @@ export namespace SpotifyBeats {
 						const response = await request();
 						logOutgoingRes(response, {
 							method,
-							path
+							path,
 						});
 						switch (response.status) {
 							case 200:
@@ -224,9 +220,8 @@ export namespace SpotifyBeats {
 								}
 								return null;
 							case 429:
-								const retryAfter = response.headers.get(
-									'Retry-After'
-								);
+								const retryAfter =
+									response.headers.get('Retry-After');
 								await wait(
 									1000 *
 										(parseInt(retryAfter || '60', 10) + 1)
@@ -276,7 +271,7 @@ export namespace SpotifyBeats {
 						path,
 						() => {
 							return fetch(`${API.SPOTIFY_BASE}${path}`, {
-								headers: this._getHeaders()
+								headers: this._getHeaders(),
 							});
 						},
 						'get',
@@ -305,9 +300,9 @@ export namespace SpotifyBeats {
 									method: 'post',
 									headers: {
 										...this._getHeaders(),
-										...(options.headers || {})
+										...(options.headers || {}),
 									},
-									body: data
+									body: data,
 								}
 							);
 						},
@@ -336,9 +331,9 @@ export namespace SpotifyBeats {
 									method: 'put',
 									headers: {
 										...this._getHeaders(),
-										...(options.headers || {})
+										...(options.headers || {}),
 									},
-									body: data
+									body: data,
 								}
 							);
 						},
@@ -356,22 +351,21 @@ export namespace SpotifyBeats {
 				}
 
 				async grantAuthCode(token: string) {
-					const response = await this.post<
-						SpotifyTypes.Endpoints.AuthToken
-					>(
-						'/api/token',
-						`grant_type=authorization_code&code=${token}&redirect_uri=${this._redirectURI}`,
-						{
-							headers: {
-								'Content-Type':
-									'application/x-www-form-urlencoded',
-								Authorization: `Basic ${Buffer.from(
-									`${this._clientId}:${this._clientSecret}`
-								).toString('base64')}`
-							},
-							base: 'https://accounts.spotify.com'
-						}
-					);
+					const response =
+						await this.post<SpotifyTypes.Endpoints.AuthToken>(
+							'/api/token',
+							`grant_type=authorization_code&code=${token}&redirect_uri=${this._redirectURI}`,
+							{
+								headers: {
+									'Content-Type':
+										'application/x-www-form-urlencoded',
+									Authorization: `Basic ${Buffer.from(
+										`${this._clientId}:${this._clientSecret}`
+									).toString('base64')}`,
+								},
+								base: 'https://accounts.spotify.com',
+							}
+						);
 					if (!response) return false;
 					return this._checkCreatedToken(response);
 				}
@@ -396,13 +390,13 @@ export namespace SpotifyBeats {
 						redirect_url_base: getEnv(
 							'SECRET_SPOTIFY_REDIRECT_URL_BASE',
 							true
-						)
+						),
 					};
 					return (_api = new API({
 						clientId: id,
 						clientSecret: secret,
 						redirectURI: `${redirect_url_base}/spotify/redirect`,
-						db
+						db,
 					}));
 				} catch (e) {
 					logTag(
@@ -434,7 +428,7 @@ export namespace SpotifyBeats {
 
 				if (response.status === 204) {
 					return {
-						playing: false
+						playing: false,
 					};
 				}
 
@@ -446,7 +440,7 @@ export namespace SpotifyBeats {
 					playStart,
 					playingID: (item && item.id) || undefined,
 					duration: (item && item.duration_ms) || undefined,
-					playTime: progress_ms
+					playTime: progress_ms,
 				};
 			}
 
@@ -464,7 +458,7 @@ export namespace SpotifyBeats {
 				const { beats, track } = await response.json();
 				return {
 					beats: beats,
-					duration: track.duration
+					duration: track.duration,
 				};
 			}
 		}
@@ -476,17 +470,15 @@ export namespace SpotifyBeats {
 				return Math.abs(base - target) <= diff;
 			}
 
-			const beatCache: Map<
-				string,
-				SpotifyTypes.TimeInterval[]
-			> = new Map();
+			const beatCache: Map<string, SpotifyTypes.TimeInterval[]> =
+				new Map();
 
 			async function checkForChanges(
 				oldState: API.PlaybackState | null,
 				newState: API.PlaybackState
 			): Promise<BeatChanges> {
 				const changes: BeatChanges = {
-					playbackTime: newState.playTime!
+					playbackTime: newState.playTime!,
 				};
 				if (!oldState || oldState.playing !== newState.playing) {
 					changes.playState = newState.playing;
@@ -539,7 +531,7 @@ export namespace SpotifyBeats {
 					duration: state.duration!,
 					playStart: state.playStart!,
 					playState: state.playing,
-					playbackTime: state.playTime!
+					playbackTime: state.playTime!,
 				};
 			}
 
@@ -593,7 +585,7 @@ export namespace SpotifyBeats {
 						'user-read-private',
 						'user-read-email',
 						'user-read-playback-state',
-						'user-modify-playback-state'
+						'user-modify-playback-state',
 					],
 					'generate-new'
 				);
@@ -655,7 +647,7 @@ export namespace SpotifyBeats {
 
 		export class Bot extends BotState.Base {
 			static readonly commands = {
-				'/auth': 'Authenticate spotify (if needed)'
+				'/auth': 'Authenticate spotify (if needed)',
 			};
 
 			static readonly botName = 'Spotify';
@@ -683,9 +675,9 @@ export namespace SpotifyBeats {
 						/what commands are there for keyval/,
 						async () => {
 							return `Commands are:\n${Bot.matches.matches
-								.map(match => {
+								.map((match) => {
 									return `RegExps: ${match.regexps
-										.map(r => r.source)
+										.map((r) => r.source)
 										.join(', ')}. Texts: ${match.texts.join(
 										', '
 									)}}`;
@@ -711,7 +703,7 @@ export namespace SpotifyBeats {
 			): Promise<_Bot.Message.MatchResponse | undefined> {
 				return await this.matchLines({
 					...config,
-					matchConfig: Bot.matches
+					matchConfig: Bot.matches,
 				});
 			}
 

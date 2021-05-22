@@ -1,12 +1,12 @@
 import {
 	CHANGE_TYPE,
-	TemplateFn
+	TemplateFn,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { HomeDetectorDisplay } from './home-detector-display.js';
 
 export const HomeDetectorDisplayCSS = new TemplateFn<HomeDetectorDisplay>(
-	html => {
+	(html) => {
 		return html`
 			<style>
 				#background {

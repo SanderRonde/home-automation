@@ -3,7 +3,7 @@ import { ModuleConfig, ModuleHookables } from './modules';
 import {
 	attachMessage,
 	attachSourcedMessage,
-	ResponseLike
+	ResponseLike,
 } from '../lib/logger';
 import webhooks from '../config/webhook';
 import { Bot as _Bot } from './bot';
@@ -60,7 +60,7 @@ export namespace Webhook {
 						res,
 						{
 							auth: Auth.Secret.getKey(),
-							name: name
+							name: name,
 						},
 						source
 					);
@@ -77,7 +77,7 @@ export namespace Webhook {
 			public static async webhook(
 				res: ResponseLike,
 				{
-					name
+					name,
 				}: {
 					auth?: string;
 					name: string;

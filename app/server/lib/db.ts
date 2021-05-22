@@ -5,7 +5,7 @@ import * as path from 'path';
 class DBFileManager {
 	private static get date() {
 		return {
-			___last_updated: Date.now()
+			___last_updated: Date.now(),
 		};
 	}
 
@@ -15,14 +15,14 @@ class DBFileManager {
 			// Create it
 			await fs.mkdirp(DB_FOLDER);
 			await fs.writeFile(filePath, JSON.stringify(this.date, null, 4), {
-				encoding: 'utf8'
+				encoding: 'utf8',
 			});
 			return this.date;
 		}
 		try {
 			const parsed = JSON.parse(
 				(await fs.readFile(filePath, {
-					encoding: 'utf8'
+					encoding: 'utf8',
 				})) || '{}'
 			);
 			return parsed;
@@ -44,13 +44,13 @@ class DBFileManager {
 			JSON.stringify(
 				{
 					...data,
-					...this.date
+					...this.date,
 				},
 				null,
 				4
 			),
 			{
-				encoding: 'utf8'
+				encoding: 'utf8',
 			}
 		);
 	}
@@ -99,7 +99,7 @@ export class Database {
 		return {
 			currentContainer: current,
 			lastKey,
-			currentTarget
+			currentTarget,
 		};
 	}
 
@@ -163,7 +163,7 @@ export class Database {
 			return;
 		} else {
 			currentContainer[lastKey] = currentTarget.filter(
-				entry => !filter(entry)
+				(entry) => !filter(entry)
 			);
 		}
 

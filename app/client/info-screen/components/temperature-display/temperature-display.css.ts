@@ -1,12 +1,12 @@
 import {
 	TemplateFn,
-	CHANGE_TYPE
+	CHANGE_TYPE,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { TemperatureDisplay } from './temperature-display.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 
 export const TemperatureDisplayCSS = new TemplateFn<TemperatureDisplay>(
-	function(html) {
+	function (html) {
 		return html`
 			<style>
 				#centerer {

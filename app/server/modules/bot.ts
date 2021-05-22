@@ -2,7 +2,7 @@ import {
 	attachMessage,
 	logOutgoingReq,
 	logFirst,
-	ResponseLike
+	ResponseLike,
 } from '../lib/logger';
 import { ModuleConfig, AllModules, InstanceOf } from './modules';
 import { TELEGRAM_IPS, TELEGRAM_API } from '../lib/constants';
@@ -22,7 +22,7 @@ const BOT_NAME = 'HuisBot';
 export const enum RESPONSE_TYPE {
 	MARKDOWN = 'Markdown',
 	HTML = 'HTML',
-	TEXT = 'Text'
+	TEXT = 'Text',
 }
 
 export namespace Bot {
@@ -248,7 +248,7 @@ export namespace Bot {
 							'thursday',
 							'friday',
 							'saturday',
-							'sunday'
+							'sunday',
 						];
 						const day = new Date().getDay();
 						return weekdays[day - 1];
@@ -304,28 +304,28 @@ export namespace Bot {
 					return Promise.resolve(false);
 				}
 				chatId = chatId || this._lastChatID;
-				return new Promise<boolean>(resolve => {
+				return new Promise<boolean>((resolve) => {
 					const msg = JSON.stringify({
 						...{
 							chat_id: chatId,
-							text: text + ''
+							text: text + '',
 						},
 						...(type === RESPONSE_TYPE.TEXT
 							? {}
 							: {
-									parse_mode: type
-							  })
+									parse_mode: type,
+							  }),
 					});
 					const req = https.request({
 						method: 'POST',
 						path: `/bot${this._secret}/sendMessage`,
 						hostname: TELEGRAM_API,
 						headers: {
-							'Content-Type': 'application/json'
-						}
+							'Content-Type': 'application/json',
+						},
 					});
 					req.write(msg);
-					req.on('error', e => {
+					req.on('error', (e) => {
 						attachMessage(
 							req,
 							chalk.red('Error sending telegram msg'),
@@ -337,7 +337,7 @@ export namespace Bot {
 						resolve(true);
 						logOutgoingReq(req, {
 							method: 'POST',
-							target: TELEGRAM_API + '/sendMessage'
+							target: TELEGRAM_API + '/sendMessage',
 						});
 					});
 					req.end();
@@ -358,7 +358,7 @@ export namespace Bot {
 			): Promise<MatchResponse | undefined> {
 				return await BotState.Matchable.matchLines({
 					...config,
-					matchConfig: Handler.matches
+					matchConfig: Handler.matches,
 				});
 			}
 
@@ -384,7 +384,7 @@ export namespace Bot {
 					config,
 					await this._matchSelf(config),
 					...Object.values(await getAllModules()).map(
-						mod => mod.meta.bot.Bot
+						(mod) => mod.meta.bot.Bot
 					)
 				);
 			}
@@ -395,7 +395,7 @@ export namespace Bot {
 				message,
 				state,
 				res,
-				bot
+				bot,
 			}: MatchParameters): Promise<
 				| {
 						type: RESPONSE_TYPE;
@@ -417,7 +417,7 @@ export namespace Bot {
 						message,
 						state,
 						res,
-						bot
+						bot,
 					}))
 				) {
 					// Push response
@@ -427,7 +427,7 @@ export namespace Bot {
 					) {
 						response.push({
 							type: RESPONSE_TYPE.TEXT,
-							text: match.response
+							text: match.response,
 						});
 					} else {
 						response.push(match.response);
@@ -489,13 +489,13 @@ export namespace Bot {
 							message.chat.id
 						),
 						res,
-						bot: this
+						bot: this,
 					})) ||
 					(attachMessage(matchMsg, 'None') && [
 						{
 							type: RESPONSE_TYPE.TEXT,
-							text: "I'm not sure what you mean"
-						}
+							text: "I'm not sure what you mean",
+						},
 					])
 				);
 			}
@@ -540,7 +540,7 @@ export namespace Bot {
 					return undefined;
 				}
 
-				return new Promise<string>(resolve => {
+				return new Promise<string>((resolve) => {
 					this._openQuestions.push(resolve);
 				});
 			}
@@ -568,7 +568,7 @@ export namespace Bot {
 					return undefined;
 				}
 
-				return new Promise<string>(resolve => {
+				return new Promise<string>((resolve) => {
 					this._openQuestions.push(resolve);
 					setCancelable(() => {
 						this._openQuestions.splice(
@@ -617,8 +617,8 @@ export namespace Bot {
 						return [
 							{
 								type: RESPONSE_TYPE.TEXT,
-								text: 'Edits unsupported'
-							}
+								text: 'Edits unsupported',
+							},
 						];
 					}
 					if (this.isQuestion(message)) {
@@ -644,8 +644,8 @@ export namespace Bot {
 					return [
 						{
 							type: RESPONSE_TYPE.TEXT,
-							text: 'Message type unsupported' as string | number
-						}
+							text: 'Message type unsupported' as string | number,
+						},
 					];
 				})();
 				attachMessage(
@@ -655,7 +655,7 @@ export namespace Bot {
 				);
 				const sendSuccesful = (
 					await Promise.all(
-						responses.map(async response => {
+						responses.map(async (response) => {
 							const chatId =
 								message?.chat.id || edited_message?.chat.id;
 							if (chatId === undefined) return false;
@@ -677,7 +677,7 @@ export namespace Bot {
 							return true;
 						})
 					)
-				).every(v => v);
+				).every((v) => v);
 
 				if (!resWrapped.sent) {
 					if (sendSuccesful) {
@@ -728,8 +728,8 @@ export namespace Bot {
 		function isFromTelegram(req: TelegramReq) {
 			const fwd = req.headers['x-forwarded-for'] as string;
 			const [ipv4] = fwd.split(',');
-			const ipBlocks = ipv4.split('.').map(p => parseInt(p));
-			return TELEGRAM_IPS.some(r => isInIPRange(ipBlocks, r));
+			const ipBlocks = ipv4.split('.').map((p) => parseInt(p));
+			return TELEGRAM_IPS.some((r) => isInIPRange(ipBlocks, r));
 		}
 
 		export let handler: Message.Handler | null = null;
@@ -755,10 +755,10 @@ export namespace Bot {
 			`${chalk.bold('Available commands are')}:\n\n${Object.values(
 				await getAllModules()
 			)
-				.map(mod => mod.meta.bot.Bot)
-				.map(bot => {
+				.map((mod) => mod.meta.bot.Bot)
+				.map((bot) => {
 					return `${Object.keys(bot.commands)
-						.map(cmd => {
+						.map((cmd) => {
 							return `${chalk.bold(cmd.slice(1))} - ${
 								bot.commands[cmd as keyof typeof bot.commands]
 							}`;

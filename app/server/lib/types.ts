@@ -17,7 +17,7 @@ export class Color implements Color {
 		return {
 			r: this.r,
 			g: this.g,
-			b: this.b
+			b: this.b,
 		};
 	}
 

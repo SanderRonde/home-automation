@@ -1,10 +1,10 @@
 import { WebHookConfig } from '../modules/webhook';
 
 export default {
-	someName: async _modules => {
+	someName: async (_modules) => {
 		// Do something
 	},
-	otherName: async _modules => {
+	otherName: async (_modules) => {
 		// Do something else
-	}
+	},
 } as WebHookConfig;

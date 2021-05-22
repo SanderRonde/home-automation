@@ -2,7 +2,7 @@ import {
 	ConfigurableWebComponent,
 	Props,
 	config,
-	PROP_TYPE
+	PROP_TYPE,
 } from '../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { AnnotatorInstanceHTML } from './annotator-instance.html.js';
 import { AnnotatorInstanceCSS } from './annotator-instance.css.js';
@@ -37,7 +37,7 @@ type AnnotatedFile = {
 };
 
 function waitUntil(fn: () => boolean, interval: number = 50) {
-	return new Promise(resolve => {
+	return new Promise((resolve) => {
 		function doCheck() {
 			if (fn()) {
 				resolve();
@@ -52,7 +52,7 @@ function waitUntil(fn: () => boolean, interval: number = 50) {
 @config({
 	is: 'annotator-instance',
 	css: AnnotatorInstanceCSS,
-	html: AnnotatorInstanceHTML
+	html: AnnotatorInstanceHTML,
 })
 export class AnnotatorInstance extends ConfigurableWebComponent<{
 	selectors: {
@@ -70,19 +70,19 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 		reflect: {
 			filename: {
 				type: PROP_TYPE.STRING,
-				value: null
+				value: null,
 			},
 			length: {
 				type: PROP_TYPE.NUMBER,
-				value: 0
-			}
-		}
+				value: 0,
+			},
+		},
 	});
 
 	private _setGenre(x: number, y: number) {
 		this.genre = {
 			hard: x,
-			uptempo: y
+			uptempo: y,
 		};
 
 		const canvas = this.$.genreSelect;
@@ -148,12 +148,12 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 			this.items.push({
 				type,
 				time,
-				duration
+				duration,
 			});
 		} else {
 			this.items.push({
 				type,
-				time
+				time,
 			});
 		}
 	}
@@ -238,7 +238,7 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 	melodyStart() {
 		if (this._melody) return;
 		this._melody = {
-			startTime: this.$.vid.currentTime
+			startTime: this.$.vid.currentTime,
 		};
 	}
 
@@ -269,8 +269,8 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 				items: this.items,
 				genre: this.genre || {
 					hard: 0.5,
-					uptempo: 0.5
-				}
+					uptempo: 0.5,
+				},
 			})
 		)}`;
 	}
@@ -281,7 +281,7 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 
 	clearLast() {
 		const time = this.$.vid.currentTime;
-		this.items = this.items.filter(item => {
+		this.items = this.items.filter((item) => {
 			return item.time < time - 10 || item.type !== this.markType;
 		});
 
@@ -293,9 +293,9 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 	}
 
 	undo() {
-		const last = this.items.filter(i => i.type === this.markType).pop();
+		const last = this.items.filter((i) => i.type === this.markType).pop();
 
-		this.items = this.items.filter(i => i !== last);
+		this.items = this.items.filter((i) => i !== last);
 
 		// Repaint
 		this._forcePaint(this.items);
@@ -393,8 +393,8 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 			this.$.zoomedBeats,
 			this.$.zoomedMelodies,
 			this.$.zoomedText,
-			this.$.text
-		].map(canvas => {
+			this.$.text,
+		].map((canvas) => {
 			canvas
 				.getContext('2d')
 				?.clearRect(0, 0, canvas.width, canvas.height);

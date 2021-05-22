@@ -3,7 +3,7 @@ import * as path from 'path';
 import { getEnv, getNumberEnv } from './io';
 
 const ROOT = path.join(__dirname, '../../../');
-export const CLIENT_FOLDER = path.join(ROOT, 'app/client')
+export const CLIENT_FOLDER = path.join(ROOT, 'app/client');
 export const DB_FOLDER = path.join(ROOT, 'database');
 const STATIC_FOLDER = path.join(ROOT, 'static');
 export const MARKED_AUDIO_FOLDER = path.join(STATIC_FOLDER, 'marked_audio');
@@ -19,13 +19,13 @@ export const TELEGRAM_IPS = [
 	{
 		start: [149, 154],
 		lower: [160, 0],
-		upper: [175, 255]
+		upper: [175, 255],
 	},
 	{
 		start: [91, 108],
 		lower: [4, 0],
-		upper: [7, 255]
-	}
+		upper: [7, 255],
+	},
 ];
 export const TELEGRAM_API = 'api.telegram.org';
 
@@ -39,13 +39,13 @@ export const enum LED_NAMES {
 	COUCH_LEDS,
 	WALL_LEDS,
 	CEILING_LEDS,
-	HEX_LEDS
+	HEX_LEDS,
 }
 export const MAGIC_LEDS = [
 	LED_NAMES.BED_LEDS,
 	LED_NAMES.DESK_LEDS,
 	LED_NAMES.COUCH_LEDS,
-	LED_NAMES.WALL_LEDS
+	LED_NAMES.WALL_LEDS,
 ];
 export const ARDUINO_LEDS = [LED_NAMES.CEILING_LEDS];
 export const HEX_LEDS = [LED_NAMES.HEX_LEDS];
@@ -55,7 +55,7 @@ export const LED_IPS: {
 	[getEnv('MODULE_LED_DESK_LED_IP', true)]: LED_NAMES.DESK_LEDS,
 	[getEnv('MODULE_LED_BED_LED_IP', true)]: LED_NAMES.BED_LEDS,
 	[getEnv('MODULE_LED_COUCH_LED_IP', true)]: LED_NAMES.COUCH_LEDS,
-	[getEnv('MODULE_LED_WALL_LED_IP', true)]: LED_NAMES.WALL_LEDS
+	[getEnv('MODULE_LED_WALL_LED_IP', true)]: LED_NAMES.WALL_LEDS,
 };
 if (getEnv('MODULE_LED_HEX_IP', false)) {
 	LED_IPS[getEnv('MODULE_LED_HEX_IP', false) as string] = LED_NAMES.HEX_LEDS;
@@ -67,13 +67,13 @@ export const NAME_MAP = {
 	[getEnv('MODULE_LED_BED_LED_IP', true)]: [
 		'room.leds.bed',
 		'room.lights.nightstand',
-		'room.leds.wakelight'
+		'room.leds.wakelight',
 	],
-	[LED_DEVICE_NAME as string]: ['room.leds.ceiling']
+	[LED_DEVICE_NAME as string]: ['room.leds.ceiling'],
 };
 if (getEnv('MODULE_LED_HEX_IP', false)) {
 	NAME_MAP[getEnv('MODULE_LED_HEX_IP', false) as string] = [
-		'room.leds.hexes'
+		'room.leds.hexes',
 	];
 }
 export const NIGHTSTAND_COLOR: Color = (() => {
@@ -94,13 +94,13 @@ export const COMMON_SWITCH_MAPPINGS: [RegExp, string][] = [
 	[/((the)\s+)?lights/, 'room.lights.ceiling'],
 	[
 		/((the|my)\s+)?(nightlight|(nightstand\s*light))/,
-		'room.lights.nightstand'
+		'room.lights.nightstand',
 	],
 	[/all\s+lights/, 'room.lights'],
 	[/((all|the|my)\s+)?speakers/, 'room.speakers'],
 	[/((the|my)\s+)?couch\s+speakers/, 'room.speakers.couch'],
 	[/((the|my)\s+)?desk\s+speakers/, 'room.speakers.desk'],
-	[/((the|my)\s+)?hex(es)?/, 'room.leds.hexes']
+	[/((the|my)\s+)?hex(es)?/, 'room.leds.hexes'],
 ];
 
 // Cast

@@ -45,8 +45,8 @@ export class WSSimInstance<
 			type: 'ping',
 			handler: () => {
 				this.refreshTimeoutListener();
-			}
-		}
+			},
+		},
 	];
 	private _ip!: string;
 	private _alive: boolean = true;
@@ -60,7 +60,7 @@ export class WSSimInstance<
 		// Store this IP alongside the ID
 		instanceIDs.set(id, {
 			instance: this,
-			ip: this._ip
+			ip: this._ip,
 		});
 		instanceMap.set(this, id);
 
@@ -108,8 +108,8 @@ export class WSSimInstance<
 				port: 80,
 				headers: {
 					'Content-Type': 'text/plain',
-					'Content-Length': type.length + data.length + 1
-				}
+					'Content-Length': type.length + data.length + 1,
+				},
 			});
 			req.write(`${type} ${data}`);
 			req.on('error', () => {
@@ -127,7 +127,7 @@ export class WSSimInstance<
 			);
 			logOutgoingReq(req, {
 				method: 'POST',
-				target: this._ip
+				target: this._ip,
 			});
 		} catch (e) {
 			this._die();
@@ -147,7 +147,7 @@ export class WSSimInstance<
 		// Check if another listener with this identifier exists
 		for (const {
 			type: listenerType,
-			identifier: listenerIdentifier
+			identifier: listenerIdentifier,
 		} of this._listeners) {
 			if (
 				identifier &&
@@ -159,7 +159,7 @@ export class WSSimInstance<
 		}
 		this._listeners.push({
 			type,
-			handler
+			handler,
 		});
 	}
 
@@ -204,7 +204,7 @@ export class WSSimInstance<
 export const enum ACCEPT_STATE {
 	ACCEPTED = 1,
 	REJECTED = -1,
-	IGNORED = 0
+	IGNORED = 0,
 }
 
 export class WSSimulator {
@@ -301,7 +301,7 @@ export class WSSimulator {
 							...req.params,
 							...req.body,
 							...req.query,
-							cookies: req.cookies
+							cookies: req.cookies,
 						}))
 					) {
 						return ACCEPT_STATE.REJECTED;
@@ -312,7 +312,7 @@ export class WSSimulator {
 			},
 			onAccept(instance: WSSimInstance) {
 				handler(instance);
-			}
+			},
 		});
 	}
 
@@ -371,25 +371,25 @@ export class WSWrapper {
 			}
 
 			const instance = new WebsocketServer({ noServer: true });
-			instance.handleUpgrade(req, socket, head, ws => {
+			instance.handleUpgrade(req, socket, head, (ws) => {
 				ws.emit('connection', ws, req);
 
 				handler({
 					send(message: string) {
-						ws.send(message, err => {
+						ws.send(message, (err) => {
 							if (err) {
 								ws.emit('close');
 							}
 						});
 					},
 					addListener(messageListener) {
-						ws.on('message', data => {
+						ws.on('message', (data) => {
 							messageListener(data.toString());
 						});
 					},
 					onDead(handler) {
 						ws.addEventListener('close', handler);
-					}
+					},
 				});
 			});
 			return;
@@ -399,7 +399,7 @@ export class WSWrapper {
 	all(route: string, handler: WSHandler) {
 		this.routes.push({
 			route,
-			handler
+			handler,
 		});
 	}
 

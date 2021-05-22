@@ -1,5 +1,10 @@
 import * as OAuthServer from 'express-oauth-server';
-import { attachMessage, attachSourcedMessage, logTag, ResponseLike } from '../lib/logger';
+import {
+	attachMessage,
+	attachSourcedMessage,
+	logTag,
+	ResponseLike,
+} from '../lib/logger';
 import oAuthUsers from '../config/oauth-users';
 import oAuthClients from '../config/oauth-clients';
 import { SettablePromise } from '../lib/util';
@@ -9,7 +14,14 @@ import { Database } from '../lib/db';
 import * as path from 'path';
 import { CLIENT_FOLDER } from '../lib/constants';
 import * as express from 'express';
-import type { AuthorizationCodeModel, Token, Client, User, RefreshToken, AuthorizationCode } from 'oauth2-server'
+import type {
+	AuthorizationCodeModel,
+	Token,
+	Client,
+	User,
+	RefreshToken,
+	AuthorizationCode,
+} from 'oauth2-server';
 import * as fs from 'fs-extra';
 import { createRouter } from '../lib/api';
 
@@ -20,8 +32,8 @@ export type OAuthUser = {
 
 export type OAuthClient = {
 	clientID: string;
-	clientSecret: string
-}
+	clientSecret: string;
+};
 
 export namespace OAuth {
 	export const meta = new (class Meta extends ModuleMeta {
@@ -42,92 +54,162 @@ export namespace OAuth {
 			scope?: string | string[];
 			client: Client;
 			user: User;
-		}
+		};
 
-		type DBAuthorizationCode = Pick<AuthorizationCode, 'authorizationCode' | 'expiresAt'|'redirectUri'> & {
+		type DBAuthorizationCode = Pick<
+			AuthorizationCode,
+			'authorizationCode' | 'expiresAt' | 'redirectUri'
+		> & {
 			client: Client;
 			user: User;
-		}
+		};
 
 		class OAuthModel implements AuthorizationCodeModel {
 			constructor(public db: Database) {}
 
-			async getClient(clientID: string, clientSecret: string|null) {
+			async getClient(clientID: string, clientSecret: string | null) {
 				logTag('oauth', 'cyan', `Finding client "${clientID}"`);
-				return oAuthClients.find(client => {
+				return oAuthClients.find((client) => {
 					if (client.id !== clientID) return false;
-					return clientSecret === null || client.clientSecret === clientSecret
-				})
+					return (
+						clientSecret === null ||
+						client.clientSecret === clientSecret
+					);
+				});
 			}
 
-			async saveToken(token: Token|RefreshToken, client: Client, user: User) {
-				const dbToken: DBToken =  {
+			async saveToken(
+				token: Token | RefreshToken,
+				client: Client,
+				user: User
+			) {
+				const dbToken: DBToken = {
 					accessToken: token.accessToken,
 					accessTokenExpiresAt: token.accessTokenExpiresAt?.getTime(),
 					refreshToken: token.refreshToken,
-					refreshTokenExpiresAt: token.refreshTokenExpiresAt?.getTime(),
+					refreshTokenExpiresAt:
+						token.refreshTokenExpiresAt?.getTime(),
 					client,
-					user
-				}
+					user,
+				};
 				this.db.pushVal('tokens', dbToken);
 
-				logTag('oauth', 'cyan', `Saving token for client "${client.id}" and user`, user);
+				logTag(
+					'oauth',
+					'cyan',
+					`Saving token for client "${client.id}" and user`,
+					user
+				);
 
 				return {
 					...dbToken,
 					accessTokenExpiresAt: token.accessTokenExpiresAt,
-					refreshTokenExpiresAt: token.refreshTokenExpiresAt
-				}
+					refreshTokenExpiresAt: token.refreshTokenExpiresAt,
+				};
 			}
 
 			async getAccessToken(accessToken: string) {
-				logTag('oauth', 'cyan', `Getting token for access token "${accessToken}"`);
+				logTag(
+					'oauth',
+					'cyan',
+					`Getting token for access token "${accessToken}"`
+				);
 				const tokens = this.db.get<DBToken[]>('tokens', []);
-				const match = tokens.find(token => token.accessToken === accessToken)
+				const match = tokens.find(
+					(token) => token.accessToken === accessToken
+				);
 				if (!match) return undefined;
 
 				return {
 					...match,
-					accessTokenExpiresAt: match.accessTokenExpiresAt ? new Date(match.accessTokenExpiresAt) : undefined,
-					refreshTokenExpiresAt: match.refreshTokenExpiresAt ? new Date(match.refreshTokenExpiresAt) : undefined,
-				}
+					accessTokenExpiresAt: match.accessTokenExpiresAt
+						? new Date(match.accessTokenExpiresAt)
+						: undefined,
+					refreshTokenExpiresAt: match.refreshTokenExpiresAt
+						? new Date(match.refreshTokenExpiresAt)
+						: undefined,
+				};
 			}
 
-			async revokeToken(toRevokeToken: Token|RefreshToken) {
-				logTag('oauth', 'cyan', `Revoking token for client "${toRevokeToken.client.id}" and user`, toRevokeToken.user);
-				this.db.deleteArrayVal<DBToken>('tokens', token => token.accessToken === toRevokeToken.accessToken)
+			async revokeToken(toRevokeToken: Token | RefreshToken) {
+				logTag(
+					'oauth',
+					'cyan',
+					`Revoking token for client "${toRevokeToken.client.id}" and user`,
+					toRevokeToken.user
+				);
+				this.db.deleteArrayVal<DBToken>(
+					'tokens',
+					(token) => token.accessToken === toRevokeToken.accessToken
+				);
 				return true;
 			}
 
-			async saveAuthorizationCode(code: Pick<AuthorizationCode, 'authorizationCode' | 'expiresAt' | 'redirectUri' | 'scope'>, client: Client, user: User) {
+			async saveAuthorizationCode(
+				code: Pick<
+					AuthorizationCode,
+					'authorizationCode' | 'expiresAt' | 'redirectUri' | 'scope'
+				>,
+				client: Client,
+				user: User
+			) {
 				const dbAuthorizationCode: DBAuthorizationCode = {
 					authorizationCode: code.authorizationCode,
 					expiresAt: code.expiresAt,
 					redirectUri: code.redirectUri,
 					client,
 					user,
-				}
-				logTag('oauth', 'cyan', `Saving authorization code for client "${client.id}" and user`, user);
+				};
+				logTag(
+					'oauth',
+					'cyan',
+					`Saving authorization code for client "${client.id}" and user`,
+					user
+				);
 				this.db.pushVal('authorizationCodes', dbAuthorizationCode);
-				return dbAuthorizationCode
-			  }
+				return dbAuthorizationCode;
+			}
 
 			async getAuthorizationCode(code: string) {
-				const authorizationCodes = this.db.get<DBAuthorizationCode[]>('authorizationCodes', []);
+				const authorizationCodes = this.db.get<DBAuthorizationCode[]>(
+					'authorizationCodes',
+					[]
+				);
 				logTag('oauth', 'cyan', `Getting authorization code "${code}"`);
-				return authorizationCodes.find(authCode => authCode.authorizationCode === code);
+				return authorizationCodes.find(
+					(authCode) => authCode.authorizationCode === code
+				);
 			}
 
 			async revokeAuthorizationCode(toRevoke: AuthorizationCode) {
-				logTag('oauth', 'cyan', `Revoking authorization code for client "${toRevoke.client.id}" and user`, toRevoke.user);
-				await this.db.deleteArrayVal<DBAuthorizationCode>('authorizationCodes', authCode => authCode.authorizationCode === toRevoke.authorizationCode)
+				logTag(
+					'oauth',
+					'cyan',
+					`Revoking authorization code for client "${toRevoke.client.id}" and user`,
+					toRevoke.user
+				);
+				await this.db.deleteArrayVal<DBAuthorizationCode>(
+					'authorizationCodes',
+					(authCode) =>
+						authCode.authorizationCode ===
+						toRevoke.authorizationCode
+				);
 				return true;
 			}
 
-			async verifyScope(token: Token, scope: string|string[]) {
-				logTag('oauth', 'cyan', `Verifying scope for client "${token.client.id}" and user`, token.user);
+			async verifyScope(token: Token, scope: string | string[]) {
+				logTag(
+					'oauth',
+					'cyan',
+					`Verifying scope for client "${token.client.id}" and user`,
+					token.user
+				);
 				const requestedScopes = Array.isArray(scope) ? scope : [scope];
-				const givenScopes = token.scope ? Array.isArray(token.scope) ? token.scope : [token.scope] : [];
+				const givenScopes = token.scope
+					? Array.isArray(token.scope)
+						? token.scope
+						: [token.scope]
+					: [];
 				for (const requestedScope of requestedScopes) {
 					if (!givenScopes.includes(requestedScope)) return false;
 				}
@@ -140,9 +222,11 @@ export namespace OAuth {
 
 		export function init(_db: Database) {
 			db.set(_db);
-			server.set(new OAuthServer({
-				model: new OAuthModel(_db)
-			}))
+			server.set(
+				new OAuthServer({
+					model: new OAuthModel(_db),
+				})
+			);
 		}
 	}
 
@@ -156,27 +240,27 @@ export namespace OAuth {
 		} {
 			if (!username || !password) {
 				return {
-					valid: false
+					valid: false,
 				};
 			}
 
-			const user = oAuthUsers.find(user => user.username === username);
+			const user = oAuthUsers.find((user) => user.username === username);
 			if (!user) {
 				return {
 					valid: false,
-					invalidReason: 'Unknown username'
+					invalidReason: 'Unknown username',
 				};
 			}
 
 			if (user.password !== password) {
 				return {
 					valid: false,
-					invalidReason: 'Invalid password'
+					invalidReason: 'Invalid password',
 				};
 			}
 
 			return {
-				valid: true
+				valid: true,
 			};
 		}
 	}
@@ -190,20 +274,31 @@ export namespace OAuth {
 			invalidReason?: string
 		) {
 			if (!oauthHTMLFile.isSet) {
-				oauthHTMLFile.set(await fs.readFile(path.join(CLIENT_FOLDER, 'oauth/oauth.html'), 'utf8'))
+				oauthHTMLFile.set(
+					await fs.readFile(
+						path.join(CLIENT_FOLDER, 'oauth/oauth.html'),
+						'utf8'
+					)
+				);
 			}
 
 			// Send back to a login page
 			const previousParams = { ...req.body, ...req.params, ...req.query };
-			const params = ['client_id', 'redirect_uri', 'response_type', 'scope', 'response_mode', 'state', 'nonce'].map(
-				p => `${p}=${previousParams[p]}`
-			);
+			const params = [
+				'client_id',
+				'redirect_uri',
+				'response_type',
+				'scope',
+				'response_mode',
+				'state',
+				'nonce',
+			].map((p) => `${p}=${previousParams[p]}`);
 			if (invalidReason) {
 				params.push(`errorReason=${invalidReason}`);
 			}
 
 			res.status(200);
-			res.redirect(`/oauth/login?${params.join('&')}`)
+			res.redirect(`/oauth/login?${params.join('&')}`);
 		}
 
 		export async function init({ app }: ModuleConfig) {
@@ -220,7 +315,7 @@ export namespace OAuth {
 
 					const { username = '', password = '' } = {
 						...req.body,
-						...req.params
+						...req.params,
 					};
 					const { valid, invalidReason } = OAuthUsers.validate(
 						username,
@@ -237,27 +332,24 @@ export namespace OAuth {
 					);
 					return (await Authorization.server.value).authorize({
 						authenticateHandler: {
-							handle: () => username
-						}
+							handle: () => username,
+						},
 					})(req, res as express.Response, next);
 				},
 				(await Authorization.server.value).authorize()
 			);
-			router.get(
-				'/login',
-				async (_req, res) => {
-					attachSourcedMessage(
-						res,
-						'OAUTH.API',
-						await meta.explainHook,
-						'Logging in to auth'
-					);
+			router.get('/login', async (_req, res) => {
+				attachSourcedMessage(
+					res,
+					'OAUTH.API',
+					await meta.explainHook,
+					'Logging in to auth'
+				);
 
-					res.status(200);
-					res.write(await oauthHTMLFile.value);
-					res.end();
-				}
-			);
+				res.status(200);
+				res.write(await oauthHTMLFile.value);
+				res.end();
+			});
 			router.post(
 				'/token',
 				async (_req, res, next) => {

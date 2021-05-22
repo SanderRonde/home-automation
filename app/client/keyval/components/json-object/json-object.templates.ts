@@ -1,10 +1,10 @@
 import {
 	CHANGE_TYPE,
-	TemplateFn
+	TemplateFn,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import {
 	clampWidthSelector,
-	clampWidth
+	clampWidth,
 } from '../../../shared/css-util/css-util.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { jsonValue } from '../json-value/json-value.templates.js';
@@ -21,7 +21,7 @@ function getKeys(value: any): (string | number)[] {
 function getDeepValues(value: any): any[] {
 	if (typeof value === 'object') {
 		return getKeys(value)
-			.map(key => {
+			.map((key) => {
 				return getDeepValues(value[key]);
 			})
 			.reduce((prev, current) => {
@@ -32,7 +32,7 @@ function getDeepValues(value: any): any[] {
 }
 
 export const JSONObjectHTML = new TemplateFn<JSONObject>(
-	function(html, { props }) {
+	function (html, { props }) {
 		return html`
 			<div id="header">
 				<div id="name">${props.name}</div>
@@ -43,7 +43,7 @@ export const JSONObjectHTML = new TemplateFn<JSONObject>(
 						?initial="${(() => {
 							const deepVals = getDeepValues(props.json);
 							if (
-								deepVals.filter(val => {
+								deepVals.filter((val) => {
 									if (typeof val === 'string') {
 										return parseInt(val, 10) > 0;
 									} else if (typeof val === 'number') {
@@ -64,7 +64,7 @@ export const JSONObjectHTML = new TemplateFn<JSONObject>(
 			</div>
 			<div id="subsection">
 				${getKeys(props.json)
-					.map(key => {
+					.map((key) => {
 						if (key === '___last_updated') return null;
 						return jsonValue(
 							html,
@@ -73,7 +73,7 @@ export const JSONObjectHTML = new TemplateFn<JSONObject>(
 							key + ''
 						);
 					})
-					.filter(v => !!v)}
+					.filter((v) => !!v)}
 			</div>
 		`;
 	},
@@ -82,7 +82,7 @@ export const JSONObjectHTML = new TemplateFn<JSONObject>(
 );
 
 export const JSONObjectCSS = new TemplateFn<JSONObject>(
-	html => {
+	(html) => {
 		return html`
 			<style>
 				#background {

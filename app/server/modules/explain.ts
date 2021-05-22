@@ -4,7 +4,7 @@ import {
 	LogCapturer,
 	addLogListener,
 	attachSourcedMessage,
-	ResponseLike
+	ResponseLike,
 } from '../lib/logger';
 import { AllModules, ModuleConfig } from './modules';
 import { BotState } from '../lib/bot-state';
@@ -52,7 +52,7 @@ export namespace Explain {
 				actions: Explaining.Action[]
 			) {
 				new Cast.External.Handler(logObj, 'EXPLAIN.API').say(
-					`${descr}. ${actions.map(action => {
+					`${descr}. ${actions.map((action) => {
 						return `At ${new Date(
 							action.timestamp
 						).toLocaleTimeString()}, source ${
@@ -71,7 +71,7 @@ export namespace Explain {
 				res: ResponseLike,
 				{
 					amount,
-					announce = false
+					announce = false,
 				}: {
 					amount: number;
 					announce?: boolean;
@@ -106,7 +106,7 @@ export namespace Explain {
 				res: ResponseLike,
 				{
 					mins,
-					announce = false
+					announce = false,
 				}: {
 					mins: number;
 					announce?: boolean;
@@ -150,7 +150,7 @@ export namespace Explain {
 						{
 							mins,
 							announce: announce,
-							auth: Auth.Secret.getKey()
+							auth: Auth.Secret.getKey(),
 						},
 						source
 					);
@@ -167,7 +167,7 @@ export namespace Explain {
 						{
 							amount,
 							announce: announce,
-							auth: Auth.Secret.getKey()
+							auth: Auth.Secret.getKey(),
 						},
 						source
 					);
@@ -188,7 +188,7 @@ export namespace Explain {
 					'Explain actions in last 5 minutes with additional logs',
 				'/explain15': 'Explain actions in last 15 minutes',
 				'/explainv15': 'Explain actions in last 15 minutes',
-				'/help_explain': 'Print help comands for explain'
+				'/help_explain': 'Print help comands for explain',
 			};
 
 			static readonly botName = 'Explain';
@@ -216,10 +216,11 @@ export namespace Explain {
 
 							return (
 								await Promise.all(
-									actions.map(async action => {
+									actions.map(async (action) => {
 										const logs = await (async () => {
 											if (!action.logs) return 'null';
-											const lines = await action.logs.get();
+											const lines =
+												await action.logs.get();
 											return lines;
 										})();
 										return `Time: ${new Date(
@@ -256,7 +257,7 @@ export namespace Explain {
 							);
 
 							return actions
-								.map(action => {
+								.map((action) => {
 									return `Time: ${new Date(
 										action.timestamp
 									).toLocaleTimeString()}\nModule: ${
@@ -273,9 +274,9 @@ export namespace Explain {
 						/what commands are there for explain/,
 						async () => {
 							return `Commands are:\n${Bot.matches.matches
-								.map(match => {
+								.map((match) => {
 									return `RegExps: ${match.regexps
-										.map(r => r.source)
+										.map((r) => r.source)
 										.join(', ')}. Texts: ${match.texts.join(
 										', '
 									)}}`;
@@ -304,7 +305,7 @@ export namespace Explain {
 			): Promise<_Bot.Message.MatchResponse | undefined> {
 				return await this.matchLines({
 					...config,
-					matchConfig: Bot.matches
+					matchConfig: Bot.matches,
 				});
 			}
 
@@ -314,7 +315,7 @@ export namespace Explain {
 
 			toJSON(): JSON {
 				return {
-					lastSubjects: this.lastSubjects
+					lastSubjects: this.lastSubjects,
 				};
 			}
 		}
@@ -344,9 +345,9 @@ export namespace Explain {
 				description,
 				source,
 				logs: null,
-				timestamp: Date.now()
+				timestamp: Date.now(),
 			};
-			addLogListener(logObj, captured => {
+			addLogListener(logObj, (captured) => {
 				action.logs = captured;
 			});
 			hooks.add(action);

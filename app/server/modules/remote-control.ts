@@ -3,7 +3,7 @@ import {
 	requireParams,
 	authCookie,
 	authAll,
-	upgradeToHTTPS
+	upgradeToHTTPS,
 } from '../lib/decorators';
 import { remoteControlHTML } from '../templates/remote-control-template';
 import { attachMessage, logTag, ResponseLike } from '../lib/logger';
@@ -52,60 +52,60 @@ export namespace RemoteControl {
 	export namespace External {
 		export class Handler extends createExternalClass(false) {
 			public play() {
-				return this.runRequest(res => {
+				return this.runRequest((res) => {
 					return API.Handler.play(res, {
-						auth: Auth.Secret.getKey()
+						auth: Auth.Secret.getKey(),
 					});
 				});
 			}
 
 			public pause() {
-				return this.runRequest(res => {
+				return this.runRequest((res) => {
 					return API.Handler.pause(res, {
-						auth: Auth.Secret.getKey()
+						auth: Auth.Secret.getKey(),
 					});
 				});
 			}
 
 			public playpause() {
-				return this.runRequest(res => {
+				return this.runRequest((res) => {
 					return API.Handler.playpause(res, {
-						auth: Auth.Secret.getKey()
+						auth: Auth.Secret.getKey(),
 					});
 				});
 			}
 
 			public close() {
-				return this.runRequest(res => {
+				return this.runRequest((res) => {
 					return API.Handler.close(res, {
-						auth: Auth.Secret.getKey()
+						auth: Auth.Secret.getKey(),
 					});
 				});
 			}
 
 			public volumeUp(amount: number = 10) {
-				return this.runRequest(res => {
+				return this.runRequest((res) => {
 					return API.Handler.volumeUp(res, {
 						auth: Auth.Secret.getKey(),
-						amount
+						amount,
 					});
 				});
 			}
 
 			public volumeDown(amount: number = 10) {
-				return this.runRequest(res => {
+				return this.runRequest((res) => {
 					return API.Handler.volumeDown(res, {
 						auth: Auth.Secret.getKey(),
-						amount
+						amount,
 					});
 				});
 			}
 
 			async setVolume(amount: number) {
-				return this.runRequest(res => {
+				return this.runRequest((res) => {
 					return API.Handler.setVolume(res, {
 						auth: Auth.Secret.getKey(),
-						amount
+						amount,
 					});
 				});
 			}
@@ -144,7 +144,7 @@ export namespace RemoteControl {
 				key: command['action'],
 				listener,
 				once,
-				any: false
+				any: false,
 			});
 			return index;
 		}
@@ -158,7 +158,7 @@ export namespace RemoteControl {
 				any: true,
 				listener,
 				once,
-				key: ''
+				key: '',
 			});
 			return index;
 		}
@@ -303,9 +303,9 @@ export namespace RemoteControl {
 						/what commands are there for remote-control/,
 						async () => {
 							return `Commands are:\n${Bot.matches.matches
-								.map(match => {
+								.map((match) => {
 									return `RegExps: ${match.regexps
-										.map(r => r.source)
+										.map((r) => r.source)
 										.join(', ')}. Texts: ${match.texts.join(
 										', '
 									)}}`;
@@ -325,7 +325,7 @@ export namespace RemoteControl {
 			): Promise<_Bot.Message.MatchResponse | undefined> {
 				return await this.matchLines({
 					...config,
-					matchConfig: Bot.matches
+					matchConfig: Bot.matches,
 				});
 			}
 
@@ -348,7 +348,7 @@ export namespace RemoteControl {
 				const msg = attachMessage(res, `Command: "play"`);
 				await GetSetListener.update(
 					{
-						action: 'play'
+						action: 'play',
 					},
 					attachMessage(msg, 'Updates')
 				);
@@ -367,7 +367,7 @@ export namespace RemoteControl {
 				const msg = attachMessage(res, `Command: "pause"`);
 				GetSetListener.update(
 					{
-						action: 'pause'
+						action: 'pause',
 					},
 					attachMessage(msg, 'Updates')
 				);
@@ -386,7 +386,7 @@ export namespace RemoteControl {
 				const msg = attachMessage(res, `Command: "playpause"`);
 				GetSetListener.update(
 					{
-						action: 'playpause'
+						action: 'playpause',
 					},
 					attachMessage(msg, 'Updates')
 				);
@@ -405,7 +405,7 @@ export namespace RemoteControl {
 				const msg = attachMessage(res, `Command: "close"`);
 				GetSetListener.update(
 					{
-						action: 'close'
+						action: 'close',
 					},
 					attachMessage(msg, 'Updates')
 				);
@@ -418,7 +418,7 @@ export namespace RemoteControl {
 			public static volumeUp(
 				res: ResponseLike,
 				{
-					amount = 10
+					amount = 10,
 				}: {
 					auth?: string;
 					amount?: number;
@@ -431,7 +431,7 @@ export namespace RemoteControl {
 				GetSetListener.update(
 					{
 						action: 'volumeUp',
-						amount: amount
+						amount: amount,
 					},
 					attachMessage(msg, 'Updates')
 				);
@@ -444,7 +444,7 @@ export namespace RemoteControl {
 			public static volumeDown(
 				res: ResponseLike,
 				{
-					amount = 10
+					amount = 10,
 				}: {
 					auth?: string;
 					amount?: number;
@@ -457,7 +457,7 @@ export namespace RemoteControl {
 				GetSetListener.update(
 					{
 						action: 'volumeDown',
-						amount: amount
+						amount: amount,
 					},
 					attachMessage(msg, 'Updates')
 				);
@@ -471,7 +471,7 @@ export namespace RemoteControl {
 			public static setVolume(
 				res: ResponseLike,
 				{
-					amount
+					amount,
 				}: {
 					auth?: string;
 					amount: number;
@@ -484,7 +484,7 @@ export namespace RemoteControl {
 				GetSetListener.update(
 					{
 						action: 'setVolume',
-						amount
+						amount,
 					},
 					attachMessage(msg, 'Updates')
 				);
@@ -530,7 +530,8 @@ export namespace RemoteControl {
 							return;
 						}
 
-						const conn = new ((TelnetClient as unknown) as typeof telnet_client)();
+						const conn =
+							new (TelnetClient as unknown as typeof telnet_client)();
 						try {
 							await conn.connect({
 								host,
@@ -540,7 +541,7 @@ export namespace RemoteControl {
 								timeout: 1500,
 								shellPrompt: '> ',
 								username: '',
-								initialLFCR: true
+								initialLFCR: true,
 							});
 							logTag(
 								'telnet',
@@ -549,11 +550,11 @@ export namespace RemoteControl {
 							);
 							connections.set(host, {
 								host,
-								conn
+								conn,
 							});
 							return {
 								host,
-								conn
+								conn,
 							};
 						} catch (err) {
 							return;
@@ -591,7 +592,7 @@ export namespace RemoteControl {
 					case 'volumeUp':
 						const vol1 = parseInt(
 							await conn.send('volume', {
-								waitfor: /\d+/
+								waitfor: /\d+/,
 							}),
 							10
 						);
@@ -604,7 +605,7 @@ export namespace RemoteControl {
 					case 'volumeDown':
 						const vol2 = parseInt(
 							await conn.send('volume', {
-								waitfor: /\d+/
+								waitfor: /\d+/,
 							}),
 							10
 						);
@@ -656,15 +657,15 @@ export namespace RemoteControl {
 			(async () => {
 				TELNET_IPS = getEnv('SECRET_REMOTE_CONTROL', true)
 					.split('\n')
-					.filter(l => l.length)
-					.map(l => l.split(':')) as [string, string, string][];
+					.filter((l) => l.length)
+					.map((l) => l.split(':')) as [string, string, string][];
 			})();
 		}
 
 		export async function init({
 			app,
 			randomNum,
-			websocket
+			websocket,
 		}: ModuleConfig) {
 			const webpageHandler = new Webpage.Handler(randomNum);
 
@@ -682,7 +683,7 @@ export namespace RemoteControl {
 				'/remote-control/listen',
 				async ({ send, onDead, addListener }) => {
 					let authenticated: boolean = false;
-					addListener(message => {
+					addListener((message) => {
 						if (authenticated) return;
 
 						if (Auth.Secret.authenticate(message)) {

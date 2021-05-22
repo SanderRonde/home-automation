@@ -4,20 +4,20 @@ dotenv.config({
 		__dirname,
 		'../../',
 		'.env'
-	)
+	),
 });
 import {
 	setLogLevel,
 	ProgressLogger,
 	startInit,
 	endInit,
-	logTag
+	logTag,
 } from './lib/logger';
 import {
 	initRoutes,
 	initMiddleware,
 	initAnnotatorRoutes,
-	initPostRoutes
+	initPostRoutes,
 } from './lib/routes';
 import { hasArg, getArg, getNumberArg, getNumberEnv, getEnv } from './lib/io';
 import { notifyAllModules, NoDBModuleConfig } from './modules/modules';
@@ -67,21 +67,21 @@ class WebServer {
 			ports: {
 				http: config.ports?.http || 1234,
 				https: config.ports?.https || 1235,
-				info: config.ports?.info || 1337
+				info: config.ports?.info || 1337,
 			},
 			scripts: {
 				uid: config.scripts?.uid || 0,
 				scriptDir:
 					config.scripts?.scriptDir ||
-					path.join(__dirname, '../../', 'scripts')
+					path.join(__dirname, '../../', 'scripts'),
 			},
 			log: {
 				level: config.log?.level || 1,
 				secrets: config.log?.secrets || false,
-				ignorePressure: config?.log?.ignorePressure || false
+				ignorePressure: config?.log?.ignorePressure || false,
 			},
 			debug: config.debug || false,
-			instant: config.instant || false
+			instant: config.instant || false,
 		};
 	}
 
@@ -100,13 +100,13 @@ class WebServer {
 			websocketSim: this.websocketSim,
 			config: this._config,
 			randomNum: Math.round(Math.random() * 1000000),
-			websocket: this.ws
+			websocket: this.ws,
 		};
 		await Promise.all(
-			Object.values(modules).map(async mod => {
+			Object.values(modules).map(async (mod) => {
 				await mod.meta.init({
 					...config,
-					db: await new Database(`${mod.meta.dbName}.json`).init()
+					db: await new Database(`${mod.meta.dbName}.json`).init(),
 				});
 				this._initLogger.increment(mod.meta.loggerName);
 			})
@@ -211,17 +211,17 @@ new WebServer({
 	ports: {
 		http: getNumberArg('http') || getNumberEnv('IO_PORT_HTTP'),
 		https: getNumberArg('https') || getNumberEnv('IO_PORT_HTTPS'),
-		info: getNumberArg('info-port') || getNumberEnv('IO_PORT_INFO')
+		info: getNumberArg('info-port') || getNumberEnv('IO_PORT_INFO'),
 	},
 	scripts: {
 		scriptDir: getArg('scripts') || getEnv('IO_SCRIPT_DIR'),
-		uid: getNumberArg('uid') || getNumberEnv('IO_UID')
+		uid: getNumberArg('uid') || getNumberEnv('IO_UID'),
 	},
 	log: {
 		level: getVerbosity(),
 		secrets: hasArg('log-secrets') || false,
-		ignorePressure: hasArg('ignore-pressure')
+		ignorePressure: hasArg('ignore-pressure'),
 	},
 	debug: hasArg('debug') || !!getArg('IO_DEBUG'),
-	instant: hasArg('instant', 'i')
+	instant: hasArg('instant', 'i'),
 }).init();

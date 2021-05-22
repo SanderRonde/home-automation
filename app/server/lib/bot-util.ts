@@ -94,14 +94,14 @@ export namespace BotUtil {
 
 		public static makeTable({
 			header,
-			contents
+			contents,
 		}: {
 			header?: string[];
 			contents: string[][];
 		}) {
 			if (
 				!contents.every(
-					row =>
+					(row) =>
 						row.length ===
 						(header ? header.length : contents[0].length)
 				)
@@ -159,7 +159,7 @@ export namespace BotUtil {
 
 			return {
 				type: RESPONSE_TYPE.HTML,
-				text: `<pre>${output.join('\n')}</pre>`
+				text: `<pre>${output.join('\n')}</pre>`,
 			};
 		}
 

@@ -14,17 +14,12 @@ const msgMap: WeakMap<
 	ResponseLike | AssociatedMessage | {},
 	AssociatedMessage[]
 > = new WeakMap();
-const ignoredMap: WeakSet<
-	ResponseLike | AssociatedMessage | {}
-> = new WeakSet();
-const rootMap: WeakMap<
-	any,
-	ResponseLike | AssociatedMessage | {}
-> = new WeakMap();
-const logListeners: WeakMap<
-	any,
-	(captured: LogCapturer) => void
-> = new WeakMap();
+const ignoredMap: WeakSet<ResponseLike | AssociatedMessage | {}> =
+	new WeakSet();
+const rootMap: WeakMap<any, ResponseLike | AssociatedMessage | {}> =
+	new WeakMap();
+const logListeners: WeakMap<any, (captured: LogCapturer) => void> =
+	new WeakMap();
 
 let logLevel: number = 1;
 export function setLogLevel(level: number) {
@@ -63,7 +58,7 @@ function logAssociatedMessages(
 
 	for (let i = 0; i < messages.length; i++) {
 		const padding = setDefaultArrValues(hasNextMessage, indent, false)
-			.map(next => {
+			.map((next) => {
 				if (next) {
 					return ' |   ';
 				} else {
@@ -113,14 +108,14 @@ function getIP(req: RequestLike) {
 
 export function genURLLog({
 	req = {
-		headers: {}
+		headers: {},
 	},
 	url = req.url || '?',
 	method = req.method || '?',
 	statusCode = 200,
 	duration = '?',
 	ip = getIP(req) || '?',
-	isSend = false
+	isSend = false,
 }: {
 	req?: RequestLike;
 	method?: string;
@@ -145,7 +140,7 @@ export function genURLLog({
 		ipBg(chalk.black(Auth.Secret.redact(url))),
 		`${isSend ? '->' : '<-'}`,
 		chalk.bold(ip),
-		`(${duration} ms)`
+		`(${duration} ms)`,
 	];
 }
 
@@ -159,7 +154,7 @@ export class LogCapturer implements Loggable {
 	private _logToLine(...params: any[]) {
 		this._lines.push(
 			params
-				.map(param => {
+				.map((param) => {
 					if (typeof param === 'string') return param;
 					if (typeof param === 'number') return param + '';
 					return JSON.stringify(param);
@@ -181,8 +176,8 @@ export class LogCapturer implements Loggable {
 		if (this._done) {
 			return this._get();
 		}
-		return new Promise(resolve => {
-			this._onDone.push(result => {
+		return new Promise((resolve) => {
+			this._onDone.push((result) => {
 				resolve(result);
 			});
 		});
@@ -194,7 +189,7 @@ export class LogCapturer implements Loggable {
 		}
 		this._done = true;
 		const str = this._get();
-		this._onDone.forEach(fn => fn(str));
+		this._onDone.forEach((fn) => fn(str));
 	}
 }
 
@@ -218,7 +213,7 @@ export function logReq(req: express.Request, res: express.Response) {
 				req,
 				statusCode: res.statusCode,
 				duration: end - start,
-				ip
+				ip,
 			})
 		);
 
@@ -262,7 +257,7 @@ export function logOutgoingRes(
 			ip: data.path,
 			method: data.method,
 			url: data.path,
-			isSend: true
+			isSend: true,
 		})
 	);
 
@@ -299,7 +294,7 @@ export function logOutgoingReq(
 			ip: data.target,
 			method: data.method,
 			url: ip,
-			isSend: true
+			isSend: true,
 		})
 	);
 
@@ -368,7 +363,7 @@ export function attachMessage(
 
 	const prevMessages = msgMap.get(obj)!;
 	const msg: AssociatedMessage = {
-		content: messages
+		content: messages,
 	};
 	prevMessages.push(msg);
 
@@ -400,7 +395,7 @@ export function attachSourcedMessage(
 
 	const prevMessages = msgMap.get(obj)!;
 	const msg: AssociatedMessage = {
-		content: messages
+		content: messages,
 	};
 	prevMessages.push(msg);
 
@@ -519,8 +514,9 @@ export class ProgressLogger {
 				getTime(),
 				chalk.bgBlack(
 					chalk.bold(
-						`Done loading ${this._name} in ${Date.now() -
-							this._startTime}ms`
+						`Done loading ${this._name} in ${
+							Date.now() - this._startTime
+						}ms`
 					)
 				)
 			)
@@ -536,7 +532,7 @@ export function startInit() {
 
 export function endInit() {
 	isInit = false;
-	initMessages.forEach(args => {
+	initMessages.forEach((args) => {
 		console.log(...args);
 	});
 }
@@ -583,7 +579,7 @@ const chalkColors = [
 	'blueBright',
 	'magentaBright',
 	'cyanBright',
-	'whiteBright'
+	'whiteBright',
 ] as const;
 export function logTag(
 	tag: string,

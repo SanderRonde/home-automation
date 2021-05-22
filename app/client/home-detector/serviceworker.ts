@@ -5,18 +5,18 @@ declare const self: ServiceworkerSelf;
 const CACHE_NAME = 'home-detector';
 const CACHE_STATIC = [
 	'/home-detector/favicon.ico',
-	'/home-detector/home-detector.bundle.js'
+	'/home-detector/home-detector.bundle.js',
 ];
 
-self.addEventListener('install', event => {
+self.addEventListener('install', (event) => {
 	self.skipWaiting();
 
 	event.waitUntil(
 		(async () => {
 			const cache = await caches.open(CACHE_NAME);
 			await Promise.all(
-				[...CACHE_STATIC].map(url => {
-					return cache.add(url).catch(err => {
+				[...CACHE_STATIC].map((url) => {
+					return cache.add(url).catch((err) => {
 						console.log('Failed to fetch', url, err);
 					});
 				})
@@ -25,7 +25,7 @@ self.addEventListener('install', event => {
 	);
 });
 
-self.addEventListener('activate', event => {
+self.addEventListener('activate', (event) => {
 	event.waitUntil(self.clients.claim());
 });
 
@@ -46,18 +46,18 @@ function indexPage() {
 	</html>`,
 		{
 			headers: {
-				'Content-Type': 'text/html'
+				'Content-Type': 'text/html',
 			},
-			status: 200
+			status: 200,
 		}
 	);
 }
 
 function race<T>(...promises: Promise<T | undefined>[]): Promise<T> {
 	return new Promise<T>((resolve, reject) => {
-		promises.forEach(promise => {
+		promises.forEach((promise) => {
 			promise
-				.then(result => {
+				.then((result) => {
 					if (result !== undefined) {
 						resolve(result);
 					}
@@ -68,7 +68,7 @@ function race<T>(...promises: Promise<T | undefined>[]): Promise<T> {
 			resolve();
 		} else if (promises.length === 1) {
 			promises[0]
-				.then(result => {
+				.then((result) => {
 					resolve(result);
 				})
 				.catch(() => {
@@ -86,12 +86,12 @@ async function fastest(req: Request) {
 	return race(
 		caches.match(req),
 		fetch(req, {
-			credentials: 'include'
+			credentials: 'include',
 		})
 	);
 }
 
-self.addEventListener('fetch', event => {
+self.addEventListener('fetch', (event) => {
 	const { pathname, hostname } = new URL(event.request.url);
 	if (
 		hostname !== location.hostname ||
@@ -99,7 +99,7 @@ self.addEventListener('fetch', event => {
 	) {
 		event.respondWith(
 			fetch(event.request, {
-				credentials: 'include'
+				credentials: 'include',
 			})
 		);
 		return;

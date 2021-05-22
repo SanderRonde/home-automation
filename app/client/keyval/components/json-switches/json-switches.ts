@@ -1,11 +1,11 @@
 import {
 	ComplexType,
 	config,
-	Props
+	Props,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import {
 	JSONSwitchesCSS,
-	JSONSwitchesHTML
+	JSONSwitchesHTML,
 } from './json-switches.templates.js';
 import { MessageToast } from '../../../shared/message-toast/message-toast.js';
 import { ServerComm } from '../../../shared/server-comm/server-comm.js';
@@ -74,7 +74,7 @@ function isObjSame(
 	is: 'json-switches',
 	html: JSONSwitchesHTML,
 	css: JSONSwitchesCSS,
-	dependencies: [JSONValue, MessageToast]
+	dependencies: [JSONValue, MessageToast],
 })
 export class JSONSwitches extends ServerComm {
 	props = Props.define(
@@ -83,9 +83,9 @@ export class JSONSwitches extends ServerComm {
 			reflect: {
 				json: {
 					value: {},
-					type: ComplexType<any>()
-				}
-			}
+					type: ComplexType<any>(),
+				},
+			},
 		},
 		super.props
 	);

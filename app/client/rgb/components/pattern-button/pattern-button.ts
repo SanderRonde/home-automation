@@ -5,12 +5,12 @@ import {
 	ComplexType,
 	PROP_TYPE,
 	bindToClass,
-	Mounting
+	Mounting,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import {
 	PatternConfig,
 	RGBController,
-	ColorOption
+	ColorOption,
 } from '../rgb-controller/rgb-controller.js';
 import { PatternControls } from '../pattern-controls/pattern-controls.js';
 import { ColorControls } from '../color-controls/color-controls.js';
@@ -23,16 +23,18 @@ import { TransitionTypes } from 'magic-home';
 	is: 'pattern-button',
 	css: PatternButtonCSS,
 	html: PatternButtonHTML,
-	dependencies: [PatternControls]
+	dependencies: [PatternControls],
 })
-export class PatternButton extends ConfigurableWebComponent
-	implements ColorOption {
+export class PatternButton
+	extends ConfigurableWebComponent
+	implements ColorOption
+{
 	props = Props.define(this, {
 		reflect: {
 			pattern: ComplexType<PatternConfig>(),
 			selected: PROP_TYPE.BOOL,
-			parent: ComplexType<RGBController>()
-		}
+			parent: ComplexType<RGBController>(),
+		},
 	});
 
 	@bindToClass
@@ -79,7 +81,7 @@ export class PatternButton extends ConfigurableWebComponent
 
 	updateParams({
 		speed,
-		transitionType
+		transitionType,
 	}: {
 		speed: number;
 		transitionType: TransitionTypes;

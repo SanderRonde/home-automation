@@ -7,11 +7,11 @@ export function createAPIHandler<A extends Record<string, any>, R>(
 		};
 	},
 	fn: (res: express.Response, args: A, source: string) => Promise<R> | void,
-	getArgs: (req: express.Request) => A = req => ({
+	getArgs: (req: express.Request) => A = (req) => ({
 		...req.params,
 		...req.body,
 		...req.query,
-		cookies: req.cookies
+		cookies: req.cookies,
 	})
 ) {
 	return async (req: express.Request, res: express.Response) => {
@@ -89,8 +89,8 @@ export function createRouter<A>(
 } {
 	const router = express.Router();
 
-	const handlerCreator: (verb: RouterVerb) => RouterFn<A> = verb =>
-		(((
+	const handlerCreator: (verb: RouterVerb) => RouterFn<A> = (verb) =>
+		((
 			subPath: string,
 			fnHandle: keyof APIHandlers<A> | express.Handler,
 			getArgs?: (req: express.Request) => A | express.Handler,
@@ -109,16 +109,16 @@ export function createRouter<A>(
 			return router[verb](
 				subPath,
 				async (req: express.Request, res: express.Response) => {
-					const fn = ((apiHandler[
-						fnHandle
-					] as unknown) as APIHandler).bind(apiHandler);
+					const fn = (
+						apiHandler[fnHandle] as unknown as APIHandler
+					).bind(apiHandler);
 					const getArgsFn: (req: express.Request) => A =
 						(getArgs as (req: express.Request) => A) ||
-						(req => ({
+						((req) => ({
 							...req.params,
 							...req.body,
 							...req.query,
-							cookies: req.cookies
+							cookies: req.cookies,
 						}));
 					return await fn(
 						res,
@@ -127,13 +127,13 @@ export function createRouter<A>(
 					);
 				}
 			);
-		}) as unknown) as RouterFn<A>;
+		}) as unknown as RouterFn<A>;
 	return {
 		get: handlerCreator('get'),
 		post: handlerCreator('post'),
 		all: handlerCreator('all'),
 		use(app, path = `/${self.meta.name.toLowerCase()}`) {
 			app.use(path, router);
-		}
+		},
 	};
 }

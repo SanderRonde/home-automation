@@ -1,12 +1,12 @@
 import {
 	LOCAL_URLS as _LOCAL_URLS,
 	PASTAS as _PASTAS,
-	CAST_DEVICE_NAMES
+	CAST_DEVICE_NAMES,
 } from '../config/casts';
 import {
 	attachMessage,
 	attachSourcedMessage,
-	ResponseLike
+	ResponseLike,
 } from '../lib/logger';
 import * as playlist from 'castv2-player/lib/playlist';
 import { requireParams } from '../lib/decorators';
@@ -65,9 +65,9 @@ export namespace Cast {
 		export async function scan(): Promise<castv2.Device[]> {
 			return (devices = (
 				await Promise.all(
-					CAST_DEVICE_NAMES.map(name => scannerPromise(name))
+					CAST_DEVICE_NAMES.map((name) => scannerPromise(name))
 				)
-			).filter(device => !!device));
+			).filter((device) => !!device));
 		}
 
 		export let devices: castv2.Device[] = [];
@@ -103,7 +103,7 @@ export namespace Cast {
 				}
 
 				const parts = splitTTSParts(text);
-				return parts.map(part => {
+				return parts.map((part) => {
 					return `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&q=${encodeURIComponent(
 						part
 					)}&client=tw-ob`;
@@ -146,10 +146,12 @@ export namespace Cast {
 			): Promise<castv2.MediaPlayerClass[]> {
 				await assertMediaPlayers();
 
-				const players = Scanning.devices.map(d => mediaPlayers.get(d)!);
-				await Promise.all(players.map(p => p.stopClientPromise()));
+				const players = Scanning.devices.map(
+					(d) => mediaPlayers.get(d)!
+				);
+				await Promise.all(players.map((p) => p.stopClientPromise()));
 
-				await Promise.all(players.map(p => p.playUrlPromise(url)));
+				await Promise.all(players.map((p) => p.playUrlPromise(url)));
 
 				return players;
 			}
@@ -159,26 +161,28 @@ export namespace Cast {
 			): Promise<castv2.MediaPlayerClass[]> {
 				await assertMediaPlayers();
 
-				const players = Scanning.devices.map(d => mediaPlayers.get(d)!);
-				await Promise.all(players.map(p => p.stopClientPromise()));
+				const players = Scanning.devices.map(
+					(d) => mediaPlayers.get(d)!
+				);
+				await Promise.all(players.map((p) => p.stopClientPromise()));
 
 				await Promise.all(
-					players.map(async p => {
+					players.map(async (p) => {
 						const playlist = new Playlist(p.connection.name, {
-							on() {}
+							on() {},
 						});
 						const list = playlist._addItems(
-							urls.map(url => ({
+							urls.map((url) => ({
 								url: url,
 								contentType: 'audio/mpeg',
-								metadata: {}
+								metadata: {},
 							})),
 							{},
 							false
 						);
 						await p._player.queueLoadPromise(p._player, list, {
 							startIndex: 0,
-							repeatMode: 'REPEAT_OFF'
+							repeatMode: 'REPEAT_OFF',
 						});
 					})
 				);
@@ -189,8 +193,10 @@ export namespace Cast {
 			export async function stop() {
 				Scanning.devices.forEach(assertMediaPlayer);
 
-				const players = Scanning.devices.map(d => mediaPlayers.get(d)!);
-				await Promise.all(players.map(p => p.stopClientPromise()));
+				const players = Scanning.devices.map(
+					(d) => mediaPlayers.get(d)!
+				);
+				await Promise.all(players.map((p) => p.stopClientPromise()));
 				return players;
 			}
 		}
@@ -203,7 +209,7 @@ export namespace Cast {
 					return API.Handler.stop(
 						res,
 						{
-							auth: Auth.Secret.getKey()
+							auth: Auth.Secret.getKey(),
 						},
 						source
 					);
@@ -216,7 +222,7 @@ export namespace Cast {
 						res,
 						{
 							pasta: pasta,
-							auth: Auth.Secret.getKey()
+							auth: Auth.Secret.getKey(),
 						},
 						source
 					);
@@ -230,7 +236,7 @@ export namespace Cast {
 						{
 							text,
 							lang,
-							auth: Auth.Secret.getKey()
+							auth: Auth.Secret.getKey(),
 						},
 						source
 					);
@@ -243,7 +249,7 @@ export namespace Cast {
 						res,
 						{
 							url,
-							auth: Auth.Secret.getKey()
+							auth: Auth.Secret.getKey(),
 						},
 						source
 					);
@@ -262,7 +268,7 @@ export namespace Cast {
 				'/say': 'Say given text',
 				'/pasta': 'Serve given pasta',
 				'/pastas': 'List all pastas',
-				'/mp3s': 'List all mp3 files'
+				'/mp3s': 'List all mp3 files',
 			};
 
 			static readonly botName = 'Cast';
@@ -309,7 +315,7 @@ export namespace Cast {
 						async ({ logObj, match }) => {
 							const pasta = match[3];
 							if (!(pasta in Pasta.PASTAS)) {
-								return 'We don\'t have that pasta';
+								return "We don't have that pasta";
 							}
 							await new External.Handler(
 								logObj,
@@ -335,7 +341,7 @@ export namespace Cast {
 			): Promise<_Bot.Message.MatchResponse | undefined> {
 				return await this.matchLines({
 					...config,
-					matchConfig: Bot.matches
+					matchConfig: Bot.matches,
 				});
 			}
 
@@ -353,7 +359,7 @@ export namespace Cast {
 			static async url(
 				res: ResponseLike,
 				{
-					url
+					url,
 				}: {
 					url: string;
 					auth?: string;
@@ -373,11 +379,13 @@ export namespace Cast {
 				);
 				attachMessage(
 					playerLog,
-					`Device names: ${mediaPlayers.map(p => p.connection.name)}`
+					`Device names: ${mediaPlayers.map(
+						(p) => p.connection.name
+					)}`
 				);
 				attachMessage(
 					playerLog,
-					`Device IPs: ${mediaPlayers.map(p => p.connection.host)}`
+					`Device IPs: ${mediaPlayers.map((p) => p.connection.host)}`
 				);
 				res.status(200).write('Success');
 				res.end();
@@ -411,7 +419,7 @@ export namespace Cast {
 				res: ResponseLike,
 				{
 					text,
-					lang = 'en'
+					lang = 'en',
 				}: {
 					text: string;
 					lang?: string;
@@ -435,11 +443,13 @@ export namespace Cast {
 				);
 				attachMessage(
 					playerLog,
-					`Device names: ${mediaPlayers.map(p => p.connection.name)}`
+					`Device names: ${mediaPlayers.map(
+						(p) => p.connection.name
+					)}`
 				);
 				attachMessage(
 					playerLog,
-					`Device IPs: ${mediaPlayers.map(p => p.connection.host)}`
+					`Device IPs: ${mediaPlayers.map((p) => p.connection.host)}`
 				);
 				res.status(200).write('Success');
 				res.end();
@@ -452,7 +462,7 @@ export namespace Cast {
 			static async pasta(
 				res: ResponseLike,
 				{
-					pasta
+					pasta,
 				}: {
 					pasta: string;
 					auth?: string;
@@ -481,11 +491,13 @@ export namespace Cast {
 				);
 				attachMessage(
 					playerLog,
-					`Device names: ${mediaPlayers.map(p => p.connection.name)}`
+					`Device names: ${mediaPlayers.map(
+						(p) => p.connection.name
+					)}`
 				);
 				attachMessage(
 					playerLog,
-					`Device IPs: ${mediaPlayers.map(p => p.connection.host)}`
+					`Device IPs: ${mediaPlayers.map((p) => p.connection.host)}`
 				);
 				res.status(200).write('Success');
 				res.end();

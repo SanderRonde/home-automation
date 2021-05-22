@@ -1,18 +1,18 @@
 import {
 	CHANGE_TYPE,
-	TemplateFn
+	TemplateFn,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { TEMPERATURE_DISPLAY_TYPE } from '../temperature-display/temperature-display.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { InfoScreen } from './info-screen';
 
 export const InfoScreenHTML = new TemplateFn<InfoScreen>(
-	function(html, { props }) {
+	function (html, { props }) {
 		return html`
 			<div
 				id="background"
 				class="${{
-					blank: props.blank
+					blank: props.blank,
 				}}"
 			>
 				<div id="grid">

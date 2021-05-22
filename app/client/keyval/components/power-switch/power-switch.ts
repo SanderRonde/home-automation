@@ -2,14 +2,14 @@ import {
 	config,
 	ConfigurableWebComponent,
 	Props,
-	PROP_TYPE
+	PROP_TYPE,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { PowerSwitchHTML, PowerSwitchCSS } from './power-switch.templates.js';
 
 @config({
 	is: 'power-switch',
 	html: PowerSwitchHTML,
-	css: PowerSwitchCSS
+	css: PowerSwitchCSS,
 })
 export class PowerSwitch extends ConfigurableWebComponent<{
 	selectors: {
@@ -41,7 +41,7 @@ export class PowerSwitch extends ConfigurableWebComponent<{
 		RIPPLE: 'mdl-ripple',
 		IS_FOCUSED: 'is-focused',
 		IS_DISABLED: 'is-disabled',
-		IS_CHECKED: 'is-checked'
+		IS_CHECKED: 'is-checked',
 	};
 
 	constructor() {
@@ -64,13 +64,13 @@ export class PowerSwitch extends ConfigurableWebComponent<{
 		reflect: {
 			initial: {
 				type: PROP_TYPE.BOOL,
-				value: false
+				value: false,
 			},
 			scale: {
 				type: PROP_TYPE.NUMBER,
-				value: 100
-			}
-		}
+				value: 100,
+			},
+		},
 	});
 
 	onChange() {
