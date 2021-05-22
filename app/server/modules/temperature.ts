@@ -205,9 +205,7 @@ export namespace Temperature {
 	}
 
 	export namespace External {
-		export class Handler extends createExternalClass(true) {
-			requiresInit = false;
-
+		export class Handler extends createExternalClass(false) {
 			public setMode(name: string, mode: Mode) {
 				return this.runRequest((res, source) => {
 					return API.Handler.setMode(
