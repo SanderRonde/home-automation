@@ -18,7 +18,7 @@ export function createExternalClass(requiresInit: boolean, name?: string) {
 	return class ExternalClass {
 		protected static _initialized: boolean = false;
 		protected static _name = name;
-		private static get _ready() {
+		private static _isReady(requiresInit: boolean) {
 			if (requiresInit === undefined) {
 				throw new Error('"requiresInit" not set');
 			}
@@ -55,7 +55,7 @@ export function createExternalClass(requiresInit: boolean, name?: string) {
 		runRequest<T>(fn: QueuedRequestFn<T>): Promise<T> {
 			return new Promise<T>(resolve => {
 				const constructor = this.constructor as typeof ExternalClass;
-				if (constructor._ready) {
+				if (constructor._isReady(requiresInit)) {
 					constructor
 						._handleQueuedRequest({
 							fn,
