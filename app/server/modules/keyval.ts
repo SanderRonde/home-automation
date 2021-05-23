@@ -14,7 +14,7 @@ import {
 	ResponseLike,
 } from '../lib/logger';
 import { ModuleHookables, ModuleConfig } from './modules';
-import { awaitCondition, createHookables } from '../lib/util';
+import { createHookables, SettablePromise } from '../lib/util';
 import aggregates from '../config/aggregates';
 import groups from '../config/keyval-groups';
 import { BotState } from '../lib/bot-state';
@@ -86,10 +86,10 @@ export namespace KeyVal {
 			}
 		> = new Map();
 		let _lastIndex: number = 0;
-		let _db: Database | null = null;
+		const db = new SettablePromise<Database>();
 
-		export function setDB(db: Database) {
-			_db = db;
+		export function setDB(_db: Database) {
+			db.set(_db);
 		}
 
 		export function addListener(
@@ -131,8 +131,6 @@ export namespace KeyVal {
 				return;
 			}
 
-			await awaitCondition(() => !!_db, 100);
-
 			const group = groups[key];
 			for (const key in group) {
 				const opposite = value === '1' ? '0' : '1';
@@ -143,7 +141,7 @@ export namespace KeyVal {
 						effect === KEYVAL_GROUP_EFFECT.SAME ? value : opposite
 					}" (db only)`
 				);
-				await _db!.setVal(
+				(await db.value).setVal(
 					key,
 					effect === KEYVAL_GROUP_EFFECT.SAME ? value : opposite
 				);
@@ -471,7 +469,7 @@ export namespace KeyVal {
 			) {
 				const original = this._db.get(key);
 				const value = original === '0' ? '1' : '0';
-				await this._db.setVal(key, value);
+				this._db.setVal(key, value);
 				const msg = attachSourcedMessage(
 					res,
 					source,
@@ -583,7 +581,7 @@ export namespace KeyVal {
 				source: string
 			) {
 				const original = this._db.get(key);
-				await this._db.setVal(key, value);
+				this._db.setVal(key, value);
 				const msg = attachSourcedMessage(
 					res,
 					source,

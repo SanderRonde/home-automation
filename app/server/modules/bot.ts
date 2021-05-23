@@ -185,8 +185,8 @@ export namespace Bot {
 					}
 				}
 
-				private async _saveChat(chatId: number) {
-					await this._db.setVal(
+				private _saveChat(chatId: number) {
+					this._db.setVal(
 						chatId + '',
 						JSON.stringify(this.chatIds.get(chatId)!)
 					);
