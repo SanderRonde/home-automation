@@ -9,8 +9,10 @@ export namespace Auth {
 	export const meta = new (class Meta extends ModuleMeta {
 		name = 'auth';
 
-		async init(config: ModuleConfig) {
-			await initRoutes(config);
+		init(config: ModuleConfig) {
+			initRoutes(config);
+
+			return Promise.resolve(void 0);
 		}
 	})();
 
@@ -18,14 +20,18 @@ export namespace Auth {
 		const ids: Map<number, string> = new Map();
 
 		function createId(): number {
-			let id = Math.floor(Math.random() * (1e6 - 1e5)) + 1e5;
-			if (ids.has(id)) return createId();
+			const id = Math.floor(Math.random() * (1e6 - 1e5)) + 1e5;
+			if (ids.has(id)) {
+				return createId();
+			}
 			return id;
 		}
 
 		function createClientSecret(id: number) {
 			const key = Secret.getKey();
-			const idArr = (id + '').split('').map((s) => parseInt(s, 10));
+			const idArr = String(id)
+				.split('')
+				.map((s) => parseInt(s, 10));
 
 			return key
 				.split('')
@@ -45,7 +51,7 @@ export namespace Auth {
 			return id;
 		}
 
-		export function getClientSecret(id: number) {
+		export function getClientSecret(id: number): string {
 			if (ids.has(id)) {
 				return ids.get(id)!;
 			}
@@ -54,35 +60,39 @@ export namespace Auth {
 			return secret;
 		}
 
-		export function authenticate(authKey: string, id: string) {
-			if (authKey === Secret.getKey()) return true;
+		export function authenticate(authKey: string, id: string): boolean {
+			if (authKey === Secret.getKey()) {
+				return true;
+			}
 
-			if (Number.isNaN(parseInt(id, 10))) return false;
+			if (Number.isNaN(parseInt(id, 10))) {
+				return false;
+			}
 			return ClientSecret.getClientSecret(parseInt(id, 10)) === authKey;
 		}
 	}
 
 	export namespace Secret {
-		let key: string = getEnv('SECRET_AUTH', true);
-		let botSecret: string = getEnv('SECRET_BOT', true);
+		const key: string = getEnv('SECRET_AUTH', true);
+		const botSecret: string = getEnv('SECRET_BOT', true);
 
-		export function authenticate(authKey: string) {
+		export function authenticate(authKey: string): boolean {
 			return key === authKey;
 		}
 
-		export function getKey() {
+		export function getKey(): string {
 			return key;
 		}
 
-		export function redact(msg: string) {
+		export function redact(msg: string): string {
 			return msg
-				.replace(key!, '[redacted]')
-				.replace(botSecret!, '[redacted]');
+				.replace(key, '[redacted]')
+				.replace(botSecret, '[redacted]');
 		}
 	}
 
 	export namespace Cookie {
-		export function genCookie() {
+		export function genCookie(): string {
 			const id = ClientSecret.genId();
 			const clientSecret = ClientSecret.getClientSecret(id)!;
 
@@ -91,10 +101,15 @@ export namespace Auth {
 
 		function verifyCookie(cookie: string) {
 			const parsed = JSON.parse(cookie);
-			if (!parsed || !Array.isArray(parsed) || parsed.length !== 2)
+			if (!parsed || !Array.isArray(parsed) || parsed.length !== 2) {
 				return false;
-			if (typeof parsed[0] !== 'number' || typeof parsed[1] !== 'string')
+			}
+			if (
+				typeof parsed[0] !== 'number' ||
+				typeof parsed[1] !== 'string'
+			) {
 				return false;
+			}
 
 			return ClientSecret.getClientSecret(parsed[0]) === parsed[1];
 		}
@@ -103,18 +118,14 @@ export namespace Auth {
 			cookies: {
 				[key: string]: string;
 			};
-		}) {
-			return (
-				req.cookies &&
-				req.cookies['key'] &&
-				verifyCookie(req.cookies['key'])
-			);
+		}): boolean {
+			return !!(req.cookies?.key && verifyCookie(req.cookies['key']));
 		}
 	}
 
-	async function initRoutes({ app, config }: ModuleConfig) {
+	function initRoutes({ app, config }: ModuleConfig) {
 		app.post('/authid', (_req, res) => {
-			const id = Auth.ClientSecret.genId() + '';
+			const id = String(Auth.ClientSecret.genId());
 			if (config.log.secrets) {
 				attachMessage(
 					res,

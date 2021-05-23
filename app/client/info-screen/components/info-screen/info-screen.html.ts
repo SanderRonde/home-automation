@@ -7,7 +7,7 @@ import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { InfoScreen } from './info-screen';
 
 export const InfoScreenHTML = new TemplateFn<InfoScreen>(
-	function (html, { props }) {
+	(html, { props }) => {
 		return html`
 			<div
 				id="background"

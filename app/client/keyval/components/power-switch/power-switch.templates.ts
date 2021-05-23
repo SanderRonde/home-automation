@@ -21,7 +21,7 @@ export const PowerSwitchHTML = new TemplateFn<PowerSwitch>(
 				for="switch"
 			>
 				<input
-					@change="${this.onChange}"
+					@change="${this.onChange.bind(this)}"
 					type="checkbox"
 					id="switch"
 					class="mdl-switch__input"

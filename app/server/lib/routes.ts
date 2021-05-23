@@ -2,12 +2,13 @@ import { logReq, attachMessage } from './logger';
 import * as cookieParser from 'cookie-parser';
 import * as serveStatic from 'serve-static';
 import * as bodyParser from 'body-parser';
-import { RGB } from '../modules/rgb';
 import * as express from 'express';
 import * as path from 'path';
 import * as glob from 'glob';
 import chalk from 'chalk';
-export async function initAnnotatorRoutes(app: express.Express) {
+import { RGBScan } from '../modules/rgb/clients';
+
+export function initAnnotatorRoutes(app: express.Express): void {
 	app.all('/annotator/files', (_req, res) => {
 		glob(
 			path.join(__dirname, '../../../', 'ai/files', '*.wav'),
@@ -32,7 +33,7 @@ export async function initAnnotatorRoutes(app: express.Express) {
 	});
 }
 
-export async function initMiddleware(app: express.Express) {
+export function initMiddleware(app: express.Express): void {
 	app.use((req, res, next) => {
 		logReq(req, res);
 		next();
@@ -71,14 +72,14 @@ export async function initMiddleware(app: express.Express) {
 	);
 }
 
-export async function initRoutes(app: express.Express) {
-	app.post('/scan', (_req, res) => {
-		RGB.Scan.scanRGBControllers();
+export function initRoutes(app: express.Express): void {
+	app.post('/scan', async (_req, res) => {
+		await RGBScan.scanRGBControllers();
 		res.status(200).end();
 	});
 }
 
-export async function initPostRoutes(app: express.Express) {
+export function initPostRoutes(app: express.Express): void {
 	app.use((_req, res, _next) => {
 		res.status(404).send('404');
 	});
@@ -89,7 +90,7 @@ export async function initPostRoutes(app: express.Express) {
 			res: express.Response,
 			_next: express.NextFunction
 		) => {
-			if (err && err.message) {
+			if (err?.message) {
 				if (res.headersSent) {
 					console.log(
 						chalk.bgRed(

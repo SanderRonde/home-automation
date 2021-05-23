@@ -6,7 +6,7 @@ import { TemperatureDisplay } from './temperature-display.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 
 export const TemperatureDisplayHTML = new TemplateFn<TemperatureDisplay>(
-	function (html, { props }) {
+	(html, { props }) => {
 		return html`
 			<div id="centerer">
 				<div id="container">

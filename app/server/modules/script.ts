@@ -22,8 +22,10 @@ export namespace Script {
 	export const meta = new (class Meta extends ModuleMeta {
 		name = 'script';
 
-		async init(config: ModuleConfig) {
+		init(config: ModuleConfig) {
 			Routing.init(config);
+
+			return Promise.resolve(void 0);
 		}
 
 		get external() {
@@ -39,12 +41,12 @@ export namespace Script {
 		export class Handler extends createExternalClass(true) {
 			private static _config: Config | null = null;
 
-			static async init({ config }: { config: Config }) {
+			static async init({ config }: { config: Config }): Promise<void> {
 				this._config = config;
-				super.init();
+				await super.init();
 			}
 
-			async script(name: string) {
+			async script(name: string): Promise<string> {
 				return this.runRequest((res, source) => {
 					return API.Handler.script(
 						res,
@@ -61,8 +63,6 @@ export namespace Script {
 	}
 
 	export namespace Bot {
-		export interface JSON {}
-
 		export class Bot extends BotState.Base {
 			static readonly commands = {
 				'/runscript': 'Run given script',
@@ -116,7 +116,7 @@ export namespace Script {
 					mm(
 						'/help_script',
 						/what commands are there for script/,
-						async () => {
+						() => {
 							return `Commands are:\n${Bot.matches.matches
 								.map((match) => {
 									return `RegExps: ${match.regexps
@@ -131,7 +131,7 @@ export namespace Script {
 				}
 			);
 
-			constructor(_json?: JSON) {
+			constructor(_json?: Record<string, never>) {
 				super();
 			}
 
@@ -144,7 +144,7 @@ export namespace Script {
 				});
 			}
 
-			toJSON(): JSON {
+			toJSON(): Record<string, never> {
 				return {};
 			}
 		}
@@ -163,7 +163,7 @@ export namespace Script {
 				},
 				config: Config,
 				source: string
-			) {
+			): Promise<string> {
 				if (
 					params.name.indexOf('..') > -1 ||
 					params.name.indexOf('/') > -1
@@ -196,11 +196,15 @@ export namespace Script {
 					res.end();
 					return output;
 				} catch (e) {
+					const err = e as {
+						message: string;
+						stack: string;
+					};
 					const errMsg = attachMessage(
 						res,
-						chalk.bgRed(chalk.black(`Error: ${e.message}`))
+						chalk.bgRed(chalk.black(`Error: ${err.message}`))
 					);
-					for (const line of e.stack.split('\n')) {
+					for (const line of err.stack.split('\n')) {
 						attachMessage(errMsg, chalk.bgRed(chalk.black(line)));
 					}
 					res.status(400).end();
@@ -217,7 +221,7 @@ export namespace Script {
 		}: {
 			app: express.Application;
 			config: Config;
-		}) {
+		}): void {
 			const router = createRouter(Script, API.Handler);
 			router.post('/:name', async (req, res, _next) => {
 				await API.Handler.script(

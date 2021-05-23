@@ -22,14 +22,14 @@ export class JSONObject extends ConfigurableWebComponent<{
 		IDS: {
 			switch: PowerSwitch;
 		};
-		CLASSES: {};
+		CLASSES: Record<string, never>;
 	};
 }> {
 	props = Props.define(this, {
 		reflect: {
 			json: {
 				value: {},
-				type: ComplexType<any>(),
+				type: ComplexType<unknown>(),
 			},
 			name: {
 				type: PROP_TYPE.STRING,
@@ -41,16 +41,19 @@ export class JSONObject extends ConfigurableWebComponent<{
 	});
 
 	@bindToClass
-	onToggle() {
+	async onToggle(): Promise<void> {
 		const root = this.getRoot<JSONSwitches>();
 		if (!root) {
-			MessageToast.create({
+			await MessageToast.create({
 				message: 'Failed to find root element',
 				duration: 5000,
 			});
 			return;
 		}
 
-		root.changeValue(this.props.path!, this.$.switch.checked ? '1' : '0');
+		await root.changeValue(
+			this.props.path!,
+			this.$.switch.checked ? '1' : '0'
+		);
 	}
 }

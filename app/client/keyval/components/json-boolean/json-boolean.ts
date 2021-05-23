@@ -22,7 +22,7 @@ export class JSONBoolean extends ConfigurableWebComponent<{
 		IDS: {
 			switch: PowerSwitch;
 		};
-		CLASSES: {};
+		CLASSES: Record<string, never>;
 	};
 }> {
 	props = Props.define(this, {
@@ -40,16 +40,19 @@ export class JSONBoolean extends ConfigurableWebComponent<{
 	});
 
 	@bindToClass
-	onToggle() {
+	async onToggle(): Promise<void> {
 		const root = this.getRoot<JSONSwitches>();
 		if (!root) {
-			MessageToast.create({
+			await MessageToast.create({
 				message: 'Failed to find root element',
 				duration: 5000,
 			});
 			return;
 		}
 
-		root.changeValue(this.props.path!, this.$.switch.checked ? '1' : '0');
+		await root.changeValue(
+			this.props.path!,
+			this.$.switch.checked ? '1' : '0'
+		);
 	}
 }

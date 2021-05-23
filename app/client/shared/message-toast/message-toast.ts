@@ -25,7 +25,7 @@ interface CreateConfig {
 			return html`
 				<div id="toast">
 					<div id="text">${props.message}</div>
-					<div @click="${this.onClick}" id="button">
+					<div @click="${this.onClick.bind(this)}" id="button">
 						${props.button}
 					</div>
 				</div>
@@ -87,8 +87,8 @@ interface CreateConfig {
 })
 export class MessageToast extends ConfigurableWebComponent<{
 	selectors: {
-		IDS: {};
-		CLASSES: {};
+		IDS: Record<string, never>;
+		CLASSES: Record<string, never>;
 	};
 	events: {
 		click: {
@@ -113,7 +113,7 @@ export class MessageToast extends ConfigurableWebComponent<{
 		},
 	});
 
-	async hide() {
+	async hide(): Promise<void> {
 		this.classList.remove('visible');
 		await wait(500);
 		this.remove();
@@ -121,15 +121,15 @@ export class MessageToast extends ConfigurableWebComponent<{
 	}
 
 	@bindToClass
-	onClick(e: MouseEvent) {
+	async onClick(e: MouseEvent): Promise<void> {
 		this.fire('click', e);
-		this.hide();
+		await this.hide();
 	}
 
-	async mounted() {
+	async mounted(): Promise<void> {
 		if (this.props.duration !== Infinity) {
-			window.setTimeout(() => {
-				this.hide();
+			window.setTimeout(async () => {
+				await this.hide();
 			}, this.props.duration);
 		}
 
@@ -162,9 +162,9 @@ export class MessageToast extends ConfigurableWebComponent<{
 		return toast;
 	}
 
-	static create(config: CreateConfig): MessageToast {
+	static async create(config: CreateConfig): Promise<MessageToast> {
 		if (this._activeToast) {
-			this._activeToast.hide();
+			await this._activeToast.hide();
 		}
 		return this._create(config);
 	}

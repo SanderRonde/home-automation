@@ -24,23 +24,26 @@ export namespace Temperature {
 		async init(config: ModuleConfig) {
 			TempControllers.init(config.db);
 
-			await Routing.init(config);
+			Routing.init(config);
+
+			return Promise.resolve(void 0);
 		}
 
 		get external() {
 			return External;
 		}
 
-		async notifyModules(modules: AllModules): Promise<any> {
+		notifyModules(modules: AllModules): Promise<void> {
 			modules.keyval.GetSetListener.addListener(
 				'room.heating',
 				async (value, logObj) => {
-					new External.Handler(logObj, 'TEMPERATURE.INIT').setMode(
-						'room',
-						value === '1' ? 'on' : 'off'
-					);
+					return new External.Handler(
+						logObj,
+						'TEMPERATURE.INIT'
+					).setMode('room', value === '1' ? 'on' : 'off');
 				}
 			);
+			return Promise.resolve(void 0);
 		}
 
 		get bot() {
@@ -54,7 +57,9 @@ export namespace Temperature {
 		let db: Database | null = null;
 		const controllers: Map<string, TempControl> = new Map();
 
-		export async function getController(name: string = 'default') {
+		export async function getController(
+			name = 'default'
+		): Promise<TempControl> {
 			if (!controllers.has(name)) {
 				controllers.set(name, await new TempControl().init(db!, name));
 			}
@@ -62,22 +67,22 @@ export namespace Temperature {
 			return controllers.get(name)!;
 		}
 
-		export function init(_db: Database) {
+		export function init(_db: Database): void {
 			db = _db;
 		}
 
-		export function getAll() {
+		export function getAll(): TempControl[] {
 			return Array.from(controllers.values());
 		}
 	}
 
 	class TempControl {
-		target: number = 20.0;
+		target = 20.0;
 		mode: Mode = 'auto';
-		lastTemp: number = -1;
+		lastTemp = -1;
 		db: Database | null = null;
-		lastLogTime: number = 0;
-		lastLoggedTemp: number = -1;
+		lastLogTime = 0;
+		lastLoggedTemp = -1;
 		name!: string;
 
 		move: {
@@ -85,29 +90,27 @@ export namespace Temperature {
 			ms: number;
 		} | null = null;
 
-		async setTarget(targetTemp: number) {
-			await this.db!.setVal(`${this.name}.target`, targetTemp);
+		setTarget(targetTemp: number) {
+			this.db!.setVal(`${this.name}.target`, targetTemp);
 			this.target = targetTemp;
 		}
 
 		async setMode(newMode: Mode) {
-			await this.db!.setVal(`${this.name}.mode`, newMode);
+			this.db!.setVal(`${this.name}.mode`, newMode);
 			this.mode = newMode;
 
 			if (this.name === 'room') {
 				const modules = await meta.modules;
 				if (newMode === 'off') {
-					new modules.keyval.External.Handler({}, 'HEATING.off').set(
-						'room.heating',
-						'0',
-						false
-					);
+					await new modules.keyval.External.Handler(
+						{},
+						'HEATING.off'
+					).set('room.heating', '0', false);
 				} else {
-					new modules.keyval.External.Handler({}, 'HEATING.on').set(
-						'room.heating',
-						'1',
-						false
-					);
+					await new modules.keyval.External.Handler(
+						{},
+						'HEATING.on'
+					).set('room.heating', '1', false);
 				}
 			}
 		}
@@ -119,22 +122,20 @@ export namespace Temperature {
 			};
 		}
 
-		async setLastTemp(
-			temp: number,
-			store: boolean = true,
-			doLog: boolean = true
-		) {
+		setLastTemp(temp: number, store = true, doLog = true) {
 			this.lastTemp = temp;
 
 			// Write temp to database
 			if (store) {
 				const tempHistory = JSON.parse(
 					JSON.stringify(
-						this.db!.get(`${this.name}.history`, []) as {
-							date: number;
-							temp: number;
-							state?: 'on' | 'off';
-						}[]
+						this.db!.get<
+							{
+								date: number;
+								temp: number;
+								state?: 'on' | 'off';
+							}[]
+						>(`${this.name}.history`, [])
 					)
 				);
 				tempHistory.push({
@@ -142,13 +143,13 @@ export namespace Temperature {
 					temp: temp,
 					state: this.getHeaterState(),
 				});
-				await this.db!.setVal(`${this.name}.history`, tempHistory);
-				await this.db!.setVal(`${this.name}.temp`, temp);
+				this.db!.setVal(`${this.name}.history`, tempHistory);
+				this.db!.setVal(`${this.name}.temp`, temp);
 			}
 
 			if (
 				doLog &&
-				Math.round(this.lastLoggedTemp) != Math.round(temp) &&
+				Math.round(this.lastLoggedTemp) !== Math.round(temp) &&
 				Date.now() - this.lastLogTime > LOG_INTERVAL_SECS * 1000
 			) {
 				logTag(
@@ -173,7 +174,9 @@ export namespace Temperature {
 		}
 
 		getHeaterState() {
-			if (this.mode !== 'auto') return this.mode;
+			if (this.mode !== 'auto') {
+				return this.mode;
+			}
 			if (this.lastTemp > this.target) {
 				return 'off';
 			}
@@ -193,12 +196,12 @@ export namespace Temperature {
 			const target = database.get(`${name}.target`, 20.0);
 			const prevMode = database.get(`${name}.mode`, 'auto');
 
-			await this.setTarget(target);
+			this.setTarget(target);
 			await this.setMode(prevMode);
 
 			const temp = database.get(`${name}.temp`, 20.0);
 
-			await this.setLastTemp(temp, false, false);
+			this.setLastTemp(temp, false, false);
 
 			return this;
 		}
@@ -206,7 +209,7 @@ export namespace Temperature {
 
 	export namespace External {
 		export class Handler extends createExternalClass(false) {
-			public setMode(name: string, mode: Mode) {
+			public setMode(name: string, mode: Mode): Promise<void> {
 				return this.runRequest((res, source) => {
 					return API.Handler.setMode(
 						res,
@@ -220,7 +223,7 @@ export namespace Temperature {
 				});
 			}
 
-			public setTarget(name: string, target: number) {
+			public setTarget(name: string, target: number): Promise<void> {
 				return this.runRequest((res, source) => {
 					return API.Handler.setTargetTemp(
 						res,
@@ -234,7 +237,9 @@ export namespace Temperature {
 				});
 			}
 
-			public getTemp(name: string) {
+			public getTemp(name: string): Promise<{
+				temp: number;
+			}> {
 				return this.runRequest((res, source) => {
 					return API.Handler.getTemp(
 						res,
@@ -251,7 +256,7 @@ export namespace Temperature {
 				name: string,
 				direction: 'left' | 'right',
 				ms: number
-			) {
+			): Promise<string> {
 				return this.runRequest((res, source) => {
 					return API.Handler.moveDir(
 						res,
@@ -269,8 +274,6 @@ export namespace Temperature {
 	}
 
 	export namespace Bot {
-		export interface JSON {}
-
 		export class Bot extends BotState.Base {
 			static readonly commands = {
 				'/temp': 'Get the current temperature',
@@ -289,16 +292,16 @@ export namespace Temperature {
 						/what (is|are) the(current )?temp(erature)?(s)?/,
 						/what temp(erature)? is it(\?)?/,
 						/how (warm|cold) is it(\?)?/,
-						async ({ logObj }) => {
+						({ logObj }) => {
 							attachMessage(
 								logObj,
-								`Reporting temperatures ${TempControllers.getAll().map(
-									(controller) => {
+								`Reporting temperatures ${TempControllers.getAll()
+									.map((controller) => {
 										return Math.round(
 											controller.getLastTemp()
 										);
-									}
-								)}`
+									})
+									.join(', ')}`
 							);
 							const contents = [];
 							for (const controller of TempControllers.getAll()) {
@@ -307,11 +310,12 @@ export namespace Temperature {
 										['Name', controller.name],
 										[
 											'Temp',
-											Math.round(
-												controller.getLastTemp() * 10
-											) /
-												10 +
-												'',
+											String(
+												Math.round(
+													controller.getLastTemp() *
+														10
+												) / 10
+											),
 										],
 										[
 											'Heater state',
@@ -320,7 +324,7 @@ export namespace Temperature {
 										['Heater mode', controller.getMode()],
 										[
 											'Target temperature',
-											controller.getTarget() + '',
+											String(controller.getTarget()),
 										],
 										['', ''],
 									]
@@ -338,7 +342,7 @@ export namespace Temperature {
 						/make (\w+) cold/,
 						async ({ logObj, match }) => {
 							const tempName = match[1];
-							new External.Handler(
+							await new External.Handler(
 								attachMessage(logObj, 'Stopping heating'),
 								'TEMPERATURE.BOT'
 							).setMode(tempName, 'off');
@@ -347,7 +351,7 @@ export namespace Temperature {
 					);
 					mm(/\/heatauto (\w+)/, async ({ logObj, match }) => {
 						const tempName = match[1];
-						new External.Handler(
+						await new External.Handler(
 							attachMessage(logObj, 'Set heat mode to auto'),
 							'TEMPERATURE.BOT'
 						).setMode(tempName, 'auto');
@@ -360,7 +364,7 @@ export namespace Temperature {
 						/heat (\w+)/,
 						async ({ logObj, match }) => {
 							const tempName = match[1];
-							new External.Handler(
+							await new External.Handler(
 								attachMessage(logObj, 'Heating'),
 								'TEMPERATURE.BOT'
 							).setMode(tempName, 'on');
@@ -371,7 +375,7 @@ export namespace Temperature {
 						/\/move (\w+) (left|right) for (\d+)ms/,
 						async ({ logObj, match }) => {
 							const tempName = match[1];
-							new External.Handler(
+							await new External.Handler(
 								attachMessage(logObj, 'Moving'),
 								'TEMPERATURE.BOT'
 							).moveDir(
@@ -390,7 +394,7 @@ export namespace Temperature {
 							if (['on', 'off', 'auto'].indexOf(mode) === -1) {
 								return 'Invalid mode';
 							}
-							new External.Handler(
+							await new External.Handler(
 								attachMessage(
 									logObj,
 									`Setting mode to ${mode}`
@@ -412,7 +416,7 @@ export namespace Temperature {
 							) {
 								return 'Invalid target';
 							}
-							new External.Handler(
+							await new External.Handler(
 								attachMessage(
 									logObj,
 									`Setting temp to ${target}`
@@ -426,7 +430,7 @@ export namespace Temperature {
 					mm(
 						'/help_temperature',
 						/what commands are there for temperature/,
-						async () => {
+						() => {
 							return `Commands are:\n${Bot.matches.matches
 								.map((match) => {
 									return `RegExps: ${match.regexps
@@ -454,7 +458,7 @@ export namespace Temperature {
 				});
 			}
 
-			toJSON(): JSON {
+			toJSON(): Record<string, never> {
 				return {};
 			}
 		}
@@ -476,7 +480,7 @@ export namespace Temperature {
 					name: string;
 				},
 				source: string
-			) {
+			): Promise<void> {
 				const controller = await TempControllers.getController(name);
 				const oldMode = controller.getMode();
 				attachSourcedMessage(
@@ -504,7 +508,7 @@ export namespace Temperature {
 					name: string;
 				},
 				source: string
-			) {
+			): Promise<void> {
 				const controller = await TempControllers.getController(name);
 				const oldTemp = controller.getTarget();
 				attachSourcedMessage(
@@ -513,7 +517,7 @@ export namespace Temperature {
 					await meta.explainHook,
 					`Setting target temp to ${target} from ${oldTemp}`
 				);
-				await controller.setTarget(target);
+				controller.setTarget(target);
 				res.status(200);
 				res.end();
 			}
@@ -529,7 +533,9 @@ export namespace Temperature {
 					name: string;
 				},
 				source: string
-			) {
+			): Promise<{
+				temp: number;
+			}> {
 				const controller = await TempControllers.getController(name);
 				attachSourcedMessage(
 					res,
@@ -564,7 +570,7 @@ export namespace Temperature {
 					ms: number;
 				},
 				source: string
-			) {
+			): Promise<string> {
 				const controller = await TempControllers.getController(name);
 				attachSourcedMessage(
 					res,
@@ -582,29 +588,32 @@ export namespace Temperature {
 	}
 
 	export namespace Routing {
-		export async function init({ app }: ModuleConfig) {
+		export function init({ app }: ModuleConfig): void {
 			const router = createRouter(Temperature, API.Handler);
 			router.post('/target/:target?', 'setTargetTemp');
 			router.post('/mode/:mode?', 'setMode');
 			router.all('/temp', 'getTemp');
 
 			app.post('/temperature/report/:name/:temp?', async (req, res) => {
-				const body = { ...req.params, ...req.body, ...req.query };
+				const body = { ...req.params, ...req.body, ...req.query } as {
+					temp?: string;
+					name: string;
+				};
 				if (!('temp' in body)) {
-					res.write(`Missing key "temp"`);
+					res.write('Missing key "temp"');
 					res.status(400);
 					res.end();
 					return;
 				}
 				if (!('name' in body)) {
-					res.write(`Missing key "name"`);
+					res.write('Missing key "name"');
 					res.status(400);
 					res.end();
 					return;
 				}
-				const temp = parseFloat(body['temp']);
+				const temp = parseFloat(body.temp!);
 				if (Number.isNaN(temp) || temp === 0) {
-					res.write(`Invalid temperature "${body['temp']}"`);
+					res.write(`Invalid temperature "${body.temp!}"`);
 					res.status(400);
 					res.end();
 					return;
@@ -614,7 +623,7 @@ export namespace Temperature {
 				const controller = await TempControllers.getController(
 					body['name']
 				);
-				await controller.setLastTemp(temp);
+				controller.setLastTemp(temp);
 
 				attachMessage(
 					res,
@@ -625,7 +634,9 @@ export namespace Temperature {
 			});
 
 			app.post('/temperature/advise/:name', async (req, res) => {
-				const body = { ...req.params, ...req.body, ...req.query };
+				const body = { ...req.params, ...req.body, ...req.query } as {
+					name: string;
+				};
 
 				const controller = await TempControllers.getController(
 					body['name']
@@ -645,7 +656,9 @@ export namespace Temperature {
 			});
 
 			app.post('/temperature/moves/:name', async (req, res) => {
-				const body = { ...req.params, ...req.body, ...req.query };
+				const body = { ...req.params, ...req.body, ...req.query } as {
+					name: string;
+				};
 
 				const controller = await TempControllers.getController(
 					body['name']
@@ -655,9 +668,9 @@ export namespace Temperature {
 				if (!move) {
 					attachMessage(
 						res,
-						`Returning no move for controller ${body['name']}`
+						`Returning no move for controller ${body.name}`
 					);
-					res.write(`0 l`);
+					res.write('0 l');
 				} else {
 					attachMessage(
 						res,

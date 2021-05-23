@@ -11,7 +11,7 @@ export function getArg(name: string, short?: string): string | void {
 	return void 0;
 }
 
-export function hasArg(name: string, short?: string) {
+export function hasArg(name: string, short?: string): boolean | undefined {
 	for (let i = 0; i < process.argv.length; i++) {
 		if (process.argv[i] === `--${name}`) {
 			return true;
@@ -26,7 +26,9 @@ export function hasArg(name: string, short?: string) {
 
 export function getNumberArg(name: string): number | void {
 	const arg = getArg(name);
-	if (arg === void 0) return void 0;
+	if (arg === void 0) {
+		return void 0;
+	}
 	return ~~arg;
 }
 
@@ -34,11 +36,14 @@ export function getEnv(name: string): string | void;
 export function getEnv(name: string, required: false): string | void;
 export function getEnv(name: string, required: true): string;
 export function getEnv(name: string, required: boolean): string | void;
-export function getEnv(name: string, required: boolean = false): string | void {
+export function getEnv(name: string, required = false): string | void {
 	const value = process.env[name];
 	if (value === void 0) {
-		if (!required) return void 0;
+		if (!required) {
+			return void 0;
+		}
 		console.log(`Missing env variable "${name}"`);
+		// eslint-disable-next-line no-process-exit
 		process.exit(1);
 	}
 	return value;
@@ -47,11 +52,10 @@ export function getEnv(name: string, required: boolean = false): string | void {
 export function getNumberEnv(name: string): number | void;
 export function getNumberEnv(name: string, required: false): number | void;
 export function getNumberEnv(name: string, required: true): number;
-export function getNumberEnv(
-	name: string,
-	required: boolean = false
-): number | void {
+export function getNumberEnv(name: string, required = false): number | void {
 	const value = getEnv(name, required);
-	if (typeof value !== 'string') return value;
+	if (typeof value !== 'string') {
+		return value;
+	}
 	return ~~value;
 }

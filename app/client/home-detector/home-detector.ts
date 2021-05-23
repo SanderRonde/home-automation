@@ -26,14 +26,17 @@ function registerElements() {
 	HomeDetectorDisplay.define();
 }
 
-function registerServiceworker() {
+async function registerServiceworker() {
 	if ('serviceWorker' in navigator) {
-		navigator.serviceWorker.register('/home-detector/serviceworker.js', {
-			scope: '/home-detector/',
-			updateViaCache: 'none',
-		});
+		await navigator.serviceWorker.register(
+			'/home-detector/serviceworker.js',
+			{
+				scope: '/home-detector/',
+				updateViaCache: 'none',
+			}
+		);
 	}
 }
 
 registerElements();
-registerServiceworker();
+void registerServiceworker();

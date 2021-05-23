@@ -3,6 +3,7 @@ import { ModuleConfig, ModuleHookables } from './modules';
 import {
 	attachMessage,
 	attachSourcedMessage,
+	LogObj,
 	ResponseLike,
 } from '../lib/logger';
 import webhooks from '../config/webhook';
@@ -13,17 +14,19 @@ import chalk from 'chalk';
 import { createExternalClass } from '../lib/external';
 import { createRouter } from '../lib/api';
 import { createHookables } from '../lib/util';
+import { PossiblePromise } from '../lib/type';
 
 export type WebHookConfig = {
-	[key: string]: (hookables: ModuleHookables) => any | Promise<any>;
+	[key: string]: (hookables: ModuleHookables) => PossiblePromise<void>;
 };
 
 export namespace Webhook {
 	export const meta = new (class Meta extends ModuleMeta {
 		name = 'webhook';
 
-		async init(config: ModuleConfig) {
-			await Routing.init(config);
+		init(config: ModuleConfig) {
+			Routing.init(config);
+			return Promise.resolve(void 0);
 		}
 
 		get external() {
@@ -32,7 +35,10 @@ export namespace Webhook {
 	})();
 
 	namespace Webhooks {
-		export async function trigger(name: string, logObj: any) {
+		export async function trigger(
+			name: string,
+			logObj: LogObj
+		): Promise<void> {
 			if (!(name in webhooks)) {
 				attachMessage(logObj, chalk.red('Webhook not found'));
 				return;
@@ -40,12 +46,7 @@ export namespace Webhook {
 
 			const webhook = webhooks[name];
 			await webhook(
-				await createHookables(
-					await meta.modules,
-					'WEBHOOK',
-					name,
-					logObj
-				)
+				createHookables(await meta.modules, 'WEBHOOK', name, logObj)
 			);
 		}
 	}
@@ -54,7 +55,7 @@ export namespace Webhook {
 		export class Handler extends createExternalClass(true) {
 			requiresInit = true;
 
-			public triggerWebhook<N extends string>(name: N) {
+			public triggerWebhook<N extends string>(name: N): Promise<void> {
 				return this.runRequest((res, source) => {
 					return API.Handler.webhook(
 						res,
@@ -83,7 +84,7 @@ export namespace Webhook {
 					name: string;
 				},
 				source: string
-			) {
+			): Promise<void> {
 				await Webhooks.trigger(
 					name,
 					attachSourcedMessage(
@@ -100,7 +101,7 @@ export namespace Webhook {
 	}
 
 	export namespace Routing {
-		export async function init({ app }: ModuleConfig) {
+		export function init({ app }: ModuleConfig): void {
 			const router = createRouter(Webhook, API.Handler);
 			router.post('/:name', 'webhook');
 			router.use(app);

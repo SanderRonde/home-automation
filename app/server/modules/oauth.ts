@@ -67,25 +67,30 @@ export namespace OAuth {
 		class OAuthModel implements AuthorizationCodeModel {
 			constructor(public db: Database) {}
 
-			async getClient(clientID: string, clientSecret: string | null) {
+			getClient(
+				clientID: string,
+				clientSecret: string | null
+			): Promise<typeof oAuthClients[number] | undefined> {
 				logTag('oauth', 'cyan', `Finding client "${clientID}"`);
-				return oAuthClients.find((client) => {
-					if (client.id !== clientID) return false;
-					return (
-						clientSecret === null ||
-						client.clientSecret === clientSecret
-					);
-				});
+				return Promise.resolve(
+					oAuthClients.find((client) => {
+						if (client.id !== clientID) {
+							return false;
+						}
+						return (
+							clientSecret === null ||
+							client.clientSecret === clientSecret
+						);
+					})
+				);
 			}
 
-			async saveToken(
-				token: Token | RefreshToken,
-				client: Client,
-				user: User
-			) {
+			saveToken(token: Token | RefreshToken, client: Client, user: User) {
 				const dbToken: DBToken = {
 					accessToken: token.accessToken,
-					accessTokenExpiresAt: token.accessTokenExpiresAt?.getTime(),
+					accessTokenExpiresAt: (
+						token.accessTokenExpiresAt as Date
+					)?.getTime(),
 					refreshToken: token.refreshToken,
 					refreshTokenExpiresAt:
 						token.refreshTokenExpiresAt?.getTime(),
@@ -101,11 +106,11 @@ export namespace OAuth {
 					user
 				);
 
-				return {
+				return Promise.resolve({
 					...dbToken,
 					accessTokenExpiresAt: token.accessTokenExpiresAt,
 					refreshTokenExpiresAt: token.refreshTokenExpiresAt,
-				};
+				});
 			}
 
 			async getAccessToken(accessToken: string) {
@@ -118,9 +123,11 @@ export namespace OAuth {
 				const match = tokens.find(
 					(token) => token.accessToken === accessToken
 				);
-				if (!match) return undefined;
+				if (!match) {
+					return undefined;
+				}
 
-				return {
+				return Promise.resolve({
 					...match,
 					accessTokenExpiresAt: match.accessTokenExpiresAt
 						? new Date(match.accessTokenExpiresAt)
@@ -128,10 +135,10 @@ export namespace OAuth {
 					refreshTokenExpiresAt: match.refreshTokenExpiresAt
 						? new Date(match.refreshTokenExpiresAt)
 						: undefined,
-				};
+				});
 			}
 
-			async revokeToken(toRevokeToken: Token | RefreshToken) {
+			revokeToken(toRevokeToken: Token | RefreshToken) {
 				logTag(
 					'oauth',
 					'cyan',
@@ -167,7 +174,7 @@ export namespace OAuth {
 					user
 				);
 				this.db.pushVal('authorizationCodes', dbAuthorizationCode);
-				return dbAuthorizationCode;
+				return Promise.resolve(dbAuthorizationCode);
 			}
 
 			async getAuthorizationCode(code: string) {
@@ -176,8 +183,10 @@ export namespace OAuth {
 					[]
 				);
 				logTag('oauth', 'cyan', `Getting authorization code "${code}"`);
-				return authorizationCodes.find(
-					(authCode) => authCode.authorizationCode === code
+				return Promise.resolve(
+					authorizationCodes.find(
+						(authCode) => authCode.authorizationCode === code
+					)
 				);
 			}
 
@@ -188,16 +197,16 @@ export namespace OAuth {
 					`Revoking authorization code for client "${toRevoke.client.id}" and user`,
 					toRevoke.user
 				);
-				await this.db.deleteArrayVal<DBAuthorizationCode>(
+				this.db.deleteArrayVal<DBAuthorizationCode>(
 					'authorizationCodes',
 					(authCode) =>
 						authCode.authorizationCode ===
 						toRevoke.authorizationCode
 				);
-				return true;
+				return Promise.resolve(true);
 			}
 
-			async verifyScope(token: Token, scope: string | string[]) {
+			verifyScope(token: Token, scope: string | string[]) {
 				logTag(
 					'oauth',
 					'cyan',
@@ -211,16 +220,18 @@ export namespace OAuth {
 						: [token.scope]
 					: [];
 				for (const requestedScope of requestedScopes) {
-					if (!givenScopes.includes(requestedScope)) return false;
+					if (!givenScopes.includes(requestedScope)) {
+						return Promise.resolve(false);
+					}
 				}
-				return true;
+				return Promise.resolve(true);
 			}
 		}
 
 		const db = new SettablePromise<Database>();
 		export const server = new SettablePromise<OAuthServer>();
 
-		export function init(_db: Database) {
+		export function init(_db: Database): void {
 			db.set(_db);
 			server.set(
 				new OAuthServer({
@@ -283,7 +294,11 @@ export namespace OAuth {
 			}
 
 			// Send back to a login page
-			const previousParams = { ...req.body, ...req.params, ...req.query };
+			const previousParams = {
+				...req.body,
+				...req.params,
+				...req.query,
+			} as Record<string, string>;
 			const params = [
 				'client_id',
 				'redirect_uri',
@@ -301,7 +316,7 @@ export namespace OAuth {
 			res.redirect(`/oauth/login?${params.join('&')}`);
 		}
 
-		export async function init({ app }: ModuleConfig) {
+		export async function init({ app }: ModuleConfig): Promise<void> {
 			const router = createRouter(OAuth, {});
 			router.all(
 				'/authorize',
@@ -316,18 +331,21 @@ export namespace OAuth {
 					const { username = '', password = '' } = {
 						...req.body,
 						...req.params,
+					} as {
+						username?: string;
+						password?: string;
 					};
 					const { valid, invalidReason } = OAuthUsers.validate(
 						username,
 						password
 					);
 					if (!valid) {
-						sendToLoginPage(req, res, invalidReason);
+						await sendToLoginPage(req, res, invalidReason);
 						return;
 					}
 
 					attachMessage(
-						attachMessage(res, `Login success`),
+						attachMessage(res, 'Login success'),
 						`Username: ${username}`
 					);
 					return (await Authorization.server.value).authorize({

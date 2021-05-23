@@ -4,6 +4,7 @@ import movementConfig from '../config/movements';
 import {
 	attachMessage,
 	attachSourcedMessage,
+	LogObj,
 	ResponseLike,
 } from '../lib/logger';
 import { Bot as _Bot } from './index';
@@ -13,7 +14,7 @@ import { createHookables, SettablePromise } from '../lib/util';
 import { createRouter } from '../lib/api';
 
 export interface MovementHooks {
-	[key: string]: ((hookables: ModuleHookables) => any)[];
+	[key: string]: ((hookables: ModuleHookables) => unknown)[];
 }
 
 export namespace Movement {
@@ -23,9 +24,11 @@ export namespace Movement {
 		async init(config: ModuleConfig) {
 			Register.init(config.db);
 			Routing.init(config);
+
+			return Promise.resolve(void 0);
 		}
 
-		async notifyModules(modules: AllModules) {
+		notifyModules(modules: AllModules) {
 			modules.keyval.GetSetListener.addListener(
 				'state.movement',
 				async (value) => {
@@ -37,6 +40,8 @@ export namespace Movement {
 				},
 				{ notifyOnInitial: true }
 			);
+
+			return Promise.resolve(void 0);
 		}
 	})();
 
@@ -44,40 +49,42 @@ export namespace Movement {
 		let enabled: boolean | null = null;
 		const db = new SettablePromise<Database>();
 
-		export function init(_db: Database) {
+		export function init(_db: Database): void {
 			enabled = _db.get('enabled', true);
 			db.set(_db);
 		}
 
-		export async function enable() {
+		export async function enable(): Promise<void> {
 			enabled = true;
 			(await db.value).setVal('enabled', enabled);
 			const modules = await meta.modules;
-			new modules.keyval.External.Handler({}, 'MOVEMENT.ON').set(
+			await new modules.keyval.External.Handler({}, 'MOVEMENT.ON').set(
 				'state.movement',
 				'1',
 				false
 			);
 		}
 
-		export async function disable() {
+		export async function disable(): Promise<void> {
 			enabled = false;
 			(await db.value).setVal('enabled', enabled);
 			const modules = await meta.modules;
-			new modules.keyval.External.Handler({}, 'MOVEMENT.OFF').set(
+			await new modules.keyval.External.Handler({}, 'MOVEMENT.OFF').set(
 				'state.movement',
 				'0',
 				false
 			);
 		}
 
-		async function handleChange(key: string, logObj: any) {
-			if (!enabled || !(key in movementConfig)) return;
+		async function handleChange(key: string, logObj: LogObj) {
+			if (!enabled || !(key in movementConfig)) {
+				return;
+			}
 
 			const handlers = movementConfig[key];
 			for (const handler of handlers) {
 				await handler(
-					await createHookables(
+					createHookables(
 						await meta.modules,
 						'MOVEMENT',
 						key,
@@ -87,8 +94,11 @@ export namespace Movement {
 			}
 		}
 
-		export function reportMovement(key: string, logObj: any) {
-			handleChange(key, logObj);
+		export async function reportMovement(
+			key: string,
+			logObj: LogObj
+		): Promise<void> {
+			await handleChange(key, logObj);
 		}
 	}
 
@@ -106,14 +116,14 @@ export namespace Movement {
 					key: string;
 				},
 				source: string
-			) {
+			): Promise<void> {
 				attachSourcedMessage(
 					res,
 					source,
 					await meta.explainHook,
 					`Reporting movement for key ${key}`
 				);
-				Register.reportMovement(key, res);
+				await Register.reportMovement(key, res);
 				res.status(200);
 				res.end();
 			}
@@ -121,7 +131,7 @@ export namespace Movement {
 	}
 
 	namespace Routing {
-		export function init({ app }: ModuleConfig) {
+		export function init({ app }: ModuleConfig): void {
 			const router = createRouter(Movement, API.Handler);
 			router.post('/:key', 'reportMovement');
 			router.use(app);

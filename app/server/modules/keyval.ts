@@ -10,6 +10,7 @@ import { MAIN_LIGHTS, COMMON_SWITCH_MAPPINGS } from '../lib/constants';
 import {
 	attachMessage,
 	attachSourcedMessage,
+	LogObj,
 	logTag,
 	ResponseLike,
 } from '../lib/logger';
@@ -31,10 +32,14 @@ import { createRouter } from '../lib/api';
 export interface KeyvalHooks {
 	[key: string]: {
 		on?: {
-			[name: string]: (hookables: ModuleHookables) => any | Promise<any>;
+			[name: string]: (
+				hookables: ModuleHookables
+			) => unknown | Promise<unknown>;
 		};
 		off?: {
-			[name: string]: (hookables: ModuleHookables) => any | Promise<any>;
+			[name: string]: (
+				hookables: ModuleHookables
+			) => unknown | Promise<unknown>;
 		};
 	};
 }
@@ -58,9 +63,9 @@ export namespace KeyVal {
 			GetSetListener.setDB(db);
 			const apiHandler = new API.Handler({ db });
 			await External.Handler.init({ apiHandler });
-			await Aggregates.init(db);
+			Aggregates.init(db);
 
-			await Routing.init({ ...config, apiHandler });
+			Routing.init({ ...config, apiHandler });
 		}
 
 		get external() {
@@ -72,7 +77,7 @@ export namespace KeyVal {
 		}
 	})();
 
-	function str(value: any | undefined) {
+	function str(value: unknown | undefined) {
 		return JSON.stringify(value || null);
 	}
 
@@ -81,31 +86,34 @@ export namespace KeyVal {
 			number,
 			{
 				key: string;
-				listener: (value: string, logObj: any) => void | Promise<void>;
+				listener: (
+					value: string,
+					logObj: LogObj
+				) => void | Promise<void>;
 				once: boolean;
 			}
 		> = new Map();
-		let _lastIndex: number = 0;
+		let _lastIndex = 0;
 		const db = new SettablePromise<Database>();
 
-		export function setDB(_db: Database) {
+		export function setDB(_db: Database): void {
 			db.set(_db);
 		}
 
 		export function addListener(
 			key: string,
-			listener: (value: string, logObj: any) => void,
+			listener: (value: string, logObj: LogObj) => void | Promise<void>,
 			{
 				once = false,
 				notifyOnInitial = false,
 			}: { once?: boolean; notifyOnInitial?: boolean } = {}
-		) {
+		): number {
 			if (notifyOnInitial) {
 				const logObj = {};
-				new External.Handler(logObj, 'KEYVAL.ADD_LISTENER')
+				void new External.Handler(logObj, 'KEYVAL.ADD_LISTENER')
 					.get(key)
 					.then((value) => {
-						listener(value as string, logObj);
+						return listener(value, logObj);
 					});
 			}
 			const index = _lastIndex++;
@@ -117,15 +125,15 @@ export namespace KeyVal {
 			return index;
 		}
 
-		export function removeListener(index: number) {
+		export function removeListener(index: number): void {
 			_listeners.delete(index);
 		}
 
 		export async function triggerGroups(
 			key: string,
 			value: string,
-			logObj: any
-		) {
+			logObj: LogObj
+		): Promise<void> {
 			if (!(key in groups)) {
 				attachMessage(logObj, 'No groups');
 				return;
@@ -148,8 +156,12 @@ export namespace KeyVal {
 			}
 		}
 
-		export async function update(key: string, value: string, logObj: any) {
-			let updated: number = 0;
+		export async function update(
+			key: string,
+			value: string,
+			logObj: LogObj
+		): Promise<number> {
+			let updated = 0;
 			const updatedKeyParts = key.split('.');
 
 			for (const [
@@ -157,7 +169,7 @@ export namespace KeyVal {
 				{ key: listenerKey, listener, once },
 			] of _listeners) {
 				const listenerParts = listenerKey.split('.');
-				let next: boolean = false;
+				let next = false;
 				for (
 					let i = 0;
 					i < Math.min(updatedKeyParts.length, listenerParts.length);
@@ -168,7 +180,9 @@ export namespace KeyVal {
 						break;
 					}
 				}
-				if (next) continue;
+				if (next) {
+					continue;
+				}
 
 				await listener(value, logObj);
 				updated++;
@@ -191,12 +205,20 @@ export namespace KeyVal {
 		export class Handler extends createExternalClass(true) {
 			private static _apiHandler: API.Handler | null = null;
 
-			static async init({ apiHandler }: { apiHandler: API.Handler }) {
+			static async init({
+				apiHandler,
+			}: {
+				apiHandler: API.Handler;
+			}): Promise<void> {
 				this._apiHandler = apiHandler;
-				super.init();
+				await super.init();
 			}
 
-			async set(key: string, value: string, notify: boolean = true) {
+			async set(
+				key: string,
+				value: string,
+				notify = true
+			): Promise<void> {
 				return this.runRequest((res, source) => {
 					return Handler._apiHandler!.set(
 						res,
@@ -211,7 +233,7 @@ export namespace KeyVal {
 				});
 			}
 
-			async get(key: string) {
+			async get(key: string): Promise<string> {
 				return this.runRequest((res, source) => {
 					return Handler._apiHandler!.get(
 						res,
@@ -224,7 +246,7 @@ export namespace KeyVal {
 				});
 			}
 
-			async toggle(key: string) {
+			async toggle(key: string): Promise<void> {
 				const value = await this.get(key);
 				const newValue = value === '1' ? '0' : '1';
 				await this.set(key, newValue);
@@ -254,24 +276,28 @@ export namespace KeyVal {
 						/is the light (on|off)/,
 						/are the lights (on|off)/,
 						async ({ match, logObj, state, matchText }) => {
-							const results = (await Promise.all(
+							const results = await Promise.all(
 								MAIN_LIGHTS.map((light) => {
 									return new External.Handler(
 										logObj,
 										`BOT.${matchText}`
 									).get(light);
 								})
-							)) as string[];
+							);
 
 							const actualState = (() => {
-								if (results.every((v) => v === '1'))
+								if (results.every((v) => v === '1')) {
 									return 'ON';
-								if (results.every((v) => v === '0'))
+								}
+								if (results.every((v) => v === '0')) {
 									return 'OFF';
+								}
 								return 'BETWEEN';
 							})();
 
-							state.states.keyval.lastSubjects = MAIN_LIGHTS;
+							(
+								state.states.keyval as unknown as Bot.JSON
+							).lastSubjects = MAIN_LIGHTS;
 
 							switch (actualState) {
 								case 'ON':
@@ -288,7 +314,9 @@ export namespace KeyVal {
 						}
 					);
 					mm('/lighton', async ({ logObj, state, matchText }) => {
-						state.states.keyval.lastSubjects = MAIN_LIGHTS;
+						(
+							state.states.keyval as unknown as Bot.JSON
+						).lastSubjects = MAIN_LIGHTS;
 						await Promise.all(
 							MAIN_LIGHTS.map((light) => {
 								return new External.Handler(
@@ -302,7 +330,9 @@ export namespace KeyVal {
 						} on`;
 					});
 					mm('/lightoff', async ({ logObj, state, matchText }) => {
-						state.states.keyval.lastSubjects = MAIN_LIGHTS;
+						(
+							state.states.keyval as unknown as Bot.JSON
+						).lastSubjects = MAIN_LIGHTS;
 						await Promise.all(
 							MAIN_LIGHTS.map((light) => {
 								return new External.Handler(
@@ -320,7 +350,9 @@ export namespace KeyVal {
 							new RegExp('turn (on|off) ' + reg.source),
 							async ({ logObj, state, match, matchText }) => {
 								const keyvalState = match[1];
-								state.states.keyval.lastSubjects = [switchName];
+								(
+									state.states.keyval as unknown as Bot.JSON
+								).lastSubjects = [switchName];
 								await new External.Handler(
 									logObj,
 									`BOT.${matchText}`
@@ -335,7 +367,9 @@ export namespace KeyVal {
 							new RegExp('is ' + reg.source + ' (on|off)'),
 							async ({ logObj, state, match, matchText }) => {
 								const keyvalState = match.pop();
-								state.states.keyval.lastSubjects = [switchName];
+								(
+									state.states.keyval as unknown as Bot.JSON
+								).lastSubjects = [switchName];
 								const res = await new External.Handler(
 									logObj,
 									`BOT.${matchText}`
@@ -352,8 +386,9 @@ export namespace KeyVal {
 						mm(
 							/turn (it|them) (on|off)( again)?/,
 							async ({ state, logObj, match, matchText }) => {
-								for (const lastSubject of state.states.keyval
-									.lastSubjects!) {
+								for (const lastSubject of (
+									state.states.keyval as unknown as Bot.JSON
+								).lastSubjects!) {
 									await new External.Handler(
 										logObj,
 										`BOT.${matchText}`
@@ -366,13 +401,16 @@ export namespace KeyVal {
 							}
 						),
 						({ state }) => {
-							return state.states.keyval.lastSubjects !== null;
+							return (
+								(state.states.keyval as unknown as Bot.JSON)
+									.lastSubjects !== null
+							);
 						}
 					);
 					mm(
 						'/help_keyval',
 						/what commands are there for keyval/,
-						async () => {
+						() => {
 							return `Commands are:\n${Bot.matches.matches
 								.map((match) => {
 									return `RegExps: ${match.regexps
@@ -409,8 +447,11 @@ export namespace KeyVal {
 				});
 			}
 
-			static resetState(state: _Bot.Message.StateKeeping.ChatState) {
-				state.states.keyval.lastSubjects = null;
+			static resetState(
+				state: _Bot.Message.StateKeeping.ChatState
+			): void {
+				(state.states.keyval as unknown as Bot.JSON).lastSubjects =
+					null;
 			}
 
 			toJSON(): JSON {
@@ -441,7 +482,7 @@ export namespace KeyVal {
 					auth?: string;
 				},
 				source: string
-			) {
+			): Promise<string> {
 				const value = this._db.get(key, '0');
 				attachSourcedMessage(
 					res,
@@ -466,7 +507,7 @@ export namespace KeyVal {
 					auth?: string;
 				},
 				source: string
-			) {
+			): Promise<string> {
 				const original = this._db.get(key);
 				const value = original === '0' ? '1' : '0';
 				this._db.setVal(key, value);
@@ -507,7 +548,7 @@ export namespace KeyVal {
 					maxtime: string;
 				},
 				source: string
-			) {
+			): Promise<void> {
 				const value = this._db.get(key, '0');
 				if (value !== expected) {
 					const msg = attachSourcedMessage(
@@ -526,7 +567,7 @@ export namespace KeyVal {
 				}
 
 				// Wait for changes to this key
-				let triggered: boolean = false;
+				let triggered = false;
 				const id = GetSetListener.addListener(
 					key,
 					(value, logObj) => {
@@ -579,7 +620,7 @@ export namespace KeyVal {
 					update?: boolean;
 				},
 				source: string
-			) {
+			): Promise<void> {
 				const original = this._db.get(key);
 				this._db.setVal(key, value);
 				const msg = attachSourcedMessage(
@@ -615,7 +656,7 @@ export namespace KeyVal {
 					force?: boolean;
 				},
 				source: string
-			) {
+			): Promise<void> {
 				const data = await this._db.json(force);
 				const msg = attachSourcedMessage(
 					res,
@@ -667,7 +708,10 @@ export namespace KeyVal {
 			@errorHandle
 			@authCookie
 			@upgradeToHTTPS
-			public async index(res: ResponseLike, _req: express.Request) {
+			public async index(
+				res: ResponseLike,
+				_req: express.Request
+			): Promise<void> {
 				res.status(200);
 				res.contentType('.html');
 				res.write(
@@ -679,7 +723,7 @@ export namespace KeyVal {
 	}
 
 	namespace Aggregates {
-		async function registerAggregates(db: Database) {
+		function registerAggregates(db: Database) {
 			for (const key in aggregates) {
 				const fullName = `aggregates.${key}`;
 				if (db.get(fullName) === undefined) {
@@ -701,20 +745,22 @@ export namespace KeyVal {
 						}
 						return null;
 					})();
-					if (!handlers) return;
+					if (!handlers) {
+						return;
+					}
 
-					let index: number = 0;
+					let index = 0;
 					for (const key in handlers) {
 						const fn = handlers[key];
 						await fn(
-							await createHookables(
+							createHookables(
 								await meta.modules,
 								'AGGREGATES',
 								key,
 								attachMessage(
 									logObj,
 									'Aggregate',
-									chalk.bold(index++ + ''),
+									chalk.bold(`${index++}`),
 									':',
 									chalk.bold(key)
 								)
@@ -725,8 +771,8 @@ export namespace KeyVal {
 			}
 		}
 
-		export async function init(db: Database) {
-			await registerAggregates(db);
+		export function init(db: Database): void {
+			registerAggregates(db);
 			registerListeners();
 		}
 	}
@@ -737,13 +783,13 @@ export namespace KeyVal {
 			receive: 'auth' | 'listen' | 'button';
 		};
 
-		export async function init({
+		export function init({
 			app,
 			db,
 			randomNum,
 			apiHandler,
 			websocketSim,
-		}: ModuleConfig & { apiHandler: API.Handler }) {
+		}: ModuleConfig & { apiHandler: API.Handler }): void {
 			const webpageHandler = new Webpage.Handler({ randomNum, db });
 
 			const router = createRouter(KeyVal, apiHandler);
@@ -760,12 +806,15 @@ export namespace KeyVal {
 
 			websocketSim.all(
 				'/keyval/websocket',
-				async (instance: WSSimInstance<WSMessages>) => {
+				(instance: WSSimInstance<WSMessages>) => {
 					instance.listen(
 						'listen',
 						(key) => {
 							let lastVal: string | undefined = undefined;
-							const onChange = (_value: string, logObj: any) => {
+							const onChange = (
+								_value: string,
+								logObj: LogObj
+							) => {
 								const val = db.get(key, '0');
 								if (val !== lastVal) {
 									lastVal = val;

@@ -15,10 +15,10 @@ export class ColorControls extends ConfigurableWebComponent<{
 		IDS: {
 			container: HTMLElement;
 		};
-		CLASSES: {};
+		CLASSES: Record<string, never>;
 	};
 }> {
-	appendElement(element: HTMLElement) {
+	appendElement(element: HTMLElement): void {
 		Array.from(this.$.container.children).forEach((el) => el.remove());
 		this.$.container.appendChild(element);
 	}

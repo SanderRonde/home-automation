@@ -60,25 +60,30 @@ export namespace SpotifyBeats {
 				export class Endpoints {
 					constructor(public api: API) {}
 
-					player() {
+					player(): Promise<ExtendedResponse<SpotifyTypes.Endpoints.Player> | null> {
 						return this.api.get<SpotifyTypes.Endpoints.Player>(
 							'/v1/me/player'
 						);
 					}
 
-					audioAnalysis(id: string) {
+					audioAnalysis(
+						id: string
+					): Promise<ExtendedResponse<SpotifyTypes.Endpoints.AudioAnalysis> | null> {
 						return this.api.get<SpotifyTypes.Endpoints.AudioAnalysis>(
 							`/v1/audio-analysis/${id}`
 						);
 					}
 
-					getDevices() {
+					getDevices(): Promise<ExtendedResponse<SpotifyTypes.Endpoints.Devices> | null> {
 						return this.api.get<SpotifyTypes.Endpoints.Devices>(
 							'/v1/me/player/devices'
 						);
 					}
 
-					play(uri: string, deviceId: string) {
+					play(
+						uri: string,
+						deviceId: string
+					): Promise<ExtendedResponse<SpotifyTypes.Endpoints.Play> | null> {
 						return this.api.put<SpotifyTypes.Endpoints.Play>(
 							`/v1/me/player/play?device_id=${deviceId}`,
 							JSON.stringify({
@@ -119,36 +124,41 @@ export namespace SpotifyBeats {
 					this._db = db;
 				}
 
-				async setToken(token: string) {
+				setToken(token: string) {
 					this._token = token;
 
-					await this._db.setVal('token', token);
+					this._db.setVal('token', token);
 				}
 
 				private _refresher: NodeJS.Timeout | null = null;
-				async setRefresh(token: string, expireTime: number) {
+				setRefresh(token: string, expireTime: number) {
 					if (this._refresher) {
 						clearTimeout(this._refresher);
 					}
 					this._refreshToken = token;
-					await this._db.setVal('refresh', token);
+					this._db.setVal('refresh', token);
 
 					this._refresher = setTimeout(() => {
-						this.refreshToken();
-						this._refresher && clearTimeout(this._refresher);
+						void this.refreshToken().then(() => {
+							if (this._refresher) {
+								clearTimeout(this._refresher);
+							}
+						});
 					}, expireTime * 1000 * 0.9);
 				}
 
 				private async _checkCreatedToken(
 					response: ExtendedResponse<SpotifyTypes.Endpoints.AuthToken>
 				) {
-					if (response.status !== 200) return false;
+					if (response.status !== 200) {
+						return false;
+					}
 
 					const { access_token, refresh_token, expires_in } =
 						await response.json();
 
-					await this.setToken(access_token);
-					await this.setRefresh(refresh_token, expires_in);
+					this.setToken(access_token);
+					this.setRefresh(refresh_token, expires_in);
 
 					return await this.testAuth();
 				}
@@ -157,7 +167,8 @@ export namespace SpotifyBeats {
 					const response =
 						await this.post<SpotifyTypes.Endpoints.AuthToken>(
 							'/api/token',
-							`grant_type=refresh_token&refresh_token=${this._refreshToken}`,
+							`grant_type=refresh_token&refresh_token=${this
+								._refreshToken!}`,
 							{
 								headers: {
 									'Content-Type':
@@ -169,7 +180,9 @@ export namespace SpotifyBeats {
 								base: 'https://accounts.spotify.com',
 							}
 						);
-					if (!response) return false;
+					if (!response) {
+						return false;
+					}
 					return this._checkCreatedToken(response);
 				}
 
@@ -179,7 +192,7 @@ export namespace SpotifyBeats {
 					return {
 						Accept: 'application/json',
 						'Content-Type': 'application/json',
-						Authorization: `Bearer ${this._token}`,
+						Authorization: `Bearer ${this._token!}`,
 					};
 				}
 
@@ -187,7 +200,7 @@ export namespace SpotifyBeats {
 					path: string,
 					request: () => Promise<ExtendedResponse<R>>,
 					method: string,
-					silent: boolean = false
+					silent = false
 				): Promise<ExtendedResponse<R> | null> {
 					const url = `${API.SPOTIFY_BASE}${path}`;
 					try {
@@ -220,11 +233,15 @@ export namespace SpotifyBeats {
 								}
 								return null;
 							case 429:
-								const retryAfter =
-									response.headers.get('Retry-After');
 								await wait(
 									1000 *
-										(parseInt(retryAfter || '60', 10) + 1)
+										(parseInt(
+											response.headers.get(
+												'Retry-After'
+											) || '60',
+											10
+										) +
+											1)
 								);
 								return this.wrapRequest(
 									path,
@@ -265,7 +282,7 @@ export namespace SpotifyBeats {
 
 				async get<R>(
 					path: string,
-					silent: boolean = false
+					silent = false
 				): Promise<ExtendedResponse<R> | null> {
 					const ret = await this.wrapRequest(
 						path,
@@ -342,7 +359,7 @@ export namespace SpotifyBeats {
 					);
 				}
 
-				createAuthURL(scopes: string[], state: string = '') {
+				createAuthURL(scopes: string[], state = '') {
 					return `https://accounts.spotify.com/authorize?client_id=${
 						this._clientId
 					}&response_type=code&redirect_uri=${
@@ -366,7 +383,9 @@ export namespace SpotifyBeats {
 								base: 'https://accounts.spotify.com',
 							}
 						);
-					if (!response) return false;
+					if (!response) {
+						return false;
+					}
 					return this._checkCreatedToken(response);
 				}
 
@@ -382,7 +401,7 @@ export namespace SpotifyBeats {
 			}
 
 			let _api: API | null = null;
-			export async function create(db: Database) {
+			export function create(db: Database): API | null {
 				try {
 					const { id, secret, redirect_url_base } = {
 						id: getEnv('SECRET_SPOTIFY_ID', true),
@@ -409,7 +428,7 @@ export namespace SpotifyBeats {
 				}
 			}
 
-			export function get() {
+			export function get(): API {
 				return _api!;
 			}
 
@@ -424,7 +443,9 @@ export namespace SpotifyBeats {
 				const api = get();
 				const response = await api.endpoints.player();
 				const responseTime = Date.now();
-				if (!response) return { playing: false };
+				if (!response) {
+					return { playing: false };
+				}
 
 				if (response.status === 204) {
 					return {
@@ -438,8 +459,8 @@ export namespace SpotifyBeats {
 				return {
 					playing: is_playing,
 					playStart,
-					playingID: (item && item.id) || undefined,
-					duration: (item && item.duration_ms) || undefined,
+					playingID: item?.id || undefined,
+					duration: item?.duration_ms || undefined,
 					playTime: progress_ms,
 				};
 			}
@@ -453,7 +474,9 @@ export namespace SpotifyBeats {
 			): Promise<SongInfo | null> {
 				const api = get();
 				const response = await api.endpoints.audioAnalysis(id);
-				if (!response) return null;
+				if (!response) {
+					return null;
+				}
 
 				const { beats, track } = await response.json();
 				return {
@@ -464,7 +487,7 @@ export namespace SpotifyBeats {
 		}
 
 		export namespace Checking {
-			let active: boolean = false;
+			let active = false;
 
 			function isInRange(base: number, target: number, diff: number) {
 				return Math.abs(base - target) <= diff;
@@ -535,7 +558,7 @@ export namespace SpotifyBeats {
 				};
 			}
 
-			export async function start() {
+			export async function start(): Promise<void> {
 				let lastState: API.PlaybackState | null = null;
 				while (active) {
 					const state = await API.getPlayState();
@@ -547,18 +570,18 @@ export namespace SpotifyBeats {
 				}
 			}
 
-			export async function enable() {
+			export async function enable(): Promise<void> {
 				if (!active) {
 					active = true;
-					start();
+					await start();
 				}
 			}
 
-			export async function disable() {
+			export function disable(): void {
 				active = false;
 			}
 
-			export function init() {
+			export function init(): void {
 				setInterval(() => {
 					beatCache.clear();
 				}, BEAT_CACHE_CLEAR_INTERVAL);
@@ -566,19 +589,23 @@ export namespace SpotifyBeats {
 		}
 
 		export namespace Auth {
-			export async function authFromToken(token: string) {
+			export async function authFromToken(token: string): Promise<void> {
 				const api = API.get();
-				if (!(await api.grantAuthCode(token))) return;
+				if (!(await api.grantAuthCode(token))) {
+					return;
+				}
 			}
 
-			export async function finishManualAuth(token: string) {
+			export async function finishManualAuth(
+				token: string
+			): Promise<void> {
 				await Auth.authFromToken(token);
 			}
 
 			let lastURL: string | null = null;
-			export async function generateNew() {
+			export function generateNew(): string {
 				const api = API.get()!;
-				const url = api!.createAuthURL(
+				const url = api.createAuthURL(
 					[
 						'user-read-currently-playing',
 						'user-read-playback-state',
@@ -593,21 +620,23 @@ export namespace SpotifyBeats {
 				return url;
 			}
 
-			export async function getURL() {
-				return lastURL || (await generateNew());
+			export function getURL(): string {
+				return lastURL || generateNew();
 			}
 		}
 
 		export namespace Playing {}
 
-		export async function init(db: Database) {
-			const api = await API.create(db);
-			if (!api) return;
+		export async function init(db: Database): Promise<void> {
+			const api = API.create(db);
+			if (!api) {
+				return;
+			}
 
-			let token = db.get('token', 'default');
-			let refresh = db.get('refresh', 'default');
-			await api.setToken(token);
-			await api.setRefresh(refresh, 100000);
+			const token = db.get('token', 'default');
+			const refresh = db.get('refresh', 'default');
+			api.setToken(token);
+			api.setRefresh(refresh, 100000);
 
 			// Test it
 			if (await api.testAuth()) {
@@ -622,19 +651,22 @@ export namespace SpotifyBeats {
 		export class Handler extends createExternalClass(true) {
 			requiresInit = true;
 
-			async test() {
+			async test(): Promise<boolean | null> {
 				return this.runRequest(() => {
 					return Spotify.API.get().testAuth();
 				});
 			}
 
-			async play(uri: string, device: string) {
+			async play(
+				uri: string,
+				device: string
+			): Promise<Spotify.API.ExtendedResponse<SpotifyTypes.Playlist> | null> {
 				return this.runRequest(() => {
 					return Spotify.API.get().endpoints.play(uri, device);
 				});
 			}
 
-			async getDevices() {
+			async getDevices(): Promise<Spotify.API.ExtendedResponse<SpotifyTypes.Endpoints.Devices> | null> {
 				return this.runRequest(() => {
 					return Spotify.API.get().endpoints.getDevices();
 				});
@@ -643,8 +675,6 @@ export namespace SpotifyBeats {
 	}
 
 	export namespace Bot {
-		export interface JSON {}
-
 		export class Bot extends BotState.Base {
 			static readonly commands = {
 				'/auth': 'Authenticate spotify (if needed)',
@@ -660,20 +690,20 @@ export namespace SpotifyBeats {
 						if (await api.testAuth()) {
 							return 'Authenticated!';
 						}
-						return `Please authenticate with URL ${await Spotify.Auth.getURL()}`;
+						return `Please authenticate with URL ${Spotify.Auth.getURL()}`;
 					});
 					mm('/enable_beats', async () => {
-						Spotify.Checking.enable();
+						await Spotify.Checking.enable();
 						return 'Enabled!';
 					});
-					mm('/disable_beats', async () => {
+					mm('/disable_beats', () => {
 						Spotify.Checking.disable();
 						return 'Disabled!';
 					});
 					mm(
 						'/help_spotify',
 						/what commands are there for keyval/,
-						async () => {
+						() => {
 							return `Commands are:\n${Bot.matches.matches
 								.map((match) => {
 									return `RegExps: ${match.regexps
@@ -694,7 +724,7 @@ export namespace SpotifyBeats {
 
 			lastSubjects: string[] | null = null;
 
-			constructor(_json?: JSON) {
+			constructor(_json?: Record<string, never>) {
 				super();
 			}
 
@@ -707,21 +737,21 @@ export namespace SpotifyBeats {
 				});
 			}
 
-			toJSON(): JSON {
+			toJSON(): Record<string, never> {
 				return {};
 			}
 		}
 	}
 
 	export namespace Transfer {
-		export async function init(db: Database) {
+		export async function init(db: Database): Promise<void> {
 			await Spotify.init(db);
 		}
 
 		export async function notifyChanges(
 			_fullState: FullState,
 			_changes: BeatChanges
-		) {
+		): Promise<void> {
 			// const modules = await meta.modules;
 			// await _modules.RGB.Board.BeatFlash.notifyChanges(
 			// 	fullState,
@@ -731,13 +761,15 @@ export namespace SpotifyBeats {
 	}
 
 	export namespace Routing {
-		export async function init({ app }: ModuleConfig) {
+		export function init({ app }: ModuleConfig): void {
 			const router = createRouter(SpotifyBeats, {});
 			router.post('/redirect', async (req, res) => {
-				const getParams = req.query;
+				const getParams = req.query as {
+					code?: string;
+				};
 				const code = getParams['code'];
 				if (code) {
-					Spotify.Auth.finishManualAuth(code);
+					await Spotify.Auth.finishManualAuth(code);
 				}
 
 				res.write('Done!');

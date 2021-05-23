@@ -21,7 +21,7 @@ export class PatternControls extends ConfigurableWebComponent<{
 			speedSlider: HTMLInputElement;
 			transitionInput: HTMLSelectElement;
 		};
-		CLASSES: {};
+		CLASSES: Record<string, never>;
 	};
 }> {
 	props = Props.define(this, {
@@ -32,22 +32,22 @@ export class PatternControls extends ConfigurableWebComponent<{
 		},
 	});
 
-	private _updateParams() {
+	private async _updateParams() {
 		const speed = this.$.speedSlider.valueAsNumber;
 		const transitionType = this.$.transitionInput.value as TransitionTypes;
-		this.props.parent!.updateParams({ speed, transitionType });
+		await this.props.parent!.updateParams({ speed, transitionType });
 	}
 
-	speedChange() {
-		this._updateParams();
+	async speedChange(): Promise<void> {
+		await this._updateParams();
 	}
 
-	transitionChange() {
-		this._updateParams();
+	async transitionChange(): Promise<void> {
+		await this._updateParams();
 	}
 
-	postRender() {
-		this.$.speedSlider.value = this.props.defaultSpeed! - 1 + '';
-		this.$.speedSlider.value = this.props.defaultSpeed + '';
+	postRender(): void {
+		this.$.speedSlider.value = String(this.props.defaultSpeed! - 1);
+		this.$.speedSlider.value = String(this.props.defaultSpeed);
 	}
 }

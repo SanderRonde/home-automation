@@ -5,7 +5,6 @@ import { Temperature } from './temperature';
 import { Pressure } from './pressure';
 import { Movement } from './movement';
 import { Explain } from './explain';
-import { Actions } from './actions';
 import { Webhook } from './webhook';
 import { Script } from './script';
 import { KeyVal } from './keyval';
@@ -20,6 +19,7 @@ import { InfoScreen } from './info-screen';
 import { Database } from '../lib/db';
 import * as express from 'express';
 import { Config } from '../app';
+import { ModuleMeta } from './meta';
 
 export { RemoteControl } from './remote-control';
 export { SpotifyBeats } from './spotify-beats';
@@ -28,7 +28,6 @@ export { Temperature } from './temperature';
 export { Pressure } from './pressure';
 export { Movement } from './movement';
 export { Explain } from './explain';
-export { Actions } from './actions';
 export { Webhook } from './webhook';
 export { Script } from './script';
 export { KeyVal } from './keyval';
@@ -41,7 +40,7 @@ export { RGB } from './rgb';
 export type AllModules = typeof moduleObj;
 
 export type InstanceOf<T> = T extends {
-	new (...args: any[]): infer I;
+	new (...args: unknown[]): infer I;
 }
 	? I
 	: void;
@@ -72,7 +71,6 @@ const moduleObj = {
 	oauth: OAuth,
 	script: Script,
 	keyval: KeyVal,
-	actions: Actions,
 	webhook: Webhook,
 	explain: Explain,
 	pressure: Pressure,
@@ -85,16 +83,20 @@ const moduleObj = {
 };
 const moduleArr = Object.values(moduleObj);
 
-let notified: boolean = false;
-export async function notifyAllModules() {
+let notified = false;
+export async function notifyAllModules(): Promise<void> {
 	notified = true;
 
 	for (const mod of moduleArr) {
-		await mod.meta.notifyModulesFromExternal(moduleObj);
+		await (
+			mod as {
+				meta: ModuleMeta;
+			}
+		).meta.notifyModulesFromExternal(moduleObj);
 	}
 }
 
-export async function getAllModules(notify: boolean = true) {
+export async function getAllModules(notify = true): Promise<typeof moduleObj> {
 	if (!notified && notify) {
 		await notifyAllModules();
 	}

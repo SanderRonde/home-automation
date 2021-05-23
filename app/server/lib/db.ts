@@ -9,7 +9,11 @@ class DBFileManager {
 		};
 	}
 
-	public static async read(fileName: string) {
+	public static async read<
+		R extends {
+			___last_updated: number;
+		}
+	>(fileName: string): Promise<R> {
 		const filePath = path.join(DB_FOLDER, fileName);
 		if (!(await fs.pathExists(filePath))) {
 			// Create it
@@ -17,7 +21,7 @@ class DBFileManager {
 			await fs.writeFile(filePath, JSON.stringify(this.date, null, 4), {
 				encoding: 'utf8',
 			});
-			return this.date;
+			return this.date as R;
 		}
 		try {
 			const parsed = JSON.parse(
@@ -25,7 +29,7 @@ class DBFileManager {
 					encoding: 'utf8',
 				})) || '{}'
 			);
-			return parsed;
+			return parsed as R;
 		} catch (e) {
 			throw new Error(`Failed to parse JSON in file "${filePath}"`);
 		}
@@ -34,7 +38,7 @@ class DBFileManager {
 	public static write(
 		fileName: string,
 		data: {
-			[key: string]: any;
+			[key: string]: unknown;
 		}
 	) {
 		// Synchronously write file to prevent issues with
@@ -58,12 +62,12 @@ class DBFileManager {
 
 export class Database {
 	private _data!: {
-		[key: string]: any;
+		[key: string]: unknown;
 	};
-	private _initialized: boolean = false;
+	private _initialized = false;
 	constructor(private _fileName: string) {}
 
-	async init() {
+	async init(): Promise<this> {
 		this._data = await DBFileManager.read(this._fileName);
 		this._initialized = true;
 		return this;
@@ -84,15 +88,19 @@ export class Database {
 
 		for (let i = 0; i < parts.length - 1; i++) {
 			const part = parts[i];
-			if (typeof current !== 'object') return;
+			if (typeof current !== 'object') {
+				return;
+			}
 			if (!(part in current)) {
 				// Value does not exist,
 				// create an empty object to hold its values
 				current[part] = {};
 			}
-			current = current[part];
+			current = current[part] as Record<string, unknown>;
 		}
-		if (typeof current !== 'object') return;
+		if (typeof current !== 'object') {
+			return;
+		}
 		const lastKey = parts[parts.length - 1];
 		const currentTarget = current[lastKey];
 
@@ -103,9 +111,11 @@ export class Database {
 		};
 	}
 
-	setVal(key: string, val: any, noWrite: boolean = false) {
+	setVal(key: string, val: unknown, noWrite = false): void {
 		const lastTarget = this._getLastTarget(key);
-		if (!lastTarget) return;
+		if (!lastTarget) {
+			return;
+		}
 		const { currentTarget, currentContainer, lastKey } = lastTarget;
 
 		if (
@@ -116,7 +126,7 @@ export class Database {
 		) {
 			// Set every child of this object to that value
 			const final = currentContainer[lastKey];
-			for (const child in final) {
+			for (const child in final as Record<string, unknown>) {
 				this.setVal(`${key}.${child}`, val, true);
 			}
 		} else {
@@ -128,9 +138,11 @@ export class Database {
 		}
 	}
 
-	pushVal(key: string, val: any, noWrite: boolean = false) {
+	pushVal(key: string, val: unknown, noWrite = false): void {
 		const lastTarget = this._getLastTarget(key);
-		if (!lastTarget) return;
+		if (!lastTarget) {
+			return;
+		}
 		const { currentTarget, currentContainer, lastKey } = lastTarget;
 
 		if (
@@ -150,10 +162,12 @@ export class Database {
 	deleteArrayVal<V>(
 		key: string,
 		filter: (value: V) => boolean,
-		noWrite: boolean = false
-	) {
+		noWrite = false
+	): void {
 		const lastTarget = this._getLastTarget(key);
-		if (!lastTarget) return;
+		if (!lastTarget) {
+			return;
+		}
 		const { currentTarget, currentContainer, lastKey } = lastTarget;
 
 		if (
@@ -185,12 +199,12 @@ export class Database {
 				// Value does not exist
 				return defaultVal;
 			}
-			current = current[part];
+			current = current[part] as Record<string, unknown>;
 		}
-		return (current as any) || defaultVal;
+		return ((current as unknown) || defaultVal) as V;
 	}
 
-	async data(force: boolean = false) {
+	async data(force = false): Promise<Record<string, unknown>> {
 		this._assertInitialized();
 
 		if (force) {
@@ -199,7 +213,7 @@ export class Database {
 		return this._data;
 	}
 
-	async json(force: boolean = false) {
+	async json(force = false): Promise<string> {
 		return JSON.stringify(await this.data(force));
 	}
 }

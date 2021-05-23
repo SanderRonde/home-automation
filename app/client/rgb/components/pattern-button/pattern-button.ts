@@ -38,20 +38,22 @@ export class PatternButton
 	});
 
 	@bindToClass
-	onClick() {
+	async onClick(): Promise<void> {
 		// Ignore clicks if this is an empty pattern
-		if (this.props.pattern!.colors.length === 0) return;
+		if (this.props.pattern!.colors.length === 0) {
+			return;
+		}
 
 		this.props.parent!.deselectAll();
 		this.props.parent!.setSelected(this);
-		this.getRoot<RGBController>().setPattern(
+		await this.getRoot<RGBController>().setPattern(
 			this.props.pattern!.name,
 			this.props.pattern!.defaultSpeed,
 			this.props.pattern!.transitionType
 		);
 	}
 
-	setDisplay(display: ColorDisplay) {
+	setDisplay(display: ColorDisplay): void {
 		const displayPattern = document.createElement('div');
 		displayPattern.style.backgroundImage = `linear-gradient(to bottom right, ${this.props
 			.pattern!.colors.map(({ red, green, blue }) => {
@@ -61,32 +63,32 @@ export class PatternButton
 		display.appendElement(displayPattern);
 	}
 
-	setControls(controls: ColorControls) {
+	async setControls(controls: ColorControls): Promise<void> {
 		const controller = document.createElement(
 			'pattern-controls'
 		) as PatternControls;
 		controller.setAttribute(
 			'defaultSpeed',
-			this.props.pattern!.defaultSpeed + ''
+			String(this.props.pattern!.defaultSpeed)
 		);
 		controller.setAttribute(
 			'defaultTransition',
-			this.props.pattern!.transitionType + ''
+			String(this.props.pattern!.transitionType)
 		);
-		Mounting.awaitMounted(controller).then(() => {
-			controller!.props.parent = this;
+		await Mounting.awaitMounted(controller).then(() => {
+			controller.props.parent = this;
 		});
 		controls.appendElement(controller);
 	}
 
-	updateParams({
+	async updateParams({
 		speed,
 		transitionType,
 	}: {
 		speed: number;
 		transitionType: TransitionTypes;
-	}) {
-		this.getRoot<RGBController>().setPattern(
+	}): Promise<void> {
+		await this.getRoot<RGBController>().setPattern(
 			this.props.pattern!.name,
 			speed,
 			transitionType

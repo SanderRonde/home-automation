@@ -34,7 +34,7 @@ export class InfoScreen extends ServerComm {
 		super.props
 	);
 
-	connectWebsocket() {
+	connectWebsocket(): void {
 		const connection = new WebSocket(`ws://${location.host}/blanking`);
 		connection.onmessage = (m) => {
 			const data = JSON.parse(m.data) as {
@@ -59,7 +59,7 @@ export class InfoScreen extends ServerComm {
 		};
 	}
 
-	mounted() {
+	mounted(): void {
 		this.connectWebsocket();
 	}
 }

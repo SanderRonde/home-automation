@@ -7,7 +7,7 @@ import { PatternButton } from './pattern-button.js';
 
 export const PatternButtonCSS = [
 	new TemplateFn<PatternButton>(
-		function (html, { props }) {
+		(html, { props }) => {
 			return html`
 				<style>
 					#pattern {
@@ -35,7 +35,7 @@ export const PatternButtonCSS = [
 		render
 	),
 	new TemplateFn<PatternButton>(
-		function (html) {
+		(html) => {
 			return html`
 				<style>
 					span[data-type='html'],

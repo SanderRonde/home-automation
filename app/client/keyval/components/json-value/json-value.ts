@@ -18,7 +18,7 @@ export class JSONValue extends ConfigurableWebComponent {
 		reflect: {
 			value: {
 				value: {},
-				type: ComplexType<any>(),
+				type: ComplexType<unknown>(),
 			},
 			path: {
 				value: [],

@@ -13,6 +13,7 @@ import {
 	attachSourcedMessage,
 	logTag,
 	ResponseLike,
+	LogObj,
 } from '../lib/logger';
 import { ModuleHookables, ModuleConfig } from './modules';
 import { BotState } from '../lib/bot-state';
@@ -28,6 +29,8 @@ import chalk from 'chalk';
 import { createExternalClass } from '../lib/external';
 import { createHookables } from '../lib/util';
 import { createRouter } from '../lib/api';
+import { PossiblePromise } from '../lib/type';
+import { KeyVal } from './keyval';
 
 const AWAY_PING_INTERVAL = 5;
 const HOME_PING_INTERVAL = 60;
@@ -37,10 +40,14 @@ const AWAY_MIN_CONSECUTIVE_PINGS = 20;
 export interface HomeHooks {
 	[key: string]: {
 		home?: {
-			[name: string]: (hookables: ModuleHookables) => any | Promise<any>;
+			[name: string]: (
+				hookables: ModuleHookables
+			) => PossiblePromise<void>;
 		};
 		away?: {
-			[name: string]: (hookables: ModuleHookables) => any | Promise<any>;
+			[name: string]: (
+				hookables: ModuleHookables
+			) => PossiblePromise<void>;
 		};
 	};
 }
@@ -58,7 +65,7 @@ export namespace HomeDetector {
 			const detector = new Classes.Detector({ db: config.db });
 			const apiHandler = new API.Handler({ detector });
 			Bot.Bot.init({ apiHandler, detector });
-			External.Handler.init({ detector });
+			await External.Handler.init({ detector });
 
 			initListeners();
 			Routing.init({ ...config, detector, apiHandler });
@@ -93,7 +100,7 @@ export namespace HomeDetector {
 				private _db: Database,
 				private _onChange: (newState: HOME_STATE) => void
 			) {
-				this._init();
+				void this._init();
 			}
 
 			private async _change(newState: HOME_STATE) {
@@ -191,7 +198,7 @@ export namespace HomeDetector {
 			}
 
 			private async _pingLoop() {
-				while (true) {
+				for (;;) {
 					const newState = await this._pingAll();
 					if (newState.state !== this._state) {
 						let finalState: HOME_STATE = newState.state;
@@ -215,7 +222,7 @@ export namespace HomeDetector {
 						await wait(CHANGE_PING_INTERVAL);
 					} else {
 						await wait(
-							(this._state! === HOME_STATE.HOME
+							(this._state === HOME_STATE.HOME
 								? HOME_PING_INTERVAL
 								: AWAY_PING_INTERVAL) * 1000
 						);
@@ -224,11 +231,8 @@ export namespace HomeDetector {
 			}
 
 			private async _init() {
-				this._state = await this._db.get(
-					this._config.name,
-					HOME_STATE.AWAY
-				);
-				this._pingLoop();
+				this._state = this._db.get(this._config.name, HOME_STATE.AWAY);
+				await this._pingLoop();
 			}
 
 			get state() {
@@ -293,7 +297,7 @@ export namespace HomeDetector {
 				}
 			}
 
-			getAll(extended: boolean = false) {
+			getAll(extended = false): Record<string, HOME_STATE> {
 				const obj: {
 					[key: string]: HOME_STATE;
 				} = {};
@@ -309,11 +313,11 @@ export namespace HomeDetector {
 				return obj;
 			}
 
-			getPinger(name: string) {
+			getPinger(name: string): Pinger | undefined {
 				return this._extendedPingers.get(name);
 			}
 
-			get(name: string) {
+			get(name: string): HOME_STATE | '?' {
 				const pinger = this._extendedPingers.get(name);
 				if (!pinger) {
 					return '?';
@@ -324,7 +328,7 @@ export namespace HomeDetector {
 			static addListener(
 				name: string | null,
 				callback: (newState: HOME_STATE, name: string) => void
-			) {
+			): void {
 				this._listeners.push({ name, callback });
 			}
 		}
@@ -388,7 +392,10 @@ export namespace HomeDetector {
 								}
 							})();
 
-							state.states.homeDetector.lastSubjects =
+							(
+								state.states
+									.homeDetector as unknown as HomeDetector.Bot.JSON
+							).lastSubjects =
 								matches.length === 0 ? null : matches;
 
 							return `${nameText}`;
@@ -410,7 +417,10 @@ export namespace HomeDetector {
 							);
 							resDummy.transferTo(logObj);
 
-							state.states.homeDetector.lastSubjects = [match[1]];
+							(
+								state.states
+									.homeDetector as unknown as HomeDetector.Bot.JSON
+							).lastSubjects = [match[1]];
 							if (
 								(homeState === HOME_STATE.HOME) ===
 								(checkTarget === 'home')
@@ -423,7 +433,7 @@ export namespace HomeDetector {
 					);
 					mm(
 						/when did (.*) (arrive|(get home)|leave|(go away))/,
-						async ({ logObj, state, match }) => {
+						({ logObj, state, match }) => {
 							const checkTarget =
 								match[2] === 'arrive' || match[2] === 'get home'
 									? HOME_STATE.HOME
@@ -447,16 +457,19 @@ export namespace HomeDetector {
 
 							attachMessage(
 								nameMsg,
-								`Left at:`,
-								chalk.bold(pinger.leftAt + '')
+								'Left at:',
+								chalk.bold(String(pinger.leftAt))
 							);
 							attachMessage(
 								nameMsg,
-								`Arrived at:`,
-								chalk.bold(pinger.joinedAt + '')
+								'Arrived at:',
+								chalk.bold(String(pinger.joinedAt))
 							);
 
-							state.states.homeDetector.lastSubjects = [target];
+							(
+								state.states
+									.homeDetector as unknown as HomeDetector.Bot.JSON
+							).lastSubjects = [target];
 
 							return checkTarget === HOME_STATE.HOME
 								? pinger.joinedAt.toLocaleString()
@@ -467,7 +480,7 @@ export namespace HomeDetector {
 					conditional(
 						mm(
 							/when did (he|she|they) (arrive|(get home)|leave|(go away))/,
-							async ({ logObj, state, match }) => {
+							({ logObj, state, match }) => {
 								const checkTarget =
 									match[2] === 'arrive' ||
 									match[2] === 'get home'
@@ -481,8 +494,10 @@ export namespace HomeDetector {
 									contents: [],
 									header: ['Name', 'Time'],
 								};
-								for (const target of state.states.homeDetector
-									.lastSubjects!) {
+								for (const target of (
+									state.states
+										.homeDetector as unknown as HomeDetector.Bot.JSON
+								).lastSubjects!) {
 									const nameMsg = attachMessage(
 										logObj,
 										`Name: ${target}`
@@ -501,13 +516,13 @@ export namespace HomeDetector {
 
 									attachMessage(
 										nameMsg,
-										`Left at:`,
-										chalk.bold(pinger.leftAt + '')
+										'Left at:',
+										chalk.bold(String(pinger.leftAt))
 									);
 									attachMessage(
 										nameMsg,
-										`Arrived at:`,
-										chalk.bold(pinger.joinedAt + '')
+										'Arrived at:',
+										chalk.bold(String(pinger.joinedAt))
 									);
 
 									const timeMsg =
@@ -525,7 +540,10 @@ export namespace HomeDetector {
 						),
 						({ state }) => {
 							return (
-								state.states.homeDetector.lastSubjects !== null
+								(
+									state.states
+										.homeDetector as unknown as HomeDetector.Bot.JSON
+								).lastSubjects !== null
 							);
 						}
 					);
@@ -533,7 +551,7 @@ export namespace HomeDetector {
 					mm(
 						'/help_homedetector',
 						/what commands are there for home(-| )?detector/,
-						async () => {
+						() => {
 							return `Commands are:\n${Bot.matches.matches
 								.map((match) => {
 									return `RegExps: ${match.regexps
@@ -562,7 +580,7 @@ export namespace HomeDetector {
 				}
 			}
 
-			static init(config: HomeDetectorBotConfig) {
+			static init(config: HomeDetectorBotConfig): void {
 				this._config = config;
 			}
 
@@ -575,8 +593,12 @@ export namespace HomeDetector {
 				});
 			}
 
-			static resetState(state: _Bot.Message.StateKeeping.ChatState) {
-				state.states.keyval.lastSubjects = null;
+			static resetState(
+				state: _Bot.Message.StateKeeping.ChatState
+			): void {
+				(
+					state.states.keyval as unknown as KeyVal.Bot.JSON
+				).lastSubjects = null;
 			}
 
 			toJSON(): JSON {
@@ -607,7 +629,7 @@ export namespace HomeDetector {
 					auth: string;
 				},
 				source: string
-			) {
+			): Promise<HOME_STATE | '?'> {
 				const result = this._detector.get(name);
 				attachSourcedMessage(
 					res,
@@ -628,7 +650,7 @@ export namespace HomeDetector {
 					auth: string;
 				},
 				source: string
-			) {
+			): Promise<Record<string, HOME_STATE | '?'>> {
 				const all = this._detector.getAll(true);
 				const result = JSON.stringify(all);
 				attachSourcedMessage(
@@ -680,8 +702,8 @@ export namespace HomeDetector {
 			public index(
 				res: ResponseLike,
 				_req: express.Request,
-				extended: boolean = false
-			) {
+				extended = false
+			): void {
 				res.status(200);
 				res.contentType('.html');
 				res.write(
@@ -699,7 +721,10 @@ export namespace HomeDetector {
 		export class Handler extends createExternalClass(true) {
 			private static _detector: Classes.Detector;
 
-			public triggerHook(newState: HOME_STATE, name: string) {
+			public triggerHook(
+				newState: HOME_STATE,
+				name: string
+			): Promise<void> {
 				return this.runRequest((_res, _source, logObj) => {
 					return Hooks.handle(newState, name, logObj);
 				});
@@ -711,9 +736,13 @@ export namespace HomeDetector {
 				});
 			}
 
-			static async init({ detector }: { detector: Classes.Detector }) {
+			static async init({
+				detector,
+			}: {
+				detector: Classes.Detector;
+			}): Promise<void> {
 				this._detector = detector;
-				super.init();
+				await super.init();
 			}
 		}
 	}
@@ -722,8 +751,8 @@ export namespace HomeDetector {
 		export async function handle(
 			newState: HOME_STATE,
 			name: string,
-			logObj: any = {}
-		) {
+			logObj: LogObj = {}
+		): Promise<void> {
 			if (!(name in hooks)) {
 				return;
 			}
@@ -736,20 +765,22 @@ export namespace HomeDetector {
 					return nameHooks.away;
 				}
 			})();
-			if (!changeHooks) return;
+			if (!changeHooks) {
+				return;
+			}
 
 			let index = 0;
 			for (const name in changeHooks) {
 				const fn = changeHooks[name];
 				await fn(
-					await createHookables(
+					createHookables(
 						await meta.modules,
 						'HOMEHOOK',
 						name,
 						attachMessage(
 							logObj,
 							'Hook',
-							chalk.bold(index++ + ''),
+							chalk.bold(String(index++)),
 							':',
 							chalk.bold(name)
 						)
@@ -791,7 +822,7 @@ export namespace HomeDetector {
 		}: ModuleConfig & {
 			detector: Classes.Detector;
 			apiHandler: API.Handler;
-		}) {
+		}): void {
 			const webpageHandler = new Webpage.Handler({ randomNum, detector });
 
 			const router = createRouter(HomeDetector, apiHandler);
@@ -801,13 +832,13 @@ export namespace HomeDetector {
 
 			app.all(
 				['/home-detector', '/whoishome', '/whoshome'],
-				async (req, res) => {
+				(req, res) => {
 					webpageHandler.index(res, req);
 				}
 			);
 			app.all(
 				['/home-detector/e', '/whoishome/e', '/whoshome/e'],
-				async (req, res) => {
+				(req, res) => {
 					webpageHandler.index(res, req, true);
 				}
 			);

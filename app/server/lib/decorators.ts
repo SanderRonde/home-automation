@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/ban-types */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { KeyError, AuthError } from './errors';
 import { attachMessage } from './logger';
 import { Auth } from '../modules/auth';
@@ -10,15 +14,16 @@ interface KeyVal {
 
 export function requireParams(...keys: string[]) {
 	return function (
-		_target: any,
+		_target: unknown,
 		_propertyKey: string,
 		descriptor: PropertyDescriptor
-	) {
-		const original = descriptor.value;
+	): void {
+		// eslint-disable-next-line @typescript-eslint/ban-types
+		const original = descriptor.value as Function;
 		descriptor.value = function (
 			res: express.Response,
 			params: KeyVal,
-			...args: any[]
+			...args: unknown[]
 		) {
 			for (const key of keys) {
 				if (!params || !params[key]) {
@@ -26,38 +31,45 @@ export function requireParams(...keys: string[]) {
 				}
 			}
 
-			return original.bind(this)(res, params, ...args);
+			const bound = original.bind(this);
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-call
+			const result = bound(res, params, ...args);
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+			return result;
 		};
 	};
 }
 
 export function auth(
-	target: any,
+	target: unknown,
 	propertyKey: string,
 	descriptor: PropertyDescriptor
-) {
+): void {
 	requireParams('auth')(target, propertyKey, descriptor);
 
-	const original = descriptor.value;
+	// eslint-disable-next-line @typescript-eslint/ban-types
+	const original = descriptor.value as Function;
 	descriptor.value = function (
 		res: express.Response,
 		params: KeyVal,
-		...args: any[]
+		...args: unknown[]
 	) {
 		if (!Auth.ClientSecret.authenticate(params.auth, params.id || '0')) {
 			throw new AuthError('Invalid auth key');
 		}
 
-		return original.bind(this)(res, params, ...args);
+		const bound = original.bind(this);
+		const result = bound(res, params, ...args);
+		return result;
 	};
 }
 
 export function authCookie(
-	_target: any,
+	_target: unknown,
 	_propertyKey: string,
 	descriptor: PropertyDescriptor
-) {
-	const original = descriptor.value;
+): void {
+	const original = descriptor.value as Function;
 	descriptor.value = function (
 		res: express.Response,
 		req:
@@ -67,21 +79,23 @@ export function authCookie(
 						[key: string]: string;
 					};
 			  },
-		...args: any[]
+		...args: unknown[]
 	) {
 		if (!Auth.Cookie.checkCookie(req)) {
 			throw new AuthError('Invalid or missing auth cookie');
 		}
 
-		return original.bind(this)(res, req, ...args);
+		const bound = original.bind(this);
+		const result = bound(res, req, ...args);
+		return result;
 	};
 }
 
 export function authAll(
-	_target: any,
+	_target: unknown,
 	_propertyKey: string,
 	descriptor: PropertyDescriptor
-) {
+): void {
 	const original = descriptor.value;
 	descriptor.value = function (
 		res: express.Response,
@@ -90,16 +104,16 @@ export function authAll(
 				[key: string]: string;
 			};
 		},
-		...args: any[]
+		...args: unknown[]
 	) {
 		if (Auth.Cookie.checkCookie(params)) {
 			return original.bind(this)(res, params, ...args);
-		} else if (params.cookies && params.cookies['key']) {
+		} else if (params?.cookies['key']) {
 			throw new AuthError('Invalid auth cookie');
 		}
 
 		if (!params || !params['auth']) {
-			throw new KeyError(`Missing key "auth"`);
+			throw new KeyError('Missing key "auth"');
 		}
 		if (Auth.ClientSecret.authenticate(params.auth, params.id || '0')) {
 			return original.bind(this)(res, params, ...args);
@@ -110,12 +124,15 @@ export function authAll(
 }
 
 export function errorHandle(
-	_target: any,
+	_target: unknown,
 	_propertyKey: string,
 	descriptor: PropertyDescriptor
-) {
+): void {
 	const original = descriptor.value;
-	descriptor.value = async function (res: express.Response, ...args: any[]) {
+	descriptor.value = async function (
+		res: express.Response,
+		...args: unknown[]
+	) {
 		try {
 			return await original.bind(this)(res, ...args);
 		} catch (e) {
@@ -139,15 +156,16 @@ export function errorHandle(
 }
 
 export function upgradeToHTTPS(
-	_target: any,
+	_target: unknown,
 	_propertyKey: string,
 	descriptor: PropertyDescriptor
-) {
+): void {
 	const original = descriptor.value;
+	// eslint-disable-next-line @typescript-eslint/require-await
 	descriptor.value = async function (
 		res: express.Response,
 		req: express.Request,
-		...args: any[]
+		...args: unknown[]
 	) {
 		const protocol = (() => {
 			if ('x-forwarded-proto' in req.headers) {
@@ -163,7 +181,7 @@ export function upgradeToHTTPS(
 		})();
 
 		if (protocol === 'http') {
-			res.redirect(`https://${req.headers.host}${req.url}`);
+			res.redirect(`https://${req.headers.host!}${req.url}`);
 			return;
 		}
 

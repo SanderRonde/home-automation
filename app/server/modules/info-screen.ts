@@ -1,15 +1,17 @@
 import { Credentials } from 'google-auth-library/build/src/auth/credentials';
 import { calendar_v3 } from 'googleapis/build/src/apis/calendar/v3';
 import { errorHandle, requireParams } from '../lib/decorators';
-const optionalRequire = require('optional-require')(require);
+// eslint-disable-next-line @typescript-eslint/no-unsafe-call
+const optionalRequire = require('optional-require')(require) as (
+	requirePath: string
+) => unknown;
 import { ModuleConfig } from './modules';
-import { OAuth2Client } from 'google-auth-library';
 import { SECRETS_FOLDER } from '../lib/constants';
 import { WSWrapper, WSClient } from '../lib/ws';
 import { initMiddleware } from '../lib/routes';
-import { attachMessage, logTag, ResponseLike } from '../lib/logger';
+import { attachMessage, LogObj, logTag, ResponseLike } from '../lib/logger';
 import { BotState } from '../lib/bot-state';
-import { XHR, flatten } from '../lib/util';
+import { XHR, flatten, SettablePromise } from '../lib/util';
 import { Bot as _Bot } from './bot';
 import { ModuleMeta } from './meta';
 import { google } from 'googleapis';
@@ -30,7 +32,7 @@ export namespace InfoScreen {
 		setup!: Promise<void>;
 
 		async init(config: ModuleConfig) {
-			await Routing.init(config);
+			Routing.init(config);
 			await Calendar.refresh();
 		}
 
@@ -39,9 +41,21 @@ export namespace InfoScreen {
 		}
 	})();
 
+	interface InternalTemperatureResult {
+		temp: number;
+	}
+
+	interface ExternalTemperatureResult {
+		temp: number;
+		icon: string;
+	}
+
 	export namespace Temperature {
 		export namespace Internal {
-			export async function get(name: string, logObj?: any) {
+			export async function get(
+				name: string,
+				logObj?: LogObj
+			): Promise<InternalTemperatureResult> {
 				return await new (
 					await meta.modules
 				).temperature.External.Handler(
@@ -58,8 +72,10 @@ export namespace InfoScreen {
 				units: getEnv('SECRET_OPENWEATHERMAP_UNITS', true),
 			};
 
-			export async function get() {
-				if (!openweathermapSecrets) return null;
+			export async function get(): Promise<ExternalTemperatureResult | null> {
+				if (!openweathermapSecrets) {
+					return null;
+				}
 				try {
 					const response = await XHR.get(
 						'http://api.openweathermap.org/data/2.5/weather',
@@ -122,17 +138,20 @@ export namespace InfoScreen {
 			}
 		}
 
-		export function getInternal(logObj?: any, name: string = 'room') {
+		export function getInternal(
+			logObj?: LogObj,
+			name = 'room'
+		): Promise<InternalTemperatureResult> {
 			return Internal.get(name, logObj);
 		}
 
-		export function getExternal() {
+		export function getExternal(): Promise<ExternalTemperatureResult | null> {
 			return External.get();
 		}
 	}
 
 	export namespace Webpage {
-		async function infoScreenHTML(randomNum: number) {
+		function infoScreenHTML(randomNum: number): string {
 			return `<!DOCTYPE HTML>
 			<html lang="en" style="background-color: rgb(0, 0, 0);">
 				<head>
@@ -153,18 +172,16 @@ export namespace InfoScreen {
 			}
 
 			@errorHandle
-			public async index(res: ResponseLike, _req: express.Request) {
+			public index(res: ResponseLike, _req: express.Request): void {
 				res.status(200);
 				res.contentType('.html');
-				res.write(await infoScreenHTML(this._randomNum));
+				res.write(infoScreenHTML(this._randomNum));
 				res.end();
 			}
 		}
 	}
 
 	export namespace Bot {
-		export interface JSON {}
-
 		export class Bot extends BotState.Base {
 			static readonly commands = {
 				'/info_refresh': 'Refresh info-screen',
@@ -174,22 +191,15 @@ export namespace InfoScreen {
 
 			static readonly matches = Bot.createMatchMaker(
 				({ matchMaker: mm }) => {
-					mm(
-						'/info_refresh',
-						/refresh info screen/,
-						async ({ logObj }) => {
-							const amount = Routing.refreshClients();
-							attachMessage(
-								logObj,
-								`Refreshed ${amount} clients`
-							);
-							return `Refreshed ${amount} clients`;
-						}
-					);
+					mm('/info_refresh', /refresh info screen/, ({ logObj }) => {
+						const amount = Routing.refreshClients();
+						attachMessage(logObj, `Refreshed ${amount} clients`);
+						return `Refreshed ${amount} clients`;
+					});
 				}
 			);
 
-			constructor(_json?: JSON) {
+			constructor(_json?: Record<string, never>) {
 				super();
 			}
 
@@ -202,7 +212,7 @@ export namespace InfoScreen {
 				});
 			}
 
-			toJSON(): JSON {
+			toJSON(): Record<string, never> {
 				return {};
 			}
 		}
@@ -221,7 +231,7 @@ export namespace InfoScreen {
 				}: {
 					type: 'inside' | 'outside' | 'server';
 				}
-			) {
+			): Promise<ExternalTemperatureResult | number> {
 				const { temp, icon } = await (async (): Promise<{
 					temp: number;
 					icon: string;
@@ -229,27 +239,28 @@ export namespace InfoScreen {
 					if (type === 'inside') {
 						// Use temperature module
 						const temp = await Temperature.getInternal(res);
-						return { temp: temp!.temp, icon: 'inside.png' };
+						return { temp: temp.temp, icon: 'inside.png' };
 					} else if (type === 'server') {
 						const temp = await Temperature.getInternal(
 							res,
 							'server'
 						);
-						return { temp: temp!.temp, icon: 'server.png' };
+						return { temp: temp.temp, icon: 'server.png' };
 					} else {
 						// Use openweathermap
 						const openweathermapResponse =
 							await Temperature.getExternal();
-						if (openweathermapResponse === null)
+						if (openweathermapResponse === null) {
 							return {
 								temp: 0,
 								icon: 'questionmark.svg',
 							};
+						}
 						return openweathermapResponse;
 					}
 				})();
 
-				attachMessage(res, `Temp: "${temp + ''}", icon: ${icon}`);
+				attachMessage(res, `Temp: "${String(temp)}", icon: ${icon}`);
 				res.status(200).write(
 					JSON.stringify({
 						temperature: `${Math.round(temp * 10) / 10}°`,
@@ -261,7 +272,9 @@ export namespace InfoScreen {
 			}
 
 			@errorHandle
-			public async getEvents(res: ResponseLike, {}: {}) {
+			public async getEvents(
+				res: ResponseLike
+			): Promise<Calendar.CalendarEvent[]> {
 				try {
 					const events = await Calendar.getEvents(7);
 					attachMessage(res, `Fetched ${events.length} events`);
@@ -284,9 +297,9 @@ export namespace InfoScreen {
 	}
 
 	export namespace Calendar {
-		export let authenticated: boolean = false;
+		export let authenticated = false;
 
-		export async function refresh() {
+		export async function refresh(): Promise<void> {
 			try {
 				const credentials: Credentials = JSON.parse(
 					await fs.readFile(
@@ -302,7 +315,7 @@ export namespace InfoScreen {
 			}
 		}
 
-		let secrets: {
+		const secrets: {
 			client_id: string;
 			client_secret: string;
 			redirect_url: string;
@@ -311,24 +324,26 @@ export namespace InfoScreen {
 			client_secret: getEnv('SECRET_GOOGLE_CLIENT_SECRET', true),
 			redirect_url: getEnv('SECRET_GOOGLE_REDIRECT_URL', true),
 		};
-		async function createClient() {
-			if (client) return;
+		function createClient(): void {
+			if (client.isSet) {
+				return;
+			}
 			const { client_id, client_secret, redirect_url } = secrets;
 
-			client = new google.auth.OAuth2(
-				client_id,
-				client_secret,
-				redirect_url
+			client.set(
+				new google.auth.OAuth2(client_id, client_secret, redirect_url)
 			);
 		}
 
-		let client: OAuth2Client | null = null;
+		const client = new SettablePromise<
+			InstanceType<typeof google.auth.OAuth2>
+		>();
 		let calendar: calendar_v3.Calendar | null = null;
-		export async function authenticateURL() {
-			await createClient();
+		export async function authenticateURL(): Promise<string | null> {
+			createClient();
 
 			if (client) {
-				const url = client.generateAuthUrl({
+				const url = (await client.value).generateAuthUrl({
 					access_type: 'offline',
 					scope: SCOPES,
 				});
@@ -338,7 +353,7 @@ export namespace InfoScreen {
 		}
 
 		async function authTokens(tokens: Credentials, reAuth: boolean) {
-			await createClient();
+			createClient();
 
 			if (!reAuth) {
 				await fs.writeFile(
@@ -350,23 +365,23 @@ export namespace InfoScreen {
 				);
 			}
 
-			client?.setCredentials(tokens);
+			(await client.value).setCredentials(tokens);
 			if (reAuth) {
-				await client?.getRequestHeaders();
+				await (await client.value).getRequestHeaders();
 			}
 
 			calendar = google.calendar({
 				version: 'v3',
-				auth: client!,
+				auth: await client.value,
 			});
 
 			authenticated = true;
 		}
 
-		export async function authCode(code: string) {
-			await createClient();
+		export async function authCode(code: string): Promise<void> {
+			createClient();
 
-			const { tokens } = await client!.getToken(code);
+			const { tokens } = await (await client.value).getToken(code);
 			await authTokens(tokens, false);
 		}
 
@@ -376,7 +391,13 @@ export namespace InfoScreen {
 			return date;
 		}
 
-		export async function getEvents(days: number) {
+		export type CalendarEvent = calendar_v3.Schema$Event & {
+			color: calendar_v3.Schema$ColorDefinition;
+		};
+
+		export async function getEvents(
+			days: number
+		): Promise<CalendarEvent[]> {
 			const listResponse = await calendar!.calendarList.list();
 			const calendars = listResponse.data.items || [];
 
@@ -415,7 +436,7 @@ export namespace InfoScreen {
 			const flatEvents = flatten(joined);
 			const filter = optionalRequire(
 				path.join(SECRETS_FOLDER, 'event-filter.js')
-			);
+			) as (toFilter: CalendarEvent) => boolean;
 			if (filter) {
 				return flatEvents.filter((event) => {
 					return filter(event);
@@ -428,7 +449,7 @@ export namespace InfoScreen {
 	export namespace Routing {
 		const clients: Set<WSClient> = new Set();
 
-		export function refreshClients() {
+		export function refreshClients(): number {
 			clients.forEach((client) => {
 				client.send(
 					JSON.stringify({
@@ -439,7 +460,7 @@ export namespace InfoScreen {
 			return clients.size;
 		}
 
-		export async function init({ config, randomNum }: ModuleConfig) {
+		export function init({ config, randomNum }: ModuleConfig): void {
 			const app = express();
 			const webpageHandler = new Webpage.Handler({
 				randomNum,
@@ -448,7 +469,7 @@ export namespace InfoScreen {
 			const server = http.createServer(app);
 			const ws = new WSWrapper(server);
 
-			await initMiddleware(app);
+			initMiddleware(app);
 
 			app.all('/', async (req, res) => {
 				if (!Calendar.authenticated) {
@@ -459,11 +480,13 @@ export namespace InfoScreen {
 					}
 				}
 
-				await webpageHandler.index(res, req);
+				webpageHandler.index(res, req);
 			});
 			app.get('/authorize', async (req, res) => {
-				const getParams = req.query;
-				const code = getParams['code'] as string;
+				const getParams = req.query as {
+					code?: string;
+				};
+				const code = getParams['code'];
 				if (code) {
 					await Calendar.authCode(code);
 				}
@@ -488,12 +511,11 @@ export namespace InfoScreen {
 			);
 
 			ws.all('/blanking', async (client) => {
-				const { send, onDead } = client;
 				clients.add(client);
 				const listener = KeyVal.GetSetListener.addListener(
 					'room.lights.ceiling',
-					async (value) => {
-						send(
+					(value) => {
+						client.send(
 							JSON.stringify({
 								blank: value === '0',
 							})
@@ -501,7 +523,7 @@ export namespace InfoScreen {
 					},
 					{ notifyOnInitial: true }
 				);
-				send(
+				client.send(
 					JSON.stringify({
 						blank:
 							(await new KeyVal.External.Handler(
@@ -510,7 +532,7 @@ export namespace InfoScreen {
 							).get('room.lights.ceiling')) === '0',
 					})
 				);
-				onDead(() => {
+				client.onDead(() => {
 					KeyVal.GetSetListener.removeListener(listener);
 					clients.delete(client);
 				});

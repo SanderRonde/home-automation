@@ -69,7 +69,7 @@ export const NAME_MAP = {
 		'room.lights.nightstand',
 		'room.leds.wakelight',
 	],
-	[LED_DEVICE_NAME as string]: ['room.leds.ceiling'],
+	[LED_DEVICE_NAME]: ['room.leds.ceiling'],
 };
 if (getEnv('MODULE_LED_HEX_IP', false)) {
 	NAME_MAP[getEnv('MODULE_LED_HEX_IP', false) as string] = [
@@ -86,7 +86,9 @@ export const NUM_LEDS = 1025;
 // Keyval
 export const MAIN_LIGHTS = (() => {
 	const str = getEnv('MODULE_LED_MAIN_LIGHTS', true);
-	if (!str) return [];
+	if (!str) {
+		return [];
+	}
 	return str.split(',');
 })();
 export const COMMON_SWITCH_MAPPINGS: [RegExp, string][] = [

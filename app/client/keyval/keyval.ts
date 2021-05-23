@@ -26,9 +26,9 @@ function registerElements() {
 	JSONSwitches.define();
 }
 
-function registerServiceworker() {
+async function registerServiceworker() {
 	if ('serviceWorker' in navigator) {
-		navigator.serviceWorker.register('/keyval/serviceworker.js', {
+		await navigator.serviceWorker.register('/keyval/serviceworker.js', {
 			scope: '/keyval/',
 			updateViaCache: 'none',
 		});
@@ -36,5 +36,4 @@ function registerServiceworker() {
 }
 
 registerElements();
-
-registerServiceworker();
+void registerServiceworker();

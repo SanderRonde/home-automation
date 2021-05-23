@@ -42,14 +42,17 @@ export class ColorButton
 		width: number;
 		height: number;
 	} | null = null;
-	get canvas() {
+	get canvas(): HTMLCanvasElement {
 		if (this._canvas) {
 			return this._canvas;
 		}
 		this._canvas = document.createElement('canvas');
 		return this._canvas;
 	}
-	get canvasDimensions() {
+	get canvasDimensions(): {
+		width: number;
+		height: number;
+	} {
 		if (this._canvasDimensions) {
 			return this._canvasDimensions;
 		}
@@ -60,7 +63,7 @@ export class ColorButton
 		};
 		return this._canvasDimensions;
 	}
-	get canvasContainer() {
+	get canvasContainer(): HTMLElement {
 		if (this._canvasContainer) {
 			return this._canvasContainer;
 		}
@@ -76,13 +79,13 @@ export class ColorButton
 		blackShade.style.transform = 'translateY(-100%)';
 		blackShade.style.backgroundImage =
 			'linear-gradient(to bottom, rgba(0, 0, 0, 0), rgb(0, 0, 0))';
-		blackShade.addEventListener('touchmove', this.onDrag, {
+		blackShade.addEventListener('touchmove', this.onDrag.bind(this), {
 			passive: false,
 		});
 		blackShade.addEventListener(
 			'touchstart',
 			(e) => {
-				this.onDrag(e, true);
+				void this.onDrag(e, true);
 			},
 			{
 				passive: false,
@@ -91,7 +94,7 @@ export class ColorButton
 		blackShade.addEventListener(
 			'touchend',
 			(e) => {
-				this.onDrag(e, true);
+				void this.onDrag(e, true);
 			},
 			{
 				passive: false,
@@ -100,7 +103,7 @@ export class ColorButton
 		blackShade.addEventListener(
 			'click',
 			(e) => {
-				this.onDrag(e, true);
+				void this.onDrag(e, true);
 			},
 			{
 				passive: false,
@@ -109,19 +112,19 @@ export class ColorButton
 		this._canvasContainer.appendChild(blackShade);
 		return this._canvasContainer;
 	}
-	get controls() {
+	get controls(): RgbControls {
 		if (this._controls) {
 			return this._controls;
 		}
 		this._controls = document.createElement('rgb-controls') as RgbControls;
-		Mounting.awaitMounted(this._controls).then(() => {
+		void Mounting.awaitMounted(this._controls).then(() => {
 			this._controls!.props.parent = this;
 		});
 		return this._controls;
 	}
 	private static readonly _touchBallSize =
 		Math.min(window.innerWidth, 1000) * 0.07;
-	get touchBall() {
+	get touchBall(): HTMLElement {
 		if (this._touchBall) {
 			return this._touchBall;
 		}
@@ -156,7 +159,9 @@ export class ColorButton
 			};
 			return (this._lastTouch = pos);
 		} else {
-			if (!e.touches.length) return null;
+			if (!e.touches.length) {
+				return null;
+			}
 			const pos = {
 				x: e.touches[0].clientX,
 				y: e.touches[0].clientY,
@@ -197,12 +202,12 @@ export class ColorButton
 		timeout: number;
 		color: [number, number, number];
 	} = null;
-	private _updateColor(color: [number, number, number]) {
+	private async _updateColor(color: [number, number, number]) {
 		this._lastColorUpdate = Date.now();
 		this._lastQueuedColor = null;
-		this.getRoot<RGBController>().setColor(color);
+		await this.getRoot<RGBController>().setColor(color);
 	}
-	private _queueSetColor(color: [number, number, number]) {
+	private async _queueSetColor(color: [number, number, number]) {
 		if (this._lastQueuedColor) {
 			window.clearTimeout(this._lastQueuedColor.timeout);
 		}
@@ -211,24 +216,26 @@ export class ColorButton
 			this._lastColorUpdate + ColorButton._COLOR_UPDATE_INTERVAL
 		) {
 			// Do it now
-			this._updateColor(color);
+			await this._updateColor(color);
 			return;
 		}
 
 		// Queue render
 		this._lastQueuedColor = {
-			timeout: window.setTimeout(() => {
-				this._updateColor(color);
+			timeout: window.setTimeout(async () => {
+				await this._updateColor(color);
 			}, ColorButton._COLOR_UPDATE_INTERVAL - (Date.now() - this._lastColorUpdate)),
 			color,
 		};
 	}
 
 	@bindToClass
-	onDrag(e?: TouchEvent | MouseEvent, force: boolean = false) {
-		e && e.preventDefault();
+	async onDrag(e?: TouchEvent | MouseEvent, force = false): Promise<void> {
+		e?.preventDefault();
 		const coords = this._getTouchPos(e);
-		if (!coords) return;
+		if (!coords) {
+			return;
+		}
 
 		const offset = ColorButton._touchBallSize / 2;
 		this.touchBall.style.transform = `translate(${coords.x - offset}px, ${
@@ -236,30 +243,30 @@ export class ColorButton
 		}px)`;
 		const color = this._getColorAtCoord(coords);
 		if (force) {
-			this._updateColor(color);
+			await this._updateColor(color);
 		} else {
-			this._queueSetColor(color);
+			await this._queueSetColor(color);
 		}
 	}
 
 	@bindToClass
-	onClick() {
+	onClick(): void {
 		this.props.parent!.deselectAll();
 		this.props.parent!.setSelected(this);
 	}
 
-	setDisplay(display: ColorDisplay) {
+	setDisplay(display: ColorDisplay): void {
 		display.appendElement(this.canvasContainer);
 	}
 
-	setControls(controls: ColorControls) {
+	setControls(controls: ColorControls): void {
 		controls.appendElement(this.controls);
 		const color = RgbControls.getColorAtIndex(50);
 		this.controls.lastColor = color;
 		this.updateCanvasColor(color);
 	}
 
-	updateCanvasColor([red, green, blue]: [number, number, number]) {
+	updateCanvasColor([red, green, blue]: [number, number, number]): void {
 		const ctx = this.canvas.getContext('2d')!;
 
 		const gradient = ctx.createLinearGradient(

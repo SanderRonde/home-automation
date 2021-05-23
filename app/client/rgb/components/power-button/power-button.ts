@@ -23,12 +23,12 @@ export class PowerButton extends ConfigurableWebComponent {
 		},
 	});
 
-	setPower(state: boolean) {
+	setPower(state: boolean): void {
 		this.props.on = state;
 	}
 
-	onClick() {
+	async onClick(): Promise<void> {
 		this.props.on = !this.props.on;
-		this.getRoot<RGBController>().setPower(this.props.on);
+		await this.getRoot<RGBController>().setPower(this.props.on);
 	}
 }

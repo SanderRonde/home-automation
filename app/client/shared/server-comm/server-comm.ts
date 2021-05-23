@@ -22,10 +22,10 @@ export abstract class ServerComm<
 			[key: string]: HTMLElement | SVGElement;
 		};
 	} = {
-		IDS: {};
-		CLASSES: {};
+		IDS: Record<string, never>;
+		CLASSES: Record<string, never>;
 	},
-	E extends EventListenerObj = {}
+	E extends EventListenerObj = Record<string, never>
 > extends ConfigurableWebComponent<{
 	selectors: ELS;
 	events: E;
@@ -38,18 +38,20 @@ export abstract class ServerComm<
 		},
 	});
 
-	protected async assertOnline() {
-		if (navigator.onLine) return;
+	protected async assertOnline(): Promise<void> {
+		if (navigator.onLine) {
+			return;
+		}
 		return new Promise((resolve) => {
 			const toast = MessageToast.create({
 				message: 'Waiting for internet...',
 				duration: 100000000,
 			});
 
-			const interval = window.setInterval(() => {
+			const interval = window.setInterval(async () => {
 				if (navigator.onLine) {
 					window.clearInterval(interval);
-					toast.hide();
+					await (await toast).hide();
 					resolve();
 				}
 			}, 1000);
@@ -59,10 +61,10 @@ export abstract class ServerComm<
 	protected async request(
 		url: string,
 		postBody: {
-			[key: string]: any;
+			[key: string]: unknown;
 		} = {},
-		errName: string = 'Failed request'
-	) {
+		errName = 'Failed request'
+	): Promise<false | Response> {
 		await this.assertOnline();
 
 		try {
@@ -75,7 +77,7 @@ export abstract class ServerComm<
 				credentials: 'include',
 			});
 			if (!response.ok) {
-				MessageToast.create({
+				await MessageToast.create({
 					message: `${errName} ${response.status}`,
 					duration: 5000,
 				});
@@ -83,7 +85,7 @@ export abstract class ServerComm<
 			}
 			return response;
 		} catch (e) {
-			MessageToast.create({
+			await MessageToast.create({
 				message: `${errName} (network error)`,
 				duration: 5000,
 			});

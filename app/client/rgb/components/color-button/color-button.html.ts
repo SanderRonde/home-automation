@@ -8,7 +8,7 @@ import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 export const ColorButtonHTML = new TemplateFn<ColorButton>(
 	function (html, { props }) {
 		return html`
-			<div id="container" @click="${this.onClick}">
+			<div id="container" @click="${this.onClick.bind(this)}">
 				<div ?selected="${props.selected}" id="image"></div>
 			</div>
 		`;

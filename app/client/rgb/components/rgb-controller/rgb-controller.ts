@@ -54,7 +54,7 @@ export class RGBController extends ServerComm<{
 		controls: ColorControls;
 		power: PowerButton;
 	};
-	CLASSES: {};
+	CLASSES: Record<string, never>;
 }> {
 	props = Props.define(
 		this,
@@ -66,19 +66,23 @@ export class RGBController extends ServerComm<{
 		super.props
 	);
 
-	deselectAll() {
+	deselectAll(): void {
 		(<ColorOption[]>(<unknown>this.$$('.button'))).forEach((button) => {
 			button.props.selected = false;
 		});
 	}
 
-	setSelected(selected: ColorOption) {
+	setSelected(selected: ColorOption): void {
 		selected.props.selected = true;
 		selected.setDisplay(this.$.display);
 		selected.setControls(this.$.controls);
 	}
 
-	async setColor([red, green, blue]: [number, number, number]) {
+	async setColor([red, green, blue]: [
+		number,
+		number,
+		number
+	]): Promise<void> {
 		await this.request(
 			`${location.origin}/rgb/color/${red}/${green}/${blue}`,
 			{},
@@ -91,7 +95,7 @@ export class RGBController extends ServerComm<{
 		patternName: string,
 		speed: number,
 		transitionType: TransitionTypes
-	) {
+	): Promise<void> {
 		await this.request(
 			`${location.origin}/rgb/pattern/${patternName}/${speed}/${transitionType}`,
 			{},
@@ -100,7 +104,7 @@ export class RGBController extends ServerComm<{
 		this.$.power.setPower(true);
 	}
 
-	async setPower(state: boolean) {
+	async setPower(state: boolean): Promise<void> {
 		await this.request(
 			`${location.origin}/rgb/power/${state ? 'on' : 'off'}`,
 			{},
@@ -108,7 +112,7 @@ export class RGBController extends ServerComm<{
 		);
 	}
 
-	mounted() {
+	mounted(): void {
 		this.props.patterns =
 			this.props.patterns ||
 			JSON.parse(localStorage.getItem('patterns')!);

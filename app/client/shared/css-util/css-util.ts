@@ -12,8 +12,8 @@ export function clampWidth(
 	selector: string,
 	property: string,
 	value: string,
-	width: number = 1000
-) {
+	width = 1000
+): string {
 	const calculatedvalue = getCalculatedValue(value, width);
 	return (
 		`${selector} { ${property}: ${value}; }\t` +
@@ -21,8 +21,8 @@ export function clampWidth(
 	);
 }
 
-export function clampWidthSelector(selector: string, width: number = 1000) {
-	return (...configs: [string, string][]) => {
+export function clampWidthSelector(selector: string, width = 1000) {
+	return (...configs: [string, string][]): string => {
 		return `${selector} {\n${configs
 			.map(([property, value]) => {
 				return `\t${property}: ${value};`;

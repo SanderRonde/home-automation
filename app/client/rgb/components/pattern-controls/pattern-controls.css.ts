@@ -6,7 +6,7 @@ import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { PatternControls } from './pattern-controls.js';
 
 export const PatternControlsCSS = new TemplateFn<PatternControls>(
-	function (html) {
+	(html) => {
 		return html`
 			<style>
 				#container {

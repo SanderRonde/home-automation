@@ -122,25 +122,25 @@ class WebServer {
 
 		this.app = express();
 		this._initLogger.increment('express');
-		await initMiddleware(this.app);
-		await initAnnotatorRoutes(this.app);
+		initMiddleware(this.app);
+		initAnnotatorRoutes(this.app);
 		this._initLogger.increment('middleware');
-		await this._initServers();
+		this._initServers();
 		this._initLogger.increment('servers');
-		await initRoutes(this.app);
+		initRoutes(this.app);
 		this._initLogger.increment('routes');
 		await this._initModules();
 		this._initLogger.increment('modules');
-		await initPostRoutes(this.app);
+		initPostRoutes(this.app);
 		setLogLevel(this._config.log.level);
 		await Bot.printCommands();
 		this._listen();
 	}
 
-	private async _initServers() {
+	private _initServers() {
 		this.websocketSim = new WSSimulator();
-		this.app.use((req, res, next) => {
-			this.websocketSim.handler(req, res, next);
+		this.app.use(async (req, res, next) => {
+			await this.websocketSim.handler(req, res, next);
 		});
 		this._server = http.createServer(this.app);
 		this.ws = new WSWrapper(this._server);
@@ -185,6 +185,7 @@ if (hasArg('help', 'h')) {
 		"-v*, --verbose*			Logs all data (equivalent of adding a lot of v's"
 	);
 	console.log('--ignore-pressure		Ignore pressure report logs');
+	// eslint-disable-next-line no-process-exit
 	process.exit(0);
 }
 function getVerbosity() {
@@ -207,7 +208,7 @@ function getVerbosity() {
 	}
 	return 0;
 }
-new WebServer({
+void new WebServer({
 	ports: {
 		http: getNumberArg('http') || getNumberEnv('IO_PORT_HTTP'),
 		https: getNumberArg('https') || getNumberEnv('IO_PORT_HTTPS'),

@@ -3,14 +3,15 @@ import {
 	logOutgoingReq,
 	logFirst,
 	ResponseLike,
+	LogObj,
 } from '../lib/logger';
-import { ModuleConfig, AllModules, InstanceOf } from './modules';
+import { ModuleConfig, AllModules } from './modules';
 import { TELEGRAM_IPS, TELEGRAM_API } from '../lib/constants';
 import { createExternalClass } from '../lib/external';
 import { BotState } from '../lib/bot-state';
 import { Database } from '../lib/db';
 import { log } from '../lib/logger';
-import { ModuleMeta } from './meta';
+import { BotBase, ModuleMeta } from './meta';
 import * as express from 'express';
 import { getEnv } from '../lib/io';
 import * as https from 'https';
@@ -127,41 +128,43 @@ export namespace Bot {
 		}
 
 		export namespace StateKeeping {
+			type ChatStateType = {
+				[K in keyof AllModules]: BotBase;
+			};
+
+			type ChatStateInitJSON = Record<keyof AllModules, unknown>;
+
 			export class ChatState {
-				states!: {
-					[K in keyof AllModules]: InstanceOf<
-						AllModules[K]['meta']['bot']['Bot']
-					>;
-				};
+				states!: ChatStateType;
 
 				async init(
-					json: {
-						[K in keyof AllModules]: any;
-					} = {} as any
-				) {
-					this.states = {} as any;
+					json: ChatStateInitJSON = {} as Record<
+						keyof AllModules,
+						unknown
+					>
+				): Promise<this> {
+					this.states = {} as ChatStateType;
 
 					const modules = await getAllModules();
 					Object.keys(modules).map((key: keyof AllModules) => {
-						const bot = modules[key].meta.bot.Bot;
-						this.states[key] = new bot(json[key] || {}) as any;
+						const module = modules[key] as {
+							meta: ModuleMeta;
+						};
+						const bot = module.meta.bot.Bot;
+						this.states[key] = new bot(json[key] || {});
 					});
 					return this;
 				}
 
-				async toJSON() {
-					const obj: Partial<
-						{
-							[K in keyof AllModules]: any;
-						}
-					> = {};
+				async toJSON(): Promise<Record<keyof AllModules, unknown>> {
+					const obj: Partial<Record<keyof AllModules, unknown>> = {};
 
 					const modules = await getAllModules();
 					Object.keys(modules).forEach((key: keyof AllModules) => {
 						obj[key] = this.states[key].toJSON();
 					});
 
-					return obj;
+					return obj as Record<keyof AllModules, unknown>;
 				}
 			}
 
@@ -170,7 +173,7 @@ export namespace Bot {
 
 				constructor(private _db: Database) {}
 
-				async init() {
+				async init(): Promise<this> {
 					await this._restoreFromDB();
 					return this;
 				}
@@ -180,33 +183,35 @@ export namespace Bot {
 					for (const requestId in data) {
 						this.chatIds.set(
 							parseInt(requestId, 10),
-							await new ChatState().init(data[requestId])
+							await new ChatState().init(
+								data[requestId] as ChatStateInitJSON
+							)
 						);
 					}
 				}
 
 				private _saveChat(chatId: number) {
 					this._db.setVal(
-						chatId + '',
+						String(chatId),
 						JSON.stringify(this.chatIds.get(chatId)!)
 					);
 				}
 
-				async getState(chatId: number) {
+				async getState(chatId: number): Promise<ChatState> {
 					if (!this.chatIds.has(chatId)) {
 						this.chatIds.set(chatId, await new ChatState().init());
 					}
 					return this.chatIds.get(chatId)!;
 				}
 
-				updateState(chatId: number) {
+				updateState(chatId: number): void {
 					this._saveChat(chatId);
 				}
 			}
 		}
 
 		export interface MatchParameters {
-			logObj: any;
+			logObj: LogObj;
 			text: string;
 			message: Bot.TelegramMessage;
 			state: Bot.Message.StateKeeping.ChatState;
@@ -215,7 +220,7 @@ export namespace Bot {
 		}
 
 		export class ResWrapper {
-			public sent: boolean = false;
+			public sent = false;
 
 			constructor(public res: ResponseLike) {}
 		}
@@ -232,7 +237,7 @@ export namespace Bot {
 						return `You are ${message.chat.first_name} ${message.chat.last_name}.`;
 					});
 					mm('what is the chat id', ({ message }) => {
-						return message.chat.id + '';
+						return String(message.chat.id);
 					});
 					mm('who are you', 'what is your name', () => {
 						return `I am ${BOT_NAME}`;
@@ -272,7 +277,7 @@ export namespace Bot {
 							seconds = seconds % 60;
 							let hours = Math.floor(mins / 60);
 							mins = mins % 60;
-							let days = Math.floor(hours / 24);
+							const days = Math.floor(hours / 24);
 							hours = hours % 24;
 
 							return `${days} days, ${hours} hours, ${mins} mins, ${days} days, ${mins} mins, ${seconds} seconds and ${ms} milliseconds`;
@@ -285,7 +290,7 @@ export namespace Bot {
 				super();
 			}
 
-			async init() {
+			async init(): Promise<this> {
 				this._stateKeeper = await new StateKeeping.StateKeeper(
 					this._db
 				).init();
@@ -296,7 +301,7 @@ export namespace Bot {
 				text: string,
 				type: RESPONSE_TYPE,
 				chatId?: number
-			) {
+			): Promise<boolean> {
 				if (!this._lastChatID && !chatId) {
 					log(
 						`Did not send message ${text} because no last chat ID is known`
@@ -343,8 +348,16 @@ export namespace Bot {
 					req.end();
 
 					const botLogObj = attachMessage(req, chalk.cyan('[bot]'));
-					attachMessage(botLogObj, 'ID: ', chalk.bold(chatId + ''));
-					attachMessage(botLogObj, 'Type: ', chalk.bold(type + ''));
+					attachMessage(
+						botLogObj,
+						'ID: ',
+						chalk.bold(String(chatId))
+					);
+					attachMessage(
+						botLogObj,
+						'Type: ',
+						chalk.bold(String(type))
+					);
 					attachMessage(
 						botLogObj,
 						'Text: ',
@@ -362,14 +375,16 @@ export namespace Bot {
 				});
 			}
 
-			private static async _matchMatchables(
+			private static async _matchMatchables<V>(
 				config: MatchParameters,
-				value: any,
+				value: V,
 				...matchables: typeof BotState.Matchable[]
-			) {
+			): Promise<V> {
 				for (let i = 0; i < matchables.length; i++) {
 					if (!value) {
-						value = await matchables[i].match(config);
+						value = (await matchables[i].match(
+							config
+						)) as unknown as V;
 					} else {
 						matchables[i].resetState(config.state);
 					}
@@ -383,9 +398,13 @@ export namespace Bot {
 				return this._matchMatchables(
 					config,
 					await this._matchSelf(config),
-					...Object.values(await getAllModules()).map(
-						(mod) => mod.meta.bot.Bot
-					)
+					...Object.values(await getAllModules()).map((mod) => {
+						return (
+							mod as {
+								meta: ModuleMeta;
+							}
+						).meta.bot.Bot;
+					})
 				);
 			}
 
@@ -403,7 +422,7 @@ export namespace Bot {
 				  }[]
 				| undefined
 			> {
-				let response: {
+				const response: {
 					type: RESPONSE_TYPE;
 					text: string | number;
 				}[] = [];
@@ -446,38 +465,46 @@ export namespace Bot {
 					}
 				}
 
-				if (response.length === 0) return undefined;
+				if (response.length === 0) {
+					return undefined;
+				}
 
 				const responses: {
 					type: RESPONSE_TYPE;
 					text: string | number;
 				}[] = [response[0]];
-				let lastType: string = response[0].type;
+				const lastType: string = response[0].type;
 				for (let i = 1; i < response.length; i++) {
 					if (lastType !== response[i].type) {
 						responses.push(response[i]);
 					} else {
-						responses[responses.length - 1].text +=
-							'\n' + response[i].text;
+						responses[
+							responses.length - 1
+						].text += `'\n'${response[i].text}`;
 					}
 				}
 				return responses;
 			}
 
 			async handleTextMessage(
-				logObj: any,
+				logObj: LogObj,
 				message: TelegramMessage<TelegramText>,
 				res: ResWrapper
-			) {
+			): Promise<
+				{
+					type: RESPONSE_TYPE;
+					text: string | number;
+				}[]
+			> {
 				attachMessage(
 					logObj,
-					`Message text:`,
+					'Message text:',
 					chalk.bold(message.text)
 				);
 				attachMessage(
 					logObj,
-					`Chat ID:`,
-					chalk.bold(message.chat.id + '')
+					'Chat ID:',
+					chalk.bold(String(message.chat.id))
 				);
 				const matchMsg = attachMessage(logObj, 'Match');
 				return (
@@ -501,7 +528,9 @@ export namespace Bot {
 			}
 
 			private _splitLongText(text: string) {
-				if (text.length <= 4096) return [text];
+				if (text.length <= 4096) {
+					return [text];
+				}
 				const parts = [];
 				while (text.length >= 4096) {
 					parts.push(text.slice(0, 4096));
@@ -511,7 +540,9 @@ export namespace Bot {
 			}
 
 			private _finishRes(wrapped: ResWrapper) {
-				if (wrapped.sent) return;
+				if (wrapped.sent) {
+					return;
+				}
 				wrapped.res.write('ok');
 				wrapped.res.end();
 				wrapped.sent = true;
@@ -522,12 +553,14 @@ export namespace Bot {
 				question: string,
 				message: TelegramMessage,
 				res: ResWrapper
-			) {
+			): Promise<string | undefined> {
 				// Send early
 				this._finishRes(res);
 
 				const chatId = message?.chat.id;
-				if (chatId === undefined) return undefined;
+				if (chatId === undefined) {
+					return undefined;
+				}
 				this._lastChatID = chatId;
 
 				if (
@@ -550,12 +583,14 @@ export namespace Bot {
 				message: TelegramMessage,
 				res: ResWrapper,
 				setCancelable: (cancel: () => void) => void
-			) {
+			): Promise<string | undefined> {
 				// Send early
 				this._finishRes(res);
 
 				const chatId = message?.chat.id;
-				if (chatId === undefined) return undefined;
+				if (chatId === undefined) {
+					return undefined;
+				}
 				this._lastChatID = chatId;
 
 				if (
@@ -588,23 +623,28 @@ export namespace Bot {
 				this._finishRes(res);
 
 				const chatId = message?.chat.id;
-				if (chatId === undefined) return false;
+				if (chatId === undefined) {
+					return false;
+				}
 				this._lastChatID = chatId;
 
 				return await this.sendMessage(text, RESPONSE_TYPE.TEXT, chatId);
 			}
 
-			isQuestion(message: TelegramMessage) {
+			isQuestion(message: TelegramMessage): boolean {
 				return this._openQuestions.length > 0 && 'text' in message;
 			}
 
-			handleQuestion(message: TelegramMessage<TelegramText>) {
+			handleQuestion(message: TelegramMessage<TelegramText>): void {
 				const firstQuestion = this._openQuestions.shift();
 				firstQuestion!(message.text);
 			}
 
-			private _lastChatID: number = 0;
-			async handleMessage(req: TelegramReq, res: ResponseLike) {
+			private _lastChatID = 0;
+			async handleMessage(
+				req: TelegramReq,
+				res: ResponseLike
+			): Promise<void> {
 				const { message, edited_message } = req.body;
 				const logObj = attachMessage(
 					res,
@@ -658,10 +698,12 @@ export namespace Bot {
 						responses.map(async (response) => {
 							const chatId =
 								message?.chat.id || edited_message?.chat.id;
-							if (chatId === undefined) return false;
+							if (chatId === undefined) {
+								return false;
+							}
 							this._lastChatID = chatId;
 							const textParts = this._splitLongText(
-								response.text + ''
+								String(response.text)
 							);
 							for (const textPart of textParts) {
 								if (
@@ -716,7 +758,9 @@ export namespace Bot {
 		) {
 			let blockIndex = 0;
 			for (let i = 0; i < range.start.length; i++, blockIndex++) {
-				if (ip[blockIndex] !== range.start[i]) return false;
+				if (ip[blockIndex] !== range.start[i]) {
+					return false;
+				}
 			}
 
 			return (
@@ -733,13 +777,13 @@ export namespace Bot {
 		}
 
 		export let handler: Message.Handler | null = null;
-		export async function init({ app, db }: ModuleConfig) {
+		export async function init({ app, db }: ModuleConfig): Promise<void> {
 			const secret = getEnv('SECRET_BOT', true);
 			handler = await new Message.Handler(secret, db).init();
 
 			const router = createRouter(Bot, {});
 			router.all('/msg', async (req, res) => {
-				if (isFromTelegram(req) || true) {
+				if (isFromTelegram(req)) {
 					await handler!.handleMessage(req, res);
 				} else {
 					res.write('Error: auth problem');
@@ -750,12 +794,18 @@ export namespace Bot {
 		}
 	}
 
-	export async function printCommands() {
+	export async function printCommands(): Promise<void> {
 		logFirst(
 			`${chalk.bold('Available commands are')}:\n\n${Object.values(
 				await getAllModules()
 			)
-				.map((mod) => mod.meta.bot.Bot)
+				.map((mod) => {
+					return (
+						mod as {
+							meta: ModuleMeta;
+						}
+					).meta.bot.Bot;
+				})
 				.map((bot) => {
 					return `${Object.keys(bot.commands)
 						.map((cmd) => {

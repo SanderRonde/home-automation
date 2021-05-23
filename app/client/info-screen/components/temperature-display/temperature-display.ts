@@ -21,7 +21,7 @@ export const enum TEMPERATURE_DISPLAY_TYPE {
 export class TemperatureDisplay extends ConfigurableWebComponent<{
 	events: {
 		propChange: {
-			args: [string, any, any];
+			args: [string, unknown, unknown];
 		};
 	};
 }> {
@@ -47,9 +47,9 @@ export class TemperatureDisplay extends ConfigurableWebComponent<{
 	async request(
 		url: string,
 		postBody: {
-			[key: string]: any;
+			[key: string]: unknown;
 		}
-	) {
+	): Promise<Response | null> {
 		try {
 			const response = await fetch(url, {
 				method: 'POST',
@@ -65,7 +65,7 @@ export class TemperatureDisplay extends ConfigurableWebComponent<{
 		}
 	}
 
-	async updateWeather() {
+	async updateWeather(): Promise<void> {
 		const response = await this.request(`${location.origin}/weather`, {
 			type: this.props.tempType,
 		});
@@ -77,15 +77,17 @@ export class TemperatureDisplay extends ConfigurableWebComponent<{
 		this.props.icon = icon;
 	}
 
-	private _initialized: boolean = false;
-	setup() {
-		if (this.props.tempType === undefined || this._initialized) return;
+	private _initialized = false;
+	async setup(): Promise<void> {
+		if (this.props.tempType === undefined || this._initialized) {
+			return;
+		}
 		this._initialized = true;
 
-		this.updateWeather();
+		await this.updateWeather();
 		setInterval(
-			() => {
-				this.updateWeather();
+			async () => {
+				await this.updateWeather();
 			},
 			this.props.tempType === TEMPERATURE_DISPLAY_TYPE.OUTSIDE
 				? 1000 * 60 * 60
@@ -93,10 +95,10 @@ export class TemperatureDisplay extends ConfigurableWebComponent<{
 		);
 	}
 
-	mounted() {
-		this.listen('propChange', () => {
-			this.setup();
+	async mounted(): Promise<void> {
+		this.listen('propChange', async () => {
+			await this.setup();
 		});
-		this.setup();
+		await this.setup();
 	}
 }

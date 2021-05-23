@@ -1,32 +1,40 @@
 import { ExplainHook } from '../modules/explain';
 import { IP_LOG_VERSION } from './constants';
 import { Auth } from '../modules/auth';
-import { Response } from 'node-fetch';
 import * as express from 'express';
 import * as http from 'http';
 import chalk from 'chalk';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type LogObj = any;
 
 interface AssociatedMessage {
 	content: string[];
 }
 
 const msgMap: WeakMap<
-	ResponseLike | AssociatedMessage | {},
+	| http.ClientRequest
+	| ResponseLike
+	| AssociatedMessage
+	| Record<string, unknown>,
 	AssociatedMessage[]
 > = new WeakMap();
-const ignoredMap: WeakSet<ResponseLike | AssociatedMessage | {}> =
-	new WeakSet();
-const rootMap: WeakMap<any, ResponseLike | AssociatedMessage | {}> =
-	new WeakMap();
-const logListeners: WeakMap<any, (captured: LogCapturer) => void> =
+const ignoredMap: WeakSet<
+	ResponseLike | AssociatedMessage | Record<string, unknown>
+> = new WeakSet();
+const rootMap: WeakMap<
+	LogObj,
+	ResponseLike | AssociatedMessage | Record<string, unknown>
+> = new WeakMap();
+const logListeners: WeakMap<LogObj, (captured: LogCapturer) => void> =
 	new WeakMap();
 
-let logLevel: number = 1;
-export function setLogLevel(level: number) {
+let logLevel = 1;
+export function setLogLevel(level: number): void {
 	logLevel = level;
 }
 
-export function getLogLevel() {
+export function getLogLevel(): number {
 	return logLevel;
 }
 
@@ -39,10 +47,10 @@ function setDefaultArrValues<T>(arr: T[], len: number, value: T): T[] {
 }
 
 interface Loggable {
-	log(message?: any, ...optionalParams: any[]): void;
+	log(message?: unknown, ...optionalParams: unknown[]): void;
 }
 
-function checkForLogListeners(logObj: any, target: LogCapturer) {
+function checkForLogListeners(logObj: LogObj, target: LogCapturer) {
 	if (logListeners.has(logObj)) {
 		logListeners.get(logObj)!(target);
 	}
@@ -51,10 +59,12 @@ function checkForLogListeners(logObj: any, target: LogCapturer) {
 function logAssociatedMessages(
 	target: LogCapturer,
 	messages: AssociatedMessage[],
-	indent: number = 0,
+	indent = 0,
 	hasNextMessage: boolean[] = []
 ) {
-	if (logLevel < indent + 2) return;
+	if (logLevel < indent + 2) {
+		return;
+	}
 
 	for (let i = 0; i < messages.length; i++) {
 		const padding = setDefaultArrValues(hasNextMessage, indent, false)
@@ -90,7 +100,7 @@ interface RequestLike {
 	method?: string;
 	ip?: string;
 	headers: {
-		[key: string]: any;
+		[key: string]: string | string[];
 	};
 }
 
@@ -124,7 +134,7 @@ export function genURLLog({
 	duration?: number | string;
 	ip?: string;
 	isSend?: boolean;
-}) {
+}): string[] {
 	const [statusColor, ipBg] = (() => {
 		if (statusCode === 200) {
 			return [chalk.green, chalk.bgGreen];
@@ -145,18 +155,22 @@ export function genURLLog({
 }
 
 export class LogCapturer implements Loggable {
-	private _done: boolean = false;
+	private _done = false;
 	private _onDone: ((result: string) => void)[] = [];
 
 	private _lines: string[] = [];
-	private _originalLines: any[][] = [];
+	private _originalLines: unknown[][] = [];
 
-	private _logToLine(...params: any[]) {
+	private _logToLine(...params: unknown[]) {
 		this._lines.push(
 			params
 				.map((param) => {
-					if (typeof param === 'string') return param;
-					if (typeof param === 'number') return param + '';
+					if (typeof param === 'string') {
+						return param;
+					}
+					if (typeof param === 'number') {
+						return String(param);
+					}
 					return JSON.stringify(param);
 				})
 				.join(' ')
@@ -164,7 +178,7 @@ export class LogCapturer implements Loggable {
 		this._originalLines.push(params);
 	}
 
-	log(message?: any, ...params: any[]) {
+	log(message?: unknown, ...params: unknown[]): void {
 		this._logToLine(message, ...params);
 	}
 
@@ -183,7 +197,7 @@ export class LogCapturer implements Loggable {
 		});
 	}
 
-	logToConsole() {
+	logToConsole(): void {
 		for (const line of this._originalLines) {
 			console.log(...line);
 		}
@@ -193,12 +207,12 @@ export class LogCapturer implements Loggable {
 	}
 }
 
-export function logReq(req: express.Request, res: express.Response) {
+export function logReq(req: RequestLike | LogObj, res: express.Response): void {
 	const target = new LogCapturer();
 
 	const start = Date.now();
 	const ip = getIP(req);
-	res.on('finish', async () => {
+	res.on('finish', () => {
 		checkForLogListeners(res, target);
 
 		if (logLevel < 1 || ignoredMap.has(res)) {
@@ -225,7 +239,7 @@ export function logReq(req: express.Request, res: express.Response) {
 	});
 }
 
-export function getTime() {
+export function getTime(): string {
 	return chalk.bold(`[${new Date().toLocaleString()}]`);
 }
 
@@ -234,12 +248,12 @@ function getTimeFiller() {
 }
 
 export function logOutgoingRes(
-	res: Response,
+	res: ResponseLike,
 	data: {
 		method: string;
 		path: string;
 	}
-) {
+): void {
 	const target = new LogCapturer();
 	if (logListeners.has(res)) {
 		logListeners.get(res)!(target);
@@ -274,7 +288,7 @@ export function logOutgoingReq(
 		method: string;
 		target: string;
 	}
-) {
+): void {
 	const target = new LogCapturer();
 	if (logListeners.has(req)) {
 		logListeners.get(req)!(target);
@@ -306,9 +320,9 @@ export function logOutgoingReq(
 }
 
 export function logFixture(
-	obj: ResponseLike | AssociatedMessage | {},
+	obj: ResponseLike | AssociatedMessage | Record<string, unknown>,
 	...name: string[]
-) {
+): void {
 	const target = new LogCapturer();
 	checkForLogListeners(obj, target);
 
@@ -323,9 +337,9 @@ export function logFixture(
 }
 
 export function transferAttached(
-	from: ResponseLike | AssociatedMessage | {},
-	to: ResponseLike | AssociatedMessage | {}
-) {
+	from: ResponseLike | AssociatedMessage | Record<string, unknown>,
+	to: ResponseLike | AssociatedMessage | Record<string, unknown>
+): void {
 	const attached = msgMap.get(from) || [];
 	if (!msgMap.has(to)) {
 		msgMap.set(to, []);
@@ -344,14 +358,16 @@ export function transferAttached(
 	}
 }
 
-export function disableMessages(obj: ResponseLike | AssociatedMessage | {}) {
+export function disableMessages(
+	obj: ResponseLike | AssociatedMessage | Record<string, unknown>
+): void {
 	ignoredMap.add(obj);
 }
 
 export function attachMessage(
-	obj: ResponseLike | AssociatedMessage | {},
+	obj: ResponseLike | AssociatedMessage | Record<string, unknown> | LogObj,
 	...messages: string[]
-) {
+): LogObj {
 	if (typeof obj !== 'object' && typeof obj !== 'function') {
 		console.warn('Invalid log target', obj);
 		console.trace();
@@ -375,11 +391,11 @@ export function attachMessage(
 }
 
 export function attachSourcedMessage(
-	obj: ResponseLike | AssociatedMessage | {},
+	obj: ResponseLike | AssociatedMessage | Record<string, unknown>,
 	source: string,
 	hook: ExplainHook | null,
 	...messages: string[]
-) {
+): LogObj {
 	if (typeof obj !== 'object' && typeof obj !== 'function') {
 		console.warn('Invalid log target', obj);
 		console.trace();
@@ -407,16 +423,20 @@ export function attachSourcedMessage(
 }
 
 export function addLogListener(
-	obj: any,
+	obj: LogObj,
 	listener: (captured: LogCapturer) => void
-) {
-	if (typeof obj !== 'object' || !obj) return;
+): void {
+	if (typeof obj !== 'object' || !obj) {
+		return;
+	}
 
 	logListeners.set(obj, listener);
 }
 
-export function getRootLogObj(obj: any) {
-	if (typeof obj !== 'object' || !obj) return;
+export function getRootLogObj(obj: LogObj): LogObj {
+	if (typeof obj !== 'object' || !obj) {
+		return;
+	}
 	return rootMap.get(obj);
 }
 
@@ -432,24 +452,26 @@ export interface ResponseLike {
 }
 
 export class ResDummy implements ResponseLike {
-	status() {
+	status(): this {
 		return this;
 	}
-	sendFile() {}
-	redirect() {}
-	write() {}
-	end() {}
-	contentType() {}
-	cookie() {}
+	sendFile(): void {}
+	redirect(): void {}
+	write(): void {}
+	end(): void {}
+	contentType(): void {}
+	cookie(): void {}
 
-	transferTo(obj: ResponseLike | AssociatedMessage | {}) {
+	transferTo(
+		obj: ResponseLike | AssociatedMessage | Record<string, unknown>
+	): void {
 		transferAttached(this, obj);
 	}
 	_headersSent = false;
 }
 
 export class ProgressLogger {
-	private _progress: number = 0;
+	private _progress = 0;
 	private _startTime = Date.now();
 
 	constructor(private _name: string, private _max: number) {}
@@ -467,7 +489,7 @@ export class ProgressLogger {
 			.join('')}]`;
 	}
 
-	logInitial() {
+	logInitial(): void {
 		console.log(
 			chalk.bgBlack(
 				getTime(),
@@ -480,7 +502,7 @@ export class ProgressLogger {
 		);
 	}
 
-	increment(name: string) {
+	increment(name: string): void {
 		this._progress++;
 		console.log(
 			chalk.bgBlack(
@@ -498,7 +520,7 @@ export class ProgressLogger {
 		);
 	}
 
-	done() {
+	done(): void {
 		if (this._progress > this._max) {
 			console.log(
 				chalk.red('Increment got called more often than configured')
@@ -524,20 +546,20 @@ export class ProgressLogger {
 	}
 }
 
-let isInit: boolean = false;
-let initMessages: any[][] = [];
-export function startInit() {
+let isInit = false;
+let initMessages: unknown[][] = [];
+export function startInit(): void {
 	isInit = true;
 }
 
-export function endInit() {
+export function endInit(): void {
 	isInit = false;
 	initMessages.forEach((args) => {
 		console.log(...args);
 	});
 }
 
-export function logFirst(...args: any[]) {
+export function logFirst(...args: unknown[]): void {
 	if (isInit) {
 		initMessages = [args, ...initMessages];
 	} else {
@@ -545,7 +567,7 @@ export function logFirst(...args: any[]) {
 	}
 }
 
-export function log(...args: any[]) {
+export function log(...args: unknown[]): void {
 	if (isInit) {
 		initMessages.push(args);
 	} else {
@@ -553,7 +575,7 @@ export function log(...args: any[]) {
 	}
 }
 
-export function logTimed(...args: any[]) {
+export function logTimed(...args: unknown[]): void {
 	if (isInit) {
 		initMessages.push([...getTime(), args]);
 	} else {
@@ -584,7 +606,7 @@ const chalkColors = [
 export function logTag(
 	tag: string,
 	color: typeof chalkColors[Extract<keyof typeof chalkColors, number>],
-	...messages: any[]
-) {
+	...messages: unknown[]
+): void {
 	log(getTime(), chalk[color](`[${tag}]`), ...messages);
 }

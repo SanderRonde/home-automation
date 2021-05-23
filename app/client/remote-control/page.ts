@@ -38,7 +38,7 @@ function initListeners() {
 			document
 				.getElementById(externalEvent)!
 				.addEventListener('click', () => {
-					fetch(`/remote-control/${externalEvent}`, {
+					void fetch(`/remote-control/${externalEvent}`, {
 						method: 'POST',
 						credentials: 'include',
 					});
@@ -79,7 +79,7 @@ function initSetVolume() {
 		const amount = dialogInput.value;
 		dialogInput.value = '';
 
-		fetch(`/remote-control/setvolume/${amount}`, {
+		void fetch(`/remote-control/setvolume/${amount}`, {
 			method: 'POST',
 			credentials: 'include',
 		});

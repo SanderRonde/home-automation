@@ -1,15 +1,9 @@
 import {
 	LED_NAMES,
 	NIGHTSTAND_COLOR,
-	LED_DEVICE_NAME,
-	MAGIC_LEDS,
-	ARDUINO_LEDS,
-	LED_IPS,
 	WAKELIGHT_TIME,
-	NAME_MAP,
 	MARKED_AUDIO_FOLDER,
 	NUM_LEDS,
-	HEX_LEDS,
 } from '../lib/constants';
 import {
 	errorHandle,
@@ -19,25 +13,18 @@ import {
 	authAll,
 	upgradeToHTTPS,
 } from '../lib/decorators';
-import {
-	Discovery,
-	Control,
-	CustomMode,
-	TransitionTypes,
-	BuiltinPatterns,
-} from 'magic-home';
+import { CustomMode, TransitionTypes } from 'magic-home';
 import {
 	attachMessage,
 	attachSourcedMessage,
+	LogObj,
 	logTag,
 	ResponseLike,
 } from '../lib/logger';
-import * as ReadLine from '@serialport/parser-readline';
 import { ModuleConfig } from './modules';
 import { Color, IColor } from '../lib/types';
-import { wait, arrToObj, XHR } from '../lib/util';
+import { wait, arrToObj } from '../lib/util';
 import { BotState } from '../lib/bot-state';
-import SerialPort = require('serialport');
 import { colorList } from '../lib/data';
 import { exec } from 'child_process';
 import { ModuleMeta } from './meta';
@@ -48,9 +35,10 @@ import { Auth } from './auth';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import chalk from 'chalk';
-import { getEnv } from '../lib/io';
 import { createExternalClass } from '../lib/external';
 import { createRouter } from '../lib/api';
+import { RGBEffectConfig } from './rgb/effect-config';
+import { RGBClients, RGBScan } from './rgb/clients';
 
 function getIntensityPercentage(percentage: number) {
 	return Math.round((percentage / 100) * 255);
@@ -60,7 +48,7 @@ function restartSelf() {
 	return new Promise<void>((resolve) => {
 		// Restart this program
 		exec(
-			`sudo -u root su -c "zsh -c \\"source /root/.zshrc ; forever restart automation\\""`,
+			'sudo -u root su -c "zsh -c \\"source /root/.zshrc ; forever restart automation\\""',
 			(err, _stdout, stderr) => {
 				if (err) {
 					console.log('Failed to restart :(', stderr);
@@ -80,15 +68,17 @@ export namespace RGB {
 		setup!: Promise<void>;
 
 		async init(config: ModuleConfig) {
-			await (this.setup = new Promise(async (resolve) => {
-				await Scan.scanRGBControllers(true);
-				setInterval(Scan.scanRGBControllers, 1000 * 60 * 60);
-				await External.Handler.init();
-				initListeners();
+			await (this.setup = new Promise((resolve) => {
+				void (async () => {
+					await Scan.scanRGBControllers(true);
+					setInterval(() => {
+						void Scan.scanRGBControllers();
+					}, 1000 * 60 * 60);
+					await External.Handler.init();
+					initListeners();
 
-				Routing.init(config);
-
-				resolve();
+					Routing.init(config);
+				})().then(resolve);
 			}));
 		}
 
@@ -101,828 +91,9 @@ export namespace RGB {
 		}
 	})();
 
-	export namespace EffectConfig {
-		const BYTE_BITS = 8;
-		const MAX_BYTE_VAL = Math.pow(2, BYTE_BITS) - 1;
-
-		export enum MOVING_STATUS {
-			OFF = 0,
-			FORWARDS = 1,
-			BACKWARDS = 2,
-		}
-
-		function flatten<V>(arr: V[][]): V[] {
-			const resultArr: V[] = [];
-			for (const value of arr) {
-				resultArr.push(...value);
-			}
-			return resultArr;
-		}
-
-		function assert(condition: boolean, message: string) {
-			if (!condition) {
-				throw new Error(message);
-			}
-		}
-
-		function shortToBytes(short: number) {
-			return [
-				(short & (MAX_BYTE_VAL << BYTE_BITS)) >> BYTE_BITS,
-				short & MAX_BYTE_VAL,
-			];
-		}
-
-		export class Leds {
-			private _leds!: (ColorSequence | SingleColor)[];
-
-			constructor(private _numLeds: number) {}
-
-			private _assertTotalLeds() {
-				assert(
-					this._leds.reduce((prev, current) => {
-						return prev + current.length;
-					}, 0) <= this._numLeds,
-					'Number of LEDs exceeds total'
-				);
-				assert(
-					this._leds.reduce((prev, current) => {
-						return prev + current.length;
-					}, 0) >= this._numLeds,
-					'Number of LEDs is lower than total'
-				);
-			}
-
-			fillWithColors(colors: Color[]) {
-				const numFullSequences = Math.floor(
-					this._numLeds / colors.length
-				);
-				this._leds = [];
-				this._leds.push(new ColorSequence(colors, numFullSequences));
-				if (numFullSequences * colors.length !== this._numLeds) {
-					const remainingColors =
-						this._numLeds - numFullSequences * colors.length;
-					for (let i = 0; i < remainingColors; i++) {
-						this._leds.push(new SingleColor(colors[i]));
-					}
-				}
-
-				this._assertTotalLeds();
-
-				return this;
-			}
-
-			toSequence() {
-				return this._leds;
-			}
-		}
-
-		export class MoveData {
-			static readonly MOVING_STATUS = MOVING_STATUS;
-
-			constructor(
-				_moving: MOVING_STATUS.BACKWARDS | MOVING_STATUS.FORWARDS,
-				_movingConfig: {
-					jumpSize: number;
-					jumpDelay: number;
-				},
-				_alternateConfig?:
-					| {
-							alternate: true;
-							alternateDelay: number;
-					  }
-					| {
-							alternate: false;
-					  }
-			);
-			constructor(_moving: MOVING_STATUS.OFF);
-			constructor(
-				private _moving: MOVING_STATUS,
-				private _movingConfig: {
-					jumpSize: number;
-					jumpDelay: number;
-				} = {
-					jumpSize: 0,
-					jumpDelay: 0,
-				},
-				private _alternateConfig:
-					| {
-							alternate: true;
-							alternateDelay: number;
-					  }
-					| {
-							alternate: false;
-					  } = {
-					alternate: false,
-				}
-			) {}
-
-			toBytes() {
-				return [
-					this._moving,
-					...shortToBytes(this._movingConfig.jumpSize),
-					...shortToBytes(this._movingConfig.jumpDelay),
-					~~this._alternateConfig.alternate,
-					...shortToBytes(
-						this._alternateConfig.alternate
-							? this._alternateConfig.alternateDelay
-							: 0
-					),
-				];
-			}
-		}
-
-		export class ColorSequence {
-			public colors: Color[];
-
-			constructor(colors: Color[] | Color, public repetitions: number) {
-				this.colors = Array.isArray(colors) ? colors : [colors];
-			}
-
-			toBytes(): number[] {
-				return [
-					ColorType.COLOR_SEQUENCE,
-					...shortToBytes(this.colors.length),
-					...shortToBytes(this.repetitions),
-					...flatten(this.colors.map((color) => color.toBytes())),
-				];
-			}
-
-			get length() {
-				return (
-					(Array.isArray(this.colors) ? this.colors.length : 1) *
-					this.repetitions
-				);
-			}
-		}
-
-		export class TransparentSequence {
-			constructor(public length: number) {}
-
-			toBytes(): number[] {
-				return [ColorType.TRANSPARENT, ...shortToBytes(this.length)];
-			}
-		}
-
-		export enum ColorType {
-			SINGLE_COLOR = 0,
-			COLOR_SEQUENCE = 1,
-			RANDOM_COLOR = 2,
-			TRANSPARENT = 3,
-			REPEAT = 4,
-		}
-
-		export class SingleColor {
-			constructor(public color: Color) {}
-
-			toBytes() {
-				return [ColorType.SINGLE_COLOR, ...this.color.toBytes()];
-			}
-
-			get length() {
-				return 1;
-			}
-		}
-
-		export class RandomColor {
-			constructor(
-				public size: number,
-				public randomTime: number,
-				public randomEveryTime: boolean
-			) {}
-
-			toBytes() {
-				return [
-					ColorType.RANDOM_COLOR,
-					~~this.randomEveryTime,
-					...shortToBytes(this.randomTime),
-					...shortToBytes(this.size),
-				];
-			}
-		}
-
-		export class Repeat {
-			constructor(
-				public repetitions: number,
-				public sequence:
-					| SingleColor
-					| ColorSequence
-					| RandomColor
-					| TransparentSequence
-			) {}
-
-			toBytes() {
-				return [
-					ColorType.REPEAT,
-					...shortToBytes(this.repetitions),
-					...this.sequence.toBytes(),
-				];
-			}
-		}
-
-		export class LedSpecStep {
-			public moveData: MoveData;
-			public background: Color;
-			public sequences: (
-				| SingleColor
-				| ColorSequence
-				| RandomColor
-				| TransparentSequence
-				| Repeat
-			)[];
-
-			constructor(
-				{
-					background,
-					moveData,
-					sequences,
-				}: {
-					moveData: MoveData;
-					background: Color;
-					sequences: (
-						| SingleColor
-						| ColorSequence
-						| RandomColor
-						| Repeat
-						| TransparentSequence
-					)[];
-				},
-				public delayUntilNext: number = 0
-			) {
-				this.moveData = moveData;
-				this.background = background;
-				this.sequences = sequences;
-			}
-
-			toBytes() {
-				return [
-					...shortToBytes(this.delayUntilNext),
-					...this.moveData.toBytes(),
-					...this.background.toBytes(),
-					...shortToBytes(
-						this.sequences
-							.map((sequence) => {
-								if (sequence instanceof Repeat) {
-									return sequence.repetitions;
-								}
-								return 1;
-							})
-							.reduce((p, c) => p + c, 0)
-					),
-					...flatten(
-						this.sequences.map((sequence) => sequence.toBytes())
-					),
-				];
-			}
-		}
-
-		export class LedEffect {
-			constructor(public effect: LedSpecStep[]) {}
-
-			toBytes() {
-				debugger;
-				return [
-					...shortToBytes(this.effect.length),
-					...flatten(
-						this.effect.map((step) => {
-							return step.toBytes();
-						})
-					),
-				];
-			}
-		}
-
-		export class LedSpec {
-			constructor(public steps: LedEffect) {}
-
-			toBytes(): number[] {
-				return [
-					'<'.charCodeAt(0),
-					...this.steps.toBytes(),
-					'>'.charCodeAt(0),
-				];
-			}
-		}
-	}
-
-	export namespace Clients {
-		abstract class RGBClient {
-			static patternNames: {
-				[key in BuiltinPatterns]: number;
-			} = Control.patternNames;
-			abstract address: string;
-
-			private async _stateChange(value: string) {
-				const name = this.address;
-				if (name in NAME_MAP) {
-					const keys = NAME_MAP[name as keyof typeof NAME_MAP];
-					for (const key of keys) {
-						await new KeyVal.External.Handler(
-							{},
-							`RGB_NAMEMAP.${name}`
-						).set(key, value, false);
-					}
-				}
-			}
-
-			protected async _turnedOn() {
-				await this._stateChange('1');
-			}
-
-			protected async _turnedOff() {
-				await this._stateChange('0');
-			}
-
-			abstract setColor(
-				red: number,
-				green: number,
-				blue: number,
-				intensity?: number,
-				callback?: (err: Error | null, success: boolean) => void
-			): Promise<boolean>;
-			abstract setColorAndWarmWhite(
-				red: number,
-				green: number,
-				blue: number,
-				ww: number,
-				callback?: (err: Error | null, success: boolean) => void
-			): Promise<boolean>;
-			abstract setColorWithBrightness(
-				red: number,
-				green: number,
-				blue: number,
-				brightness: number,
-				intensity?: number,
-				callback?: (err: Error | null, success: boolean) => void
-			): Promise<boolean>;
-			abstract setPattern(
-				pattern: BuiltinPatterns,
-				speed: number,
-				callback?: () => void
-			): Promise<boolean>;
-			abstract setPower(
-				on: boolean,
-				callback?: () => void
-			): Promise<boolean>;
-			abstract setWarmWhite(
-				ww: number,
-				callback?: (err: Error | null, success: boolean) => void
-			): Promise<boolean>;
-			abstract turnOff(callback?: () => void): Promise<boolean>;
-			abstract turnOn(callback?: () => void): Promise<boolean>;
-		}
-
-		export class HexClient extends RGBClient {
-			constructor(public address: string) {
-				super();
-			}
-
-			private _numToHex(num: number) {
-				const hexed = Math.round(num).toString(16);
-				if (hexed.length === 1) {
-					return `${hexed}0`;
-				}
-				return hexed;
-			}
-
-			private _colorToHex(color: Color) {
-				return `#${this._numToHex(color.r)}${this._numToHex(
-					color.g
-				)}${this._numToHex(color.b)}`;
-			}
-
-			async setColor(
-				red: number,
-				green: number,
-				blue: number,
-				intensity?: number
-			): Promise<boolean> {
-				return this.setColorWithBrightness(
-					red,
-					green,
-					blue,
-					intensity || 100
-				);
-			}
-			async setColorAndWarmWhite(
-				red: number,
-				green: number,
-				blue: number,
-				ww: number
-			): Promise<boolean> {
-				return this.setColorWithBrightness(red, green, blue, ww);
-			}
-			async setColorWithBrightness(
-				red: number,
-				green: number,
-				blue: number,
-				brightness: number
-			): Promise<boolean> {
-				await XHR.post(
-					`http://${this.address}/set_all`,
-					`hex-${this.address}-color-with-brightness`,
-					{
-						color: this._colorToHex(
-							new Color(
-								red * (brightness / 100),
-								green * (brightness / 100),
-								blue * (brightness / 100)
-							)
-						),
-					}
-				);
-				return Promise.resolve(true);
-			}
-			async setPattern(pattern: BuiltinPatterns): Promise<boolean> {
-				await XHR.post(
-					`http://${this.address}/effects/${pattern}`,
-					`hex-${this.address}-pattern`
-				);
-				return Promise.resolve(true);
-			}
-			async setPower(on: boolean): Promise<boolean> {
-				if (on) {
-					await this._turnedOn();
-					await this.turnOn();
-				} else {
-					await this._turnedOff();
-					await this.turnOff();
-				}
-				return Promise.resolve(true);
-			}
-
-			async setWarmWhite(ww: number): Promise<boolean> {
-				await XHR.post(
-					`http://${this.address}/set_all`,
-					`hex-${this.address}-color-warm-white`,
-					{
-						color: this._colorToHex(
-							new Color(ww / 100, ww / 100, ww / 100)
-						),
-					}
-				);
-				return Promise.resolve(true);
-			}
-			async turnOff(): Promise<boolean> {
-				await XHR.post(
-					`http://${this.address}/off`,
-					`hex-${this.address}-off`
-				);
-				return Promise.resolve(true);
-			}
-			async turnOn(): Promise<boolean> {
-				await XHR.post(
-					`http://${this.address}/on`,
-					`hex-${this.address}-on`
-				);
-				return Promise.resolve(true);
-			}
-
-			async runEffect(name: string, params: Record<string, any>) {
-				await XHR.post(
-					`http://${this.address}/effects/${name}`,
-					`hex-${this.address}-effect-${name}`,
-					params
-				);
-				return Promise.resolve(true);
-			}
-		}
-
-		export class MagicHomeClient extends RGBClient {
-			constructor(private _control: Control, public address: string) {
-				super();
-			}
-
-			async setColor(
-				red: number,
-				green: number,
-				blue: number,
-				intensity?: number,
-				callback?: (err: Error | null, success: boolean) => void
-			): Promise<boolean> {
-				await this._turnedOn();
-				return this._control.setColorWithBrightness(
-					red,
-					green,
-					blue,
-					intensity || 100,
-					callback
-				);
-			}
-			async setColorAndWarmWhite(
-				red: number,
-				green: number,
-				blue: number,
-				ww: number,
-				callback?: (err: Error | null, success: boolean) => void
-			): Promise<boolean> {
-				await this._turnedOn();
-				return this._control.setColorAndWarmWhite(
-					red,
-					green,
-					blue,
-					ww,
-					callback
-				);
-			}
-			async setColorWithBrightness(
-				red: number,
-				green: number,
-				blue: number,
-				brightness: number,
-				_intensity?: number,
-				callback?: (err: Error | null, success: boolean) => void
-			): Promise<boolean> {
-				await this._turnedOn();
-				return this._control.setColorWithBrightness(
-					red,
-					green,
-					blue,
-					brightness,
-					callback
-				);
-			}
-			async setPattern(
-				pattern: BuiltinPatterns,
-				speed: number,
-				callback?: () => void
-			): Promise<boolean> {
-				await this._turnedOn();
-				return this._control.setPattern(pattern, speed, callback);
-			}
-			async setPower(
-				on: boolean,
-				callback?: () => void
-			): Promise<boolean> {
-				if (on) {
-					await this._turnedOn();
-				} else {
-					await this._turnedOff();
-				}
-				return this._control.setPower(on, callback);
-			}
-			async setWarmWhite(
-				ww: number,
-				callback?: (err: Error | null, success: boolean) => void
-			): Promise<boolean> {
-				await this._turnedOn();
-				return this._control.setWarmWhite(ww, callback);
-			}
-			async turnOff(callback?: () => void): Promise<boolean> {
-				await this._turnedOff();
-				return this._control.turnOff(callback);
-			}
-			async turnOn(callback?: () => void): Promise<boolean> {
-				await this._turnedOn();
-				return this._control.turnOn(callback);
-			}
-		}
-
-		export class ArduinoClient extends RGBClient {
-			address: string;
-
-			constructor(public board: Board.Board) {
-				super();
-				this.address = board.name;
-			}
-
-			public ping(): Promise<boolean> {
-				return this.board.ping();
-			}
-
-			private _sendSuccess(
-				callback?: (err: Error | null, success: boolean) => void
-			) {
-				callback && callback(null, true);
-				return true;
-			}
-
-			async setColor(
-				red: number,
-				green: number,
-				blue: number,
-				_intensity?: number,
-				callback?: (err: Error | null, success: boolean) => void
-			): Promise<boolean> {
-				await this._turnedOn();
-				this.board.setSolid({
-					r: red,
-					g: green,
-					b: blue,
-				});
-				return this._sendSuccess(callback);
-			}
-			async setColorAndWarmWhite(
-				red: number,
-				green: number,
-				blue: number,
-				_ww: number,
-				callback?: (err: Error | null, success: boolean) => void
-			): Promise<boolean> {
-				await this._turnedOn();
-				this.board.setSolid({ r: red, g: green, b: blue });
-				return this._sendSuccess(callback);
-			}
-			async setColorWithBrightness(
-				red: number,
-				green: number,
-				blue: number,
-				brightness: number,
-				_intensity?: number,
-				callback?: (err: Error | null, success: boolean) => void
-			): Promise<boolean> {
-				await this._turnedOn();
-				const brightnessScale = brightness / 100;
-				this.board.setSolid({
-					r: red * brightnessScale,
-					g: green * brightnessScale,
-					b: blue * brightnessScale,
-				});
-				return this._sendSuccess(callback);
-			}
-			async setPattern(
-				_pattern: BuiltinPatterns,
-				_speed: number,
-				_callback?: () => void
-			): Promise<boolean> {
-				// Not implemented
-				return Promise.resolve(true);
-			}
-			async setPower(
-				on: boolean,
-				callback?: () => void
-			): Promise<boolean> {
-				if (on) {
-					await this._turnedOn();
-					return this.turnOn(callback);
-				} else {
-					await this._turnedOff();
-					return this.turnOff(callback);
-				}
-			}
-			async setWarmWhite(
-				ww: number,
-				callback?: (err: Error | null, success: boolean) => void
-			): Promise<boolean> {
-				await this._turnedOn();
-				this.board.setSolid(new Color(ww));
-				return this._sendSuccess(callback);
-			}
-			async turnOff(callback?: () => void): Promise<boolean> {
-				await this._turnedOff();
-				this.board.setModeOff();
-				return this._sendSuccess(callback);
-			}
-			async turnOn(callback?: () => void): Promise<boolean> {
-				await this._turnedOn();
-				return this._sendSuccess(callback);
-			}
-		}
-
-		export let magicHomeClients: MagicHomeClient[] = [];
-		export let arduinoClients: ArduinoClient[] = [];
-		export let hexClients: HexClient[] = [];
-		export let clients: RGBClient[] = [];
-
-		export let arduinoBoards: Board.Board[] = [];
-
-		export function getLed(
-			name: LED_NAMES
-		): MagicHomeClient | ArduinoClient | HexClient | null {
-			if (MAGIC_LEDS.includes(name)) {
-				return (
-					magicHomeClients.filter((client) => {
-						return LED_IPS[client.address] === name;
-					})[0] || null
-				);
-			} else if (ARDUINO_LEDS.includes(name)) {
-				return arduinoClients[0] || null;
-			} else if (HEX_LEDS.includes(name)) {
-				return hexClients[0] || null;
-			}
-			return null;
-		}
-	}
-
-	export namespace Scan {
-		let magicHomeTimer: NodeJS.Timeout | null = null;
-		let arduinoTimer: NodeJS.Timeout | null = null;
-		const RESCAN_TIME = 1000 * 60;
-
-		export async function scanMagicHomeControllers(first: boolean = false) {
-			const scanTime =
-				first && process.argv.indexOf('--debug') > -1 ? 250 : 10000;
-			const clients = (await new Discovery().scan(scanTime))
-				.map((client) => ({
-					control: new Control(client.address, {
-						wait_for_reply: false,
-					}),
-					address: client.address,
-				}))
-				.map(
-					(client) =>
-						new Clients.MagicHomeClient(
-							client.control,
-							client.address
-						)
-				);
-
-			Clients.magicHomeClients = clients;
-			Clients.clients = [
-				...Clients.magicHomeClients,
-				...Clients.arduinoClients,
-				...Clients.hexClients,
-			];
-
-			return clients.length;
-		}
-
-		export async function scanArduinos() {
-			if (Clients.arduinoClients.length === 0) {
-				const board = await Board.tryConnectRGBBoard(true);
-				if (board) {
-					Clients.arduinoClients.push(
-						new Clients.ArduinoClient(board)
-					);
-				}
-			}
-
-			Clients.clients = [
-				...Clients.magicHomeClients,
-				...Clients.arduinoClients,
-				...Clients.hexClients,
-			];
-
-			return Clients.arduinoClients.length;
-		}
-
-		export async function scanHex() {
-			const ip = getEnv('MODULE_LED_HEX_IP', false);
-			if (!ip) {
-				return 0;
-			}
-
-			Clients.hexClients = [new Clients.HexClient(ip)];
-			Clients.clients = [
-				...Clients.magicHomeClients,
-				...Clients.arduinoClients,
-				...Clients.hexClients,
-			];
-
-			return 1;
-		}
-
-		export async function scanRGBControllers(
-			first: boolean = false,
-			logObj: any = undefined
-		) {
-			const [magicHomeClients, arduinoClients, hexClients] =
-				await Promise.all([
-					scanMagicHomeControllers(first),
-					scanArduinos(),
-					scanHex(),
-				]);
-			const clients = magicHomeClients + arduinoClients + hexClients;
-
-			if (magicHomeClients === 0) {
-				if (magicHomeTimer !== null) {
-					clearInterval(magicHomeTimer);
-				}
-				magicHomeTimer = setTimeout(() => {
-					scanMagicHomeControllers();
-					magicHomeTimer !== null && clearInterval(magicHomeTimer);
-				}, RESCAN_TIME);
-			}
-			if (arduinoClients === 0) {
-				if (arduinoTimer !== null) {
-					clearInterval(arduinoTimer);
-				}
-				arduinoTimer = setTimeout(() => {
-					scanArduinos();
-					arduinoTimer !== null && clearInterval(arduinoTimer);
-				}, RESCAN_TIME);
-			}
-
-			if (!logObj) {
-				logTag(
-					'rgb',
-					'cyan',
-					'Found',
-					chalk.bold(clients + ''),
-					'clients'
-				);
-			} else {
-				logTag(
-					'rgb',
-					'cyan',
-					'Found',
-					chalk.bold(clients + ''),
-					'clients'
-				);
-			}
-
-			return clients;
-		}
-	}
+	const EffectConfig = RGBEffectConfig;
+	const Clients = RGBClients;
+	const Scan = RGBScan;
 
 	type CustomPattern =
 		| 'rgb'
@@ -933,14 +104,13 @@ export namespace RGB {
 		| 'shittyfire'
 		| 'betterfire';
 
-	const patterns: Object &
-		{
-			[K in CustomPattern]: {
-				pattern: CustomMode;
-				defaultSpeed: number;
-				arduinoOnly?: boolean;
-			};
-		} = {
+	const patterns: {
+		[K in CustomPattern]: {
+			pattern: CustomMode;
+			defaultSpeed: number;
+			arduinoOnly?: boolean;
+		};
+	} = {
 		rgb: {
 			pattern: new CustomMode()
 				.addColor(255, 0, 0)
@@ -1174,7 +344,7 @@ export namespace RGB {
 				stops.push(c1);
 			}
 
-			let delta = 1 / steps;
+			const delta = 1 / steps;
 			for (let i = 1; i < steps - 1; i++) {
 				const progress = delta * i;
 				const invertedProgress = 1 - progress;
@@ -1198,30 +368,41 @@ export namespace RGB {
 			let g: number;
 			let b: number;
 
-			let i, f, p, q, t;
-			i = Math.floor(h * 6);
-			f = h * 6 - i;
-			p = v * (1 - s);
-			q = v * (1 - f * s);
-			t = v * (1 - (1 - f) * s);
+			const i = Math.floor(h * 6);
+			const f = h * 6 - i;
+			const p = v * (1 - s);
+			const q = v * (1 - f * s);
+			const t = v * (1 - (1 - f) * s);
 			switch (i % 6) {
 				case 0:
-					(r = v), (g = t), (b = p);
+					r = v;
+					g = t;
+					b = p;
 					break;
 				case 1:
-					(r = q), (g = v), (b = p);
+					r = q;
+					g = v;
+					b = p;
 					break;
 				case 2:
-					(r = p), (g = v), (b = t);
+					r = p;
+					g = v;
+					b = t;
 					break;
 				case 3:
-					(r = p), (g = q), (b = v);
+					r = p;
+					g = q;
+					b = v;
 					break;
 				case 4:
-					(r = t), (g = p), (b = v);
+					r = t;
+					g = p;
+					b = v;
 					break;
 				case 5:
-					(r = v), (g = p), (b = q);
+					r = v;
+					g = p;
+					b = q;
 					break;
 			}
 			return {
@@ -1852,11 +1033,12 @@ export namespace RGB {
 		};
 		const typeCheck = arduinoEffects as {
 			[key: string]: {
-				effect: EffectConfig.LedEffect;
+				effect: RGBEffectConfig.LedEffect;
 				description: string;
 			};
 		};
 		// @ts-ignore
+		// eslint-disable-next-line @typescript-eslint/no-unused-expressions
 		typeCheck;
 	}
 
@@ -2006,7 +1188,7 @@ export namespace RGB {
 	export namespace API {
 		export const HEX_REGEX =
 			/#([a-fA-F\d]{2})([a-fA-F\d]{2})([a-fA-F\d]{2})/;
-		export function hexToRGB(hex: string) {
+		export function hexToRGB(hex: string): Color {
 			const match = HEX_REGEX.exec(hex)!;
 
 			const [, r, g, b] = match;
@@ -2015,22 +1197,27 @@ export namespace RGB {
 
 		function singleNumToHex(num: number) {
 			if (num < 10) {
-				return num + '';
+				return String(num);
 			}
 			return String.fromCharCode(97 + (num - 10));
 		}
 
-		export function toHex(num: number) {
+		export function toHex(num: number): string {
 			return (
 				singleNumToHex(Math.floor(num / 16)) + singleNumToHex(num % 16)
 			);
 		}
 
-		export function rgbToHex(red: number, green: number, blue: number) {
+		// TODO: replace with new color functions
+		export function rgbToHex(
+			red: number,
+			green: number,
+			blue: number
+		): string {
 			return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
 		}
 
-		export function colorToHex(color: Color) {
+		export function colorToHex(color: Color): string {
 			return rgbToHex(color.r, color.g, color.b);
 		}
 
@@ -2077,7 +1264,7 @@ export namespace RGB {
 					target?: string;
 				},
 				source: string
-			) {
+			): Promise<boolean> {
 				color = color.toLowerCase().trim();
 				if (!(color in colorList)) {
 					attachMessage(res, `Unknown color "${color}"`);
@@ -2098,13 +1285,13 @@ export namespace RGB {
 						),
 						chalk.bgHex(hexColor)('   ')
 					),
-					`Updated ${clientSet!.length} clients`
+					`Updated ${clientSet.length} clients`
 				);
 
 				if (
 					(
 						await Promise.all(
-							clientSet!.map(async (client) => {
+							clientSet.map(async (client) => {
 								return client.setColorWithBrightness(
 									r,
 									g,
@@ -2145,7 +1332,7 @@ export namespace RGB {
 					target?: string;
 				},
 				source: string
-			) {
+			): Promise<boolean> {
 				const redNum = Math.min(255, Math.max(0, parseInt(red, 10)));
 				const greenNum = Math.min(
 					255,
@@ -2163,13 +1350,13 @@ export namespace RGB {
 						),
 						chalk.bgHex(rgbToHex(redNum, greenNum, blueNum))('   ')
 					),
-					`Updated ${clientSet!.length} clients`
+					`Updated ${clientSet.length} clients`
 				);
 
 				if (
 					(
 						await Promise.all(
-							clientSet!.map(async (client) => {
+							clientSet.map(async (client) => {
 								return client.setColorWithBrightness(
 									redNum,
 									greenNum,
@@ -2202,7 +1389,7 @@ export namespace RGB {
 					auth?: string;
 				},
 				source: string
-			) {
+			): Promise<boolean> {
 				attachMessage(
 					attachSourcedMessage(
 						res,
@@ -2210,12 +1397,12 @@ export namespace RGB {
 						await meta.explainHook,
 						`Turned ${power}`
 					),
-					`Updated ${Clients.clients!.length} clients`
+					`Updated ${Clients.clients.length} clients`
 				);
 				if (
 					(
 						await Promise.all(
-							Clients.clients!.map((c) =>
+							Clients.clients.map((c) =>
 								power === 'on' ? c.turnOn() : c.turnOff()
 							)
 						)
@@ -2233,7 +1420,7 @@ export namespace RGB {
 			static overrideTransition(
 				pattern: CustomMode,
 				transition: 'fade' | 'jump' | 'strobe'
-			) {
+			): CustomMode {
 				return new CustomMode()
 					.addColorList(
 						pattern.colors.map(({ red, green, blue }) => {
@@ -2255,15 +1442,19 @@ export namespace RGB {
 				body: {
 					effect: ArduinoAPI.Effects;
 					auth?: string;
-				} & {
-					[key: string]: any;
-				},
+				} & Record<string, unknown>,
 				source: string
-			) {
+			): Promise<boolean> {
 				const { effect: effectName } = body;
 				if (
-					!ArduinoAPI.arduinoEffects.hasOwnProperty(effectName) &&
-					!HexAPI.hexEffects.hasOwnProperty(effectName)
+					!Object.prototype.hasOwnProperty.call(
+						ArduinoAPI.arduinoEffects,
+						effectName
+					) &&
+					!Object.prototype.hasOwnProperty.call(
+						HexAPI.hexEffects,
+						effectName
+					)
 				) {
 					attachMessage(res, `Effect ${effectName} does not exist`);
 					res.status(400).write('Unknown effect');
@@ -2272,9 +1463,11 @@ export namespace RGB {
 				}
 
 				const isArduinoEffect = !!ArduinoAPI.arduinoEffects[effectName];
-				const effect =
-					ArduinoAPI.arduinoEffects[effectName] ||
-					(HexAPI.hexEffects as any)[effectName];
+				const effects = {
+					...ArduinoAPI.arduinoEffects,
+					...HexAPI.hexEffects,
+				};
+				const effect = effects[effectName];
 
 				try {
 					const strings = isArduinoEffect
@@ -2286,8 +1479,18 @@ export namespace RGB {
 						: await Promise.all(
 								Clients.hexClients.map(async (c) =>
 									c.runEffect(
-										(effect.effect as any).name,
-										(effect.effect as any).params
+										(
+											effect.effect as unknown as {
+												name: string;
+												params: Record<string, string>;
+											}
+										).name,
+										(
+											effect.effect as unknown as {
+												name: string;
+												params: Record<string, string>;
+											}
+										).params
 									)
 								)
 						  );
@@ -2301,7 +1504,7 @@ export namespace RGB {
 							),
 							`Updated ${Clients.arduinoClients.length} clients`
 						),
-						`Sent string "${strings[0]}"`
+						`Sent string "${String(strings[0])}"`
 					);
 					res.status(200).end();
 					return true;
@@ -2322,7 +1525,7 @@ export namespace RGB {
 
 			@errorHandle
 			@auth
-			public static async refresh(res: ResponseLike) {
+			public static async refresh(res: ResponseLike): Promise<void> {
 				await Scan.scanRGBControllers();
 				res.status(200);
 				res.end();
@@ -2334,8 +1537,8 @@ export namespace RGB {
 		export class Handler extends createExternalClass(true) {
 			async color(
 				color: string,
-				target: string = 'all',
-				intensity: number = 0
+				target = 'all',
+				intensity = 0
 			): Promise<boolean> {
 				return this.runRequest((res, source) => {
 					return API.Handler.setColor(
@@ -2355,8 +1558,8 @@ export namespace RGB {
 				red: string,
 				green: string,
 				blue: string,
-				intensity: number = 0,
-				target: string = 'all'
+				intensity = 0,
+				target = 'all'
 			): Promise<boolean> {
 				return this.runRequest((res, source) => {
 					return API.Handler.setRGB(
@@ -2419,8 +1622,6 @@ export namespace RGB {
 	}
 
 	export namespace Bot {
-		export interface JSON {}
-
 		export class Bot extends BotState.Base {
 			static readonly commands = {
 				'/rgboff': 'Turn off RGB',
@@ -2454,7 +1655,10 @@ export namespace RGB {
 						const value =
 							ArduinoAPI.arduinoEffects[
 								key as ArduinoAPI.Effects
-							] || (HexAPI.hexEffects as any)[key];
+							] ||
+							HexAPI.hexEffects[
+								key as keyof typeof HexAPI.hexEffects
+							];
 						return [
 							`/effect${key}`,
 							`Effect. ${value.description}`,
@@ -2465,7 +1669,7 @@ export namespace RGB {
 
 			static readonly botName = 'RGB';
 
-			static colorTextToColor(text: string) {
+			static colorTextToColor(text: string): Color | null {
 				if (API.HEX_REGEX.test(text)) {
 					return API.hexToRGB(text);
 				}
@@ -2474,10 +1678,10 @@ export namespace RGB {
 						colorList[text as keyof typeof colorList]
 					);
 				}
-				return undefined;
+				return null;
 			}
 
-			static parseDir(dir: string) {
+			static parseDir(dir: string): ArduinoAPI.DIR {
 				if (dir === 'backwards' || dir === 'back' || dir === '0') {
 					return ArduinoAPI.DIR.DIR_BACKWARDS;
 				}
@@ -2493,7 +1697,7 @@ export namespace RGB {
 								`BOT.${matchText}`
 							).power('on')
 						) {
-							return `Turned it on`;
+							return 'Turned it on';
 						} else {
 							return 'Failed to turn it on';
 						}
@@ -2505,7 +1709,7 @@ export namespace RGB {
 								`BOT.${matchText}`
 							).power('off')
 						) {
-							return `Turned it off`;
+							return 'Turned it off';
 						} else {
 							return 'Failed tot turn it on';
 						}
@@ -2538,11 +1742,11 @@ export namespace RGB {
 
 							if (targetState === 'on') {
 								attachMessage(logObj, 'Turned it on');
-								client.turnOn();
+								await client.turnOn();
 								return 'Turned it on';
 							} else {
 								attachMessage(logObj, 'Turned it off');
-								client.turnOff();
+								await client.turnOff();
 								return 'Turned it off';
 							}
 						}
@@ -2630,9 +1834,9 @@ export namespace RGB {
 									logObj,
 									`BOT.${matchText}`
 								).rgb(
-									resolvedColor.r + '',
-									resolvedColor.g + '',
-									resolvedColor.b + '',
+									String(resolvedColor.r),
+									String(resolvedColor.g),
+									String(resolvedColor.b),
 									intensity?.length
 										? parseInt(intensity, 10)
 										: 0,
@@ -2674,9 +1878,9 @@ export namespace RGB {
 									logObj,
 									`BOT.${matchText}`
 								).rgb(
-									resolvedColor.r + '',
-									resolvedColor.g + '',
-									resolvedColor.b + '',
+									String(resolvedColor.r),
+									String(resolvedColor.g),
+									String(resolvedColor.b),
 									intensity?.length
 										? parseInt(intensity, 10)
 										: 0
@@ -2709,7 +1913,9 @@ export namespace RGB {
 							) {
 								return `Started effect "${effectName}" with config ${JSON.stringify(
 									ArduinoAPI.arduinoEffects[effectName] ||
-										(HexAPI.hexEffects as any)[effectName]
+										HexAPI.hexEffects[
+											effectName as keyof typeof HexAPI.hexEffects
+										]
 								)}`;
 							} else {
 								return 'Failed to start effect';
@@ -2720,7 +1926,7 @@ export namespace RGB {
 						'/effects',
 						/what effects are there(\?)?/,
 						async ({ logObj, match, matchText }) => {
-							if (match && match[1]) {
+							if (match?.[1]) {
 								const effectName =
 									`s${match[1]}` as ArduinoAPI.Effects;
 								if (
@@ -2740,8 +1946,8 @@ export namespace RGB {
 								) {
 									return `Started effect "${effectName}" with config ${JSON.stringify(
 										ArduinoAPI.arduinoEffects[effectName] ||
-											(HexAPI.hexEffects as any)[
-												effectName
+											HexAPI.hexEffects[
+												effectName as keyof typeof HexAPI.hexEffects
 											]
 									)}`;
 								} else {
@@ -2772,21 +1978,17 @@ export namespace RGB {
 							logObj
 						)} RGB controllers`;
 					});
-					mm(
-						'/help_rgb',
-						/what commands are there for rgb/,
-						async () => {
-							return `Commands are:\n${Bot.matches.matches
-								.map((match) => {
-									return `RegExps: ${match.regexps
-										.map((r) => r.source)
-										.join(', ')}. Texts: ${match.texts.join(
-										', '
-									)}}`;
-								})
-								.join('\n')}`;
-						}
-					);
+					mm('/help_rgb', /what commands are there for rgb/, () => {
+						return `Commands are:\n${Bot.matches.matches
+							.map((match) => {
+								return `RegExps: ${match.regexps
+									.map((r) => r.source)
+									.join(', ')}. Texts: ${match.texts.join(
+									', '
+								)}}`;
+							})
+							.join('\n')}`;
+					});
 					mm('/reconnect', /reconnect( to arduino)?/, async () => {
 						logTag('self', 'red', 'Reconnecting to arduino');
 						const amount = await Scan.scanArduinos();
@@ -2796,10 +1998,10 @@ export namespace RGB {
 						'/restart',
 						/restart( yourself)?/,
 						/reboot( yourself)?/,
-						async () => {
+						() => {
 							logTag('self', 'red', 'Restarting self');
-							setTimeout(() => {
-								restartSelf();
+							setTimeout(async () => {
+								await restartSelf();
 							}, 50);
 							return 'Restarting...';
 						}
@@ -2813,7 +2015,7 @@ export namespace RGB {
 							sendText,
 							askCancelable,
 						}) => {
-							const file = match[1] as string;
+							const file = match[1];
 							const { message, success } =
 								await new External.Handler(
 									logObj,
@@ -2833,7 +2035,7 @@ export namespace RGB {
 				}
 			);
 
-			constructor(_json?: JSON) {
+			constructor(_json?: Record<string, never>) {
 				super();
 			}
 
@@ -2852,7 +2054,7 @@ export namespace RGB {
 				});
 			}
 
-			toJSON(): JSON {
+			toJSON(): Record<string, never> {
 				return {};
 			}
 		}
@@ -2897,206 +2099,11 @@ export namespace RGB {
 				res: ResponseLike,
 				_req: express.Request,
 				randomNum: number
-			) {
+			): void {
 				res.status(200);
 				res.contentType('.html');
 				res.write(rgbHTML(randomNum));
 				res.end();
-			}
-		}
-	}
-
-	export namespace Board {
-		export async function tryConnectToSerial() {
-			return new Promise<{
-				port: SerialPort;
-				updateListener(listener: (line: string) => any): void;
-				leds: number;
-				name: string;
-			} | null>((resolve) => {
-				setTimeout(() => {
-					resolve(null);
-				}, 1000 * 60);
-
-				const port = new SerialPort(LED_DEVICE_NAME, {
-					baudRate: 115200,
-				});
-
-				let err: boolean = false;
-				port.on('error', (e) => {
-					console.log('immediately got an error', e);
-					logTag(
-						'arduino',
-						'red',
-						'Failed to connect to LED arduino',
-						e
-					);
-					resolve(null);
-					err = true;
-				});
-
-				//@ts-ignore
-				const parser = new ReadLine();
-				//@ts-ignore
-				port.pipe(parser);
-
-				if (err) {
-					resolve(null);
-					return;
-				}
-
-				// Get LEDS
-				setTimeout(() => {
-					port.write('leds\n');
-				}, 2500);
-
-				let onData = async (line: string) => {
-					const LED_NUM = parseInt(line, 10);
-
-					logTag(
-						LED_DEVICE_NAME,
-						'gray',
-						`Connected, ${LED_NUM} leds detected`
-					);
-
-					onData = (): any => {};
-					resolve({
-						port,
-						updateListener: (listener: (line: string) => any) => {
-							logTag(
-								LED_DEVICE_NAME,
-								'gray',
-								'<-',
-								`# ${line.toString()}`
-							);
-							onData = listener;
-						},
-						leds: LED_NUM,
-						name: LED_DEVICE_NAME,
-					});
-				};
-
-				parser.on('data', (line: string) => {
-					onData(line);
-				});
-			});
-		}
-
-		export async function tryConnectRGBBoard(force: boolean = false) {
-			if (force) {
-				await Promise.all(
-					Clients.arduinoBoards.map((b) => b.destroy())
-				);
-			}
-
-			const res = await tryConnectToSerial();
-			if (res === null) return res;
-
-			return new Board(res.port, res.updateListener, res.leds, res.name);
-		}
-
-		export class Board {
-			private _dead: boolean = false;
-
-			// @ts-ignore
-			constructor(
-				private _port: SerialPort,
-				public setListener: (listener: (line: string) => any) => void,
-				public leds: number,
-				public name: string
-			) {
-				Clients.arduinoBoards.push(this);
-				this._port.addListener('data', (chunk) => {
-					logTag(
-						LED_DEVICE_NAME,
-						'gray',
-						'->',
-						`${chunk.toString()}`
-					);
-				});
-			}
-
-			public ping() {
-				return new Promise<boolean>((resolve) => {
-					this.setListener((_line: string) => {
-						resolve(true);
-						this.resetListener();
-					});
-					this.getLeds();
-					setTimeout(() => {
-						resolve(false);
-					}, 1000);
-				});
-			}
-
-			public resetListener() {
-				this.setListener(() => {});
-			}
-
-			public writeString(data: string): string {
-				this._port.write(data);
-				return data;
-			}
-
-			public async runEffect(
-				effect: EffectConfig.LedEffect
-			): Promise<number[]> {
-				return new Promise((resolve) => {
-					let responded: boolean = false;
-					const listener = (chunk: string | Buffer) => {
-						if (!responded && chunk.toString().includes('ready')) {
-							responded = true;
-							this._port.removeListener('data', listener);
-							const bytes = new EffectConfig.LedSpec(
-								effect
-							).toBytes();
-							this._port.write(bytes);
-							logTag(this.name, 'cyan', '<-', `${bytes}`);
-							resolve(bytes);
-						}
-					};
-					this._port.on('data', listener);
-
-					const interval = setInterval(() => {
-						if (responded) {
-							clearInterval(interval);
-							return;
-						}
-						this._port.write('manual\n');
-					}, 500);
-				});
-			}
-
-			public setSolid({ r, g, b }: { r: number; g: number; b: number }) {
-				return this.runEffect(
-					new EffectConfig.LedEffect([
-						new EffectConfig.LedSpecStep({
-							moveData: new EffectConfig.MoveData(
-								EffectConfig.MOVING_STATUS.OFF
-							),
-							background: new Color(r, g, b),
-							sequences: [],
-						}),
-					])
-				);
-			}
-
-			public setModeOff(): string {
-				return this.writeString('off');
-			}
-
-			public getLeds(): string {
-				return this.writeString('leds');
-			}
-
-			public destroy() {
-				if (this._dead) return;
-
-				return new Promise<void>((resolve) => {
-					this._port.close(() => {
-						resolve();
-					});
-				});
 			}
 		}
 	}
@@ -3115,7 +2122,7 @@ export namespace RGB {
 
 		async function getData(
 			name: string,
-			logObj: any
+			logObj: LogObj
 		): Promise<
 			| { success: true; message: string | null }
 			| { success: false; message: string }
@@ -3149,7 +2156,7 @@ export namespace RGB {
 			// Try and authenticate
 			const modules = await meta.modules;
 			const authenticated =
-				await new modules!.spotifyBeats.External.Handler(
+				await new modules.spotifyBeats.External.Handler(
 					logObj,
 					'RGB.MARKED'
 				).test();
@@ -3164,7 +2171,7 @@ export namespace RGB {
 		}
 
 		async function startPlay(
-			logObj: any,
+			logObj: LogObj,
 			helpers: Pick<BotState.MatchHandlerParams, 'ask' | 'sendText'>,
 			parsed: ParsedMarked
 		): Promise<
@@ -3174,7 +2181,7 @@ export namespace RGB {
 		> {
 			// Get devices
 			const modules = await meta.modules;
-			const devices = await new modules!.spotifyBeats.External.Handler(
+			const devices = await new modules.spotifyBeats.External.Handler(
 				logObj,
 				'RGB.MARKED'
 			).getDevices();
@@ -3194,11 +2201,11 @@ export namespace RGB {
 
 			// Ask user what device to use
 			const response = await helpers.ask(
-				`On what device do you want to play? Type the name to choose and type "cancel" to cancel.\n${devicesParsed.devices.map(
-					(device) => {
+				`On what device do you want to play? Type the name to choose and type "cancel" to cancel.\n${devicesParsed.devices
+					.map((device) => {
 						return device.name;
-					}
-				)}`
+					})
+					.join(', ')}`
 			);
 			if (!response || response.toLowerCase() === 'cancel') {
 				return {
@@ -3209,7 +2216,7 @@ export namespace RGB {
 
 			// Get chosen device
 			const chosen = devicesParsed.devices.find(
-				(d) => d.name.toLowerCase() === response!.toLowerCase()
+				(d) => d.name.toLowerCase() === response.toLowerCase()
 			);
 
 			if (!chosen) {
@@ -3221,10 +2228,10 @@ export namespace RGB {
 
 			// Play
 			const playResponse =
-				await new modules!.spotifyBeats.External.Handler(
+				await new modules.spotifyBeats.External.Handler(
 					logObj,
 					'RGB.MARKED'
-				).play(parsed!['spotify-uri'], chosen.id);
+				).play(parsed['spotify-uri'], chosen.id);
 
 			if (
 				!playResponse ||
@@ -3242,7 +2249,7 @@ export namespace RGB {
 
 		export async function play(
 			name: string,
-			logObj: any,
+			logObj: LogObj,
 			helpers: Pick<
 				BotState.MatchHandlerParams,
 				'ask' | 'sendText' | 'askCancelable'
@@ -3269,7 +2276,7 @@ export namespace RGB {
 			// calculate exactly when the song started playing
 			const modules = await meta.modules;
 			const playState =
-				await modules!.spotifyBeats.Spotify.API.getPlayState();
+				await modules.spotifyBeats.Spotify.API.getPlayState();
 			if (!playState) {
 				return {
 					success: false,
@@ -3280,7 +2287,7 @@ export namespace RGB {
 			const playingTime =
 				Date.now() - playState.playStart! + (parsed.offset ?? 0);
 
-			let timeouts: NodeJS.Timeout[] = [];
+			const timeouts: NodeJS.Timeout[] = [];
 			parsed.items.forEach((item) => {
 				timeouts.push(
 					setTimeout(() => {
@@ -3302,11 +2309,12 @@ export namespace RGB {
 				);
 			});
 
+			// eslint-disable-next-line @typescript-eslint/unbound-method
 			const { cancel, prom } = helpers.askCancelable(
-				`Tell me when I need to stop by saying anything`
+				'Tell me when I need to stop by saying anything'
 			);
 
-			prom.then(async () => {
+			void prom.then(async () => {
 				timeouts.forEach((t) => clearTimeout(t));
 				await wait(1000);
 				Clients.arduinoClients.forEach((c) => c.setColor(0, 0, 0));
@@ -3329,7 +2337,7 @@ export namespace RGB {
 	}
 
 	export namespace Routing {
-		export async function init({ app, randomNum }: ModuleConfig) {
+		export function init({ app, randomNum }: ModuleConfig): void {
 			const router = createRouter(RGB, API.Handler);
 			router.post('/color', 'setColor');
 			router.post('/color/:color/:instensity?', 'setColor');
@@ -3337,8 +2345,8 @@ export namespace RGB {
 			router.post('/power/:power', 'setPower');
 			router.post('/effect/:effect', 'runEffect');
 			router.all('/refresh', 'refresh');
-			router.all('', async (req, res) => {
-				await WebPage.Handler.index(res, req, randomNum);
+			router.all('', (req, res) => {
+				WebPage.Handler.index(res, req, randomNum);
 			});
 			router.use(app);
 		}
@@ -3358,17 +2366,19 @@ export namespace RGB {
 		return null;
 	}
 
-	async function switchLed(name: LED_NAMES, value: string, logObj: any) {
+	async function switchLed(name: LED_NAMES, value: string, logObj: LogObj) {
 		const client = Clients.getLed(name);
-		if (!client) return;
+		if (!client) {
+			return;
+		}
 		if (value === '1') {
 			attachSourcedMessage(
 				logObj,
 				'keyval listener',
 				await meta.explainHook,
-				`Setting`,
+				'Setting',
 				chalk.bold(client.address),
-				`to on`
+				'to on'
 			);
 			(await meta.explainHook)(
 				`Set rgb ${name} to white`,
@@ -3384,7 +2394,7 @@ export namespace RGB {
 				logObj,
 				'keyval listener',
 				await meta.explainHook,
-				`Turned off`,
+				'Turned off',
 				chalk.bold(client.address)
 			);
 			return client.turnOff();
@@ -3405,20 +2415,22 @@ export namespace RGB {
 				cancelActiveWakelights();
 
 				const client = Clients.getLed(LED_NAMES.BED_LEDS);
-				if (!client) return;
+				if (!client) {
+					return;
+				}
 				if (value === '1') {
 					attachMessage(
 						attachSourcedMessage(
 							logObj,
 							'keyval listener',
 							await meta.explainHook,
-							`Setting`,
+							'Setting',
 							chalk.bold(client.address),
 							`to color rgb(${NIGHTSTAND_COLOR.r}, ${NIGHTSTAND_COLOR.g}, ${NIGHTSTAND_COLOR.b})`
 						),
 						chalk.bgHex(API.colorToHex(NIGHTSTAND_COLOR))('   ')
 					);
-					return client.setColor(
+					await client.setColor(
 						NIGHTSTAND_COLOR.r,
 						NIGHTSTAND_COLOR.g,
 						NIGHTSTAND_COLOR.b
@@ -3428,10 +2440,10 @@ export namespace RGB {
 						logObj,
 						'keyval listener',
 						await meta.explainHook,
-						`Turned off`,
+						'Turned off',
 						chalk.bold(client.address)
 					);
-					return client.turnOff();
+					await client.turnOff();
 				}
 				return Promise.resolve();
 			}
@@ -3443,23 +2455,25 @@ export namespace RGB {
 				cancelActiveWakelights();
 
 				const client = Clients.getLed(LED_NAMES.BED_LEDS);
-				if (!client) return;
+				if (!client) {
+					return;
+				}
 				if (value === '1') {
 					attachMessage(
 						attachSourcedMessage(
 							logObj,
 							'keyval listener',
 							await meta.explainHook,
-							`Fading in`,
+							'Fading in',
 							chalk.bold(client.address),
 							`to color rgb(${NIGHTSTAND_COLOR.r}, ${NIGHTSTAND_COLOR.g}, ${NIGHTSTAND_COLOR.b})`
 						),
 						chalk.bgHex(API.colorToHex(NIGHTSTAND_COLOR))('   ')
 					);
 
-					let count: number = 2;
-					const interval = setInterval(() => {
-						client.setColor(
+					let count = 2;
+					const interval = setInterval(async () => {
+						await client.setColor(
 							NIGHTSTAND_COLOR.r,
 							NIGHTSTAND_COLOR.g,
 							NIGHTSTAND_COLOR.b,
@@ -3472,7 +2486,7 @@ export namespace RGB {
 						}
 					}, WAKELIGHT_TIME / 100);
 					wakelights.push(interval);
-					client.setColor(
+					await client.setColor(
 						NIGHTSTAND_COLOR.r,
 						NIGHTSTAND_COLOR.g,
 						NIGHTSTAND_COLOR.b,
@@ -3484,10 +2498,10 @@ export namespace RGB {
 						logObj,
 						'keyval listener',
 						await meta.explainHook,
-						`Turned off`,
+						'Turned off',
 						chalk.bold(client.address)
 					);
-					return client.turnOff();
+					await client.turnOff();
 				}
 				return Promise.resolve();
 			}

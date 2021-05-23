@@ -6,7 +6,7 @@ import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { RgbControls } from './rgb-controls.js';
 
 export const RgbControlsCSS = new TemplateFn<RgbControls>(
-	function (html) {
+	(html) => {
 		return html`
 			<style>
 				#container {

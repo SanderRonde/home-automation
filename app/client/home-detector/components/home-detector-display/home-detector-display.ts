@@ -31,17 +31,25 @@ export class HomeDetectorDisplay extends ServerComm {
 			? `${location.origin}/home-detector/all/e`
 			: `${location.origin}/home-detector/all`;
 		const res = await this.request(url, {}, 'Failed to refresh');
-		if (res === false) return false;
+		if (res === false) {
+			return false;
+		}
 		const json = await res.json();
 
 		const isDifferent = (() => {
 			for (const key in this.props.json) {
-				if (json[key] !== this.props.json[key]) {
+				if (
+					(json as Record<string, unknown>)[key] !==
+					this.props.json[key]
+				) {
 					return true;
 				}
 			}
 			for (const key in json) {
-				if (json[key] !== this.props.json[key]) {
+				if (
+					(json as Record<string, unknown>)[key] !==
+					this.props.json[key]
+				) {
 					return true;
 				}
 			}
@@ -54,14 +62,14 @@ export class HomeDetectorDisplay extends ServerComm {
 		return true;
 	}
 
-	firstRender() {
-		window.setInterval(() => {
-			this._refreshJSON();
+	async firstRender(): Promise<void> {
+		window.setInterval(async () => {
+			await this._refreshJSON();
 		}, 1000 * 15);
 		this.props.key = this.props.key || localStorage.getItem('key')!;
 		localStorage.setItem('key', this.props.key!);
 		if (!this.props.json || Object.keys(this.props.json).length === 0) {
-			this._refreshJSON();
+			await this._refreshJSON();
 		}
 	}
 }

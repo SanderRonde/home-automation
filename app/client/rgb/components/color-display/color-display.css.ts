@@ -6,7 +6,7 @@ import { ColorDisplay } from './color-display.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 
 export const ColorDisplayCSS = new TemplateFn<ColorDisplay>(
-	function (html) {
+	(html) => {
 		return html`
 			<style>
 				#display {

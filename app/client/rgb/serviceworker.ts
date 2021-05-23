@@ -103,6 +103,7 @@ async function fastest(req: Request) {
 }
 
 self.addEventListener('fetch', (event) => {
+	// eslint-disable-next-line node/no-unsupported-features/node-builtins
 	const { pathname, hostname } = new URL(event.request.url);
 	if (
 		hostname !== location.hostname ||

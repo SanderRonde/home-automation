@@ -8,7 +8,12 @@ import {
 import { ModuleConfig, ModuleHookables, AllModules } from './modules';
 import { errorHandle, requireParams, auth } from '../lib/decorators';
 import pressureConfig from '../config/pressures';
-import { attachMessage, disableMessages, ResponseLike } from '../lib/logger';
+import {
+	attachMessage,
+	disableMessages,
+	LogObj,
+	ResponseLike,
+} from '../lib/logger';
 import { BotState } from '../lib/bot-state';
 import { Database } from '../lib/db';
 import { Bot as _Bot } from './index';
@@ -16,6 +21,7 @@ import { ModuleMeta } from './meta';
 import { createExternalClass } from '../lib/external';
 import { createHookables, SettablePromise } from '../lib/util';
 import { createRouter } from '../lib/api';
+import { PossiblePromise } from '../lib/type';
 
 export const enum PRESSURE_CHANGE_DIRECTION {
 	UP,
@@ -70,7 +76,7 @@ export interface PressureChange {
 	/**
 	 * A handler that is executed when the pressure falls in given range
 	 */
-	handler: (hookables: ModuleHookables) => any | Promise<any>;
+	handler: (hookables: ModuleHookables) => PossiblePromise<void>;
 }
 
 export interface PressureHooks {
@@ -81,12 +87,13 @@ export namespace Pressure {
 	export const meta = new (class Meta extends ModuleMeta {
 		name = 'pressure';
 
-		async init(config: ModuleConfig) {
+		init(config: ModuleConfig): Promise<void> {
 			Register.init(config.db);
 			Routing.init(config);
+			return Promise.resolve(void 0);
 		}
 
-		async notifyModules(modules: AllModules) {
+		notifyModules(modules: AllModules) {
 			modules.keyval.GetSetListener.addListener(
 				'state.pressure',
 				async (value, logObj) => {
@@ -99,6 +106,7 @@ export namespace Pressure {
 				},
 				{ notifyOnInitial: true }
 			);
+			return Promise.resolve(void 0);
 		}
 
 		get external() {
@@ -114,35 +122,43 @@ export namespace Pressure {
 		let enabled: boolean | null = null;
 		const db = new SettablePromise<Database>();
 
-		export async function enable() {
+		export async function enable(): Promise<void> {
 			enabled = true;
 			(await db.value).setVal('enabled', enabled);
-			new (await meta.modules).keyval.External.Handler(
-				{},
-				'PRESSURE.ON'
-			).set('state.pressure', '1', false);
+			await new (
+				await meta.modules
+			).keyval.External.Handler({}, 'PRESSURE.ON').set(
+				'state.pressure',
+				'1',
+				false
+			);
 		}
 
-		export function isEnabled() {
+		export function isEnabled(): boolean {
 			return enabled || false;
 		}
 
-		export async function disable() {
+		export async function disable(): Promise<void> {
 			enabled = false;
 			(await db.value).setVal('enabled', enabled);
-			new (await meta.modules).keyval.External.Handler(
-				{},
-				'PRESSURE.OFF'
-			).set('state.pressure', '0', false);
+			await new (
+				await meta.modules
+			).keyval.External.Handler({}, 'PRESSURE.OFF').set(
+				'state.pressure',
+				'0',
+				false
+			);
 		}
 
-		export function init(_db: Database) {
+		export function init(_db: Database): void {
 			db.set(_db);
 			enabled = _db.get('enabled', true);
 		}
 
-		async function handleChange(key: string, logObj: any) {
-			if (!(key in pressureConfig)) return;
+		async function handleChange(key: string, logObj: LogObj) {
+			if (!(key in pressureConfig)) {
+				return;
+			}
 
 			const ranges = pressureConfig[key];
 			for (const range of ranges) {
@@ -158,7 +174,9 @@ export namespace Pressure {
 					}
 
 					const currentRange = currentRanges.get(key);
-					if (currentRange === range) continue;
+					if (currentRange === range) {
+						continue;
+					}
 
 					if (
 						lastPressures
@@ -168,11 +186,11 @@ export namespace Pressure {
 								return value >= from && value <= to;
 							})
 					) {
-						let doUpdate: boolean = currentRanges.has(key);
+						const doUpdate: boolean = currentRanges.has(key);
 						if (
 							!doUpdate ||
 							(await handler(
-								await createHookables(
+								createHookables(
 									await meta.modules,
 									'PRESSURE',
 									key,
@@ -199,7 +217,9 @@ export namespace Pressure {
 						.get(key)!
 						.slice(-samples)
 						.map((v) => ~~v);
-					if (rest.length < samples - 1) continue;
+					if (rest.length < samples - 1) {
+						continue;
+					}
 					if (
 						rest.every((value) => {
 							if (direction === PRESSURE_CHANGE_DIRECTION.UP) {
@@ -209,8 +229,8 @@ export namespace Pressure {
 							}
 						})
 					) {
-						handler(
-							await createHookables(
+						await handler(
+							createHookables(
 								await meta.modules,
 								'PRESSURE',
 								key,
@@ -225,7 +245,11 @@ export namespace Pressure {
 		const currentRanges: Map<string, PressureRange> = new Map();
 		const lastPressures: Map<string, number[]> = new Map();
 		const pressures: Map<string, number> = new Map();
-		export function setPressure(key: string, value: number, logObj: any) {
+		export async function setPressure(
+			key: string,
+			value: number,
+			logObj: LogObj
+		): Promise<void> {
 			if (!lastPressures.get(key)) {
 				lastPressures.set(key, []);
 			}
@@ -240,7 +264,7 @@ export namespace Pressure {
 
 			pressures.set(key, value);
 			if (enabled) {
-				handleChange(key, logObj);
+				await handleChange(key, logObj);
 			}
 		}
 
@@ -248,30 +272,30 @@ export namespace Pressure {
 			return pressures.get(key) || null;
 		}
 
-		export function getAll() {
+		export function getAll(): Map<string, number> {
 			return pressures;
 		}
 	}
 
 	export namespace External {
 		export class Handler extends createExternalClass(false) {
-			async enable() {
+			async enable(): Promise<void> {
 				return this.runRequest(async (_res, _source, logObj) => {
 					await Register.enable();
 					attachMessage(logObj, 'Enabled pressure module');
 				});
 			}
 
-			async disable() {
+			async disable(): Promise<void> {
 				return this.runRequest(async (_res, _source, logObj) => {
 					await Register.disable();
 					attachMessage(logObj, 'Disabled pressure module');
 				});
 			}
 
-			async isEnabled() {
-				return this.runRequest(async (_res, _source, logObj) => {
-					const isEnabled = await Register.isEnabled();
+			async isEnabled(): Promise<boolean> {
+				return this.runRequest((_res, _source, logObj) => {
+					const isEnabled = Register.isEnabled();
 					attachMessage(
 						logObj,
 						'Got enabled status of pressure module'
@@ -281,11 +305,11 @@ export namespace Pressure {
 			}
 
 			async get(key: string): Promise<number | null> {
-				return this.runRequest(async (_res, _source, logObj) => {
-					const pressure = await Register.getPressure(key);
+				return this.runRequest((_res, _source, logObj) => {
+					const pressure = Register.getPressure(key);
 					attachMessage(
 						logObj,
-						`Returning pressure ${pressure} for key ${key}`
+						`Returning pressure ${String(pressure)} for key ${key}`
 					);
 					return pressure;
 				});
@@ -294,8 +318,6 @@ export namespace Pressure {
 	}
 
 	export namespace Bot {
-		export interface JSON {}
-
 		export class Bot extends BotState.Base {
 			static readonly commands = {
 				'/pressure': 'Turn on pressure module',
@@ -311,20 +333,20 @@ export namespace Pressure {
 						'/pressureoff',
 						/turn off pressure( module)?/,
 						async ({ logObj }) => {
-							new External.Handler(
+							await new External.Handler(
 								logObj,
 								'PRESSURE.BOT'
 							).disable();
 							return 'Turned off pressure module';
 						}
 					);
-					mm('/pressures', /what are the pressures/, async () => {
+					mm('/pressures', /what are the pressures/, () => {
 						return Bot.makeTable({
 							header: ['key', 'value'],
 							contents: Array.from(
 								Register.getAll().entries()
 							).map(([key, pressure]) => {
-								return [key, pressure + ''];
+								return [key, String(pressure)];
 							}),
 						});
 					});
@@ -332,7 +354,7 @@ export namespace Pressure {
 						'/pressure',
 						/turn on pressure( module)?/,
 						async ({ logObj }) => {
-							new External.Handler(
+							await new External.Handler(
 								logObj,
 								'PRESSURE.BOT'
 							).enable();
@@ -342,7 +364,7 @@ export namespace Pressure {
 					mm(
 						'/help_pressure',
 						/what commands are there for pressure/,
-						async () => {
+						() => {
 							return `Commands are:\n${Bot.matches.matches
 								.map((match) => {
 									return `RegExps: ${match.regexps
@@ -370,11 +392,11 @@ export namespace Pressure {
 				});
 			}
 
-			constructor(_json?: JSON) {
+			constructor(_json?: Record<string, never>) {
 				super();
 			}
 
-			toJSON(): JSON {
+			toJSON(): Record<string, never> {
 				return {};
 			}
 		}
@@ -385,7 +407,7 @@ export namespace Pressure {
 			@errorHandle
 			@requireParams('key', 'pressure')
 			@auth
-			public static reportPressure(
+			public static async reportPressure(
 				res: ResponseLike,
 				{
 					key,
@@ -395,12 +417,12 @@ export namespace Pressure {
 					key: string;
 					pressure: string;
 				}
-			) {
+			): Promise<void> {
 				attachMessage(
 					res,
 					`Setting pressure key ${key} to ${pressure}`
 				);
-				Register.setPressure(key, ~~pressure, res);
+				await Register.setPressure(key, ~~pressure, res);
 				res.status(200);
 				res.end();
 			}
@@ -408,13 +430,13 @@ export namespace Pressure {
 	}
 
 	namespace Routing {
-		export function init({ app, config }: ModuleConfig) {
+		export function init({ app, config }: ModuleConfig): void {
 			const router = createRouter(Pressure, API.Handler);
 			router.post('/:key/:pressure', async (req, res) => {
 				if (config.log.ignorePressure) {
 					disableMessages(res);
 				}
-				API.Handler.reportPressure(res, {
+				await API.Handler.reportPressure(res, {
 					...req.params,
 					...req.body,
 					...req.query,

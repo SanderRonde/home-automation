@@ -26,9 +26,9 @@ function registerElements() {
 	RGBController.define();
 }
 
-function registerServiceworker() {
+async function registerServiceworker() {
 	if ('serviceWorker' in navigator) {
-		navigator.serviceWorker.register('/rgb/serviceworker.js', {
+		await navigator.serviceWorker.register('/rgb/serviceworker.js', {
 			scope: '/rgb/',
 			updateViaCache: 'none',
 		});
@@ -36,4 +36,4 @@ function registerServiceworker() {
 }
 
 registerElements();
-registerServiceworker();
+void registerServiceworker();

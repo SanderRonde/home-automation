@@ -5,6 +5,7 @@ import {
 	addLogListener,
 	attachSourcedMessage,
 	ResponseLike,
+	LogObj,
 } from '../lib/logger';
 import { AllModules, ModuleConfig } from './modules';
 import { BotState } from '../lib/bot-state';
@@ -14,11 +15,12 @@ import { Auth } from './auth';
 import { Cast } from './cast';
 import { createExternalClass } from '../lib/external';
 import { createRouter } from '../lib/api';
+import { KeyVal } from '.';
 
 export type ExplainHook = (
 	description: string,
 	source: string,
-	logObj: any
+	logObj: LogObj
 ) => void;
 
 const ACTION_TIMEOUT_TIME = 30 * 60 * 1000;
@@ -27,12 +29,16 @@ export namespace Explain {
 	export const meta = new (class Meta extends ModuleMeta {
 		name = 'explain';
 
-		async init(config: ModuleConfig) {
-			await Routing.init({ ...config });
+		init(config: ModuleConfig) {
+			Routing.init({ ...config });
+
+			return Promise.resolve(void 0);
 		}
 
-		async notifyModules(modules: AllModules) {
+		notifyModules(modules: AllModules) {
 			Explaining.initHooks(modules);
+
+			return Promise.resolve(void 0);
 		}
 
 		get external() {
@@ -46,21 +52,23 @@ export namespace Explain {
 
 	export namespace API {
 		export class Handler {
-			private static _castActions(
-				logObj: any,
+			private static async _castActions(
+				logObj: LogObj,
 				descr: string,
 				actions: Explaining.Action[]
 			) {
-				new Cast.External.Handler(logObj, 'EXPLAIN.API').say(
-					`${descr}. ${actions.map((action) => {
-						return `At ${new Date(
-							action.timestamp
-						).toLocaleTimeString()}, source ${
-							action.source
-						} and module ${action.moduleName}. Description: ${
-							action.description
-						}`;
-					})}`
+				await new Cast.External.Handler(logObj, 'EXPLAIN.API').say(
+					`${descr}. ${actions
+						.map((action) => {
+							return `At ${new Date(
+								action.timestamp
+							).toLocaleTimeString()}, source ${
+								action.source
+							} and module ${action.moduleName}. Description: ${
+								action.description
+							}`;
+						})
+						.join('')}`
 				);
 			}
 
@@ -78,7 +86,7 @@ export namespace Explain {
 					auth?: string;
 				},
 				source: string
-			) {
+			): Promise<Explaining.Action[]> {
 				const actions = Explaining.getLastX(amount);
 				const msg = attachSourcedMessage(
 					res,
@@ -89,7 +97,7 @@ export namespace Explain {
 				);
 
 				if (announce) {
-					this._castActions(
+					await this._castActions(
 						msg,
 						`Last ${amount} actions are`,
 						actions
@@ -113,7 +121,7 @@ export namespace Explain {
 					auth?: string;
 				},
 				source: string
-			) {
+			): Promise<Explaining.Action[]> {
 				const actions = Explaining.getInTimeWindow(mins);
 				const msg = attachSourcedMessage(
 					res,
@@ -124,7 +132,7 @@ export namespace Explain {
 				);
 
 				if (announce) {
-					this._castActions(
+					await this._castActions(
 						msg,
 						`Last ${mins}ms of actions are`,
 						actions
@@ -142,7 +150,7 @@ export namespace Explain {
 
 			explainTime(
 				mins: number,
-				announce: boolean = false
+				announce = false
 			): Promise<Explaining.Action[]> {
 				return this.runRequest((res, source) => {
 					return API.Handler.getLastXMins(
@@ -159,7 +167,7 @@ export namespace Explain {
 
 			explainAmount(
 				amount: number,
-				announce: boolean = false
+				announce = false
 			): Promise<Explaining.Action[]> {
 				return this.runRequest((res, source) => {
 					return API.Handler.getLastX(
@@ -218,7 +226,9 @@ export namespace Explain {
 								await Promise.all(
 									actions.map(async (action) => {
 										const logs = await (async () => {
-											if (!action.logs) return 'null';
+											if (!action.logs) {
+												return 'null';
+											}
 											const lines =
 												await action.logs.get();
 											return lines;
@@ -241,7 +251,7 @@ export namespace Explain {
 						/\/explain(\d+)?/,
 						/explain last (\d+) minutes/,
 						/explain/,
-						async ({ match, logObj }) => {
+						({ match, logObj }) => {
 							const minutes =
 								match.length && match[1]
 									? parseInt(match[1], 10)
@@ -272,7 +282,7 @@ export namespace Explain {
 					mm(
 						'/help_explain',
 						/what commands are there for explain/,
-						async () => {
+						() => {
 							return `Commands are:\n${Bot.matches.matches
 								.map((match) => {
 									return `RegExps: ${match.regexps
@@ -309,8 +319,12 @@ export namespace Explain {
 				});
 			}
 
-			static resetState(state: _Bot.Message.StateKeeping.ChatState) {
-				state.states.keyval.lastSubjects = null;
+			static resetState(
+				state: _Bot.Message.StateKeeping.ChatState
+			): void {
+				(
+					state.states.keyval as unknown as KeyVal.Bot.JSON
+				).lastSubjects = null;
 			}
 
 			toJSON(): JSON {
@@ -336,9 +350,11 @@ export namespace Explain {
 			moduleName: string,
 			description: string,
 			source: string,
-			logObj: any
+			logObj: LogObj
 		) {
-			if (moduleName === meta.name) return;
+			if (moduleName === meta.name) {
+				return;
+			}
 
 			const action: Action = {
 				moduleName,
@@ -356,9 +372,11 @@ export namespace Explain {
 			}, ACTION_TIMEOUT_TIME);
 		}
 
-		export function initHooks(modules: AllModules) {
+		export function initHooks(modules: AllModules): void {
 			for (const moduleName in modules) {
-				const moduleObj = modules[moduleName as keyof AllModules];
+				const moduleObj = modules[moduleName as keyof AllModules] as {
+					meta: ModuleMeta;
+				};
 				moduleObj.meta.addExplainHookFromExternal(
 					(description, source, logObj) => {
 						hook(moduleName, description, source, logObj);
@@ -391,13 +409,13 @@ export namespace Explain {
 			return sortChronological(retVals);
 		}
 
-		export function getLastX(amount: number = 1): Action[] {
+		export function getLastX(amount = 1): Action[] {
 			return Array.from(hooks.values()).slice(-amount);
 		}
 	}
 
 	export namespace Routing {
-		export async function init({ app }: ModuleConfig) {
+		export function init({ app }: ModuleConfig): void {
 			const router = createRouter(Explain, API.Handler);
 			router.post('/time/:mins', 'getLastXMins');
 			router.post('/amount/:amount', 'getLastX');

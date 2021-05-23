@@ -6,7 +6,7 @@ import { CurrentDate } from './current-date.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 
 export const CurrentDateCSS = new TemplateFn<CurrentDate>(
-	function (html) {
+	(html) => {
 		return html`
 			<style>
 				#date-line {

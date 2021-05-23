@@ -17,7 +17,7 @@ export class PowerSwitch extends ConfigurableWebComponent<{
 			label: HTMLLabelElement;
 			switch: HTMLInputElement;
 		};
-		CLASSES: {};
+		CLASSES: Record<string, never>;
 	};
 	events: {
 		toggle: {
@@ -50,8 +50,8 @@ export class PowerSwitch extends ConfigurableWebComponent<{
 		this._updateScale();
 
 		const original = window.onresize;
-		window.onresize = (e: any) => {
-			original && original.call(window, e);
+		window.onresize = (e: unknown) => {
+			original?.call(window, e);
 			this._updateScale();
 		};
 	}
@@ -73,24 +73,24 @@ export class PowerSwitch extends ConfigurableWebComponent<{
 		},
 	});
 
-	onChange() {
+	onChange(): void {
 		this.fire('toggle', this.checked, !this.checked);
 	}
 
-	get checked() {
+	get checked(): boolean {
 		return this.$.switch.checked;
 	}
 
-	get enabled() {
+	get enabled(): boolean {
 		return this.checked;
 	}
 
-	postRender() {
+	postRender(): void {
 		this._element = this.$.label;
 		this._inputElement = this.$.switch;
 	}
 
-	firstRender() {
+	firstRender(): void {
 		this._element = this.$.label;
 		this._inputElement = this.$.switch;
 		this._init();
@@ -123,7 +123,7 @@ export class PowerSwitch extends ConfigurableWebComponent<{
 		}, PowerSwitch._TINY_TIMEOUT);
 	}
 
-	checkDisabled() {
+	checkDisabled(): void {
 		if (this._inputElement.disabled) {
 			this._element.classList.add(PowerSwitch._CssClasses.IS_DISABLED);
 		} else {
@@ -131,7 +131,7 @@ export class PowerSwitch extends ConfigurableWebComponent<{
 		}
 	}
 
-	checkToggleState() {
+	checkToggleState(): void {
 		if (this._inputElement.checked) {
 			this._element.classList.add(PowerSwitch._CssClasses.IS_CHECKED);
 		} else {
@@ -139,35 +139,35 @@ export class PowerSwitch extends ConfigurableWebComponent<{
 		}
 	}
 
-	disable() {
+	disable(): void {
 		this._inputElement.disabled = true;
 		this._updateClasses();
 	}
 
-	enable() {
+	enable(): void {
 		this._inputElement.disabled = false;
 		this._updateClasses();
 	}
 
-	on() {
+	on(): void {
 		this._inputElement.checked = true;
 		this._updateClasses();
 	}
 
-	off() {
+	off(): void {
 		this._inputElement.checked = false;
 		this._updateClasses();
 	}
 
 	private _init() {
 		if (this._element) {
-			var track = document.createElement('div');
+			const track = document.createElement('div');
 			track.classList.add(PowerSwitch._CssClasses.TRACK);
 
-			var thumb = document.createElement('div');
+			const thumb = document.createElement('div');
 			thumb.classList.add(PowerSwitch._CssClasses.THUMB);
 
-			var focusHelper = document.createElement('span');
+			const focusHelper = document.createElement('span');
 			focusHelper.classList.add(PowerSwitch._CssClasses.FOCUS_HELPER);
 
 			thumb.appendChild(focusHelper);
@@ -197,7 +197,7 @@ export class PowerSwitch extends ConfigurableWebComponent<{
 					this._onMouseUp();
 				});
 
-				var ripple = document.createElement('span');
+				const ripple = document.createElement('span');
 				ripple.classList.add(PowerSwitch._CssClasses.RIPPLE);
 
 				this._rippleContainerElement.appendChild(ripple);

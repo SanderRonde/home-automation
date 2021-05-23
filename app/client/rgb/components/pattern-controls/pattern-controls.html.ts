@@ -11,7 +11,7 @@ export const PatternControlsHTML = new TemplateFn<PatternControls>(
 			<div id="container">
 				<div id="sliderContainer">
 					<input
-						@input="${this.speedChange}"
+						@input="${this.speedChange.bind(this)}"
 						min="0"
 						max="100"
 						value="${props.defaultSpeed}"
@@ -19,7 +19,10 @@ export const PatternControlsHTML = new TemplateFn<PatternControls>(
 						type="range"
 					/>
 				</div>
-				<select @change="${this.transitionChange}" id="transitionInput">
+				<select
+					@change="${this.transitionChange.bind(this)}"
+					id="transitionInput"
+				>
 					<option
 						?selected="${props.defaultTransition === 'jump'}"
 						value="jump"

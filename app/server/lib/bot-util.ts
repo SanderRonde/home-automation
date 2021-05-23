@@ -1,9 +1,14 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/explicit-module-boundary-types */
+/* eslint-disable @typescript-eslint/ban-types */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { RESPONSE_TYPE } from '../modules/bot';
 
 export namespace BotUtil {
 	type NotUndefined<
 		O extends {
-			[key: string]: any;
+			[key: string]: unknown;
 		}
 	> = {
 		[K in keyof O]: O[K] extends undefined ? void : O[K];
@@ -11,12 +16,14 @@ export namespace BotUtil {
 
 	type Defined<
 		O extends {
-			[key: string]: any;
+			[key: string]: unknown;
 		}
 	> = Pick<O, keyof NotUndefined<O>>;
 
-	function padWord(word: string, length: number, padChar: string = ' ') {
-		if (word.length === length) return word;
+	function padWord(word: string, length: number, padChar = ' ') {
+		if (word.length === length) {
+			return word;
+		}
 
 		let newStr: string = word;
 		while (newStr.length + 1 <= length) {
@@ -52,10 +59,12 @@ export namespace BotUtil {
 				if (
 					!(key in config) ||
 					typeof (config as any)[key] !== 'object' ||
-					(config as any)[key] == undefined ||
-					(config as any)[key] == null
+					(config as any)[key] === undefined ||
+					(config as any)[key] === null
 				) {
-					if ((extra as any)[key] === undefined) continue;
+					if ((extra as any)[key] === undefined) {
+						continue;
+					}
 					(final as any)[key] = (extra as any)[key];
 				} else if ((extra as any)[key] !== undefined) {
 					// Merge object or array
@@ -70,7 +79,7 @@ export namespace BotUtil {
 		}
 
 		public static unsetUndefined<
-			O extends { [key: string]: any | undefined }
+			O extends { [key: string]: unknown | undefined }
 		>(obj: O): Defined<O> {
 			const finalObj: Partial<Defined<O>> = {};
 			for (const key in obj) {
@@ -83,12 +92,14 @@ export namespace BotUtil {
 
 		public static formatList(list: string[]): string {
 			if (list.length === 0) {
-				return `(empty)`;
+				return '(empty)';
 			}
 			if (list.length === 1) {
 				return `${list[0]}`;
 			} else {
-				return `${list.slice(0, -1).join(', ')} and ${list.slice(-1)}`;
+				return `${list.slice(0, -1).join(', ')} and ${String(
+					list.slice(-1)
+				)}`;
 			}
 		}
 
@@ -98,7 +109,12 @@ export namespace BotUtil {
 		}: {
 			header?: string[];
 			contents: string[][];
-		}) {
+		}):
+			| {
+					type: RESPONSE_TYPE;
+					text: string;
+			  }
+			| string {
 			if (
 				!contents.every(
 					(row) =>
@@ -138,7 +154,7 @@ export namespace BotUtil {
 					if (j !== 0) {
 						cellText += '|';
 					}
-					if (j != 0) {
+					if (j !== 0) {
 						cellText += ' ';
 					}
 					cellText += padWord(data[i][j], colLengths[j]);
@@ -163,7 +179,7 @@ export namespace BotUtil {
 			};
 		}
 
-		static capitalize(word: string) {
+		static capitalize(word: string): string {
 			return word[0].toUpperCase() + word.slice(1);
 		}
 	}

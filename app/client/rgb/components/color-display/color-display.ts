@@ -15,10 +15,10 @@ export class ColorDisplay extends ConfigurableWebComponent<{
 		IDS: {
 			display: HTMLElement;
 		};
-		CLASSES: {};
+		CLASSES: Record<string, never>;
 	};
 }> {
-	appendElement(el: HTMLElement) {
+	appendElement(el: HTMLElement): void {
 		Array.from(this.$.display.children).forEach((el) => {
 			el.remove();
 		});

@@ -19,7 +19,7 @@ export const JSONBooleanHTML = new TemplateFn<JSONBoolean>(
 				<div id="switchContainer">
 					<power-switch
 						id="switch"
-						@@toggle="${this.onToggle}"
+						@@toggle="${this.onToggle.bind(this)}"
 						?initial="${(() => {
 							if (typeof props.value === 'number') {
 								return props.value > 0;

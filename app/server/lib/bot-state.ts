@@ -1,5 +1,5 @@
 import { Bot, RESPONSE_TYPE } from '../modules/bot';
-import { attachMessage } from './logger';
+import { attachMessage, LogObj } from './logger';
 import { BotUtil } from './bot-util';
 import chalk from 'chalk';
 
@@ -26,9 +26,12 @@ export namespace BotState {
 		state: Bot.Message.StateKeeping.ChatState;
 		match: RegExpMatchArray;
 		matchText: string;
-		logObj: any;
+		logObj: LogObj;
 		ask(question: string): Promise<string | undefined>;
-		askCancelable(question: string): {
+		askCancelable(
+			this: void,
+			question: string
+		): {
 			cancel(): void;
 			prom: Promise<string | undefined>;
 		};
@@ -46,7 +49,7 @@ export namespace BotState {
 	}
 
 	export interface MatchParams extends MatchBaseParams {
-		logObj: any;
+		logObj: LogObj;
 	}
 
 	export type MatchFallback = (config: MatchBaseParams) => void;
@@ -73,10 +76,10 @@ export namespace BotState {
 	) => string[];
 
 	export abstract class Matchable extends BotUtil.BotUtil {
-		static async match({}: MatchParams): Promise<
-			Bot.Message.MatchResponse | undefined
-		> {
-			return undefined;
+		static match(
+			_params: MatchParams
+		): Promise<Bot.Message.MatchResponse | undefined> {
+			return Promise.resolve(undefined);
 		}
 
 		static async matchLines(
@@ -84,9 +87,10 @@ export namespace BotState {
 				matchConfig: MatchConfig;
 			}
 		): Promise<Bot.Message.MatchResponse | undefined> {
-			let { logObj, text, matchConfig } = config;
+			const { logObj, matchConfig } = config;
+			let { text } = config;
 
-			let index: number = -1;
+			let index = -1;
 			let match: RegExpExecArray | null = null;
 			text = text.toLowerCase();
 			let earliestMatch: {
@@ -113,7 +117,7 @@ export namespace BotState {
 					) {
 						if (
 							earliestMatch === null ||
-							index < earliestMatch!.index
+							index < earliestMatch.index
 						) {
 							earliestMatch = {
 								type: 'text',
@@ -137,7 +141,7 @@ export namespace BotState {
 					) {
 						if (
 							earliestMatch === null ||
-							match.index < earliestMatch!.index
+							match.index < earliestMatch.index
 						) {
 							earliestMatch = {
 								type: 'text',
@@ -155,18 +159,18 @@ export namespace BotState {
 			if (earliestMatch) {
 				const newLogObj = attachMessage(
 					logObj,
-					earliestMatch!.type === 'text'
+					earliestMatch.type === 'text'
 						? 'Matching string:'
 						: 'Matching regex:',
-					chalk.bold(earliestMatch!.matchText)
+					chalk.bold(earliestMatch.matchText)
 				);
 				return {
-					end: earliestMatch!.end,
-					response: await earliestMatch!.fn({
+					end: earliestMatch.end,
+					response: await earliestMatch.fn({
 						...config,
 						logObj: newLogObj,
-						match: earliestMatch!.match,
-						matchText: earliestMatch!.matchText,
+						match: earliestMatch.match,
+						matchText: earliestMatch.matchText,
 						ask(question: string) {
 							return config.bot.askQuestion(
 								question,
@@ -186,7 +190,7 @@ export namespace BotState {
 									}
 								),
 								cancel() {
-									_cancel && _cancel();
+									_cancel?.();
 								},
 							};
 						},
@@ -235,7 +239,9 @@ export namespace BotState {
 							)
 						);
 					} else {
-						throw new Error('Invalid type passed: ' + innerArg);
+						throw new Error(
+							`Invalid type passed: ${String(innerArg)}`
+						);
 					}
 				}
 			}
@@ -314,7 +320,7 @@ export namespace BotState {
 					match: MatchData,
 					condition: (params: MatchParams) => boolean
 				) => void;
-			}) => any
+			}) => unknown
 		): MatchConfig {
 			const config: MatchConfig = {
 				matches: [],
@@ -354,10 +360,10 @@ export namespace BotState {
 
 		static readonly botName: string;
 
-		static resetState(_state: Bot.Message.StateKeeping.ChatState) {}
+		static resetState(_state: Bot.Message.StateKeeping.ChatState): void {}
 	}
 
 	export abstract class Base extends Matchable {
-		abstract toJSON(): any;
+		abstract toJSON(): unknown;
 	}
 }

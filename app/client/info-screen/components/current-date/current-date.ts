@@ -16,13 +16,9 @@ export class CurrentDate extends ConfigurableWebComponent {
 		// ...
 	});
 
-	mounted() {
+	mounted(): void {
 		setInterval(() => {
 			this.renderToDOM();
 		}, 250);
-	}
-
-	firstRender() {
-		// ...
 	}
 }

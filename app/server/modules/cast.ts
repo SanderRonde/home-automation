@@ -6,6 +6,7 @@ import {
 import {
 	attachMessage,
 	attachSourcedMessage,
+	LogObj,
 	ResponseLike,
 } from '../lib/logger';
 import * as playlist from 'castv2-player/lib/playlist';
@@ -24,15 +25,18 @@ import { createRouter } from '../lib/api';
 class DummyLog {
 	constructor(public componentName: string = 'castv2') {}
 
-	_addPrefix(firstArg?: any, ...args: any[]) {
+	_addPrefix(firstArg?: unknown, ...args: unknown[]) {
 		if (firstArg) {
-			return [`${this.componentName} - ${firstArg}`, ...args];
+			return [`${this.componentName} - ${String(firstArg)}`, ...args];
 		}
 		return [];
 	}
 
 	error() {
-		console.error.apply(console, this._addPrefix(...arguments));
+		// eslint-disable-next-line prefer-rest-params
+		const prefixed = this._addPrefix(...arguments);
+		// eslint-disable-next-line prefer-spread
+		console.error.apply(console, prefixed);
 	}
 	warn() {}
 	info() {}
@@ -93,7 +97,10 @@ export namespace Cast {
 		}
 
 		export function tts(text: string, lang: string) {
-			return async (source: string, loggable: any) => {
+			return async (
+				source: string,
+				loggable: LogObj
+			): Promise<string[]> => {
 				if (await meta.explainHook) {
 					(await meta.explainHook)(
 						`Casting TTS ${text} in lang ${lang}`,
@@ -136,7 +143,9 @@ export namespace Cast {
 			}
 
 			function assertMediaPlayer(device: castv2.Device) {
-				if (mediaPlayers.has(device)) return;
+				if (mediaPlayers.has(device)) {
+					return;
+				}
 
 				mediaPlayers.set(device, new MediaPlayer(device));
 			}
@@ -190,7 +199,7 @@ export namespace Cast {
 				return players;
 			}
 
-			export async function stop() {
+			export async function stop(): Promise<castv2.MediaPlayerClass[]> {
 				Scanning.devices.forEach(assertMediaPlayer);
 
 				const players = Scanning.devices.map(
@@ -204,7 +213,7 @@ export namespace Cast {
 
 	export namespace External {
 		export class Handler extends createExternalClass(true) {
-			async stop() {
+			async stop(): Promise<castv2.MediaPlayerClass[]> {
 				return this.runRequest((res, source) => {
 					return API.Handler.stop(
 						res,
@@ -216,7 +225,9 @@ export namespace Cast {
 				});
 			}
 
-			async pasta(pasta: string) {
+			async pasta(
+				pasta: string
+			): Promise<castv2.MediaPlayerClass[] | undefined> {
 				return this.runRequest((res, source) => {
 					return API.Handler.pasta(
 						res,
@@ -229,7 +240,10 @@ export namespace Cast {
 				});
 			}
 
-			async say(text: string, lang: string = 'en') {
+			async say(
+				text: string,
+				lang = 'en'
+			): Promise<castv2.MediaPlayerClass[]> {
 				return this.runRequest((res, source) => {
 					return API.Handler.say(
 						res,
@@ -243,7 +257,7 @@ export namespace Cast {
 				});
 			}
 
-			async url(url: string) {
+			async url(url: string): Promise<castv2.MediaPlayerClass[]> {
 				return this.runRequest((res, source) => {
 					return API.Handler.url(
 						res,
@@ -259,8 +273,6 @@ export namespace Cast {
 	}
 
 	export namespace Bot {
-		export interface JSON {}
-
 		export class Bot extends BotState.Base {
 			static readonly commands = {
 				'/castoff': 'Turn off cast that is playing',
@@ -304,7 +316,7 @@ export namespace Cast {
 						/\/pastas/,
 						/show me all (of your)? pasta(s)?/,
 						/what pasta(s)? do you have/,
-						async ({}) => {
+						() => {
 							return `The pastas we have are: ${Bot.formatList(
 								Object.keys(Pasta.PASTAS)
 							)}`;
@@ -324,7 +336,7 @@ export namespace Cast {
 							return `Played pasta: "${pasta}"`;
 						}
 					);
-					mm(/\/mp3s/, /show all mp3s/, async ({}) => {
+					mm(/\/mp3s/, /show all mp3s/, () => {
 						return `The mp3s are: ${Bot.formatList(
 							Object.keys(LocalURLS.LOCAL_URLS)
 						)}`;
@@ -332,7 +344,7 @@ export namespace Cast {
 				}
 			);
 
-			constructor(_json?: JsonWebKey) {
+			constructor(_json?: Record<string, never>) {
 				super();
 			}
 
@@ -345,7 +357,7 @@ export namespace Cast {
 				});
 			}
 
-			toJSON(): JSON {
+			toJSON(): Record<string, never> {
 				return {};
 			}
 		}
@@ -365,7 +377,7 @@ export namespace Cast {
 					auth?: string;
 				},
 				source: string
-			) {
+			): Promise<castv2.MediaPlayerClass[]> {
 				if (url in LocalURLS.LOCAL_URLS) {
 					url = LocalURLS.LOCAL_URLS[url];
 				}
@@ -379,13 +391,15 @@ export namespace Cast {
 				);
 				attachMessage(
 					playerLog,
-					`Device names: ${mediaPlayers.map(
-						(p) => p.connection.name
-					)}`
+					`Device names: ${mediaPlayers
+						.map((p) => p.connection.name)
+						.join(', ')}`
 				);
 				attachMessage(
 					playerLog,
-					`Device IPs: ${mediaPlayers.map((p) => p.connection.host)}`
+					`Device IPs: ${mediaPlayers
+						.map((p) => p.connection.host)
+						.join(', ')}`
 				);
 				res.status(200).write('Success');
 				res.end();
@@ -396,11 +410,11 @@ export namespace Cast {
 			@auth
 			static async stop(
 				res: ResponseLike,
-				{}: {
+				_options: {
 					auth?: string;
 				},
 				source: string
-			) {
+			): Promise<castv2.MediaPlayerClass[]> {
 				const mediaPlayers = await Casting.Media.stop();
 				attachSourcedMessage(
 					res,
@@ -426,7 +440,7 @@ export namespace Cast {
 					auth?: string;
 				},
 				source: string
-			) {
+			): Promise<castv2.MediaPlayerClass[]> {
 				const urls = await TTS.tts(text, lang)('API.say', res);
 				attachMessage(res, `Got urls ${urls.join(', ')}`);
 
@@ -443,13 +457,15 @@ export namespace Cast {
 				);
 				attachMessage(
 					playerLog,
-					`Device names: ${mediaPlayers.map(
-						(p) => p.connection.name
-					)}`
+					`Device names: ${mediaPlayers
+						.map((p) => p.connection.name)
+						.join(', ')}`
 				);
 				attachMessage(
 					playerLog,
-					`Device IPs: ${mediaPlayers.map((p) => p.connection.host)}`
+					`Device IPs: ${mediaPlayers
+						.map((p) => p.connection.host)
+						.join(', ')}`
 				);
 				res.status(200).write('Success');
 				res.end();
@@ -468,7 +484,7 @@ export namespace Cast {
 					auth?: string;
 				},
 				source: string
-			) {
+			): Promise<castv2.MediaPlayerClass[] | undefined> {
 				if (!(pasta in Pasta.PASTAS)) {
 					res.status(400).write('Unknown pasta');
 					res.end();
@@ -491,13 +507,15 @@ export namespace Cast {
 				);
 				attachMessage(
 					playerLog,
-					`Device names: ${mediaPlayers.map(
-						(p) => p.connection.name
-					)}`
+					`Device names: ${mediaPlayers
+						.map((p) => p.connection.name)
+						.join(', ')}`
 				);
 				attachMessage(
 					playerLog,
-					`Device IPs: ${mediaPlayers.map((p) => p.connection.host)}`
+					`Device IPs: ${mediaPlayers
+						.map((p) => p.connection.host)
+						.join(', ')}`
 				);
 				res.status(200).write('Success');
 				res.end();
@@ -507,7 +525,7 @@ export namespace Cast {
 	}
 
 	export namespace Routing {
-		export async function init({ app }: ModuleConfig) {
+		export async function init({ app }: ModuleConfig): Promise<void> {
 			await External.Handler.init();
 
 			const router = createRouter(Cast, API.Handler);

@@ -1,27 +1,31 @@
 import * as express from 'express';
 
-export function createAPIHandler<A extends Record<string, any>, R>(
+export function createAPIHandler<A extends Record<string, unknown>, R>(
 	self: {
 		meta: {
 			name: string;
 		};
 	},
 	fn: (res: express.Response, args: A, source: string) => Promise<R> | void,
-	getArgs: (req: express.Request) => A = (req) => ({
-		...req.params,
-		...req.body,
-		...req.query,
-		cookies: req.cookies,
-	})
+	getArgs: (req: express.Request) => A = (req) =>
+		({
+			...req.params,
+			...req.body,
+			...req.query,
+			cookies: req.cookies,
+		} as A)
 ) {
-	return async (req: express.Request, res: express.Response) => {
+	return async (
+		req: express.Request,
+		res: express.Response
+	): Promise<void> => {
 		await fn(res, getArgs(req), `${self.meta.name}.API.${req.url}`);
 	};
 }
 
 type _Remove<
 	A extends {
-		[key: string]: any;
+		[key: string]: unknown;
 	},
 	B
 > = {
@@ -30,7 +34,7 @@ type _Remove<
 
 type RemoveType<
 	A extends {
-		[key: string]: any;
+		[key: string]: unknown;
 	},
 	B
 > = {
@@ -39,9 +43,9 @@ type RemoveType<
 
 type APIHandler = (
 	res: express.Response,
-	args: any,
+	args: unknown,
 	source: string
-) => Promise<any> | void;
+) => Promise<unknown> | void;
 
 type IsAPIHandler<F> = F extends APIHandler ? true : false;
 
@@ -114,12 +118,13 @@ export function createRouter<A>(
 					).bind(apiHandler);
 					const getArgsFn: (req: express.Request) => A =
 						(getArgs as (req: express.Request) => A) ||
-						((req) => ({
-							...req.params,
-							...req.body,
-							...req.query,
-							cookies: req.cookies,
-						}));
+						((req) =>
+							({
+								...req.params,
+								...req.body,
+								...req.query,
+								cookies: req.cookies,
+							} as A));
 					return await fn(
 						res,
 						getArgsFn(req),

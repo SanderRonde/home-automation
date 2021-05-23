@@ -12,17 +12,30 @@ import { ServerComm } from '../../../shared/server-comm/server-comm.js';
 import { JSONValue } from '../json-value/json-value.js';
 
 function isValSame(a: unknown, b: unknown): boolean {
-	if (typeof a !== typeof b) return false;
+	if (typeof a !== typeof b) {
+		return false;
+	}
 	if (typeof a === 'object') {
 		if (!a) {
-			if (b) return false;
+			if (b) {
+				return false;
+			}
 		} else if (!b) {
 			return false;
 		} else {
 			if (Array.isArray(a)) {
-				if (!isArrSame(a, b as unknown[])) return false;
+				if (!isArrSame(a, b as unknown[])) {
+					return false;
+				}
 			} else {
-				if (!isObjSame(a as any, b as any)) return false;
+				if (
+					!isObjSame(
+						a as Record<string, unknown>,
+						b as Record<string, unknown>
+					)
+				) {
+					return false;
+				}
 			}
 		}
 	} else if (
@@ -30,7 +43,9 @@ function isValSame(a: unknown, b: unknown): boolean {
 		typeof a === 'string' ||
 		typeof a === 'boolean'
 	) {
-		if (a !== b) return false;
+		if (a !== b) {
+			return false;
+		}
 	} else {
 		return false;
 	}
@@ -38,34 +53,42 @@ function isValSame(a: unknown, b: unknown): boolean {
 }
 
 function isArrSame(a: unknown[], b: unknown[]): boolean {
-	if (a.length !== b.length) return false;
+	if (a.length !== b.length) {
+		return false;
+	}
 	for (let i = 0; i < a.length; i++) {
-		if (!isValSame(a[i], b[i])) return false;
+		if (!isValSame(a[i], b[i])) {
+			return false;
+		}
 	}
 	return true;
 }
 
 function isObjSame(
-	a: {
-		[key: string]: unknown;
-	},
-	b: {
-		[key: string]: unknown;
-	}
+	a: Record<string, unknown>,
+	b: Record<string, unknown>
 ): boolean {
 	const aKeys = Object.keys(a);
 	const bKeys = Object.keys(b);
-	if (aKeys.length !== bKeys.length) return false;
+	if (aKeys.length !== bKeys.length) {
+		return false;
+	}
 
 	for (const keyA of aKeys) {
-		if (bKeys.indexOf(keyA) === -1) return false;
+		if (bKeys.indexOf(keyA) === -1) {
+			return false;
+		}
 	}
 	for (const keyB of bKeys) {
-		if (aKeys.indexOf(keyB) === -1) return false;
+		if (aKeys.indexOf(keyB) === -1) {
+			return false;
+		}
 	}
 
 	for (const key in a) {
-		if (!isValSame(a[key], b[key])) return false;
+		if (!isValSame(a[key], b[key])) {
+			return false;
+		}
 	}
 	return true;
 }
@@ -83,7 +106,7 @@ export class JSONSwitches extends ServerComm {
 			reflect: {
 				json: {
 					value: {},
-					type: ComplexType<any>(),
+					type: ComplexType<unknown>(),
 				},
 			},
 		},
@@ -104,33 +127,42 @@ export class JSONSwitches extends ServerComm {
 			{},
 			'Failed to refresh'
 		);
-		if (res === false) return false;
-		const json = await res.json();
+		if (res === false) {
+			return false;
+		}
+		const json = (await res.json()) as unknown;
 		if (!isValSame(json, this.props.json)) {
 			this.props.json = json;
 		}
 		return true;
 	}
 
-	async changeValue(path: string[], toValue: string) {
+	async changeValue(path: string[], toValue: string): Promise<void> {
 		const keys =
 			path.length !== 0
 				? [path.join('.')]
 				: Object.getOwnPropertyNames(this.props.json);
 		for (const key of keys) {
-			if (!(await this._sendValChange(key, toValue))) return;
+			if (!(await this._sendValChange(key, toValue))) {
+				return;
+			}
 		}
-		if (!(await this._refreshJSON())) return;
+		if (!(await this._refreshJSON())) {
+			return;
+		}
 	}
 
-	firstRender() {
+	async firstRender(): Promise<void> {
 		window.setInterval(() => {
-			this._refreshJSON();
+			void this._refreshJSON();
 		}, 1000 * 60);
 		this.props.key = this.props.key || localStorage.getItem('key')!;
 		localStorage.setItem('key', this.props.key!);
-		if (!this.props.json || Object.keys(this.props.json).length === 0) {
-			this._refreshJSON();
+		if (
+			!this.props.json ||
+			Object.keys(this.props.json as Record<string, unknown>).length === 0
+		) {
+			await this._refreshJSON();
 		}
 	}
 }

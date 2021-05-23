@@ -1,11 +1,12 @@
-import { attachMessage, logOutgoingReq, log } from './logger';
+import { attachMessage, logOutgoingReq, log, LogObj } from './logger';
 import * as querystring from 'querystring';
 import * as http from 'http';
 import chalk from 'chalk';
 import { AllModules } from '../modules';
 import { ModuleHookables } from '../modules/modules';
+import * as url from 'url';
 
-export function wait(time: number) {
+export function wait(time: number): Promise<void> {
 	return new Promise((resolve) => {
 		setTimeout(resolve, time);
 	});
@@ -30,10 +31,10 @@ export function arrToObj<V>(arr: [string, V][]): {
 export async function awaitCondition(
 	condition: () => boolean,
 	interval: number,
-	maxTime: number = Infinity
-) {
-	let tests: number = 0;
-	let maxTests = maxTime / interval;
+	maxTime = Infinity
+): Promise<void> {
+	let tests = 0;
+	const maxTests = maxTime / interval;
 
 	while (!condition() && tests < maxTests) {
 		await wait(interval);
@@ -74,11 +75,17 @@ export namespace Time {
 		const toMins = timeToMinutes(to);
 
 		if (fromMins > toMins) {
-			if (timeMins > fromMins) return true;
-			if (timeMins < toMins) return true;
+			if (timeMins > fromMins) {
+				return true;
+			}
+			if (timeMins < toMins) {
+				return true;
+			}
 			return false;
 		} else {
-			if (timeMins < fromMins || timeMins > toMins) return false;
+			if (timeMins < fromMins || timeMins > toMins) {
+				return false;
+			}
 			return true;
 		}
 	}
@@ -94,18 +101,16 @@ export function splitIntoGroups<V>(arr: V[], size: number): V[][] {
 
 export namespace XHR {
 	export function post(
-		url: string,
+		xhrURL: string,
 		name: string,
-		params: {
-			[key: string]: string;
-		} = {}
-	) {
+		params: Record<string, string> = {}
+	): Promise<string> {
 		return new Promise<string>((resolve) => {
 			const qs = Object.keys(params).length
 				? `?${querystring.stringify(params)}`
 				: '';
-			const fullURL = `${url}${qs}`;
-			const parsedURL = new URL(fullURL);
+			const fullURL = `${xhrURL}${qs}`;
+			const parsedURL = new url.URL(fullURL);
 			const req = http
 				.request(
 					{
@@ -115,7 +120,7 @@ export namespace XHR {
 						method: 'POST',
 					},
 					(res) => {
-						let data: string = '';
+						let data = '';
 
 						res.on('data', (chunk: string | Buffer) => {
 							data += chunk.toString();
@@ -124,12 +129,12 @@ export namespace XHR {
 							attachMessage(
 								req,
 								chalk.cyan(`[${name}]`),
-								url,
+								xhrURL,
 								JSON.stringify(params)
 							);
 							logOutgoingReq(req, {
 								method: 'GET',
-								target: url,
+								target: xhrURL,
 							});
 							resolve(data);
 						});
@@ -138,7 +143,7 @@ export namespace XHR {
 				.on('error', (e) => {
 					log(
 						chalk.red(
-							`Error while sending request "${name}" with URL "${url}": "${e.message}"`
+							`Error while sending request "${name}" with URL "${xhrURL}": "${e.message}"`
 						)
 					);
 				});
@@ -147,20 +152,20 @@ export namespace XHR {
 	}
 
 	export function get(
-		url: string,
+		xhrURL: string,
 		name: string,
 		params: {
 			[key: string]: string;
 		} = {}
-	) {
+	): Promise<string> {
 		return new Promise<string>((resolve) => {
 			const qs = Object.keys(params).length
 				? `?${querystring.stringify(params)}`
 				: '';
-			const fullURL = `${url}${qs}`;
+			const fullURL = `${xhrURL}${qs}`;
 			const req = http
 				.get(fullURL, (res) => {
-					let data: string = '';
+					let data = '';
 
 					res.on('data', (chunk: string | Buffer) => {
 						data += chunk.toString();
@@ -169,12 +174,12 @@ export namespace XHR {
 						attachMessage(
 							req,
 							chalk.cyan(`[${name}]`),
-							url,
+							xhrURL,
 							JSON.stringify(params)
 						);
 						logOutgoingReq(req, {
 							method: 'GET',
-							target: url,
+							target: xhrURL,
 						});
 						resolve(data);
 					});
@@ -182,7 +187,7 @@ export namespace XHR {
 				.on('error', (e) => {
 					log(
 						chalk.red(
-							`Error while sending request "${name}" with URL "${url}": "${e.message}"`
+							`Error while sending request "${name}" with URL "${xhrURL}": "${e.message}"`
 						)
 					);
 				});
@@ -192,7 +197,7 @@ export namespace XHR {
 
 const CHARS =
 	'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'.split('');
-export function generateRandomString(length: number = 64) {
+export function generateRandomString(length = 64): string {
 	let str = '';
 	for (let i = 0; i < length; i++) {
 		str += CHARS[Math.floor(CHARS.length * Math.random())];
@@ -204,7 +209,7 @@ export function flatten<V>(arr: V[][]): V[] {
 	const flattened: V[] = [];
 	for (const value of arr) {
 		if (Array.isArray(value)) {
-			flattened.push(...(flatten(value as any) as V[]));
+			flattened.push(...flatten<V>(value as unknown as V[][]));
 		} else {
 			flattened.push(value);
 		}
@@ -213,32 +218,32 @@ export function flatten<V>(arr: V[][]): V[] {
 }
 
 export class SettablePromise<V> {
-	private _isSet: boolean = false;
+	private _isSet = false;
 	private _resolver!: (value: V) => void;
 	private _promise = new Promise<V>((resolve) => {
 		this._resolver = resolve;
 	});
 
-	set(value: V) {
+	set(value: V): void {
 		this._resolver(value);
 		this._isSet = true;
 	}
 
-	get isSet() {
+	get isSet(): boolean {
 		return this._isSet;
 	}
 
-	get value() {
+	get value(): Promise<V> {
 		return this._promise;
 	}
 }
 
-export async function createHookables(
+export function createHookables(
 	modules: AllModules,
 	sourceName: string,
 	hookName: string,
-	logObj: any
-): Promise<ModuleHookables> {
+	logObj: LogObj
+): ModuleHookables {
 	return arrToObj(
 		Object.keys(modules).map((name: keyof AllModules) => {
 			return [

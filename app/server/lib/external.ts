@@ -1,21 +1,22 @@
-import { ResDummy } from './logger';
+import { LogObj, ResDummy } from './logger';
 
 type QueuedRequestFn<T> = (
 	res: ResDummy,
 	source: string,
-	logObj: any
+	logObj: LogObj
 ) => Promise<T> | T;
 
-type QueuedRequest<T = any> = {
+type QueuedRequest<T = unknown> = {
 	fn: QueuedRequestFn<T>;
 	instance: InstanceType<ReturnType<typeof createExternalClass>>;
 };
 
 const initializedClasses: WeakSet<ReturnType<typeof createExternalClass>> =
 	new WeakSet();
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function createExternalClass(requiresInit: boolean, name?: string) {
 	return class ExternalClass {
-		protected static _initialized: boolean = false;
+		protected static _initialized = false;
 		protected static _name = name;
 		private static _isReady(requiresInit: boolean) {
 			if (requiresInit === undefined) {
@@ -24,7 +25,7 @@ export function createExternalClass(requiresInit: boolean, name?: string) {
 			return !requiresInit || this._initialized;
 		}
 
-		constructor(private _logObj: any, private _source: string) {}
+		constructor(private _logObj: LogObj, private _source: string) {}
 
 		private static _queuedRequests: QueuedRequest[] = [];
 
@@ -39,11 +40,11 @@ export function createExternalClass(requiresInit: boolean, name?: string) {
 			return value;
 		}
 
-		static async init(_args?: any) {
+		static async init(_args?: unknown) {
 			initializedClasses.add(this);
 			this._initialized = true;
 			for (const req of this._queuedRequests) {
-				this._handleQueuedRequest(req);
+				await this._handleQueuedRequest(req);
 			}
 		}
 
@@ -55,7 +56,7 @@ export function createExternalClass(requiresInit: boolean, name?: string) {
 			return new Promise<T>((resolve) => {
 				const constructor = this.constructor as typeof ExternalClass;
 				if (constructor._isReady(requiresInit)) {
-					constructor
+					void constructor
 						._handleQueuedRequest({
 							fn,
 							instance: this,

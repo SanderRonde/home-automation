@@ -28,7 +28,7 @@ interface TimedEvent extends ExtendedEvent {
 export class CalendarOverview extends ConfigurableWebComponent<{
 	events: {
 		propChange: {
-			args: [string, any, any];
+			args: [string, unknown, unknown];
 		};
 	};
 }> {
@@ -41,26 +41,28 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 		},
 	});
 
-	getDay(daysOffset: number) {
+	getDay(daysOffset: number): Date {
 		const day = new Date();
 		day.setDate(day.getDate() + daysOffset);
 		return day;
 	}
 
-	getEndOfDay(daysOffset: number) {
+	getEndOfDay(daysOffset: number): Date {
 		const day = this.getDay(daysOffset);
 		day.setHours(23, 59, 59);
 		return day;
 	}
 
-	getStartOfDay(daysOffset: number) {
+	getStartOfDay(daysOffset: number): Date {
 		const day = this.getDay(daysOffset);
 		day.setHours(0, 0, 0);
 		return day;
 	}
 
-	getDayIndex(date: Date, weekdays: Date[]) {
-		if (date < weekdays[0]) return 0;
+	getDayIndex(date: Date, weekdays: Date[]): number {
+		if (date < weekdays[0]) {
+			return 0;
+		}
 		for (let i = 1; i < weekdays.length; i++) {
 			if (date < weekdays[i]) {
 				return i;
@@ -69,7 +71,7 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 		return Infinity;
 	}
 
-	getTimeSpacedEvents() {
+	getTimeSpacedEvents(): (TimedEvent | null)[][] {
 		const weekdayEvents = this.getWeekDayEvents();
 		const max = Math.max(
 			...weekdayEvents.map((weekDay) => weekDay.events.length)
@@ -77,7 +79,7 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 
 		const arr: (TimedEvent | null)[][] = new Array(max)
 			.fill('')
-			.map((_) => new Array(7).fill(null));
+			.map((_) => new Array(7).fill(null) as null[]);
 		for (let i = 0; i < arr.length; i++) {
 			for (let j = 0; j < 7; j++) {
 				arr[i][j] = weekdayEvents[j].events[i] || null;
@@ -86,7 +88,10 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 		return arr;
 	}
 
-	getWeekDayEvents() {
+	getWeekDayEvents(): {
+		date: Date;
+		events: TimedEvent[];
+	}[] {
 		const days = new Array(7).fill('').map((_, index) => {
 			return this.getDay(index);
 		});
@@ -117,7 +122,9 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 			const startIndex = this.getDayIndex(eventStart, endsOfDays);
 			const endIndex = this.getDayIndex(eventEnd, endsOfDays);
 
-			if (startIndex === Infinity || endIndex === Infinity) continue;
+			if (startIndex === Infinity || endIndex === Infinity) {
+				continue;
+			}
 
 			if (
 				// If the event is either on the same day
@@ -160,8 +167,12 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 			events.sort((a, b) => {
 				const aDate = new Date(a.start!.dateTime!);
 				const bDate = new Date(b.start!.dateTime!);
-				if (aDate < bDate) return -1;
-				if (aDate === bDate) return 0;
+				if (aDate < bDate) {
+					return -1;
+				}
+				if (aDate === bDate) {
+					return 0;
+				}
 				return 1;
 			});
 		});
@@ -172,9 +183,9 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 	async request(
 		url: string,
 		postBody: {
-			[key: string]: any;
+			[key: string]: unknown;
 		}
-	) {
+	): Promise<Response | null> {
 		try {
 			const response = await fetch(url, {
 				method: 'POST',
@@ -190,7 +201,7 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 		}
 	}
 
-	async updateCalendar() {
+	async updateCalendar(): Promise<void> {
 		const response = await this.request(`${location.origin}/calendar`, {});
 		if (!response) {
 			return;
@@ -199,14 +210,14 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 		this.props.events = events;
 	}
 
-	setup() {
-		this.updateCalendar();
-		setInterval(() => {
-			this.updateCalendar();
+	async setup(): Promise<void> {
+		await this.updateCalendar();
+		setInterval(async () => {
+			await this.updateCalendar();
 		}, 1000 * 60 * 60);
 	}
 
-	mounted() {
-		this.setup();
+	async mounted(): Promise<void> {
+		await this.setup();
 	}
 }

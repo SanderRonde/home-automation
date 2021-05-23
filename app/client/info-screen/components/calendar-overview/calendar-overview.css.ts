@@ -6,7 +6,7 @@ import { CalendarOverview } from './calendar-overview.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 
 export const CalendarOverviewCSS = new TemplateFn<CalendarOverview>(
-	function (html) {
+	(html) => {
 		return html`
 			<style>
 				#container {

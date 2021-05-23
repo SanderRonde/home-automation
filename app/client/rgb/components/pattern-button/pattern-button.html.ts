@@ -8,7 +8,7 @@ import { PatternButton } from './pattern-button.js';
 export const PatternButtonHTML = new TemplateFn<PatternButton>(
 	function (html, { props }) {
 		return html`
-			<div id="container" @click="${this.onClick}">
+			<div id="container" @click="${this.onClick.bind(this)}">
 				${props.pattern!.colors.length === 0
 					? html`
 							<div id="cross">

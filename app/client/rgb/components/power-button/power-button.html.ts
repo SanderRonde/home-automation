@@ -12,7 +12,7 @@ export const PowerButtonHTML = new TemplateFn<PowerButton>(
 				class="${{
 					on: props.on,
 				}}"
-				@click="${this.onClick}"
+				@click="${this.onClick.bind(this)}"
 				id="container"
 			></div>
 		`;

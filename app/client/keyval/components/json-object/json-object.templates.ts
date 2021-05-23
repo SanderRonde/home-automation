@@ -10,7 +10,7 @@ import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { jsonValue } from '../json-value/json-value.templates.js';
 import { JSONObject } from './json-object.js';
 
-function getKeys(value: any): (string | number)[] {
+function getKeys(value: unknown): (string | number)[] {
 	if (Array.isArray(value)) {
 		return value.map((_, index) => index);
 	} else {
@@ -18,11 +18,11 @@ function getKeys(value: any): (string | number)[] {
 	}
 }
 
-function getDeepValues(value: any): any[] {
+function getDeepValues(value: unknown): unknown[] {
 	if (typeof value === 'object') {
 		return getKeys(value)
 			.map((key) => {
-				return getDeepValues(value[key]);
+				return getDeepValues((value as Record<string, unknown>)[key]);
 			})
 			.reduce((prev, current) => {
 				return [...prev, ...current];
@@ -39,7 +39,7 @@ export const JSONObjectHTML = new TemplateFn<JSONObject>(
 				<div id="groupToggle">
 					<power-switch
 						id="switch"
-						@@toggle="${this.onToggle}"
+						@@toggle="${this.onToggle.bind(this)}"
 						?initial="${(() => {
 							const deepVals = getDeepValues(props.json);
 							if (
@@ -65,12 +65,14 @@ export const JSONObjectHTML = new TemplateFn<JSONObject>(
 			<div id="subsection">
 				${getKeys(props.json)
 					.map((key) => {
-						if (key === '___last_updated') return null;
+						if (key === '___last_updated') {
+							return null;
+						}
 						return jsonValue(
 							html,
-							props.json[key],
-							[...props.path!, key + ''],
-							key + ''
+							(props.json as Record<string, unknown>)[key],
+							[...props.path!, String(key)],
+							String(key)
 						);
 					})
 					.filter((v) => !!v)}

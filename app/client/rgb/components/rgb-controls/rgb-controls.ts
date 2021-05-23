@@ -18,7 +18,7 @@ export class RgbControls extends ConfigurableWebComponent<{
 		IDS: {
 			hueSlider: HTMLInputElement;
 		};
-		CLASSES: {};
+		CLASSES: Record<string, never>;
 	};
 }> {
 	props = Props.define(this, {
@@ -73,11 +73,11 @@ export class RgbControls extends ConfigurableWebComponent<{
 		}) as [number, number, number];
 	}
 
-	onChange() {
+	async onChange(): Promise<void> {
 		const value = this.$.hueSlider.valueAsNumber;
 		const color = RgbControls.getColorAtIndex(value);
 		this.lastColor = color;
 		this.props.parent!.updateCanvasColor(color);
-		this.props.parent!.onDrag();
+		await this.props.parent!.onDrag();
 	}
 }

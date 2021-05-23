@@ -9,10 +9,10 @@ import { JSONValue } from './json-value.js';
 
 export function jsonValue(
 	html: Templater<TemplateRenderResult>,
-	value: any,
+	value: unknown,
 	path: string[],
-	name: string = 'all'
-) {
+	name = 'all'
+): TemplateRenderResult {
 	if (
 		typeof value === 'boolean' ||
 		typeof value === 'number' ||

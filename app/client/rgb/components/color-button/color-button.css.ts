@@ -7,7 +7,7 @@ import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 
 export const ColorButtonCSS = [
 	new TemplateFn<ColorButton>(
-		function (html) {
+		(html) => {
 			return html`
 				<style>
 					#image {
@@ -37,7 +37,7 @@ export const ColorButtonCSS = [
 		render
 	),
 	new TemplateFn<ColorButton>(
-		function (html) {
+		(html) => {
 			return html`
 				<style>
 					span[data-type='html'],

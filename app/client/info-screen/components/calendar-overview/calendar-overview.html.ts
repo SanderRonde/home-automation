@@ -28,13 +28,12 @@ export const CalendarOverviewHTML = new TemplateFn<CalendarOverview>(
 							return html`
 								<tr>
 									${timeslot.map((event) => {
-										if (!event)
+										if (!event) {
 											return html`
 												<td class="event empty"></td>
 											`;
-										const colorStyle = `background-color: ${
-											event!.color.background
-										};`;
+										}
+										const colorStyle = `background-color: ${event.color.background};`;
 										return html`
 											<td class="event">
 												<div

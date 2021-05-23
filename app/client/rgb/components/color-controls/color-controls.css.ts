@@ -6,7 +6,7 @@ import { ColorControls } from './color-controls.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 
 export const ColorControlsCSS = new TemplateFn<ColorControls>(
-	function (html) {
+	(html) => {
 		return html` <style></style> `;
 	},
 	CHANGE_TYPE.THEME,

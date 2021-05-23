@@ -2,23 +2,24 @@ import { ModuleConfig, AllModules } from './modules';
 import { BotState } from '../lib/bot-state';
 import { ExplainHook } from './explain';
 import { SettablePromise } from '../lib/util';
+import { LogObj } from '../lib/logger';
 
 export declare class Handler {
-	constructor(_logObj: any, _source: string);
+	constructor(_logObj: LogObj, _source: string);
 }
 
 class HandlerDefault implements Handler {
 	// @ts-ignore
-	constructor(private _logObj: any, private _source: string) {}
+	constructor(private _logObj: LogObj, private _source: string) {}
 }
 
 export class BotBase extends BotState.Base {
-	constructor(_json?: any) {
+	constructor(_json?: unknown) {
 		super();
 		return this;
 	}
 
-	toJSON() {
+	toJSON(): unknown {
 		return {};
 	}
 }
@@ -31,7 +32,7 @@ export abstract class ModuleMeta {
 	public _dbName: string | null = null;
 	public _loggerName: string | null = null;
 
-	abstract async init(config: ModuleConfig): Promise<void>;
+	abstract init(config: ModuleConfig): Promise<void>;
 
 	get external(): {
 		Handler: typeof Handler;
@@ -49,33 +50,33 @@ export abstract class ModuleMeta {
 		};
 	}
 
-	get explainHook() {
+	get explainHook(): Promise<ExplainHook> {
 		return this._explainHook.value;
 	}
 
-	get modules() {
+	get modules(): Promise<AllModules> {
 		return this._modules.value;
 	}
 
-	async notifyModules(_modules: AllModules): Promise<any> {}
+	async notifyModules(_modules: AllModules): Promise<void> {}
 
-	async notifyModulesFromExternal(modules: AllModules): Promise<any> {
+	async notifyModulesFromExternal(modules: AllModules): Promise<void> {
 		this._modules.set(modules);
-		this.notifyModules(modules);
+		await this.notifyModules(modules);
 	}
 
-	addExplainHook(_onAction: ExplainHook) {}
+	addExplainHook(_onAction: ExplainHook): void {}
 
-	addExplainHookFromExternal(onAction: ExplainHook) {
+	addExplainHookFromExternal(onAction: ExplainHook): void {
 		this._explainHook.set(onAction);
 		this.addExplainHook(onAction);
 	}
 
-	get dbName() {
+	get dbName(): string {
 		return this._dbName || this.name;
 	}
 
-	get loggerName() {
+	get loggerName(): string {
 		return this._loggerName || `/${this.name}`;
 	}
 }

@@ -9,7 +9,11 @@ export const RgbControlsHTML = new TemplateFn<RgbControls>(
 	function (html) {
 		return html`
 			<div id="container">
-				<input @input="${this.onChange}" id="hueSlider" type="range" />
+				<input
+					@input="${this.onChange.bind(this)}"
+					id="hueSlider"
+					type="range"
+				/>
 			</div>
 		`;
 	},
