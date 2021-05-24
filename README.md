@@ -65,9 +65,13 @@ The movement module handles any motion detection and runs the associated actions
 
 ### Controllers
 
+#### Google Home/Assistant
+
+All devices are accessible through the Google Assistant API and can be connected to the Google Home app. This allows them to be controlled through voice or through the Home app.
+
 #### Telegram bot
 
-Everything is conneceted with a telegram bot that (semi-)intelligently performs the actions you tell it to. It consists of a lot of regex but works surprisingly well.
+Everything is connected with a telegram bot that (semi-)intelligently performs the actions you tell it to. It consists of a lot of regex but works surprisingly well.
 
 #### Smart speaker integration
 
