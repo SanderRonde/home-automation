@@ -801,7 +801,7 @@ export namespace HomeDetector {
 	function initListeners() {
 		Classes.Detector.addListener(null, (newState, name) => {
 			logTag(
-				`[device:${name}]`,
+				`device:${name}`,
 				'cyan',
 				newState === HOME_STATE.HOME
 					? chalk.bold(chalk.blue('now home'))
