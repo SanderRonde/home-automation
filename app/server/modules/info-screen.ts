@@ -411,7 +411,7 @@ export namespace InfoScreen {
 				calendars.map(async (calendarObj) => {
 					return {
 						response: await calendar?.events.list({
-							calendarId: calendarObj.id,
+							calendarId: calendarObj.id || undefined,
 							singleEvents: true,
 							orderBy: 'startTime',
 							timeMin: startTime.toISOString(),

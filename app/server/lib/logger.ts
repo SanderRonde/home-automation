@@ -248,7 +248,7 @@ function getTimeFiller() {
 }
 
 export function logOutgoingRes(
-	res: ResponseLike,
+	res: ResponseLike | LogObj,
 	data: {
 		method: string;
 		path: string;
@@ -609,4 +609,12 @@ export function logTag(
 	...messages: unknown[]
 ): void {
 	log(getTime(), chalk[color](`[${tag}]`), ...messages);
+}
+
+export function debug(...messages: unknown[]): void {
+	log(getTime(), chalk.bgHex('fc8803')('[DEBUG]'), ...messages);
+}
+
+export function warning(...messages: unknown[]): void {
+	log(getTime(), chalk.bgRed('[WARNING]'), ...messages);
 }

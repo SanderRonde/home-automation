@@ -107,7 +107,7 @@ declare module 'magic-home' {
 		connected: boolean;
 	}
 
-	export type TransitionTypes = 'fade' | 'jump' | 'strobe';
+	export type TransitionTypes = 'fade' | 'jump' | 'strobe' | 'color';
 
 	export class CustomMode {
 		static transitionTypes: TransitionTypes[];

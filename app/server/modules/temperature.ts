@@ -14,6 +14,7 @@ import { Auth } from './auth';
 import chalk from 'chalk';
 import { createExternalClass } from '../lib/external';
 import { createRouter } from '../lib/api';
+import { SettablePromise } from '../lib/util';
 
 const LOG_INTERVAL_SECS = 60;
 
@@ -54,21 +55,24 @@ export namespace Temperature {
 	type Mode = 'on' | 'off' | 'auto';
 
 	namespace TempControllers {
-		let db: Database | null = null;
+		const db = new SettablePromise<Database>();
 		const controllers: Map<string, TempControl> = new Map();
 
 		export async function getController(
 			name = 'default'
 		): Promise<TempControl> {
 			if (!controllers.has(name)) {
-				controllers.set(name, await new TempControl().init(db!, name));
+				controllers.set(
+					name,
+					await new TempControl().init((await db.value)!, name)
+				);
 			}
 
 			return controllers.get(name)!;
 		}
 
 		export function init(_db: Database): void {
-			db = _db;
+			db.set(_db);
 		}
 
 		export function getAll(): TempControl[] {
@@ -77,6 +81,8 @@ export namespace Temperature {
 	}
 
 	class TempControl {
+		private _listeners: ((temperature: number) => void)[] = [];
+
 		target = 20.0;
 		mode: Mode = 'auto';
 		lastTemp = -1;
@@ -159,6 +165,8 @@ export namespace Temperature {
 				);
 				this.lastLogTime = Date.now();
 			}
+
+			this._listeners.forEach((listener) => listener(temp));
 		}
 
 		getTarget() {
@@ -187,6 +195,10 @@ export namespace Temperature {
 			const move = this.move;
 			this.move = null;
 			return move;
+		}
+
+		addListener(listener: (temperature: number) => void) {
+			this._listeners.push(listener);
 		}
 
 		async init(database: Database, name: string) {
@@ -268,6 +280,20 @@ export namespace Temperature {
 						},
 						source
 					);
+				});
+			}
+
+			public onUpdate(
+				name: string,
+				handler: (temperature: number) => void
+			): Promise<void> {
+				return this.runRequest(async () => {
+					const controller = await TempControllers.getController(
+						name
+					);
+					controller.addListener((temperature) => {
+						handler(temperature);
+					});
 				});
 			}
 		}

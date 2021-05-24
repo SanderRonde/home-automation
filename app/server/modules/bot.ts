@@ -507,6 +507,7 @@ export namespace Bot {
 					chalk.bold(String(message.chat.id))
 				);
 				const matchMsg = attachMessage(logObj, 'Match');
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-return
 				return (
 					(await Handler.multiMatch({
 						logObj: matchMsg,

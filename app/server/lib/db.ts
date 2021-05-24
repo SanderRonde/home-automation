@@ -1,6 +1,7 @@
 import { DB_FOLDER } from './constants';
 import * as fs from 'fs-extra';
 import * as path from 'path';
+import { warning } from './logger';
 
 class DBFileManager {
 	private static get date() {
@@ -138,7 +139,12 @@ export class Database {
 		}
 	}
 
-	pushVal(key: string, val: unknown, noWrite = false): void {
+	pushVal(
+		key: string,
+		val: unknown,
+		duplicateBehavior: 'warning' | 'ignore' | 'duplicate' = 'warning',
+		noWrite: boolean = false
+	): void {
 		const lastTarget = this._getLastTarget(key);
 		if (!lastTarget) {
 			return;
@@ -151,7 +157,23 @@ export class Database {
 		) {
 			currentContainer[lastKey] = [val];
 		} else {
-			currentTarget.push(val);
+			if (
+				currentTarget.includes(val) ||
+				duplicateBehavior !== 'duplicate'
+			) {
+				if (duplicateBehavior === 'warning') {
+					warning(
+						'Current value array for',
+						key,
+						val,
+						'already contains',
+						val,
+						'skipping'
+					);
+				}
+			} else {
+				currentTarget.push(val);
+			}
 		}
 
 		if (!noWrite) {

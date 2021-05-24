@@ -2,6 +2,7 @@ import * as OAuthServer from 'express-oauth-server';
 import {
 	attachMessage,
 	attachSourcedMessage,
+	debug,
 	logTag,
 	ResponseLike,
 } from '../lib/logger';
@@ -14,7 +15,7 @@ import { Database } from '../lib/db';
 import * as path from 'path';
 import { CLIENT_FOLDER } from '../lib/constants';
 import * as express from 'express';
-import type {
+import {
 	AuthorizationCodeModel,
 	Token,
 	Client,
@@ -239,6 +240,22 @@ export namespace OAuth {
 				})
 			);
 		}
+
+		export function getAuth(res: express.Response): {
+			token: Omit<Token, 'user'> & {
+				user: string;
+			};
+		} {
+			return (
+				res.locals as {
+					oauth: {
+						token: Omit<Token, 'user'> & {
+							user: string;
+						};
+					};
+				}
+			).oauth;
+		}
 	}
 
 	namespace OAuthUsers {
@@ -307,7 +324,7 @@ export namespace OAuth {
 				'response_mode',
 				'state',
 				'nonce',
-			].map((p) => `${p}=${previousParams[p]}`);
+			].map((p) => `${p}=${encodeURIComponent(previousParams[p])}`);
 			if (invalidReason) {
 				params.push(`errorReason=${invalidReason}`);
 			}
@@ -328,6 +345,16 @@ export namespace OAuth {
 						'Authorizing OAuth'
 					);
 
+					// Somehow Google sends a wrong URL so we have to fix it
+					const query = req.query as {
+						redirect_uri?: string;
+					};
+					if (query.redirect_uri) {
+						query.redirect_uri = query.redirect_uri.replace(
+							'https:/o',
+							'https://o'
+						);
+					}
 					const { username = '', password = '' } = {
 						...req.body,
 						...req.params,
@@ -335,6 +362,12 @@ export namespace OAuth {
 						username?: string;
 						password?: string;
 					};
+					debug('OAuth', '/authorize', {
+						...req.body,
+						...req.params,
+						...req.query,
+					});
+
 					const { valid, invalidReason } = OAuthUsers.validate(
 						username,
 						password

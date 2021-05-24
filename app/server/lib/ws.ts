@@ -367,7 +367,7 @@ export class WSWrapper {
 	}
 
 	handle(req: http.IncomingMessage, socket: Socket, head: Buffer): void {
-		const pathname = new url.URL(req.url!).pathname;
+		const pathname = new url.URL(`http://localhost/${req.url!}`).pathname;
 		for (const { route, handler } of this.routes) {
 			if (
 				pathname !== route &&

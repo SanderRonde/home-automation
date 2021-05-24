@@ -2,6 +2,7 @@ import { RemoteControl } from './remote-control';
 import { SpotifyBeats } from './spotify-beats';
 import { HomeDetector } from './home-detector';
 import { Temperature } from './temperature';
+import { SmartHome } from './smart-home';
 import { Pressure } from './pressure';
 import { Movement } from './movement';
 import { Explain } from './explain';
@@ -25,6 +26,7 @@ export { RemoteControl } from './remote-control';
 export { SpotifyBeats } from './spotify-beats';
 export { HomeDetector } from './home-detector';
 export { Temperature } from './temperature';
+export { SmartHome } from './smart-home';
 export { Pressure } from './pressure';
 export { Movement } from './movement';
 export { Explain } from './explain';
@@ -75,6 +77,7 @@ const moduleObj = {
 	explain: Explain,
 	pressure: Pressure,
 	movement: Movement,
+	smartHome: SmartHome,
 	infoScreen: InfoScreen,
 	temperature: Temperature,
 	spotifyBeats: SpotifyBeats,

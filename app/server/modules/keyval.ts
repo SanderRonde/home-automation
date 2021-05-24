@@ -218,7 +218,7 @@ export namespace KeyVal {
 				key: string,
 				value: string,
 				notify = true
-			): Promise<void> {
+			): Promise<boolean> {
 				return this.runRequest((res, source) => {
 					return Handler._apiHandler!.set(
 						res,
@@ -250,6 +250,15 @@ export namespace KeyVal {
 				const value = await this.get(key);
 				const newValue = value === '1' ? '0' : '1';
 				await this.set(key, newValue);
+			}
+
+			async onChange(
+				key: string,
+				callback: (value: string) => void
+			): Promise<number> {
+				return this.runRequest(() => {
+					return GetSetListener.addListener(key, callback);
+				});
 			}
 		}
 	}
@@ -620,7 +629,7 @@ export namespace KeyVal {
 					update?: boolean;
 				},
 				source: string
-			): Promise<void> {
+			): Promise<boolean> {
 				const original = this._db.get(key);
 				this._db.setVal(key, value);
 				const msg = attachSourcedMessage(
@@ -643,7 +652,7 @@ export namespace KeyVal {
 				}
 				res.status(200).write(value);
 				res.end();
-				return;
+				return true;
 			}
 
 			@errorHandle

@@ -1,4 +1,4 @@
-import { Color } from './types';
+import { Color } from './color';
 import * as path from 'path';
 import { getEnv, getNumberEnv } from './io';
 
@@ -34,12 +34,12 @@ export const LED_DEVICE_NAME = getEnv('MODULE_LED_DEVICE_NAME', true);
 
 // Rgb
 export const enum LED_NAMES {
-	BED_LEDS,
-	DESK_LEDS,
-	COUCH_LEDS,
-	WALL_LEDS,
-	CEILING_LEDS,
-	HEX_LEDS,
+	BED_LEDS = 'BED_LEDS',
+	DESK_LEDS = 'DESK_LEDS',
+	COUCH_LEDS = 'COUCH_LEDS',
+	WALL_LEDS = 'WALL_LEDS',
+	CEILING_LEDS = 'CEILING_LEDS',
+	HEX_LEDS = 'HEX_LEDS',
 }
 export const MAGIC_LEDS = [
 	LED_NAMES.BED_LEDS,
@@ -121,3 +121,8 @@ export const PLAYSTATE_CHECK_INTERVAL = 1000;
 export const BEAT_CACHE_CLEAR_INTERVAL = 1000 * 60 * 60;
 export const PLAYBACK_CLOSE_RANGE = 10;
 export const MAX_BEATS_ARR_LENGTH = 2000;
+
+// Smart-home
+export const SMART_HOME_BATCH_MIN_TIMEOUT = 50;
+export const SMART_HOME_BATCH_MAX_TIMEOUT = 5000;
+export const TEMPERATURE_REPORT_MAX_TIMEOUT = 60000 * 5;

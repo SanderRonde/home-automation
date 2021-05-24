@@ -91,7 +91,11 @@ export function createRouter<A>(
 ): { use(app: express.Application, path?: string): void } & {
 	[v in RouterVerb]: RouterFn<A>;
 } {
-	const router = express.Router();
+	const toRegister: {
+		verb: RouterVerb;
+		subPath: string;
+		handlers: express.Handler[];
+	}[] = [];
 
 	const handlerCreator: (verb: RouterVerb) => RouterFn<A> = (verb) =>
 		((
@@ -108,37 +112,47 @@ export function createRouter<A>(
 					}
 					return [...arr, ...handlers];
 				})();
-				return router[verb](subPath, ...routeHandlers);
+				toRegister.push({
+					verb,
+					subPath,
+					handlers: routeHandlers,
+				});
+			} else {
+				toRegister.push({
+					verb,
+					subPath,
+					handlers: [
+						async (req: express.Request, res: express.Response) => {
+							const fn = (
+								apiHandler[fnHandle] as unknown as APIHandler
+							).bind(apiHandler);
+							const getArgsFn: (req: express.Request) => A =
+								(getArgs as (req: express.Request) => A) ||
+								((req) =>
+									({
+										...req.params,
+										...req.body,
+										...req.query,
+										cookies: req.cookies,
+									} as A));
+							return await fn(
+								res,
+								getArgsFn(req),
+								`${self.meta.name}.API.${req.url}`
+							);
+						},
+					],
+				});
 			}
-			return router[verb](
-				subPath,
-				async (req: express.Request, res: express.Response) => {
-					const fn = (
-						apiHandler[fnHandle] as unknown as APIHandler
-					).bind(apiHandler);
-					const getArgsFn: (req: express.Request) => A =
-						(getArgs as (req: express.Request) => A) ||
-						((req) =>
-							({
-								...req.params,
-								...req.body,
-								...req.query,
-								cookies: req.cookies,
-							} as A));
-					return await fn(
-						res,
-						getArgsFn(req),
-						`${self.meta.name}.API.${req.url}`
-					);
-				}
-			);
 		}) as unknown as RouterFn<A>;
 	return {
 		get: handlerCreator('get'),
 		post: handlerCreator('post'),
 		all: handlerCreator('all'),
 		use(app, path = `/${self.meta.name.toLowerCase()}`) {
-			app.use(path, router);
+			toRegister.forEach(({ verb, subPath, handlers }) => {
+				app[verb](`${path}${subPath}`, ...handlers);
+			});
 		},
 	};
 }
