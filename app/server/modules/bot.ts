@@ -818,3 +818,5 @@ export namespace Bot {
 		);
 	}
 }
+
+export { Bot as _Bot } from './bot';

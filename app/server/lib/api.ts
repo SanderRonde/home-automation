@@ -2,11 +2,11 @@ import * as express from 'express';
 import { ModuleMeta } from '../modules/meta';
 
 export function createAPIHandler<A extends Record<string, unknown>, R>(
-	self: {
-		meta: {
-			name: string;
-		};
-	},
+	self:
+		| {
+				meta: ModuleMeta;
+		  }
+		| ModuleMeta,
 	fn: (res: express.Response, args: A, source: string) => Promise<R> | void,
 	getArgs: (req: express.Request) => A = (req) =>
 		({
@@ -20,7 +20,11 @@ export function createAPIHandler<A extends Record<string, unknown>, R>(
 		req: express.Request,
 		res: express.Response
 	): Promise<void> => {
-		await fn(res, getArgs(req), `${self.meta.name}.API.${req.url}`);
+		await fn(
+			res,
+			getArgs(req),
+			`${'meta' in self ? self.meta.name : self.name}.API.${req.url}`
+		);
 	};
 }
 
