@@ -1,5 +1,6 @@
 import { BotState } from '../../lib/bot-state';
-import { _Bot } from '../bot';
+import { MatchParameters } from '../bot/message';
+import { MatchResponse } from '../bot/types';
 import { getSpotifyAPI } from './spotify/api';
 import { getURL } from './spotify/auth';
 import { disable, enable } from './spotify/checking';
@@ -52,8 +53,8 @@ export class Bot extends BotState.Base {
 	}
 
 	static async match(
-		config: _Bot.Message.MatchParameters
-	): Promise<_Bot.Message.MatchResponse | undefined> {
+		config: MatchParameters
+	): Promise<MatchResponse | undefined> {
 		return await this.matchLines({
 			...config,
 			matchConfig: Bot.matches,

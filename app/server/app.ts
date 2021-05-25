@@ -22,11 +22,12 @@ import {
 import { hasArg, getArg, getNumberArg, getNumberEnv, getEnv } from './lib/io';
 import { notifyAllModules, NoDBModuleConfig } from './modules/modules';
 import { WSSimulator, WSWrapper } from './lib/ws';
-import { getAllModules, Bot } from './modules';
+import { getAllModules } from './modules';
 import { Database } from './lib/db';
 import * as express from 'express';
 import * as path from 'path';
 import * as http from 'http';
+import { printCommands } from './modules/bot/helpers';
 
 interface PartialConfig {
 	ports?: {
@@ -145,7 +146,7 @@ class WebServer {
 		this._initLogger.increment('modules');
 		initPostRoutes(this.app);
 		setLogLevel(this._config.log.level);
-		await Bot.printCommands();
+		await printCommands();
 		this._listen();
 	}
 

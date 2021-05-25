@@ -21,13 +21,15 @@ import groups from '../config/keyval-groups';
 import { BotState } from '../lib/bot-state';
 import { WSSimInstance } from '../lib/ws';
 import { Database } from '../lib/db';
-import { Bot as _Bot } from './bot';
 import * as express from 'express';
 import { ModuleMeta } from './meta';
 import { Auth } from './auth';
 import chalk from 'chalk';
 import { createExternalClass } from '../lib/external';
 import { createRouter } from '../lib/api';
+import { MatchParameters } from './bot/message';
+import { ChatState } from './bot/message/state-keeping';
+import { MatchResponse } from './bot/types';
 
 export interface KeyvalHooks {
 	[key: string]: {
@@ -448,17 +450,15 @@ export namespace KeyVal {
 			}
 
 			static async match(
-				config: _Bot.Message.MatchParameters
-			): Promise<_Bot.Message.MatchResponse | undefined> {
+				config: MatchParameters
+			): Promise<MatchResponse | undefined> {
 				return await this.matchLines({
 					...config,
 					matchConfig: Bot.matches,
 				});
 			}
 
-			static resetState(
-				state: _Bot.Message.StateKeeping.ChatState
-			): void {
+			static resetState(state: ChatState): void {
 				(state.states.keyval as unknown as Bot.JSON).lastSubjects =
 					null;
 			}

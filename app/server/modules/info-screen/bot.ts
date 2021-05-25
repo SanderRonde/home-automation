@@ -1,7 +1,8 @@
 import { BotState } from '../../lib/bot-state';
 import { attachMessage } from '../../lib/logger';
+import { MatchParameters } from '../bot/message';
+import { MatchResponse } from '../bot/types';
 import { refreshClients } from './routing';
-import { _Bot } from '../bot';
 
 export class Bot extends BotState.Base {
 	static readonly commands = {
@@ -23,8 +24,8 @@ export class Bot extends BotState.Base {
 	}
 
 	static async match(
-		config: _Bot.Message.MatchParameters
-	): Promise<_Bot.Message.MatchResponse | undefined> {
+		config: MatchParameters
+	): Promise<MatchResponse | undefined> {
 		return await this.matchLines({
 			...config,
 			matchConfig: Bot.matches,

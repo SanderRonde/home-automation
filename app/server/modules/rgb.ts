@@ -41,7 +41,6 @@ import { BotState } from '../lib/bot-state';
 import { colorList } from '../lib/data';
 import { exec } from 'child_process';
 import { ModuleMeta } from './meta';
-import { Bot as _Bot } from './bot';
 import * as express from 'express';
 import { KeyVal } from './keyval';
 import { Auth } from './auth';
@@ -54,6 +53,8 @@ import { Color } from '../lib/color';
 import SerialPort = require('serialport');
 import * as ReadLine from '@serialport/parser-readline';
 import { getEnv } from '../lib/io';
+import { MatchResponse } from './bot/types';
+import { MatchParameters } from './bot/message';
 
 function getIntensityPercentage(percentage: number) {
 	return Math.round((percentage / 100) * 255);
@@ -3397,8 +3398,8 @@ export namespace RGB {
 				| null = null;
 
 			static async match(
-				config: _Bot.Message.MatchParameters
-			): Promise<_Bot.Message.MatchResponse | undefined> {
+				config: MatchParameters
+			): Promise<MatchResponse | undefined> {
 				return await this.matchLines({
 					...config,
 					matchConfig: Bot.matches,

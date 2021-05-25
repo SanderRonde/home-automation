@@ -6,7 +6,9 @@ import { Auth } from '../auth';
 import { KeyVal } from '../keyval';
 import { APIHandler } from './api';
 import { Detector } from './classes';
-import { Bot as _Bot } from '../bot';
+import { MatchParameters } from '../bot/message';
+import { ChatState } from '../bot/message/state-keeping';
+import { MatchResponse } from '../bot/types';
 
 export interface State {
 	lastSubjects: string[] | null;
@@ -239,15 +241,15 @@ export class Bot extends BotState.Base {
 	}
 
 	static async match(
-		config: _Bot.Message.MatchParameters
-	): Promise<_Bot.Message.MatchResponse | undefined> {
+		config: MatchParameters
+	): Promise<MatchResponse | undefined> {
 		return await this.matchLines({
 			...config,
 			matchConfig: Bot.matches,
 		});
 	}
 
-	static resetState(state: _Bot.Message.StateKeeping.ChatState): void {
+	static resetState(state: ChatState): void {
 		(state.states.keyval as unknown as KeyVal.Bot.JSON).lastSubjects = null;
 	}
 

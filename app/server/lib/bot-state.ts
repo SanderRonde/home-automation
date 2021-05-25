@@ -1,7 +1,13 @@
-import { Bot, RESPONSE_TYPE } from '../modules/bot';
 import { attachMessage, LogObj } from './logger';
 import { BotUtil } from './bot-util';
 import chalk from 'chalk';
+import {
+	MatchResponse,
+	RESPONSE_TYPE,
+	TelegramMessage,
+} from '../modules/bot/types';
+import { ChatState } from '../modules/bot/message/state-keeping';
+import { MessageHandler, ResWrapper } from '../modules/bot/message';
 
 export namespace BotState {
 	export type MatchHandlerRet =
@@ -22,8 +28,8 @@ export namespace BotState {
 
 	export interface MatchHandlerParams {
 		text: string;
-		message: Bot.TelegramMessage;
-		state: Bot.Message.StateKeeping.ChatState;
+		message: TelegramMessage;
+		state: ChatState;
 		match: RegExpMatchArray;
 		matchText: string;
 		logObj: LogObj;
@@ -42,10 +48,10 @@ export namespace BotState {
 
 	export interface MatchBaseParams {
 		text: string;
-		message: Bot.TelegramMessage;
-		state: Bot.Message.StateKeeping.ChatState;
-		bot: Bot.Message.Handler;
-		res: Bot.Message.ResWrapper;
+		message: TelegramMessage;
+		state: ChatState;
+		bot: MessageHandler;
+		res: ResWrapper;
 	}
 
 	export interface MatchParams extends MatchBaseParams {
@@ -76,9 +82,7 @@ export namespace BotState {
 	) => string[];
 
 	export abstract class Matchable extends BotUtil.BotUtil {
-		static match(
-			_params: MatchParams
-		): Promise<Bot.Message.MatchResponse | undefined> {
+		static match(_params: MatchParams): Promise<MatchResponse | undefined> {
 			return Promise.resolve(undefined);
 		}
 
@@ -86,7 +90,7 @@ export namespace BotState {
 			config: MatchParams & {
 				matchConfig: MatchConfig;
 			}
-		): Promise<Bot.Message.MatchResponse | undefined> {
+		): Promise<MatchResponse | undefined> {
 			const { logObj, matchConfig } = config;
 			let { text } = config;
 
@@ -360,7 +364,7 @@ export namespace BotState {
 
 		static readonly botName: string;
 
-		static resetState(_state: Bot.Message.StateKeeping.ChatState): void {}
+		static resetState(_state: ChatState): void {}
 	}
 
 	export abstract class Base extends Matchable {

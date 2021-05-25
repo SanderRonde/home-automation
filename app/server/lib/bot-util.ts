@@ -3,7 +3,8 @@
 /* eslint-disable @typescript-eslint/ban-types */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { RESPONSE_TYPE } from '../modules/bot';
+
+import { RESPONSE_TYPE } from '../modules/bot/types';
 
 export namespace BotUtil {
 	type NotUndefined<
