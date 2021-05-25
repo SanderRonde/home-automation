@@ -1,4 +1,4 @@
-import { MovementHooks } from '../modules/movement';
+import { MovementHooks } from '../modules/movement/types';
 
 export default {
 	'some-name': [
