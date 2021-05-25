@@ -1,8 +1,8 @@
 import { errorHandle, requireParams } from '../../lib/decorators';
 import { ResponseLike, attachMessage } from '../../lib/logger';
 import { ExternalTemperatureResult } from './types';
-import { getExternal, getInternal } from './temperature';
 import { CalendarEvent, getEvents } from './calendar';
+import { getInternal, getExternal } from './temperature/';
 
 export class APIHandler {
 	constructor() {}
