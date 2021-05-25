@@ -1,8 +1,7 @@
 import { Explain } from './index';
 import { addLogListener, LogCapturer, LogObj } from '../../lib/logger';
 import { AllModules } from '..';
-
-const ACTION_TIMEOUT_TIME = 30 * 60 * 1000;
+import { ACTION_TIMEOUT_TIME } from './constants';
 
 export interface Action {
 	moduleName: string;

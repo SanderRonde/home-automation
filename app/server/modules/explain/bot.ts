@@ -4,7 +4,7 @@ import { getInTimeWindow } from './explaining';
 import { Bot as _Bot } from '../bot';
 import { KeyVal } from '../keyval';
 
-export interface JSON {
+export interface State {
 	lastSubjects: string[] | null;
 }
 
@@ -104,7 +104,7 @@ export class Bot extends BotState.Base {
 
 	lastSubjects: string[] | null = null;
 
-	constructor(json?: JSON) {
+	constructor(json?: State) {
 		super();
 		if (json) {
 			this.lastSubjects = json.lastSubjects;
@@ -124,7 +124,7 @@ export class Bot extends BotState.Base {
 		(state.states.keyval as unknown as KeyVal.Bot.JSON).lastSubjects = null;
 	}
 
-	toJSON(): JSON {
+	toJSON(): State {
 		return {
 			lastSubjects: this.lastSubjects,
 		};

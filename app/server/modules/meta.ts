@@ -1,8 +1,8 @@
 import { ModuleConfig, AllModules } from './modules';
 import { BotState } from '../lib/bot-state';
-import { ExplainHook } from './explain';
 import { SettablePromise } from '../lib/util';
 import { LogObj } from '../lib/logger';
+import { ExplainHook } from './explain/types';
 
 export declare class Handler {
 	constructor(_logObj: LogObj, _source: string);
