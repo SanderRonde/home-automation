@@ -14,7 +14,7 @@ export const InfoScreen = new (class Meta extends ModuleMeta {
 		await refresh();
 	}
 
-	get bot() {
+	get Bot() {
 		return Bot;
 	}
 })();

@@ -13,7 +13,7 @@ export const OAuth = new (class Meta extends ModuleMeta {
 		await ExternalHandler.init();
 	}
 
-	get external() {
+	get External() {
 		return ExternalHandler;
 	}
 })();

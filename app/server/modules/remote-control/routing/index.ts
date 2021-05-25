@@ -27,7 +27,7 @@ export function initRouting({ app, randomNum, websocket }: ModuleConfig): void {
 				return;
 			}
 
-			const external = new (await RemoteControl.modules).auth.external(
+			const external = new (await RemoteControl.modules).auth.External(
 				{},
 				'REMOTE_CONTROL.WS'
 			);

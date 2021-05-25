@@ -20,7 +20,6 @@ import { InfoScreen } from './info-screen';
 import { Database } from '../lib/db';
 import * as express from 'express';
 import { Config } from '../app';
-import { Handler, ModuleMeta } from './meta';
 
 export { RemoteControl } from './remote-control';
 export { SpotifyBeats } from './spotify-beats';
@@ -48,21 +47,7 @@ export type InstanceOf<T> = T extends {
 	: void;
 
 export type ModuleHookables = {
-	[K in keyof AllModules]: InstanceOf<
-		AllModules[K] extends {
-			meta: ModuleMeta;
-		}
-			? AllModules[K]['meta']['external'] extends {
-					Handler: typeof Handler;
-			  }
-				? AllModules[K]['meta']['external']['Handler']
-				: AllModules[K]['meta']['external']
-			: AllModules[K] extends {
-					external: typeof Handler;
-			  }
-			? AllModules[K]['external']
-			: void
-	>;
+	[K in keyof AllModules]: InstanceType<AllModules[K]['External']>;
 };
 
 export interface NoDBModuleConfig {

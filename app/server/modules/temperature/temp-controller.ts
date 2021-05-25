@@ -34,13 +34,13 @@ class TempControl {
 		if (this.name === 'room') {
 			const modules = await Temperature.modules;
 			if (newMode === 'off') {
-				await new modules.keyval.external({}, 'HEATING.off').set(
+				await new modules.keyval.External({}, 'HEATING.off').set(
 					'room.heating',
 					'0',
 					false
 				);
 			} else {
-				await new modules.keyval.external({}, 'HEATING.on').set(
+				await new modules.keyval.External({}, 'HEATING.on').set(
 					'room.heating',
 					'1',
 					false

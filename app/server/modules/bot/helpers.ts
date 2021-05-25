@@ -8,7 +8,7 @@ export async function printCommands(): Promise<void> {
 			await Bot.modules
 		)
 			.map((meta) => {
-				return meta.bot;
+				return meta.Bot;
 			})
 			.map((bot) => {
 				return `${Object.keys(bot.commands)

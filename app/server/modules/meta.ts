@@ -37,11 +37,11 @@ export abstract class ModuleMeta {
 		return Promise.resolve(void 0);
 	}
 
-	get external(): typeof Handler {
+	get External(): typeof Handler {
 		return HandlerDefault;
 	}
 
-	get bot(): typeof BotBase {
+	get Bot(): typeof BotBase {
 		return BotBase;
 	}
 

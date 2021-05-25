@@ -21,7 +21,7 @@ export async function initRouting({ app }: ModuleConfig): Promise<void> {
 		'/google',
 		await new (
 			await SmartHome.modules
-		).oauth.external(
+		).oauth.External(
 			{},
 			'SMART_HOME.ROUTING_INIT'
 		).getAuthenticateMiddleware(),

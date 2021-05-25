@@ -11,7 +11,7 @@ export const Bot = new (class Meta extends ModuleMeta {
 		await ExternalHandler.init();
 	}
 
-	get external() {
+	get External() {
 		return ExternalHandler;
 	}
 })();

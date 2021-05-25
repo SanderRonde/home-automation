@@ -11,7 +11,7 @@ export const Webhook = new (class Meta extends ModuleMeta {
 		return Promise.resolve(void 0);
 	}
 
-	get external() {
+	get External() {
 		return ExternalHandler;
 	}
 })();

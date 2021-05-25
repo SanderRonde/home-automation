@@ -194,7 +194,7 @@ export class MessageHandler extends BotState.Matchable {
 			config,
 			await this._matchSelf(config),
 			...Object.values(await Bot.modules).map((meta) => {
-				return meta.bot;
+				return meta.Bot;
 			})
 		);
 	}

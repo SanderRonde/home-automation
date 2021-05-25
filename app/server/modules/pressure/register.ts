@@ -24,7 +24,7 @@ export async function enable(): Promise<void> {
 	(await db.value).setVal('enabled', enabled);
 	await new (
 		await Pressure.modules
-	).keyval.external({}, 'PRESSURE.ON').set('state.pressure', '1', false);
+	).keyval.External({}, 'PRESSURE.ON').set('state.pressure', '1', false);
 }
 
 export function isEnabled(): boolean {
@@ -36,7 +36,7 @@ export async function disable(): Promise<void> {
 	(await db.value).setVal('enabled', enabled);
 	await new (
 		await Pressure.modules
-	).keyval.external({}, 'PRESSURE.OFF').set('state.pressure', '0', false);
+	).keyval.External({}, 'PRESSURE.OFF').set('state.pressure', '0', false);
 }
 
 export function initRegister(_db: Database): void {

@@ -54,7 +54,7 @@ async function getData(
 
 	// Try and authenticate
 	const modules = await RGB.modules;
-	const authenticated = await new modules.spotifyBeats.external(
+	const authenticated = await new modules.spotifyBeats.External(
 		logObj,
 		'RGB.MARKED'
 	).test();
@@ -79,7 +79,7 @@ async function startPlay(
 > {
 	// Get devices
 	const modules = await RGB.modules;
-	const devices = await new modules.spotifyBeats.external(
+	const devices = await new modules.spotifyBeats.External(
 		logObj,
 		'RGB.MARKED'
 	).getDevices();
@@ -121,7 +121,7 @@ async function startPlay(
 	}
 
 	// Play
-	const playResponse = await new modules.spotifyBeats.external(
+	const playResponse = await new modules.spotifyBeats.External(
 		logObj,
 		'RGB.MARKED'
 	).play(parsed['spotify-uri'], chosen.id);
@@ -168,7 +168,7 @@ export async function play(
 	// Fetch playstate at this time, which should allow us to
 	// calculate exactly when the song started playing
 	const modules = await RGB.modules;
-	const playState = await new modules.spotifyBeats.external(
+	const playState = await new modules.spotifyBeats.External(
 		logObj,
 		'RGB.MARKED'
 	).getPlayState();

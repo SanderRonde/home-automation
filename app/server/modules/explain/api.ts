@@ -11,7 +11,7 @@ export class APIHandler {
 	) {
 		await new (
 			await Explain.modules
-		).cast.external(logObj, 'EXPLAIN.API').say(
+		).cast.External(logObj, 'EXPLAIN.API').say(
 			`${descr}. ${actions
 				.map((action) => {
 					return `At ${new Date(

@@ -20,11 +20,11 @@ export const Explain = new (class Meta extends ModuleMeta {
 		return Promise.resolve(void 0);
 	}
 
-	get external() {
+	get External() {
 		return ExternalHandler;
 	}
 
-	get bot() {
+	get Bot() {
 		return Bot;
 	}
 })();

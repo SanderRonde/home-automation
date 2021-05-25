@@ -12,11 +12,11 @@ export const SpotifyBeats = new (class Meta extends ModuleMeta {
 		initRouting(config);
 	}
 
-	get external() {
+	get External() {
 		return ExternalHandler;
 	}
 
-	get bot() {
+	get Bot() {
 		return Bot;
 	}
 })();

@@ -14,7 +14,7 @@ export const Movement = new (class Meta extends ModuleMeta {
 	}
 
 	async notifyModules(modules: unknown) {
-		await new (modules as AllModules).keyval.external(
+		await new (modules as AllModules).keyval.External(
 			{},
 			'MOVEMENT.NOTIFY'
 		).onChange(

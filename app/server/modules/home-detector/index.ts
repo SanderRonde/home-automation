@@ -38,11 +38,11 @@ export const HomeDetector = new (class Meta extends ModuleMeta {
 		initRouting({ ...config, detector, apiHandler });
 	}
 
-	get external() {
+	get External() {
 		return ExternalHandler;
 	}
 
-	get bot() {
+	get Bot() {
 		return Bot;
 	}
 })();

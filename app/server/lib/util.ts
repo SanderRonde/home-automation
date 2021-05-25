@@ -249,7 +249,7 @@ export function createHookables(
 	return arrToObj(
 		Object.keys(modules).map((name: keyof AllModules) => {
 			const moduleMeta = modules[name];
-			const Handler = moduleMeta.external;
+			const Handler = moduleMeta.External;
 			return [name, new Handler(logObj, `${sourceName}.${hookName}`)];
 		})
 	) as unknown as ModuleHookables;

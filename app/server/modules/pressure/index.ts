@@ -15,7 +15,7 @@ export const Pressure = new (class Meta extends ModuleMeta {
 	}
 
 	async notifyModules(modules: unknown) {
-		await new (modules as AllModules).keyval.external(
+		await new (modules as AllModules).keyval.External(
 			{},
 			'PRESSURE.NOTIFY'
 		).onChange(
@@ -32,11 +32,11 @@ export const Pressure = new (class Meta extends ModuleMeta {
 		);
 	}
 
-	get external() {
+	get External() {
 		return ExternalHandler;
 	}
 
-	get bot() {
+	get Bot() {
 		return Bot;
 	}
 })();

@@ -20,11 +20,11 @@ export const KeyVal = new (class Meta extends ModuleMeta {
 		initRouting({ ...config, apiHandler });
 	}
 
-	get external() {
+	get External() {
 		return ExternalHandler;
 	}
 
-	get bot() {
+	get Bot() {
 		return Bot;
 	}
 })();

@@ -51,7 +51,7 @@ function cancelActiveWakelights() {
 }
 
 export async function initListeners(): Promise<void> {
-	const external = new (await RGB.modules).keyval.external({}, 'RGB.INIT');
+	const external = new (await RGB.modules).keyval.External({}, 'RGB.INIT');
 	await external.onChange('room.lights.nightstand', async (value, logObj) => {
 		cancelActiveWakelights();
 
@@ -142,16 +142,18 @@ export async function initListeners(): Promise<void> {
 		}
 		return Promise.resolve();
 	});
-	await Object.entries({
-		'room.leds.ceiling': LED_NAMES.CEILING_LEDS,
-		'room.leds.bed': LED_NAMES.BED_LEDS,
-		'room.leds.desk': LED_NAMES.DESK_LEDS,
-		'room.leds.wall': LED_NAMES.WALL_LEDS,
-		'room.leds.couch': LED_NAMES.COUCH_LEDS,
-		'room.leds.hexes': LED_NAMES.HEX_LEDS,
-	}).map(async ([key, ledName]) => {
-		await external.onChange(key, async (value, logObj) => {
-			await switchLed(ledName, value, logObj);
-		});
-	});
+	await Promise.all(
+		Object.entries({
+			'room.leds.ceiling': LED_NAMES.CEILING_LEDS,
+			'room.leds.bed': LED_NAMES.BED_LEDS,
+			'room.leds.desk': LED_NAMES.DESK_LEDS,
+			'room.leds.wall': LED_NAMES.WALL_LEDS,
+			'room.leds.couch': LED_NAMES.COUCH_LEDS,
+			'room.leds.hexes': LED_NAMES.HEX_LEDS,
+		}).map(async ([key, ledName]) => {
+			await external.onChange(key, async (value, logObj) => {
+				await switchLed(ledName, value, logObj);
+			});
+		})
+	);
 }

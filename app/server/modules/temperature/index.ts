@@ -16,12 +16,12 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		return Promise.resolve(void 0);
 	}
 
-	get external() {
+	get External() {
 		return ExternalHandler;
 	}
 
 	async notifyModules(modules: unknown): Promise<void> {
-		await new (modules as AllModules).keyval.external(
+		await new (modules as AllModules).keyval.External(
 			{},
 			'TEMPERATURE.INIT'
 		).onChange('room.heating', async (value, logObj) => {
@@ -32,7 +32,7 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		});
 	}
 
-	get bot() {
+	get Bot() {
 		return Bot;
 	}
 })();

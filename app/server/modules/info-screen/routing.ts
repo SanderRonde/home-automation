@@ -71,7 +71,7 @@ export function initRouting({ config, randomNum }: ModuleConfig): void {
 		clients.add(client);
 		const listener = await new (
 			await InfoScreen.modules
-		).keyval.external({}, 'INFO_SCREEN.BLANKING').onChange(
+		).keyval.External({}, 'INFO_SCREEN.BLANKING').onChange(
 			'room.lights.ceiling',
 			(value) => {
 				client.send(
@@ -87,7 +87,7 @@ export function initRouting({ config, randomNum }: ModuleConfig): void {
 				blank:
 					(await new (
 						await InfoScreen.modules
-					).keyval.external({}, 'INFO_SCREEN.BLANKING').get(
+					).keyval.External({}, 'INFO_SCREEN.BLANKING').get(
 						'room.lights.ceiling'
 					)) === '0',
 			})

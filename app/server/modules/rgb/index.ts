@@ -26,11 +26,11 @@ export const RGB = new (class Meta extends ModuleMeta {
 		}));
 	}
 
-	get external() {
+	get External() {
 		return ExternalHandler;
 	}
 
-	get bot() {
+	get Bot() {
 		return Bot;
 	}
 })();

@@ -7,7 +7,7 @@ import { ResponseLike } from '../../lib/logger';
 async function keyvalHTML(json: string, randomNum: number, res: ResponseLike) {
 	const key = await new (
 		await KeyVal.modules
-	).auth.external(res, 'HOME_DETECTOR.WEB_PAGE').getSecretKey();
+	).auth.External(res, 'HOME_DETECTOR.WEB_PAGE').getSecretKey();
 	return `<!DOCTYPE HTML>
 			<html lang="en" style="background-color: rgb(70,70,70);">
 				<head>

@@ -50,7 +50,7 @@ export abstract class RGBClient {
 			for (const key of keys) {
 				await new (
 					await RGB.modules
-				).keyval.external({}, `RGB_NAMEMAP.${name}`).set(
+				).keyval.External({}, `RGB_NAMEMAP.${name}`).set(
 					key,
 					value,
 					false

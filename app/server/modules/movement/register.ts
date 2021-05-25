@@ -16,7 +16,7 @@ export async function enable(): Promise<void> {
 	enabled = true;
 	(await db.value).setVal('enabled', enabled);
 	const modules = await Movement.modules;
-	await new modules.keyval.external({}, 'MOVEMENT.ON').set(
+	await new modules.keyval.External({}, 'MOVEMENT.ON').set(
 		'state.movement',
 		'1',
 		false
@@ -27,7 +27,7 @@ export async function disable(): Promise<void> {
 	enabled = false;
 	(await db.value).setVal('enabled', enabled);
 	const modules = await Movement.modules;
-	await new modules.keyval.external({}, 'MOVEMENT.OFF').set(
+	await new modules.keyval.External({}, 'MOVEMENT.OFF').set(
 		'state.movement',
 		'0',
 		false
