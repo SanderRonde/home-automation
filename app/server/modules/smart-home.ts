@@ -23,7 +23,6 @@ import {
 import { createRouter } from '../lib/api';
 import { ModuleConfig } from './modules';
 import { ModuleMeta } from './meta';
-import { OAuth } from './oauth';
 import { attachMessage, logTag, warning } from '../lib/logger';
 import * as express from 'express';
 import {
@@ -42,6 +41,7 @@ import {
 	SMART_HOME_BATCH_MAX_TIMEOUT,
 	SMART_HOME_BATCH_MIN_TIMEOUT,
 } from '../lib/constants';
+import { getAuth } from './oauth/helpers';
 
 export namespace SmartHome {
 	export const meta = new (class Meta extends ModuleMeta {
@@ -339,7 +339,7 @@ export namespace SmartHome {
 				_headers: Headers,
 				framework: BuiltinFrameworkMetadata
 			): Promise<SmartHomeV1SyncResponse> {
-				const auth = OAuth.Authorization.getAuth(
+				const auth = getAuth(
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					framework.express!.response as any
 				);
@@ -453,7 +453,7 @@ export namespace SmartHome {
 				_headers: Headers,
 				framework: BuiltinFrameworkMetadata
 			): Promise<SmartHomeV1DisconnectResponse> {
-				const auth = OAuth.Authorization.getAuth(
+				const auth = getAuth(
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					framework.express!.response as any
 				);
@@ -475,7 +475,12 @@ export namespace SmartHome {
 			const router = createRouter(SmartHome, {});
 			router.all(
 				'/google',
-				(await OAuth.Authorization.server.value).authenticate(),
+				await new (
+					await meta.modules
+				).oauth.external(
+					{},
+					'SMART_HOME.ROUTING_INIT'
+				).getAuthenticateMiddleware(),
 				smartHomeApp
 			);
 			router.use(app, '/actions');
