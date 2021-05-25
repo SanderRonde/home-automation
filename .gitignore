@@ -87,3 +87,5 @@ ai/**/*.js
 ai/**/*.ts.map
 
 ai/beat-detector/modes/realtime_test/public/files/
+
+!app/server/types/*.d.ts
