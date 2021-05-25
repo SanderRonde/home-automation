@@ -31,7 +31,7 @@ export const Pressure = new (class Meta extends ModuleMeta {
 	}
 
 	get external() {
-		return External;
+		return ExternalHandler;
 	}
 
 	get bot() {
