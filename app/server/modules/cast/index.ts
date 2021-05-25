@@ -5,7 +5,7 @@ import {
 import { Bot as _Bot } from '../bot';
 import { ModuleMeta } from '../meta';
 import { Bot } from './bot';
-import { init } from './routing';
+import { initRouting } from './routing';
 import { ModuleConfig } from '..';
 import { ExternalHandler } from './external';
 
@@ -13,7 +13,7 @@ export const Cast = new (class Meta extends ModuleMeta {
 	name = 'cast';
 
 	async init(config: ModuleConfig) {
-		await init(config);
+		await initRouting(config);
 	}
 
 	get external() {

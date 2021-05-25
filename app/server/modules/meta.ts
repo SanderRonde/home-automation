@@ -62,7 +62,7 @@ export abstract class ModuleMeta {
 		return this._modules.value;
 	}
 
-	async notifyModules(_modules: AllModules): Promise<void> {}
+	async notifyModules(_modules: unknown): Promise<void> {}
 
 	async notifyModulesFromExternal(modules: AllModules): Promise<void> {
 		this._modules.set(modules);
