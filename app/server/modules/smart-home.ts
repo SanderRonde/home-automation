@@ -53,6 +53,8 @@ export namespace SmartHome {
 		}
 
 		async postInit() {
+			// Enable if list of devices should be updated as the server
+			// is restarted
 			await HomeGraph.requestSync();
 		}
 	})();
