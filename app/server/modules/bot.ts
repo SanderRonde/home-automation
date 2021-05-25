@@ -147,11 +147,11 @@ export namespace Bot {
 
 					const modules = await getAllModules();
 					Object.keys(modules).map((key: keyof AllModules) => {
-						const module = modules[key] as {
-							meta: ModuleMeta;
-						};
-						const bot = module.meta.bot.Bot;
-						this.states[key] = new bot(json[key] || {});
+						const module = modules[key];
+						const meta = 'meta' in module ? module.meta : module;
+						const bot = meta.bot;
+						const Bot = typeof bot === 'function' ? bot : bot.Bot;
+						this.states[key] = new Bot(json[key] || {});
 					});
 					return this;
 				}
@@ -399,11 +399,10 @@ export namespace Bot {
 					config,
 					await this._matchSelf(config),
 					...Object.values(await getAllModules()).map((mod) => {
-						return (
-							mod as {
-								meta: ModuleMeta;
-							}
-						).meta.bot.Bot;
+						const meta = 'meta' in mod ? mod.meta : mod;
+						return typeof meta.bot === 'function'
+							? meta.bot
+							: meta.bot.Bot;
 					})
 				);
 			}
@@ -801,11 +800,10 @@ export namespace Bot {
 				await getAllModules()
 			)
 				.map((mod) => {
-					return (
-						mod as {
-							meta: ModuleMeta;
-						}
-					).meta.bot.Bot;
+					const meta = 'meta' in mod ? mod.meta : mod;
+					return typeof meta.bot === 'function'
+						? meta.bot
+						: meta.bot.Bot;
 				})
 				.map((bot) => {
 					return `${Object.keys(bot.commands)

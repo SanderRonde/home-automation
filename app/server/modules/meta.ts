@@ -34,17 +34,21 @@ export abstract class ModuleMeta {
 
 	abstract init(config: ModuleConfig): Promise<void>;
 
-	get external(): {
-		Handler: typeof Handler;
-	} {
+	get external():
+		| {
+				Handler: typeof Handler;
+		  }
+		| typeof Handler {
 		return {
 			Handler: HandlerDefault,
 		};
 	}
 
-	get bot(): {
-		Bot: typeof BotBase;
-	} {
+	get bot():
+		| {
+				Bot: typeof BotBase;
+		  }
+		| typeof BotBase {
 		return {
 			Bot: BotBase,
 		};

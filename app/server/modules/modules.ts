@@ -11,7 +11,7 @@ import { Script } from './script';
 import { KeyVal } from './keyval';
 import { OAuth } from './oauth';
 import { Auth } from './auth';
-import { Cast } from './cast';
+import { Cast } from './cast/index';
 import { Bot } from './bot';
 import { RGB } from './rgb';
 
@@ -20,7 +20,7 @@ import { InfoScreen } from './info-screen';
 import { Database } from '../lib/db';
 import * as express from 'express';
 import { Config } from '../app';
-import { ModuleMeta } from './meta';
+import { Handler, ModuleMeta } from './meta';
 
 export { RemoteControl } from './remote-control';
 export { SpotifyBeats } from './spotify-beats';
@@ -35,7 +35,7 @@ export { Script } from './script';
 export { KeyVal } from './keyval';
 export { OAuth } from './oauth';
 export { Auth } from './auth';
-export { Cast } from './cast';
+export { Cast } from './cast/index';
 export { Bot } from './bot';
 export { RGB } from './rgb';
 
@@ -49,7 +49,19 @@ export type InstanceOf<T> = T extends {
 
 export type ModuleHookables = {
 	[K in keyof AllModules]: InstanceOf<
-		AllModules[K]['meta']['external']['Handler']
+		AllModules[K] extends {
+			meta: ModuleMeta;
+		}
+			? AllModules[K]['meta']['external'] extends {
+					Handler: typeof Handler;
+			  }
+				? AllModules[K]['meta']['external']['Handler']
+				: AllModules[K]['meta']['external']
+			: AllModules[K] extends {
+					external: typeof Handler;
+			  }
+			? AllModules[K]['external']
+			: void
 	>;
 };
 
@@ -91,11 +103,8 @@ export async function notifyAllModules(): Promise<void> {
 	notified = true;
 
 	for (const mod of moduleArr) {
-		await (
-			mod as {
-				meta: ModuleMeta;
-			}
-		).meta.notifyModulesFromExternal(moduleObj);
+		const meta = 'meta' in mod ? mod.meta : mod;
+		await meta.notifyModulesFromExternal(moduleObj);
 	}
 }
 

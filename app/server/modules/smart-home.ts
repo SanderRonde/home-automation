@@ -100,6 +100,7 @@ export namespace SmartHome {
 					await hg.devices.requestSync({
 						requestBody: {
 							agentUserId: user,
+							async: true,
 						},
 					});
 				})

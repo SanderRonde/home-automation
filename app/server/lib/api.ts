@@ -1,4 +1,5 @@
 import * as express from 'express';
+import { ModuleMeta } from '../modules/meta';
 
 export function createAPIHandler<A extends Record<string, unknown>, R>(
 	self: {
@@ -82,11 +83,11 @@ type RouterFn<A> = {
 type RouterVerb = 'get' | 'post' | 'all';
 
 export function createRouter<A>(
-	self: {
-		meta: {
-			name: string;
-		};
-	},
+	self:
+		| {
+				meta: ModuleMeta;
+		  }
+		| ModuleMeta,
 	apiHandler: A
 ): { use(app: express.Application, path?: string): void } & {
 	[v in RouterVerb]: RouterFn<A>;
@@ -138,7 +139,10 @@ export function createRouter<A>(
 							return await fn(
 								res,
 								getArgsFn(req),
-								`${self.meta.name}.API.${req.url}`
+								// TODO: change once all are converte
+								`${
+									'meta' in self ? self.meta.name : self.name
+								}.API.${req.url}`
 							);
 						},
 					],
@@ -149,7 +153,13 @@ export function createRouter<A>(
 		get: handlerCreator('get'),
 		post: handlerCreator('post'),
 		all: handlerCreator('all'),
-		use(app, path = `/${self.meta.name.toLowerCase()}`) {
+		use(
+			app,
+			path = `/${('meta' in self
+				? self.meta.name
+				: self.name
+			).toLowerCase()}`
+		) {
 			toRegister.forEach(({ verb, subPath, handlers }) => {
 				app[verb](`${path}${subPath}`, ...handlers);
 			});

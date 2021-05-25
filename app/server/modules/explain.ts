@@ -12,7 +12,6 @@ import { BotState } from '../lib/bot-state';
 import { Bot as _Bot } from './bot';
 import { ModuleMeta } from './meta';
 import { Auth } from './auth';
-import { Cast } from './cast';
 import { createExternalClass } from '../lib/external';
 import { createRouter } from '../lib/api';
 import { KeyVal } from '.';
@@ -57,7 +56,9 @@ export namespace Explain {
 				descr: string,
 				actions: Explaining.Action[]
 			) {
-				await new Cast.External.Handler(logObj, 'EXPLAIN.API').say(
+				await new (
+					await meta.modules
+				).cast.external(logObj, 'EXPLAIN.API').say(
 					`${descr}. ${actions
 						.map((action) => {
 							return `At ${new Date(
@@ -374,10 +375,9 @@ export namespace Explain {
 
 		export function initHooks(modules: AllModules): void {
 			for (const moduleName in modules) {
-				const moduleObj = modules[moduleName as keyof AllModules] as {
-					meta: ModuleMeta;
-				};
-				moduleObj.meta.addExplainHookFromExternal(
+				const moduleObj = modules[moduleName as keyof AllModules];
+				const meta = 'meta' in moduleObj ? moduleObj.meta : moduleObj;
+				meta.addExplainHookFromExternal(
 					(description, source, logObj) => {
 						hook(moduleName, description, source, logObj);
 					}

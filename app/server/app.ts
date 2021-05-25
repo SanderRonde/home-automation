@@ -104,11 +104,13 @@ class WebServer {
 		};
 		await Promise.all(
 			Object.values(modules).map(async (mod) => {
-				await mod.meta.init({
+				// TODO: change once all are converted
+				const modMeta = 'meta' in mod ? mod.meta : mod;
+				await modMeta.init({
 					...config,
-					db: await new Database(`${mod.meta.dbName}.json`).init(),
+					db: await new Database(`${modMeta.dbName}.json`).init(),
 				});
-				this._initLogger.increment(mod.meta.loggerName);
+				this._initLogger.increment(modMeta.loggerName);
 			})
 		);
 	}
