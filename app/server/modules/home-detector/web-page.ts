@@ -11,7 +11,7 @@ async function homeDetectorHTML(
 ) {
 	const key = await new (
 		await HomeDetector.modules
-	).auth.external(res, `HOME_DETECTOR.WEB_PAGE`).getSecretKey();
+	).auth.external(res, 'HOME_DETECTOR.WEB_PAGE').getSecretKey();
 	return `<html style="background-color: rgb(40, 40, 40);">
 			<head>
 				<link rel="icon" href="/home-detector/favicon.ico" type="image/x-icon" />

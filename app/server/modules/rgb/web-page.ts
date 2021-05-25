@@ -22,7 +22,7 @@ const patternPreviews = JSON.stringify(
 async function rgbHTML(randomNum: number, res: ResponseLike) {
 	const key = await new (
 		await RGB.modules
-	).auth.external(res, `HOME_DETECTOR.WEB_PAGE`).getSecretKey();
+	).auth.external(res, 'HOME_DETECTOR.WEB_PAGE').getSecretKey();
 	return `<html style="background-color: rgb(70,70,70);">
 			<head>
 				<link rel="icon" href="/rgb/favicon.ico" type="image/x-icon" />

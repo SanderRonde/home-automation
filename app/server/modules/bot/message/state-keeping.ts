@@ -20,8 +20,10 @@ export class ChatState {
 		Object.keys(modules).map((key: keyof AllModules) => {
 			const meta = modules[key];
 			const Bot = meta.bot;
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const param = json[key] || ({} as any);
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-call
-			this.states[key] = new Bot(json[key] || ({} as any));
+			this.states[key] = new Bot(param);
 		});
 		return this;
 	}

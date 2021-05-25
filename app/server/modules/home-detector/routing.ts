@@ -21,10 +21,13 @@ export function initRouting({
 	router.post('/:name', 'get');
 	router.use(app);
 
-	app.all(['/home-detector', '/whoishome', '/whoshome'], (req, res) => {
-		webpageHandler.index(res, req);
+	app.all(['/home-detector', '/whoishome', '/whoshome'], async (req, res) => {
+		await webpageHandler.index(res, req);
 	});
-	app.all(['/home-detector/e', '/whoishome/e', '/whoshome/e'], (req, res) => {
-		webpageHandler.index(res, req, true);
-	});
+	app.all(
+		['/home-detector/e', '/whoishome/e', '/whoshome/e'],
+		async (req, res) => {
+			await webpageHandler.index(res, req, true);
+		}
+	);
 }

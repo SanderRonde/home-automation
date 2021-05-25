@@ -13,8 +13,8 @@ export function initRouting({ app, randomNum }: ModuleConfig): void {
 	router.post('/power/:power', 'setPower');
 	router.post('/effect/:effect', 'runEffect');
 	router.all('/refresh', 'refresh');
-	router.all('', (req, res) => {
-		WebPageHandler.index(res, req, randomNum);
+	router.all('', async (req, res) => {
+		await WebPageHandler.index(res, req, randomNum);
 	});
 	router.use(app);
 

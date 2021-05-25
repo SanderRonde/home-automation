@@ -41,6 +41,7 @@ export async function tryConnectToSerial(): Promise<{
 
 		const parser =
 			// @ts-ignore
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-call
 			new ReadLine() as unknown as InstanceType<
 				typeof import('@serialport/parser-readline').ReadLine
 			>;

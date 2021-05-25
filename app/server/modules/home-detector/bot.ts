@@ -41,7 +41,7 @@ export class Bot extends BotState.Base {
 								await HomeDetector.modules
 							).auth.external(
 								logObj,
-								`HOME_DETECTOR.BOT`
+								'HOME_DETECTOR.BOT'
 							).getSecretKey(),
 						},
 						'BOT.WHOSHOME'
@@ -88,7 +88,7 @@ export class Bot extends BotState.Base {
 							await HomeDetector.modules
 						).auth.external(
 							logObj,
-							`HOME_DETECTOR.BOT`
+							'HOME_DETECTOR.BOT'
 						).getSecretKey(),
 						name: match[1],
 					},

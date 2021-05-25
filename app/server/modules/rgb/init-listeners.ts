@@ -50,9 +50,9 @@ function cancelActiveWakelights() {
 	wakelights = [];
 }
 
-export async function initListeners() {
+export async function initListeners(): Promise<void> {
 	const external = new (await RGB.modules).keyval.external({}, 'RGB.INIT');
-	external.onChange('room.lights.nightstand', async (value, logObj) => {
+	await external.onChange('room.lights.nightstand', async (value, logObj) => {
 		cancelActiveWakelights();
 
 		const client = getLed(LED_NAMES.BED_LEDS);
@@ -89,7 +89,7 @@ export async function initListeners() {
 		return Promise.resolve();
 	});
 
-	external.onChange('room.leds.wakelight', async (value, logObj) => {
+	await external.onChange('room.leds.wakelight', async (value, logObj) => {
 		cancelActiveWakelights();
 
 		const client = getLed(LED_NAMES.BED_LEDS);
@@ -142,15 +142,15 @@ export async function initListeners() {
 		}
 		return Promise.resolve();
 	});
-	Object.entries({
+	await Object.entries({
 		'room.leds.ceiling': LED_NAMES.CEILING_LEDS,
 		'room.leds.bed': LED_NAMES.BED_LEDS,
 		'room.leds.desk': LED_NAMES.DESK_LEDS,
 		'room.leds.wall': LED_NAMES.WALL_LEDS,
 		'room.leds.couch': LED_NAMES.COUCH_LEDS,
 		'room.leds.hexes': LED_NAMES.HEX_LEDS,
-	}).forEach(([key, ledName]) => {
-		external.onChange(key, async (value, logObj) => {
+	}).map(async ([key, ledName]) => {
+		await external.onChange(key, async (value, logObj) => {
 			await switchLed(ledName, value, logObj);
 		});
 	});

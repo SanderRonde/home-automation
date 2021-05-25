@@ -20,8 +20,8 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		return ExternalHandler;
 	}
 
-	notifyModules(modules: unknown): Promise<void> {
-		new (modules as AllModules).keyval.external(
+	async notifyModules(modules: unknown): Promise<void> {
+		await new (modules as AllModules).keyval.external(
 			{},
 			'TEMPERATURE.INIT'
 		).onChange('room.heating', async (value, logObj) => {
@@ -30,7 +30,6 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 				value === '1' ? 'on' : 'off'
 			);
 		});
-		return Promise.resolve(void 0);
 	}
 
 	get bot() {

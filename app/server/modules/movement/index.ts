@@ -13,8 +13,8 @@ export const Movement = new (class Meta extends ModuleMeta {
 		return Promise.resolve(void 0);
 	}
 
-	notifyModules(modules: unknown) {
-		new (modules as AllModules).keyval.external(
+	async notifyModules(modules: unknown) {
+		await new (modules as AllModules).keyval.external(
 			{},
 			'MOVEMENT.NOTIFY'
 		).onChange(
@@ -28,7 +28,5 @@ export const Movement = new (class Meta extends ModuleMeta {
 			},
 			{ notifyOnInitial: true }
 		);
-
-		return Promise.resolve(void 0);
 	}
 })();
