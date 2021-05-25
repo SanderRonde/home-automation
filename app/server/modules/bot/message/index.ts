@@ -193,9 +193,8 @@ export class MessageHandler extends BotState.Matchable {
 		return this._matchMatchables(
 			config,
 			await this._matchSelf(config),
-			...Object.values(await Bot.modules).map((mod) => {
-				const meta = 'meta' in mod ? mod.meta : mod;
-				return typeof meta.bot === 'function' ? meta.bot : meta.bot.Bot;
+			...Object.values(await Bot.modules).map((meta) => {
+				return meta.bot;
 			})
 		);
 	}

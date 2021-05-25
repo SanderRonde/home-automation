@@ -2,13 +2,13 @@ import chalk from 'chalk';
 import { HOME_STATE } from './types';
 import { BotState } from '../../lib/bot-state';
 import { attachMessage, ResDummy } from '../../lib/logger';
-import { Auth } from '../auth';
 import { APIHandler } from './api';
 import { Detector } from './classes';
 import { MatchParameters } from '../bot/message';
 import { ChatState } from '../bot/message/state-keeping';
 import { MatchResponse } from '../bot/types';
 import { State as KeyValState } from '../keyval/bot';
+import { HomeDetector } from '.';
 
 export interface State {
 	lastSubjects: string[] | null;
@@ -37,8 +37,12 @@ export class Bot extends BotState.Base {
 					const all = await Bot._config!.apiHandler.getAll(
 						resDummy,
 						{
-							// TODO: replace with external
-							auth: Auth.Secret.getKey(),
+							auth: await new (
+								await HomeDetector.modules
+							).auth.external(
+								logObj,
+								`HOME_DETECTOR.BOT`
+							).getSecretKey(),
 						},
 						'BOT.WHOSHOME'
 					);
@@ -80,7 +84,12 @@ export class Bot extends BotState.Base {
 				const homeState = await Bot._config!.apiHandler.get(
 					resDummy,
 					{
-						auth: Auth.Secret.getKey(),
+						auth: await new (
+							await HomeDetector.modules
+						).auth.external(
+							logObj,
+							`HOME_DETECTOR.BOT`
+						).getSecretKey(),
 						name: match[1],
 					},
 					'BOT.IS_HOME'

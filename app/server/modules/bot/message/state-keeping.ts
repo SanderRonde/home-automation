@@ -18,11 +18,10 @@ export class ChatState {
 
 		const modules = await getAllModules();
 		Object.keys(modules).map((key: keyof AllModules) => {
-			const module = modules[key];
-			const meta = 'meta' in module ? module.meta : module;
-			const bot = meta.bot;
-			const Bot = typeof bot === 'function' ? bot : bot.Bot;
-			this.states[key] = new Bot(json[key] || {});
+			const meta = modules[key];
+			const Bot = meta.bot;
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-call
+			this.states[key] = new Bot(json[key] || ({} as any));
 		});
 		return this;
 	}

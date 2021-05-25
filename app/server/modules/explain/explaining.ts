@@ -41,8 +41,7 @@ function hook(
 
 export function initHooks(modules: AllModules): void {
 	for (const moduleName in modules) {
-		const moduleObj = modules[moduleName as keyof AllModules];
-		const meta = 'meta' in moduleObj ? moduleObj.meta : moduleObj;
+		const meta = modules[moduleName as keyof AllModules];
 		meta.addExplainHookFromExternal((description, source, logObj) => {
 			hook(moduleName, description, source, logObj);
 		});

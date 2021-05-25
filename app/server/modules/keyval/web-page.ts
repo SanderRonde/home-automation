@@ -1,10 +1,13 @@
 import express = require('express');
-import { Auth } from '..';
+import { KeyVal } from '.';
 import { Database } from '../../lib/db';
 import { errorHandle, authCookie, upgradeToHTTPS } from '../../lib/decorators';
 import { ResponseLike } from '../../lib/logger';
 
-function keyvalHTML(json: string, randomNum: number) {
+async function keyvalHTML(json: string, randomNum: number, res: ResponseLike) {
+	const key = await new (
+		await KeyVal.modules
+	).auth.external(res, `HOME_DETECTOR.WEB_PAGE`).getSecretKey();
 	return `<!DOCTYPE HTML>
 			<html lang="en" style="background-color: rgb(70,70,70);">
 				<head>
@@ -16,7 +19,7 @@ function keyvalHTML(json: string, randomNum: number) {
 					<title>KeyVal Switch</title>
 				</head>
 				<body style="margin: 0;overflow-x: hidden;">
-					<json-switches json='${json}' key="${Auth.Secret.getKey()}">Javascript should be enabled</json-switches>
+					<json-switches json='${json}' key="${key}">Javascript should be enabled</json-switches>
 					<script type="module" src="/keyval/keyval.bundle.js?n=${randomNum}"></script>
 				</body>
 			</html>`;
@@ -40,7 +43,9 @@ export class WebPageHandler {
 	): Promise<void> {
 		res.status(200);
 		res.contentType('.html');
-		res.write(keyvalHTML(await this._db.json(true), this._randomNum));
+		res.write(
+			await keyvalHTML(await this._db.json(true), this._randomNum, res)
+		);
 		res.end();
 	}
 }

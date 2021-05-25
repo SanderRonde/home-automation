@@ -7,9 +7,8 @@ export async function printCommands(): Promise<void> {
 		`${chalk.bold('Available commands are')}:\n\n${Object.values(
 			await Bot.modules
 		)
-			.map((mod) => {
-				const meta = 'meta' in mod ? mod.meta : mod;
-				return typeof meta.bot === 'function' ? meta.bot : meta.bot.Bot;
+			.map((meta) => {
+				return meta.bot;
 			})
 			.map((bot) => {
 				return `${Object.keys(bot.commands)

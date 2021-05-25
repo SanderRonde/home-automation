@@ -1,63 +1,63 @@
+import { RemoteControl } from '.';
 import { createExternalClass } from '../../lib/external';
-import { Auth } from '../auth';
 import { APIHandler } from './api';
 
 export class ExternalHandler extends createExternalClass(false) {
 	public play(): Promise<void> {
-		return this.runRequest((res) => {
+		return this.runRequest(async (res) => {
 			return APIHandler.play(res, {
 				// TODO: replace with external
-				auth: Auth.Secret.getKey(),
+				auth: await this._getKey(res, RemoteControl),
 			});
 		});
 	}
 
 	public pause(): Promise<void> {
-		return this.runRequest((res) => {
+		return this.runRequest(async (res) => {
 			return APIHandler.pause(res, {
-				auth: Auth.Secret.getKey(),
+				auth: await this._getKey(res, RemoteControl),
 			});
 		});
 	}
 
 	public playpause(): Promise<void> {
-		return this.runRequest((res) => {
+		return this.runRequest(async (res) => {
 			return APIHandler.playpause(res, {
-				auth: Auth.Secret.getKey(),
+				auth: await this._getKey(res, RemoteControl),
 			});
 		});
 	}
 
 	public close(): Promise<void> {
-		return this.runRequest((res) => {
+		return this.runRequest(async (res) => {
 			return APIHandler.close(res, {
-				auth: Auth.Secret.getKey(),
+				auth: await this._getKey(res, RemoteControl),
 			});
 		});
 	}
 
 	public volumeUp(amount = 10): Promise<void> {
-		return this.runRequest((res) => {
+		return this.runRequest(async (res) => {
 			return APIHandler.volumeUp(res, {
-				auth: Auth.Secret.getKey(),
+				auth: await this._getKey(res, RemoteControl),
 				amount,
 			});
 		});
 	}
 
 	public volumeDown(amount = 10): Promise<void> {
-		return this.runRequest((res) => {
+		return this.runRequest(async (res) => {
 			return APIHandler.volumeDown(res, {
-				auth: Auth.Secret.getKey(),
+				auth: await this._getKey(res, RemoteControl),
 				amount,
 			});
 		});
 	}
 
 	async setVolume(amount: number): Promise<void> {
-		return this.runRequest((res) => {
+		return this.runRequest(async (res) => {
 			return APIHandler.setVolume(res, {
-				auth: Auth.Secret.getKey(),
+				auth: await this._getKey(res, RemoteControl),
 				amount,
 			});
 		});

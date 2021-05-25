@@ -1,9 +1,9 @@
 import { IP_LOG_VERSION } from './constants';
-import { Auth } from '../modules/auth';
 import * as express from 'express';
 import * as http from 'http';
 import chalk from 'chalk';
 import { ExplainHook } from '../modules/explain/types';
+import { externalRedact } from '../modules/auth/helpers';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type LogObj = any;
@@ -147,7 +147,7 @@ export function genURLLog({
 	return [
 		statusColor(`[${statusCode}]`),
 		`[${method.toUpperCase()}]`,
-		ipBg(chalk.black(Auth.Secret.redact(url))),
+		ipBg(chalk.black(externalRedact(url))),
 		`${isSend ? '->' : '<-'}`,
 		chalk.bold(ip),
 		`(${duration} ms)`,

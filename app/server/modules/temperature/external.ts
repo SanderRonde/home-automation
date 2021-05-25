@@ -1,17 +1,16 @@
+import { Temperature } from '.';
 import { createExternalClass } from '../../lib/external';
-import { Auth } from '../auth';
 import { APIHandler } from './api';
 import { getController } from './temp-controller';
 import { Mode } from './types';
 
 export class ExternalHandler extends createExternalClass(false) {
 	public setMode(name: string, mode: Mode): Promise<void> {
-		return this.runRequest((res, source) => {
+		return this.runRequest(async (res, source) => {
 			return APIHandler.setMode(
 				res,
 				{
-					// TODO: replace with external
-					auth: Auth.Secret.getKey(),
+					auth: await this._getKey(res, Temperature),
 					mode,
 					name,
 				},
@@ -21,11 +20,11 @@ export class ExternalHandler extends createExternalClass(false) {
 	}
 
 	public setTarget(name: string, target: number): Promise<void> {
-		return this.runRequest((res, source) => {
+		return this.runRequest(async (res, source) => {
 			return APIHandler.setTargetTemp(
 				res,
 				{
-					auth: Auth.Secret.getKey(),
+					auth: await this._getKey(res, Temperature),
 					target,
 					name,
 				},
@@ -37,11 +36,11 @@ export class ExternalHandler extends createExternalClass(false) {
 	public getTemp(name: string): Promise<{
 		temp: number;
 	}> {
-		return this.runRequest((res, source) => {
+		return this.runRequest(async (res, source) => {
 			return APIHandler.getTemp(
 				res,
 				{
-					auth: Auth.Secret.getKey(),
+					auth: await this._getKey(res, Temperature),
 					name,
 				},
 				source
@@ -54,11 +53,11 @@ export class ExternalHandler extends createExternalClass(false) {
 		direction: 'left' | 'right',
 		ms: number
 	): Promise<string> {
-		return this.runRequest((res, source) => {
+		return this.runRequest(async (res, source) => {
 			return APIHandler.moveDir(
 				res,
 				{
-					auth: Auth.Secret.getKey(),
+					auth: await this._getKey(res, Temperature),
 					direction,
 					ms,
 					name,

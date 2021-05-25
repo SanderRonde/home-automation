@@ -7,14 +7,13 @@ export class ExternalHandler extends createExternalClass(false) {
 	requiresInit = false;
 
 	explainTime(mins: number, announce = false): Promise<Action[]> {
-		return this.runRequest((res, source) => {
+		return this.runRequest(async (res, source) => {
 			return APIHandler.getLastXMins(
 				res,
 				{
 					mins,
 					announce: announce,
-					// TODO: use external
-					auth: Auth.Secret.getKey(),
+					auth: await this._getKey(res, Auth),
 				},
 				source
 			);
@@ -22,14 +21,13 @@ export class ExternalHandler extends createExternalClass(false) {
 	}
 
 	explainAmount(amount: number, announce = false): Promise<Action[]> {
-		return this.runRequest((res, source) => {
+		return this.runRequest(async (res, source) => {
 			return APIHandler.getLastX(
 				res,
 				{
 					amount,
 					announce: announce,
-					// TODO: use external
-					auth: Auth.Secret.getKey(),
+					auth: await this._getKey(res, Auth),
 				},
 				source
 			);

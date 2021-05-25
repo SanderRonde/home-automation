@@ -1,3 +1,4 @@
+import { ModuleMeta } from '../modules/meta';
 import { LogObj, ResDummy } from './logger';
 
 type QueuedRequestFn<T> = (
@@ -46,6 +47,15 @@ export function createExternalClass(requiresInit: boolean, name?: string) {
 			for (const req of this._queuedRequests) {
 				await this._handleQueuedRequest(req);
 			}
+		}
+
+		public async _getKey(
+			logObj: LogObj,
+			module: ModuleMeta
+		): Promise<string> {
+			return await new (
+				await module.modules
+			).auth.external(logObj, `${module.name}.EXTERNAL`).getSecretKey();
 		}
 
 		/**

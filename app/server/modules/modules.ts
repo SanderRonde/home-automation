@@ -103,8 +103,7 @@ export async function notifyAllModules(): Promise<void> {
 	notified = true;
 
 	for (const mod of moduleArr) {
-		const meta = 'meta' in mod ? mod.meta : mod;
-		await meta.notifyModulesFromExternal(moduleObj);
+		await mod.notifyModulesFromExternal(moduleObj);
 	}
 }
 

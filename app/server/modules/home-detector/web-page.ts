@@ -1,11 +1,17 @@
 import * as express from 'express';
+import { HomeDetector } from '.';
 import { errorHandle, authCookie, upgradeToHTTPS } from '../../lib/decorators';
 import { ResponseLike } from '../../lib/logger';
-import { Auth } from '../auth';
 import { Detector } from './classes';
 
-function homeDetectorHTML(json: string, randomNum: number) {
-	// TODO: replace auth with external
+async function homeDetectorHTML(
+	json: string,
+	randomNum: number,
+	res: ResponseLike
+) {
+	const key = await new (
+		await HomeDetector.modules
+	).auth.external(res, `HOME_DETECTOR.WEB_PAGE`).getSecretKey();
 	return `<html style="background-color: rgb(40, 40, 40);">
 			<head>
 				<link rel="icon" href="/home-detector/favicon.ico" type="image/x-icon" />
@@ -13,7 +19,7 @@ function homeDetectorHTML(json: string, randomNum: number) {
 				<title>Who is home</title>
 			</head>
 			<body style="margin: 0">
-				<home-detector-display json='${json}' key="${Auth.Secret.getKey()}"></home-detector-display>
+				<home-detector-display json='${json}' key="${key}"></home-detector-display>
 				<script type="module" src="/home-detector/home-detector.bundle.js?n=${randomNum}"></script>
 			</body>
 		</html>`;
@@ -37,17 +43,18 @@ export class WebPageHandler {
 	@errorHandle
 	@authCookie
 	@upgradeToHTTPS
-	public index(
+	public async index(
 		res: ResponseLike,
 		_req: express.Request,
 		extended = false
-	): void {
+	): Promise<void> {
 		res.status(200);
 		res.contentType('.html');
 		res.write(
-			homeDetectorHTML(
+			await homeDetectorHTML(
 				JSON.stringify(this._detector.getAll(extended)),
-				this._randomNum
+				this._randomNum,
+				res
 			)
 		);
 		res.end();

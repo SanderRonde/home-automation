@@ -1,6 +1,6 @@
+import { KeyVal } from '.';
 import { createExternalClass } from '../../lib/external';
 import { LogObj } from '../../lib/logger';
-import { Auth } from '../auth';
 import { APIHandler } from './api';
 import { addListener, removeListener } from './get-set-listener';
 
@@ -17,15 +17,14 @@ export class ExternalHandler extends createExternalClass(true) {
 	}
 
 	async set(key: string, value: string, notify = true): Promise<boolean> {
-		return this.runRequest((res, source) => {
+		return this.runRequest(async (res, source) => {
 			return ExternalHandler._apiHandler!.set(
 				res,
 				{
 					key,
 					value,
 					update: notify,
-					// TODO: replace with external
-					auth: Auth.Secret.getKey(),
+					auth: await this._getKey(res, KeyVal),
 				},
 				source
 			);
@@ -33,12 +32,12 @@ export class ExternalHandler extends createExternalClass(true) {
 	}
 
 	async get(key: string): Promise<string> {
-		return this.runRequest((res, source) => {
+		return this.runRequest(async (res, source) => {
 			return ExternalHandler._apiHandler!.get(
 				res,
 				{
 					key,
-					auth: Auth.Secret.getKey(),
+					auth: await this._getKey(res, KeyVal),
 				},
 				source
 			);

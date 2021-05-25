@@ -1,7 +1,7 @@
+import { RGB } from '.';
 import { BotState } from '../../lib/bot-state';
 import { LED_NAMES } from '../../lib/constants';
 import { createExternalClass } from '../../lib/external';
-import { Auth } from '../auth';
 import { APIHandler } from './api';
 import { Effects } from './arduino-api';
 import { getLed, RGBClient } from './clients';
@@ -14,14 +14,13 @@ export class ExternalHandler extends createExternalClass(true) {
 		target = 'all',
 		intensity = 0
 	): Promise<boolean> {
-		return this.runRequest((res, source) => {
+		return this.runRequest(async (res, source) => {
 			return APIHandler.setColor(
 				res,
 				{
 					color,
 					intensity: intensity,
-					// TODO: change to external
-					auth: Auth.Secret.getKey(),
+					auth: await this._getKey(res, RGB),
 					target: target,
 				},
 				source
@@ -36,7 +35,7 @@ export class ExternalHandler extends createExternalClass(true) {
 		intensity = 0,
 		target = 'all'
 	): Promise<boolean> {
-		return this.runRequest((res, source) => {
+		return this.runRequest(async (res, source) => {
 			return APIHandler.setRGB(
 				res,
 				{
@@ -44,7 +43,7 @@ export class ExternalHandler extends createExternalClass(true) {
 					green,
 					blue,
 					intensity: intensity,
-					auth: Auth.Secret.getKey(),
+					auth: await this._getKey(res, RGB),
 					target: target,
 				},
 				source
@@ -53,12 +52,12 @@ export class ExternalHandler extends createExternalClass(true) {
 	}
 
 	async power(state: 'on' | 'off'): Promise<boolean> {
-		return this.runRequest((res, source) => {
+		return this.runRequest(async (res, source) => {
 			return APIHandler.setPower(
 				res,
 				{
 					power: state,
-					auth: Auth.Secret.getKey(),
+					auth: await this._getKey(res, RGB),
 				},
 				source
 			);
@@ -66,12 +65,12 @@ export class ExternalHandler extends createExternalClass(true) {
 	}
 
 	async effect(name: Effects, extra: JoinedConfigs = {}): Promise<boolean> {
-		return this.runRequest((res, source) => {
+		return this.runRequest(async (res, source) => {
 			return APIHandler.runEffect(
 				res,
 				{
 					effect: name,
-					auth: Auth.Secret.getKey(),
+					auth: await this._getKey(res, RGB),
 					...extra,
 				},
 				source

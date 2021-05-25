@@ -37,24 +37,12 @@ export abstract class ModuleMeta {
 		return Promise.resolve(void 0);
 	}
 
-	get external():
-		| {
-				Handler: typeof Handler;
-		  }
-		| typeof Handler {
-		return {
-			Handler: HandlerDefault,
-		};
+	get external(): typeof Handler {
+		return HandlerDefault;
 	}
 
-	get bot():
-		| {
-				Bot: typeof BotBase;
-		  }
-		| typeof BotBase {
-		return {
-			Bot: BotBase,
-		};
+	get bot(): typeof BotBase {
+		return BotBase;
 	}
 
 	get explainHook(): Promise<ExplainHook> {

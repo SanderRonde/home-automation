@@ -1,6 +1,6 @@
+import { Script } from '.';
 import { Config } from '../../app';
 import { createExternalClass } from '../../lib/external';
-import { Auth } from '../auth';
 import { APIHandler } from './api';
 
 export class ExternalHandler extends createExternalClass(true) {
@@ -12,13 +12,12 @@ export class ExternalHandler extends createExternalClass(true) {
 	}
 
 	async script(name: string): Promise<string> {
-		return this.runRequest((res, source) => {
+		return this.runRequest(async (res, source) => {
 			return APIHandler.script(
 				res,
 				{
 					name,
-					// TODO: replace with external
-					auth: Auth.Secret.getKey(),
+					auth: await this._getKey(res, Script),
 				},
 				ExternalHandler._config!,
 				source

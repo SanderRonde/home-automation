@@ -8,9 +8,12 @@
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 import { KeyError, AuthError } from './errors';
 import { attachMessage } from './logger';
-import { Auth } from '../modules/auth';
 import * as express from 'express';
 import chalk from 'chalk';
+import {
+	externalAuthenticate,
+	externalCheckCookie,
+} from '../modules/auth/helpers';
 
 interface KeyVal {
 	[key: string]: string;
@@ -52,7 +55,7 @@ export function auth(
 		params: KeyVal,
 		...args: any[]
 	) {
-		if (!Auth.ClientSecret.authenticate(params.auth, params.id || '0')) {
+		if (!externalAuthenticate(params.auth, params.id || '0')) {
 			throw new AuthError('Invalid auth key');
 		}
 
@@ -77,7 +80,7 @@ export function authCookie(
 			  },
 		...args: any[]
 	) {
-		if (!Auth.Cookie.checkCookie(req)) {
+		if (!externalCheckCookie(req)) {
 			throw new AuthError('Invalid or missing auth cookie');
 		}
 
@@ -100,7 +103,7 @@ export function authAll(
 		},
 		...args: any[]
 	) {
-		if (Auth.Cookie.checkCookie(params)) {
+		if (externalCheckCookie(params)) {
 			return original.bind(this)(res, params, ...args);
 		} else if (params.cookies && params.cookies['key']) {
 			throw new AuthError('Invalid auth cookie');
@@ -109,7 +112,7 @@ export function authAll(
 		if (!params || !params['auth']) {
 			throw new KeyError('Missing key "auth"');
 		}
-		if (Auth.ClientSecret.authenticate(params.auth, params.id || '0')) {
+		if (externalAuthenticate(params.auth, params.id || '0')) {
 			return original.bind(this)(res, params, ...args);
 		} else {
 			throw new AuthError('Invalid auth key');

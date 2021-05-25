@@ -103,23 +103,19 @@ class WebServer {
 			websocket: this.ws,
 		};
 		await Promise.all(
-			Object.values(modules).map(async (mod) => {
-				// TODO: change once all are converted
-				const modMeta = 'meta' in mod ? mod.meta : mod;
-				await modMeta.init({
+			Object.values(modules).map(async (meta) => {
+				await meta.init({
 					...config,
-					db: await new Database(`${modMeta.dbName}.json`).init(),
+					db: await new Database(`${meta.dbName}.json`).init(),
 				});
-				this._initLogger.increment(modMeta.loggerName);
+				this._initLogger.increment(meta.loggerName);
 			})
 		);
 
 		// Run post-inits
 		await Promise.all(
-			Object.values(modules).map(async (mod) => {
-				// TODO: change once all are converted
-				const modMeta = 'meta' in mod ? mod.meta : mod;
-				await modMeta.postInit();
+			Object.values(modules).map(async (meta) => {
+				await meta.postInit();
 			})
 		);
 		this._initLogger.increment('post-init');

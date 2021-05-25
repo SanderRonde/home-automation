@@ -2,7 +2,6 @@ import { RemoteControl } from '..';
 import { ModuleConfig } from '../..';
 import { createRouter } from '../../../lib/api';
 import { attachMessage } from '../../../lib/logger';
-import { Auth } from '../../auth';
 import { APIHandler } from '../api';
 import { listenAny, removeListener } from '../get-set-listener';
 import { WebPageHandler } from '../web-page';
@@ -23,13 +22,16 @@ export function initRouting({ app, randomNum, websocket }: ModuleConfig): void {
 
 	websocket.all('/remote-control/listen', ({ send, onDead, addListener }) => {
 		let authenticated = false;
-		addListener((message) => {
+		addListener(async (message) => {
 			if (authenticated) {
 				return;
 			}
 
-			// TODO: replace with external
-			if (Auth.Secret.authenticate(message)) {
+			const external = new (await RemoteControl.modules).auth.external(
+				{},
+				'REMOTE_CONTROL.WS'
+			);
+			if (await external.authenticate(message)) {
 				authenticated = true;
 
 				const listener = listenAny((command, logObj) => {
