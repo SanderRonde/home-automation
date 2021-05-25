@@ -1,5 +1,5 @@
 import { BotState } from '../../lib/bot-state';
-import { Handler } from './external';
+import { ExternalHandler } from './external';
 import { LOCAL_URLS } from './local-urls';
 import { PASTAS } from './pasta';
 import { Bot as _Bot } from '../bot';
@@ -18,11 +18,11 @@ export class Bot extends BotState.Base {
 
 	static readonly matches = Bot.createMatchMaker(({ matchMaker: mm }) => {
 		mm('/castoff', /stop cast(ing)?/, async ({ logObj }) => {
-			await new Handler(logObj, 'CAST.BOT').stop();
+			await new ExternalHandler(logObj, 'CAST.BOT').stop();
 			return 'Stopped casting';
 		});
 		mm(/(cast url|\/casturl)(\s*)(.*)/, async ({ logObj, match }) => {
-			await new Handler(logObj, 'CAST.BOT').url(match[3]);
+			await new ExternalHandler(logObj, 'CAST.BOT').url(match[3]);
 			return `Casting URL "${match[3]}"`;
 		});
 		mm(
@@ -30,7 +30,7 @@ export class Bot extends BotState.Base {
 			async ({ logObj, match }) => {
 				const lang = match[6] || 'en';
 				const text = match[8];
-				await new Handler(logObj, 'CAST.BOT').say(text, lang);
+				await new ExternalHandler(logObj, 'CAST.BOT').say(text, lang);
 				return `Saying "${text}" in lang "${lang}"`;
 			}
 		);
@@ -51,7 +51,7 @@ export class Bot extends BotState.Base {
 				if (!(pasta in PASTAS)) {
 					return "We don't have that pasta";
 				}
-				await new Handler(logObj, 'CAST.BOT').pasta(pasta);
+				await new ExternalHandler(logObj, 'CAST.BOT').pasta(pasta);
 				return `Played pasta: "${pasta}"`;
 			}
 		);

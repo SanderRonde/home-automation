@@ -11,7 +11,7 @@ import { Cast } from './index';
 import { tts } from './tts';
 import { PASTAS } from './pasta';
 
-export class Handler {
+export class APIHandler {
 	@errorHandle
 	@requireParams('url')
 	@auth

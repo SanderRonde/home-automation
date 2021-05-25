@@ -1,11 +1,11 @@
 import { Cast } from './index';
 import { ModuleConfig } from '..';
 import { createRouter } from '../../lib/api';
-import { Handler } from './external';
-import { Handler as APIHandler } from './api';
+import { ExternalHandler } from './external';
+import { APIHandler } from './api';
 
 export async function init({ app }: ModuleConfig): Promise<void> {
-	await Handler.init();
+	await ExternalHandler.init();
 
 	const router = createRouter(Cast, APIHandler);
 	router.get('/:auth/stop', 'stop');

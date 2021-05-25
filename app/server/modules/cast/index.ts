@@ -7,7 +7,7 @@ import { ModuleMeta } from '../meta';
 import { Bot } from './bot';
 import { init } from './routing';
 import { ModuleConfig } from '..';
-import { Handler } from './external';
+import { ExternalHandler } from './external';
 
 export const Cast = new (class Meta extends ModuleMeta {
 	name = 'cast';
@@ -17,7 +17,7 @@ export const Cast = new (class Meta extends ModuleMeta {
 	}
 
 	get external() {
-		return Handler;
+		return ExternalHandler;
 	}
 
 	get bot() {

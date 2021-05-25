@@ -1,9 +1,9 @@
 import { createExternalClass } from '../../lib/external';
 import * as castv2 from 'castv2-player';
-import { Handler as APIHandler } from './api';
+import { APIHandler } from './api';
 import { Auth } from '../auth';
 
-export class Handler extends createExternalClass(true) {
+export class ExternalHandler extends createExternalClass(true) {
 	async stop(): Promise<castv2.MediaPlayerClass[]> {
 		return this.runRequest((res, source) => {
 			return APIHandler.stop(
