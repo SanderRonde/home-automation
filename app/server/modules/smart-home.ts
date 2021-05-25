@@ -51,6 +51,10 @@ export namespace SmartHome {
 			await Routing.init(config);
 			await HomeGraph.init(config.db);
 		}
+
+		async postInit() {
+			await HomeGraph.requestSync();
+		}
 	})();
 
 	const smartHomeLogger = (...args: unknown[]) =>
@@ -90,8 +94,7 @@ export namespace SmartHome {
 			}
 		}
 
-		// @ts-ignore
-		async function requestSync() {
+		export async function requestSync(): Promise<void> {
 			const hg = await homeGraph.value;
 			await Promise.all(
 				(
@@ -134,13 +137,6 @@ export namespace SmartHome {
 			});
 
 			homeGraph.set(hg);
-
-			/**
-			 * Enable this if the list of user devices should be updated
-			 */
-			setTimeout(async () => {
-				await requestSync();
-			}, 20000);
 		}
 
 		async function attachUpdateListeners() {
