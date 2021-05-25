@@ -1,4 +1,4 @@
-import { PressureHooks, PRESSURE_REGISTER } from '../modules/pressure';
+import { PressureHooks, PRESSURE_REGISTER } from '../modules/pressure/types';
 
 export default {
 	bed: [
