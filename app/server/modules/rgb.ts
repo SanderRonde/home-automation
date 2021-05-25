@@ -3506,11 +3506,10 @@ export namespace RGB {
 
 			// Try and authenticate
 			const modules = await meta.modules;
-			const authenticated =
-				await new modules.spotifyBeats.External.Handler(
-					logObj,
-					'RGB.MARKED'
-				).test();
+			const authenticated = await new modules.spotifyBeats.external(
+				logObj,
+				'RGB.MARKED'
+			).test();
 			if (!authenticated) {
 				return {
 					success: false,
@@ -3532,7 +3531,7 @@ export namespace RGB {
 		> {
 			// Get devices
 			const modules = await meta.modules;
-			const devices = await new modules.spotifyBeats.External.Handler(
+			const devices = await new modules.spotifyBeats.external(
 				logObj,
 				'RGB.MARKED'
 			).getDevices();
@@ -3578,11 +3577,10 @@ export namespace RGB {
 			}
 
 			// Play
-			const playResponse =
-				await new modules.spotifyBeats.External.Handler(
-					logObj,
-					'RGB.MARKED'
-				).play(parsed['spotify-uri'], chosen.id);
+			const playResponse = await new modules.spotifyBeats.external(
+				logObj,
+				'RGB.MARKED'
+			).play(parsed['spotify-uri'], chosen.id);
 
 			if (
 				!playResponse ||
@@ -3626,8 +3624,10 @@ export namespace RGB {
 			// Fetch playstate at this time, which should allow us to
 			// calculate exactly when the song started playing
 			const modules = await meta.modules;
-			const playState =
-				await modules.spotifyBeats.Spotify.API.getPlayState();
+			const playState = await new modules.spotifyBeats.external(
+				logObj,
+				'RGB.MARKED'
+			).getPlayState();
 			if (!playState) {
 				return {
 					success: false,
