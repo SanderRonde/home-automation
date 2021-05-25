@@ -33,6 +33,9 @@ export abstract class ModuleMeta {
 	public _loggerName: string | null = null;
 
 	abstract init(config: ModuleConfig): Promise<void>;
+	postInit(): Promise<void> {
+		return Promise.resolve(void 0);
+	}
 
 	get external():
 		| {

@@ -113,12 +113,22 @@ class WebServer {
 				this._initLogger.increment(modMeta.loggerName);
 			})
 		);
+
+		// Run post-inits
+		await Promise.all(
+			Object.values(modules).map(async (mod) => {
+				// TODO: change once all are converted
+				const modMeta = 'meta' in mod ? mod.meta : mod;
+				await modMeta.postInit();
+			})
+		);
+		this._initLogger.increment('post-init');
 	}
 
 	public async init() {
 		this._initLogger = new ProgressLogger(
 			'Server start',
-			8 + Object.keys(await getAllModules(false)).length
+			9 + Object.keys(await getAllModules(false)).length
 		);
 		this._initLogger.increment('IO');
 
