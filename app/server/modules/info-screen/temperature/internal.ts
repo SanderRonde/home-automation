@@ -8,8 +8,7 @@ export async function get(
 ): Promise<InternalTemperatureResult> {
 	return await new (
 		await InfoScreen.modules
-	).temperature.External.Handler(
-		logObj || {},
-		'INFO_SCREEN.TEMPERATURE'
-	).getTemp(name);
+	).temperature.external(logObj || {}, 'INFO_SCREEN.TEMPERATURE').getTemp(
+		name
+	);
 }
