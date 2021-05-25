@@ -6,76 +6,72 @@ import { DummyCastLog } from './types';
 const MediaPlayer = castv2.MediaPlayer(new DummyCastLog());
 const Playlist = playlist(new DummyCastLog());
 
-export namespace Media {
-	const mediaPlayers: WeakMap<castv2.Device, castv2.MediaPlayerClass> =
-		new WeakMap();
+const mediaPlayers: WeakMap<castv2.Device, castv2.MediaPlayerClass> =
+	new WeakMap();
 
-	async function assertMediaPlayers() {
-		if (devices.length === 0) {
-			await scan();
-		}
-
-		devices.forEach(assertMediaPlayer);
+async function assertMediaPlayers() {
+	if (devices.length === 0) {
+		await scan();
 	}
 
-	function assertMediaPlayer(device: castv2.Device) {
-		if (mediaPlayers.has(device)) {
-			return;
-		}
+	devices.forEach(assertMediaPlayer);
+}
 
-		mediaPlayers.set(device, new MediaPlayer(device));
+function assertMediaPlayer(device: castv2.Device) {
+	if (mediaPlayers.has(device)) {
+		return;
 	}
 
-	export async function playURL(
-		url: string
-	): Promise<castv2.MediaPlayerClass[]> {
-		await assertMediaPlayers();
+	mediaPlayers.set(device, new MediaPlayer(device));
+}
 
-		const players = devices.map((d) => mediaPlayers.get(d)!);
-		await Promise.all(players.map((p) => p.stopClientPromise()));
+export async function playURL(url: string): Promise<castv2.MediaPlayerClass[]> {
+	await assertMediaPlayers();
 
-		await Promise.all(players.map((p) => p.playUrlPromise(url)));
+	const players = devices.map((d) => mediaPlayers.get(d)!);
+	await Promise.all(players.map((p) => p.stopClientPromise()));
 
-		return players;
-	}
+	await Promise.all(players.map((p) => p.playUrlPromise(url)));
 
-	export async function playURLs(
-		urls: string[]
-	): Promise<castv2.MediaPlayerClass[]> {
-		await assertMediaPlayers();
+	return players;
+}
 
-		const players = devices.map((d) => mediaPlayers.get(d)!);
-		await Promise.all(players.map((p) => p.stopClientPromise()));
+export async function playURLs(
+	urls: string[]
+): Promise<castv2.MediaPlayerClass[]> {
+	await assertMediaPlayers();
 
-		await Promise.all(
-			players.map(async (p) => {
-				const playlist = new Playlist(p.connection.name, {
-					on() {},
-				});
-				const list = playlist._addItems(
-					urls.map((url) => ({
-						url: url,
-						contentType: 'audio/mpeg',
-						metadata: {},
-					})),
-					{},
-					false
-				);
-				await p._player.queueLoadPromise(p._player, list, {
-					startIndex: 0,
-					repeatMode: 'REPEAT_OFF',
-				});
-			})
-		);
+	const players = devices.map((d) => mediaPlayers.get(d)!);
+	await Promise.all(players.map((p) => p.stopClientPromise()));
 
-		return players;
-	}
+	await Promise.all(
+		players.map(async (p) => {
+			const playlist = new Playlist(p.connection.name, {
+				on() {},
+			});
+			const list = playlist._addItems(
+				urls.map((url) => ({
+					url: url,
+					contentType: 'audio/mpeg',
+					metadata: {},
+				})),
+				{},
+				false
+			);
+			await p._player.queueLoadPromise(p._player, list, {
+				startIndex: 0,
+				repeatMode: 'REPEAT_OFF',
+			});
+		})
+	);
 
-	export async function stop(): Promise<castv2.MediaPlayerClass[]> {
-		devices.forEach(assertMediaPlayer);
+	return players;
+}
 
-		const players = devices.map((d) => mediaPlayers.get(d)!);
-		await Promise.all(players.map((p) => p.stopClientPromise()));
-		return players;
-	}
+export async function stop(): Promise<castv2.MediaPlayerClass[]> {
+	devices.forEach(assertMediaPlayer);
+
+	const players = devices.map((d) => mediaPlayers.get(d)!);
+	await Promise.all(players.map((p) => p.stopClientPromise()));
+	return players;
 }

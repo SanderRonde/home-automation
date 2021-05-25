@@ -6,7 +6,7 @@ import {
 } from '../../lib/logger';
 import * as castv2 from 'castv2-player';
 import { LOCAL_URLS } from './local-urls';
-import { Media } from './casting';
+import { playURL, playURLs, stop } from './casting';
 import { Cast } from './index';
 import { tts } from './tts';
 import { PASTAS } from './pasta';
@@ -29,7 +29,7 @@ export class Handler {
 			url = LOCAL_URLS[url];
 		}
 
-		const mediaPlayers = await Media.playURL(url);
+		const mediaPlayers = await playURL(url);
 		const playerLog = attachSourcedMessage(
 			res,
 			source,
@@ -62,7 +62,7 @@ export class Handler {
 		},
 		source: string
 	): Promise<castv2.MediaPlayerClass[]> {
-		const mediaPlayers = await Media.stop();
+		const mediaPlayers = await stop();
 		attachSourcedMessage(
 			res,
 			source,
@@ -91,7 +91,7 @@ export class Handler {
 		const urls = await tts(text, lang)('API.say', res);
 		attachMessage(res, `Got urls ${urls.join(', ')}`);
 
-		const mediaPlayers = await Media.playURLs(urls);
+		const mediaPlayers = await playURLs(urls);
 		attachSourcedMessage(
 			res,
 			source,
@@ -141,7 +141,7 @@ export class Handler {
 		const urls = await tts(text, lang)('API.pasta', res);
 
 		attachMessage(res, `Got urls ${urls.join(', ')}`);
-		const mediaPlayers = await Media.playURLs(urls);
+		const mediaPlayers = await playURLs(urls);
 		attachSourcedMessage(
 			res,
 			source,
