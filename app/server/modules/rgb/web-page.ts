@@ -1,0 +1,52 @@
+import express = require('express');
+import { errorHandle, authCookie, upgradeToHTTPS } from '../../lib/decorators';
+import { ResponseLike } from '../../lib/logger';
+import { Auth } from '../auth';
+import { CustomPattern, patterns } from './patterns';
+
+const patternPreviews = JSON.stringify(
+	Object.keys(patterns).map((key) => {
+		const {
+			pattern: { colors, transitionType },
+			defaultSpeed,
+		} = patterns[key as CustomPattern];
+		return {
+			defaultSpeed,
+			colors,
+			transitionType,
+			name: key,
+		};
+	})
+);
+
+function rgbHTML(randomNum: number) {
+	// TODO: Replace with external
+	return `<html style="background-color: rgb(70,70,70);">
+			<head>
+				<link rel="icon" href="/rgb/favicon.ico" type="image/x-icon" />
+				<link rel="manifest" href="/rgb/static/manifest.json">
+				<meta name="viewport" content="width=device-width, initial-scale=1">
+				<title>RGB controller</title>
+			</head>
+			<body style="margin: 0">
+				<rgb-controller key="${Auth.Secret.getKey()}" patterns='${patternPreviews}'></rgb-controller>
+				<script type="module" src="/rgb/rgb.bundle.js?n=${randomNum}"></script>
+			</body>
+		</html>`;
+}
+
+export class WebPageHandler {
+	@errorHandle
+	@authCookie
+	@upgradeToHTTPS
+	public static index(
+		res: ResponseLike,
+		_req: express.Request,
+		randomNum: number
+	): void {
+		res.status(200);
+		res.contentType('.html');
+		res.write(rgbHTML(randomNum));
+		res.end();
+	}
+}

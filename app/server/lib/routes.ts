@@ -6,7 +6,6 @@ import * as express from 'express';
 import * as path from 'path';
 import * as glob from 'glob';
 import chalk from 'chalk';
-import { RGB } from '../modules';
 
 export function initAnnotatorRoutes(app: express.Express): void {
 	app.all('/annotator/files', (_req, res) => {
@@ -70,13 +69,6 @@ export function initMiddleware(app: express.Express): void {
 		},
 		serveStatic(path.join(__dirname, '../../../', 'node_modules/wc-lib'))
 	);
-}
-
-export function initRoutes(app: express.Express): void {
-	app.post('/scan', async (_req, res) => {
-		await RGB.Scan.scanRGBControllers();
-		res.status(200).end();
-	});
 }
 
 export function initPostRoutes(app: express.Express): void {

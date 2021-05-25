@@ -14,7 +14,6 @@ import {
 	logTag,
 } from './lib/logger';
 import {
-	initRoutes,
 	initMiddleware,
 	initAnnotatorRoutes,
 	initPostRoutes,
@@ -129,7 +128,7 @@ class WebServer {
 	public async init() {
 		this._initLogger = new ProgressLogger(
 			'Server start',
-			9 + Object.keys(await getAllModules(false)).length
+			8 + Object.keys(await getAllModules(false)).length
 		);
 		this._initLogger.increment('IO');
 
@@ -140,8 +139,6 @@ class WebServer {
 		this._initLogger.increment('middleware');
 		this._initServers();
 		this._initLogger.increment('servers');
-		initRoutes(this.app);
-		this._initLogger.increment('routes');
 		await this._initModules();
 		this._initLogger.increment('modules');
 		initPostRoutes(this.app);
