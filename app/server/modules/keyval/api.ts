@@ -12,6 +12,7 @@ import {
 	attachMessage,
 } from '../../lib/logger';
 import { addListener, removeListener, update } from './get-set-listener';
+import { str } from './helpers';
 
 export class APIHandler {
 	private _db: Database;
