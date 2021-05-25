@@ -1,7 +1,8 @@
-import { KEYVAL_GROUP_EFFECT, GroupConfig } from '../modules/keyval';
+import { GroupConfig, KEYVAL_GROUP_EFFECT } from '../modules/keyval/types';
 
 // When the inital key is triggered, the others are updated
 // to that value (or the inverted value) as well
+
 // without triggering any listeners
 export default {
 	'some.key.val': {

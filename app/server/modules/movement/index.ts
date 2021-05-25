@@ -14,7 +14,10 @@ export const Movement = new (class Meta extends ModuleMeta {
 	}
 
 	notifyModules(modules: unknown) {
-		(modules as AllModules).keyval.GetSetListener.addListener(
+		new (modules as AllModules).keyval.external(
+			{},
+			'MOVEMENT.NOTIFY'
+		).onChange(
 			'state.movement',
 			async (value) => {
 				if (value === '1') {

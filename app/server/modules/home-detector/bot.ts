@@ -3,12 +3,12 @@ import { HOME_STATE } from './types';
 import { BotState } from '../../lib/bot-state';
 import { attachMessage, ResDummy } from '../../lib/logger';
 import { Auth } from '../auth';
-import { KeyVal } from '../keyval';
 import { APIHandler } from './api';
 import { Detector } from './classes';
 import { MatchParameters } from '../bot/message';
 import { ChatState } from '../bot/message/state-keeping';
 import { MatchResponse } from '../bot/types';
+import { State as KeyValState } from '../keyval/bot';
 
 export interface State {
 	lastSubjects: string[] | null;
@@ -250,7 +250,7 @@ export class Bot extends BotState.Base {
 	}
 
 	static resetState(state: ChatState): void {
-		(state.states.keyval as unknown as KeyVal.Bot.JSON).lastSubjects = null;
+		(state.states.keyval as unknown as KeyValState).lastSubjects = null;
 	}
 
 	toJSON(): State {

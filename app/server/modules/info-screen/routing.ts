@@ -1,6 +1,6 @@
 import express = require('express');
 import { InfoScreen } from '.';
-import { ModuleConfig, KeyVal } from '..';
+import { ModuleConfig } from '..';
 import { createAPIHandler } from '../../lib/api';
 import { logTag } from '../../lib/logger';
 import { initMiddleware } from '../../lib/routes';
@@ -69,7 +69,9 @@ export function initRouting({ config, randomNum }: ModuleConfig): void {
 
 	ws.all('/blanking', async (client) => {
 		clients.add(client);
-		const listener = KeyVal.GetSetListener.addListener(
+		const listener = await new (
+			await InfoScreen.modules
+		).keyval.external({}, 'INFO_SCREEN.BLANKING').onChange(
 			'room.lights.ceiling',
 			(value) => {
 				client.send(
@@ -83,14 +85,15 @@ export function initRouting({ config, randomNum }: ModuleConfig): void {
 		client.send(
 			JSON.stringify({
 				blank:
-					(await new KeyVal.External.Handler(
-						{},
-						'INFO_SCREEN.BLANKING'
-					).get('room.lights.ceiling')) === '0',
+					(await new (
+						await InfoScreen.modules
+					).keyval.external({}, 'INFO_SCREEN.BLANKING').get(
+						'room.lights.ceiling'
+					)) === '0',
 			})
 		);
 		client.onDead(() => {
-			KeyVal.GetSetListener.removeListener(listener);
+			listener.remove();
 			clients.delete(client);
 		});
 	});

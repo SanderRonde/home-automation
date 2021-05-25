@@ -1,4 +1,4 @@
-import { KeyvalHooks } from '../modules/keyval';
+import { KeyvalHooks } from '../modules/keyval/types';
 
 export default {
 	'key-name': {

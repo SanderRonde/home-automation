@@ -42,7 +42,6 @@ import { colorList } from '../lib/data';
 import { exec } from 'child_process';
 import { ModuleMeta } from './meta';
 import * as express from 'express';
-import { KeyVal } from './keyval';
 import { Auth } from './auth';
 import * as fs from 'fs-extra';
 import * as path from 'path';
@@ -91,7 +90,7 @@ export namespace RGB {
 						void Scan.scanRGBControllers();
 					}, 1000 * 60 * 60);
 					await External.Handler.init();
-					initListeners();
+					void initListeners();
 
 					Routing.init(config);
 				})().then(resolve);
@@ -447,10 +446,13 @@ export namespace RGB {
 				if (name in NAME_MAP) {
 					const keys = NAME_MAP[name as keyof typeof NAME_MAP];
 					for (const key of keys) {
-						await new KeyVal.External.Handler(
-							{},
-							`RGB_NAMEMAP.${name}`
-						).set(key, value, false);
+						await new (
+							await meta.modules
+						).keyval.external({}, `RGB_NAMEMAP.${name}`).set(
+							key,
+							value,
+							false
+						);
 					}
 				}
 			}
@@ -3760,103 +3762,101 @@ export namespace RGB {
 		wakelights = [];
 	}
 
-	function initListeners() {
-		KeyVal.GetSetListener.addListener(
-			'room.lights.nightstand',
-			async (value, logObj) => {
-				cancelActiveWakelights();
+	async function initListeners() {
+		const external = new (await meta.modules).keyval.external(
+			{},
+			'RGB.INIT'
+		);
+		external.onChange('room.lights.nightstand', async (value, logObj) => {
+			cancelActiveWakelights();
 
-				const client = Clients.getLed(LED_NAMES.BED_LEDS);
-				if (!client) {
-					return;
-				}
-				if (value === '1') {
-					attachMessage(
-						attachSourcedMessage(
-							logObj,
-							'keyval listener',
-							await meta.explainHook,
-							'Setting',
-							chalk.bold(client.address),
-							`to color rgb(${NIGHTSTAND_COLOR.r}, ${NIGHTSTAND_COLOR.g}, ${NIGHTSTAND_COLOR.b})`
-						),
-						chalk.bgHex(NIGHTSTAND_COLOR.toHex())('   ')
-					);
-					await client.setColor(
-						NIGHTSTAND_COLOR.r,
-						NIGHTSTAND_COLOR.g,
-						NIGHTSTAND_COLOR.b
-					);
-				} else if (value === '0') {
+			const client = Clients.getLed(LED_NAMES.BED_LEDS);
+			if (!client) {
+				return;
+			}
+			if (value === '1') {
+				attachMessage(
 					attachSourcedMessage(
 						logObj,
 						'keyval listener',
 						await meta.explainHook,
-						'Turned off',
-						chalk.bold(client.address)
-					);
-					await client.turnOff();
-				}
-				return Promise.resolve();
+						'Setting',
+						chalk.bold(client.address),
+						`to color rgb(${NIGHTSTAND_COLOR.r}, ${NIGHTSTAND_COLOR.g}, ${NIGHTSTAND_COLOR.b})`
+					),
+					chalk.bgHex(NIGHTSTAND_COLOR.toHex())('   ')
+				);
+				await client.setColor(
+					NIGHTSTAND_COLOR.r,
+					NIGHTSTAND_COLOR.g,
+					NIGHTSTAND_COLOR.b
+				);
+			} else if (value === '0') {
+				attachSourcedMessage(
+					logObj,
+					'keyval listener',
+					await meta.explainHook,
+					'Turned off',
+					chalk.bold(client.address)
+				);
+				await client.turnOff();
 			}
-		);
+			return Promise.resolve();
+		});
 
-		KeyVal.GetSetListener.addListener(
-			'room.leds.wakelight',
-			async (value, logObj) => {
-				cancelActiveWakelights();
+		external.onChange('room.leds.wakelight', async (value, logObj) => {
+			cancelActiveWakelights();
 
-				const client = Clients.getLed(LED_NAMES.BED_LEDS);
-				if (!client) {
-					return;
-				}
-				if (value === '1') {
-					attachMessage(
-						attachSourcedMessage(
-							logObj,
-							'keyval listener',
-							await meta.explainHook,
-							'Fading in',
-							chalk.bold(client.address),
-							`to color rgb(${NIGHTSTAND_COLOR.r}, ${NIGHTSTAND_COLOR.g}, ${NIGHTSTAND_COLOR.b})`
-						),
-						chalk.bgHex(NIGHTSTAND_COLOR.toHex())('   ')
-					);
-
-					let count = 2;
-					const interval = setInterval(async () => {
-						await client.setColorWithBrightness(
-							NIGHTSTAND_COLOR.r,
-							NIGHTSTAND_COLOR.g,
-							NIGHTSTAND_COLOR.b,
-							count
-						);
-
-						if (count++ === 100) {
-							clearInterval(interval);
-							wakelights.splice(wakelights.indexOf(interval), 1);
-						}
-					}, WAKELIGHT_TIME / 100);
-					wakelights.push(interval);
-					await client.setColor(
-						NIGHTSTAND_COLOR.r,
-						NIGHTSTAND_COLOR.g,
-						NIGHTSTAND_COLOR.b
-					);
-				} else if (value === '0') {
-					cancelActiveWakelights();
+			const client = Clients.getLed(LED_NAMES.BED_LEDS);
+			if (!client) {
+				return;
+			}
+			if (value === '1') {
+				attachMessage(
 					attachSourcedMessage(
 						logObj,
 						'keyval listener',
 						await meta.explainHook,
-						'Turned off',
-						chalk.bold(client.address)
+						'Fading in',
+						chalk.bold(client.address),
+						`to color rgb(${NIGHTSTAND_COLOR.r}, ${NIGHTSTAND_COLOR.g}, ${NIGHTSTAND_COLOR.b})`
+					),
+					chalk.bgHex(NIGHTSTAND_COLOR.toHex())('   ')
+				);
+
+				let count = 2;
+				const interval = setInterval(async () => {
+					await client.setColorWithBrightness(
+						NIGHTSTAND_COLOR.r,
+						NIGHTSTAND_COLOR.g,
+						NIGHTSTAND_COLOR.b,
+						count
 					);
-					await client.turnOff();
-				}
-				return Promise.resolve();
+
+					if (count++ === 100) {
+						clearInterval(interval);
+						wakelights.splice(wakelights.indexOf(interval), 1);
+					}
+				}, WAKELIGHT_TIME / 100);
+				wakelights.push(interval);
+				await client.setColor(
+					NIGHTSTAND_COLOR.r,
+					NIGHTSTAND_COLOR.g,
+					NIGHTSTAND_COLOR.b
+				);
+			} else if (value === '0') {
+				cancelActiveWakelights();
+				attachSourcedMessage(
+					logObj,
+					'keyval listener',
+					await meta.explainHook,
+					'Turned off',
+					chalk.bold(client.address)
+				);
+				await client.turnOff();
 			}
-		);
+			return Promise.resolve();
+		});
 		Object.entries({
 			'room.leds.ceiling': LED_NAMES.CEILING_LEDS,
 			'room.leds.bed': LED_NAMES.BED_LEDS,
@@ -3865,7 +3865,7 @@ export namespace RGB {
 			'room.leds.couch': LED_NAMES.COUCH_LEDS,
 			'room.leds.hexes': LED_NAMES.HEX_LEDS,
 		}).forEach(([key, ledName]) => {
-			KeyVal.GetSetListener.addListener(key, async (value, logObj) => {
+			external.onChange(key, async (value, logObj) => {
 				await switchLed(ledName, value, logObj);
 			});
 		});

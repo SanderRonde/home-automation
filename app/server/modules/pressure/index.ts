@@ -15,7 +15,10 @@ export const Pressure = new (class Meta extends ModuleMeta {
 	}
 
 	notifyModules(modules: unknown) {
-		(modules as AllModules).keyval.GetSetListener.addListener(
+		new (modules as AllModules).keyval.external(
+			{},
+			'PRESSURE.NOTIFY'
+		).onChange(
 			'state.pressure',
 			async (value, logObj) => {
 				const handler = new ExternalHandler(logObj, 'KEYVAL');
