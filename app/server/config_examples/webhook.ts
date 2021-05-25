@@ -1,4 +1,4 @@
-import { WebHookConfig } from '../modules/webhook';
+import { WebHookConfig } from '../modules/webhook/types';
 
 export default {
 	someName: async (_modules) => {
