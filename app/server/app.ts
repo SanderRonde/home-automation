@@ -23,7 +23,7 @@ import { notifyAllModules, NoDBModuleConfig } from './modules/modules';
 import { WSSimulator, WSWrapper } from './lib/ws';
 import { getAllModules } from './modules';
 import { Database } from './lib/db';
-import * as express from 'express';
+import express from 'express';
 import * as path from 'path';
 import * as http from 'http';
 import { printCommands } from './modules/bot/helpers';

@@ -8,7 +8,7 @@
 	"private": true,
 	"nodemonConfig": {
 		"ext": "js",
-		"exec": "node --enable-source-maps app/server/app.js --http 1272 --https 1273 -v* --log-secrets",
+		"exec": "node --experimental-modules --enable-source-maps --trace-warnings -r ts-node/register/transpile-only app/server/app.ts --http 1272 --https 1273 -v* --log-secrets",
 		"watch": [
 			"app/server/"
 		]
@@ -30,7 +30,8 @@
 		"compile": "yarn html-typings && yarn compile:server && yarn compile:client && yarn compile:ai && yarn bundle",
 		"watch": "tsc -w -p app/server/tsconfig.json",
 		"pretty": "pretty-quick",
-		"eslint": "eslint --fix \"./app/**/*.ts\""
+		"eslint": "eslint --fix \"./app/**/*.ts\"",
+		"start": "node --experimental-modules --enable-source-maps --trace-warnings -r ts-node/register/transpile-only app/server/app.ts --http 1272 --https 1273 -v* --name 1000 --scripts /home/sander/scripts --color -i"
 	},
 	"devDependencies": {
 		"@types/body-parser": "^1.17.0",
@@ -89,6 +90,7 @@
 		"serialport": "^8.0.7",
 		"serve-static": "^1.14.1",
 		"telnet-client": "^1.2.5",
+		"ts-node": "^10.0.0",
 		"uglify-es": "^3.3.9",
 		"wc-lib": "^1.1.36",
 		"ws": "^7.2.0"

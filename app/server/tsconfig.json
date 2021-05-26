@@ -18,7 +18,8 @@
 		"strictPropertyInitialization": true,
 		"strictNullChecks": true,
 		"strictBindCallApply": true,
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		"esModuleInterop": true
 	},
 	"compileOnSave": true,
 	"allowJs": true,
