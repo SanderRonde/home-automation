@@ -10,6 +10,7 @@ import {
 	MoveData,
 	MOVING_STATUS,
 } from './effect-config';
+import * as ReadLine from '@serialport/parser-readline';
 
 export async function tryConnectToSerial(): Promise<{
 	port: SerialPort;
