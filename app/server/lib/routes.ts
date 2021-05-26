@@ -1,10 +1,10 @@
 import { logReq, attachMessage } from './logger';
-import * as cookieParser from 'cookie-parser';
-import * as serveStatic from 'serve-static';
-import * as bodyParser from 'body-parser';
-import * as express from 'express';
+import cookieParser from 'cookie-parser';
+import serveStatic from 'serve-static';
+import bodyParser from 'body-parser';
+import express from 'express';
 import * as path from 'path';
-import * as glob from 'glob';
+import glob from 'glob';
 import chalk from 'chalk';
 
 export function initAnnotatorRoutes(app: express.Express): void {

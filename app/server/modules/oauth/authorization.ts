@@ -10,7 +10,7 @@ import { Database } from '../../lib/db';
 import oAuthClients from '../../config/oauth-clients';
 import { logTag } from '../../lib/logger';
 import { SettablePromise } from '../../lib/util';
-import * as OAuthServer from 'express-oauth-server';
+import OAuthServer from 'express-oauth-server';
 
 type DBToken = {
 	accessToken: string;

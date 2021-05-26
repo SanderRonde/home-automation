@@ -1,5 +1,5 @@
 import * as castv2 from 'castv2-player';
-import * as playlist from 'castv2-player/lib/playlist';
+import playlist from 'castv2-player/lib/playlist';
 import { devices, scan } from './scanning';
 import { DummyCastLog } from './types';
 
