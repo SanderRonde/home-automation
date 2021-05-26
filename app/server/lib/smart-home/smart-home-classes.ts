@@ -16,6 +16,8 @@ import {
 } from './smart-home-types';
 import { warning } from '../logger';
 import { Batcher, pad } from '../util';
+import * as express from 'express';
+import { captureTime, time } from '../timer';
 
 type ExecuteReturnType<TRAIT extends SMART_HOME_DEVICE_TRAIT> =
 	| {
@@ -74,11 +76,16 @@ export abstract class SmartHomeDevice {
 		};
 	}
 
-	public async query(hookables: ModuleHookables): Promise<{}> {
+	public async query(
+		hookables: ModuleHookables,
+		res: express.Response
+	): Promise<{}> {
+		const timing = captureTime();
 		let joined: {} = {};
 		const awaited = await Promise.all(
 			this.queryFunctions.map((q) => q(hookables))
 		);
+		time(res, `${this.id} end, ${timing.getTime()}ms`);
 
 		for (const value of awaited) {
 			joined = {

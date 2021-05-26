@@ -4,6 +4,7 @@ import * as http from 'http';
 import chalk from 'chalk';
 import { ExplainHook } from '../modules/explain/types';
 import { externalRedact } from '../modules/auth/helpers';
+import { gatherTimings } from './timer';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type LogObj = any;
@@ -19,7 +20,7 @@ const msgMap: WeakMap<
 	| Record<string, unknown>,
 	AssociatedMessage[]
 > = new WeakMap();
-const ignoredMap: WeakSet<
+const ignoredSet: WeakSet<
 	ResponseLike | AssociatedMessage | Record<string, unknown>
 > = new WeakSet();
 const rootMap: WeakMap<
@@ -215,7 +216,7 @@ export function logReq(req: RequestLike | LogObj, res: express.Response): void {
 	res.on('finish', () => {
 		checkForLogListeners(res, target);
 
-		if (logLevel < 1 || ignoredMap.has(res)) {
+		if (logLevel < 1 || ignoredSet.has(res)) {
 			target.logToConsole();
 			return;
 		}
@@ -230,6 +231,8 @@ export function logReq(req: RequestLike | LogObj, res: express.Response): void {
 				ip,
 			})
 		);
+
+		gatherTimings(res);
 
 		// Log attached messages
 		if (logLevel >= 2 && msgMap.has(res)) {
@@ -361,7 +364,7 @@ export function transferAttached(
 export function disableMessages(
 	obj: ResponseLike | AssociatedMessage | Record<string, unknown>
 ): void {
-	ignoredMap.add(obj);
+	ignoredSet.add(obj);
 }
 
 export function attachMessage(

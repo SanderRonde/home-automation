@@ -9,12 +9,21 @@ import { addUser, removeUser } from '../home-graph/users';
 import { createHookables } from '../../../lib/util';
 import { SmartHome } from '../..';
 import { attachMessage } from '../../../lib/logger';
+import { time } from '../../../lib/timer';
 
 export async function sharedSync(
-	username: string
+	username: string,
+	response: express.Response
 ): Promise<SmartHomeDeviceSync[]> {
+	time(response, 'add-user-start');
 	await addUser(username);
-	return smartHomeConfig.map((Device) => new Device().sync());
+	time(response, 'add-user-end');
+	const responses: SmartHomeDeviceSync[] = [];
+	for (const device of smartHomeConfig) {
+		responses.push(new device().sync());
+		time(response, `get-device-${new device().id}`);
+	}
+	return responses;
 }
 
 export async function sharedQuery(
@@ -26,23 +35,29 @@ export async function sharedQuery(
 		value: Record<string, unknown>;
 	}[]
 > {
+	time(res, 'shared-query-start');
+	const awaitModules = await SmartHome.modules;
+	time(res, 'await-modules');
 	const hookables = createHookables(
-		await SmartHome.modules,
+		awaitModules,
 		'SMART_HOME',
 		'QUERY',
 		attachMessage(res, 'Smart Home Query')
 	);
+	time(res, 'create-hookables');
 	const result = await Promise.all(
 		ids.map(async (id) => {
-			return {
+			const result = {
 				id,
 				value: await smartHomeConfig
 					.map((Device) => new Device())
 					.find((entry) => entry.id === id)!
-					.query(hookables),
+					.query(hookables, res),
 			};
+			return result;
 		})
 	);
+	time(res, 'do-queries');
 	return result;
 }
 
@@ -59,13 +74,17 @@ export async function sharedExecute(
 		state?: Record<string, unknown>;
 	}[]
 > {
+	time(res, 'shared-execute-start');
+	const awaitedModules = await SmartHome.modules;
+	time(res, 'module-await');
 	const hookables = createHookables(
-		await SmartHome.modules,
+		awaitedModules,
 		'SMART_HOME',
 		'EXECUTE',
 		attachMessage(res, 'Smart Home Execute')
 	);
-	return await Promise.all(
+	time(res, 'create-hookables');
+	const result = await Promise.all(
 		deviceIDs.map(async (deviceID) => {
 			const device = smartHomeConfig
 				.map((Device) => new Device())
@@ -77,19 +96,31 @@ export async function sharedExecute(
 					errorCode: 'deviceNotFound',
 				};
 			}
+
+			const preOnlineCheck = Date.now();
 			if (!(await device.isOnline(hookables))) {
 				return {
 					ids: [deviceID],
 					status: 'OFFLINE' as const,
 				};
 			}
+			const postOnlineCheck = Date.now();
+			time(
+				res,
+				`${device.id} online check - ${
+					postOnlineCheck - preOnlineCheck
+				}ms`
+			);
 
+			const preExecute = Date.now();
 			const result = await device.execute(
 				command,
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				params as any,
 				hookables
 			);
+			const postExecute = Date.now();
+			time(res, `${device.id} execute - ${postExecute - preExecute}ms`);
 			if (!result.success) {
 				return {
 					ids: [deviceID],
@@ -98,16 +129,22 @@ export async function sharedExecute(
 				};
 			}
 
+			const preQuery = Date.now();
+			const query = await device.query(hookables, res);
+			const postQuery = Date.now();
+			time(res, `${device.id} query - ${postQuery - preQuery}ms`);
 			return {
 				ids: [deviceID],
 				state: {
-					...(await device.query(hookables)),
+					...query,
 					...result.mergeWithQuery,
 				},
 				status: 'SUCCESS' as const,
 			};
 		})
 	);
+	time(res, 'shared-execute-done');
+	return result;
 }
 
 export async function sharedDisconnect(username: string): Promise<void> {

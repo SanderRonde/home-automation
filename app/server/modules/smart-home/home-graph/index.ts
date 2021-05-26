@@ -110,6 +110,9 @@ async function attachUpdateListeners() {
 							user,
 							Object.keys(
 								userRequestBody.payload!.devices!.states!
+							),
+							JSON.stringify(
+								userRequestBody.payload!.devices!.states!
 							)
 						);
 						try {

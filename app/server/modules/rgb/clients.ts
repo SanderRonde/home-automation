@@ -163,7 +163,7 @@ export abstract class RGBClient {
 		}
 	}
 
-	private _updateStatePower(isOn: boolean) {
+	protected _updateStatePower(isOn: boolean): void {
 		const oldValue = this._lastState;
 		this._lastState = isOn
 			? { type: 'on' }
@@ -236,12 +236,20 @@ export class HexClient extends RGBClient {
 
 	id = LED_NAMES.HEX_LEDS;
 
-	async isOn(): Promise<boolean> {
-		const response = (await XHR.post(
-			`http://${this.address}/is_on`,
-			`hex-${this.address}-is-on`
-		)) as EncodedString<{ enabled: boolean }>;
-		return JSON.parse(response).enabled;
+	isOn(): Promise<boolean> {
+		const assumedState = this._lastState.type !== 'off';
+		void (async () => {
+			const response = (await XHR.post(
+				`http://${this.address}/is_on`,
+				`hex-${this.address}-is-on`
+			)) as EncodedString<{ enabled: boolean }>;
+			const isEnabled = JSON.parse(response).enabled;
+
+			if (assumedState !== isEnabled) {
+				this._updateStatePower(isEnabled);
+			}
+		})();
+		return Promise.resolve(assumedState);
 	}
 
 	private _numToHex(num: number) {
@@ -393,8 +401,16 @@ export class MagicHomeClient extends RGBClient {
 		return state;
 	}
 
-	async isOn(): Promise<boolean> {
-		return (await this._queryState()).on;
+	isOn(): Promise<boolean> {
+		// Respond now, query state and if they mismatch send
+		// an update
+		const currentlyOn = this._lastState.type !== 'off';
+		void this._queryState().then((state) => {
+			if (currentlyOn !== state.on) {
+				this._updateStatePower(state.on);
+			}
+		});
+		return Promise.resolve(currentlyOn);
 	}
 
 	private _withinRange(value: number, target: number, range: number) {
@@ -413,22 +429,67 @@ export class MagicHomeClient extends RGBClient {
 		);
 	}
 
-	async getColor(): Promise<Color | null> {
-		const state = await this._queryState();
-		if (
-			this._lastState.type === 'fullColor' &&
-			this._isScaledColor(
-				this._lastState.color,
-				new Color(state.color),
-				this._lastState.brightness
-			)
-		) {
-			return this._lastState.color;
-		}
-		if (state.mode === 'color') {
-			return new Color(state.color);
-		}
-		return null;
+	getColor(): Promise<Color | null> {
+		// Respond now, query state and if they mismatch send
+		// an update
+		const { assumedColor, assumedBrightness } = (() => {
+			if (this._lastState.type === 'fullColor') {
+				return {
+					assumedColor: this._lastState.color,
+					assumedBrightness: this._lastState.brightness,
+				};
+			}
+			return {
+				assumedColor: null,
+				assumedBrightness: null,
+			};
+		})();
+
+		void (async () => {
+			const actualColor = await (async () => {
+				const state = await this._queryState();
+				if (state.mode !== 'color') {
+					return null;
+				}
+				if (
+					this._lastState.type === 'fullColor' &&
+					this._isScaledColor(
+						this._lastState.color,
+						new Color(state.color),
+						this._lastState.brightness
+					)
+				) {
+					return this._lastState.color;
+				}
+				return null;
+			})();
+
+			if ((assumedColor === null) !== (actualColor === null)) {
+				// One is defined and the other is not, update
+				if (actualColor === null) {
+					this._updateStatePower(false);
+				} else {
+					this.updateStateColor(actualColor, 100);
+				}
+				return;
+			}
+			if (
+				assumedColor &&
+				!assumedColor.isSame(actualColor!) &&
+				!this._isScaledColor(
+					assumedColor,
+					actualColor!,
+					assumedBrightness!
+				)
+			) {
+				// Color is defined and not the same
+				this.updateStateColor(actualColor!, 100);
+				return;
+			}
+			// One is not defined, meaning both are not defined,
+			// meaning we're good
+		})();
+		return Promise.resolve(assumedColor);
 	}
 
 	async getBrightness(): Promise<number | null> {
@@ -459,7 +520,6 @@ export class MagicHomeClient extends RGBClient {
 	) {
 		await this._turnedOn();
 		this.updateStateColor(new Color(red, green, blue), brightness);
-		console.log('Setting solid color', red, green, blue, brightness);
 		return this._control.setColorWithBrightness(
 			red,
 			green,

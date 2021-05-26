@@ -11,6 +11,7 @@ import {
 } from 'actions-on-google';
 import { BuiltinFrameworkMetadata } from 'actions-on-google/dist/framework';
 import { SMART_HOME_COMMAND } from '../../../lib/smart-home/smart-home-types';
+import { time } from '../../../lib/timer';
 import { flatMap, flatten, fromEntries } from '../../../lib/util';
 import { getAuth } from '../../oauth/helpers';
 import {
@@ -25,16 +26,20 @@ export async function googleSync(
 	_headers: Headers,
 	framework: BuiltinFrameworkMetadata
 ): Promise<SmartHomeV1SyncResponse> {
+	time(framework.express!.response, 'sync');
 	const auth = getAuth(
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		framework.express!.response as any
 	);
-	return {
+	time(framework.express!.response, 'get-auth');
+	const response = {
 		requestId: body.requestId,
 		payload: {
 			agentUserId: auth.token.user,
 			debugString: `Sync for username: "${auth.token.user}"`,
-			devices: (await sharedSync(auth.token.user)).map((device) => {
+			devices: (
+				await sharedSync(auth.token.user, framework.express!.response)
+			).map((device) => {
 				return {
 					id: device.id,
 					name: {
@@ -50,6 +55,8 @@ export async function googleSync(
 			}),
 		},
 	};
+	time(framework.express!.response, 'gather-google-sync-response');
+	return response;
 }
 
 export async function googleQuery(
@@ -57,7 +64,8 @@ export async function googleQuery(
 	_headers: Headers,
 	framework: BuiltinFrameworkMetadata
 ): Promise<SmartHomeV1QueryResponse> {
-	return {
+	time(framework.express!.response, 'query');
+	const response = {
 		requestId: body.requestId,
 		payload: {
 			devices: fromEntries(
@@ -82,6 +90,8 @@ export async function googleQuery(
 			),
 		},
 	};
+	time(framework.express!.response, 'gather-google-query-response');
+	return response;
 }
 
 export async function googleExecute(
@@ -89,7 +99,8 @@ export async function googleExecute(
 	_headers: Headers,
 	framework: BuiltinFrameworkMetadata
 ): Promise<SmartHomeV1ExecuteResponse> {
-	return {
+	time(framework.express!.response, 'google-execute-start');
+	const response = {
 		requestId: body.requestId,
 		payload: {
 			commands: flatten(
@@ -124,6 +135,8 @@ export async function googleExecute(
 			),
 		},
 	};
+	time(framework.express!.response, 'google-response-ready');
+	return response;
 }
 
 export async function googleDisconnect(
