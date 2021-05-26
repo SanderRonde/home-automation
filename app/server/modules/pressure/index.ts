@@ -15,21 +15,24 @@ export const Pressure = new (class Meta extends ModuleMeta {
 	}
 
 	async notifyModules(modules: unknown) {
-		await new (modules as AllModules).keyval.External(
-			{},
-			'PRESSURE.NOTIFY'
-		).onChange(
-			'state.pressure',
-			async (value, logObj) => {
-				const handler = new ExternalHandler(logObj, 'KEYVAL');
-				if (value === '1') {
-					await handler.enable();
-				} else {
-					await handler.disable();
-				}
-			},
-			{ notifyOnInitial: true }
-		);
+		void (async () => {
+			await new (modules as AllModules).keyval.External(
+				{},
+				'PRESSURE.NOTIFY'
+			).onChange(
+				'state.pressure',
+				async (value, logObj) => {
+					const handler = new ExternalHandler(logObj, 'KEYVAL');
+					if (value === '1') {
+						await handler.enable();
+					} else {
+						await handler.disable();
+					}
+				},
+				{ notifyOnInitial: true }
+			);
+		})();
+		return Promise.resolve(void 0);
 	}
 
 	get External() {

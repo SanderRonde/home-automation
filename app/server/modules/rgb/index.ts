@@ -19,7 +19,7 @@ export const RGB = new (class Meta extends ModuleMeta {
 					void scanRGBControllers();
 				}, 1000 * 60 * 60);
 				await ExternalHandler.init();
-				void initListeners();
+				initListeners();
 
 				initRouting(config);
 			})().then(resolve);

@@ -13,20 +13,23 @@ export const Movement = new (class Meta extends ModuleMeta {
 		return Promise.resolve(void 0);
 	}
 
-	async notifyModules(modules: unknown) {
-		await new (modules as AllModules).keyval.External(
-			{},
-			'MOVEMENT.NOTIFY'
-		).onChange(
-			'state.movement',
-			async (value) => {
-				if (value === '1') {
-					await enable();
-				} else {
-					await disable();
-				}
-			},
-			{ notifyOnInitial: true }
-		);
+	notifyModules(modules: unknown) {
+		void (async () => {
+			await new (modules as AllModules).keyval.External(
+				{},
+				'MOVEMENT.NOTIFY'
+			).onChange(
+				'state.movement',
+				async (value) => {
+					if (value === '1') {
+						await enable();
+					} else {
+						await disable();
+					}
+				},
+				{ notifyOnInitial: true }
+			);
+		})();
+		return Promise.resolve(void 0);
 	}
 })();
