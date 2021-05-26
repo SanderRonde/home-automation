@@ -61,23 +61,6 @@ class TempControl {
 
 		// Write temp to database
 		if (store) {
-			const tempHistory = JSON.parse(
-				JSON.stringify(
-					this.db!.get<
-						{
-							date: number;
-							temp: number;
-							state?: 'on' | 'off';
-						}[]
-					>(`${this.name}.history`, [])
-				)
-			);
-			tempHistory.push({
-				date: Date.now(),
-				temp: temp,
-				state: this.getHeaterState(),
-			});
-			this.db!.setVal(`${this.name}.history`, tempHistory);
 			this.db!.setVal(`${this.name}.temp`, temp);
 		}
 
