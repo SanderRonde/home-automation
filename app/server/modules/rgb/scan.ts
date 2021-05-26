@@ -34,7 +34,7 @@ export async function scanMagicHomeControllers(first = false): Promise<number> {
 	setMagicHomeClients(clients);
 	setClients([...magicHomeClients, ...arduinoClients, ...hexClients]);
 
-	return length;
+	return clients.length;
 }
 
 export async function scanArduinos(): Promise<number> {
