@@ -67,6 +67,8 @@
 	},
 	"dependencies": {
 		"@googleapis/homegraph": "^2.0.0",
+		"@pm2/io": "^5.0.0",
+		"@pm2/node-runtime-stats": "^0.3.2",
 		"@sanderronde/write-buffer": "1.0.3",
 		"@serialport/parser-readline": "^9.0.7",
 		"actions-on-google": "^2.14.0",

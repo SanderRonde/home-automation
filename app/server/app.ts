@@ -27,6 +27,7 @@ import express from 'express';
 import * as path from 'path';
 import * as http from 'http';
 import { printCommands } from './modules/bot/helpers';
+import { expressErrorHandler, init } from '@pm2/io';
 
 interface PartialConfig {
 	ports?: {
@@ -126,6 +127,12 @@ class WebServer {
 			'Server start',
 			8 + Object.keys(await getAllModules(false)).length
 		);
+		init({
+			catchExceptions: true,
+			tracing: {
+				enabled: true,
+			},
+		});
 		this._initLogger.increment('IO');
 
 		this.app = express();
@@ -138,6 +145,7 @@ class WebServer {
 		await this._initModules();
 		this._initLogger.increment('modules');
 		initPostRoutes(this.app);
+		this.app.use(expressErrorHandler());
 		setLogLevel(this._config.log.level);
 		await printCommands();
 		this._listen();
