@@ -1,5 +1,6 @@
 export const hexEffects = {
 	hexrainbowfast: {
+		name: 'Fast Rainbows',
 		description: 'A quickly rotating rainbow',
 		effect: {
 			name: 'rainbow',
@@ -9,6 +10,7 @@ export const hexEffects = {
 		},
 	},
 	hexrainbowslow: {
+		name: 'Slow Rainbows',
 		description: 'A slowly rotating rainbow',
 		effect: {
 			name: 'rainbow',
@@ -18,6 +20,7 @@ export const hexEffects = {
 		},
 	},
 	hexrandomcolorsslow: {
+		name: 'Slow Random Colors',
 		description: 'Random colors changing slowly (1s)',
 		effect: {
 			name: 'random_colors',
@@ -27,6 +30,7 @@ export const hexEffects = {
 		},
 	},
 	hexrandomcolorsfast: {
+		name: 'Fast Random Colors',
 		description: 'Random colors changing quickly (250ms)',
 		effect: {
 			name: 'random_colors',
@@ -36,6 +40,7 @@ export const hexEffects = {
 		},
 	},
 	hexrandomcolorsfastest: {
+		name: 'Very Fast Random Colors',
 		description: 'Random colors changing very quickly (25ms)',
 		effect: {
 			name: 'random_colors',
@@ -45,6 +50,7 @@ export const hexEffects = {
 		},
 	},
 	hexgradual: {
+		name: 'Gradual Color Changes',
 		description: 'Gradual color changes',
 		effect: {
 			name: 'random_colors_gradual',
@@ -58,6 +64,7 @@ export const hexEffects = {
 		},
 	},
 	hexgradualslower: {
+		name: 'Slow Gradual Color Changes',
 		description: 'Gradual color changes (a little slower)',
 		effect: {
 			name: 'random_colors_gradual',
@@ -71,6 +78,7 @@ export const hexEffects = {
 		},
 	},
 	hexgradualpastel: {
+		name: 'Gradual Color Changes (Pastel)',
 		description: 'Gradual color changes (pastel)',
 		effect: {
 			name: 'random_colors_gradual',
@@ -84,6 +92,7 @@ export const hexEffects = {
 		},
 	},
 	hexgradualbiginfluence: {
+		name: 'Gradual Color Changes (high Neighbour)',
 		description: 'Gradual color changes with high neighbour influence',
 		effect: {
 			name: 'random_colors_gradual',
@@ -97,6 +106,7 @@ export const hexEffects = {
 		},
 	},
 	hexgradualslow: {
+		name: 'Gradual Color Changes (slow)',
 		description: 'Gradual color changes slowly',
 		effect: {
 			name: 'random_colors_gradual',
@@ -110,6 +120,7 @@ export const hexEffects = {
 		},
 	},
 	hexgradualnoinfluence: {
+		name: 'Gradual Color Changes (no Neighbour)',
 		description: 'Gradual color changes without neighbour influence',
 		effect: {
 			name: 'random_colors_gradual',
@@ -123,6 +134,7 @@ export const hexEffects = {
 		},
 	},
 	hexgradualsplit: {
+		name: 'Gradual Color Changes (split)',
 		description: 'Gradual color changes that are split',
 		effect: {
 			name: 'random_colors_gradual',
@@ -135,4 +147,13 @@ export const hexEffects = {
 			},
 		},
 	},
+} as {
+	[effectName: string]: {
+		name: string;
+		description: string;
+		effect: {
+			name: string;
+			params: Record<string, string>;
+		};
+	};
 };
