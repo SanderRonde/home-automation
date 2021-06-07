@@ -46,11 +46,11 @@ function race<T>(...promises: Promise<T | undefined>[]): Promise<T> {
 				.catch(() => {});
 		});
 		if (promises.length === 0) {
-			resolve();
+			resolve(void 0 as unknown as T);
 		} else if (promises.length === 1) {
 			promises[0]
 				.then((result) => {
-					resolve(result);
+					resolve(result as T);
 				})
 				.catch(() => {
 					reject(new Error('All requests failed'));

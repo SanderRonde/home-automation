@@ -7,6 +7,7 @@ import {
 	NodePart,
 	isDirective,
 	noChange,
+	directive,
 } from '../../../node_modules/lit-html/lit-html.js';
 import { HomeDetectorDisplay } from './components/home-detector-display/home-detector-display.js';
 import { WebComponent } from '../../../node_modules/wc-lib/build/es/wc-lib.js';
@@ -21,6 +22,7 @@ function registerElements() {
 		NodePart,
 		isDirective,
 		noChange,
+		directive,
 	});
 
 	HomeDetectorDisplay.define();
