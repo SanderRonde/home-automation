@@ -20,6 +20,7 @@ export const CalendarOverviewCSS = new TemplateFn<CalendarOverview>(
 
 				#table {
 					border-spacing: 0;
+					min-height: 200px;
 				}
 
 				#container th:not(:last-child),
