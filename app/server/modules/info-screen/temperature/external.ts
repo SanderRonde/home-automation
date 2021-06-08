@@ -1,71 +1,62 @@
 import { getEnv } from '../../../lib/io';
 import { XHR } from '../../../lib/util';
-import { ExternalTemperatureResult } from '../types';
+import {
+	ExternalTemperatureResult,
+	ExternalWeatherTimePeriod,
+	WeatherAPIResponse,
+} from '../types';
 
 const openweathermapSecrets = {
-	api_key: getEnv('SECRET_OPENWEATHERMAP_API_KEY', true),
-	city: getEnv('SECRET_OPENWEATHERMAP_CITY', true),
-	units: getEnv('SECRET_OPENWEATHERMAP_UNITS', true),
+	api_key: getEnv('SECRET_OPENWEATHERMAP_API_KEY', false),
+	lat: getEnv('SECRET_OPENWEATHERMAP_LAT', false),
+	lon: getEnv('SECRET_OPENWEATHERMAP_LON', false),
+	units: getEnv('SECRET_OPENWEATHERMAP_UNITS', false),
 };
 
-export async function get(): Promise<ExternalTemperatureResult | null> {
-	if (!openweathermapSecrets) {
+export async function get(
+	timePeriod: ExternalWeatherTimePeriod
+): Promise<ExternalTemperatureResult | null> {
+	if (
+		!openweathermapSecrets.api_key ||
+		!openweathermapSecrets.lat ||
+		!openweathermapSecrets.lon ||
+		!openweathermapSecrets.units
+	) {
 		return null;
 	}
 	try {
 		const response = await XHR.get(
-			'http://api.openweathermap.org/data/2.5/weather',
+			'http://api.openweathermap.org/data/2.5/onecall',
 			'openweathermap-weather',
 			{
-				q: openweathermapSecrets.city,
+				lat: openweathermapSecrets.lat,
+				lon: openweathermapSecrets.lon,
 				appid: openweathermapSecrets.api_key,
 				units: openweathermapSecrets.units,
+				mode: 'json',
 			}
 		);
-		const parsed = JSON.parse(response) as {
-			coord: {
-				lon: number;
-				lat: number;
+		const parsed = JSON.parse(response) as WeatherAPIResponse;
+		console.log(parsed);
+		if (timePeriod === ExternalWeatherTimePeriod.CURRENT) {
+			const hourlyForecast = parsed.hourly[0];
+			return {
+				chanceOfRain: hourlyForecast.pop,
+				icon: `${hourlyForecast.weather[0].icon}.svg`,
+				temp: parsed.current.temp,
+				windDegrees: parsed.current.wind_deg,
+				windSpeed: parsed.current.wind_speed,
 			};
-			weather: {
-				id: number;
-				main: string;
-				description: string;
-				icon: string;
-			}[];
-			base: string;
-			main: {
-				temp: number;
-				feels_like: number;
-				temp_min: number;
-				temp_max: number;
-				pressure: number;
-				humidity: number;
-			};
-			visibility: number;
-			wind: {
-				speed: number;
-				deg: number;
-			};
-			clouds: {
-				all: number;
-			};
-			dt: number;
-			sys: {
-				type: number;
-				id: number;
-				country: string;
-				sunrise: number;
-				sunset: number;
-			};
-			timezone: number;
-			id: number;
-			name: string;
-			cod: number;
-		};
+		}
+		const currentDailyForecast = parsed.daily[0];
 		return {
-			temp: parsed.main.temp,
-			icon: `${parsed.weather[0].icon}.svg`,
+			chanceOfRain: currentDailyForecast.pop,
+			icon: `${currentDailyForecast.weather[0].icon}.svg`,
+			temp: currentDailyForecast.temp.day,
+			tempMin: currentDailyForecast.temp.min,
+			tempMax: currentDailyForecast.temp.max,
+			windDegrees: currentDailyForecast.wind_deg,
+			windSpeed: currentDailyForecast.wind_speed,
 		};
 	} catch (e) {
 		console.log(e);

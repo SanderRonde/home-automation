@@ -9,12 +9,18 @@ import { ServerComm } from '../../../shared/server-comm/server-comm.js';
 import { CurrentDate } from '../current-date/current-date.js';
 import { InfoScreenHTML } from './info-screen.html.js';
 import { InfoScreenCSS } from './info-screen.css.js';
+import { AdvancedTemperatureDisplay } from '../advanced-temperature-display/advanced-temperature-display.js';
 
 @config({
 	is: 'info-screen',
 	html: InfoScreenHTML,
 	css: InfoScreenCSS,
-	dependencies: [CurrentDate, TemperatureDisplay, CalendarOverview],
+	dependencies: [
+		CurrentDate,
+		TemperatureDisplay,
+		CalendarOverview,
+		AdvancedTemperatureDisplay,
+	],
 })
 export class InfoScreen extends ServerComm {
 	props = Props.define(

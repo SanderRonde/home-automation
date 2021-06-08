@@ -19,6 +19,10 @@ export const CurrentDateCSS = new TemplateFn<CurrentDate>(
 					text-align: center;
 					font-size: 700%;
 				}
+
+				#time-seconds {
+					color: #5d5d5d;
+				}
 			</style>
 		`;
 	},

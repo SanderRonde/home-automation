@@ -22,11 +22,21 @@ export const CurrentDateHTML = new TemplateFn<CurrentDate>(
 				}).format(new Date())})
 			</div>
 			<div id="time-line">
-				${new Intl.DateTimeFormat('nl-NL', {
-					hour: '2-digit',
-					minute: '2-digit',
-					second: '2-digit',
-				}).format(new Date())}
+				<span
+					>${new Intl.DateTimeFormat('nl-NL', {
+						hour: '2-digit',
+						minute: '2-digit',
+					}).format(new Date())}</span
+				><span>:</span
+				><span id="time-seconds"
+					>${(() => {
+						const seconds = new Date().getSeconds();
+						if (seconds < 10) {
+							return `0${seconds}`;
+						}
+						return String(seconds);
+					})()}</span
+				>
 			</div>
 		`;
 	},

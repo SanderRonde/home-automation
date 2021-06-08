@@ -1,6 +1,6 @@
 import { errorHandle, requireParams } from '../../lib/decorators';
 import { ResponseLike, attachMessage } from '../../lib/logger';
-import { ExternalTemperatureResult } from './types';
+import { ExternalTemperatureResult, ExternalWeatherTimePeriod } from './types';
 import { CalendarEvent, getEvents } from './calendar';
 import { getInternal, getExternal } from './temperature/';
 
@@ -13,43 +13,51 @@ export class APIHandler {
 		res: ResponseLike,
 		{
 			type,
+			period,
 		}: {
 			type: 'inside' | 'outside' | 'server';
+			period: 'current' | 'daily';
 		}
 	): Promise<ExternalTemperatureResult | number> {
-		const { temp, icon } = await (async (): Promise<{
-			temp: number;
-			icon: string;
-		}> => {
+		const response = await (async () => {
 			if (type === 'inside') {
 				// Use temperature module
 				const temp = await getInternal(res);
-				return { temp: temp.temp, icon: 'inside.png' };
+				return { temperature: temp.temp, icon: 'inside.png' };
 			} else if (type === 'server') {
 				const temp = await getInternal(res, 'server');
-				return { temp: temp.temp, icon: 'server.png' };
+				return { temperature: temp.temp, icon: 'server.png' };
 			} else {
 				// Use openweathermap
-				const openweathermapResponse = await getExternal();
+				const openweathermapResponse = await getExternal(
+					period === 'current'
+						? ExternalWeatherTimePeriod.CURRENT
+						: ExternalWeatherTimePeriod.DAILY
+				);
+				console.log('ow-response', openweathermapResponse);
 				if (openweathermapResponse === null) {
 					return {
-						temp: 0,
+						temperature: 0,
 						icon: 'questionmark.svg',
 					};
 				}
-				return openweathermapResponse;
+				return {
+					...openweathermapResponse,
+					temperature: openweathermapResponse.temp,
+				};
 			}
 		})();
+		const { temperature, icon } = response;
 
-		attachMessage(res, `Temp: "${String(temp)}", icon: ${icon}`);
+		attachMessage(res, `Temp: "${String(temperature)}", icon: ${icon}`);
 		res.status(200).write(
 			JSON.stringify({
-				temperature: `${Math.round(temp * 10) / 10}°`,
-				icon: icon,
+				...response,
+				temperature: `${Math.round(temperature * 10) / 10}°`,
 			})
 		);
 		res.end();
-		return temp;
+		return temperature;
 	}
 
 	@errorHandle

@@ -5,6 +5,7 @@ import {
 import { TEMPERATURE_DISPLAY_TYPE } from '../temperature-display/temperature-display.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { InfoScreen } from './info-screen';
+import { TEMPERATURE_DISPLAY_PERIOD } from '../advanced-temperature-display/advanced-temperature-display.js';
 
 export const InfoScreenHTML = new TemplateFn<InfoScreen>(
 	(html, { props }) => {
@@ -16,10 +17,16 @@ export const InfoScreenHTML = new TemplateFn<InfoScreen>(
 				}}"
 			>
 				<div id="grid">
-					<temperature-display
-						id="left-temp"
+					<advanced-temperature-display
+						id="daily-temp"
 						temp-type="${TEMPERATURE_DISPLAY_TYPE.OUTSIDE}"
-					></temperature-display>
+						period="${TEMPERATURE_DISPLAY_PERIOD.DAILY}"
+					></advanced-temperature-display>
+					<advanced-temperature-display
+						id="current-temp"
+						temp-type="${TEMPERATURE_DISPLAY_TYPE.OUTSIDE}"
+						period="${TEMPERATURE_DISPLAY_PERIOD.CURRENT}"
+					></advanced-temperature-display>
 					<current-date id="top-date"></current-date>
 					<temperature-display
 						id="right-temp"

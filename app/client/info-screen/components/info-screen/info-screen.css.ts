@@ -45,11 +45,18 @@ export const InfoScreenCSS = new TemplateFn<InfoScreen>(
 					grid-row-end: 4;
 				}
 
-				#left-temp {
+				#daily-temp {
 					grid-column-start: 1;
 					grid-column-end: 2;
 					grid-row-start: 1;
 					grid-row-end: 3;
+				}
+
+				#daily-temp {
+					grid-column-start: 1;
+					grid-column-end: 2;
+					grid-row-start: 3;
+					grid-row-end: 5;
 				}
 
 				#right-temp {
