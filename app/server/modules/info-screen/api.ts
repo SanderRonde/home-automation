@@ -34,7 +34,6 @@ export class APIHandler {
 						? ExternalWeatherTimePeriod.CURRENT
 						: ExternalWeatherTimePeriod.DAILY
 				);
-				console.log('ow-response', openweathermapResponse);
 				if (openweathermapResponse === null) {
 					return {
 						temperature: 0,

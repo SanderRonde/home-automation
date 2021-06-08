@@ -37,7 +37,6 @@ export async function get(
 			}
 		);
 		const parsed = JSON.parse(response) as WeatherAPIResponse;
-		console.log(parsed);
 		if (timePeriod === ExternalWeatherTimePeriod.CURRENT) {
 			const hourlyForecast = parsed.hourly[0];
 			return {
