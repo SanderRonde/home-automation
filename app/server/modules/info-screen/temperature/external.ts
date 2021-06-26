@@ -40,7 +40,7 @@ export async function get(
 		if (timePeriod === ExternalWeatherTimePeriod.CURRENT) {
 			const hourlyForecast = parsed.hourly[0];
 			return {
-				chanceOfRain: hourlyForecast.pop,
+				chanceOfRain: hourlyForecast.pop * 100,
 				icon: `${hourlyForecast.weather[0].icon}.svg`,
 				temp: parsed.current.temp,
 				windDegrees: parsed.current.wind_deg,
@@ -49,7 +49,7 @@ export async function get(
 		}
 		const currentDailyForecast = parsed.daily[0];
 		return {
-			chanceOfRain: currentDailyForecast.pop,
+			chanceOfRain: currentDailyForecast.pop * 100,
 			icon: `${currentDailyForecast.weather[0].icon}.svg`,
 			temp: currentDailyForecast.temp.day,
 			tempMin: currentDailyForecast.temp.min,
