@@ -40,7 +40,7 @@ export async function get(
 		if (timePeriod === ExternalWeatherTimePeriod.CURRENT) {
 			const hourlyForecast = parsed.hourly[0];
 			return {
-				chanceOfRain: hourlyForecast.pop * 100,
+				chanceOfRain: Math.round(hourlyForecast.pop * 100),
 				icon: `${hourlyForecast.weather[0].icon}.svg`,
 				temp: parsed.current.temp,
 				windDegrees: parsed.current.wind_deg,
