@@ -2,7 +2,7 @@ import { RGB } from '.';
 import { BotState } from '../../lib/bot-state';
 import { LED_NAMES } from '../../lib/constants';
 import { createExternalClass } from '../../lib/external';
-import { APIHandler } from './api';
+import { APIHandler, ColorTarget } from './api';
 import { Effects } from './arduino-api';
 import { getLed, RGBClient } from './clients';
 import { play } from './marked-audio';
@@ -11,7 +11,7 @@ import { JoinedConfigs } from './types';
 export class ExternalHandler extends createExternalClass(true) {
 	async color(
 		color: string,
-		target = 'all',
+		target: ColorTarget = 'all',
 		intensity = 0
 	): Promise<boolean> {
 		return this.runRequest(async (res, source) => {
@@ -33,7 +33,7 @@ export class ExternalHandler extends createExternalClass(true) {
 		green: string,
 		blue: string,
 		intensity = 0,
-		target = 'all'
+		target: ColorTarget = 'all'
 	): Promise<boolean> {
 		return this.runRequest(async (res, source) => {
 			return APIHandler.setRGB(

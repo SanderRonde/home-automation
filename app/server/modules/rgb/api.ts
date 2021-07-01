@@ -26,8 +26,27 @@ import { scanRGBControllers } from './scan';
 
 export const HEX_REGEX = /#([a-fA-F\d]{2})([a-fA-F\d]{2})([a-fA-F\d]{2})/;
 
+export type ColorTarget =
+	| 'all'
+	| 'hex'
+	| 'hexes'
+	| 'magic'
+	| 'magichome'
+	| 'magic-home'
+	| 'ceiling'
+	| 'ceilingled'
+	| 'ceiling-led'
+	| 'arduino'
+	| 'all'
+	| 'rgb'
+	| 'led'
+	| 'leds'
+	| 'it'
+	| 'them'
+	| 'color';
+
 export class APIHandler {
-	private static _getClientSetFromTarget(target: string) {
+	private static _getClientSetFromTarget(target: ColorTarget) {
 		switch (target) {
 			case 'hex':
 			case 'hexes':
@@ -66,7 +85,7 @@ export class APIHandler {
 			color: string;
 			intensity?: number;
 			auth?: string;
-			target?: string;
+			target?: ColorTarget;
 		},
 		source: string
 	): Promise<boolean> {
@@ -133,7 +152,7 @@ export class APIHandler {
 			blue: string;
 			auth?: string;
 			intensity?: number;
-			target?: string;
+			target?: ColorTarget;
 		},
 		source: string
 	): Promise<boolean> {

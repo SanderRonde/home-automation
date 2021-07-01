@@ -5,7 +5,7 @@ import { attachMessage, logTag } from '../../lib/logger';
 import { arrToObj } from '../../lib/util';
 import { MatchParameters } from '../bot/message';
 import { MatchResponse } from '../bot/types';
-import { HEX_REGEX } from './api';
+import { ColorTarget, HEX_REGEX } from './api';
 import { arduinoEffects, Effects } from './arduino-api';
 import { arduinoClients, getLed, magicHomeClients } from './clients';
 import { ExternalHandler } from './external';
@@ -193,7 +193,7 @@ export class Bot extends BotState.Base {
 		mm(
 			/set (rgb|led(?:s)?|it|them|color|hexes|hex|ceiling|ceilingled|arduino|magic|magichome) to (?:(?:(\d+) (\d+) (\d+))|([^ ]+))(\s+with intensity (\d+))?/,
 			async ({ logObj, match, matchText }) => {
-				const target = match[1];
+				const target = match[1] as ColorTarget;
 				const colorR = match[2];
 				const colorG = match[3];
 				const colorB = match[4];
