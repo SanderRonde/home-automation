@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import { CustomMode } from 'magic-home';
 import { RGB } from '.';
 import { Color } from '../../lib/color';
+import { LED_NAMES } from '../../lib/constants';
 import { colorList } from '../../lib/data';
 import {
 	errorHandle,
@@ -18,6 +19,7 @@ import { arduinoEffects, Effects } from './arduino-api';
 import {
 	arduinoClients,
 	clients,
+	getLed,
 	hexClients,
 	magicHomeClients,
 } from './clients';
@@ -46,7 +48,7 @@ export type ColorTarget =
 	| 'color';
 
 export class APIHandler {
-	private static _getClientSetFromTarget(target: ColorTarget) {
+	private static _getClientSetFromTarget(target: ColorTarget | LED_NAMES) {
 		switch (target) {
 			case 'hex':
 			case 'hexes':
@@ -67,8 +69,14 @@ export class APIHandler {
 			case 'it':
 			case 'them':
 			case 'color':
-			default:
 				return clients;
+			default: {
+				const specificLed = getLed(target);
+				if (specificLed) {
+					return [specificLed];
+				}
+				return clients;
+			}
 		}
 	}
 
@@ -85,7 +93,7 @@ export class APIHandler {
 			color: string;
 			intensity?: number;
 			auth?: string;
-			target?: ColorTarget;
+			target?: ColorTarget | LED_NAMES;
 		},
 		source: string
 	): Promise<boolean> {
@@ -152,7 +160,7 @@ export class APIHandler {
 			blue: string;
 			auth?: string;
 			intensity?: number;
-			target?: ColorTarget;
+			target?: ColorTarget | LED_NAMES;
 		},
 		source: string
 	): Promise<boolean> {
@@ -207,7 +215,7 @@ export class APIHandler {
 		}: {
 			power: string;
 			auth?: string;
-			target?: ColorTarget;
+			target?: ColorTarget | LED_NAMES;
 		},
 		source: string
 	): Promise<boolean> {

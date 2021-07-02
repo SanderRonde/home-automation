@@ -11,7 +11,7 @@ import { JoinedConfigs } from './types';
 export class ExternalHandler extends createExternalClass(true) {
 	async color(
 		color: string,
-		target: ColorTarget = 'all',
+		target: ColorTarget | LED_NAMES = 'all',
 		intensity = 0
 	): Promise<boolean> {
 		return this.runRequest(async (res, source) => {
@@ -33,7 +33,7 @@ export class ExternalHandler extends createExternalClass(true) {
 		green: string,
 		blue: string,
 		intensity = 0,
-		target: ColorTarget = 'all'
+		target: ColorTarget | LED_NAMES = 'all'
 	): Promise<boolean> {
 		return this.runRequest(async (res, source) => {
 			return APIHandler.setRGB(
@@ -53,7 +53,7 @@ export class ExternalHandler extends createExternalClass(true) {
 
 	async power(
 		state: 'on' | 'off',
-		target: ColorTarget = 'all'
+		target: ColorTarget | LED_NAMES = 'all'
 	): Promise<boolean> {
 		return this.runRequest(async (res, source) => {
 			return APIHandler.setPower(
