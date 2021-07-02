@@ -203,12 +203,16 @@ export class APIHandler {
 		res: ResponseLike,
 		{
 			power,
+			target = 'all',
 		}: {
 			power: string;
 			auth?: string;
+			target?: ColorTarget;
 		},
 		source: string
 	): Promise<boolean> {
+		const clientSet = this._getClientSetFromTarget(target);
+
 		attachMessage(
 			attachSourcedMessage(
 				res,
@@ -216,12 +220,12 @@ export class APIHandler {
 				await RGB.explainHook,
 				`Turned ${power}`
 			),
-			`Updated ${clients.length} clients`
+			`Updated ${clientSet.length} clients`
 		);
 		if (
 			(
 				await Promise.all(
-					clients.map((c) =>
+					clientSet.map((c) =>
 						power === 'on' ? c.turnOn() : c.turnOff()
 					)
 				)

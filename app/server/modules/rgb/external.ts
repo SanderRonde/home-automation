@@ -51,13 +51,17 @@ export class ExternalHandler extends createExternalClass(true) {
 		});
 	}
 
-	async power(state: 'on' | 'off'): Promise<boolean> {
+	async power(
+		state: 'on' | 'off',
+		target: ColorTarget = 'all'
+	): Promise<boolean> {
 		return this.runRequest(async (res, source) => {
 			return APIHandler.setPower(
 				res,
 				{
 					power: state,
 					auth: await this._getKey(res, RGB),
+					target,
 				},
 				source
 			);
