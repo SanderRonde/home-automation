@@ -9,7 +9,6 @@ interface Timing {
 const timedRequests: WeakMap<express.Response, Timing[]> = new WeakMap();
 
 export function attachTimerToReq(res: express.Response): void {
-	console.log('timer-attach', Date.now());
 	timedRequests.set(res, [
 		{
 			label: 'start',
@@ -28,7 +27,6 @@ export function gatherTimings(res: express.Response): void {
 		label: 'end',
 		time: Date.now(),
 	});
-	console.log('timer-end', Date.now());
 
 	const timingsLog = attachMessage(res, 'Timings:');
 	const startTime = timings[0].time;
