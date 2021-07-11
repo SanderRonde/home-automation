@@ -247,7 +247,7 @@ export function logReq(
 
 		gatherTimings(res);
 
-		if (reqErrors.has(req)) {
+		if (reqErrors.has(req) && logLevel >= 3) {
 			logAssociatedMessages(
 				target,
 				reqErrors
