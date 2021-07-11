@@ -216,7 +216,12 @@ export function reportReqError(req: RequestLike | LogObj, error: Error): void {
 	reqErrors.get(req)!.push(error);
 }
 
-export function logReq(req: RequestLike | LogObj, res: express.Response): void {
+export function logReq(
+	req: RequestLike | LogObj,
+	res: express.Response & {
+		body?: Record<string, string>;
+	}
+): void {
 	const target = new LogCapturer();
 
 	const start = Date.now();
@@ -248,7 +253,9 @@ export function logReq(req: RequestLike | LogObj, res: express.Response): void {
 				reqErrors
 					.get(req)!
 					.map((err) => err.toString())
-					.map((err) => ({ content: [`Error: ${err}`] }))
+					.map((err) => ({
+						content: [`${chalk.red('Error')}: ${err}`],
+					}))
 			);
 		}
 

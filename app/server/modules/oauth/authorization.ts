@@ -198,6 +198,7 @@ export function initAuthorization(_db: Database): void {
 	authorizationServer.set(
 		new OAuthServer({
 			model: new OAuthModel(_db),
+			useErrorHandler: true,
 		})
 	);
 }

@@ -1,4 +1,5 @@
-import { logReq, attachMessage } from './logger';
+import { logReq, reportReqError } from './logger';
+import { expressErrorHandler } from '@pm2/io';
 import cookieParser from 'cookie-parser';
 import serveStatic from 'serve-static';
 import bodyParser from 'body-parser';
@@ -78,9 +79,9 @@ export function initPostRoutes(app: express.Express): void {
 	app.use(
 		(
 			err: Error,
-			_req: express.Request,
+			req: express.Request,
 			res: express.Response,
-			_next: express.NextFunction
+			next: express.NextFunction
 		) => {
 			if (err?.message) {
 				if (res.headersSent) {
@@ -96,9 +97,8 @@ export function initPostRoutes(app: express.Express): void {
 					return;
 				}
 				res.status(500).write('Internal server error');
-				for (const line of err.stack!.split('\n')) {
-					attachMessage(res, chalk.bgRed(chalk.black(line)));
-				}
+				reportReqError(req, err);
+				expressErrorHandler()(err, req, res, next);
 				res.end();
 			}
 		}

@@ -12,7 +12,6 @@ import {
 	startInit,
 	endInit,
 	logTag,
-	reportReqError,
 } from './lib/logger';
 import {
 	initMiddleware,
@@ -21,14 +20,14 @@ import {
 } from './lib/routes';
 import { hasArg, getArg, getNumberArg, getNumberEnv, getEnv } from './lib/io';
 import { notifyAllModules, NoDBModuleConfig } from './modules/modules';
+import { printCommands } from './modules/bot/helpers';
 import { WSSimulator, WSWrapper } from './lib/ws';
 import { getAllModules } from './modules';
 import { Database } from './lib/db';
 import express from 'express';
 import * as path from 'path';
 import * as http from 'http';
-import { printCommands } from './modules/bot/helpers';
-import { expressErrorHandler, init } from '@pm2/io';
+import { init } from '@pm2/io';
 
 interface PartialConfig {
 	ports?: {
@@ -146,19 +145,6 @@ class WebServer {
 		await this._initModules();
 		this._initLogger.increment('modules');
 		initPostRoutes(this.app);
-		this.app.use(
-			(
-				err: Error,
-				req: express.Request,
-				res: express.Response,
-				next: express.NextFunction
-			) => {
-				if (err) {
-					reportReqError(req, err);
-				}
-				expressErrorHandler()(err, req, res, next);
-			}
-		);
 
 		setLogLevel(this._config.log.level);
 		await printCommands();
