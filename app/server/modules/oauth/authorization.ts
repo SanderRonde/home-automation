@@ -2,7 +2,9 @@ import {
 	AuthorizationCode,
 	AuthorizationCodeModel,
 	Client,
+	Falsey,
 	RefreshToken,
+	RefreshTokenModel,
 	Token,
 	User,
 } from 'oauth2-server';
@@ -12,15 +14,15 @@ import { logTag } from '../../lib/logger';
 import { SettablePromise } from '../../lib/util';
 import OAuthServer from 'express-oauth-server';
 
-type DBToken = {
-	accessToken: string;
-	accessTokenExpiresAt?: number;
-	refreshToken?: string;
-	refreshTokenExpiresAt?: number;
+interface DBToken {
 	scope?: string | string[];
 	client: Client;
 	user: User;
-};
+	accessToken: string;
+	accessTokenExpiresAt: number;
+	refreshToken?: string;
+	refreshTokenExpiresAt?: number;
+}
 
 type DBAuthorizationCode = Pick<
 	AuthorizationCode,
@@ -30,7 +32,7 @@ type DBAuthorizationCode = Pick<
 	user: User;
 };
 
-class OAuthModel implements AuthorizationCodeModel {
+class OAuthModel implements AuthorizationCodeModel, RefreshTokenModel {
 	constructor(public db: Database) {}
 
 	getClient(
@@ -38,20 +40,20 @@ class OAuthModel implements AuthorizationCodeModel {
 		clientSecret: string | null
 	): Promise<typeof oAuthClients[number] | undefined> {
 		logTag('oauth', 'cyan', `Finding client "${clientID}"`);
-		return Promise.resolve(
-			oAuthClients.find((client) => {
-				if (client.id !== clientID) {
-					return false;
-				}
-				return (
-					clientSecret === null ||
-					client.clientSecret === clientSecret
-				);
-			})
-		);
+		const foundClient = oAuthClients.find((client) => {
+			if (client.id !== clientID) {
+				return false;
+			}
+			return (
+				clientSecret === null || client.clientSecret === clientSecret
+			);
+		});
+		logTag('oauth', 'cyan', `Found client with ID "${clientID}"`);
+
+		return Promise.resolve(foundClient);
 	}
 
-	saveToken(token: Token | RefreshToken, client: Client, user: User) {
+	saveToken(token: Token, client: Client, user: User) {
 		const dbToken: DBToken = {
 			accessToken: token.accessToken,
 			accessTokenExpiresAt: (
@@ -108,11 +110,14 @@ class OAuthModel implements AuthorizationCodeModel {
 			`Revoking token for client "${toRevokeToken.client.id}" and user`,
 			toRevokeToken.user
 		);
-		this.db.deleteArrayVal<DBToken>(
-			'tokens',
-			(token) => token.accessToken === toRevokeToken.accessToken
-		);
-		return true;
+		this.db.deleteArrayVal<DBToken>('tokens', (token) => {
+			if (toRevokeToken.accessToken) {
+				return token.accessToken === toRevokeToken.accessToken;
+			} else {
+				return token.refreshToken === toRevokeToken.refreshToken;
+			}
+		});
+		return Promise.resolve(true);
 	}
 
 	async saveAuthorizationCode(
@@ -187,6 +192,21 @@ class OAuthModel implements AuthorizationCodeModel {
 			}
 		}
 		return Promise.resolve(true);
+	}
+
+	getRefreshToken(refreshToken: string): Promise<RefreshToken | Falsey> {
+		const refreshTokens = this.db.get<DBToken[]>('tokens', []);
+		const match = refreshTokens.find(
+			(token) => token.refreshToken === refreshToken
+		);
+		if (!match) {
+			return Promise.resolve(undefined);
+		}
+		return Promise.resolve({
+			...match,
+			refreshToken: match.refreshToken!,
+			refreshTokenExpiresAt: new Date(match.refreshTokenExpiresAt!),
+		});
 	}
 }
 
