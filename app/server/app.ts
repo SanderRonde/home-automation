@@ -12,6 +12,7 @@ import {
 	startInit,
 	endInit,
 	logTag,
+	reportReqError,
 } from './lib/logger';
 import {
 	initMiddleware,
@@ -145,7 +146,20 @@ class WebServer {
 		await this._initModules();
 		this._initLogger.increment('modules');
 		initPostRoutes(this.app);
-		this.app.use(expressErrorHandler());
+		this.app.use(
+			(
+				err: Error,
+				req: express.Request,
+				res: express.Response,
+				next: express.NextFunction
+			) => {
+				if (err) {
+					reportReqError(req, err);
+				}
+				expressErrorHandler()(err, req, res, next);
+			}
+		);
+
 		setLogLevel(this._config.log.level);
 		await printCommands();
 		this._listen();

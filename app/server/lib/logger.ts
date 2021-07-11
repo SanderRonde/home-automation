@@ -208,6 +208,14 @@ export class LogCapturer implements Loggable {
 	}
 }
 
+const reqErrors: WeakMap<RequestLike | LogObj, Error[]> = new WeakMap();
+export function reportReqError(req: RequestLike | LogObj, error: Error): void {
+	if (!reqErrors.has(req)) {
+		reqErrors.set(req, []);
+	}
+	reqErrors.get(req)!.push(error);
+}
+
 export function logReq(req: RequestLike | LogObj, res: express.Response): void {
 	const target = new LogCapturer();
 
@@ -233,6 +241,16 @@ export function logReq(req: RequestLike | LogObj, res: express.Response): void {
 		);
 
 		gatherTimings(res);
+
+		if (reqErrors.has(req)) {
+			logAssociatedMessages(
+				target,
+				reqErrors
+					.get(req)!
+					.map((err) => err.toString())
+					.map((err) => ({ content: [`Error: ${err}`] }))
+			);
+		}
 
 		// Log attached messages
 		if (logLevel >= 2 && msgMap.has(res)) {
