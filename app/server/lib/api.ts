@@ -87,11 +87,7 @@ type RouterFn<A> = {
 type RouterVerb = 'get' | 'post' | 'all';
 
 export function createRouter<A>(
-	self:
-		| {
-				meta: ModuleMeta;
-		  }
-		| ModuleMeta,
+	self: ModuleMeta,
 	apiHandler: A
 ): { use(app: express.Application, path?: string): void } & {
 	[v in RouterVerb]: RouterFn<A>;
@@ -143,10 +139,7 @@ export function createRouter<A>(
 							return await fn(
 								res,
 								getArgsFn(req),
-								// TODO: change once all are converte
-								`${
-									'meta' in self ? self.meta.name : self.name
-								}.API.${req.url}`
+								`${self.name}.API.${req.url}`
 							);
 						},
 					],
@@ -157,13 +150,7 @@ export function createRouter<A>(
 		get: handlerCreator('get'),
 		post: handlerCreator('post'),
 		all: handlerCreator('all'),
-		use(
-			app,
-			path = `/${('meta' in self
-				? self.meta.name
-				: self.name
-			).toLowerCase()}`
-		) {
+		use(app, path = `/${self.name.toLowerCase()}`) {
 			toRegister.forEach(({ verb, subPath, handlers }) => {
 				app[verb](`${path}${subPath}`, ...handlers);
 			});
