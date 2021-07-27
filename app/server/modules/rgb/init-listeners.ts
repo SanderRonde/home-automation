@@ -133,10 +133,11 @@ export function initListeners(): void {
 						}
 					}, WAKELIGHT_TIME / 100);
 					wakelights.push(interval);
-					await client.setColor(
+					await client.setColorWithBrightness(
 						NIGHTSTAND_COLOR.r,
 						NIGHTSTAND_COLOR.g,
-						NIGHTSTAND_COLOR.b
+						NIGHTSTAND_COLOR.b,
+						count
 					);
 				} else if (value === '0') {
 					cancelActiveWakelights();
