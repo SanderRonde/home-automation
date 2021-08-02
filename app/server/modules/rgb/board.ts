@@ -34,7 +34,6 @@ export async function tryConnectToSerial(): Promise<{
 
 		let err = false;
 		port.on('error', (e) => {
-			console.log('immediately got an error', e);
 			logTag('arduino', 'red', 'Failed to connect to LED arduino', e);
 			resolve(null);
 			err = true;
