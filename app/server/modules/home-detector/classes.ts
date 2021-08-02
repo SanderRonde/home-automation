@@ -46,7 +46,7 @@ class Pinger {
 
 	private async _ping(ip: string) {
 		const { alive } = await ping.promise.probe(ip, {
-			timeout: 2000,
+			timeout: 5,
 		});
 		return {
 			state: alive ? HOME_STATE.HOME : HOME_STATE.AWAY,
@@ -66,7 +66,7 @@ class Pinger {
 		const pings = await Promise.all(
 			this._config.ips.map((ip) => {
 				return ping.promise.probe(ip, {
-					timeout: 2000,
+					timeout: 5,
 				});
 			})
 		);
