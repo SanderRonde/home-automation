@@ -2,6 +2,7 @@ import { AllModules, ModuleConfig } from '..';
 import { ModuleMeta } from '../meta';
 import { disable, enable, initRegister } from './register';
 import { initRouting } from './routing';
+import { ExternalHandler } from './external';
 
 export const Movement = new (class Meta extends ModuleMeta {
 	name = 'movement';
@@ -31,5 +32,9 @@ export const Movement = new (class Meta extends ModuleMeta {
 			);
 		})();
 		return Promise.resolve(void 0);
+	}
+
+	get External() {
+		return ExternalHandler;
 	}
 })();

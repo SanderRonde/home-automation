@@ -7,6 +7,7 @@ import { Pressure } from './pressure';
 import { Movement } from './movement';
 import { Explain } from './explain';
 import { Webhook } from './webhook';
+import { EWeLink } from './ewelink';
 import { Script } from './script/';
 import { KeyVal } from './keyval';
 import { OAuth } from './oauth/';
@@ -30,6 +31,7 @@ export { Pressure } from './pressure';
 export { Movement } from './movement';
 export { Explain } from './explain';
 export { Webhook } from './webhook';
+export { EWeLink } from './ewelink';
 export { Script } from './script/';
 export { KeyVal } from './keyval';
 export { OAuth } from './oauth/';
@@ -71,6 +73,7 @@ const moduleObj = {
 	script: Script,
 	keyval: KeyVal,
 	webhook: Webhook,
+	ewelink: EWeLink,
 	explain: Explain,
 	pressure: Pressure,
 	movement: Movement,
