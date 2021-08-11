@@ -14,6 +14,13 @@ import { logTag } from '../../lib/logger';
 import { SettablePromise } from '../../lib/util';
 import OAuthServer from 'express-oauth-server';
 
+/**
+ * When true, access tokens never expire. This
+ * is useful if only trusted clients have tokens
+ * and the refresh flow isn't fully set up yet.
+ */
+const ENABLE_NEVER_EXPIRING_TOKENS = true;
+
 interface DBToken {
 	scope?: string | string[];
 	client: Client;
@@ -95,7 +102,12 @@ class OAuthModel implements AuthorizationCodeModel, RefreshTokenModel {
 		return Promise.resolve({
 			...match,
 			accessTokenExpiresAt: match.accessTokenExpiresAt
-				? new Date(match.accessTokenExpiresAt)
+				? new Date(
+						match.accessTokenExpiresAt +
+							(ENABLE_NEVER_EXPIRING_TOKENS
+								? 1000 * 60 * 60 * 24 * 365 * 20
+								: 0)
+				  )
 				: undefined,
 			refreshTokenExpiresAt: match.refreshTokenExpiresAt
 				? new Date(match.refreshTokenExpiresAt)
