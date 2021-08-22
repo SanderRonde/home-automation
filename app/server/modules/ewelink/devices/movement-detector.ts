@@ -17,6 +17,7 @@ export class EwelinkMovement {
 			);
 		this._eWeLinkConfig.wsConnection.on('data', async (data) => {
 			if (
+				typeof data === 'object' &&
 				'deviceid' in data &&
 				data.deviceid === this._eWeLinkConfig.device.deviceid
 			) {
