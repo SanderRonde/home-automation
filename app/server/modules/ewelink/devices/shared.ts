@@ -18,7 +18,8 @@ export type EWeLinkWebSocketMessage =
 			apikey: string;
 			config: Record<string, string | number>;
 			sequence: string;
-	  };
+	  }
+	| 'pong';
 
 export class EWeLinkWSConnection extends EventEmitter {
 	on(event: 'data', listener: (data: EWeLinkWebSocketMessage) => void): this {
