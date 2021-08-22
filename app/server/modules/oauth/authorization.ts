@@ -13,6 +13,8 @@ import oAuthClients from '../../config/oauth-clients';
 import { logTag } from '../../lib/logger';
 import { SettablePromise } from '../../lib/util';
 import OAuthServer from 'express-oauth-server';
+import oauthClients from '../../config/oauth-clients';
+import oauthUsers from '../../config/oauth-users';
 
 /**
  * When true, access tokens never expire. This
@@ -211,6 +213,17 @@ class OAuthModel implements AuthorizationCodeModel, RefreshTokenModel {
 		const match = refreshTokens.find(
 			(token) => token.refreshToken === refreshToken
 		);
+		if (ENABLE_NEVER_EXPIRING_TOKENS) {
+			return Promise.resolve({
+				client: oauthClients[0],
+				refreshToken,
+				user: oauthUsers[0],
+				refreshTokenExpiresAt: new Date(
+					Date.now() + 1000 * 60 * 60 * 24 * 365 * 20
+				),
+			});
+		}
+
 		if (!match) {
 			return Promise.resolve(undefined);
 		}
