@@ -126,3 +126,6 @@ export const MAX_BEATS_ARR_LENGTH = 2000;
 export const SMART_HOME_BATCH_MIN_TIMEOUT = 50;
 export const SMART_HOME_BATCH_MAX_TIMEOUT = 5000;
 export const TEMPERATURE_REPORT_MAX_TIMEOUT = 60000 * 5;
+
+// Ewelink
+export const EWELINK_DEBUG = false;

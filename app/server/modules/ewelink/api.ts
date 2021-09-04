@@ -7,6 +7,7 @@ import {
 } from './devices/shared';
 import onEWeLinkDevices from '../../config/ewelink';
 import { AllModules } from '..';
+import { EWELINK_DEBUG } from '../../lib/constants';
 
 function createConnection(credentials: {
 	email: string;
@@ -35,6 +36,9 @@ export async function initEWeLinkAPI(modules: AllModules): Promise<void> {
 
 	const wsConnection = new EWeLinkWSConnection();
 	await connection.openWebSocket((data: EWeLinkWebSocketMessage) => {
+		if (EWELINK_DEBUG) {
+			console.log(data);
+		}
 		wsConnection.emit('data', data);
 	});
 
