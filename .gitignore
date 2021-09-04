@@ -89,3 +89,11 @@ ai/**/*.ts.map
 ai/beat-detector/modes/realtime_test/public/files/
 
 !app/server/types/*.d.ts
+
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+!.yarn/plugins
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
