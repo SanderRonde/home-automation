@@ -27,7 +27,7 @@ import { Database } from './lib/db';
 import express from 'express';
 import * as path from 'path';
 import * as http from 'http';
-import { init } from '@pm2/io';
+import PM2 from '@pm2/io';
 
 interface PartialConfig {
 	ports?: {
@@ -127,7 +127,7 @@ class WebServer {
 			'Server start',
 			8 + Object.keys(await getAllModules(false)).length
 		);
-		init({
+		PM2.init({
 			catchExceptions: true,
 			tracing: {
 				enabled: true,
