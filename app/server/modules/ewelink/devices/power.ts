@@ -3,19 +3,28 @@ import { EWeLinkSharedConfig } from './shared';
 
 export class EwelinkPower {
 	private _keyvalExternal!: ExternalHandler;
+	private _options: {
+		enableSync: boolean;
+	};
 
 	constructor(
 		private _eWeLinkConfig: EWeLinkSharedConfig,
 		private _keyVal: string,
-		private _enableSync: boolean = true
-	) {}
+		options?: {
+			enableSync?: boolean;
+		}
+	) {
+		this._options = {
+			enableSync: options?.enableSync ?? true,
+		};
+	}
 
 	async init(): Promise<void> {
 		this._keyvalExternal = new this._eWeLinkConfig.modules.keyval.External(
 			{},
 			'EWELINK.POWER.INIT'
 		);
-		if (this._enableSync) {
+		if (this._options.enableSync) {
 			this._startTimer();
 		}
 		await this._keyvalExternal.onChange(
