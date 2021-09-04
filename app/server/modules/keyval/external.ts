@@ -44,10 +44,17 @@ export class ExternalHandler extends createExternalClass(true) {
 		});
 	}
 
-	async toggle(key: string): Promise<void> {
-		const value = await this.get(key);
-		const newValue = value === '1' ? '0' : '1';
-		await this.set(key, newValue);
+	async toggle(key: string): Promise<string> {
+		return this.runRequest(async (res, source) => {
+			return ExternalHandler._apiHandler!.toggle(
+				res,
+				{
+					key,
+					auth: await this._getKey(res, KeyVal),
+				},
+				source
+			);
+		});
 	}
 
 	async onChange(

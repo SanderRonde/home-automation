@@ -2,27 +2,31 @@ import EventEmitter from 'events';
 import eWelink, { Device } from 'ewelink-api';
 import { AllModules } from '../..';
 
-export type EWeLinkWebSocketMessage =
-	| ({
-			action: 'update';
-	  } & {
-			deviceid: string;
-			apikey: string;
-			userAgent: string;
-			d_seq: number;
-			params: Record<string, string | number>;
-			from: string;
-	  })
+export type EWeLinkUpdateMessage<P = Record<string, string | number>> = {
+	action: 'update';
+	deviceid: string;
+	apikey: string;
+	userAgent: string;
+	d_seq: number;
+	params: P;
+	from: string;
+};
+
+export type EWeLinkWebSocketMessage<P = Record<string, string | number>> =
+	| EWeLinkUpdateMessage<P>
 	| {
 			error: number;
 			apikey: string;
-			config: Record<string, string | number>;
+			config: P;
 			sequence: string;
 	  }
 	| 'pong';
 
 export class EWeLinkWSConnection extends EventEmitter {
-	on(event: 'data', listener: (data: EWeLinkWebSocketMessage) => void): this {
+	on(
+		event: 'data',
+		listener: (data: EWeLinkWebSocketMessage<unknown>) => void
+	): this {
 		return super.on(event, listener);
 	}
 }
@@ -32,4 +36,8 @@ export interface EWeLinkSharedConfig {
 	device: Device;
 	wsConnection: EWeLinkWSConnection;
 	modules: AllModules;
+}
+
+export abstract class EWeLinkInittable {
+	public abstract init(): Promise<void>;
 }

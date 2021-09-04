@@ -1,7 +1,7 @@
 import { ExternalHandler } from '../../keyval/external';
-import { EWeLinkSharedConfig } from './shared';
+import { EWeLinkInittable, EWeLinkSharedConfig } from './shared';
 
-export class EwelinkPower {
+export class EwelinkPower extends EWeLinkInittable {
 	private _keyvalExternal!: ExternalHandler;
 	private _options: {
 		enableSync: boolean;
@@ -14,6 +14,7 @@ export class EwelinkPower {
 			enableSync?: boolean;
 		}
 	) {
+		super();
 		this._options = {
 			enableSync: options?.enableSync ?? true,
 		};

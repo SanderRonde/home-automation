@@ -14,6 +14,47 @@ import {
 import { addListener, removeListener, update } from './get-set-listener';
 import { str } from './helpers';
 
+type MultiValueResolver<V> = (values: V[]) => V;
+
+function getObjectValue<V>(
+	obj: ObjValue<V>,
+	resolver: MultiValueResolver<V>
+): V {
+	const values: V[] = [];
+	for (const key in obj) {
+		const value = obj[key];
+		if (typeof value === 'object') {
+			values.push(getObjectValue(value as ObjValue<V>, resolver));
+		} else {
+			values.push(value);
+		}
+	}
+	return resolver(values);
+}
+
+const keyvalMultiValueResolver: MultiValueResolver<'1' | '0'> = (values) => {
+	if (values.length === 0) {
+		return '0';
+	}
+	for (const value of values) {
+		if (value === '0') {
+			return '0';
+		}
+	}
+	return '1';
+};
+
+type ObjValue<V> = {
+	[key: string]: V | ObjValue<V>;
+};
+
+function ensureString(value: string | ObjValue<string>): string {
+	if (typeof value === 'object') {
+		return getObjectValue(value, keyvalMultiValueResolver);
+	}
+	return value;
+}
+
 export class APIHandler {
 	private _db: Database;
 
@@ -34,7 +75,7 @@ export class APIHandler {
 		},
 		source: string
 	): Promise<string> {
-		const value = this._db.get(key, '0');
+		const value = ensureString(this._db.get(key, '0'));
 		attachSourcedMessage(
 			res,
 			source,
@@ -59,7 +100,7 @@ export class APIHandler {
 		},
 		source: string
 	): Promise<string> {
-		const original = this._db.get(key);
+		const original = ensureString(this._db.get<string>(key, '0'));
 		const value = original === '0' ? '1' : '0';
 		this._db.setVal(key, value);
 		const msg = attachSourcedMessage(

@@ -1,15 +1,17 @@
 import { ExternalHandler } from '../../movement/external';
-import { EWeLinkSharedConfig } from './shared';
+import { EWeLinkInittable, EWeLinkSharedConfig } from './shared';
 
-export class EwelinkMovement {
+export class EwelinkMovement extends EWeLinkInittable {
 	private _movementExternal!: ExternalHandler;
 
 	constructor(
 		private _eWeLinkConfig: EWeLinkSharedConfig,
 		private _movementKey: string
-	) {}
+	) {
+		super();
+	}
 
-	init(): void {
+	init(): Promise<void> {
 		this._movementExternal =
 			new this._eWeLinkConfig.modules.movement.External(
 				{},
@@ -24,5 +26,6 @@ export class EwelinkMovement {
 				await this._movementExternal.reportMovement(this._movementKey);
 			}
 		});
+		return Promise.resolve();
 	}
 }
