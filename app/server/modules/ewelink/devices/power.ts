@@ -1,8 +1,12 @@
-import { ExternalHandler } from '../../keyval/external';
-import { EWeLinkInittable, EWeLinkSharedConfig } from './shared';
+import chalk from 'chalk';
+import { logFixture, ResDummy } from '../../../lib/logger';
+import {
+	EWeLinkInittable,
+	EWeLinkSharedConfig,
+	EWeLinkWebSocketMessage,
+} from './shared';
 
 export class EwelinkPower extends EWeLinkInittable {
-	private _keyvalExternal!: ExternalHandler;
 	private _options: {
 		enableSync: boolean;
 	};
@@ -20,22 +24,45 @@ export class EwelinkPower extends EWeLinkInittable {
 		};
 	}
 
+	private _getKeyval(source: string) {
+		const resDummy = new ResDummy();
+		return {
+			resDummy,
+			keyval: new this._eWeLinkConfig.modules.keyval.External(
+				resDummy,
+				source
+			),
+		};
+	}
+
 	async init(): Promise<void> {
-		this._keyvalExternal = new this._eWeLinkConfig.modules.keyval.External(
-			{},
-			'EWELINK.POWER.INIT'
-		);
 		if (this._options.enableSync) {
 			this._startTimer();
 		}
-		await this._keyvalExternal.onChange(
-			this._keyVal,
-			async (value: string) => {
-				if (value === '1') {
-					await this.turnOn();
-				} else {
-					await this.turnOff();
+		const { keyval } = this._getKeyval('EWELINK.POWER.INIT');
+		await keyval.onChange(this._keyVal, async (value: string) => {
+			if (value === '1') {
+				await this.turnOn();
+			} else {
+				await this.turnOff();
+			}
+		});
+		this._eWeLinkConfig.wsConnection.on(
+			'data',
+			async (data: EWeLinkWebSocketMessage<{ switch: 'on' | 'off' }>) => {
+				if (
+					typeof data === 'string' ||
+					!('action' in data) ||
+					data.action !== 'update' ||
+					data.deviceid !== this._eWeLinkConfig.device.deviceid
+				) {
+					return;
 				}
+
+				await this._setFromRemoteStatus(
+					data.params.switch,
+					'websocket'
+				);
 			}
 		);
 	}
@@ -55,23 +82,41 @@ export class EwelinkPower extends EWeLinkInittable {
 		return this.setPower(false);
 	}
 
+	private async _setFromRemoteStatus(
+		remoteState: 'on' | 'off',
+		source: string
+	) {
+		const logName = `EWELINK.POWER.${source.toUpperCase()}`;
+		const { keyval, resDummy } = this._getKeyval(logName);
+		const localState = await keyval.get(this._keyVal);
+
+		if ((remoteState === 'on') !== (localState === '1')) {
+			await keyval.set(
+				this._keyVal,
+				remoteState === 'on' ? '1' : '0',
+				true
+			);
+			logFixture(resDummy, chalk.magenta('[ewelink]'), `[${source}]`);
+		}
+	}
+
 	private async _syncStatus() {
 		const remoteState =
 			await this._eWeLinkConfig.connection.getDevicePowerState(
 				this._eWeLinkConfig.device.deviceid
 			);
-		const localState = await this._keyvalExternal.get(this._keyVal);
 
-		if ((remoteState === 'on') !== (localState === '1')) {
-			await this._keyvalExternal.set(
-				this._keyVal,
-				remoteState === 'on' ? '1' : '0',
-				false
-			);
+		if (!remoteState.state) {
+			return;
 		}
+
+		await this._setFromRemoteStatus(
+			remoteState.state as 'on' | 'off',
+			'sync'
+		);
 	}
 
 	private _startTimer() {
-		setInterval(() => this._syncStatus(), 1000 * 60);
+		setInterval(() => this._syncStatus(), 1000 * 10);
 	}
 }
