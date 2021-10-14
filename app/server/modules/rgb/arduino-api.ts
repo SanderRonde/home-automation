@@ -150,6 +150,47 @@ export const arduinoEffects = {
 			}),
 		]),
 	},
+	awakenings: {
+		description: 'Awakenings',
+		effect: new LedEffect(
+			[
+				{
+					jumpSize: 1,
+					jumpDelay: 5,
+				},
+				{
+					jumpSize: 1,
+					jumpDelay: 1,
+				},
+				{
+					jumpSize: 2,
+					jumpDelay: 1,
+				},
+			].map(
+				({ jumpSize, jumpDelay }) =>
+					new LedSpecStep({
+						moveData: new MoveData(MOVING_STATUS.FORWARDS, {
+							jumpSize,
+							jumpDelay,
+						}),
+						background: new Color(0, 0, 0),
+						sequences: new Leds(NUM_LEDS)
+							.fillWithColors(
+								interpolate(
+									new Color(255, 255, 255),
+									new Color(0, 0, 0),
+									5,
+									{
+										start: true,
+										end: true,
+									}
+								)
+							)
+							.toSequence(),
+					})
+			)
+		),
+	},
 	multidot: {
 		description: 'A bunch of dots moving',
 		effect: new LedEffect([
