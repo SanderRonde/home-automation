@@ -161,6 +161,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@notionhq/client@npm:^0.4.6":
+  version: 0.4.6
+  resolution: "@notionhq/client@npm:0.4.6"
+  dependencies:
+    "@types/node-fetch": ^2.5.10
+    node-fetch: ^2.6.1
+  checksum: 9259f59b3e09793bc9dfa1de9cde53a88f4756df78e6814ac2dcf1864f632626bf378f845786013eb0aa49bfcca1a5fe6d5f8bba19aed7ab0adbca78ecb9380a
+  languageName: node
+  linkType: hard
+
 "@npmcli/fs@npm:^1.0.0":
   version: 1.0.0
   resolution: "@npmcli/fs@npm:1.0.0"
@@ -640,6 +650,16 @@ __metadata:
   version: 1.2.1
   resolution: "@types/minimist@npm:1.2.1"
   checksum: 02631cdd79d346ed6838f5443767b5218a0d915fd0529d4a8840c4eba942d7f6906f0056686dd5a119d42528bed0bee5767ebef7667fdca6fcb95411bb56084e
+  languageName: node
+  linkType: hard
+
+"@types/node-fetch@npm:^2.5.10":
+  version: 2.5.12
+  resolution: "@types/node-fetch@npm:2.5.12"
+  dependencies:
+    "@types/node": "*"
+    form-data: ^3.0.0
+  checksum: ad63c85ba6a9477b8e057ec8682257738130d98e8ece4e31141789bd99df9d9147985cc8bc0cb5c8983ed5aa6bb95d46df23d1e055f4ad5cf8b82fc69cf626c7
   languageName: node
   linkType: hard
 
@@ -3815,6 +3835,7 @@ fsevents@~2.3.2:
   resolution: "home-automation@workspace:."
   dependencies:
     "@googleapis/homegraph": ^2.0.0
+    "@notionhq/client": ^0.4.6
     "@pm2/io": ^5.0.0
     "@pm2/node-runtime-stats": ^0.3.2
     "@sanderronde/write-buffer": 1.0.3

@@ -129,3 +129,6 @@ export const TEMPERATURE_REPORT_MAX_TIMEOUT = 60000 * 5;
 
 // Ewelink
 export const EWELINK_DEBUG = false;
+
+// Notion
+export const NOTION_GEOCODE_UPDATE_INTERVAL = 1000 * 60 * 60;
