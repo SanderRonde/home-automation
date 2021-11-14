@@ -6,7 +6,7 @@ import { Client } from '@notionhq/client';
 import { getAllForQuery } from './client';
 import { NOTION_GEOCODE_UPDATE_INTERVAL } from '../../lib/constants';
 
-const geocodeLocationRegex = /(.*) \(location\)/;
+const geocodeLocationRegex = /(.*) \(#location\)/;
 
 type WithAuth<P> = P & {
 	auth?: string | undefined;
