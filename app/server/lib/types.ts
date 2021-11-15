@@ -1,8 +1,3 @@
-/**
- * TODO: rename this to types.ts after the
- * move of types.ts to color.ts is done
- */
-
 export type PossiblePromise<V> = V | Promise<V>;
 
 declare global {

@@ -24,9 +24,10 @@ export async function tryConnectToSerial(): Promise<{
 		leds: number;
 		name: string;
 	} | null>((resolve) => {
+		const seconds = process.argv.includes('--debug') ? 5 : 60;
 		setTimeout(() => {
 			resolve(null);
-		}, 1000 * 60);
+		}, seconds * 1000);
 
 		const port = new SerialPort(LED_DEVICE_NAME, {
 			baudRate: 115200,

@@ -5,16 +5,16 @@ import {
 import { Client } from '@notionhq/client';
 import { getAllForQuery } from './client';
 import { NOTION_GEOCODE_UPDATE_INTERVAL } from '../../lib/constants';
+import { WithAuth } from './types';
+import { logTag } from '../../lib/logger';
+import { captureTime } from '../../lib/timer';
+import { wait } from '../../lib/util';
 
 const geocodeLocationRegex = /(.*) \(#location\)/;
 
-type WithAuth<P> = P & {
-	auth?: string | undefined;
-};
-
 function getGeocodableProperties(
 	database: SearchResponse['results'][number]
-): string | null {
+): string[] | null {
 	if (database.object !== 'database') {
 		return null;
 	}
@@ -23,24 +23,26 @@ function getGeocodableProperties(
 	if (!properties.some((prop) => prop.type === 'last_edited_time')) {
 		return null;
 	}
+	const props: string[] = [];
 	for (const property of properties) {
 		if (property.type !== 'rich_text') {
 			continue;
 		}
 		if (geocodeLocationRegex.exec(property.name)) {
-			return property.name;
+			props.push(property.name);
 		}
 	}
 
-	return null;
+	return props.length > 0 ? props : null;
 }
 
 async function performDatabaseGeocoding(
 	client: Client,
 	database: SearchResponse['results'][number],
-	geocodingProp: string,
+	geocodingProps: string[],
 	forAll: boolean = false
 ) {
+	const timer = captureTime();
 	const lastEditedProp = Object.values(database.properties).find(
 		(prop: { type: string }) => prop.type === 'last_edited_time'
 	) as {
@@ -48,10 +50,14 @@ async function performDatabaseGeocoding(
 	};
 	const filters: unknown[] = [
 		{
-			property: geocodingProp,
-			text: {
-				is_not_empty: true,
-			},
+			or: geocodingProps.map((geocodingProp) => {
+				return {
+					property: geocodingProp,
+					text: {
+						is_not_empty: true,
+					},
+				};
+			}),
 		},
 	];
 	if (!forAll) {
@@ -73,60 +79,71 @@ async function performDatabaseGeocoding(
 		query
 	);
 
+	let updates: number = 0;
 	for (const row of contents) {
-		const textProp = row.properties[geocodingProp];
-		if (
-			textProp.type !== 'rich_text' ||
-			textProp.rich_text[0].type !== 'text'
-		) {
-			continue;
-		}
-		const plainText = textProp.rich_text[0].text.content;
-		const link = `https://www.google.com/maps/place/${encodeURIComponent(
-			plainText
-		)}`;
-		if (
-			!textProp.rich_text[0].text.link?.url ||
-			textProp.rich_text[0].text.link?.url !== link
-		) {
-			await client.pages.update({
-				page_id: row.id,
-				properties: {
-					[geocodingProp]: {
-						rich_text: [
-							{
-								type: 'text',
-								text: {
-									content: plainText,
-									link: {
-										url: link,
+		for (const geocodingProp of geocodingProps) {
+			const textProp = row.properties[geocodingProp];
+			if (
+				textProp.type !== 'rich_text' ||
+				textProp.rich_text[0].type !== 'text'
+			) {
+				continue;
+			}
+			const plainText = textProp.rich_text[0].text.content;
+			const link = `https://www.google.com/maps/place/${encodeURIComponent(
+				plainText
+			)}`;
+			if (
+				!textProp.rich_text[0].text.link?.url ||
+				textProp.rich_text[0].text.link?.url !== link
+			) {
+				await wait(400);
+				await client.pages.update({
+					page_id: row.id,
+					properties: {
+						[geocodingProp]: {
+							rich_text: [
+								{
+									type: 'text',
+									text: {
+										content: plainText,
+										link: {
+											url: link,
+										},
 									},
 								},
-							},
-						],
+							],
+						},
 					},
-				},
-			});
+				});
+				updates++;
+			}
 		}
 	}
+	const duration = timer.getTime();
+	logTag(
+		'notion-geocode',
+		'cyan',
+		`Geocoded ${updates} locations in ${duration}ms`
+	);
 }
 
 async function initDatabaseGeocoding(
 	client: Client,
 	database: SearchResponse['results'][number]
 ) {
-	const geocodingProp = getGeocodableProperties(database);
-	if (!geocodingProp) {
+	const geocodingProps = getGeocodableProperties(database);
+	if (!geocodingProps) {
 		return;
 	}
 
-	await performDatabaseGeocoding(client, database, geocodingProp, true);
+	await performDatabaseGeocoding(client, database, geocodingProps, true);
 	setInterval(async () => {
-		await performDatabaseGeocoding(client, database, geocodingProp);
+		await performDatabaseGeocoding(client, database, geocodingProps);
 	}, NOTION_GEOCODE_UPDATE_INTERVAL);
 }
 
-export async function initGeocoder(client: Client): Promise<void> {
+export async function startGeocoder(client: Client): Promise<void> {
 	const databases = await getAllForQuery(client.search.bind(client), {
 		filter: {
 			property: 'object',

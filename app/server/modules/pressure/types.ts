@@ -1,5 +1,5 @@
 import { ModuleHookables } from '..';
-import { PossiblePromise } from '../../lib/type';
+import { PossiblePromise } from '../../lib/types';
 
 export const enum PRESSURE_CHANGE_DIRECTION {
 	UP,

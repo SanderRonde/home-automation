@@ -26,7 +26,7 @@ export class BotBase extends BotState.Base {
 
 export abstract class ModuleMeta {
 	private _explainHook = new SettablePromise<ExplainHook>();
-	private _modules = new SettablePromise<AllModules>();
+	public _modules = new SettablePromise<AllModules>();
 
 	abstract name: string;
 	public _dbName: string | null = null;

@@ -18,6 +18,14 @@ export class ExternalHandler extends createExternalClass(true) {
 		});
 	}
 
+	public onUpdate(
+		handler: (newState: HOME_STATE, name: string) => void
+	): Promise<void> {
+		return this.runRequest(() => {
+			Detector.addListener(null, handler);
+		});
+	}
+
 	static async init({ detector }: { detector: Detector }): Promise<void> {
 		this._detector = detector;
 		await super.init();

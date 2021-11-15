@@ -21,7 +21,7 @@ export const Pressure = new (class Meta extends ModuleMeta {
 				'PRESSURE.NOTIFY'
 			).onChange(
 				'state.pressure',
-				async (value, logObj) => {
+				async (value, _key, logObj) => {
 					const handler = new ExternalHandler(logObj, 'KEYVAL');
 					if (value === '1') {
 						await handler.enable();

@@ -58,7 +58,7 @@ export function initListeners(): void {
 		);
 		await external.onChange(
 			'room.lights.nightstand',
-			async (value, logObj) => {
+			async (value, _key, logObj) => {
 				cancelActiveWakelights();
 
 				const client = getLed(LED_NAMES.BED_LEDS);
@@ -98,7 +98,7 @@ export function initListeners(): void {
 
 		await external.onChange(
 			'room.leds.wakelight',
-			async (value, logObj) => {
+			async (value, _key, logObj) => {
 				cancelActiveWakelights();
 
 				const client = getLed(LED_NAMES.BED_LEDS);
@@ -162,7 +162,7 @@ export function initListeners(): void {
 				'room.leds.couch': LED_NAMES.COUCH_LEDS,
 				'room.leds.hexes': LED_NAMES.HEX_LEDS,
 			}).map(async ([key, ledName]) => {
-				await external.onChange(key, async (value, logObj) => {
+				await external.onChange(key, async (value, _key, logObj) => {
 					await switchLed(ledName, value, logObj);
 				});
 			})

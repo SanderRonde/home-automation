@@ -22,7 +22,7 @@ import { hasArg, getArg, getNumberArg, getNumberEnv, getEnv } from './lib/io';
 import { notifyAllModules, NoDBModuleConfig } from './modules/modules';
 import { printCommands } from './modules/bot/helpers';
 import { WSSimulator, WSWrapper } from './lib/ws';
-import { getAllModules } from './modules';
+import { AllModules, getAllModules } from './modules';
 import { Database } from './lib/db';
 import express from 'express';
 import * as path from 'path';
@@ -113,13 +113,8 @@ class WebServer {
 			})
 		);
 
-		// Run post-inits
-		await Promise.all(
-			Object.values(modules).map(async (meta) => {
-				await meta.postInit();
-			})
-		);
 		this._initLogger.increment('post-init');
+		return modules;
 	}
 
 	public async init() {
@@ -142,13 +137,13 @@ class WebServer {
 		this._initLogger.increment('middleware');
 		this._initServers();
 		this._initLogger.increment('servers');
-		await this._initModules();
+		const modules = await this._initModules();
 		this._initLogger.increment('modules');
 		initPostRoutes(this.app);
 
 		setLogLevel(this._config.log.level);
 		await printCommands();
-		this._listen();
+		this._listen(modules);
 	}
 
 	private _initServers() {
@@ -161,9 +156,9 @@ class WebServer {
 		this._initLogger.increment('HTTP server');
 	}
 
-	private _listen() {
+	private _listen(modules: AllModules) {
 		// HTTPS is unused for now
-		this._server.listen(this._config.ports.http, () => {
+		this._server.listen(this._config.ports.http, async () => {
 			this._initLogger.increment('listening');
 			this._initLogger.done();
 			endInit();
@@ -172,6 +167,13 @@ class WebServer {
 				'HTTP server',
 				'magenta',
 				`listening on port ${this._config.ports.http}`
+			);
+
+			// Run post-inits
+			await Promise.all(
+				Object.values(modules).map(async (meta) => {
+					await meta.postInit();
+				})
 			);
 		});
 	}

@@ -58,8 +58,8 @@ export class ExternalHandler extends createExternalClass(true) {
 	}
 
 	async onChange(
-		key: string,
-		callback: (value: string, logObj: LogObj) => void,
+		key: string | null,
+		callback: (value: string, key: string, logObj: LogObj) => void,
 		options: { once?: boolean; notifyOnInitial?: boolean } = {}
 	): Promise<{ remove(): void }> {
 		return this.runRequest(() => {

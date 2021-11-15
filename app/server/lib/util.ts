@@ -251,7 +251,8 @@ export function createHookables(
 			const moduleMeta = modules[name];
 			const Handler = moduleMeta.External;
 			return [name, new Handler(logObj, `${sourceName}.${hookName}`)];
-		})
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		}) as any
 	) as unknown as ModuleHookables;
 }
 
@@ -359,4 +360,11 @@ export function pad(str: string, length: number, padChar: string): string {
 		str = `${padChar}${str}`;
 	}
 	return str;
+}
+
+export function optionalArrayValue<V>(
+	condition: boolean,
+	value: V
+): V[] | never[] {
+	return condition ? [value] : [];
 }

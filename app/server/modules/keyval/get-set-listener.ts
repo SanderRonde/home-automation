@@ -8,8 +8,12 @@ import { KEYVAL_GROUP_EFFECT } from './types';
 const _listeners: Map<
 	number,
 	{
-		key: string;
-		listener: (value: string, logObj: LogObj) => void | Promise<void>;
+		key: string | null;
+		listener: (
+			value: string,
+			key: string,
+			logObj: LogObj
+		) => void | Promise<void>;
 		once: boolean;
 	}
 > = new Map();
@@ -21,19 +25,23 @@ export function setDB(_db: Database): void {
 }
 
 export function addListener(
-	key: string,
-	listener: (value: string, logObj: LogObj) => void | Promise<void>,
+	key: string | null,
+	listener: (
+		value: string,
+		key: string,
+		logObj: LogObj
+	) => void | Promise<void>,
 	{
 		once = false,
 		notifyOnInitial = false,
 	}: { once?: boolean; notifyOnInitial?: boolean } = {}
 ): number {
-	if (notifyOnInitial) {
+	if (notifyOnInitial && key !== null) {
 		const logObj = {};
 		void new ExternalHandler(logObj, 'KEYVAL.ADD_LISTENER')
 			.get(key)
 			.then((value) => {
-				return listener(value, logObj);
+				return listener(value, key, logObj);
 			});
 	}
 	const index = _lastIndex++;
@@ -85,23 +93,25 @@ export async function update(
 	const updatedKeyParts = key.split('.');
 
 	for (const [index, { key: listenerKey, listener, once }] of _listeners) {
-		const listenerParts = listenerKey.split('.');
-		let next = false;
-		for (
-			let i = 0;
-			i < Math.min(updatedKeyParts.length, listenerParts.length);
-			i++
-		) {
-			if (updatedKeyParts[i] !== listenerParts[i]) {
-				next = true;
-				break;
+		if (listenerKey !== null) {
+			const listenerParts = listenerKey.split('.');
+			let next = false;
+			for (
+				let i = 0;
+				i < Math.min(updatedKeyParts.length, listenerParts.length);
+				i++
+			) {
+				if (updatedKeyParts[i] !== listenerParts[i]) {
+					next = true;
+					break;
+				}
+			}
+			if (next) {
+				continue;
 			}
 		}
-		if (next) {
-			continue;
-		}
 
-		await listener(value, logObj);
+		await listener(value, key, logObj);
 		updated++;
 		if (once) {
 			_listeners.delete(index);

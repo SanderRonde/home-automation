@@ -80,6 +80,7 @@ static/
 ai/files/
 ai/annotator/**/*.js
 app/server/config/**
+app/server/modules/notion/secret/**
 boards/ip_list.txt
 TODO
 venv

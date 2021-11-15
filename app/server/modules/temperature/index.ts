@@ -24,7 +24,7 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		void new (modules as AllModules).keyval.External(
 			{},
 			'TEMPERATURE.INIT'
-		).onChange('room.heating', async (value, logObj) => {
+		).onChange('room.heating', async (value, _key, logObj) => {
 			return new ExternalHandler(logObj, 'TEMPERATURE.INIT').setMode(
 				'room',
 				value === '1' ? 'on' : 'off'
