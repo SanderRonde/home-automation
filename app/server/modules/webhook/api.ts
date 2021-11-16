@@ -11,14 +11,17 @@ export class APIHandler {
 		res: ResponseLike,
 		{
 			name,
+			auth,
+			...params
 		}: {
 			auth?: string;
 			name: string;
-		},
+		} & Record<string, unknown>,
 		source: string
 	): Promise<void> {
 		await triggerWebhooks(
 			name,
+			params,
 			attachSourcedMessage(
 				res,
 				source,

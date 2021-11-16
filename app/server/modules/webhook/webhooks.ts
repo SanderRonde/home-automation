@@ -6,6 +6,7 @@ import { Webhook } from '.';
 
 export async function triggerWebhooks(
 	name: string,
+	params: Record<string, unknown>,
 	logObj: LogObj
 ): Promise<void> {
 	if (!(name in webhooks)) {
@@ -15,6 +16,7 @@ export async function triggerWebhooks(
 
 	const webhook = webhooks[name];
 	await webhook(
-		createHookables(await Webhook.modules, 'WEBHOOK', name, logObj)
+		createHookables(await Webhook.modules, 'WEBHOOK', name, logObj),
+		params
 	);
 }
