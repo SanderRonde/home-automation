@@ -3,6 +3,7 @@ import { createClient } from './client';
 import { startGeocoder } from './geocode';
 import { AllModules, ModuleConfig } from '..';
 import { Client } from '@notionhq/client';
+import { ExternalHandler } from './external';
 
 type Secret = {
 	init(config: ModuleConfig, client: Client): Promise<void>;
@@ -37,6 +38,7 @@ export const Notion = new (class Meta extends ModuleMeta {
 		if (secret) {
 			await secret.init(config, this._client);
 		}
+		await ExternalHandler.init(this._client);
 		return Promise.resolve();
 	}
 
@@ -49,5 +51,9 @@ export const Notion = new (class Meta extends ModuleMeta {
 				await secret.start(this._config!, this._client!, modules);
 			})();
 		}
+	}
+
+	get External() {
+		return ExternalHandler;
 	}
 })();
