@@ -1,6 +1,7 @@
 import { attachMessage, logOutgoingReq, log, LogObj } from './logger';
 import * as querystring from 'querystring';
 import * as http from 'http';
+import * as https from 'https';
 import chalk from 'chalk';
 import { AllModules } from '../modules';
 import { ModuleHookables } from '../modules/modules';
@@ -159,11 +160,21 @@ export namespace XHR {
 		} = {}
 	): Promise<string> {
 		return new Promise<string>((resolve) => {
+			const parsedURL = new url.URL(xhrURL);
+			let basePackage: typeof http | typeof https | null = null;
+			if (parsedURL.protocol === 'https:') {
+				basePackage = https;
+			} else if (parsedURL.protocol === 'http:') {
+				basePackage = http;
+			} else {
+				throw new Error(`Unknown protocol: "${parsedURL.protocol}"`);
+			}
+
 			const qs = Object.keys(params).length
 				? `?${querystring.stringify(params)}`
 				: '';
 			const fullURL = `${xhrURL}${qs}`;
-			const req = http
+			const req = basePackage
 				.get(fullURL, (res) => {
 					let data = '';
 
