@@ -98,6 +98,7 @@ class OAuthModel implements AuthorizationCodeModel, RefreshTokenModel {
 		const tokens = this.db.get<DBToken[]>('tokens', []);
 		const match = tokens.find((token) => token.accessToken === accessToken);
 		if (!match) {
+			logTag('oauth', 'cyan', 'Failed to find token');
 			return undefined;
 		}
 
