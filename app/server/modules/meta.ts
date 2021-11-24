@@ -3,6 +3,7 @@ import { BotState } from '../lib/bot-state';
 import { SettablePromise } from '../lib/util';
 import { LogObj } from '../lib/logger';
 import { ExplainHook } from './explain/types';
+import { HOME_STATE } from './home-detector/types';
 
 export declare class Handler {
 	constructor(_logObj: LogObj, _source: string);
@@ -58,6 +59,20 @@ export abstract class ModuleMeta {
 	async notifyModulesFromExternal(modules: AllModules): Promise<void> {
 		this._modules.set(modules);
 		await this.notifyModules(modules);
+		const external = new modules.homeDetector.External(
+			{},
+			`META.${this.name}`
+		);
+		await external.onUpdate(async (homeState, name) => {
+			if (name !== 'self') {
+				return;
+			}
+			if (homeState === HOME_STATE.HOME) {
+				await this.onBackOnline();
+			} else {
+				await this.onOffline();
+			}
+		});
 	}
 
 	addExplainHook(_onAction: ExplainHook): void {}
@@ -66,6 +81,9 @@ export abstract class ModuleMeta {
 		this._explainHook.set(onAction);
 		this.addExplainHook(onAction);
 	}
+
+	onOffline(): Promise<void> | void {}
+	onBackOnline(): Promise<void> | void {}
 
 	get dbName(): string {
 		return this._dbName || this.name;

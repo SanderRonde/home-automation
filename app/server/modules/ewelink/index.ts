@@ -5,6 +5,9 @@ import { AllModules } from '..';
 
 export const EWeLink = new (class Meta extends ModuleMeta {
 	name = 'ewelink';
+	private _ewelinkApiInstance: {
+		refreshWebsocket?(): Promise<void>;
+	} | null = null;
 
 	init() {
 		return Promise.resolve(void 0);
@@ -19,5 +22,13 @@ export const EWeLink = new (class Meta extends ModuleMeta {
 
 	get External() {
 		return ExternalHandler;
+	}
+
+	async onBackOnline() {
+		if (!this._ewelinkApiInstance) {
+			return;
+		}
+
+		await this._ewelinkApiInstance.refreshWebsocket?.();
 	}
 })();

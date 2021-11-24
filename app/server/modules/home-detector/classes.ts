@@ -9,6 +9,7 @@ import {
 	HOME_PING_INTERVAL,
 	AWAY_PING_INTERVAL,
 } from './constants';
+import { getEnv } from '../../lib/io';
 
 function wait(time: number) {
 	return new Promise((resolve) => {
@@ -189,13 +190,27 @@ export class Detector {
 	}
 
 	private _initPingers() {
+		const config = {
+			...homeIps,
+			base: {
+				...homeIps.base,
+				self: [getEnv('SELF_IP', true)],
+			},
+		} as {
+			base: {
+				[key: string]: string[];
+			};
+			extended: {
+				[key: string]: string[];
+			};
+		};
 		for (const { key, data, extended } of [
-			...(Object.keys(homeIps.base) || []).map((n) => ({
+			...(Object.keys(config.base) || []).map((n) => ({
 				key: n,
-				data: homeIps.base[n],
+				data: config.base[n],
 				extended: false,
 			})),
-			...(Object.keys(homeIps.extended) || []).map((n) => ({
+			...(Object.keys(config.extended) || []).map((n) => ({
 				key: n,
 				data: homeIps.extended[n],
 				extended: true,

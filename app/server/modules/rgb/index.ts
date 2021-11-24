@@ -33,4 +33,11 @@ export const RGB = new (class Meta extends ModuleMeta {
 	get Bot() {
 		return Bot;
 	}
+
+	async onBackOnline() {
+		await scanRGBControllers(true);
+		setInterval(() => {
+			void scanRGBControllers();
+		}, 1000 * 60 * 60);
+	}
 })();

@@ -23,24 +23,45 @@ export type LinkEWeLinkDevice = (
 	onDevice: (config: EWeLinkSharedConfig) => Promise<void> | void
 ) => Promise<void>;
 
-export async function initEWeLinkAPI(modules: AllModules): Promise<void> {
+async function createWebsocketListener(
+	connection: eWelink,
+	wsConnection: EWeLinkWSConnection
+) {
+	let ignore = false;
+	await connection.openWebSocket((data: EWeLinkWebSocketMessage) => {
+		if (ignore) {
+			return;
+		}
+		if (EWELINK_DEBUG) {
+			console.log(data);
+		}
+		wsConnection.emit('data', data);
+	});
+	return {
+		cancel() {
+			ignore = true;
+		},
+	};
+}
+
+export async function initEWeLinkAPI(modules: AllModules): Promise<{
+	refreshWebsocket?(): Promise<void>;
+} | null> {
 	const email = getEnv('SECRET_EWELINK_EMAIL', false);
 	const password = getEnv('SECRET_EWELINK_PASSWORD', false);
 
 	if (!email || !password) {
-		return;
+		return null;
 	}
 
 	const connection = createConnection({ email, password });
 	const devices = await connection.getDevices();
 
 	const wsConnection = new EWeLinkWSConnection();
-	await connection.openWebSocket((data: EWeLinkWebSocketMessage) => {
-		if (EWELINK_DEBUG) {
-			console.log(data);
-		}
-		wsConnection.emit('data', data);
-	});
+	let wsConnectionListener = await createWebsocketListener(
+		connection,
+		wsConnection
+	);
 
 	await onEWeLinkDevices(async (id, onDevice) => {
 		const device = devices.find((d) => d.deviceid === id);
@@ -53,4 +74,14 @@ export async function initEWeLinkAPI(modules: AllModules): Promise<void> {
 			});
 		}
 	});
+
+	return {
+		async refreshWebsocket() {
+			wsConnectionListener.cancel();
+			wsConnectionListener = await createWebsocketListener(
+				connection,
+				wsConnection
+			);
+		},
+	};
 }
