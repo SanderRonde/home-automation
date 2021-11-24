@@ -63,7 +63,7 @@ export abstract class ModuleMeta {
 			{},
 			`META.${this.name}`
 		);
-		await external.onUpdate(async (homeState, name) => {
+		void external.onUpdate(async (homeState, name) => {
 			if (name !== 'self') {
 				return;
 			}
