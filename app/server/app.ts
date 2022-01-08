@@ -43,6 +43,7 @@ interface PartialConfig {
 		level?: number;
 		secrets: boolean;
 		ignorePressure?: boolean;
+		errorLogPath?: string | null | void;
 	};
 	debug?: boolean;
 	instant?: boolean;
@@ -80,6 +81,10 @@ class WebServer {
 				level: config.log?.level || 1,
 				secrets: config.log?.secrets || false,
 				ignorePressure: config?.log?.ignorePressure || false,
+				// In debug mode always log errors to console
+				errorLogPath: config.debug
+					? null
+					: config?.log?.errorLogPath ?? null,
 			},
 			debug: config.debug || false,
 			instant: config.instant || false,
@@ -91,18 +96,22 @@ class WebServer {
 		startInit();
 	}
 
-	private async _initModules() {
-		await notifyAllModules();
-
-		const modules = await getAllModules();
-
-		const config: NoDBModuleConfig = {
+	private _getModuleConfig(): NoDBModuleConfig {
+		return {
 			app: this.app,
 			websocketSim: this.websocketSim,
 			config: this._config,
 			randomNum: Math.round(Math.random() * 1000000),
 			websocket: this.ws,
 		};
+	}
+
+	private async _initModules() {
+		await notifyAllModules();
+
+		const modules = await getAllModules();
+
+		const config: NoDBModuleConfig = this._getModuleConfig();
 		await Promise.all(
 			Object.values(modules).map(async (meta) => {
 				await meta.init({
@@ -132,7 +141,7 @@ class WebServer {
 
 		this.app = express();
 		this._initLogger.increment('express');
-		initMiddleware(this.app);
+		initMiddleware(this._getModuleConfig());
 		initAnnotatorRoutes(this.app);
 		this._initLogger.increment('middleware');
 		this._initServers();
@@ -238,6 +247,7 @@ void new WebServer({
 		level: getVerbosity(),
 		secrets: hasArg('log-secrets') || false,
 		ignorePressure: hasArg('ignore-pressure'),
+		errorLogPath: getArg('error-log-path'),
 	},
 	debug: hasArg('debug') || !!getArg('IO_DEBUG'),
 	instant: hasArg('instant', 'i'),

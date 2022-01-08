@@ -7,6 +7,7 @@ import * as path from 'path';
 import pm2 from '@pm2/io';
 import glob from 'glob';
 import chalk from 'chalk';
+import { NoDBModuleConfig } from '../modules';
 
 export function initAnnotatorRoutes(app: express.Express): void {
 	app.all('/annotator/files', (_req, res) => {
@@ -33,9 +34,9 @@ export function initAnnotatorRoutes(app: express.Express): void {
 	});
 }
 
-export function initMiddleware(app: express.Express): void {
+export function initMiddleware({ app, config }: NoDBModuleConfig): void {
 	app.use((req, res, next) => {
-		logReq(req, res);
+		logReq(req, res, config);
 		next();
 	});
 	app.use(cookieParser());
@@ -76,31 +77,24 @@ export function initPostRoutes(app: express.Express): void {
 	app.use((_req, res, _next) => {
 		res.status(404).send('404');
 	});
-	app.use(
-		(
-			err: Error,
-			req: express.Request,
-			res: express.Response,
-			next: express.NextFunction
-		) => {
-			if (err?.message) {
-				if (res.headersSent) {
-					console.log(
-						chalk.bgRed(
-							chalk.black(
-								'Got error after headers were sent',
-								err.message,
-								err.stack!
-							)
+	app.use((err: Error, req: express.Request, res: express.Response) => {
+		if (err?.message) {
+			if (res.headersSent) {
+				console.log(
+					chalk.bgRed(
+						chalk.black(
+							'Got error after headers were sent',
+							err.message,
+							err.stack!
 						)
-					);
-					return;
-				}
-				res.status(500).write('Internal server error');
-				reportReqError(req, err);
-				pm2.expressErrorHandler()(err, req, res, next);
-				res.end();
+					)
+				);
+				return;
 			}
+			res.status(500).write('Internal server error');
+			reportReqError(req, err);
+			pm2.expressErrorHandler()(err, req, res, () => {});
+			res.end();
 		}
-	);
+	});
 }

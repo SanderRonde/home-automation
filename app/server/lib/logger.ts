@@ -5,6 +5,9 @@ import chalk from 'chalk';
 import { ExplainHook } from '../modules/explain/types';
 import { externalRedact } from '../modules/auth/helpers';
 import { gatherTimings } from './timer';
+import { Config } from '../app';
+import * as fs from 'fs-extra';
+import { generateRandomString } from './util';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type LogObj = any;
@@ -216,11 +219,19 @@ export function reportReqError(req: RequestLike | LogObj, error: Error): void {
 	reqErrors.get(req)!.push(error);
 }
 
+function logErrorToErrorFile(err: Error, errorFile: string): string {
+	const error = `${err.name}: ${err.message}\n${err.stack ?? ''}`;
+	const id = `E${generateRandomString(32)}`;
+	void fs.appendFile(errorFile, `${id}: ${error}\n\n`);
+	return id;
+}
+
 export function logReq(
 	req: RequestLike | LogObj,
 	res: express.Response & {
 		body?: Record<string, string>;
-	}
+	},
+	config: Config
 ): void {
 	const target = new LogCapturer();
 
@@ -250,12 +261,27 @@ export function logReq(
 		if (reqErrors.has(req) && logLevel >= 3) {
 			logAssociatedMessages(
 				target,
-				reqErrors
-					.get(req)!
-					.map((err) => err.toString())
-					.map((err) => ({
-						content: [`${chalk.red('Error')}: ${err}`],
-					}))
+				reqErrors.get(req)!.map((err) => {
+					const errPath = config.log.errorLogPath;
+					if (errPath) {
+						// Log error to error path and create it
+						const id = logErrorToErrorFile(err, errPath);
+						return {
+							content: [
+								`${chalk.red(
+									'Error'
+								)}: ${err.toString()} (${id})`,
+							],
+						};
+					}
+					return {
+						content: [
+							`${chalk.red('Error')}: ${err.toString()}\n${
+								err.stack ?? ''
+							}`,
+						],
+					};
+				})
 			);
 		}
 
