@@ -1,10 +1,10 @@
 import { logReq, reportReqError } from './logger';
-import { expressErrorHandler } from '@pm2/io';
 import cookieParser from 'cookie-parser';
 import serveStatic from 'serve-static';
 import bodyParser from 'body-parser';
 import express from 'express';
 import * as path from 'path';
+import pm2 from '@pm2/io';
 import glob from 'glob';
 import chalk from 'chalk';
 
@@ -98,7 +98,7 @@ export function initPostRoutes(app: express.Express): void {
 				}
 				res.status(500).write('Internal server error');
 				reportReqError(req, err);
-				expressErrorHandler()(err, req, res, next);
+				pm2.expressErrorHandler()(err, req, res, next);
 				res.end();
 			}
 		}
