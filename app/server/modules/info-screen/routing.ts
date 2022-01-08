@@ -23,7 +23,8 @@ export function refreshClients(): number {
 	return clients.size;
 }
 
-export function initRouting({ config, randomNum }: ModuleConfig): void {
+export function initRouting(moduleConfig: ModuleConfig): void {
+	const { config, randomNum } = moduleConfig;
 	const app = express();
 	const webpageHandler = new WebPageHandler({
 		randomNum,
@@ -32,7 +33,7 @@ export function initRouting({ config, randomNum }: ModuleConfig): void {
 	const server = http.createServer(app);
 	const ws = new WSWrapper(server);
 
-	initMiddleware(app);
+	initMiddleware(moduleConfig);
 
 	app.all('/', async (req, res) => {
 		if (!authenticated) {
