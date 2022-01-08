@@ -1,10 +1,19 @@
 import { createExternalClass } from '../../lib/external';
-import { Detector } from './classes';
 import { handleHooks } from './hooks';
 import { HOME_STATE } from './types';
+import { Detector } from './classes';
 
 export class ExternalHandler extends createExternalClass(true) {
 	private static _detector: Detector;
+
+	public static async init({
+		detector,
+	}: {
+		detector: Detector;
+	}): Promise<void> {
+		this._detector = detector;
+		await super.init();
+	}
 
 	public triggerHook(newState: HOME_STATE, name: string): Promise<void> {
 		return this.runRequest((_res, _source, logObj) => {
@@ -19,15 +28,10 @@ export class ExternalHandler extends createExternalClass(true) {
 	}
 
 	public onUpdate(
-		handler: (newState: HOME_STATE, name: string) => void
+		handler: (newState: HOME_STATE, name: string) => void | Promise<void>
 	): Promise<void> {
 		return this.runRequest(() => {
 			Detector.addListener(null, handler);
 		});
-	}
-
-	static async init({ detector }: { detector: Detector }): Promise<void> {
-		this._detector = detector;
-		await super.init();
 	}
 }

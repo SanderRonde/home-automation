@@ -1,11 +1,11 @@
+import { genId, getClientSecret } from './client-secret';
+import { attachMessage } from '../../lib/logger';
+import { createRouter } from '../../lib/api';
+import { authenticate } from './secret';
+import { genCookie } from './cookie';
+import { ModuleConfig } from '..';
 import chalk from 'chalk';
 import { Auth } from '.';
-import { ModuleConfig } from '..';
-import { createRouter } from '../../lib/api';
-import { attachMessage } from '../../lib/logger';
-import { genId, getClientSecret } from './client-secret';
-import { genCookie } from './cookie';
-import { authenticate } from './secret';
 
 export function initRoutes({ app, config }: ModuleConfig): void {
 	app.post('/authid', (_req, res) => {
@@ -24,7 +24,10 @@ export function initRoutes({ app, config }: ModuleConfig): void {
 
 	const router = createRouter(Auth, {});
 	router.all('/key', (req, res) => {
-		if (authenticate(req.params.key)) {
+		if (
+			'key' in req.params &&
+			authenticate((req.params as { key: string }).key)
+		) {
 			res.cookie('key', genCookie(), {
 				// Expires in quite a few years
 				expires: new Date(2147483647000),

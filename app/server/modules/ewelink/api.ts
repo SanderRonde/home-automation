@@ -1,13 +1,13 @@
-import eWelink from 'ewelink-api';
-import { getEnv } from '../../lib/io';
 import {
 	EWeLinkSharedConfig,
 	EWeLinkWebSocketMessage,
 	EWeLinkWSConnection,
 } from './devices/shared';
-import onEWeLinkDevices from '../../config/ewelink';
-import { AllModules } from '..';
 import { EWELINK_DEBUG } from '../../lib/constants';
+import onEWeLinkDevices from '../../config/ewelink';
+import { getEnv } from '../../lib/io';
+import eWelink from 'ewelink-api';
+import { AllModules } from '..';
 
 function createConnection(credentials: {
 	email: string;

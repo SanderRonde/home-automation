@@ -1,5 +1,6 @@
 declare class PaperRipple {
-	constructor(config?: {
+	public $: HTMLElement;
+	public constructor(config?: {
 		initialOpacity?: number;
 		opacityDecayVelocity?: number;
 		recenters?: boolean;
@@ -7,9 +8,8 @@ declare class PaperRipple {
 		round?: boolean;
 		target?: HTMLElement;
 	});
-	$: HTMLElement;
-	downAction(event: MouseEvent): void;
-	upAction(): void;
+	public downAction(event: MouseEvent): void;
+	public upAction(): void;
 }
 
 function initRipple() {
@@ -26,10 +26,6 @@ function initRipple() {
 			});
 		}
 	);
-}
-
-interface Window {
-	ws: WebSocket;
 }
 
 function initListeners() {

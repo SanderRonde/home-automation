@@ -1,14 +1,14 @@
-import { API, ExtendedResponse } from '.';
 import { SpotifyTypes } from '../../../../types/spotify';
+import { API, ExtendedResponse } from '.';
 
 export class SpotifyAPIEndpoints {
-	constructor(public api: API) {}
+	public constructor(public api: API) {}
 
-	player(): Promise<ExtendedResponse<SpotifyTypes.Endpoints.Player> | null> {
+	public player(): Promise<ExtendedResponse<SpotifyTypes.Endpoints.Player> | null> {
 		return this.api.get<SpotifyTypes.Endpoints.Player>('/v1/me/player');
 	}
 
-	audioAnalysis(
+	public audioAnalysis(
 		id: string
 	): Promise<ExtendedResponse<SpotifyTypes.Endpoints.AudioAnalysis> | null> {
 		return this.api.get<SpotifyTypes.Endpoints.AudioAnalysis>(
@@ -16,13 +16,13 @@ export class SpotifyAPIEndpoints {
 		);
 	}
 
-	getDevices(): Promise<ExtendedResponse<SpotifyTypes.Endpoints.Devices> | null> {
+	public getDevices(): Promise<ExtendedResponse<SpotifyTypes.Endpoints.Devices> | null> {
 		return this.api.get<SpotifyTypes.Endpoints.Devices>(
 			'/v1/me/player/devices'
 		);
 	}
 
-	play(
+	public play(
 		uri: string,
 		deviceId: string
 	): Promise<ExtendedResponse<SpotifyTypes.Endpoints.Play> | null> {

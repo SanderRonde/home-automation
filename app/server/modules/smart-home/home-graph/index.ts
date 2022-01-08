@@ -1,29 +1,29 @@
 import smartHomeConfig from '../../../config/smart-home';
 
-import { homegraph, homegraph_v1 } from '@googleapis/homegraph';
-import { google } from 'googleapis';
-import * as fs from 'fs-extra';
-import * as path from 'path';
+import {
+	SECRETS_FOLDER,
+	SMART_HOME_BATCH_MAX_TIMEOUT,
+	SMART_HOME_BATCH_MIN_TIMEOUT,
+} from '../../../lib/constants';
+import {
+	SmartHomeDeviceUpdate,
+	SMART_HOME_DEVICE_TRAIT,
+} from '../../../lib/smart-home/smart-home-types';
 import {
 	Batcher,
 	createHookables,
 	fromEntries,
 	SettablePromise,
 } from '../../../lib/util';
-import { Database } from '../../../lib/db';
+import { homegraph, homegraph_v1 } from '@googleapis/homegraph';
 import { currentUsers, initHomeGraphUsers } from './users';
-import {
-	SECRETS_FOLDER,
-	SMART_HOME_BATCH_MAX_TIMEOUT,
-	SMART_HOME_BATCH_MIN_TIMEOUT,
-} from '../../../lib/constants';
 import { warning } from '../../../lib/logger';
-import {
-	SmartHomeDeviceUpdate,
-	SMART_HOME_DEVICE_TRAIT,
-} from '../../../lib/smart-home/smart-home-types';
 import { smartHomeLogger } from '../shared';
+import { Database } from '../../../lib/db';
+import { google } from 'googleapis';
 import { SmartHome } from '../';
+import * as fs from 'fs-extra';
+import * as path from 'path';
 
 export const homeGraph = new SettablePromise<homegraph_v1.Homegraph>();
 export const db = new SettablePromise<Database>();
@@ -139,12 +139,17 @@ async function attachUpdateListeners() {
 		'HOME_GRAPH',
 		{}
 	);
-	smartHomeConfig.forEach((Device) =>
-		new Device().attachHomeGraphListeners(hookables, (update: unknown) => {
-			batcher.call(
-				update as SmartHomeDeviceUpdate<SMART_HOME_DEVICE_TRAIT>
-			);
-		})
+	await Promise.all(
+		smartHomeConfig.map((Device) =>
+			new Device().attachHomeGraphListeners(
+				hookables,
+				(update: unknown) => {
+					batcher.call(
+						update as SmartHomeDeviceUpdate<SMART_HOME_DEVICE_TRAIT>
+					);
+				}
+			)
+		)
 	);
 }
 

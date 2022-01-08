@@ -1,62 +1,72 @@
 import { ModuleConfig, AllModules } from './modules';
-import { BotState } from '../lib/bot-state';
-import { SettablePromise } from '../lib/util';
-import { LogObj } from '../lib/logger';
-import { ExplainHook } from './explain/types';
 import { HOME_STATE } from './home-detector/types';
+import { BotStateBase } from '../lib/bot-state';
+import { SettablePromise } from '../lib/util';
+import { ExplainHook } from './explain/types';
+import { LogObj } from '../lib/logger';
 
 export declare class Handler {
-	constructor(_logObj: LogObj, _source: string);
+	public constructor(_logObj: LogObj, _source: string);
 }
 
 class HandlerDefault implements Handler {
-	// @ts-ignore
-	constructor(private _logObj: LogObj, private _source: string) {}
+	public constructor() {}
 }
 
-export class BotBase extends BotState.Base {
-	constructor(_json?: unknown) {
+export class BotBase extends BotStateBase {
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	public constructor(_json?: unknown) {
 		super();
 		return this;
 	}
 
-	toJSON(): unknown {
+	public toJSON(): unknown {
 		return {};
 	}
 }
 
 export abstract class ModuleMeta {
 	private _explainHook = new SettablePromise<ExplainHook>();
+	public abstract name: string;
 	public _modules = new SettablePromise<AllModules>();
 
-	abstract name: string;
 	public _dbName: string | null = null;
 	public _loggerName: string | null = null;
 
-	abstract init(config: ModuleConfig): Promise<void>;
-	postInit(): Promise<void> {
-		return Promise.resolve(void 0);
-	}
-
-	get External(): typeof Handler {
+	public get External(): typeof Handler {
 		return HandlerDefault;
 	}
 
-	get Bot(): typeof BotBase {
+	public get Bot(): typeof BotBase {
 		return BotBase;
 	}
 
-	get explainHook(): Promise<ExplainHook> {
+	public get explainHook(): Promise<ExplainHook> {
 		return this._explainHook.value;
 	}
 
-	get modules(): Promise<AllModules> {
+	public get modules(): Promise<AllModules> {
 		return this._modules.value;
 	}
 
-	async notifyModules(_modules: unknown): Promise<void> {}
+	public get dbName(): string {
+		return this._dbName || this.name;
+	}
 
-	async notifyModulesFromExternal(modules: AllModules): Promise<void> {
+	public get loggerName(): string {
+		return this._loggerName || `/${this.name}`;
+	}
+
+	public abstract init(config: ModuleConfig): Promise<void>;
+
+	public postInit(): Promise<void> {
+		return Promise.resolve(void 0);
+	}
+
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	public async notifyModules(_modules: unknown): Promise<void> {}
+
+	public async notifyModulesFromExternal(modules: AllModules): Promise<void> {
 		this._modules.set(modules);
 		await this.notifyModules(modules);
 		const external = new modules.homeDetector.External(
@@ -81,21 +91,14 @@ export abstract class ModuleMeta {
 		});
 	}
 
-	addExplainHook(_onAction: ExplainHook): void {}
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	public addExplainHook(_onAction: ExplainHook): void {}
 
-	addExplainHookFromExternal(onAction: ExplainHook): void {
+	public addExplainHookFromExternal(onAction: ExplainHook): void {
 		this._explainHook.set(onAction);
 		this.addExplainHook(onAction);
 	}
 
-	onOffline(): Promise<void> | void {}
-	onBackOnline(): Promise<void> | void {}
-
-	get dbName(): string {
-		return this._dbName || this.name;
-	}
-
-	get loggerName(): string {
-		return this._loggerName || `/${this.name}`;
-	}
+	public onOffline(): Promise<void> | void {}
+	public onBackOnline(): Promise<void> | void {}
 }

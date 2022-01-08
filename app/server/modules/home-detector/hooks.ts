@@ -1,9 +1,9 @@
-import chalk from 'chalk';
-import { HomeDetector } from '.';
-import hooks from '../../config/home-hooks';
 import { attachMessage, logFixture, LogObj } from '../../lib/logger';
 import { createHookables } from '../../lib/util';
+import hooks from '../../config/home-hooks';
 import { HOME_STATE } from './types';
+import { HomeDetector } from '.';
+import chalk from 'chalk';
 
 export async function handleHooks(
 	newState: HOME_STATE,

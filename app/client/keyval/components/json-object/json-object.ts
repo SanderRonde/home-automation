@@ -25,7 +25,7 @@ export class JSONObject extends ConfigurableWebComponent<{
 		CLASSES: Record<string, never>;
 	};
 }> {
-	props = Props.define(this, {
+	public props = Props.define(this, {
 		reflect: {
 			json: {
 				value: {},
@@ -41,7 +41,7 @@ export class JSONObject extends ConfigurableWebComponent<{
 	});
 
 	@bindToClass
-	async onToggle(): Promise<void> {
+	public async onToggle(): Promise<void> {
 		const root = this.getRoot<JSONSwitches>();
 		if (!root) {
 			await MessageToast.create({

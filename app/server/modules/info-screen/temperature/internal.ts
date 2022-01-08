@@ -1,6 +1,6 @@
-import { InfoScreen } from '..';
-import { LogObj } from '../../../lib/logger';
 import { InternalTemperatureResult } from '../types';
+import { LogObj } from '../../../lib/logger';
+import { InfoScreen } from '..';
 
 export async function get(
 	name: string,

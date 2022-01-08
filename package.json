@@ -13,6 +13,9 @@
 			"app/server/"
 		]
 	},
+	"engines": {
+		"node": ">=16.0.0"
+	},
 	"scripts": {
 		"compile:server": "tsc -p app/server/tsconfig.json",
 		"compile:client": "tsc -p app/client/tsconfig.json",
@@ -30,7 +33,9 @@
 		"compile": "yarn html-typings && yarn compile:server && yarn compile:client && yarn compile:ai && yarn bundle",
 		"watch": "tsc -w -p app/server/tsconfig.json",
 		"pretty": "pretty-quick",
-		"eslint": "eslint --fix \"./app/**/*.ts\"",
+		"format-check": "prettier '**/*.{ts,json,html}'",
+		"format": "prettier --write '**/*.{ts,json,html}'",
+		"lint": "eslint --fix \"./app/**/*.ts\"",
 		"start": "node --experimental-modules --enable-source-maps --trace-warnings -r ts-node/register/transpile-only app/server/app.ts --http 1272 --https 1273 -v* --name 1000 --scripts /home/sander/scripts --color -i"
 	},
 	"devDependencies": {
@@ -51,20 +56,25 @@
 		"@types/serialport": "^8.0.0",
 		"@types/serve-static": "^1.13.2",
 		"@types/ws": "^6.0.3",
-		"@typescript-eslint/eslint-plugin": "^4.24.0",
+		"@typescript-eslint/eslint-plugin": "^5.9.0",
+		"@typescript-eslint/parser": "^5.9.0",
 		"antd": "^4.15.6",
 		"esbuild": "^0.12.1",
-		"eslint": "^7.27.0",
+		"eslint": "^8.6.0",
+		"eslint-config-prettier": "^8.3.0",
 		"eslint-plugin-node": "^11.1.0",
+		"eslint-plugin-prettier": "^4.0.0",
+		"eslint-plugin-unused-imports": "^2.0.0",
 		"gts": "^3.1.0",
 		"html-typings": "^1.1.4",
 		"nodemon": "^2.0.12",
 		"prettier": "^2.3.0",
+		"prettier-plugin-sort-imports": "^1.1.0",
 		"pretty-quick": "^2.0.1",
 		"react": "^17.0.2",
 		"react-dom": "^17.0.2",
 		"rollup": "^1.20.3",
-		"typescript": "^4.4.2"
+		"typescript": "latest"
 	},
 	"dependencies": {
 		"@googleapis/homegraph": "^2.0.0",

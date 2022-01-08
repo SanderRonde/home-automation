@@ -1,8 +1,3 @@
-import chalk from 'chalk';
-import { Control, Discovery } from 'magic-home';
-import { getEnv } from '../../lib/io';
-import { LogObj, logTag } from '../../lib/logger';
-import { tryConnectBoard } from './board';
 import {
 	ArduinoClient,
 	arduinoClients,
@@ -14,6 +9,11 @@ import {
 	setHexClients,
 	setMagicHomeClients,
 } from './clients';
+import { LogObj, logTag } from '../../lib/logger';
+import { Control, Discovery } from 'magic-home';
+import { tryConnectBoard } from './board';
+import { getEnv } from '../../lib/io';
+import chalk from 'chalk';
 
 let magicHomeTimer: NodeJS.Timeout | null = null;
 let arduinoTimer: NodeJS.Timeout | null = null;
@@ -77,22 +77,24 @@ export async function scanRGBControllers(
 		if (magicHomeTimer !== null) {
 			clearInterval(magicHomeTimer);
 		}
-		magicHomeTimer = setTimeout(async () => {
-			await scanMagicHomeControllers();
-			if (magicHomeTimer !== null) {
-				clearInterval(magicHomeTimer);
-			}
+		magicHomeTimer = setTimeout(() => {
+			void scanMagicHomeControllers().then(() => {
+				if (magicHomeTimer !== null) {
+					clearInterval(magicHomeTimer);
+				}
+			});
 		}, RESCAN_TIME);
 	}
 	if (arduinoClients === 0) {
 		if (arduinoTimer !== null) {
 			clearInterval(arduinoTimer);
 		}
-		arduinoTimer = setTimeout(async () => {
-			await scanArduinos();
-			if (arduinoTimer !== null) {
-				clearInterval(arduinoTimer);
-			}
+		arduinoTimer = setTimeout(() => {
+			void scanArduinos().then(() => {
+				if (arduinoTimer !== null) {
+					clearInterval(arduinoTimer);
+				}
+			});
 		}, RESCAN_TIME);
 	}
 

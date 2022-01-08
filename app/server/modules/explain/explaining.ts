@@ -1,7 +1,7 @@
-import { Explain } from './index';
 import { addLogListener, LogCapturer, LogObj } from '../../lib/logger';
-import { AllModules } from '..';
 import { ACTION_TIMEOUT_TIME } from './constants';
+import { Explain } from './index';
+import { AllModules } from '..';
 
 export interface Action {
 	moduleName: string;

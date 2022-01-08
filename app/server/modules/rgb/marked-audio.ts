@@ -1,12 +1,12 @@
-import { BotState } from '../../lib/bot-state';
-import { Color } from '../../lib/color';
 import { MARKED_AUDIO_FOLDER } from '../../lib/constants';
-import { LogObj } from '../../lib/logger';
-import { wait } from '../../lib/util';
-import * as path from 'path';
-import * as fs from 'fs-extra';
-import { RGB } from '.';
+import { MatchHandlerParams } from '../../lib/bot-state';
 import { arduinoClients } from './clients';
+import { LogObj } from '../../lib/logger';
+import { Color } from '../../lib/color';
+import { wait } from '../../lib/util';
+import * as fs from 'fs-extra';
+import * as path from 'path';
+import { RGB } from '.';
 
 interface ParsedMarked {
 	'spotify-uri': string;
@@ -70,7 +70,7 @@ async function getData(
 
 async function startPlay(
 	logObj: LogObj,
-	helpers: Pick<BotState.MatchHandlerParams, 'ask' | 'sendText'>,
+	helpers: Pick<MatchHandlerParams, 'ask' | 'sendText'>,
 	parsed: ParsedMarked
 ): Promise<
 	| { success: true; message: string | null }
@@ -143,10 +143,7 @@ async function startPlay(
 export async function play(
 	name: string,
 	logObj: LogObj,
-	helpers: Pick<
-		BotState.MatchHandlerParams,
-		'ask' | 'sendText' | 'askCancelable'
-	>
+	helpers: Pick<MatchHandlerParams, 'ask' | 'sendText' | 'askCancelable'>
 ): Promise<
 	| { success: true; message: string | null }
 	| { success: false; message: string }
@@ -186,14 +183,23 @@ export async function play(
 	parsed.items.forEach((item) => {
 		timeouts.push(
 			setTimeout(() => {
-				arduinoClients.forEach((c) =>
-					c.setColor(parsed.color.r, parsed.color.g, parsed.color.b)
-				);
-				timeouts.push(
-					setTimeout(() => {
-						arduinoClients.forEach((c) => c.setColor(0, 0, 0));
-					}, Math.min(item.duration, 1) * 1000)
-				);
+				void Promise.all(
+					arduinoClients.map((c) =>
+						c.setColor(
+							parsed.color.r,
+							parsed.color.g,
+							parsed.color.b
+						)
+					)
+				).then(() => {
+					timeouts.push(
+						setTimeout(() => {
+							void Promise.all(
+								arduinoClients.map((c) => c.setColor(0, 0, 0))
+							);
+						}, Math.min(item.duration, 1) * 1000)
+					);
+				});
 			}, item.time * 1000 - playingTime)
 		);
 	});
@@ -206,7 +212,7 @@ export async function play(
 	void prom.then(async () => {
 		timeouts.forEach((t) => clearTimeout(t));
 		await wait(1000);
-		arduinoClients.forEach((c) => c.setColor(0, 0, 0));
+		await Promise.all(arduinoClients.map((c) => c.setColor(0, 0, 0)));
 
 		await helpers.sendText('stopped');
 	});

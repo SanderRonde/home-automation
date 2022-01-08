@@ -1,8 +1,8 @@
 import express = require('express');
-import { KeyVal } from '.';
-import { Database } from '../../lib/db';
 import { errorHandle, authCookie, upgradeToHTTPS } from '../../lib/decorators';
 import { ResponseLike } from '../../lib/logger';
+import { Database } from '../../lib/db';
+import { KeyVal } from '.';
 
 async function keyvalHTML(json: string, randomNum: number, res: ResponseLike) {
 	const key = await new (
@@ -26,10 +26,10 @@ async function keyvalHTML(json: string, randomNum: number, res: ResponseLike) {
 }
 
 export class WebPageHandler {
-	private _db: Database;
-	private _randomNum: number;
+	private readonly _db: Database;
+	private readonly _randomNum: number;
 
-	constructor({ db, randomNum }: { randomNum: number; db: Database }) {
+	public constructor({ db, randomNum }: { randomNum: number; db: Database }) {
 		this._db = db;
 		this._randomNum = randomNum;
 	}
@@ -39,6 +39,7 @@ export class WebPageHandler {
 	@upgradeToHTTPS
 	public async index(
 		res: ResponseLike,
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		_req: express.Request
 	): Promise<void> {
 		res.status(200);

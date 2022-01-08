@@ -1,7 +1,7 @@
-import { SpotifyBeats } from '.';
-import { ModuleConfig } from '..';
-import { createRouter } from '../../lib/api';
 import { finishManualAuth } from './spotify/auth';
+import { createRouter } from '../../lib/api';
+import { ModuleConfig } from '..';
+import { SpotifyBeats } from '.';
 
 export function initRouting({ app }: ModuleConfig): void {
 	const router = createRouter(SpotifyBeats, {});

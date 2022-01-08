@@ -33,7 +33,7 @@ function shortToBytes(short: number) {
 export class Leds {
 	private _leds!: (ColorSequence | SingleColor)[];
 
-	constructor(private _numLeds: number) {}
+	public constructor(private readonly _numLeds: number) {}
 
 	private _assertTotalLeds() {
 		assert(
@@ -50,7 +50,7 @@ export class Leds {
 		);
 	}
 
-	fillWithColors(colors: Color[]): this {
+	public fillWithColors(colors: Color[]): this {
 		const numFullSequences = Math.floor(this._numLeds / colors.length);
 		this._leds = [];
 		this._leds.push(new ColorSequence(colors, numFullSequences));
@@ -67,15 +67,15 @@ export class Leds {
 		return this;
 	}
 
-	toSequence(): (ColorSequence | SingleColor)[] {
+	public toSequence(): (ColorSequence | SingleColor)[] {
 		return this._leds;
 	}
 }
 
 export class MoveData {
-	static readonly MOVING_STATUS = MOVING_STATUS;
+	public static readonly MOVING_STATUS = MOVING_STATUS;
 
-	constructor(
+	public constructor(
 		_moving: MOVING_STATUS.BACKWARDS | MOVING_STATUS.FORWARDS,
 		_movingConfig: {
 			jumpSize: number;
@@ -90,9 +90,9 @@ export class MoveData {
 					alternate: false;
 			  }
 	);
-	constructor(_moving: MOVING_STATUS.OFF);
-	constructor(
-		private _moving: MOVING_STATUS,
+	public constructor(_moving: MOVING_STATUS.OFF);
+	public constructor(
+		private readonly _moving: MOVING_STATUS,
 		private _movingConfig: {
 			jumpSize: number;
 			jumpDelay: number;
@@ -112,7 +112,7 @@ export class MoveData {
 		}
 	) {}
 
-	toBytes(): number[] {
+	public toBytes(): number[] {
 		return [
 			this._moving,
 			...shortToBytes(this._movingConfig.jumpSize),
@@ -130,11 +130,18 @@ export class MoveData {
 export class ColorSequence {
 	public colors: Color[];
 
-	constructor(colors: Color[] | Color, public repetitions: number) {
+	public get length(): number {
+		return (
+			(Array.isArray(this.colors) ? this.colors.length : 1) *
+			this.repetitions
+		);
+	}
+
+	public constructor(colors: Color[] | Color, public repetitions: number) {
 		this.colors = Array.isArray(colors) ? colors : [colors];
 	}
 
-	toBytes(): number[] {
+	public toBytes(): number[] {
 		return [
 			ColorType.COLOR_SEQUENCE,
 			...shortToBytes(this.colors.length),
@@ -142,19 +149,12 @@ export class ColorSequence {
 			...flatten<number>(this.colors.map((color) => color.toBytes())),
 		];
 	}
-
-	get length(): number {
-		return (
-			(Array.isArray(this.colors) ? this.colors.length : 1) *
-			this.repetitions
-		);
-	}
 }
 
 export class TransparentSequence {
-	constructor(public length: number) {}
+	public constructor(public length: number) {}
 
-	toBytes(): number[] {
+	public toBytes(): number[] {
 		return [ColorType.TRANSPARENT, ...shortToBytes(this.length)];
 	}
 }
@@ -168,25 +168,25 @@ export enum ColorType {
 }
 
 export class SingleColor {
-	constructor(public color: Color) {}
-
-	toBytes(): number[] {
-		return [ColorType.SINGLE_COLOR, ...this.color.toBytes()];
+	public get length(): number {
+		return 1;
 	}
 
-	get length(): number {
-		return 1;
+	public constructor(public color: Color) {}
+
+	public toBytes(): number[] {
+		return [ColorType.SINGLE_COLOR, ...this.color.toBytes()];
 	}
 }
 
 export class RandomColor {
-	constructor(
+	public constructor(
 		public size: number,
 		public randomTime: number,
 		public randomEveryTime: boolean
 	) {}
 
-	toBytes(): number[] {
+	public toBytes(): number[] {
 		return [
 			ColorType.RANDOM_COLOR,
 			~~this.randomEveryTime,
@@ -197,7 +197,7 @@ export class RandomColor {
 }
 
 export class Repeat {
-	constructor(
+	public constructor(
 		public repetitions: number,
 		public sequence:
 			| SingleColor
@@ -206,7 +206,7 @@ export class Repeat {
 			| TransparentSequence
 	) {}
 
-	toBytes(): number[] {
+	public toBytes(): number[] {
 		return [
 			ColorType.REPEAT,
 			...shortToBytes(this.repetitions),
@@ -226,7 +226,7 @@ export class LedSpecStep {
 		| Repeat
 	)[];
 
-	constructor(
+	public constructor(
 		{
 			background,
 			moveData,
@@ -249,7 +249,7 @@ export class LedSpecStep {
 		this.sequences = sequences;
 	}
 
-	toBytes(): number[] {
+	public toBytes(): number[] {
 		return [
 			...shortToBytes(this.delayUntilNext),
 			...this.moveData.toBytes(),
@@ -270,9 +270,9 @@ export class LedSpecStep {
 }
 
 export class LedEffect {
-	constructor(public effect: LedSpecStep[]) {}
+	public constructor(public effect: LedSpecStep[]) {}
 
-	toBytes(): number[] {
+	public toBytes(): number[] {
 		return [
 			...shortToBytes(this.effect.length),
 			...flatten(
@@ -285,9 +285,9 @@ export class LedEffect {
 }
 
 export class LedSpec {
-	constructor(public steps: LedEffect) {}
+	public constructor(public steps: LedEffect) {}
 
-	toBytes(): number[] {
+	public toBytes(): number[] {
 		return ['<'.charCodeAt(0), ...this.steps.toBytes(), '>'.charCodeAt(0)];
 	}
 }

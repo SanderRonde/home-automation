@@ -1,10 +1,10 @@
-import chalk from 'chalk';
-import { Database } from '../../../../lib/db';
-import { getEnv } from '../../../../lib/io';
 import { logOutgoingRes, logTag } from '../../../../lib/logger';
-import { wait } from '../../../../lib/util';
 import { SpotifyTypes } from '../../../../types/spotify';
 import { SpotifyAPIEndpoints } from './endpoints';
+import { Database } from '../../../../lib/db';
+import { getEnv } from '../../../../lib/io';
+import { wait } from '../../../../lib/util';
+import chalk from 'chalk';
 
 export interface ExtendedResponse<R> extends Response {
 	clone(): ExtendedResponse<R>;
@@ -12,16 +12,18 @@ export interface ExtendedResponse<R> extends Response {
 }
 
 export class API {
-	private _clientId: string;
-	private _clientSecret: string;
-	private _redirectURI: string;
+	private static readonly SPOTIFY_BASE = 'https://api.spotify.com';
+	private readonly _clientId: string;
+	private readonly _clientSecret: string;
+	private readonly _redirectURI: string;
 	private _token?: string;
-	private _db: Database;
+	private readonly _db: Database;
 
 	private _refreshToken?: string;
+	private _refresher: NodeJS.Timeout | null = null;
 	public endpoints = new SpotifyAPIEndpoints(this);
 
-	constructor({
+	public constructor({
 		clientId,
 		clientSecret,
 		redirectURI,
@@ -41,29 +43,6 @@ export class API {
 		this._db = db;
 	}
 
-	setToken(token: string): void {
-		this._token = token;
-
-		this._db.setVal('token', token);
-	}
-
-	private _refresher: NodeJS.Timeout | null = null;
-	setRefresh(token: string, expireTime: number): void {
-		if (this._refresher) {
-			clearTimeout(this._refresher);
-		}
-		this._refreshToken = token;
-		this._db.setVal('refresh', token);
-
-		this._refresher = setTimeout(() => {
-			void this.refreshToken().then(() => {
-				if (this._refresher) {
-					clearTimeout(this._refresher);
-				}
-			});
-		}, expireTime * 1000 * 0.9);
-	}
-
 	private async _checkCreatedToken(
 		response: ExtendedResponse<SpotifyTypes.Endpoints.AuthToken>
 	) {
@@ -80,7 +59,37 @@ export class API {
 		return await this.testAuth();
 	}
 
-	async refreshToken(): Promise<boolean | null> {
+	private _getHeaders() {
+		return {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${this._token!}`,
+		};
+	}
+
+	public setToken(token: string): void {
+		this._token = token;
+
+		this._db.setVal('token', token);
+	}
+
+	public setRefresh(token: string, expireTime: number): void {
+		if (this._refresher) {
+			clearTimeout(this._refresher);
+		}
+		this._refreshToken = token;
+		this._db.setVal('refresh', token);
+
+		this._refresher = setTimeout(() => {
+			void this.refreshToken().then(() => {
+				if (this._refresher) {
+					clearTimeout(this._refresher);
+				}
+			});
+		}, expireTime * 1000 * 0.9);
+	}
+
+	public async refreshToken(): Promise<boolean | null> {
 		const response = await this.post<SpotifyTypes.Endpoints.AuthToken>(
 			'/api/token',
 			`grant_type=refresh_token&refresh_token=${this._refreshToken!}`,
@@ -100,16 +109,7 @@ export class API {
 		return this._checkCreatedToken(response);
 	}
 
-	private static readonly SPOTIFY_BASE = 'https://api.spotify.com';
-	private _getHeaders() {
-		return {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${this._token!}`,
-		};
-	}
-
-	async wrapRequest<R>(
+	public async wrapRequest<R>(
 		path: string,
 		request: () => Promise<ExtendedResponse<R>>,
 		method: string,
@@ -181,7 +181,7 @@ export class API {
 		}
 	}
 
-	async get<R>(
+	public async get<R>(
 		path: string,
 		silent = false
 	): Promise<ExtendedResponse<R> | null> {
@@ -198,7 +198,7 @@ export class API {
 		return ret;
 	}
 
-	post<R>(
+	public post<R>(
 		path: string,
 		data: string,
 		options: {
@@ -226,7 +226,7 @@ export class API {
 		);
 	}
 
-	put<R>(
+	public put<R>(
 		path: string,
 		data: string,
 		options: {
@@ -254,7 +254,7 @@ export class API {
 		);
 	}
 
-	createAuthURL(scopes: string[], state = ''): string {
+	public createAuthURL(scopes: string[], state = ''): string {
 		return `https://accounts.spotify.com/authorize?client_id=${
 			this._clientId
 		}&response_type=code&redirect_uri=${
@@ -262,7 +262,7 @@ export class API {
 		}&scope=${scopes.join('%20')}&state=${state}`;
 	}
 
-	async grantAuthCode(token: string): Promise<boolean | null> {
+	public async grantAuthCode(token: string): Promise<boolean | null> {
 		const response = await this.post<SpotifyTypes.Endpoints.AuthToken>(
 			'/api/token',
 			`grant_type=authorization_code&code=${token}&redirect_uri=${this._redirectURI}`,
@@ -282,7 +282,7 @@ export class API {
 		return this._checkCreatedToken(response);
 	}
 
-	async testAuth(): Promise<boolean> {
+	public async testAuth(): Promise<boolean> {
 		try {
 			const response = await this.get('/v1/me', true);
 			return !!(response && response.status === 200);

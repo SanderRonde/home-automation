@@ -5,16 +5,16 @@ import {
 	MAX_PRESSURE_TIME,
 	PRESSURE_SAMPLE_TIME,
 } from '../../lib/constants';
-import { Database } from '../../lib/db';
-import { LogObj, attachMessage } from '../../lib/logger';
-import { SettablePromise, createHookables } from '../../lib/util';
-import pressureConfig from '../../config/pressures';
-import { Pressure } from '.';
 import {
 	PRESSURE_REGISTER,
 	PRESSURE_CHANGE_DIRECTION,
 	PressureRange,
 } from './types';
+import { SettablePromise, createHookables } from '../../lib/util';
+import { LogObj, attachMessage } from '../../lib/logger';
+import pressureConfig from '../../config/pressures';
+import { Database } from '../../lib/db';
+import { Pressure } from '.';
 
 let enabled: boolean | null = null;
 const db = new SettablePromise<Database>();

@@ -7,6 +7,7 @@ export class APIHandler {
 	@authAll
 	public static async play(
 		res: ResponseLike,
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		_params: {
 			auth?: string;
 		}
@@ -26,6 +27,7 @@ export class APIHandler {
 	@authAll
 	public static async pause(
 		res: ResponseLike,
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		_params: {
 			auth?: string;
 		}
@@ -45,6 +47,7 @@ export class APIHandler {
 	@authAll
 	public static async playpause(
 		res: ResponseLike,
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		_params: {
 			auth?: string;
 		}
@@ -64,6 +67,7 @@ export class APIHandler {
 	@authAll
 	public static async close(
 		res: ResponseLike,
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		_params: {
 			auth?: string;
 		}

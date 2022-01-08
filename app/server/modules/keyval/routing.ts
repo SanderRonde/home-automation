@@ -1,12 +1,12 @@
-import chalk from 'chalk';
-import { KeyVal } from '.';
-import { ModuleConfig } from '..';
-import { createRouter } from '../../lib/api';
+import { addListener, removeListener, update } from './get-set-listener';
 import { LogObj, attachMessage, logTag } from '../../lib/logger';
 import { WSSimInstance } from '../../lib/ws';
-import { APIHandler } from './api';
-import { addListener, removeListener, update } from './get-set-listener';
+import { createRouter } from '../../lib/api';
 import { WebPageHandler } from './web-page';
+import { APIHandler } from './api';
+import { ModuleConfig } from '..';
+import { KeyVal } from '.';
+import chalk from 'chalk';
 
 type WSMessages = {
 	send: 'authid' | 'authfail' | 'authsuccess' | 'valChange';

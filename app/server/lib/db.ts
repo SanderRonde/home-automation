@@ -1,7 +1,7 @@
 import { DB_FOLDER } from './constants';
+import { warning } from './logger';
 import * as fs from 'fs-extra';
 import * as path from 'path';
-import { warning } from './logger';
 
 class DBFileManager {
 	private static get date() {
@@ -66,13 +66,7 @@ export class Database {
 		[key: string]: unknown;
 	};
 	private _initialized = false;
-	constructor(private _fileName: string) {}
-
-	async init(): Promise<this> {
-		this._data = await DBFileManager.read(this._fileName);
-		this._initialized = true;
-		return this;
-	}
+	public constructor(private readonly _fileName: string) {}
 
 	private _assertInitialized() {
 		if (!this._initialized) {
@@ -111,8 +105,13 @@ export class Database {
 			currentTarget,
 		};
 	}
+	public async init(): Promise<this> {
+		this._data = await DBFileManager.read(this._fileName);
+		this._initialized = true;
+		return this;
+	}
 
-	setVal(key: string, val: unknown, noWrite = false): void {
+	public setVal(key: string, val: unknown, noWrite = false): void {
 		const lastTarget = this._getLastTarget(key);
 		if (!lastTarget) {
 			return;
@@ -139,7 +138,7 @@ export class Database {
 		}
 	}
 
-	pushVal(
+	public pushVal(
 		key: string,
 		val: unknown,
 		duplicateBehavior: 'warning' | 'ignore' | 'duplicate' = 'warning',
@@ -181,7 +180,7 @@ export class Database {
 		}
 	}
 
-	deleteArrayVal<V>(
+	public deleteArrayVal<V>(
 		key: string,
 		filter: (value: V) => boolean,
 		noWrite = false
@@ -208,9 +207,12 @@ export class Database {
 		}
 	}
 
-	get<V>(key: string, defaultVal: V): V;
-	get<V>(key: string): V | undefined;
-	get<V>(key: string, defaultVal: V | undefined = undefined): V | undefined {
+	public get<V>(key: string, defaultVal: V): V;
+	public get<V>(key: string): V | undefined;
+	public get<V>(
+		key: string,
+		defaultVal: V | undefined = undefined
+	): V | undefined {
 		this._assertInitialized();
 
 		const parts = key.split('.');
@@ -226,7 +228,7 @@ export class Database {
 		return ((current as unknown) || defaultVal) as V;
 	}
 
-	async data(force = false): Promise<Record<string, unknown>> {
+	public async data(force = false): Promise<Record<string, unknown>> {
 		this._assertInitialized();
 
 		if (force) {
@@ -235,7 +237,7 @@ export class Database {
 		return this._data;
 	}
 
-	async json(force = false): Promise<string> {
+	public async json(force = false): Promise<string> {
 		return JSON.stringify(await this.data(force));
 	}
 }

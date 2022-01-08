@@ -1,9 +1,9 @@
-import { RGB } from '.';
-import { ModuleConfig } from '..';
 import { createRouter } from '../../lib/api';
-import { APIHandler } from './api';
 import { scanRGBControllers } from './scan';
 import { WebPageHandler } from './web-page';
+import { APIHandler } from './api';
+import { ModuleConfig } from '..';
+import { RGB } from '.';
 
 export function initRouting({ app, randomNum }: ModuleConfig): void {
 	const router = createRouter(RGB, APIHandler);

@@ -1,14 +1,14 @@
-import { smarthome } from 'actions-on-google';
-import { ModuleConfig, SmartHome } from '..';
-import { createRouter } from '../../lib/api';
-import { attachMessage } from '../../lib/logger';
-import { attachTimerToReq } from '../../lib/timer';
 import {
 	googleSync,
 	googleQuery,
 	googleExecute,
 	googleDisconnect,
 } from './state/google';
+import { attachTimerToReq } from '../../lib/timer';
+import { attachMessage } from '../../lib/logger';
+import { smarthome } from 'actions-on-google';
+import { ModuleConfig, SmartHome } from '..';
+import { createRouter } from '../../lib/api';
 
 export async function initRouting({ app }: ModuleConfig): Promise<void> {
 	const smartHomeApp = smarthome({});
@@ -33,6 +33,7 @@ export async function initRouting({ app }: ModuleConfig): Promise<void> {
 			attachTimerToReq(res);
 			return next();
 		},
+		// @ts-ignore
 		await new (
 			await SmartHome.modules
 		).oauth.External(

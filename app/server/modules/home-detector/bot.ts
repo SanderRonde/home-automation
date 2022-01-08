@@ -1,14 +1,14 @@
-import chalk from 'chalk';
-import { HOME_STATE } from './types';
-import { BotState } from '../../lib/bot-state';
 import { attachMessage, ResDummy } from '../../lib/logger';
-import { APIHandler } from './api';
-import { Detector } from './classes';
-import { MatchParameters } from '../bot/message';
 import { ChatState } from '../bot/message/state-keeping';
-import { MatchResponse } from '../bot/types';
 import { State as KeyValState } from '../keyval/bot';
+import { BotStateBase } from '../../lib/bot-state';
+import { MatchParameters } from '../bot/message';
+import { MatchResponse } from '../bot/types';
+import { HOME_STATE } from './types';
+import { Detector } from './classes';
+import { APIHandler } from './api';
 import { HomeDetector } from '.';
+import chalk from 'chalk';
 
 export interface State {
 	lastSubjects: string[] | null;
@@ -19,15 +19,17 @@ interface HomeDetectorBotConfig {
 	detector: Detector;
 }
 
-export class Bot extends BotState.Base {
-	static readonly commands = {
+export class Bot extends BotStateBase {
+	private static _config: HomeDetectorBotConfig | null = null;
+
+	public static readonly commands = {
 		'/whoshome': 'Check who is home',
 		'/help_homedetector': 'Print help comands for home-detector',
 	};
 
-	static readonly botName = 'Home-Detector';
+	public static readonly botName = 'Home-Detector';
 
-	static readonly matches = Bot.createMatchMaker(
+	public static readonly matches = Bot.createMatchMaker(
 		({ matchMaker: mm, fallbackSetter: fallback, conditional }) => {
 			mm(
 				'/whoshome',
@@ -235,21 +237,20 @@ export class Bot extends BotState.Base {
 		}
 	);
 
-	private static _config: HomeDetectorBotConfig | null = null;
-	lastSubjects: string[] | null = null;
+	public lastSubjects: string[] | null = null;
 
-	constructor(json?: State) {
+	public constructor(json?: State) {
 		super();
 		if (json) {
 			this.lastSubjects = json.lastSubjects;
 		}
 	}
 
-	static init(config: HomeDetectorBotConfig): void {
+	public static init(config: HomeDetectorBotConfig): void {
 		this._config = config;
 	}
 
-	static async match(
+	public static async match(
 		config: MatchParameters
 	): Promise<MatchResponse | undefined> {
 		return await this.matchLines({
@@ -258,11 +259,11 @@ export class Bot extends BotState.Base {
 		});
 	}
 
-	static resetState(state: ChatState): void {
+	public static resetState(state: ChatState): void {
 		(state.states.keyval as unknown as KeyValState).lastSubjects = null;
 	}
 
-	toJSON(): State {
+	public toJSON(): State {
 		return {
 			lastSubjects: this.lastSubjects,
 		};

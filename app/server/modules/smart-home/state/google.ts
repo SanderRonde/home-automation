@@ -9,17 +9,17 @@ import {
 	SmartHomeV1ExecuteResponse,
 	SmartHomeV1DisconnectRequest,
 } from 'actions-on-google';
-import { BuiltinFrameworkMetadata } from 'actions-on-google/dist/framework';
-import { SMART_HOME_COMMAND } from '../../../lib/smart-home/smart-home-types';
-import { time } from '../../../lib/timer';
-import { flatMap, flatten, fromEntries } from '../../../lib/util';
-import { getAuth } from '../../oauth/helpers';
 import {
 	sharedDisconnect,
 	sharedExecute,
 	sharedQuery,
 	sharedSync,
 } from './shared';
+import { SMART_HOME_COMMAND } from '../../../lib/smart-home/smart-home-types';
+import { BuiltinFrameworkMetadata } from 'actions-on-google/dist/framework';
+import { flatMap, flatten, fromEntries } from '../../../lib/util';
+import { getAuth } from '../../oauth/helpers';
+import { time } from '../../../lib/timer';
 
 export async function googleSync(
 	body: SmartHomeV1SyncRequest,

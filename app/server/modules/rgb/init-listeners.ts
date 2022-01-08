@@ -1,12 +1,13 @@
-import chalk from 'chalk';
-import { RGB } from '.';
 import {
 	LED_NAMES,
 	NIGHTSTAND_COLOR,
 	WAKELIGHT_TIME,
 } from '../../lib/constants';
 import { LogObj, attachSourcedMessage, attachMessage } from '../../lib/logger';
+import { asyncSetInterval } from '../../lib/util';
 import { getLed } from './clients';
+import chalk from 'chalk';
+import { RGB } from '.';
 
 async function switchLed(name: LED_NAMES, value: string, logObj: LogObj) {
 	const client = getLed(name);
@@ -119,7 +120,7 @@ export function initListeners(): void {
 					);
 
 					let count = 2;
-					const interval = setInterval(async () => {
+					const interval = asyncSetInterval(async () => {
 						await client.setColorWithBrightness(
 							NIGHTSTAND_COLOR.r,
 							NIGHTSTAND_COLOR.g,

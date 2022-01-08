@@ -30,7 +30,7 @@ export abstract class ServerComm<
 	selectors: ELS;
 	events: E;
 }> {
-	props = Props.define(this, {
+	public props = Props.define(this, {
 		reflect: {
 			key: {
 				type: PROP_TYPE.STRING,
@@ -48,12 +48,14 @@ export abstract class ServerComm<
 				duration: 100000000,
 			});
 
-			const interval = window.setInterval(async () => {
-				if (navigator.onLine) {
-					window.clearInterval(interval);
-					await (await toast).hide();
-					resolve();
-				}
+			const interval = window.setInterval(() => {
+				void (async () => {
+					if (navigator.onLine) {
+						window.clearInterval(interval);
+						await (await toast).hide();
+						resolve();
+					}
+				})();
 			}, 1000);
 		});
 	}

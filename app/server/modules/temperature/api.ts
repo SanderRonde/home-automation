@@ -1,4 +1,3 @@
-import { Temperature } from '..';
 import {
 	errorHandle,
 	requireParams,
@@ -7,6 +6,7 @@ import {
 } from '../../lib/decorators';
 import { ResponseLike, attachSourcedMessage } from '../../lib/logger';
 import { getController } from './temp-controller';
+import { Temperature } from '..';
 import { Mode } from './types';
 
 export class APIHandler {

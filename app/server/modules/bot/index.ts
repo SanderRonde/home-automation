@@ -1,17 +1,17 @@
-import { ModuleConfig } from '..';
-import { ModuleMeta } from '../meta';
 import { ExternalHandler } from './external';
 import { initRouting } from './routing';
+import { ModuleMeta } from '../meta';
+import { ModuleConfig } from '..';
 
 export const Bot = new (class Meta extends ModuleMeta {
-	name = 'bot';
+	public name = 'bot';
 
-	async init(config: ModuleConfig) {
-		await initRouting(config);
-		await ExternalHandler.init();
+	public get External() {
+		return ExternalHandler;
 	}
 
-	get External() {
-		return ExternalHandler;
+	public async init(config: ModuleConfig) {
+		await initRouting(config);
+		await ExternalHandler.init();
 	}
 })();

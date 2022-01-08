@@ -21,14 +21,6 @@ export class RgbControls extends ConfigurableWebComponent<{
 		CLASSES: Record<string, never>;
 	};
 }> {
-	props = Props.define(this, {
-		reflect: {
-			parent: ComplexType<ColorButton>(),
-		},
-	});
-
-	public lastColor: [number, number, number] = [0, 0, 0];
-
 	private static readonly RANGE_COLORS = [
 		[255, 0, 0],
 		[255, 255, 0],
@@ -38,7 +30,16 @@ export class RgbControls extends ConfigurableWebComponent<{
 		[255, 0, 255],
 		[255, 0, 0],
 	];
-	static getColorAtIndex(index: number): [number, number, number] {
+
+	public props = Props.define(this, {
+		reflect: {
+			parent: ComplexType<ColorButton>(),
+		},
+	});
+
+	public lastColor: [number, number, number] = [0, 0, 0];
+
+	public static getColorAtIndex(index: number): [number, number, number] {
 		const groupSize = 100 / (this.RANGE_COLORS.length - 1);
 		const closestGroup = Math.ceil(index / groupSize) * groupSize;
 		const { start, end } = (() => {
@@ -73,7 +74,7 @@ export class RgbControls extends ConfigurableWebComponent<{
 		}) as [number, number, number];
 	}
 
-	async onChange(): Promise<void> {
+	public async onChange(): Promise<void> {
 		const value = this.$.hueSlider.valueAsNumber;
 		const color = RgbControls.getColorAtIndex(value);
 		this.lastColor = color;

@@ -1,10 +1,10 @@
-import chalk from 'chalk';
-import { KeyVal } from '.';
+import { createHookables } from '../../lib/util';
+import { attachMessage } from '../../lib/logger';
+import { addListener } from './get-set-listener';
 import aggregates from '../../config/aggregates';
 import { Database } from '../../lib/db';
-import { attachMessage } from '../../lib/logger';
-import { createHookables } from '../../lib/util';
-import { addListener } from './get-set-listener';
+import { KeyVal } from '.';
+import chalk from 'chalk';
 
 function registerAggregates(db: Database) {
 	for (const key in aggregates) {

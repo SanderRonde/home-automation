@@ -25,7 +25,8 @@ export class TemperatureDisplay extends ConfigurableWebComponent<{
 		};
 	};
 }> {
-	props = Props.define(this, {
+	private _initialized = false;
+	public props = Props.define(this, {
 		reflect: {
 			tempType: {
 				type: PROP_TYPE.STRING,
@@ -44,7 +45,7 @@ export class TemperatureDisplay extends ConfigurableWebComponent<{
 		},
 	});
 
-	async request(
+	public async request(
 		url: string,
 		postBody: {
 			[key: string]: unknown;
@@ -65,7 +66,7 @@ export class TemperatureDisplay extends ConfigurableWebComponent<{
 		}
 	}
 
-	async updateWeather(): Promise<void> {
+	public async updateWeather(): Promise<void> {
 		const response = await this.request(`${location.origin}/weather`, {
 			type: this.props.tempType,
 		});
@@ -77,8 +78,7 @@ export class TemperatureDisplay extends ConfigurableWebComponent<{
 		this.props.icon = icon;
 	}
 
-	private _initialized = false;
-	async setup(): Promise<void> {
+	public async setup(): Promise<void> {
 		if (this.props.tempType === undefined || this._initialized) {
 			return;
 		}
@@ -86,8 +86,8 @@ export class TemperatureDisplay extends ConfigurableWebComponent<{
 
 		await this.updateWeather();
 		setInterval(
-			async () => {
-				await this.updateWeather();
+			() => {
+				void this.updateWeather();
 			},
 			this.props.tempType === TEMPERATURE_DISPLAY_TYPE.OUTSIDE
 				? 1000 * 60 * 60
@@ -95,7 +95,7 @@ export class TemperatureDisplay extends ConfigurableWebComponent<{
 		);
 	}
 
-	async mounted(): Promise<void> {
+	public async mounted(): Promise<void> {
 		this.listen('propChange', async () => {
 			await this.setup();
 		});

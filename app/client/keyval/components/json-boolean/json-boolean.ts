@@ -25,7 +25,7 @@ export class JSONBoolean extends ConfigurableWebComponent<{
 		CLASSES: Record<string, never>;
 	};
 }> {
-	props = Props.define(this, {
+	public props = Props.define(this, {
 		reflect: {
 			value: {
 				type: ComplexType<number | boolean | string>(),
@@ -40,7 +40,7 @@ export class JSONBoolean extends ConfigurableWebComponent<{
 	});
 
 	@bindToClass
-	async onToggle(): Promise<void> {
+	public async onToggle(): Promise<void> {
 		const root = this.getRoot<JSONSwitches>();
 		if (!root) {
 			await MessageToast.create({

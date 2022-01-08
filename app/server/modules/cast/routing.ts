@@ -1,8 +1,8 @@
-import { Cast } from './index';
-import { ModuleConfig } from '..';
-import { createRouter } from '../../lib/api';
 import { ExternalHandler } from './external';
+import { createRouter } from '../../lib/api';
 import { APIHandler } from './api';
+import { ModuleConfig } from '..';
+import { Cast } from './index';
 
 export async function initRouting({ app }: ModuleConfig): Promise<void> {
 	await ExternalHandler.init();

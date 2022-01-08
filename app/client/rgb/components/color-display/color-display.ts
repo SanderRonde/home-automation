@@ -18,7 +18,7 @@ export class ColorDisplay extends ConfigurableWebComponent<{
 		CLASSES: Record<string, never>;
 	};
 }> {
-	appendElement(el: HTMLElement): void {
+	public appendElement(el: HTMLElement): void {
 		Array.from(this.$.display.children).forEach((el) => {
 			el.remove();
 		});

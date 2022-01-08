@@ -1,7 +1,7 @@
-import { Temperature } from '.';
 import { createExternalClass } from '../../lib/external';
-import { APIHandler } from './api';
 import { getController } from './temp-controller';
+import { APIHandler } from './api';
+import { Temperature } from '.';
 import { Mode } from './types';
 
 export class ExternalHandler extends createExternalClass(false) {
@@ -69,12 +69,12 @@ export class ExternalHandler extends createExternalClass(false) {
 
 	public onUpdate(
 		name: string,
-		handler: (temperature: number) => void
+		handler: (temperature: number) => void | Promise<void>
 	): Promise<void> {
 		return this.runRequest(async () => {
 			const controller = await getController(name);
-			controller.addListener((temperature) => {
-				handler(temperature);
+			controller.addListener(async (temperature) => {
+				await handler(temperature);
 			});
 		});
 	}

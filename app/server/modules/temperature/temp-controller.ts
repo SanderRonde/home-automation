@@ -1,33 +1,33 @@
-import chalk from 'chalk';
-import { Temperature } from '..';
-import { Database } from '../../lib/db';
-import { logTag } from '../../lib/logger';
 import { SettablePromise } from '../../lib/util';
 import { LOG_INTERVAL_SECS } from './constants';
+import { logTag } from '../../lib/logger';
+import { Database } from '../../lib/db';
+import { Temperature } from '..';
 import { Mode } from './types';
+import chalk from 'chalk';
 
 class TempControl {
-	private _listeners: ((temperature: number) => void)[] = [];
+	private _listeners: ((temperature: number) => void | Promise<void>)[] = [];
 
-	target = 20.0;
-	mode: Mode = 'auto';
-	lastTemp = -1;
-	db: Database | null = null;
-	lastLogTime = 0;
-	lastLoggedTemp = -1;
-	name!: string;
+	public target = 20.0;
+	public mode: Mode = 'auto';
+	public lastTemp = -1;
+	public db: Database | null = null;
+	public lastLogTime = 0;
+	public lastLoggedTemp = -1;
+	public name!: string;
 
-	move: {
+	public move: {
 		direction: 'left' | 'right';
 		ms: number;
 	} | null = null;
 
-	setTarget(targetTemp: number) {
+	public setTarget(targetTemp: number) {
 		this.db!.setVal(`${this.name}.target`, targetTemp);
 		this.target = targetTemp;
 	}
 
-	async setMode(newMode: Mode) {
+	public async setMode(newMode: Mode) {
 		this.db!.setVal(`${this.name}.mode`, newMode);
 		this.mode = newMode;
 
@@ -49,14 +49,14 @@ class TempControl {
 		}
 	}
 
-	setMove(direction: 'left' | 'right', ms: number) {
+	public setMove(direction: 'left' | 'right', ms: number) {
 		this.move = {
 			direction,
 			ms,
 		};
 	}
 
-	setLastTemp(temp: number, store = true, doLog = true) {
+	public async setLastTemp(temp: number, store = true, doLog = true) {
 		this.lastTemp = temp;
 
 		// Write temp to database
@@ -77,22 +77,22 @@ class TempControl {
 			this.lastLogTime = Date.now();
 		}
 
-		this._listeners.forEach((listener) => listener(temp));
+		await Promise.all(this._listeners.map((listener) => listener(temp)));
 	}
 
-	getTarget() {
+	public getTarget() {
 		return this.target;
 	}
 
-	getMode() {
+	public getMode() {
 		return this.mode;
 	}
 
-	getLastTemp() {
+	public getLastTemp() {
 		return this.lastTemp;
 	}
 
-	getHeaterState() {
+	public getHeaterState() {
 		if (this.mode !== 'auto') {
 			return this.mode;
 		}
@@ -102,17 +102,19 @@ class TempControl {
 		return 'on';
 	}
 
-	getMove() {
+	public getMove() {
 		const move = this.move;
 		this.move = null;
 		return move;
 	}
 
-	addListener(listener: (temperature: number) => void) {
+	public addListener(
+		listener: (temperature: number) => void | Promise<void>
+	) {
 		this._listeners.push(listener);
 	}
 
-	async init(database: Database, name: string) {
+	public async init(database: Database, name: string) {
 		this.db = database;
 		this.name = name;
 
@@ -124,7 +126,7 @@ class TempControl {
 
 		const temp = database.get(`${name}.temp`, 20.0);
 
-		this.setLastTemp(temp, false, false);
+		await this.setLastTemp(temp, false, false);
 
 		return this;
 	}

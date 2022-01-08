@@ -35,7 +35,7 @@ export function addListener(
 }
 
 export function listenAny(
-	listener: (command: Commands, logObj: LogObj) => void,
+	listener: (command: Commands, logObj: LogObj) => void | Promise<void>,
 	once = false
 ): number {
 	const index = _lastIndex++;

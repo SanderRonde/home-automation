@@ -1,9 +1,9 @@
-import { ModuleMeta } from '../meta';
-import { createClient } from './client';
-import { startGeocoder } from './geocode';
 import { AllModules, ModuleConfig } from '..';
-import { Client } from '@notionhq/client';
 import { ExternalHandler } from './external';
+import { startGeocoder } from './geocode';
+import { Client } from '@notionhq/client';
+import { createClient } from './client';
+import { ModuleMeta } from '../meta';
 
 type Secret = {
 	init(config: ModuleConfig, client: Client): Promise<void>;
@@ -15,10 +15,14 @@ type Secret = {
 };
 
 export const Notion = new (class Meta extends ModuleMeta {
-	name = 'notion';
-
 	private _client: Client | null = null;
 	private _config: ModuleConfig | null = null;
+
+	public name = 'notion';
+
+	public get External() {
+		return ExternalHandler;
+	}
 
 	private async _getSecret(): Promise<Secret | null> {
 		try {
@@ -28,7 +32,7 @@ export const Notion = new (class Meta extends ModuleMeta {
 		}
 	}
 
-	async init(config: ModuleConfig) {
+	public async init(config: ModuleConfig) {
 		this._client = createClient();
 		this._config = config;
 		if (!this._client) {
@@ -42,7 +46,7 @@ export const Notion = new (class Meta extends ModuleMeta {
 		return Promise.resolve();
 	}
 
-	async postInit() {
+	public async postInit() {
 		await startGeocoder(this._client!);
 		const secret = await this._getSecret();
 		if (secret) {
@@ -51,9 +55,5 @@ export const Notion = new (class Meta extends ModuleMeta {
 				await secret.start(this._config!, this._client!, modules);
 			})();
 		}
-	}
-
-	get External() {
-		return ExternalHandler;
 	}
 })();

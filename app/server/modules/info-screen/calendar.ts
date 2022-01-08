@@ -1,11 +1,11 @@
-import * as fs from 'fs-extra';
+import { SettablePromise, flatten } from '../../lib/util';
+import { SECRETS_FOLDER } from '../../lib/constants';
 import { Credentials } from 'google-auth-library';
 import { google, calendar_v3 } from 'googleapis';
-import * as path from 'path';
-import { SECRETS_FOLDER } from '../../lib/constants';
 import { getEnv } from '../../lib/io';
-import { SettablePromise, flatten } from '../../lib/util';
 import { SCOPES } from './constants';
+import * as fs from 'fs-extra';
+import * as path from 'path';
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-call
 const optionalRequire = require('optional-require')(require) as (

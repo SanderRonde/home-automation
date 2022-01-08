@@ -1,19 +1,20 @@
-import chalk from 'chalk';
-import { logFixture, ResDummy } from '../../../lib/logger';
 import {
 	EWeLinkInittable,
 	EWeLinkSharedConfig,
 	EWeLinkWebSocketMessage,
 } from './shared';
+import { logFixture, ResDummy } from '../../../lib/logger';
+import { asyncSetInterval } from '../../../lib/util';
+import chalk from 'chalk';
 
 export class EwelinkPower extends EWeLinkInittable {
-	private _options: {
+	private readonly _options: {
 		enableSync: boolean;
 	};
 
-	constructor(
-		private _eWeLinkConfig: EWeLinkSharedConfig,
-		private _keyVal: string,
+	public constructor(
+		private readonly _eWeLinkConfig: EWeLinkSharedConfig,
+		private readonly _keyVal: string,
 		options?: {
 			enableSync?: boolean;
 		}
@@ -33,53 +34,6 @@ export class EwelinkPower extends EWeLinkInittable {
 				source
 			),
 		};
-	}
-
-	async init(): Promise<void> {
-		if (this._options.enableSync) {
-			this._startTimer();
-		}
-		const { keyval } = this._getKeyval('EWELINK.POWER.INIT');
-		await keyval.onChange(this._keyVal, async (value: string) => {
-			if (value === '1') {
-				await this.turnOn();
-			} else {
-				await this.turnOff();
-			}
-		});
-		this._eWeLinkConfig.wsConnection.on(
-			'data',
-			async (data: EWeLinkWebSocketMessage<{ switch: 'on' | 'off' }>) => {
-				if (
-					typeof data === 'string' ||
-					!('action' in data) ||
-					data.action !== 'update' ||
-					data.deviceid !== this._eWeLinkConfig.device.deviceid
-				) {
-					return;
-				}
-
-				await this._setFromRemoteStatus(
-					data.params.switch,
-					'websocket'
-				);
-			}
-		);
-	}
-
-	async setPower(isOn: boolean): Promise<void> {
-		await this._eWeLinkConfig.connection.setDevicePowerState(
-			this._eWeLinkConfig.device.deviceid,
-			isOn ? 'on' : 'off'
-		);
-	}
-
-	turnOn(): Promise<void> {
-		return this.setPower(true);
-	}
-
-	turnOff(): Promise<void> {
-		return this.setPower(false);
 	}
 
 	private async _setFromRemoteStatus(
@@ -117,6 +71,53 @@ export class EwelinkPower extends EWeLinkInittable {
 	}
 
 	private _startTimer() {
-		setInterval(() => this._syncStatus(), 1000 * 10);
+		asyncSetInterval(() => this._syncStatus(), 1000 * 10);
+	}
+
+	public async init(): Promise<void> {
+		if (this._options.enableSync) {
+			this._startTimer();
+		}
+		const { keyval } = this._getKeyval('EWELINK.POWER.INIT');
+		await keyval.onChange(this._keyVal, async (value: string) => {
+			if (value === '1') {
+				await this.turnOn();
+			} else {
+				await this.turnOff();
+			}
+		});
+		this._eWeLinkConfig.wsConnection.on(
+			'data',
+			async (data: EWeLinkWebSocketMessage<{ switch: 'on' | 'off' }>) => {
+				if (
+					typeof data === 'string' ||
+					!('action' in data) ||
+					data.action !== 'update' ||
+					data.deviceid !== this._eWeLinkConfig.device.deviceid
+				) {
+					return;
+				}
+
+				await this._setFromRemoteStatus(
+					data.params.switch,
+					'websocket'
+				);
+			}
+		);
+	}
+
+	public async setPower(isOn: boolean): Promise<void> {
+		await this._eWeLinkConfig.connection.setDevicePowerState(
+			this._eWeLinkConfig.device.deviceid,
+			isOn ? 'on' : 'off'
+		);
+	}
+
+	public turnOn(): Promise<void> {
+		return this.setPower(true);
+	}
+
+	public turnOff(): Promise<void> {
+		return this.setPower(false);
 	}
 }

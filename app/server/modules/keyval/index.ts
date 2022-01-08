@@ -1,16 +1,24 @@
-import { ModuleConfig } from '..';
-import { ModuleMeta } from '../meta';
 import { initAggregates } from './aggregates';
-import { APIHandler } from './api';
-import { Bot } from './bot';
 import { ExternalHandler } from './external';
 import { setDB } from './get-set-listener';
 import { initRouting } from './routing';
+import { ModuleMeta } from '../meta';
+import { APIHandler } from './api';
+import { ModuleConfig } from '..';
+import { Bot } from './bot';
 
 export const KeyVal = new (class Meta extends ModuleMeta {
-	name = 'keyval';
+	public name = 'keyval';
 
-	async init(config: ModuleConfig) {
+	public get External() {
+		return ExternalHandler;
+	}
+
+	public get Bot() {
+		return Bot;
+	}
+
+	public async init(config: ModuleConfig) {
 		const { db } = config;
 		setDB(db);
 		const apiHandler = new APIHandler({ db });
@@ -18,13 +26,5 @@ export const KeyVal = new (class Meta extends ModuleMeta {
 		initAggregates(db);
 
 		initRouting({ ...config, apiHandler });
-	}
-
-	get External() {
-		return ExternalHandler;
-	}
-
-	get Bot() {
-		return Bot;
 	}
 })();

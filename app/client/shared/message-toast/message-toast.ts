@@ -99,7 +99,8 @@ export class MessageToast extends ConfigurableWebComponent<{
 		};
 	};
 }> {
-	props = Props.define(this, {
+	private static _activeToast: MessageToast | null = null;
+	public props = Props.define(this, {
 		reflect: {
 			message: PROP_TYPE.STRING,
 			button: {
@@ -112,32 +113,6 @@ export class MessageToast extends ConfigurableWebComponent<{
 			},
 		},
 	});
-
-	async hide(): Promise<void> {
-		this.classList.remove('visible');
-		await wait(500);
-		this.remove();
-		this.fire('hide');
-	}
-
-	@bindToClass
-	async onClick(e: MouseEvent): Promise<void> {
-		this.fire('click', e);
-		await this.hide();
-	}
-
-	async mounted(): Promise<void> {
-		if (this.props.duration !== Infinity) {
-			window.setTimeout(async () => {
-				await this.hide();
-			}, this.props.duration);
-		}
-
-		await wait(0);
-		this.classList.add('visible');
-	}
-
-	private static _activeToast: MessageToast | null = null;
 
 	private static _create({
 		message,
@@ -162,10 +137,34 @@ export class MessageToast extends ConfigurableWebComponent<{
 		return toast;
 	}
 
-	static async create(config: CreateConfig): Promise<MessageToast> {
+	public static async create(config: CreateConfig): Promise<MessageToast> {
 		if (this._activeToast) {
 			await this._activeToast.hide();
 		}
 		return this._create(config);
+	}
+
+	@bindToClass
+	public async onClick(e: MouseEvent): Promise<void> {
+		this.fire('click', e);
+		await this.hide();
+	}
+
+	public async hide(): Promise<void> {
+		this.classList.remove('visible');
+		await wait(500);
+		this.remove();
+		this.fire('hide');
+	}
+
+	public async mounted(): Promise<void> {
+		if (this.props.duration !== Infinity) {
+			window.setTimeout(() => {
+				void this.hide();
+			}, this.props.duration);
+		}
+
+		await wait(0);
+		this.classList.add('visible');
 	}
 }

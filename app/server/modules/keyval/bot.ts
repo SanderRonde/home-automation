@@ -1,25 +1,25 @@
-import { BotState } from '../../lib/bot-state';
 import { COMMON_SWITCH_MAPPINGS, MAIN_LIGHTS } from '../../lib/constants';
-import { MatchParameters } from '../bot/message';
 import { ChatState } from '../bot/message/state-keeping';
-import { MatchResponse } from '../bot/types';
+import { BotStateBase } from '../../lib/bot-state';
+import { MatchParameters } from '../bot/message';
 import { ExternalHandler } from './external';
+import { MatchResponse } from '../bot/types';
 
 export interface State {
 	lastSubjects: string[] | null;
 }
 
-export class Bot extends BotState.Base {
-	static readonly commands = {
+export class Bot extends BotStateBase {
+	public static readonly commands = {
 		'/islighton': 'Check if the light is on',
 		'/lightoff': 'Turn off the light',
 		'/lighton': 'Turn on the light',
 		'/help_keyval': 'Print help comands for keyval',
 	};
 
-	static readonly botName = 'Keyval';
+	public static readonly botName = 'Keyval';
 
-	static readonly matches = Bot.createMatchMaker(
+	public static readonly matches = Bot.createMatchMaker(
 		({ matchMaker: mm, fallbackSetter: fallback, conditional }) => {
 			mm(
 				'/islighton',
@@ -158,16 +158,16 @@ export class Bot extends BotState.Base {
 		}
 	);
 
-	lastSubjects: string[] | null = null;
+	public lastSubjects: string[] | null = null;
 
-	constructor(json?: State) {
+	public constructor(json?: State) {
 		super();
 		if (json) {
 			this.lastSubjects = json.lastSubjects;
 		}
 	}
 
-	static async match(
+	public static async match(
 		config: MatchParameters
 	): Promise<MatchResponse | undefined> {
 		return await this.matchLines({
@@ -176,11 +176,11 @@ export class Bot extends BotState.Base {
 		});
 	}
 
-	static resetState(state: ChatState): void {
+	public static resetState(state: ChatState): void {
 		(state.states.keyval as unknown as State).lastSubjects = null;
 	}
 
-	toJSON(): State {
+	public toJSON(): State {
 		return {
 			lastSubjects: this.lastSubjects,
 		};

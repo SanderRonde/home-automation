@@ -18,7 +18,7 @@ export class ColorControls extends ConfigurableWebComponent<{
 		CLASSES: Record<string, never>;
 	};
 }> {
-	appendElement(element: HTMLElement): void {
+	public appendElement(element: HTMLElement): void {
 		Array.from(this.$.container.children).forEach((el) => el.remove());
 		this.$.container.appendChild(element);
 	}

@@ -10,10 +10,10 @@ export class Color implements Color {
 	public g: number;
 	public b: number;
 
-	constructor(color: number);
-	constructor(color: MagicHomeColor);
-	constructor(r: number, g: number, b: number);
-	constructor(
+	public constructor(color: number);
+	public constructor(color: MagicHomeColor);
+	public constructor(r: number, g: number, b: number);
+	public constructor(
 		r: number | MagicHomeColor,
 		g: number = typeof r === 'number' ? r : 0,
 		b: number = typeof r === 'number' ? r : 0
@@ -29,6 +29,31 @@ export class Color implements Color {
 		this.b = b;
 	}
 
+	public static fromHex(hexString: string): Color {
+		const sliced = hexString.startsWith('#')
+			? hexString.slice(1)
+			: hexString;
+		const [r, g, b] = sliced.match(/.{2}/g)!;
+		return new Color(parseInt(r, 16), parseInt(g, 16), parseInt(b, 16));
+	}
+
+	public static fromHSV(
+		hue: number,
+		saturation: number,
+		value: number
+	): Color {
+		const { r, g, b } = HSVtoRGB(hue, saturation, value);
+		return new Color(r, g, b);
+	}
+
+	public static isSame(color1: Color, color2: Color): boolean {
+		return (
+			color1.r === color2.r &&
+			color1.b === color2.b &&
+			color1.g === color2.g
+		);
+	}
+
 	private _colorToHex(color: number) {
 		const num = color.toString(16);
 		if (num.length === 1) {
@@ -37,7 +62,7 @@ export class Color implements Color {
 		return num;
 	}
 
-	toJSON(): IColor {
+	public toJSON(): IColor {
 		return {
 			r: this.r,
 			g: this.g,
@@ -45,47 +70,26 @@ export class Color implements Color {
 		};
 	}
 
-	clone(): Color {
+	public clone(): Color {
 		return new Color(this.r, this.g, this.b);
 	}
 
-	toBytes(): number[] {
+	public toBytes(): number[] {
 		return [this.r, this.g, this.b];
 	}
 
-	isSame(color: Color): boolean {
+	public isSame(color: Color): boolean {
 		return Color.isSame(this, color);
 	}
 
-	toHex(): string {
+	public toHex(): string {
 		return `#${this._colorToHex(this.r)}${this._colorToHex(
 			this.g
 		)}${this._colorToHex(this.b)}`;
 	}
 
-	toDecimal(): number {
+	public toDecimal(): number {
 		return parseInt(this.toHex().slice(1), 16);
-	}
-
-	static fromHex(hexString: string): Color {
-		const sliced = hexString.startsWith('#')
-			? hexString.slice(1)
-			: hexString;
-		const [r, g, b] = sliced.match(/.{2}/g)!;
-		return new Color(parseInt(r, 16), parseInt(g, 16), parseInt(b, 16));
-	}
-
-	static fromHSV(hue: number, saturation: number, value: number): Color {
-		const { r, g, b } = HSVtoRGB(hue, saturation, value);
-		return new Color(r, g, b);
-	}
-
-	static isSame(color1: Color, color2: Color): boolean {
-		return (
-			color1.r === color2.r &&
-			color1.b === color2.b &&
-			color1.g === color2.g
-		);
 	}
 }
 

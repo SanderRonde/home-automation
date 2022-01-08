@@ -1,9 +1,9 @@
-import { Movement } from '.';
 import { createExternalClass } from '../../lib/external';
 import { APIHandler } from './api';
+import { Movement } from '.';
 
 export class ExternalHandler extends createExternalClass(false) {
-	async reportMovement(key: string): Promise<void> {
+	public async reportMovement(key: string): Promise<void> {
 		return this.runRequest(async (res, source) => {
 			return APIHandler.reportMovement(
 				res,

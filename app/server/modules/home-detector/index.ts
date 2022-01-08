@@ -1,17 +1,25 @@
-import chalk from 'chalk';
+import { ExternalHandler } from './external';
+import { logTag } from '../../lib/logger';
+import { initRouting } from './routing';
+import { handleHooks } from './hooks';
+import { HOME_STATE } from './types';
+import { ModuleMeta } from '../meta';
 import { Detector } from './classes';
 import { APIHandler } from './api';
-import { ExternalHandler } from './external';
-import { initRouting } from './routing';
-import { HOME_STATE } from './types';
-import { handleHooks } from './hooks';
-import { ModuleMeta } from '../meta';
 import { ModuleConfig } from '..';
 import { Bot } from './bot';
-import { logTag } from '../../lib/logger';
+import chalk from 'chalk';
 
 export const HomeDetector = new (class Meta extends ModuleMeta {
-	name = 'home-detector';
+	public name = 'home-detector';
+
+	public get External() {
+		return ExternalHandler;
+	}
+
+	public get Bot() {
+		return Bot;
+	}
 
 	private _initListeners() {
 		Detector.addListener(null, (newState, name) => {
@@ -28,21 +36,20 @@ export const HomeDetector = new (class Meta extends ModuleMeta {
 		});
 	}
 
-	async init(config: ModuleConfig) {
+	public async init(config: ModuleConfig) {
 		const detector = new Detector({ db: config.db });
 		const apiHandler = new APIHandler({ detector });
-		Bot.init({ apiHandler, detector });
+		Bot.init({
+			apiHandler,
+			detector,
+		});
 		await ExternalHandler.init({ detector });
 
 		this._initListeners();
-		initRouting({ ...config, detector, apiHandler });
-	}
-
-	get External() {
-		return ExternalHandler;
-	}
-
-	get Bot() {
-		return Bot;
+		initRouting({
+			...config,
+			detector,
+			apiHandler,
+		});
 	}
 })();

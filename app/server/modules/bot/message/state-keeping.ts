@@ -9,9 +9,9 @@ type ChatStateType = {
 type ChatStateInitJSON = Record<keyof AllModules, unknown>;
 
 export class ChatState {
-	states!: ChatStateType;
+	public states!: ChatStateType;
 
-	async init(
+	public async init(
 		json: ChatStateInitJSON = {} as Record<keyof AllModules, unknown>
 	): Promise<this> {
 		this.states = {} as ChatStateType;
@@ -28,7 +28,7 @@ export class ChatState {
 		return this;
 	}
 
-	async toJSON(): Promise<Record<keyof AllModules, unknown>> {
+	public async toJSON(): Promise<Record<keyof AllModules, unknown>> {
 		const obj: Partial<Record<keyof AllModules, unknown>> = {};
 
 		const modules = await getAllModules();
@@ -41,14 +41,9 @@ export class ChatState {
 }
 
 export class StateKeeper {
-	chatIds: Map<number, ChatState> = new Map();
+	public chatIds: Map<number, ChatState> = new Map();
 
-	constructor(private _db: Database) {}
-
-	async init(): Promise<this> {
-		await this._restoreFromDB();
-		return this;
-	}
+	public constructor(private readonly _db: Database) {}
 
 	private async _restoreFromDB() {
 		const data = await this._db.data();
@@ -67,14 +62,19 @@ export class StateKeeper {
 		);
 	}
 
-	async getState(chatId: number): Promise<ChatState> {
+	public async init(): Promise<this> {
+		await this._restoreFromDB();
+		return this;
+	}
+
+	public async getState(chatId: number): Promise<ChatState> {
 		if (!this.chatIds.has(chatId)) {
 			this.chatIds.set(chatId, await new ChatState().init());
 		}
 		return this.chatIds.get(chatId)!;
 	}
 
-	updateState(chatId: number): void {
+	public updateState(chatId: number): void {
 		this._saveChat(chatId);
 	}
 }

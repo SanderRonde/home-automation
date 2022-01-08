@@ -1,8 +1,8 @@
 import { attachMessage, LogObj } from '../../lib/logger';
-import webhooks from '../../config/webhook';
-import chalk from 'chalk';
 import { createHookables } from '../../lib/util';
+import webhooks from '../../config/webhook';
 import { Webhook } from '.';
+import chalk from 'chalk';
 
 export async function triggerWebhooks(
 	name: string,

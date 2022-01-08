@@ -3,7 +3,7 @@ import { messageHandlerInstance } from './routing';
 import { RESPONSE_TYPE } from './types';
 
 export class ExternalHandler extends createExternalClass(true) {
-	async sendMessage(
+	public async sendMessage(
 		text: string,
 		type: RESPONSE_TYPE,
 		chatID?: number

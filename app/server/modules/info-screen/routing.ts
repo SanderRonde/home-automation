@@ -1,14 +1,15 @@
 import express = require('express');
-import { InfoScreen } from '.';
-import { ModuleConfig } from '..';
-import { createAPIHandler } from '../../lib/api';
-import { logTag } from '../../lib/logger';
-import { initMiddleware } from '../../lib/routes';
-import { WSClient, WSWrapper } from '../../lib/ws';
-import { WebPageHandler } from './web-page';
-import { APIHandler } from './api';
-import * as http from 'http';
 import { authCode, authenticated, authenticateURL } from './calendar';
+import { AsyncExpressApplication } from '../../types/express';
+import { WSClient, WSWrapper } from '../../lib/ws';
+import { initMiddleware } from '../../lib/routes';
+import { createAPIHandler } from '../../lib/api';
+import { WebPageHandler } from './web-page';
+import { logTag } from '../../lib/logger';
+import { APIHandler } from './api';
+import { ModuleConfig } from '..';
+import { InfoScreen } from '.';
+import * as http from 'http';
 
 const clients: Set<WSClient> = new Set();
 
@@ -25,17 +26,17 @@ export function refreshClients(): number {
 
 export function initRouting(moduleConfig: ModuleConfig): void {
 	const { config, randomNum } = moduleConfig;
-	const app = express();
+	const app = express() as AsyncExpressApplication;
 	const webpageHandler = new WebPageHandler({
 		randomNum,
 	});
 	const apiHandler = new APIHandler();
-	const server = http.createServer(app);
+	const server = http.createServer(app as express.Application);
 	const ws = new WSWrapper(server);
 
 	initMiddleware(moduleConfig);
 
-	app.all('/', async (req, res) => {
+	app.all('/', async (_req, res) => {
 		if (!authenticated) {
 			const url = await authenticateURL();
 			if (url) {
@@ -44,7 +45,7 @@ export function initRouting(moduleConfig: ModuleConfig): void {
 			}
 		}
 
-		webpageHandler.index(res, req);
+		webpageHandler.index(res);
 	});
 	app.get('/authorize', async (req, res) => {
 		const getParams = req.query as {

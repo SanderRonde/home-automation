@@ -1,5 +1,5 @@
-import * as express from 'express';
 import { attachMessage } from './logger';
+import * as express from 'express';
 
 interface Timing {
 	label: string;

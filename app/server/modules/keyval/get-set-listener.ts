@@ -1,9 +1,9 @@
-import { Database } from '../../lib/db';
 import { attachMessage, LogObj } from '../../lib/logger';
 import { SettablePromise } from '../../lib/util';
-import { ExternalHandler } from './external';
 import groups from '../../config/keyval-groups';
 import { KEYVAL_GROUP_EFFECT } from './types';
+import { ExternalHandler } from './external';
+import { Database } from '../../lib/db';
 
 const _listeners: Map<
 	number,

@@ -1,4 +1,5 @@
 import { PressureHooks, PRESSURE_REGISTER } from '../modules/pressure/types';
+import { ModuleHookables } from '../modules';
 
 export default {
 	bed: [
@@ -7,7 +8,8 @@ export default {
 			from: 0,
 			to: 1010,
 			minTime: 2500,
-			handler: (_modules) => {
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			handler: (_modules: ModuleHookables) => {
 				// Do something
 				return PRESSURE_REGISTER.REGISTER_CHANGED;
 			},
@@ -17,7 +19,8 @@ export default {
 			from: 1010,
 			to: 1024,
 			minTime: 2500,
-			handler: (_modules) => {
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			handler: (_modules: ModuleHookables) => {
 				// Do something else
 				return PRESSURE_REGISTER.REGISTER_CHANGED;
 			},
@@ -27,7 +30,8 @@ export default {
 		{
 			type: 'range',
 			to: 500,
-			handler: (_modules) => {
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			handler: (_modules: ModuleHookables) => {
 				// Do something
 				return PRESSURE_REGISTER.REGISTER_CHANGED;
 			},
@@ -36,7 +40,8 @@ export default {
 			type: 'range',
 			from: 500,
 			minTime: 5000,
-			handler: (_modules) => {
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			handler: (_modules: ModuleHookables) => {
 				// Do something else
 				return PRESSURE_REGISTER.REGISTER_CHANGED;
 			},

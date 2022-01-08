@@ -1,6 +1,6 @@
-import * as castv2 from 'castv2-player';
 import playlist from 'castv2-player/lib/playlist';
 import { devices, scan } from './scanning';
+import * as castv2 from 'castv2-player';
 import { DummyCastLog } from './types';
 
 const MediaPlayer = castv2.MediaPlayer(new DummyCastLog());

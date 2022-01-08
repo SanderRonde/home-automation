@@ -1,17 +1,17 @@
-import { ExternalHandler } from '../../movement/external';
 import { EWeLinkInittable, EWeLinkSharedConfig } from './shared';
+import { ExternalHandler } from '../../movement/external';
 
 export class EwelinkMovement extends EWeLinkInittable {
 	private _movementExternal!: ExternalHandler;
 
-	constructor(
-		private _eWeLinkConfig: EWeLinkSharedConfig,
-		private _movementKey: string
+	public constructor(
+		private readonly _eWeLinkConfig: EWeLinkSharedConfig,
+		private readonly _movementKey: string
 	) {
 		super();
 	}
 
-	init(): Promise<void> {
+	public init(): Promise<void> {
 		this._movementExternal =
 			new this._eWeLinkConfig.modules.movement.External(
 				{},

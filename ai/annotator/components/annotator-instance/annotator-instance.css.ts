@@ -2,8 +2,8 @@ import {
 	TemplateFn,
 	CHANGE_TYPE,
 } from '../../../../node_modules/wc-lib/build/es/wc-lib.js';
-import { AnnotatorInstance } from './annotator-instance.js';
 import { render } from '../../../../node_modules/lit-html/lit-html.js';
+import { AnnotatorInstance } from './annotator-instance.js';
 
 export const AnnotatorInstanceCSS = new TemplateFn<AnnotatorInstance>(
 	function (html) {

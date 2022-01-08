@@ -14,7 +14,7 @@ import { JSONValueHTML } from './json-value.templates.js';
 	dependencies: [JSONObject, JSONBoolean],
 })
 export class JSONValue extends ConfigurableWebComponent {
-	props = Props.define(this, {
+	public props = Props.define(this, {
 		reflect: {
 			value: {
 				value: {},

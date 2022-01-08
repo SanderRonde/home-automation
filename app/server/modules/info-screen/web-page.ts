@@ -1,6 +1,5 @@
 import { errorHandle } from '../../lib/decorators';
 import { ResponseLike } from '../../lib/logger';
-import * as express from 'express';
 
 function infoScreenHTML(randomNum: number): string {
 	return `<!DOCTYPE HTML>
@@ -16,14 +15,14 @@ function infoScreenHTML(randomNum: number): string {
 }
 
 export class WebPageHandler {
-	private _randomNum: number;
+	private readonly _randomNum: number;
 
-	constructor({ randomNum }: { randomNum: number }) {
+	public constructor({ randomNum }: { randomNum: number }) {
 		this._randomNum = randomNum;
 	}
 
 	@errorHandle
-	public index(res: ResponseLike, _req: express.Request): void {
+	public index(res: ResponseLike): void {
 		res.status(200);
 		res.contentType('.html');
 		res.write(infoScreenHTML(this._randomNum));

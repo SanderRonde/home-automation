@@ -1,3 +1,4 @@
+import { TEMPERATURE_DISPLAY_PERIOD } from '../advanced-temperature-display/advanced-temperature-display.js';
 import {
 	CHANGE_TYPE,
 	TemplateFn,
@@ -5,7 +6,6 @@ import {
 import { TEMPERATURE_DISPLAY_TYPE } from '../temperature-display/temperature-display.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { InfoScreen } from './info-screen';
-import { TEMPERATURE_DISPLAY_PERIOD } from '../advanced-temperature-display/advanced-temperature-display.js';
 
 export const InfoScreenHTML = new TemplateFn<InfoScreen>(
 	(html, { props }) => {

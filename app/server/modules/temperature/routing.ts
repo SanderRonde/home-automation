@@ -1,8 +1,8 @@
+import { getController } from './temp-controller';
+import { attachMessage } from '../../lib/logger';
 import { ModuleConfig, Temperature } from '..';
 import { createRouter } from '../../lib/api';
-import { attachMessage } from '../../lib/logger';
 import { APIHandler } from './api';
-import { getController } from './temp-controller';
 
 export function initRouting({ app }: ModuleConfig): void {
 	const router = createRouter(Temperature, APIHandler);
@@ -11,7 +11,11 @@ export function initRouting({ app }: ModuleConfig): void {
 	router.all('/temp', 'getTemp');
 
 	app.post('/temperature/report/:name/:temp?', async (req, res) => {
-		const body = { ...req.params, ...req.body, ...req.query } as {
+		const body = {
+			...req.params,
+			...req.body,
+			...req.query,
+		} as {
 			temp?: string;
 			name: string;
 		};
@@ -37,7 +41,7 @@ export function initRouting({ app }: ModuleConfig): void {
 
 		// Set last temp
 		const controller = await getController(body['name']);
-		controller.setLastTemp(temp);
+		await controller.setLastTemp(temp);
 
 		attachMessage(
 			res,
@@ -48,7 +52,11 @@ export function initRouting({ app }: ModuleConfig): void {
 	});
 
 	app.post('/temperature/advise/:name', async (req, res) => {
-		const body = { ...req.params, ...req.body, ...req.query } as {
+		const body = {
+			...req.params,
+			...req.body,
+			...req.query,
+		} as {
 			name: string;
 		};
 
@@ -68,7 +76,11 @@ export function initRouting({ app }: ModuleConfig): void {
 	});
 
 	app.post('/temperature/moves/:name', async (req, res) => {
-		const body = { ...req.params, ...req.body, ...req.query } as {
+		const body = {
+			...req.params,
+			...req.body,
+			...req.query,
+		} as {
 			name: string;
 		};
 

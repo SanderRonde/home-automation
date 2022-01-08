@@ -6,14 +6,14 @@
 /* eslint-disable @typescript-eslint/require-await */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
-import { KeyError, AuthError } from './errors';
-import { attachMessage } from './logger';
-import * as express from 'express';
-import chalk from 'chalk';
 import {
 	externalAuthenticate,
 	externalCheckCookie,
 } from '../modules/auth/helpers';
+import { KeyError, AuthError } from './errors';
+import { attachMessage } from './logger';
+import * as express from 'express';
+import chalk from 'chalk';
 
 interface KeyVal {
 	[key: string]: string;

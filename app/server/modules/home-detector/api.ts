@@ -1,5 +1,3 @@
-import { HomeDetector } from './index';
-import { HOME_STATE } from './types';
 import {
 	errorHandle,
 	requireParams,
@@ -7,12 +5,14 @@ import {
 	auth,
 } from '../../lib/decorators';
 import { ResponseLike, attachSourcedMessage } from '../../lib/logger';
+import { HomeDetector } from './index';
+import { HOME_STATE } from './types';
 import { Detector } from './classes';
 
 export class APIHandler {
-	private _detector: Detector;
+	private readonly _detector: Detector;
 
-	constructor({ detector }: { detector: Detector }) {
+	public constructor({ detector }: { detector: Detector }) {
 		this._detector = detector;
 	}
 

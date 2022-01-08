@@ -1,3 +1,4 @@
+import { AdvancedTemperatureDisplay } from '../advanced-temperature-display/advanced-temperature-display.js';
 import {
 	Props,
 	config,
@@ -9,7 +10,6 @@ import { ServerComm } from '../../../shared/server-comm/server-comm.js';
 import { CurrentDate } from '../current-date/current-date.js';
 import { InfoScreenHTML } from './info-screen.html.js';
 import { InfoScreenCSS } from './info-screen.css.js';
-import { AdvancedTemperatureDisplay } from '../advanced-temperature-display/advanced-temperature-display.js';
 
 @config({
 	is: 'info-screen',
@@ -23,7 +23,7 @@ import { AdvancedTemperatureDisplay } from '../advanced-temperature-display/adva
 	],
 })
 export class InfoScreen extends ServerComm {
-	props = Props.define(
+	public props = Props.define(
 		this,
 		{
 			reflect: {
@@ -40,7 +40,7 @@ export class InfoScreen extends ServerComm {
 		super.props
 	);
 
-	connectWebsocket(): void {
+	public connectWebsocket(): void {
 		const connection = new WebSocket(`ws://${location.host}/blanking`);
 		connection.onmessage = (m) => {
 			const data = JSON.parse(m.data) as {
@@ -65,7 +65,7 @@ export class InfoScreen extends ServerComm {
 		};
 	}
 
-	mounted(): void {
+	public mounted(): void {
 		this.connectWebsocket();
 	}
 }

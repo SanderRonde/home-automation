@@ -1,21 +1,3 @@
-import chalk from 'chalk';
-import { CustomMode } from 'magic-home';
-import { RGB } from '.';
-import { Color } from '../../lib/color';
-import { LED_NAMES } from '../../lib/constants';
-import { colorList } from '../../lib/data';
-import {
-	errorHandle,
-	requireParams,
-	authAll,
-	auth,
-} from '../../lib/decorators';
-import {
-	ResponseLike,
-	attachMessage,
-	attachSourcedMessage,
-} from '../../lib/logger';
-import { arduinoEffects, Effects } from './arduino-api';
 import {
 	arduinoClients,
 	clients,
@@ -23,8 +5,26 @@ import {
 	hexClients,
 	magicHomeClients,
 } from './clients';
-import { hexEffects } from './hex-api';
+import {
+	ResponseLike,
+	attachMessage,
+	attachSourcedMessage,
+} from '../../lib/logger';
+import {
+	errorHandle,
+	requireParams,
+	authAll,
+	auth,
+} from '../../lib/decorators';
+import { arduinoEffects, Effects } from './arduino-api';
+import { LED_NAMES } from '../../lib/constants';
 import { scanRGBControllers } from './scan';
+import { colorList } from '../../lib/data';
+import { CustomMode } from 'magic-home';
+import { Color } from '../../lib/color';
+import { hexEffects } from './hex-api';
+import chalk from 'chalk';
+import { RGB } from '.';
 
 export const HEX_REGEX = /#([a-fA-F\d]{2})([a-fA-F\d]{2})([a-fA-F\d]{2})/;
 
@@ -78,6 +78,19 @@ export class APIHandler {
 				return clients;
 			}
 		}
+	}
+
+	public static overrideTransition(
+		pattern: CustomMode,
+		transition: 'fade' | 'jump' | 'strobe'
+	): CustomMode {
+		return new CustomMode()
+			.addColorList(
+				pattern.colors.map(({ red, green, blue }) => {
+					return [red, green, blue] as [number, number, number];
+				})
+			)
+			.setTransitionType(transition);
 	}
 
 	@errorHandle
@@ -246,19 +259,6 @@ export class APIHandler {
 			res.end();
 			return false;
 		}
-	}
-
-	static overrideTransition(
-		pattern: CustomMode,
-		transition: 'fade' | 'jump' | 'strobe'
-	): CustomMode {
-		return new CustomMode()
-			.addColorList(
-				pattern.colors.map(({ red, green, blue }) => {
-					return [red, green, blue] as [number, number, number];
-				})
-			)
-			.setTransitionType(transition);
 	}
 
 	@errorHandle

@@ -1,22 +1,22 @@
-import { createExternalClass } from '../../lib/external';
-import { SpotifyTypes } from '../../types/spotify';
 import {
 	ExtendedResponse,
 	getPlayState,
 	getSpotifyAPI,
 	PlaybackState,
 } from './spotify/api';
+import { createExternalClass } from '../../lib/external';
+import { SpotifyTypes } from '../../types/spotify';
 
 export class ExternalHandler extends createExternalClass(true) {
-	requiresInit = true;
+	public requiresInit = true;
 
-	async test(): Promise<boolean | null> {
+	public async test(): Promise<boolean | null> {
 		return this.runRequest(() => {
 			return getSpotifyAPI().testAuth();
 		});
 	}
 
-	async play(
+	public async play(
 		uri: string,
 		device: string
 	): Promise<ExtendedResponse<SpotifyTypes.Playlist> | null> {
@@ -25,13 +25,13 @@ export class ExternalHandler extends createExternalClass(true) {
 		});
 	}
 
-	async getDevices(): Promise<ExtendedResponse<SpotifyTypes.Endpoints.Devices> | null> {
+	public async getDevices(): Promise<ExtendedResponse<SpotifyTypes.Endpoints.Devices> | null> {
 		return this.runRequest(() => {
 			return getSpotifyAPI().endpoints.getDevices();
 		});
 	}
 
-	async getPlayState(): Promise<PlaybackState> {
+	public async getPlayState(): Promise<PlaybackState> {
 		return this.runRequest(() => {
 			return getPlayState();
 		});

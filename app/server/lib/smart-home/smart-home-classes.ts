@@ -1,9 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-types */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
-import { ModuleHookables } from '../../modules';
-import { LED_NAMES, TEMPERATURE_REPORT_MAX_TIMEOUT } from '../constants';
-import { Color } from '../color';
 import {
 	SmartHomeAttributes,
 	SmartHomeDeviceSync,
@@ -14,10 +11,13 @@ import {
 	SMART_HOME_DEVICE_TRAIT,
 	SMART_HOME_DEVICE_TYPE,
 } from './smart-home-types';
-import { warning } from '../logger';
-import { Batcher, pad } from '../util';
-import * as express from 'express';
+import { LED_NAMES, TEMPERATURE_REPORT_MAX_TIMEOUT } from '../constants';
+import { ModuleHookables } from '../../modules';
 import { captureTime, time } from '../timer';
+import { Batcher, pad } from '../util';
+import { warning } from '../logger';
+import * as express from 'express';
+import { Color } from '../color';
 
 type ExecuteReturnType<TRAIT extends SMART_HOME_DEVICE_TRAIT> =
 	| {
@@ -30,13 +30,13 @@ type ExecuteReturnType<TRAIT extends SMART_HOME_DEVICE_TRAIT> =
 	  };
 
 export abstract class SmartHomeDevice {
-	public abstract id: string | LED_NAMES;
-	public abstract name: string;
-	public abstract nicknames: string[];
-
 	protected temperatureID?: string;
 	protected keyvalID?: string;
 	protected rgbID?: LED_NAMES;
+
+	public abstract id: string | LED_NAMES;
+	public abstract name: string;
+	public abstract nicknames: string[];
 
 	protected get _queryID(): string {
 		return this.keyvalID || this.rgbID || this.temperatureID || this.id;
@@ -60,6 +60,7 @@ export abstract class SmartHomeDevice {
 		return [];
 	}
 
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	public isOnline(_hookables: ModuleHookables): Promise<boolean> {
 		return Promise.resolve(true);
 	}
@@ -97,8 +98,11 @@ export abstract class SmartHomeDevice {
 	}
 
 	public execute(
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		_command: SMART_HOME_COMMAND,
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		_params: {},
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		_hookables: ModuleHookables
 	): Promise<ExecuteReturnType<any>> {
 		return Promise.resolve({
@@ -108,49 +112,51 @@ export abstract class SmartHomeDevice {
 	}
 
 	public async attachHomeGraphListeners(
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		_hookables: ModuleHookables,
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		_callback: SmartHomeDeviceUpdateCallback
 	): Promise<void> {}
 }
 
 export abstract class SmartHomeLight extends SmartHomeDevice {
-	get type() {
+	public get type() {
 		return SMART_HOME_DEVICE_TYPE.LIGHT;
 	}
 }
 
 export abstract class SmartHomeThermostat extends SmartHomeDevice {
-	get type() {
+	public get type() {
 		return SMART_HOME_DEVICE_TYPE.THERMOSTAT;
 	}
 }
 
 export abstract class SmartHomeSpeaker extends SmartHomeDevice {
-	get type() {
+	public get type() {
 		return SMART_HOME_DEVICE_TYPE.SPEAKER;
 	}
 }
 
 export abstract class SmartHomeRadiator extends SmartHomeDevice {
-	get type() {
+	public get type() {
 		return SMART_HOME_DEVICE_TYPE.RADIATOR;
 	}
 }
 
 export abstract class SmartHomeSensor extends SmartHomeDevice {
-	get type() {
+	public get type() {
 		return SMART_HOME_DEVICE_TYPE.SENSOR;
 	}
 }
 
 export abstract class SmartHomeScene extends SmartHomeDevice {
-	get type() {
+	public get type() {
 		return SMART_HOME_DEVICE_TYPE.SCENE;
 	}
 }
 
 export abstract class SmartHomeOutlet extends SmartHomeDevice {
-	get type() {
+	public get type() {
 		return SMART_HOME_DEVICE_TYPE.OUTLET;
 	}
 }
@@ -231,12 +237,6 @@ export function SmartHomeMixinOnOffRGB<
 			return [...super.traits, SMART_HOME_DEVICE_TRAIT.ON_OFF];
 		}
 
-		public async isOnline(hookables: ModuleHookables) {
-			return !!(await hookables.RGB.getClient(
-				this._queryID as LED_NAMES
-			));
-		}
-
 		public get queryFunctions() {
 			return [
 				...super.queryFunctions,
@@ -252,6 +252,12 @@ export function SmartHomeMixinOnOffRGB<
 					};
 				},
 			];
+		}
+
+		public async isOnline(hookables: ModuleHookables) {
+			return !!(await hookables.RGB.getClient(
+				this._queryID as LED_NAMES
+			));
 		}
 
 		public async execute(
@@ -313,10 +319,11 @@ export function SmartHomeMixinColorSetting<
 >(Constructor: C) {
 	// @ts-ignore
 	abstract class SmartHomeColorsetting extends (Constructor as typeof SmartHomeDevice) {
+		public abstract ledName: LED_NAMES;
+
 		public get traits(): SMART_HOME_DEVICE_TRAIT[] {
 			return [...super.traits, SMART_HOME_DEVICE_TRAIT.COLOR_SETTING];
 		}
-		public abstract ledName: LED_NAMES;
 
 		public get attributes(): SmartHomeAttributes<SMART_HOME_DEVICE_TRAIT.COLOR_SETTING> {
 			return {

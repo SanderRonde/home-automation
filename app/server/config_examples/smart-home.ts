@@ -5,9 +5,9 @@ import {
 
 const devices = [
 	class _ extends SmartHomeMixinOnOffKeyval(SmartHomeLight) {
-		id = 'room.lights.ceiling';
-		name = 'Ceiling Light';
-		nicknames = ['ceiling', 'ceiling light', 'light'];
+		public id = 'room.lights.ceiling';
+		public name = 'Ceiling Light';
+		public nicknames = ['ceiling', 'ceiling light', 'light'];
 	},
 ];
 export default devices;

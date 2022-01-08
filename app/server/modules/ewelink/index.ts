@@ -4,27 +4,27 @@ import { ModuleMeta } from '../meta';
 import { AllModules } from '..';
 
 export const EWeLink = new (class Meta extends ModuleMeta {
-	name = 'ewelink';
 	private _ewelinkApiInstance: {
 		refreshWebsocket?(): Promise<void>;
 	} | null = null;
+	public name = 'ewelink';
 
-	init() {
+	public get External() {
+		return ExternalHandler;
+	}
+
+	public init() {
 		return Promise.resolve(void 0);
 	}
 
-	async notifyModules(modules: unknown) {
+	public async notifyModules(modules: unknown) {
 		void (async () => {
 			await initEWeLinkAPI(modules as AllModules);
 		})();
 		return Promise.resolve(void 0);
 	}
 
-	get External() {
-		return ExternalHandler;
-	}
-
-	async onBackOnline() {
+	public async onBackOnline() {
 		if (!this._ewelinkApiInstance) {
 			return;
 		}

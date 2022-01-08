@@ -25,9 +25,6 @@ export class PowerSwitch extends ConfigurableWebComponent<{
 		};
 	};
 }> {
-	private _element!: HTMLElement;
-	private _inputElement!: HTMLInputElement;
-	private _rippleContainerElement!: HTMLSpanElement;
 	private static readonly _TINY_TIMEOUT = 0.001;
 	private static readonly _CssClasses = {
 		INPUT: 'mdl-switch__input',
@@ -43,24 +40,11 @@ export class PowerSwitch extends ConfigurableWebComponent<{
 		IS_DISABLED: 'is-disabled',
 		IS_CHECKED: 'is-checked',
 	};
+	private _element!: HTMLElement;
+	private _inputElement!: HTMLInputElement;
+	private _rippleContainerElement!: HTMLSpanElement;
 
-	constructor() {
-		super();
-
-		this._updateScale();
-
-		const original = window.onresize;
-		window.onresize = (e: unknown) => {
-			original?.call(window, e);
-			this._updateScale();
-		};
-	}
-
-	private _updateScale() {
-		this.props.scale = (Math.min(1000, window.innerWidth) / 411) * 200;
-	}
-
-	props = Props.define(this, {
+	public props = Props.define(this, {
 		reflect: {
 			initial: {
 				type: PROP_TYPE.BOOL,
@@ -73,27 +57,24 @@ export class PowerSwitch extends ConfigurableWebComponent<{
 		},
 	});
 
-	onChange(): void {
-		this.fire('toggle', this.checked, !this.checked);
-	}
-
-	get checked(): boolean {
+	public get checked(): boolean {
 		return this.$.switch.checked;
 	}
 
-	get enabled(): boolean {
+	public get enabled(): boolean {
 		return this.checked;
 	}
 
-	postRender(): void {
-		this._element = this.$.label;
-		this._inputElement = this.$.switch;
-	}
+	public constructor() {
+		super();
 
-	firstRender(): void {
-		this._element = this.$.label;
-		this._inputElement = this.$.switch;
-		this._init();
+		this._updateScale();
+
+		const original = window.onresize;
+		window.onresize = (e: unknown) => {
+			original?.call(window, e);
+			this._updateScale();
+		};
 	}
 
 	private _onChange() {
@@ -121,42 +102,6 @@ export class PowerSwitch extends ConfigurableWebComponent<{
 		window.setTimeout(() => {
 			this._inputElement.blur();
 		}, PowerSwitch._TINY_TIMEOUT);
-	}
-
-	checkDisabled(): void {
-		if (this._inputElement.disabled) {
-			this._element.classList.add(PowerSwitch._CssClasses.IS_DISABLED);
-		} else {
-			this._element.classList.remove(PowerSwitch._CssClasses.IS_DISABLED);
-		}
-	}
-
-	checkToggleState(): void {
-		if (this._inputElement.checked) {
-			this._element.classList.add(PowerSwitch._CssClasses.IS_CHECKED);
-		} else {
-			this._element.classList.remove(PowerSwitch._CssClasses.IS_CHECKED);
-		}
-	}
-
-	disable(): void {
-		this._inputElement.disabled = true;
-		this._updateClasses();
-	}
-
-	enable(): void {
-		this._inputElement.disabled = false;
-		this._updateClasses();
-	}
-
-	on(): void {
-		this._inputElement.checked = true;
-		this._updateClasses();
-	}
-
-	off(): void {
-		this._inputElement.checked = false;
-		this._updateClasses();
 	}
 
 	private _init() {
@@ -220,5 +165,60 @@ export class PowerSwitch extends ConfigurableWebComponent<{
 			this._updateClasses();
 			this._element.classList.add('is-upgraded');
 		}
+	}
+
+	private _updateScale() {
+		this.props.scale = (Math.min(1000, window.innerWidth) / 411) * 200;
+	}
+
+	public onChange(): void {
+		this.fire('toggle', this.checked, !this.checked);
+	}
+
+	public postRender(): void {
+		this._element = this.$.label;
+		this._inputElement = this.$.switch;
+	}
+
+	public firstRender(): void {
+		this._element = this.$.label;
+		this._inputElement = this.$.switch;
+		this._init();
+	}
+
+	public checkDisabled(): void {
+		if (this._inputElement.disabled) {
+			this._element.classList.add(PowerSwitch._CssClasses.IS_DISABLED);
+		} else {
+			this._element.classList.remove(PowerSwitch._CssClasses.IS_DISABLED);
+		}
+	}
+
+	public checkToggleState(): void {
+		if (this._inputElement.checked) {
+			this._element.classList.add(PowerSwitch._CssClasses.IS_CHECKED);
+		} else {
+			this._element.classList.remove(PowerSwitch._CssClasses.IS_CHECKED);
+		}
+	}
+
+	public disable(): void {
+		this._inputElement.disabled = true;
+		this._updateClasses();
+	}
+
+	public enable(): void {
+		this._inputElement.disabled = false;
+		this._updateClasses();
+	}
+
+	public on(): void {
+		this._inputElement.checked = true;
+		this._updateClasses();
+	}
+
+	public off(): void {
+		this._inputElement.checked = false;
+		this._updateClasses();
 	}
 }

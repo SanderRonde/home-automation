@@ -1,6 +1,6 @@
-import { LinkEWeLinkDevice } from '../modules/ewelink/api';
 import { EwelinkMovement } from '../modules/ewelink/devices/movement-detector';
 import { EwelinkPower } from '../modules/ewelink/devices/power';
+import { LinkEWeLinkDevice } from '../modules/ewelink/api';
 
 export default async function onEWeLinkDevices(
 	linkDevice: LinkEWeLinkDevice

@@ -1,7 +1,7 @@
-import { Explain } from './index';
 import { attachSourcedMessage, LogObj, ResponseLike } from '../../lib/logger';
-import { Action, getInTimeWindow, getLastX } from './explaining';
 import { auth, errorHandle, requireParams } from '../../lib/decorators';
+import { Action, getInTimeWindow, getLastX } from './explaining';
+import { Explain } from './index';
 
 export class APIHandler {
 	private static async _castActions(

@@ -1,8 +1,8 @@
-import chalk from 'chalk';
+import { attachMessage, LogObj, logTag } from '../../../lib/logger';
 import telnet_client, * as TelnetClient from 'telnet-client';
 import { getEnv } from '../../../lib/io';
-import { attachMessage, LogObj, logTag } from '../../../lib/logger';
 import { Commands } from '../types';
+import chalk from 'chalk';
 
 let TELNET_IPS: [string, string, string][] | null;
 const connections: Map<

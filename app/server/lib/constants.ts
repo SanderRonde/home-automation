@@ -1,6 +1,6 @@
+import { getEnv, getNumberEnv } from './io';
 import { Color } from './color';
 import * as path from 'path';
-import { getEnv, getNumberEnv } from './io';
 
 const ROOT = path.join(__dirname, '../../../');
 export const CLIENT_FOLDER = path.join(ROOT, 'app/client');

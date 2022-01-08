@@ -1,5 +1,5 @@
-import { TemplateFn, CHANGE_TYPE } from 'wc-lib/build/es/wc-lib';
 import { AdvancedTemperatureDisplay } from './advanced-temperature-display.js';
+import { TemplateFn, CHANGE_TYPE } from 'wc-lib/build/es/wc-lib';
 import { render } from 'lit-html';
 
 export const AdvancedTemperatureDisplayCSS =

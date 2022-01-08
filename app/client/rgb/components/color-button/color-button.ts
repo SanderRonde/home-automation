@@ -27,13 +27,9 @@ export class ColorButton
 	extends ConfigurableWebComponent
 	implements ColorOption
 {
-	props = Props.define(this, {
-		reflect: {
-			selected: PROP_TYPE.BOOL,
-			parent: ComplexType<RGBController>(),
-		},
-	});
-
+	private static readonly _touchBallSize =
+		Math.min(window.innerWidth, 1000) * 0.07;
+	private static readonly _COLOR_UPDATE_INTERVAL = 100;
 	private _canvasContainer: HTMLElement | null = null;
 	private _canvas: HTMLCanvasElement | null = null;
 	private _controls: RgbControls | null = null;
@@ -42,14 +38,31 @@ export class ColorButton
 		width: number;
 		height: number;
 	} | null = null;
-	get canvas(): HTMLCanvasElement {
+	private _lastTouch: {
+		x: number;
+		y: number;
+	} | null = null;
+	private _lastColorUpdate: number = Date.now();
+	private _lastQueuedColor: null | {
+		timeout: number;
+		color: [number, number, number];
+	} = null;
+
+	public props = Props.define(this, {
+		reflect: {
+			selected: PROP_TYPE.BOOL,
+			parent: ComplexType<RGBController>(),
+		},
+	});
+
+	public get canvas(): HTMLCanvasElement {
 		if (this._canvas) {
 			return this._canvas;
 		}
 		this._canvas = document.createElement('canvas');
 		return this._canvas;
 	}
-	get canvasDimensions(): {
+	public get canvasDimensions(): {
 		width: number;
 		height: number;
 	} {
@@ -63,7 +76,7 @@ export class ColorButton
 		};
 		return this._canvasDimensions;
 	}
-	get canvasContainer(): HTMLElement {
+	public get canvasContainer(): HTMLElement {
 		if (this._canvasContainer) {
 			return this._canvasContainer;
 		}
@@ -79,7 +92,7 @@ export class ColorButton
 		blackShade.style.transform = 'translateY(-100%)';
 		blackShade.style.backgroundImage =
 			'linear-gradient(to bottom, rgba(0, 0, 0, 0), rgb(0, 0, 0))';
-		blackShade.addEventListener('touchmove', this.onDrag.bind(this), {
+		blackShade.addEventListener('touchmove', (e) => void this.onDrag(e), {
 			passive: false,
 		});
 		blackShade.addEventListener(
@@ -112,7 +125,7 @@ export class ColorButton
 		this._canvasContainer.appendChild(blackShade);
 		return this._canvasContainer;
 	}
-	get controls(): RgbControls {
+	public get controls(): RgbControls {
 		if (this._controls) {
 			return this._controls;
 		}
@@ -122,9 +135,7 @@ export class ColorButton
 		});
 		return this._controls;
 	}
-	private static readonly _touchBallSize =
-		Math.min(window.innerWidth, 1000) * 0.07;
-	get touchBall(): HTMLElement {
+	public get touchBall(): HTMLElement {
 		if (this._touchBall) {
 			return this._touchBall;
 		}
@@ -142,11 +153,6 @@ export class ColorButton
 
 		return this._touchBall;
 	}
-
-	private _lastTouch: {
-		x: number;
-		y: number;
-	} | null = null;
 
 	private _getTouchPos(e?: TouchEvent | MouseEvent) {
 		if (!e) {
@@ -196,12 +202,6 @@ export class ColorButton
 			.map((c) => Math.round(c * yFactor)) as [number, number, number];
 	}
 
-	private static readonly _COLOR_UPDATE_INTERVAL = 100;
-	private _lastColorUpdate: number = Date.now();
-	private _lastQueuedColor: null | {
-		timeout: number;
-		color: [number, number, number];
-	} = null;
 	private async _updateColor(color: [number, number, number]) {
 		this._lastColorUpdate = Date.now();
 		this._lastQueuedColor = null;
@@ -222,15 +222,18 @@ export class ColorButton
 
 		// Queue render
 		this._lastQueuedColor = {
-			timeout: window.setTimeout(async () => {
-				await this._updateColor(color);
+			timeout: window.setTimeout(() => {
+				void this._updateColor(color);
 			}, ColorButton._COLOR_UPDATE_INTERVAL - (Date.now() - this._lastColorUpdate)),
 			color,
 		};
 	}
 
 	@bindToClass
-	async onDrag(e?: TouchEvent | MouseEvent, force = false): Promise<void> {
+	public async onDrag(
+		e?: TouchEvent | MouseEvent,
+		force = false
+	): Promise<void> {
 		e?.preventDefault();
 		const coords = this._getTouchPos(e);
 		if (!coords) {
@@ -250,23 +253,27 @@ export class ColorButton
 	}
 
 	@bindToClass
-	onClick(): void {
+	public onClick(): void {
 		this.props.parent!.deselectAll();
 		this.props.parent!.setSelected(this);
 	}
 
-	setDisplay(display: ColorDisplay): void {
+	public setDisplay(display: ColorDisplay): void {
 		display.appendElement(this.canvasContainer);
 	}
 
-	setControls(controls: ColorControls): void {
+	public setControls(controls: ColorControls): void {
 		controls.appendElement(this.controls);
 		const color = RgbControls.getColorAtIndex(50);
 		this.controls.lastColor = color;
 		this.updateCanvasColor(color);
 	}
 
-	updateCanvasColor([red, green, blue]: [number, number, number]): void {
+	public updateCanvasColor([red, green, blue]: [
+		number,
+		number,
+		number
+	]): void {
 		const ctx = this.canvas.getContext('2d')!;
 
 		const gradient = ctx.createLinearGradient(

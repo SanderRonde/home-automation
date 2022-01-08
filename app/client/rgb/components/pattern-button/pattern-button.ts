@@ -29,7 +29,7 @@ export class PatternButton
 	extends ConfigurableWebComponent
 	implements ColorOption
 {
-	props = Props.define(this, {
+	public props = Props.define(this, {
 		reflect: {
 			pattern: ComplexType<PatternConfig>(),
 			selected: PROP_TYPE.BOOL,
@@ -38,7 +38,7 @@ export class PatternButton
 	});
 
 	@bindToClass
-	async onClick(): Promise<void> {
+	public async onClick(): Promise<void> {
 		// Ignore clicks if this is an empty pattern
 		if (this.props.pattern!.colors.length === 0) {
 			return;
@@ -53,7 +53,7 @@ export class PatternButton
 		);
 	}
 
-	setDisplay(display: ColorDisplay): void {
+	public setDisplay(display: ColorDisplay): void {
 		const displayPattern = document.createElement('div');
 		displayPattern.style.backgroundImage = `linear-gradient(to bottom right, ${this.props
 			.pattern!.colors.map(({ red, green, blue }) => {
@@ -63,7 +63,7 @@ export class PatternButton
 		display.appendElement(displayPattern);
 	}
 
-	async setControls(controls: ColorControls): Promise<void> {
+	public async setControls(controls: ColorControls): Promise<void> {
 		const controller = document.createElement(
 			'pattern-controls'
 		) as PatternControls;
@@ -81,7 +81,7 @@ export class PatternButton
 		controls.appendElement(controller);
 	}
 
-	async updateParams({
+	public async updateParams({
 		speed,
 		transitionType,
 	}: {

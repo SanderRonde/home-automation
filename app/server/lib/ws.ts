@@ -32,6 +32,7 @@ export class WSSimInstance<
 		send: '';
 	}
 > {
+	private static readonly TIMEOUT = 10 * 60 * 60 * 1000;
 	private _listeners: {
 		type: string;
 		handler: (
@@ -50,13 +51,29 @@ export class WSSimInstance<
 	];
 	private _ip!: string;
 	private _alive = true;
-	private static readonly TIMEOUT = 10 * 60 * 60 * 1000;
 	private _listener: NodeJS.Timeout | null = null;
+
+	public get alive(): boolean {
+		return this._alive;
+	}
+
+	public get ip(): string {
+		return this._ip;
+	}
+
+	public constructor(req: express.Request, res: express.Response) {
+		this._init(req, res);
+		this.refreshTimeoutListener();
+	}
 
 	private _init(req: express.Request, res: express.Response) {
 		const id = genUniqueId();
 		this._ip = (
-			{ ...req.body, ...req.params, ...req.query } as {
+			{
+				...req.body,
+				...req.params,
+				...req.query,
+			} as {
 				ip: string;
 			}
 		).ip;
@@ -88,13 +105,8 @@ export class WSSimInstance<
 		}, WSSimInstance.TIMEOUT);
 	}
 
-	constructor(req: express.Request, res: express.Response) {
-		this._init(req, res);
-		this.refreshTimeoutListener();
-	}
-
-	send<T extends DATA['send']>(type: T, data?: string): void;
-	send(type: string, data = ''): void {
+	public send<T extends DATA['send']>(type: T, data?: string): void;
+	public send(type: string, data = ''): void {
 		if (!this.alive) {
 			console.warn(
 				'Attempting to send messages to closed instance',
@@ -138,12 +150,12 @@ export class WSSimInstance<
 		}
 	}
 
-	listen<T extends DATA['receive']>(
+	public listen<T extends DATA['receive']>(
 		type: T,
 		handler: (data: string) => void | Promise<void>,
 		identifier?: string
 	): void;
-	listen(
+	public listen(
 		type: string,
 		handler: (data: string) => void | Promise<void>,
 		identifier?: string
@@ -168,7 +180,7 @@ export class WSSimInstance<
 		});
 	}
 
-	onMessage(req: express.Request, res: express.Response): void {
+	public onMessage(req: express.Request, res: express.Response): void {
 		if (!this.alive) {
 			res.status(401).write('Dead connection');
 			res.end();
@@ -195,15 +207,7 @@ export class WSSimInstance<
 		}
 	}
 
-	onClose(): void {}
-
-	get alive(): boolean {
-		return this._alive;
-	}
-
-	get ip(): string {
-		return this._ip;
-	}
+	public onClose(): void {}
 }
 
 export const enum ACCEPT_STATE {
@@ -285,13 +289,15 @@ export class WSSimulator {
 	@errorHandle
 	@auth
 	private _authenticate(
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		_res: express.Response,
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		_params: { auth: string }
 	): Promise<boolean> {
 		return Promise.resolve(true);
 	}
 
-	all(
+	public all(
 		route: string,
 		handler: (instance: WSSimInstance) => void,
 		authenticate = true
@@ -320,15 +326,21 @@ export class WSSimulator {
 		});
 	}
 
-	get(route: string, handler: (instance: WSSimInstance) => void): void {
+	public get(
+		route: string,
+		handler: (instance: WSSimInstance) => void
+	): void {
 		this.all(route, handler);
 	}
 
-	post(route: string, handler: (instance: WSSimInstance) => void): void {
+	public post(
+		route: string,
+		handler: (instance: WSSimInstance) => void
+	): void {
 		this.all(route, handler);
 	}
 
-	async handler(
+	public async handler(
 		req: express.Request,
 		res: express.Response,
 		next: express.NextFunction
@@ -345,19 +357,19 @@ export class WSSimulator {
 
 export interface WSClient {
 	send: (message: string) => void;
-	addListener: (listener: (message: string) => void) => void;
+	addListener: (listener: (message: string) => void | Promise<void>) => void;
 	onDead(handler: () => void): void;
 }
 
-type WSHandler = (args: WSClient) => void;
+type WSHandler = (args: WSClient) => void | Promise<void>;
 
 export class WSWrapper {
-	routes: {
+	public routes: {
 		route: string;
 		handler: WSHandler;
 	}[] = [];
 
-	constructor(public server: http.Server) {
+	public constructor(public server: http.Server) {
 		server.on(
 			'upgrade',
 			(req: http.IncomingMessage, socket: Socket, head: Buffer) => {
@@ -366,7 +378,11 @@ export class WSWrapper {
 		);
 	}
 
-	handle(req: http.IncomingMessage, socket: Socket, head: Buffer): void {
+	public handle(
+		req: http.IncomingMessage,
+		socket: Socket,
+		head: Buffer
+	): void {
 		const pathname = new url.URL(`http://localhost${req.url!}`).pathname;
 		for (const { route, handler } of this.routes) {
 			if (
@@ -380,7 +396,7 @@ export class WSWrapper {
 			instance.handleUpgrade(req, socket, head, (ws) => {
 				ws.emit('connection', ws, req);
 
-				handler({
+				void handler({
 					send(message: string) {
 						ws.send(message, (err) => {
 							if (err) {
@@ -390,7 +406,7 @@ export class WSWrapper {
 					},
 					addListener(messageListener) {
 						ws.on('message', (data) => {
-							messageListener(data.toString());
+							void messageListener(data.toString());
 						});
 					},
 					onDead(handler) {
@@ -402,18 +418,18 @@ export class WSWrapper {
 		}
 	}
 
-	all(route: string, handler: WSHandler): void {
+	public all(route: string, handler: WSHandler): void {
 		this.routes.push({
 			route,
 			handler,
 		});
 	}
 
-	post(route: string, handler: WSHandler): void {
+	public post(route: string, handler: WSHandler): void {
 		this.all(route, handler);
 	}
 
-	get(route: string, handler: WSHandler): void {
+	public get(route: string, handler: WSHandler): void {
 		this.all(route, handler);
 	}
 }

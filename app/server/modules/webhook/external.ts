@@ -1,9 +1,9 @@
-import { Webhook } from '.';
 import { createExternalClass } from '../../lib/external';
 import { APIHandler } from './api';
+import { Webhook } from '.';
 
 export class ExternalHandler extends createExternalClass(true) {
-	requiresInit = true;
+	public requiresInit = true;
 
 	public triggerWebhook<N extends string>(name: N): Promise<void> {
 		return this.runRequest(async (res, source) => {

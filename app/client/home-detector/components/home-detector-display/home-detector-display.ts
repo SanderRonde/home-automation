@@ -13,7 +13,7 @@ import { ServerComm } from '../../../shared/server-comm/server-comm.js';
 	css: HomeDetectorDisplayCSS,
 })
 export class HomeDetectorDisplay extends ServerComm {
-	props = Props.define(
+	public props = Props.define(
 		this,
 		{
 			reflect: {
@@ -62,9 +62,9 @@ export class HomeDetectorDisplay extends ServerComm {
 		return true;
 	}
 
-	async firstRender(): Promise<void> {
-		window.setInterval(async () => {
-			await this._refreshJSON();
+	public async firstRender(): Promise<void> {
+		window.setInterval(() => {
+			void this._refreshJSON();
 		}, 1000 * 15);
 		this.props.key = this.props.key || localStorage.getItem('key')!;
 		localStorage.setItem('key', this.props.key!);

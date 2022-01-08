@@ -1,15 +1,15 @@
-import { HomeDetector } from './index';
-import { Database } from '../../lib/db';
-import { HOME_STATE } from './types';
-import * as ping from 'ping';
-import homeIps from '../../config/home-ips';
 import {
 	AWAY_MIN_CONSECUTIVE_PINGS,
 	CHANGE_PING_INTERVAL,
 	HOME_PING_INTERVAL,
 	AWAY_PING_INTERVAL,
 } from './constants';
+import homeIps from '../../config/home-ips';
+import { Database } from '../../lib/db';
+import { HomeDetector } from './index';
 import { getEnv } from '../../lib/io';
+import { HOME_STATE } from './types';
+import * as ping from 'ping';
 
 function wait(time: number) {
 	return new Promise((resolve) => {
@@ -22,13 +22,19 @@ class Pinger {
 	public leftAt: Date = new Date(1970, 0, 0, 0, 0, 0, 0);
 	public joinedAt: Date = new Date(1970, 0, 0, 0, 0, 0, 0);
 
-	constructor(
-		private _config: {
+	public get state() {
+		return this._state!;
+	}
+
+	public constructor(
+		private readonly _config: {
 			name: string;
 			ips: string[];
 		},
-		private _db: Database,
-		private _onChange: (newState: HOME_STATE) => void
+		private readonly _db: Database,
+		private readonly _onChange: (
+			newState: HOME_STATE
+		) => void | Promise<void>
 	) {
 		void this._init();
 	}
@@ -42,7 +48,7 @@ class Pinger {
 			);
 		}
 
-		this._onChange(newState);
+		await this._onChange(newState);
 	}
 
 	private async _ping(ip: string) {
@@ -161,32 +167,38 @@ class Pinger {
 		this._state = this._db.get(this._config.name, HOME_STATE.AWAY);
 		await this._pingLoop();
 	}
-
-	get state() {
-		return this._state!;
-	}
 }
 
 export class Detector {
-	private _db: Database;
 	private static _listeners: {
 		name: string | null;
-		callback: (newState: HOME_STATE, name: string) => void;
+		callback: (newState: HOME_STATE, name: string) => void | Promise<void>;
 	}[] = [];
+	private readonly _db: Database;
 	private _basePingers: Map<string, Pinger> = new Map();
 	private _extendedPingers: Map<string, Pinger> = new Map();
 
-	constructor({ db }: { db: Database }) {
+	public constructor({ db }: { db: Database }) {
 		this._db = db;
 		this._initPingers();
 	}
 
-	private _onChange(changeName: string, newState: HOME_STATE) {
-		Detector._listeners.forEach(({ name, callback }) => {
-			if (name === null || changeName === name) {
-				callback(newState, changeName);
-			}
+	public static addListener(
+		name: string | null,
+		callback: (newState: HOME_STATE, name: string) => void | Promise<void>
+	): void {
+		this._listeners.push({
+			name,
+			callback,
 		});
+	}
+
+	private async _onChange(changeName: string, newState: HOME_STATE) {
+		for (const { name, callback } of Detector._listeners) {
+			if (name === null || changeName === name) {
+				await callback(newState, changeName);
+			}
+		}
 	}
 
 	private _initPingers() {
@@ -224,8 +236,8 @@ export class Detector {
 						ips: data,
 					},
 					this._db,
-					(newState) => {
-						this._onChange(key, newState);
+					async (newState) => {
+						await this._onChange(key, newState);
 					}
 				)
 			);
@@ -235,7 +247,7 @@ export class Detector {
 		}
 	}
 
-	getAll(extended = false): Record<string, HOME_STATE> {
+	public getAll(extended = false): Record<string, HOME_STATE> {
 		const obj: {
 			[key: string]: HOME_STATE;
 		} = {};
@@ -251,22 +263,15 @@ export class Detector {
 		return obj;
 	}
 
-	getPinger(name: string): Pinger | undefined {
+	public getPinger(name: string): Pinger | undefined {
 		return this._extendedPingers.get(name);
 	}
 
-	get(name: string): HOME_STATE | '?' {
+	public get(name: string): HOME_STATE | '?' {
 		const pinger = this._extendedPingers.get(name);
 		if (!pinger) {
 			return '?';
 		}
 		return pinger.state;
-	}
-
-	static addListener(
-		name: string | null,
-		callback: (newState: HOME_STATE, name: string) => void
-	): void {
-		this._listeners.push({ name, callback });
 	}
 }

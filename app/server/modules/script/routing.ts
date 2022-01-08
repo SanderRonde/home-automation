@@ -1,18 +1,18 @@
-import * as express from 'express';
-import { Script } from '.';
-import { Config } from '../../app';
+import { AsyncExpressApplication } from '../../types/express';
 import { createRouter } from '../../lib/api';
 import { APIHandler } from './api';
+import { Config } from '../../app';
+import { Script } from '.';
 
 export function initRouting({
 	app,
 	config,
 }: {
-	app: express.Application;
+	app: AsyncExpressApplication;
 	config: Config;
 }): void {
 	const router = createRouter(Script, APIHandler);
-	router.post('/:name', async (req, res, _next) => {
+	router.post('/:name', async (req, res) => {
 		await APIHandler.script(
 			res,
 			{

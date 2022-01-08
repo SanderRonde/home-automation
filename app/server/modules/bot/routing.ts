@@ -1,11 +1,11 @@
-import { Bot } from '.';
-import { ModuleConfig } from '..';
-import { createRouter } from '../../lib/api';
 import { TELEGRAM_IPS } from '../../lib/constants';
-import { getEnv } from '../../lib/io';
 import { SettablePromise } from '../../lib/util';
+import { createRouter } from '../../lib/api';
 import { MessageHandler } from './message';
 import { TelegramReq } from './types';
+import { getEnv } from '../../lib/io';
+import { ModuleConfig } from '..';
+import { Bot } from '.';
 
 function isInIPRange(
 	ip: number[],

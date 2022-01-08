@@ -1,20 +1,28 @@
 import { AllModules, ModuleConfig } from '..';
-import { ModuleMeta } from '../meta';
-import { Bot } from './bot';
 import { ExternalHandler } from './external';
 import { initRegister } from './register';
 import { initRouting } from './routing';
+import { ModuleMeta } from '../meta';
+import { Bot } from './bot';
 
 export const Pressure = new (class Meta extends ModuleMeta {
-	name = 'pressure';
+	public name = 'pressure';
 
-	init(config: ModuleConfig): Promise<void> {
+	public get External() {
+		return ExternalHandler;
+	}
+
+	public get Bot() {
+		return Bot;
+	}
+
+	public init(config: ModuleConfig): Promise<void> {
 		initRegister(config.db);
 		initRouting(config);
 		return Promise.resolve(void 0);
 	}
 
-	async notifyModules(modules: unknown) {
+	public async notifyModules(modules: unknown) {
 		void (async () => {
 			await new (modules as AllModules).keyval.External(
 				{},
@@ -33,13 +41,5 @@ export const Pressure = new (class Meta extends ModuleMeta {
 			);
 		})();
 		return Promise.resolve(void 0);
-	}
-
-	get External() {
-		return ExternalHandler;
-	}
-
-	get Bot() {
-		return Bot;
 	}
 })();

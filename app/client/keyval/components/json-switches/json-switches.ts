@@ -100,7 +100,7 @@ function isObjSame(
 	dependencies: [JSONValue, MessageToast],
 })
 export class JSONSwitches extends ServerComm {
-	props = Props.define(
+	public props = Props.define(
 		this,
 		{
 			reflect: {
@@ -137,7 +137,7 @@ export class JSONSwitches extends ServerComm {
 		return true;
 	}
 
-	async changeValue(path: string[], toValue: string): Promise<void> {
+	public async changeValue(path: string[], toValue: string): Promise<void> {
 		const keys =
 			path.length !== 0
 				? [path.join('.')]
@@ -152,7 +152,7 @@ export class JSONSwitches extends ServerComm {
 		}
 	}
 
-	async firstRender(): Promise<void> {
+	public async firstRender(): Promise<void> {
 		window.setInterval(() => {
 			void this._refreshJSON();
 		}, 1000 * 60);

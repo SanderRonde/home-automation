@@ -1,11 +1,11 @@
 import { attachMessage, logOutgoingReq, log, LogObj } from './logger';
-import * as querystring from 'querystring';
-import * as http from 'http';
-import * as https from 'https';
-import chalk from 'chalk';
-import { AllModules } from '../modules';
 import { ModuleHookables } from '../modules/modules';
+import * as querystring from 'querystring';
+import { AllModules } from '../modules';
+import * as https from 'https';
+import * as http from 'http';
 import * as url from 'url';
+import chalk from 'chalk';
 
 export function wait(time: number): Promise<void> {
 	return new Promise((resolve) => {
@@ -43,37 +43,42 @@ export async function awaitCondition(
 	}
 }
 
-export namespace Time {
-	export function toTime(timeStr: string): Time {
+export class Time {
+	public hours: number;
+	public minutes: number;
+
+	public constructor(timeString: string);
+	public constructor(hours: number, minutes: number);
+	public constructor(hoursOrStr: number | string, minutes?: number) {
+		if (typeof hoursOrStr === 'string') {
+			const [hours, minutes] = hoursOrStr.split(':');
+			this.hours = parseInt(hours, 10);
+			this.minutes = parseInt(minutes, 10);
+		} else {
+			this.hours = hoursOrStr;
+			this.minutes = minutes || 0;
+		}
+	}
+
+	public static toTime(timeStr: string): Time {
 		const [hours, minutes] = timeStr.split(':');
-		return {
-			hours: parseInt(hours, 10),
-			minutes: parseInt(minutes, 10),
-		};
+		return new Time(parseInt(hours, 10), parseInt(minutes, 10));
 	}
 
-	export interface Time {
-		hours: number;
-		minutes: number;
-	}
-
-	export function dateToTime(date: Date): Time {
+	public static dateToTime(date: Date): Time {
 		const hours = date.getHours();
 		const mins = date.getMinutes();
-		return {
-			hours,
-			minutes: mins,
-		};
+		return new Time(hours, mins);
 	}
 
-	function timeToMinutes({ hours, minutes }: Time): number {
-		return hours * 60 + minutes;
+	public toMinutes(): number {
+		return this.hours * 60 + this.minutes;
 	}
 
-	export function isInRange(time: Time, from: Time, to: Time): boolean {
-		const timeMins = timeToMinutes(time);
-		const fromMins = timeToMinutes(from);
-		const toMins = timeToMinutes(to);
+	public isInRange(from: Time, to: Time): boolean {
+		const timeMins = this.toMinutes();
+		const fromMins = from.toMinutes();
+		const toMins = to.toMinutes();
 
 		if (fromMins > toMins) {
 			if (timeMins > fromMins) {
@@ -100,8 +105,8 @@ export function splitIntoGroups<V>(arr: V[], size: number): V[][] {
 	return result;
 }
 
-export namespace XHR {
-	export function post(
+export class XHR {
+	public static post(
 		xhrURL: string,
 		name: string,
 		params: Record<string, string> = {}
@@ -152,7 +157,7 @@ export namespace XHR {
 		});
 	}
 
-	export function get(
+	public static get(
 		xhrURL: string,
 		name: string,
 		params: {
@@ -237,17 +242,17 @@ export class SettablePromise<V> {
 		this._resolver = resolve;
 	});
 
-	set(value: V): void {
-		this._resolver(value);
-		this._isSet = true;
-	}
-
-	get isSet(): boolean {
+	public get isSet(): boolean {
 		return this._isSet;
 	}
 
-	get value(): Promise<V> {
+	public get value(): Promise<V> {
 		return this._promise;
+	}
+
+	public set(value: V): void {
+		this._resolver(value);
+		this._isSet = true;
 	}
 }
 
@@ -294,15 +299,15 @@ export function fromEntries<V>(entries: [string, V][]): {
  * a single call
  */
 export class Batcher<D> {
-	private _minWaitTime: number;
-	private _maxWaitTime: number;
-	private _onDispatch: (data: D[]) => void;
+	private readonly _minWaitTime: number;
+	private readonly _maxWaitTime: number;
+	private readonly _onDispatch: (data: D[]) => void;
 	private _data: D[] = [];
 
 	private _currentBatchMinTimer: NodeJS.Timeout | null = null;
 	private _currentBatchMaxTimer: NodeJS.Timeout | null = null;
 
-	constructor({
+	public constructor({
 		maxWaitTime,
 		minWaitTime,
 		onDispatch,
@@ -353,7 +358,7 @@ export class Batcher<D> {
 		this._data = [];
 	}
 
-	call(data: D): void {
+	public call(data: D): void {
 		if (this._data.length === 0) {
 			this._markFirstCall();
 		}
@@ -378,4 +383,22 @@ export function optionalArrayValue<V>(
 	value: V
 ): V[] | never[] {
 	return condition ? [value] : [];
+}
+
+export function asyncSetInterval(
+	callback: () => void | Promise<void>,
+	interval: number
+): NodeJS.Timer {
+	return setInterval(() => {
+		void callback();
+	}, interval);
+}
+
+export function asyncTimeout(
+	callback: () => void | Promise<void>,
+	interval: number
+): NodeJS.Timer {
+	return setTimeout(() => {
+		void callback();
+	}, interval);
 }

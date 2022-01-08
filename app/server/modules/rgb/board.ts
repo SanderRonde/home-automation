@@ -1,8 +1,4 @@
 import SerialPort = require('serialport');
-import { Color } from '../../lib/color';
-import { LED_DEVICE_NAME } from '../../lib/constants';
-import { logTag } from '../../lib/logger';
-import { arduinoBoards, ArduinoClient } from './clients';
 import {
 	LedEffect,
 	LedSpec,
@@ -10,7 +6,11 @@ import {
 	MoveData,
 	MOVING_STATUS,
 } from './effect-config';
+import { arduinoBoards, ArduinoClient } from './clients';
+import { LED_DEVICE_NAME } from '../../lib/constants';
 import ReadLine from '@serialport/parser-readline';
+import { logTag } from '../../lib/logger';
+import { Color } from '../../lib/color';
 
 export async function tryConnectToSerial(): Promise<{
 	port: SerialPort;
@@ -113,8 +113,8 @@ export class Board {
 	public client!: ArduinoClient;
 
 	// @ts-ignore
-	constructor(
-		private _port: SerialPort,
+	public constructor(
+		private readonly _port: SerialPort,
 		public setListener: (listener: (line: string) => void) => void,
 		public leds: number,
 		public name: string
@@ -123,28 +123,6 @@ export class Board {
 		this._port.addListener('data', (chunk: Buffer | string) => {
 			logTag(LED_DEVICE_NAME, 'gray', '->', `${chunk.toString().trim()}`);
 		});
-	}
-
-	public ping(): Promise<boolean> {
-		return new Promise<boolean>((resolve) => {
-			this.setListener((_line: string) => {
-				resolve(true);
-				this.resetListener();
-			});
-			this.getLeds();
-			setTimeout(() => {
-				resolve(false);
-			}, 1000);
-		});
-	}
-
-	public resetListener(): void {
-		this.setListener(() => {});
-	}
-
-	public writeString(data: string): string {
-		this._port.write(data);
-		return data;
 	}
 
 	private _runEffect(effect: LedEffect) {
@@ -170,6 +148,28 @@ export class Board {
 				this._port.write('manual\n');
 			}, 500);
 		});
+	}
+
+	public ping(): Promise<boolean> {
+		return new Promise<boolean>((resolve) => {
+			this.setListener(() => {
+				resolve(true);
+				this.resetListener();
+			});
+			this.getLeds();
+			setTimeout(() => {
+				resolve(false);
+			}, 1000);
+		});
+	}
+
+	public resetListener(): void {
+		this.setListener(() => {});
+	}
+
+	public writeString(data: string): string {
+		this._port.write(data);
+		return data;
 	}
 
 	public async runEffect(

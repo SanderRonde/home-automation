@@ -1,18 +1,18 @@
-import { KeyVal } from '.';
-import { Database } from '../../lib/db';
+import {
+	ResponseLike,
+	attachSourcedMessage,
+	attachMessage,
+} from '../../lib/logger';
 import {
 	errorHandle,
 	requireParams,
 	authAll,
 	auth,
 } from '../../lib/decorators';
-import {
-	ResponseLike,
-	attachSourcedMessage,
-	attachMessage,
-} from '../../lib/logger';
 import { addListener, removeListener, update } from './get-set-listener';
+import { Database } from '../../lib/db';
 import { str } from './helpers';
+import { KeyVal } from '.';
 
 type MultiValueResolver<V> = (values: V[]) => V;
 
@@ -56,9 +56,9 @@ function ensureString(value: string | ObjValue<string>): string {
 }
 
 export class APIHandler {
-	private _db: Database;
+	private readonly _db: Database;
 
-	constructor({ db }: { db: Database }) {
+	public constructor({ db }: { db: Database }) {
 		this._db = db;
 	}
 

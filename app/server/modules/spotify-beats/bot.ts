@@ -1,18 +1,18 @@
-import { BotState } from '../../lib/bot-state';
-import { MatchParameters } from '../bot/message';
-import { MatchResponse } from '../bot/types';
-import { getSpotifyAPI } from './spotify/api';
-import { getURL } from './spotify/auth';
 import { disable, enable } from './spotify/checking';
+import { BotStateBase } from '../../lib/bot-state';
+import { MatchParameters } from '../bot/message';
+import { getSpotifyAPI } from './spotify/api';
+import { MatchResponse } from '../bot/types';
+import { getURL } from './spotify/auth';
 
-export class Bot extends BotState.Base {
-	static readonly commands = {
+export class Bot extends BotStateBase {
+	public static readonly commands = {
 		'/auth': 'Authenticate spotify (if needed)',
 	};
 
-	static readonly botName = 'Spotify';
+	public static readonly botName = 'Spotify';
 
-	static readonly matches = Bot.createMatchMaker(
+	public static readonly matches = Bot.createMatchMaker(
 		({ matchMaker: mm, fallbackSetter: fallback }) => {
 			mm('/auth', /auth(enticate)?( spotify)?/, async () => {
 				const api = getSpotifyAPI();
@@ -46,13 +46,9 @@ export class Bot extends BotState.Base {
 		}
 	);
 
-	lastSubjects: string[] | null = null;
+	public lastSubjects: string[] | null = null;
 
-	constructor(_json?: Record<string, never>) {
-		super();
-	}
-
-	static async match(
+	public static async match(
 		config: MatchParameters
 	): Promise<MatchResponse | undefined> {
 		return await this.matchLines({
@@ -61,7 +57,7 @@ export class Bot extends BotState.Base {
 		});
 	}
 
-	toJSON(): Record<string, never> {
+	public toJSON(): Record<string, never> {
 		return {};
 	}
 }

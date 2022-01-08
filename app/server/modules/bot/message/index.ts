@@ -1,13 +1,3 @@
-import { BotState } from '../../../lib/bot-state';
-import { Database } from '../../../lib/db';
-import {
-	attachMessage,
-	log,
-	LogObj,
-	logOutgoingReq,
-	ResponseLike,
-} from '../../../lib/logger';
-import { BOT_NAME } from '../constants';
 import {
 	MatchResponse,
 	RESPONSE_TYPE,
@@ -15,9 +5,19 @@ import {
 	TelegramReq,
 	TelegramText,
 } from '../types';
+import {
+	attachMessage,
+	log,
+	LogObj,
+	logOutgoingReq,
+	ResponseLike,
+} from '../../../lib/logger';
+import { BotStateBase, Matchable } from '../../../lib/bot-state';
 import { ChatState, StateKeeper } from './state-keeping';
-import * as https from 'https';
 import { TELEGRAM_API } from '../../../lib/constants';
+import { Database } from '../../../lib/db';
+import { BOT_NAME } from '../constants';
+import * as https from 'https';
 import chalk from 'chalk';
 import { Bot } from '..';
 
@@ -33,14 +33,13 @@ export interface MatchParameters {
 export class ResWrapper {
 	public sent = false;
 
-	constructor(public res: ResponseLike) {}
+	public constructor(public res: ResponseLike) {}
 }
 
-export class MessageHandler extends BotState.Matchable {
+export class MessageHandler extends BotStateBase {
 	private static _bootedAt = new Date();
-	private _stateKeeper!: StateKeeper;
 
-	static readonly matches = MessageHandler.createMatchMaker(
+	public static readonly matches = MessageHandler.createMatchMaker(
 		({ matchMaker: mm, sameWordMaker: wm }) => {
 			mm('hi', 'hello', () => 'Hi!');
 			mm('thanks', () => "You're welcome");
@@ -93,80 +92,21 @@ export class MessageHandler extends BotState.Matchable {
 		}
 	);
 
-	constructor(private _secret: string, private _db: Database) {
+	private _stateKeeper!: StateKeeper;
+	private _openQuestions: ((response: string) => void)[] = [];
+	private _lastChatID = 0;
+
+	public constructor(
+		private readonly _secret: string,
+		private readonly _db: Database
+	) {
 		super();
-	}
-
-	async init(): Promise<this> {
-		this._stateKeeper = await new StateKeeper(this._db).init();
-		return this;
-	}
-
-	async sendMessage(
-		text: string,
-		type: RESPONSE_TYPE,
-		chatId?: number
-	): Promise<boolean> {
-		if (!this._lastChatID && !chatId) {
-			log(
-				`Did not send message ${text} because no last chat ID is known`
-			);
-			return Promise.resolve(false);
-		}
-		chatId = chatId || this._lastChatID;
-		return new Promise<boolean>((resolve) => {
-			const msg = JSON.stringify({
-				...{
-					chat_id: chatId,
-					text: text + '',
-				},
-				...(type === RESPONSE_TYPE.TEXT
-					? {}
-					: {
-							parse_mode: type,
-					  }),
-			});
-			const req = https.request({
-				method: 'POST',
-				path: `/bot${this._secret}/sendMessage`,
-				hostname: TELEGRAM_API,
-				headers: {
-					'Content-Type': 'application/json',
-				},
-			});
-			req.write(msg);
-			req.on('error', (e) => {
-				attachMessage(
-					req,
-					chalk.red('Error sending telegram msg'),
-					e.toString()
-				);
-				resolve(false);
-			});
-			req.on('finish', () => {
-				resolve(true);
-				logOutgoingReq(req, {
-					method: 'POST',
-					target: TELEGRAM_API + '/sendMessage',
-				});
-			});
-			req.end();
-
-			const botLogObj = attachMessage(req, chalk.cyan('[bot]'));
-			attachMessage(botLogObj, 'ID: ', chalk.bold(String(chatId)));
-			attachMessage(botLogObj, 'Type: ', chalk.bold(String(type)));
-			attachMessage(
-				botLogObj,
-				'Text: ',
-				chalk.bold(JSON.stringify(text))
-			);
-		});
 	}
 
 	private static async _matchSelf(
 		config: MatchParameters
 	): Promise<MatchResponse | undefined> {
-		return await BotState.Matchable.matchLines({
+		return await Matchable.matchLines({
 			...config,
 			matchConfig: MessageHandler.matches,
 		});
@@ -175,7 +115,7 @@ export class MessageHandler extends BotState.Matchable {
 	private static async _matchMatchables<V>(
 		config: MatchParameters,
 		value: V,
-		...matchables: typeof BotState.Matchable[]
+		...matchables: typeof Matchable[]
 	): Promise<V> {
 		for (let i = 0; i < matchables.length; i++) {
 			if (!value) {
@@ -187,7 +127,7 @@ export class MessageHandler extends BotState.Matchable {
 		return value;
 	}
 
-	static async match(
+	public static async match(
 		config: MatchParameters
 	): Promise<MatchResponse | undefined> {
 		return this._matchMatchables(
@@ -199,7 +139,7 @@ export class MessageHandler extends BotState.Matchable {
 		);
 	}
 
-	static async multiMatch({
+	public static async multiMatch({
 		logObj,
 		text,
 		message,
@@ -277,7 +217,94 @@ export class MessageHandler extends BotState.Matchable {
 		return responses;
 	}
 
-	async handleTextMessage(
+	private _splitLongText(text: string) {
+		if (text.length <= 4096) {
+			return [text];
+		}
+		const parts = [];
+		while (text.length >= 4096) {
+			parts.push(text.slice(0, 4096));
+			text = text.slice(4096);
+		}
+		return parts;
+	}
+
+	private _finishRes(wrapped: ResWrapper) {
+		if (wrapped.sent) {
+			return;
+		}
+		wrapped.res.write('ok');
+		wrapped.res.end();
+		wrapped.sent = true;
+	}
+
+	public async init(): Promise<this> {
+		this._stateKeeper = await new StateKeeper(this._db).init();
+		return this;
+	}
+
+	public async sendMessage(
+		text: string,
+		type: RESPONSE_TYPE,
+		chatId?: number
+	): Promise<boolean> {
+		if (!this._lastChatID && !chatId) {
+			log(
+				`Did not send message ${text} because no last chat ID is known`
+			);
+			return Promise.resolve(false);
+		}
+		chatId = chatId || this._lastChatID;
+		return new Promise<boolean>((resolve) => {
+			const msg = JSON.stringify({
+				...{
+					chat_id: chatId,
+					text: text + '',
+				},
+				...(type === RESPONSE_TYPE.TEXT
+					? {}
+					: {
+							parse_mode: type,
+					  }),
+			});
+			const req = https.request({
+				method: 'POST',
+				path: `/bot${this._secret}/sendMessage`,
+				hostname: TELEGRAM_API,
+				headers: {
+					'Content-Type': 'application/json',
+				},
+			});
+			req.write(msg);
+			req.on('error', (e) => {
+				attachMessage(
+					req,
+					chalk.red('Error sending telegram msg'),
+					e.toString()
+				);
+				resolve(false);
+			});
+			req.on('finish', () => {
+				resolve(true);
+				logOutgoingReq(req, {
+					method: 'POST',
+					target: TELEGRAM_API + '/sendMessage',
+				});
+			});
+			req.end();
+
+			const botLogObj = attachMessage(req, chalk.cyan('[bot]'));
+			attachMessage(botLogObj, 'ID: ', chalk.bold(String(chatId)));
+			attachMessage(botLogObj, 'Type: ', chalk.bold(String(type)));
+			attachMessage(
+				botLogObj,
+				'Text: ',
+				chalk.bold(JSON.stringify(text))
+			);
+		});
+	}
+
+	public async handleTextMessage(
 		logObj: LogObj,
 		message: TelegramMessage<TelegramText>,
 		res: ResWrapper
@@ -309,29 +336,7 @@ export class MessageHandler extends BotState.Matchable {
 		);
 	}
 
-	private _splitLongText(text: string) {
-		if (text.length <= 4096) {
-			return [text];
-		}
-		const parts = [];
-		while (text.length >= 4096) {
-			parts.push(text.slice(0, 4096));
-			text = text.slice(4096);
-		}
-		return parts;
-	}
-
-	private _finishRes(wrapped: ResWrapper) {
-		if (wrapped.sent) {
-			return;
-		}
-		wrapped.res.write('ok');
-		wrapped.res.end();
-		wrapped.sent = true;
-	}
-
-	private _openQuestions: ((response: string) => void)[] = [];
-	async askQuestion(
+	public async askQuestion(
 		question: string,
 		message: TelegramMessage,
 		res: ResWrapper
@@ -354,7 +359,7 @@ export class MessageHandler extends BotState.Matchable {
 		});
 	}
 
-	async askCancelable(
+	public async askCancelable(
 		question: string,
 		message: TelegramMessage,
 		res: ResWrapper,
@@ -384,7 +389,7 @@ export class MessageHandler extends BotState.Matchable {
 		});
 	}
 
-	async sendText(
+	public async sendText(
 		text: string,
 		message: TelegramMessage,
 		res: ResWrapper
@@ -401,17 +406,19 @@ export class MessageHandler extends BotState.Matchable {
 		return await this.sendMessage(text, RESPONSE_TYPE.TEXT, chatId);
 	}
 
-	isQuestion(message: TelegramMessage): boolean {
+	public isQuestion(message: TelegramMessage): boolean {
 		return this._openQuestions.length > 0 && 'text' in message;
 	}
 
-	handleQuestion(message: TelegramMessage<TelegramText>): void {
+	public handleQuestion(message: TelegramMessage<TelegramText>): void {
 		const firstQuestion = this._openQuestions.shift();
 		firstQuestion!(message.text);
 	}
 
-	private _lastChatID = 0;
-	async handleMessage(req: TelegramReq, res: ResponseLike): Promise<void> {
+	public async handleMessage(
+		req: TelegramReq,
+		res: ResponseLike
+	): Promise<void> {
 		const { message, edited_message } = req.body;
 		const logObj = attachMessage(res, chalk.bold(chalk.cyan('[bot]')));
 
@@ -482,5 +489,9 @@ export class MessageHandler extends BotState.Matchable {
 			}
 			resWrapped.res.end();
 		}
+	}
+
+	public toJSON(): unknown {
+		return {};
 	}
 }

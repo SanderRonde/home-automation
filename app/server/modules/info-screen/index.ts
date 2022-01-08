@@ -1,20 +1,20 @@
-import { ModuleConfig } from '..';
-import { ModuleMeta } from '../meta';
-import { Bot } from './bot';
-import { refresh } from './calendar';
 import { initRouting } from './routing';
+import { ModuleMeta } from '../meta';
+import { refresh } from './calendar';
+import { ModuleConfig } from '..';
+import { Bot } from './bot';
 
 export const InfoScreen = new (class Meta extends ModuleMeta {
-	name = 'info-screen';
+	public name = 'info-screen';
 
-	setup!: Promise<void>;
+	public setup!: Promise<void>;
 
-	async init(config: ModuleConfig) {
-		initRouting(config);
-		await refresh();
+	public get Bot() {
+		return Bot;
 	}
 
-	get Bot() {
-		return Bot;
+	public async init(config: ModuleConfig) {
+		initRouting(config);
+		await refresh();
 	}
 })();

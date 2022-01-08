@@ -1,6 +1,6 @@
-import EventEmitter from 'events';
 import eWelink, { Device } from 'ewelink-api';
 import { AllModules } from '../..';
+import EventEmitter from 'events';
 
 export type EWeLinkUpdateMessage<P = Record<string, string | number>> = {
 	action: 'update';
@@ -23,11 +23,13 @@ export type EWeLinkWebSocketMessage<P = Record<string, string | number>> =
 	| 'pong';
 
 export class EWeLinkWSConnection extends EventEmitter {
-	on(
+	public on(
 		event: 'data',
-		listener: (data: EWeLinkWebSocketMessage<unknown>) => void
+		listener: (
+			data: EWeLinkWebSocketMessage<unknown>
+		) => void | Promise<void>
 	): this {
-		return super.on(event, listener);
+		return super.on(event, (data) => void listener(data));
 	}
 }
 

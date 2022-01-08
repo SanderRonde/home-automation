@@ -1,19 +1,19 @@
-import { BotState } from '../../lib/bot-state';
+import { BotStateBase } from '../../lib/bot-state';
 import { MatchParameters } from '../bot/message';
-import { MatchResponse } from '../bot/types';
 import { ExternalHandler } from './external';
+import { MatchResponse } from '../bot/types';
 import { getAll } from './register';
 
-export class Bot extends BotState.Base {
-	static readonly commands = {
+export class Bot extends BotStateBase {
+	public static readonly commands = {
 		'/pressure': 'Turn on pressure module',
 		'/pressureoff': 'Turn off pressure module',
 		'/help_pressure': 'Print help comands for keyval',
 	};
 
-	static readonly botName = 'Pressure';
+	public static readonly botName = 'Pressure';
 
-	static readonly matches = Bot.createMatchMaker(
+	public static readonly matches = Bot.createMatchMaker(
 		({ matchMaker: mm, fallbackSetter: fallback }) => {
 			mm(
 				'/pressureoff',
@@ -57,7 +57,7 @@ export class Bot extends BotState.Base {
 		}
 	);
 
-	static async match(
+	public static async match(
 		config: MatchParameters
 	): Promise<MatchResponse | undefined> {
 		return await this.matchLines({
@@ -66,11 +66,7 @@ export class Bot extends BotState.Base {
 		});
 	}
 
-	constructor(_json?: Record<string, never>) {
-		super();
-	}
-
-	toJSON(): Record<string, never> {
+	public toJSON(): Record<string, never> {
 		return {};
 	}
 }

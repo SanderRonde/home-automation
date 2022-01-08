@@ -1,13 +1,13 @@
-import { KeyVal } from '.';
+import { addListener, removeListener } from './get-set-listener';
 import { createExternalClass } from '../../lib/external';
 import { LogObj } from '../../lib/logger';
 import { APIHandler } from './api';
-import { addListener, removeListener } from './get-set-listener';
+import { KeyVal } from '.';
 
 export class ExternalHandler extends createExternalClass(true) {
 	private static _apiHandler: APIHandler | null = null;
 
-	static async init({
+	public static async init({
 		apiHandler,
 	}: {
 		apiHandler: APIHandler;
@@ -16,7 +16,11 @@ export class ExternalHandler extends createExternalClass(true) {
 		await super.init();
 	}
 
-	async set(key: string, value: string, notify = true): Promise<boolean> {
+	public async set(
+		key: string,
+		value: string,
+		notify = true
+	): Promise<boolean> {
 		return this.runRequest(async (res, source) => {
 			return ExternalHandler._apiHandler!.set(
 				res,
@@ -31,7 +35,7 @@ export class ExternalHandler extends createExternalClass(true) {
 		});
 	}
 
-	async get(key: string): Promise<string> {
+	public async get(key: string): Promise<string> {
 		return this.runRequest(async (res, source) => {
 			return ExternalHandler._apiHandler!.get(
 				res,
@@ -44,7 +48,7 @@ export class ExternalHandler extends createExternalClass(true) {
 		});
 	}
 
-	async toggle(key: string): Promise<string> {
+	public async toggle(key: string): Promise<string> {
 		return this.runRequest(async (res, source) => {
 			return ExternalHandler._apiHandler!.toggle(
 				res,
@@ -57,9 +61,13 @@ export class ExternalHandler extends createExternalClass(true) {
 		});
 	}
 
-	async onChange(
+	public async onChange(
 		key: string | null,
-		callback: (value: string, key: string, logObj: LogObj) => void,
+		callback: (
+			value: string,
+			key: string,
+			logObj: LogObj
+		) => void | Promise<void>,
 		options: { once?: boolean; notifyOnInitial?: boolean } = {}
 	): Promise<{ remove(): void }> {
 		return this.runRequest(() => {

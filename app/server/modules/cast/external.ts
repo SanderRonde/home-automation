@@ -4,7 +4,7 @@ import { APIHandler } from './api';
 import { Cast } from '.';
 
 export class ExternalHandler extends createExternalClass(true) {
-	async stop(): Promise<castv2.MediaPlayerClass[]> {
+	public async stop(): Promise<castv2.MediaPlayerClass[]> {
 		return this.runRequest(async (res, source) => {
 			return APIHandler.stop(
 				res,
@@ -16,7 +16,9 @@ export class ExternalHandler extends createExternalClass(true) {
 		});
 	}
 
-	async pasta(pasta: string): Promise<castv2.MediaPlayerClass[] | undefined> {
+	public async pasta(
+		pasta: string
+	): Promise<castv2.MediaPlayerClass[] | undefined> {
 		return this.runRequest(async (res, source) => {
 			return APIHandler.pasta(
 				res,
@@ -29,7 +31,10 @@ export class ExternalHandler extends createExternalClass(true) {
 		});
 	}
 
-	async say(text: string, lang = 'en'): Promise<castv2.MediaPlayerClass[]> {
+	public async say(
+		text: string,
+		lang = 'en'
+	): Promise<castv2.MediaPlayerClass[]> {
 		return this.runRequest(async (res, source) => {
 			return APIHandler.say(
 				res,
@@ -43,7 +48,7 @@ export class ExternalHandler extends createExternalClass(true) {
 		});
 	}
 
-	async url(url: string): Promise<castv2.MediaPlayerClass[]> {
+	public async url(url: string): Promise<castv2.MediaPlayerClass[]> {
 		return this.runRequest(async (res, source) => {
 			return APIHandler.url(
 				res,

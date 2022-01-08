@@ -8,13 +8,13 @@ import {
 	Token,
 	User,
 } from 'oauth2-server';
-import { Database } from '../../lib/db';
 import oAuthClients from '../../config/oauth-clients';
-import { logTag } from '../../lib/logger';
-import { SettablePromise } from '../../lib/util';
-import OAuthServer from 'express-oauth-server';
 import oauthClients from '../../config/oauth-clients';
 import oauthUsers from '../../config/oauth-users';
+import { SettablePromise } from '../../lib/util';
+import OAuthServer from 'express-oauth-server';
+import { logTag } from '../../lib/logger';
+import { Database } from '../../lib/db';
 
 /**
  * When true, access tokens never expire. This
@@ -42,9 +42,9 @@ type DBAuthorizationCode = Pick<
 };
 
 class OAuthModel implements AuthorizationCodeModel, RefreshTokenModel {
-	constructor(public db: Database) {}
+	public constructor(public db: Database) {}
 
-	getClient(
+	public getClient(
 		clientID: string,
 		clientSecret: string | null
 	): Promise<typeof oAuthClients[number] | undefined> {
@@ -62,7 +62,7 @@ class OAuthModel implements AuthorizationCodeModel, RefreshTokenModel {
 		return Promise.resolve(foundClient);
 	}
 
-	saveToken(token: Token, client: Client, user: User) {
+	public saveToken(token: Token, client: Client, user: User) {
 		const dbToken: DBToken = {
 			accessToken: token.accessToken,
 			accessTokenExpiresAt: (
@@ -89,7 +89,7 @@ class OAuthModel implements AuthorizationCodeModel, RefreshTokenModel {
 		});
 	}
 
-	async getAccessToken(accessToken: string) {
+	public async getAccessToken(accessToken: string) {
 		logTag(
 			'oauth',
 			'cyan',
@@ -118,7 +118,7 @@ class OAuthModel implements AuthorizationCodeModel, RefreshTokenModel {
 		});
 	}
 
-	revokeToken(toRevokeToken: Token | RefreshToken) {
+	public revokeToken(toRevokeToken: Token | RefreshToken) {
 		logTag(
 			'oauth',
 			'cyan',
@@ -135,7 +135,7 @@ class OAuthModel implements AuthorizationCodeModel, RefreshTokenModel {
 		return Promise.resolve(true);
 	}
 
-	async saveAuthorizationCode(
+	public async saveAuthorizationCode(
 		code: Pick<
 			AuthorizationCode,
 			'authorizationCode' | 'expiresAt' | 'redirectUri' | 'scope'
@@ -160,7 +160,7 @@ class OAuthModel implements AuthorizationCodeModel, RefreshTokenModel {
 		return Promise.resolve(dbAuthorizationCode);
 	}
 
-	async getAuthorizationCode(code: string) {
+	public async getAuthorizationCode(code: string) {
 		const authorizationCodes = this.db.get<DBAuthorizationCode[]>(
 			'authorizationCodes',
 			[]
@@ -173,7 +173,7 @@ class OAuthModel implements AuthorizationCodeModel, RefreshTokenModel {
 		);
 	}
 
-	async revokeAuthorizationCode(toRevoke: AuthorizationCode) {
+	public async revokeAuthorizationCode(toRevoke: AuthorizationCode) {
 		logTag(
 			'oauth',
 			'cyan',
@@ -188,7 +188,7 @@ class OAuthModel implements AuthorizationCodeModel, RefreshTokenModel {
 		return Promise.resolve(true);
 	}
 
-	verifyScope(token: Token, scope: string | string[]) {
+	public verifyScope(token: Token, scope: string | string[]) {
 		logTag(
 			'oauth',
 			'cyan',
@@ -209,7 +209,9 @@ class OAuthModel implements AuthorizationCodeModel, RefreshTokenModel {
 		return Promise.resolve(true);
 	}
 
-	getRefreshToken(refreshToken: string): Promise<RefreshToken | Falsey> {
+	public getRefreshToken(
+		refreshToken: string
+	): Promise<RefreshToken | Falsey> {
 		const refreshTokens = this.db.get<DBToken[]>('tokens', []);
 		const match = refreshTokens.find(
 			(token) => token.refreshToken === refreshToken

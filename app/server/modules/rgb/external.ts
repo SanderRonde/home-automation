@@ -1,15 +1,15 @@
-import { RGB } from '.';
-import { BotState } from '../../lib/bot-state';
-import { LED_NAMES } from '../../lib/constants';
 import { createExternalClass } from '../../lib/external';
+import { MatchHandlerParams } from '../../lib/bot-state';
 import { APIHandler, ColorTarget } from './api';
-import { Effects } from './arduino-api';
+import { LED_NAMES } from '../../lib/constants';
 import { getLed, RGBClient } from './clients';
-import { play } from './marked-audio';
 import { JoinedConfigs } from './types';
+import { Effects } from './arduino-api';
+import { play } from './marked-audio';
+import { RGB } from '.';
 
 export class ExternalHandler extends createExternalClass(true) {
-	async color(
+	public async color(
 		color: string,
 		target: ColorTarget | LED_NAMES = 'all',
 		intensity = 0
@@ -28,7 +28,7 @@ export class ExternalHandler extends createExternalClass(true) {
 		});
 	}
 
-	async rgb(
+	public async rgb(
 		red: string,
 		green: string,
 		blue: string,
@@ -51,7 +51,7 @@ export class ExternalHandler extends createExternalClass(true) {
 		});
 	}
 
-	async power(
+	public async power(
 		state: 'on' | 'off',
 		target: ColorTarget | LED_NAMES = 'all'
 	): Promise<boolean> {
@@ -68,7 +68,10 @@ export class ExternalHandler extends createExternalClass(true) {
 		});
 	}
 
-	async effect(name: Effects, extra: JoinedConfigs = {}): Promise<boolean> {
+	public async effect(
+		name: Effects,
+		extra: JoinedConfigs = {}
+	): Promise<boolean> {
 		return this.runRequest(async (res, source) => {
 			return APIHandler.runEffect(
 				res,
@@ -82,19 +85,16 @@ export class ExternalHandler extends createExternalClass(true) {
 		});
 	}
 
-	async markedAudio(
+	public async markedAudio(
 		file: string,
-		helpers: Pick<
-			BotState.MatchHandlerParams,
-			'ask' | 'sendText' | 'askCancelable'
-		>
+		helpers: Pick<MatchHandlerParams, 'ask' | 'sendText' | 'askCancelable'>
 	): ReturnType<typeof play> {
 		return this.runRequest((_res, _source, logObj) => {
 			return play(file, logObj, helpers);
 		});
 	}
 
-	async getClient(name: LED_NAMES): Promise<RGBClient | null> {
+	public async getClient(name: LED_NAMES): Promise<RGBClient | null> {
 		return this.runRequest(() => {
 			return getLed(name);
 		});

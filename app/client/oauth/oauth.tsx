@@ -1,10 +1,10 @@
-import * as React from 'react';
-import * as ReactDOM from 'react-dom';
 import { Input, Button, notification } from 'antd';
+import * as ReactDOM from 'react-dom';
+import * as React from 'react';
 
 const PageCenterer: React.FC<{
-	children: any;
-}> = props => {
+	children: React.ReactNode;
+}> = (props) => {
 	return (
 		<div
 			style={{
@@ -12,14 +12,14 @@ const PageCenterer: React.FC<{
 				height: '100vh',
 				display: 'flex',
 				flexDirection: 'row',
-				justifyContent: 'center'
+				justifyContent: 'center',
 			}}
 		>
 			<div
 				style={{
 					display: 'flex',
 					flexDirection: 'column',
-					justifyContent: 'center'
+					justifyContent: 'center',
 				}}
 			>
 				{props.children}
@@ -28,7 +28,7 @@ const PageCenterer: React.FC<{
 	);
 };
 
-const Login: React.FC<{}> = () => {
+const Login: React.FC<Record<string, never>> = () => {
 	const urlParams = new URLSearchParams(window.location.search);
 	const form = React.useRef<HTMLFormElement>(null);
 
@@ -37,7 +37,7 @@ const Login: React.FC<{}> = () => {
 			const reason = urlParams.get('errorReason');
 			notification.open({
 				message: 'Failed to log in',
-				description: reason
+				description: reason,
 			});
 		}
 	}, []);
@@ -46,7 +46,7 @@ const Login: React.FC<{}> = () => {
 		<PageCenterer>
 			<div
 				style={{
-					maxWidth: '400px'
+					maxWidth: '400px',
 				}}
 			>
 				<form ref={form} action={'/oauth/authorize'} method="POST">
@@ -57,8 +57,8 @@ const Login: React.FC<{}> = () => {
 						'scope',
 						'response_mode',
 						'state',
-						'nonce'
-					].map(param => {
+						'nonce',
+					].map((param) => {
 						if (urlParams.has(param)) {
 							return (
 								<Input
@@ -74,7 +74,7 @@ const Login: React.FC<{}> = () => {
 						style={{ marginBottom: '10px' }}
 						name={'username'}
 						placeholder={'Username'}
-						onKeyDown={e => {
+						onKeyDown={(e) => {
 							if (e.code === 'Enter') {
 								form.current?.submit();
 							}
@@ -85,7 +85,7 @@ const Login: React.FC<{}> = () => {
 						type={'password'}
 						placeholder={'Password'}
 						style={{ marginBottom: '10px' }}
-						onKeyDown={e => {
+						onKeyDown={(e) => {
 							if (e.code === 'Enter') {
 								form.current?.submit();
 							}
@@ -106,4 +106,4 @@ const Login: React.FC<{}> = () => {
 	);
 };
 
-ReactDOM.render(<Login />, document.getElementById('root')!);
+ReactDOM.render(<Login />, document.getElementById('root'));

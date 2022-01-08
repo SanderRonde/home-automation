@@ -17,18 +17,21 @@ const initializedClasses: WeakSet<ReturnType<typeof createExternalClass>> =
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function createExternalClass(requiresInit: boolean, name?: string) {
 	return class ExternalClass {
+		private static _queuedRequests: QueuedRequest[] = [];
 		protected static _initialized = false;
 		protected static _name = name;
+
+		public constructor(
+			private readonly _logObj: LogObj,
+			private readonly _source: string
+		) {}
+
 		private static _isReady(requiresInit: boolean) {
 			if (requiresInit === undefined) {
 				throw new Error('"requiresInit" not set');
 			}
 			return !requiresInit || this._initialized;
 		}
-
-		constructor(private _logObj: LogObj, private _source: string) {}
-
-		private static _queuedRequests: QueuedRequest[] = [];
 
 		private static async _handleQueuedRequest<T>({
 			fn,
@@ -41,7 +44,8 @@ export function createExternalClass(requiresInit: boolean, name?: string) {
 			return value;
 		}
 
-		static async init(_args?: unknown) {
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		public static async init(_args?: unknown) {
 			initializedClasses.add(this);
 			this._initialized = true;
 			for (const req of this._queuedRequests) {
@@ -62,7 +66,7 @@ export function createExternalClass(requiresInit: boolean, name?: string) {
 		 * Runs a request. Either now (when the class is ready)
 		 * or later when it has been intiialized
 		 */
-		runRequest<T>(fn: QueuedRequestFn<T>): Promise<T> {
+		public runRequest<T>(fn: QueuedRequestFn<T>): Promise<T> {
 			return new Promise<T>((resolve) => {
 				const constructor = this.constructor as typeof ExternalClass;
 				if (constructor._isReady(requiresInit)) {

@@ -1,21 +1,21 @@
-import { auth, errorHandle, requireParams } from '../../lib/decorators';
 import {
 	attachMessage,
 	attachSourcedMessage,
 	ResponseLike,
 } from '../../lib/logger';
-import * as castv2 from 'castv2-player';
-import { LOCAL_URLS } from './local-urls';
+import { auth, errorHandle, requireParams } from '../../lib/decorators';
 import { playURL, playURLs, stop } from './casting';
+import { LOCAL_URLS } from './local-urls';
+import * as castv2 from 'castv2-player';
+import { PASTAS } from './pasta';
 import { Cast } from './index';
 import { tts } from './tts';
-import { PASTAS } from './pasta';
 
 export class APIHandler {
 	@errorHandle
 	@requireParams('url')
 	@auth
-	static async url(
+	public static async url(
 		res: ResponseLike,
 		{
 			url,
@@ -55,7 +55,7 @@ export class APIHandler {
 
 	@errorHandle
 	@auth
-	static async stop(
+	public static async stop(
 		res: ResponseLike,
 		_options: {
 			auth?: string;
@@ -76,7 +76,7 @@ export class APIHandler {
 
 	@errorHandle
 	@auth
-	static async say(
+	public static async say(
 		res: ResponseLike,
 		{
 			text,
@@ -122,7 +122,7 @@ export class APIHandler {
 	@errorHandle
 	@requireParams('pasta')
 	@auth
-	static async pasta(
+	public static async pasta(
 		res: ResponseLike,
 		{
 			pasta,

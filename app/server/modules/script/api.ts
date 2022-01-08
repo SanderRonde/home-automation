@@ -1,15 +1,15 @@
-import * as childProcess from 'child_process';
-import chalk from 'chalk';
-import { Config } from '../../app';
-import { errorHandle, requireParams, authAll } from '../../lib/decorators';
-import { AuthError } from '../../lib/errors';
 import {
 	ResponseLike,
 	attachSourcedMessage,
 	attachMessage,
 } from '../../lib/logger';
+import { errorHandle, requireParams, authAll } from '../../lib/decorators';
+import * as childProcess from 'child_process';
+import { AuthError } from '../../lib/errors';
+import { Config } from '../../app';
 import * as path from 'path';
 import { Script } from '.';
+import chalk from 'chalk';
 
 export class APIHandler {
 	@errorHandle

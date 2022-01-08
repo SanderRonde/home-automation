@@ -1,17 +1,17 @@
-import { ModuleConfig } from '..';
-import { ModuleMeta } from '../meta';
 import { ExternalHandler } from './external';
 import { initRouting } from './routing';
+import { ModuleMeta } from '../meta';
+import { ModuleConfig } from '..';
 
 export const Webhook = new (class Meta extends ModuleMeta {
-	name = 'webhook';
+	public name = 'webhook';
 
-	init(config: ModuleConfig) {
-		initRouting(config);
-		return Promise.resolve(void 0);
+	public get External() {
+		return ExternalHandler;
 	}
 
-	get External() {
-		return ExternalHandler;
+	public init(config: ModuleConfig) {
+		initRouting(config);
+		return Promise.resolve(void 0);
 	}
 })();

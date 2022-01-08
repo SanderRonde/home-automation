@@ -1,13 +1,13 @@
-import { IP_LOG_VERSION } from './constants';
-import * as express from 'express';
-import * as http from 'http';
-import chalk from 'chalk';
-import { ExplainHook } from '../modules/explain/types';
 import { externalRedact } from '../modules/auth/helpers';
+import { ExplainHook } from '../modules/explain/types';
+import { generateRandomString } from './util';
+import { IP_LOG_VERSION } from './constants';
 import { gatherTimings } from './timer';
+import * as express from 'express';
 import { Config } from '../app';
 import * as fs from 'fs-extra';
-import { generateRandomString } from './util';
+import * as http from 'http';
+import chalk from 'chalk';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type LogObj = any;
@@ -182,15 +182,15 @@ export class LogCapturer implements Loggable {
 		this._originalLines.push(params);
 	}
 
-	log(message?: unknown, ...params: unknown[]): void {
-		this._logToLine(message, ...params);
-	}
-
 	private _get() {
 		return this._lines.join('\n');
 	}
 
-	async get(): Promise<string> {
+	public log(message?: unknown, ...params: unknown[]): void {
+		this._logToLine(message, ...params);
+	}
+
+	public async get(): Promise<string> {
 		if (this._done) {
 			return this._get();
 		}
@@ -201,7 +201,7 @@ export class LogCapturer implements Loggable {
 		});
 	}
 
-	logToConsole(): void {
+	public logToConsole(): void {
 		for (const line of this._originalLines) {
 			console.log(...line);
 		}
@@ -506,29 +506,32 @@ export interface ResponseLike {
 }
 
 export class ResDummy implements ResponseLike {
-	status(): this {
+	public _headersSent = false;
+	public status(): this {
 		return this;
 	}
-	sendFile(): void {}
-	redirect(): void {}
-	write(): void {}
-	end(): void {}
-	contentType(): void {}
-	cookie(): void {}
+	public sendFile(): void {}
+	public redirect(): void {}
+	public write(): void {}
+	public end(): void {}
+	public contentType(): void {}
+	public cookie(): void {}
 
-	transferTo(
+	public transferTo(
 		obj: ResponseLike | AssociatedMessage | Record<string, unknown>
 	): void {
 		transferAttached(this, obj);
 	}
-	_headersSent = false;
 }
 
 export class ProgressLogger {
 	private _progress = 0;
 	private _startTime = Date.now();
 
-	constructor(private _name: string, private _max: number) {}
+	public constructor(
+		private readonly _name: string,
+		private readonly _max: number
+	) {}
 
 	private _getProgressBar() {
 		if (this._max - this._progress < 0) {
@@ -543,7 +546,7 @@ export class ProgressLogger {
 			.join('')}]`;
 	}
 
-	logInitial(): void {
+	public logInitial(): void {
 		console.log(
 			chalk.bgBlack(
 				getTime(),
@@ -556,7 +559,7 @@ export class ProgressLogger {
 		);
 	}
 
-	increment(name: string): void {
+	public increment(name: string): void {
 		this._progress++;
 		console.log(
 			chalk.bgBlack(
@@ -574,7 +577,7 @@ export class ProgressLogger {
 		);
 	}
 
-	done(): void {
+	public done(): void {
 		if (this._progress > this._max) {
 			console.log(
 				chalk.red('Increment got called more often than configured')

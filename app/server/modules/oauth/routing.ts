@@ -1,18 +1,18 @@
 import express = require('express');
-import { debug } from '../../lib/logger';
-import { ModuleConfig, OAuth } from '..';
-import { createRouter } from '../../lib/api';
-import { CLIENT_FOLDER } from '../../lib/constants';
 import {
 	ResponseLike,
 	attachSourcedMessage,
 	attachMessage,
 } from '../../lib/logger';
+import { authorizationServer } from './authorization';
+import { CLIENT_FOLDER } from '../../lib/constants';
+import { validateOAUthUsers } from './oauth-users';
 import { SettablePromise } from '../../lib/util';
+import { createRouter } from '../../lib/api';
+import { ModuleConfig, OAuth } from '..';
+import { debug } from '../../lib/logger';
 import * as fs from 'fs-extra';
 import * as path from 'path';
-import { validateOAUthUsers } from './oauth-users';
-import { authorizationServer } from './authorization';
 
 const oauthHTMLFile = new SettablePromise<string>();
 
@@ -57,6 +57,7 @@ export async function initRouting({ app }: ModuleConfig): Promise<void> {
 	const router = createRouter(OAuth, {});
 	router.all(
 		'/authorize',
+		// @ts-ignore
 		async (req, res, next) => {
 			attachSourcedMessage(
 				res,
@@ -105,7 +106,7 @@ export async function initRouting({ app }: ModuleConfig): Promise<void> {
 				authenticateHandler: {
 					handle: () => username,
 				},
-			})(req, res as express.Response, next);
+			})(req, res, next);
 		},
 		(await authorizationServer.value).authorize()
 	);
@@ -121,6 +122,7 @@ export async function initRouting({ app }: ModuleConfig): Promise<void> {
 		res.write(await oauthHTMLFile.value);
 		res.end();
 	});
+	// @ts-ignore
 	router.post(
 		'/token',
 		async (_req, res, next) => {

@@ -1,15 +1,15 @@
 import smartHomeConfig from '../../../config/smart-home';
 
-import * as express from 'express';
 import {
 	SmartHomeDeviceSync,
 	SMART_HOME_COMMAND,
 } from '../../../lib/smart-home/smart-home-types';
 import { addUser, removeUser } from '../home-graph/users';
 import { createHookables } from '../../../lib/util';
-import { SmartHome } from '../..';
 import { attachMessage } from '../../../lib/logger';
 import { time } from '../../../lib/timer';
+import * as express from 'express';
+import { SmartHome } from '../..';
 
 export async function sharedSync(
 	username: string,

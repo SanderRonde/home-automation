@@ -1,6 +1,6 @@
+import { splitIntoGroups, wait } from '../../lib/util';
 import { Client } from '@notionhq/client';
 import { getEnv } from '../../lib/io';
-import { splitIntoGroups, wait } from '../../lib/util';
 
 export function createClient(): Client | null {
 	const secret = getEnv('SECRET_NOTION_API_KEY');

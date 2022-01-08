@@ -20,15 +20,11 @@ type EWeLinkButtonPressMessage = EWeLinkUpdateMessage<{
 }>;
 
 export class EwelinkButtonBase extends EWeLinkInittable {
-	constructor(
+	public constructor(
 		protected _eWeLinkConfig: EWeLinkSharedConfig,
 		private _actions: ButtonTriggerActions
 	) {
 		super();
-	}
-
-	protected setActions(actions: ButtonTriggerActions): void {
-		this._actions = actions;
 	}
 
 	private async _onTrigger(
@@ -40,7 +36,11 @@ export class EwelinkButtonBase extends EWeLinkInittable {
 		}
 	}
 
-	init(): Promise<void> {
+	protected setActions(actions: ButtonTriggerActions): void {
+		this._actions = actions;
+	}
+
+	public init(): Promise<void> {
 		this._eWeLinkConfig.wsConnection.on('data', async (message) => {
 			if (typeof message === 'string') {
 				return;

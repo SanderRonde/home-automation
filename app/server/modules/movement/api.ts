@@ -1,7 +1,7 @@
-import { Movement } from '.';
 import { auth, errorHandle, requireParams } from '../../lib/decorators';
 import { ResponseLike, attachSourcedMessage } from '../../lib/logger';
 import { reportMovement } from './register';
+import { Movement } from '.';
 
 export class APIHandler {
 	@errorHandle

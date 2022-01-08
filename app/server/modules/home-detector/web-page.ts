@@ -1,8 +1,8 @@
-import * as express from 'express';
-import { HomeDetector } from '.';
 import { errorHandle, authCookie, upgradeToHTTPS } from '../../lib/decorators';
 import { ResponseLike } from '../../lib/logger';
 import { Detector } from './classes';
+import * as express from 'express';
+import { HomeDetector } from '.';
 
 async function homeDetectorHTML(
 	json: string,
@@ -26,10 +26,10 @@ async function homeDetectorHTML(
 }
 
 export class WebPageHandler {
-	private _detector: Detector;
-	private _randomNum: number;
+	private readonly _detector: Detector;
+	private readonly _randomNum: number;
 
-	constructor({
+	public constructor({
 		detector,
 		randomNum,
 	}: {

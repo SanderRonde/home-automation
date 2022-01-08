@@ -1,6 +1,3 @@
-import { BuiltinPatterns, Control, State } from 'magic-home';
-import { RGB } from '.';
-import { Color } from '../../lib/color';
 import {
 	ARDUINO_LEDS,
 	HEX_LEDS,
@@ -9,11 +6,21 @@ import {
 	MAGIC_LEDS,
 	NAME_MAP,
 } from '../../lib/constants';
+import { BuiltinPatterns, Control, State } from 'magic-home';
 import { warning } from '../../lib/logger';
+import { Color } from '../../lib/color';
 import { XHR } from '../../lib/util';
 import { Board } from './board';
+import { RGB } from '.';
 
 export abstract class RGBClient {
+	public static patternNames: {
+		[key in BuiltinPatterns]: number;
+	} = Control.patternNames;
+	private _listeners: {
+		type: 'color' | 'brightness' | 'effect' | 'power';
+		listener: (value: unknown) => void;
+	}[] = [];
 	protected _lastState:
 		| {
 				type: 'fullColor';
@@ -32,16 +39,9 @@ export abstract class RGBClient {
 		  } = {
 		type: 'off',
 	};
-	private _listeners: {
-		type: 'color' | 'brightness' | 'effect' | 'power';
-		listener: (value: unknown) => void;
-	}[] = [];
 
-	static patternNames: {
-		[key in BuiltinPatterns]: number;
-	} = Control.patternNames;
-	abstract address: string;
-	abstract id: string;
+	public abstract address: string;
+	public abstract id: string;
 
 	private async _stateChange(value: string) {
 		const name = this.address;
@@ -59,44 +59,6 @@ export abstract class RGBClient {
 		}
 	}
 
-	abstract isOn(): Promise<boolean>;
-	abstract setColor(
-		red: number,
-		green: number,
-		blue: number,
-		callback?: (err: Error | null, success: boolean) => void
-	): Promise<boolean>;
-	abstract setBrightness(
-		brightness: number,
-		callback?: (err: Error | null, success: boolean) => void
-	): Promise<boolean>;
-	abstract setColorAndWarmWhite(
-		red: number,
-		green: number,
-		blue: number,
-		ww: number,
-		callback?: (err: Error | null, success: boolean) => void
-	): Promise<boolean>;
-	abstract setColorWithBrightness(
-		red: number,
-		green: number,
-		blue: number,
-		brightness: number,
-		callback?: (err: Error | null, success: boolean) => void
-	): Promise<boolean>;
-	abstract setPattern(
-		pattern: BuiltinPatterns,
-		speed: number,
-		callback?: () => void
-	): Promise<boolean>;
-	abstract setPower(on: boolean, callback?: () => void): Promise<boolean>;
-	abstract setWarmWhite(
-		ww: number,
-		callback?: (err: Error | null, success: boolean) => void
-	): Promise<boolean>;
-	abstract turnOff(callback?: () => void): Promise<boolean>;
-	abstract turnOn(callback?: () => void): Promise<boolean>;
-
 	protected async _turnedOn(): Promise<void> {
 		await this._stateChange('1');
 		this._updateStatePower(true);
@@ -110,57 +72,13 @@ export abstract class RGBClient {
 		this._updateStatePower(false);
 	}
 
-	protected triggerListener(
+	protected _triggerListener(
 		type: 'color' | 'brightness' | 'effect' | 'power',
 		data: Color | number | string | boolean
 	): void {
 		this._listeners
 			.filter((listener) => listener.type === type)
 			.forEach(({ listener }) => listener(data));
-	}
-
-	public updateStateColor(color: Color, brightness: number): void {
-		const oldValue = this._lastState;
-		this._lastState = {
-			type: 'fullColor',
-			color: color,
-			brightness: brightness,
-		};
-
-		if (oldValue.type !== this._lastState.type) {
-			this.triggerListener('color', color);
-			this.triggerListener('brightness', brightness);
-			this.triggerListener('effect', 'color');
-			if (oldValue.type === 'off') {
-				this.triggerListener('power', true);
-			}
-			return;
-		}
-		if (!oldValue.color.isSame(color)) {
-			this.triggerListener('color', color);
-		}
-		if (oldValue.brightness !== brightness) {
-			this.triggerListener('brightness', brightness);
-		}
-	}
-
-	public updateStateEffect(effectName: string): void {
-		const oldValue = this._lastState;
-		this._lastState = {
-			type: 'effect',
-			effectName,
-		};
-
-		if (oldValue.type !== this._lastState.type) {
-			this.triggerListener('effect', effectName);
-			if (oldValue.type === 'off') {
-				this.triggerListener('power', true);
-			}
-			return;
-		}
-		if (oldValue.effectName !== effectName) {
-			this.triggerListener('effect', effectName);
-		}
 	}
 
 	protected _updateStatePower(isOn: boolean): void {
@@ -172,25 +90,110 @@ export abstract class RGBClient {
 			  };
 
 		if (oldValue.type !== this._lastState.type) {
-			this.triggerListener('power', isOn);
+			this._triggerListener('power', isOn);
 		}
 	}
 
-	async getColor(): Promise<Color | null> {
+	public abstract isOn(): Promise<boolean>;
+	public abstract setColor(
+		red: number,
+		green: number,
+		blue: number,
+		callback?: (err: Error | null, success: boolean) => void
+	): Promise<boolean>;
+	public abstract setBrightness(
+		brightness: number,
+		callback?: (err: Error | null, success: boolean) => void
+	): Promise<boolean>;
+	public abstract setColorAndWarmWhite(
+		red: number,
+		green: number,
+		blue: number,
+		ww: number,
+		callback?: (err: Error | null, success: boolean) => void
+	): Promise<boolean>;
+	public abstract setColorWithBrightness(
+		red: number,
+		green: number,
+		blue: number,
+		brightness: number,
+		callback?: (err: Error | null, success: boolean) => void
+	): Promise<boolean>;
+	public abstract setPattern(
+		pattern: BuiltinPatterns,
+		speed: number,
+		callback?: () => void
+	): Promise<boolean>;
+	public abstract setPower(
+		on: boolean,
+		callback?: () => void
+	): Promise<boolean>;
+	public abstract setWarmWhite(
+		ww: number,
+		callback?: (err: Error | null, success: boolean) => void
+	): Promise<boolean>;
+	public abstract turnOff(callback?: () => void): Promise<boolean>;
+	public abstract turnOn(callback?: () => void): Promise<boolean>;
+
+	public updateStateColor(color: Color, brightness: number): void {
+		const oldValue = this._lastState;
+		this._lastState = {
+			type: 'fullColor',
+			color: color,
+			brightness: brightness,
+		};
+
+		if (oldValue.type !== this._lastState.type) {
+			this._triggerListener('color', color);
+			this._triggerListener('brightness', brightness);
+			this._triggerListener('effect', 'color');
+			if (oldValue.type === 'off') {
+				this._triggerListener('power', true);
+			}
+			return;
+		}
+		if (!oldValue.color.isSame(color)) {
+			this._triggerListener('color', color);
+		}
+		if (oldValue.brightness !== brightness) {
+			this._triggerListener('brightness', brightness);
+		}
+	}
+
+	public updateStateEffect(effectName: string): void {
+		const oldValue = this._lastState;
+		this._lastState = {
+			type: 'effect',
+			effectName,
+		};
+
+		if (oldValue.type !== this._lastState.type) {
+			this._triggerListener('effect', effectName);
+			if (oldValue.type === 'off') {
+				this._triggerListener('power', true);
+			}
+			return;
+		}
+		if (oldValue.effectName !== effectName) {
+			this._triggerListener('effect', effectName);
+		}
+	}
+
+	public async getColor(): Promise<Color | null> {
 		if (this._lastState.type === 'fullColor') {
 			return Promise.resolve(this._lastState.color);
 		}
 		return Promise.resolve(null);
 	}
 
-	async getBrightness(): Promise<number | null> {
+	public async getBrightness(): Promise<number | null> {
 		if (this._lastState.type === 'fullColor') {
 			return Promise.resolve(this._lastState.brightness);
 		}
 		return Promise.resolve(null);
 	}
 
-	async getEffect(): Promise<string | null> {
+	public async getEffect(): Promise<string | null> {
 		if (this._lastState.type === 'effect') {
 			return Promise.resolve(this._lastState.effectName);
 		}
@@ -230,26 +233,10 @@ export abstract class RGBClient {
 }
 
 export class HexClient extends RGBClient {
-	constructor(public address: string) {
+	public id = LED_NAMES.HEX_LEDS;
+
+	public constructor(public address: string) {
 		super();
-	}
-
-	id = LED_NAMES.HEX_LEDS;
-
-	isOn(): Promise<boolean> {
-		const assumedState = this._lastState.type !== 'off';
-		void (async () => {
-			const response = (await XHR.post(
-				`http://${this.address}/is_on`,
-				`hex-${this.address}-is-on`
-			)) as EncodedString<{ enabled: boolean }>;
-			const isEnabled = JSON.parse(response).enabled;
-
-			if (assumedState !== isEnabled) {
-				this._updateStatePower(isEnabled);
-			}
-		})();
-		return Promise.resolve(assumedState);
 	}
 
 	private _numToHex(num: number) {
@@ -266,7 +253,27 @@ export class HexClient extends RGBClient {
 		)}${this._numToHex(color.b)}`;
 	}
 
-	async setColor(red: number, green: number, blue: number): Promise<boolean> {
+	public isOn(): Promise<boolean> {
+		const assumedState = this._lastState.type !== 'off';
+		void (async () => {
+			const response = (await XHR.post(
+				`http://${this.address}/is_on`,
+				`hex-${this.address}-is-on`
+			)) as EncodedString<{ enabled: boolean }>;
+			const isEnabled = JSON.parse(response).enabled;
+
+			if (assumedState !== isEnabled) {
+				this._updateStatePower(isEnabled);
+			}
+		})();
+		return Promise.resolve(assumedState);
+	}
+
+	public async setColor(
+		red: number,
+		green: number,
+		blue: number
+	): Promise<boolean> {
 		return this.setColorWithBrightness(
 			red,
 			green,
@@ -275,7 +282,7 @@ export class HexClient extends RGBClient {
 		);
 	}
 
-	async setBrightness(brightness: number): Promise<boolean> {
+	public async setBrightness(brightness: number): Promise<boolean> {
 		const color =
 			this._lastState.type === 'fullColor'
 				? this._lastState.color
@@ -288,7 +295,7 @@ export class HexClient extends RGBClient {
 		);
 	}
 
-	async setColorAndWarmWhite(
+	public async setColorAndWarmWhite(
 		red: number,
 		green: number,
 		blue: number,
@@ -297,7 +304,7 @@ export class HexClient extends RGBClient {
 		return this.setColorWithBrightness(red, green, blue, ww);
 	}
 
-	async setColorWithBrightness(
+	public async setColorWithBrightness(
 		red: number,
 		green: number,
 		blue: number,
@@ -320,7 +327,7 @@ export class HexClient extends RGBClient {
 		return Promise.resolve(true);
 	}
 
-	async setPattern(pattern: BuiltinPatterns): Promise<boolean> {
+	public async setPattern(pattern: BuiltinPatterns): Promise<boolean> {
 		await XHR.post(
 			`http://${this.address}/effects/${pattern}`,
 			`hex-${this.address}-pattern`
@@ -329,7 +336,7 @@ export class HexClient extends RGBClient {
 		return Promise.resolve(true);
 	}
 
-	async setPower(on: boolean): Promise<boolean> {
+	public async setPower(on: boolean): Promise<boolean> {
 		if (on) {
 			await this._turnedOn();
 			await this.turnOn();
@@ -340,21 +347,21 @@ export class HexClient extends RGBClient {
 		return Promise.resolve(true);
 	}
 
-	async setWarmWhite(): Promise<boolean> {
+	public async setWarmWhite(): Promise<boolean> {
 		return this.setColorWithBrightness(255, 255, 255, 100);
 	}
-	async turnOff(): Promise<boolean> {
+	public async turnOff(): Promise<boolean> {
 		await XHR.post(`http://${this.address}/off`, `hex-${this.address}-off`);
 		await this._turnedOff();
 		return Promise.resolve(true);
 	}
-	async turnOn(): Promise<boolean> {
+	public async turnOn(): Promise<boolean> {
 		await XHR.post(`http://${this.address}/on`, `hex-${this.address}-on`);
 		await this._turnedOn();
 		return Promise.resolve(true);
 	}
 
-	async runEffect(
+	public async runEffect(
 		name: string,
 		params: Record<string, string>
 	): Promise<boolean> {
@@ -369,11 +376,8 @@ export class HexClient extends RGBClient {
 }
 
 export class MagicHomeClient extends RGBClient {
-	constructor(private _control: Control, public address: string) {
-		super();
-	}
-
-	id = (() => {
+	private _lastQueriedState: State | null = null;
+	public id = (() => {
 		const name = LED_IPS[this.address];
 		if (!name) {
 			warning(
@@ -383,7 +387,12 @@ export class MagicHomeClient extends RGBClient {
 		return name;
 	})();
 
-	private _lastQueriedState: State | null = null;
+	public constructor(
+		private readonly _control: Control,
+		public address: string
+	) {
+		super();
+	}
 
 	/**
 	 * Get the last queried state. If it's been requested
@@ -399,18 +408,6 @@ export class MagicHomeClient extends RGBClient {
 			this._lastQueriedState = null;
 		}, 100);
 		return state;
-	}
-
-	isOn(): Promise<boolean> {
-		// Respond now, query state and if they mismatch send
-		// an update
-		const currentlyOn = this._lastState.type !== 'off';
-		void this._queryState().then((state) => {
-			if (currentlyOn !== state.on) {
-				this._updateStatePower(state.on);
-			}
-		});
-		return Promise.resolve(currentlyOn);
 	}
 
 	private _withinRange(value: number, target: number, range: number) {
@@ -429,7 +426,37 @@ export class MagicHomeClient extends RGBClient {
 		);
 	}
 
-	getColor(): Promise<Color | null> {
+	private async _setSolidColor(
+		red: number,
+		green: number,
+		blue: number,
+		brightness = 100,
+		callback?: (err: Error | null, success: boolean) => void
+	) {
+		await this._turnedOn();
+		this.updateStateColor(new Color(red, green, blue), brightness);
+		return this._control.setColorWithBrightness(
+			red,
+			green,
+			blue,
+			brightness || 100,
+			callback
+		);
+	}
+
+	public isOn(): Promise<boolean> {
+		// Respond now, query state and if they mismatch send
+		// an update
+		const currentlyOn = this._lastState.type !== 'off';
+		void this._queryState().then((state) => {
+			if (currentlyOn !== state.on) {
+				this._updateStatePower(state.on);
+			}
+		});
+		return Promise.resolve(currentlyOn);
+	}
+
+	public getColor(): Promise<Color | null> {
 		// Respond now, query state and if they mismatch send
 		// an update
 		const { assumedColor, assumedBrightness } = (() => {
@@ -492,7 +519,7 @@ export class MagicHomeClient extends RGBClient {
 		return Promise.resolve(assumedColor);
 	}
 
-	async getBrightness(): Promise<number | null> {
+	public async getBrightness(): Promise<number | null> {
 		// Check for the last color we sent from this server.
 		// If the colors match, we know the brightness (since we set it).
 		// If the colors differ, it was set in a different way and
@@ -511,25 +538,7 @@ export class MagicHomeClient extends RGBClient {
 		return null;
 	}
 
-	private async _setSolidColor(
-		red: number,
-		green: number,
-		blue: number,
-		brightness = 100,
-		callback?: (err: Error | null, success: boolean) => void
-	) {
-		await this._turnedOn();
-		this.updateStateColor(new Color(red, green, blue), brightness);
-		return this._control.setColorWithBrightness(
-			red,
-			green,
-			blue,
-			brightness || 100,
-			callback
-		);
-	}
-
-	async setColor(
+	public async setColor(
 		red: number,
 		green: number,
 		blue: number,
@@ -544,7 +553,7 @@ export class MagicHomeClient extends RGBClient {
 		);
 	}
 
-	async setBrightness(brightness: number): Promise<boolean> {
+	public async setBrightness(brightness: number): Promise<boolean> {
 		const color = (await this.getColor()) || new Color(255, 255, 255);
 		return this.setColorWithBrightness(
 			color.r,
@@ -554,7 +563,7 @@ export class MagicHomeClient extends RGBClient {
 		);
 	}
 
-	async setColorAndWarmWhite(
+	public async setColorAndWarmWhite(
 		red: number,
 		green: number,
 		blue: number,
@@ -564,7 +573,7 @@ export class MagicHomeClient extends RGBClient {
 		return this._setSolidColor(red, green, blue, 100, callback);
 	}
 
-	async setColorWithBrightness(
+	public async setColorWithBrightness(
 		red: number,
 		green: number,
 		blue: number,
@@ -574,7 +583,7 @@ export class MagicHomeClient extends RGBClient {
 		return this._setSolidColor(red, green, blue, brightness, callback);
 	}
 
-	async setPattern(
+	public async setPattern(
 		pattern: BuiltinPatterns,
 		speed: number,
 		callback?: () => void
@@ -584,7 +593,10 @@ export class MagicHomeClient extends RGBClient {
 		return this._control.setPattern(pattern, speed, callback);
 	}
 
-	async setPower(on: boolean, callback?: () => void): Promise<boolean> {
+	public async setPower(
+		on: boolean,
+		callback?: () => void
+	): Promise<boolean> {
 		if (on) {
 			await this._turnedOn();
 		} else {
@@ -593,7 +605,7 @@ export class MagicHomeClient extends RGBClient {
 		return this._control.setPower(on, callback);
 	}
 
-	async setWarmWhite(
+	public async setWarmWhite(
 		ww: number,
 		callback?: (err: Error | null, success: boolean) => void
 	): Promise<boolean> {
@@ -603,41 +615,26 @@ export class MagicHomeClient extends RGBClient {
 		return this._control.setWarmWhite(ww, callback);
 	}
 
-	async turnOff(callback?: () => void): Promise<boolean> {
+	public async turnOff(callback?: () => void): Promise<boolean> {
 		await this._turnedOff();
 		return this._control.turnOff(callback);
 	}
 
-	async turnOn(callback?: () => void): Promise<boolean> {
+	public async turnOn(callback?: () => void): Promise<boolean> {
 		await this._turnedOn();
 		return this._control.turnOn(callback);
 	}
 }
 
 export class ArduinoClient extends RGBClient {
-	address: string;
+	public address: string;
 
-	id = LED_NAMES.CEILING_LEDS;
+	public id = LED_NAMES.CEILING_LEDS;
 
-	constructor(public board: Board) {
+	public constructor(public board: Board) {
 		super();
 		this.address = board.name;
 		board.client = this;
-	}
-
-	public async isOn(): Promise<boolean> {
-		return Promise.resolve(this._lastState.type !== 'off');
-	}
-
-	async getColor(): Promise<Color | null> {
-		if (this._lastState.type === 'fullColor') {
-			return Promise.resolve(this._lastState.color);
-		}
-		return Promise.resolve(null);
-	}
-
-	public ping(): Promise<boolean> {
-		return this.board.ping();
 	}
 
 	private _sendSuccess(
@@ -664,7 +661,22 @@ export class ArduinoClient extends RGBClient {
 		return this._sendSuccess(callback);
 	}
 
-	async setColor(
+	public async isOn(): Promise<boolean> {
+		return Promise.resolve(this._lastState.type !== 'off');
+	}
+
+	public async getColor(): Promise<Color | null> {
+		if (this._lastState.type === 'fullColor') {
+			return Promise.resolve(this._lastState.color);
+		}
+		return Promise.resolve(null);
+	}
+
+	public ping(): Promise<boolean> {
+		return this.board.ping();
+	}
+
+	public async setColor(
 		red: number,
 		green: number,
 		blue: number,
@@ -679,7 +691,7 @@ export class ArduinoClient extends RGBClient {
 		);
 	}
 
-	async setBrightness(
+	public async setBrightness(
 		brightness: number,
 		callback?: (err: Error | null, success: boolean) => void
 	): Promise<boolean> {
@@ -696,7 +708,7 @@ export class ArduinoClient extends RGBClient {
 		);
 	}
 
-	async setColorAndWarmWhite(
+	public async setColorAndWarmWhite(
 		red: number,
 		green: number,
 		blue: number,
@@ -706,7 +718,7 @@ export class ArduinoClient extends RGBClient {
 		return this._setSolidColor(red, green, blue, 100, callback);
 	}
 
-	async setColorWithBrightness(
+	public async setColorWithBrightness(
 		red: number,
 		green: number,
 		blue: number,
@@ -716,15 +728,14 @@ export class ArduinoClient extends RGBClient {
 		return this._setSolidColor(red, green, blue, brightness, callback);
 	}
 
-	setPattern(
-		_pattern: BuiltinPatterns,
-		_speed: number,
-		_callback?: () => void
-	): Promise<boolean> {
+	public setPattern(): Promise<boolean> {
 		throw new Error('Not implemented');
 	}
 
-	async setPower(on: boolean, callback?: () => void): Promise<boolean> {
+	public async setPower(
+		on: boolean,
+		callback?: () => void
+	): Promise<boolean> {
 		if (on) {
 			await this._turnedOn();
 			return this.turnOn(callback);
@@ -734,20 +745,20 @@ export class ArduinoClient extends RGBClient {
 		}
 	}
 
-	async setWarmWhite(
+	public async setWarmWhite(
 		ww: number,
 		callback?: (err: Error | null, success: boolean) => void
 	): Promise<boolean> {
 		return this._setSolidColor(ww, ww, ww, 100, callback);
 	}
 
-	async turnOff(callback?: () => void): Promise<boolean> {
+	public async turnOff(callback?: () => void): Promise<boolean> {
 		await this._turnedOff();
 		this.board.setModeOff();
 		return this._sendSuccess(callback);
 	}
 
-	async turnOn(callback?: () => void): Promise<boolean> {
+	public async turnOn(callback?: () => void): Promise<boolean> {
 		await this._turnedOn();
 		return this._sendSuccess(callback);
 	}

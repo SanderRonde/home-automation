@@ -1,17 +1,25 @@
-import { ModuleConfig } from '..';
-import { ModuleMeta } from '../meta';
-import { Bot } from './bot';
-import { ExternalHandler } from './external';
 import { initListeners } from './init-listeners';
-import { initRouting } from './routing';
+import { ExternalHandler } from './external';
 import { scanRGBControllers } from './scan';
+import { initRouting } from './routing';
+import { ModuleMeta } from '../meta';
+import { ModuleConfig } from '..';
+import { Bot } from './bot';
 
 export const RGB = new (class Meta extends ModuleMeta {
-	name = 'rgb';
+	public name = 'rgb';
 
-	setup!: Promise<void>;
+	public setup!: Promise<void>;
 
-	async init(config: ModuleConfig) {
+	public get External() {
+		return ExternalHandler;
+	}
+
+	public get Bot() {
+		return Bot;
+	}
+
+	public async init(config: ModuleConfig) {
 		await (this.setup = new Promise((resolve) => {
 			void (async () => {
 				await scanRGBControllers(true);
@@ -26,15 +34,7 @@ export const RGB = new (class Meta extends ModuleMeta {
 		}));
 	}
 
-	get External() {
-		return ExternalHandler;
-	}
-
-	get Bot() {
-		return Bot;
-	}
-
-	async onBackOnline() {
+	public async onBackOnline() {
 		await scanRGBControllers(true);
 		setInterval(() => {
 			void scanRGBControllers();

@@ -1,11 +1,11 @@
-import { RemoteControl } from '..';
-import { ModuleConfig } from '../..';
-import { createRouter } from '../../../lib/api';
-import { attachMessage } from '../../../lib/logger';
-import { APIHandler } from '../api';
 import { listenAny, removeListener } from '../get-set-listener';
+import { attachMessage } from '../../../lib/logger';
+import { createRouter } from '../../../lib/api';
 import { WebPageHandler } from '../web-page';
 import { sendMessage } from './telnet';
+import { ModuleConfig } from '../..';
+import { APIHandler } from '../api';
+import { RemoteControl } from '..';
 
 export function initRouting({ app, randomNum, websocket }: ModuleConfig): void {
 	const webpageHandler = new WebPageHandler(randomNum);
@@ -52,7 +52,7 @@ export function initRouting({ app, randomNum, websocket }: ModuleConfig): void {
 		await sendMessage(command, logObj);
 	});
 
-	app.all('/remote-control', (req, res) => {
-		webpageHandler.index(res, req);
+	app.all('/remote-control', (_req, res) => {
+		webpageHandler.index(res);
 	});
 }

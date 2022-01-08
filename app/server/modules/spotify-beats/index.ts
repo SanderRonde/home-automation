@@ -1,22 +1,22 @@
-import { ModuleConfig } from '..';
-import { ModuleMeta } from '../meta';
-import { Bot } from './bot';
 import { ExternalHandler } from './external';
 import { initRouting } from './routing';
+import { ModuleMeta } from '../meta';
+import { ModuleConfig } from '..';
+import { Bot } from './bot';
 
 export const SpotifyBeats = new (class Meta extends ModuleMeta {
-	name = 'spotify-beats';
+	public name = 'spotify-beats';
 
-	async init(config: ModuleConfig) {
-		await ExternalHandler.init();
-		initRouting(config);
-	}
-
-	get External() {
+	public get External() {
 		return ExternalHandler;
 	}
 
-	get Bot() {
+	public get Bot() {
 		return Bot;
+	}
+
+	public async init(config: ModuleConfig) {
+		await ExternalHandler.init();
+		initRouting(config);
 	}
 })();

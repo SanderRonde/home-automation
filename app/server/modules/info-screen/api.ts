@@ -1,12 +1,10 @@
+import { ExternalTemperatureResult, ExternalWeatherTimePeriod } from './types';
 import { errorHandle, requireParams } from '../../lib/decorators';
 import { ResponseLike, attachMessage } from '../../lib/logger';
-import { ExternalTemperatureResult, ExternalWeatherTimePeriod } from './types';
-import { CalendarEvent, getEvents } from './calendar';
 import { getInternal, getExternal } from './temperature/';
+import { CalendarEvent, getEvents } from './calendar';
 
 export class APIHandler {
-	constructor() {}
-
 	@errorHandle
 	@requireParams('type')
 	public async getTemperature(

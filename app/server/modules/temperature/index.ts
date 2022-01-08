@@ -1,14 +1,22 @@
+import { initTempController } from './temp-controller';
 import { AllModules, ModuleConfig } from '..';
-import { ModuleMeta } from '../meta';
-import { Bot } from './bot';
 import { ExternalHandler } from './external';
 import { initRouting } from './routing';
-import { initTempController } from './temp-controller';
+import { ModuleMeta } from '../meta';
+import { Bot } from './bot';
 
 export const Temperature = new (class Temperature extends ModuleMeta {
-	name = 'temperature';
+	public name = 'temperature';
 
-	async init(config: ModuleConfig) {
+	public get External() {
+		return ExternalHandler;
+	}
+
+	public get Bot() {
+		return Bot;
+	}
+
+	public async init(config: ModuleConfig) {
 		initTempController(config.db);
 
 		initRouting(config);
@@ -16,11 +24,7 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		return Promise.resolve(void 0);
 	}
 
-	get External() {
-		return ExternalHandler;
-	}
-
-	notifyModules(modules: unknown): Promise<void> {
+	public notifyModules(modules: unknown): Promise<void> {
 		void new (modules as AllModules).keyval.External(
 			{},
 			'TEMPERATURE.INIT'
@@ -32,9 +36,5 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		});
 
 		return Promise.resolve(void 0);
-	}
-
-	get Bot() {
-		return Bot;
 	}
 })();

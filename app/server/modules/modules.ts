@@ -17,10 +17,10 @@ import { Cast } from './cast';
 import { Bot } from './bot';
 import { RGB } from './rgb';
 
+import { AsyncExpressApplication } from '../types/express';
 import { WSSimulator, WSWrapper } from '../lib/ws';
 import { InfoScreen } from './info-screen';
 import { Database } from '../lib/db';
-import * as express from 'express';
 import { Config } from '../app';
 
 export { RemoteControl } from './remote-control';
@@ -55,7 +55,7 @@ export type ModuleHookables = {
 };
 
 export interface NoDBModuleConfig {
-	app: express.Application;
+	app: AsyncExpressApplication;
 	websocketSim: WSSimulator;
 	websocket: WSWrapper;
 	config: Config;

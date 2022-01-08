@@ -1,17 +1,17 @@
-import { BotState } from '../../lib/bot-state';
+import { ChatState } from '../bot/message/state-keeping';
+import { State as KeyValState } from '../keyval/bot';
+import { BotStateBase } from '../../lib/bot-state';
+import { MatchParameters } from '../bot/message';
 import { attachMessage } from '../../lib/logger';
 import { getInTimeWindow } from './explaining';
-import { MatchParameters } from '../bot/message';
-import { ChatState } from '../bot/message/state-keeping';
 import { MatchResponse } from '../bot/types';
-import { State as KeyValState } from '../keyval/bot';
 
 export interface State {
 	lastSubjects: string[] | null;
 }
 
-export class Bot extends BotState.Base {
-	static readonly commands = {
+export class Bot extends BotStateBase {
+	public static readonly commands = {
 		'/explain': 'Explain actions in last 5 minutes',
 		'/explainv': 'Explain actions in last 5 minutes with additional logs',
 		'/explain15': 'Explain actions in last 15 minutes',
@@ -19,9 +19,9 @@ export class Bot extends BotState.Base {
 		'/help_explain': 'Print help comands for explain',
 	};
 
-	static readonly botName = 'Explain';
+	public static readonly botName = 'Explain';
 
-	static readonly matches = Bot.createMatchMaker(
+	public static readonly matches = Bot.createMatchMaker(
 		({ matchMaker: mm, fallbackSetter: fallback }) => {
 			mm(
 				/\/explainv(\d+)?/,
@@ -104,16 +104,16 @@ export class Bot extends BotState.Base {
 		}
 	);
 
-	lastSubjects: string[] | null = null;
+	public lastSubjects: string[] | null = null;
 
-	constructor(json?: State) {
+	public constructor(json?: State) {
 		super();
 		if (json) {
 			this.lastSubjects = json.lastSubjects;
 		}
 	}
 
-	static async match(
+	public static async match(
 		config: MatchParameters
 	): Promise<MatchResponse | undefined> {
 		return await this.matchLines({
@@ -122,11 +122,11 @@ export class Bot extends BotState.Base {
 		});
 	}
 
-	static resetState(state: ChatState): void {
+	public static resetState(state: ChatState): void {
 		(state.states.keyval as unknown as KeyValState).lastSubjects = null;
 	}
 
-	toJSON(): State {
+	public toJSON(): State {
 		return {
 			lastSubjects: this.lastSubjects,
 		};

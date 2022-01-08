@@ -1,23 +1,23 @@
+import { disable, enable, getPressure, isEnabled } from './register';
 import { createExternalClass } from '../../lib/external';
 import { attachMessage } from '../../lib/logger';
-import { disable, enable, getPressure, isEnabled } from './register';
 
 export class ExternalHandler extends createExternalClass(false) {
-	async enable(): Promise<void> {
+	public async enable(): Promise<void> {
 		return this.runRequest(async (_res, _source, logObj) => {
 			await enable();
 			attachMessage(logObj, 'Enabled pressure module');
 		});
 	}
 
-	async disable(): Promise<void> {
+	public async disable(): Promise<void> {
 		return this.runRequest(async (_res, _source, logObj) => {
 			await disable();
 			attachMessage(logObj, 'Disabled pressure module');
 		});
 	}
 
-	async isEnabled(): Promise<boolean> {
+	public async isEnabled(): Promise<boolean> {
 		return this.runRequest((_res, _source, logObj) => {
 			const enabled = isEnabled();
 			attachMessage(logObj, 'Got enabled status of pressure module');
@@ -25,7 +25,7 @@ export class ExternalHandler extends createExternalClass(false) {
 		});
 	}
 
-	async get(key: string): Promise<number | null> {
+	public async get(key: string): Promise<number | null> {
 		return this.runRequest((_res, _source, logObj) => {
 			const pressure = getPressure(key);
 			attachMessage(

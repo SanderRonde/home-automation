@@ -1,8 +1,8 @@
-import { Movement } from '.';
-import { Database } from '../../lib/db';
-import { LogObj, attachMessage } from '../../lib/logger';
 import { SettablePromise, createHookables } from '../../lib/util';
+import { LogObj, attachMessage } from '../../lib/logger';
 import movementConfig from '../../config/movements';
+import { Database } from '../../lib/db';
+import { Movement } from '.';
 
 let enabled: boolean | null = null;
 const db = new SettablePromise<Database>();

@@ -1,5 +1,6 @@
-import * as express from 'express';
+import { AsyncExpressApplication, AsyncRequestHandler } from '../types/express';
 import { ModuleMeta } from '../modules/meta';
+import * as express from 'express';
 
 export function createAPIHandler<A extends Record<string, unknown>, R>(
 	self:
@@ -67,21 +68,21 @@ type APIHandlers<A> = {
 type RouterFn<A> = {
 	(
 		subPath: string,
-		fnHandle: express.Handler,
-		getArgs?: express.Handler,
-		...handlers: express.Handler[]
-	): express.Handler;
+		fnHandle: AsyncRequestHandler,
+		getArgs?: AsyncRequestHandler,
+		...handlers: AsyncRequestHandler[]
+	): AsyncRequestHandler;
 	(
 		subPath: string,
 		fnHandle: keyof APIHandlers<A>,
 		getArgs?: (req: express.Request) => A
-	): express.Handler;
+	): AsyncRequestHandler;
 	(
 		subPath: string,
-		fnHandle: keyof APIHandlers<A> | express.Handler,
-		getArgs?: (req: express.Request) => A | express.Handler,
-		...handlers: express.Handler[]
-	): express.Handler;
+		fnHandle: keyof APIHandlers<A> | AsyncRequestHandler,
+		getArgs?: (req: express.Request) => A | AsyncRequestHandler,
+		...handlers: AsyncRequestHandler[]
+	): AsyncRequestHandler;
 };
 
 type RouterVerb = 'get' | 'post' | 'all';
@@ -89,7 +90,12 @@ type RouterVerb = 'get' | 'post' | 'all';
 export function createRouter<A>(
 	self: ModuleMeta,
 	apiHandler: A
-): { use(app: express.Application, path?: string): void } & {
+): {
+	use(
+		app: express.Application | AsyncExpressApplication,
+		path?: string
+	): void;
+} & {
 	[v in RouterVerb]: RouterFn<A>;
 } {
 	const toRegister: {
@@ -152,6 +158,7 @@ export function createRouter<A>(
 		all: handlerCreator('all'),
 		use(app, path = `/${self.name.toLowerCase()}`) {
 			toRegister.forEach(({ verb, subPath, handlers }) => {
+				// @ts-ignore
 				app[verb](`${path}${subPath}`, ...handlers);
 			});
 		},

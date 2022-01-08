@@ -1,13 +1,13 @@
 import { logReq, reportReqError } from './logger';
+import { NoDBModuleConfig } from '../modules';
 import cookieParser from 'cookie-parser';
 import serveStatic from 'serve-static';
 import bodyParser from 'body-parser';
 import express from 'express';
 import * as path from 'path';
+import chalk from 'chalk';
 import pm2 from '@pm2/io';
 import glob from 'glob';
-import chalk from 'chalk';
-import { NoDBModuleConfig } from '../modules';
 
 export function initAnnotatorRoutes(app: express.Express): void {
 	app.all('/annotator/files', (_req, res) => {
@@ -74,7 +74,7 @@ export function initMiddleware({ app, config }: NoDBModuleConfig): void {
 }
 
 export function initPostRoutes(app: express.Express): void {
-	app.use((_req, res, _next) => {
+	app.use((_req, res) => {
 		res.status(404).send('404');
 	});
 	app.use((err: Error, req: express.Request, res: express.Response) => {

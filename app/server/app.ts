@@ -20,9 +20,9 @@ import {
 } from './lib/routes';
 import { hasArg, getArg, getNumberArg, getNumberEnv, getEnv } from './lib/io';
 import { notifyAllModules, NoDBModuleConfig } from './modules/modules';
+import { AllModules, getAllModules } from './modules';
 import { printCommands } from './modules/bot/helpers';
 import { WSSimulator, WSWrapper } from './lib/ws';
-import { AllModules, getAllModules } from './modules';
 import { Database } from './lib/db';
 import express from 'express';
 import * as path from 'path';
@@ -56,13 +56,18 @@ type DeepRequired<T> = {
 export type Config = DeepRequired<PartialConfig>;
 
 class WebServer {
+	private readonly _config: Config;
+	private _server!: http.Server;
+	private _initLogger!: ProgressLogger;
+
 	public app!: express.Express;
 	public websocketSim!: WSSimulator;
 	public ws!: WSWrapper;
-	private _server!: http.Server;
 
-	private _config: Config;
-	private _initLogger!: ProgressLogger;
+	public constructor(config: PartialConfig = {}) {
+		this._config = this._setConfigDefaults(config);
+		startInit();
+	}
 
 	private _setConfigDefaults(config: PartialConfig): Config {
 		return {
@@ -89,11 +94,6 @@ class WebServer {
 			debug: config.debug || false,
 			instant: config.instant || false,
 		};
-	}
-
-	constructor(config: PartialConfig = {}) {
-		this._config = this._setConfigDefaults(config);
-		startInit();
 	}
 
 	private _getModuleConfig(): NoDBModuleConfig {
@@ -126,6 +126,38 @@ class WebServer {
 		return modules;
 	}
 
+	private _initServers() {
+		this.websocketSim = new WSSimulator();
+		this.app.use(async (req, res, next) => {
+			await this.websocketSim.handler(req, res, next);
+		});
+		this._server = http.createServer(this.app);
+		this.ws = new WSWrapper(this._server);
+		this._initLogger.increment('HTTP server');
+	}
+
+	private _listen(modules: AllModules) {
+		// HTTPS is unused for now
+		this._server.listen(this._config.ports.http, () => {
+			this._initLogger.increment('listening');
+			this._initLogger.done();
+			endInit();
+
+			logTag(
+				'HTTP server',
+				'magenta',
+				`listening on port ${this._config.ports.http}`
+			);
+
+			// Run post-inits
+			void Promise.all(
+				Object.values(modules).map(async (meta) => {
+					await meta.postInit();
+				})
+			);
+		});
+	}
+
 	public async init() {
 		this._initLogger = new ProgressLogger(
 			'Server start',
@@ -153,38 +185,6 @@ class WebServer {
 		setLogLevel(this._config.log.level);
 		await printCommands();
 		this._listen(modules);
-	}
-
-	private _initServers() {
-		this.websocketSim = new WSSimulator();
-		this.app.use(async (req, res, next) => {
-			await this.websocketSim.handler(req, res, next);
-		});
-		this._server = http.createServer(this.app);
-		this.ws = new WSWrapper(this._server);
-		this._initLogger.increment('HTTP server');
-	}
-
-	private _listen(modules: AllModules) {
-		// HTTPS is unused for now
-		this._server.listen(this._config.ports.http, async () => {
-			this._initLogger.increment('listening');
-			this._initLogger.done();
-			endInit();
-
-			logTag(
-				'HTTP server',
-				'magenta',
-				`listening on port ${this._config.ports.http}`
-			);
-
-			// Run post-inits
-			await Promise.all(
-				Object.values(modules).map(async (meta) => {
-					await meta.postInit();
-				})
-			);
-		});
 	}
 }
 

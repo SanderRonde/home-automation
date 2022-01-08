@@ -1,6 +1,6 @@
-import { db } from '.';
 import { SettablePromise } from '../../../lib/util';
 import { smartHomeLogger } from '../shared';
+import { db } from '.';
 
 export const currentUsers = new SettablePromise<string[]>();
 

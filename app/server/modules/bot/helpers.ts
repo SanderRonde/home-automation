@@ -1,6 +1,6 @@
+import { logFirst } from '../../lib/logger';
 import chalk from 'chalk';
 import { Bot } from '.';
-import { logFirst } from '../../lib/logger';
 
 export async function printCommands(): Promise<void> {
 	logFirst(

@@ -1,7 +1,7 @@
-import { Explain } from './index';
-import { ModuleConfig } from '..';
-import { APIHandler } from './api';
 import { createRouter } from '../../lib/api';
+import { APIHandler } from './api';
+import { ModuleConfig } from '..';
+import { Explain } from './index';
 
 export function initRouting({ app }: ModuleConfig): void {
 	const router = createRouter(Explain, APIHandler);

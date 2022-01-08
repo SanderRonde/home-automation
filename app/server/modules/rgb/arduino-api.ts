@@ -1,5 +1,3 @@
-import { Color } from '../../lib/color';
-import { NUM_LEDS } from '../../lib/constants';
 import {
 	ColorSequence,
 	LedEffect,
@@ -12,6 +10,8 @@ import {
 	SingleColor,
 	TransparentSequence,
 } from './effect-config';
+import { NUM_LEDS } from '../../lib/constants';
+import { Color } from '../../lib/color';
 
 export type Effects = keyof typeof arduinoEffects;
 

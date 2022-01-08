@@ -1,7 +1,7 @@
-import { Webhook } from '.';
 import { errorHandle, requireParams, authAll } from '../../lib/decorators';
 import { ResponseLike, attachSourcedMessage } from '../../lib/logger';
 import { triggerWebhooks } from './webhooks';
+import { Webhook } from '.';
 
 export class APIHandler {
 	@errorHandle
@@ -11,6 +11,7 @@ export class APIHandler {
 		res: ResponseLike,
 		{
 			name,
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			auth,
 			...params
 		}: {

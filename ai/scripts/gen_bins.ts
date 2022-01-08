@@ -3,13 +3,13 @@
 import * as MultiProgress from 'multi-progress';
 import * as httpServer from 'http-server';
 import * as ProgressBar from 'progress';
-import * as symbols from 'log-symbols';
 import * as puppeteer from 'puppeteer';
+import * as symbols from 'log-symbols';
+import * as chalk from 'chalk';
 import * as fs from 'fs-extra';
 import * as glob from 'glob';
 import * as http from 'http';
 import * as path from 'path';
-import * as chalk from 'chalk';
 
 interface HTTPServer {
 	server: http.Server;

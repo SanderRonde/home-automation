@@ -1,6 +1,6 @@
-import { RemoteControl } from '.';
 import { createExternalClass } from '../../lib/external';
 import { APIHandler } from './api';
+import { RemoteControl } from '.';
 
 export class ExternalHandler extends createExternalClass(false) {
 	public play(): Promise<void> {
@@ -54,7 +54,7 @@ export class ExternalHandler extends createExternalClass(false) {
 		});
 	}
 
-	async setVolume(amount: number): Promise<void> {
+	public async setVolume(amount: number): Promise<void> {
 		return this.runRequest(async (res) => {
 			return APIHandler.setVolume(res, {
 				auth: await this._getKey(res, RemoteControl),

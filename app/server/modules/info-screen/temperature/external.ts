@@ -1,10 +1,10 @@
-import { getEnv } from '../../../lib/io';
-import { XHR } from '../../../lib/util';
 import {
 	ExternalTemperatureResult,
 	ExternalWeatherTimePeriod,
 	WeatherAPIResponse,
 } from '../types';
+import { getEnv } from '../../../lib/io';
+import { XHR } from '../../../lib/util';
 
 const openweathermapSecrets = {
 	api_key: getEnv('SECRET_OPENWEATHERMAP_API_KEY', false),
