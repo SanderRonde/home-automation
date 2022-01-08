@@ -41,7 +41,11 @@ export function initRouting({
 				'listen',
 				(key) => {
 					let lastVal: string | undefined = undefined;
-					const onChange = (_value: string, logObj: LogObj) => {
+					const onChange = (
+						_value: string,
+						_key: string,
+						logObj: LogObj
+					) => {
 						const val = db.get(key, '0');
 						if (val !== lastVal) {
 							lastVal = val;
@@ -54,7 +58,7 @@ export function initRouting({
 						}
 					};
 					const listener = addListener(key, onChange);
-					onChange('0', {});
+					onChange('0', key, {});
 
 					instance.onClose = () => {
 						removeListener(listener);
