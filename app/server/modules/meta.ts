@@ -63,8 +63,14 @@ export abstract class ModuleMeta {
 			{},
 			`META.${this.name}`
 		);
+
+		let initialSelfChangeDone: boolean = false;
 		void external.onUpdate(async (homeState, name) => {
 			if (name !== 'self') {
+				return;
+			}
+			if (!initialSelfChangeDone) {
+				initialSelfChangeDone = true;
 				return;
 			}
 			if (homeState === HOME_STATE.HOME) {
