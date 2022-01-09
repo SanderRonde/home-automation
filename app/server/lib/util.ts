@@ -282,6 +282,16 @@ export function flatMap<I, R>(arr: I[], map: (item: I) => R | R[]): R[] {
 	return result;
 }
 
+export function flattenObject(
+	obj: Record<string, unknown>[]
+): Record<string, unknown> {
+	let joined: Record<string, unknown> = {};
+	for (const item of obj) {
+		joined = { ...joined, ...item };
+	}
+	return joined;
+}
+
 export function fromEntries<V>(entries: [string, V][]): {
 	[key: string]: V;
 } {

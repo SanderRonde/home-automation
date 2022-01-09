@@ -4,6 +4,7 @@ import {
 	googleExecute,
 	googleDisconnect,
 } from './state/google';
+import { createSamsungSchemaHandler } from './state/samsung';
 import { attachTimerToReq } from '../../lib/timer';
 import { attachMessage } from '../../lib/logger';
 import { smarthome } from 'actions-on-google';
@@ -42,5 +43,12 @@ export async function initRouting({ app }: ModuleConfig): Promise<void> {
 		).getAuthenticateMiddleware(),
 		smartHomeApp
 	);
+
+	const handler = createSamsungSchemaHandler();
+	if (handler) {
+		router.post('/samsung', (req, res) =>
+			handler.handleHttpCallback(req, res)
+		);
+	}
 	router.use(app, '/actions');
 }

@@ -1,8 +1,11 @@
 /* eslint-disable @typescript-eslint/ban-types */
+
+import { QueryReturnType, SmartHomeDevice } from './smart-home-classes';
+
 /**
  * A subset of the smart home device types
  */
-export const enum SMART_HOME_DEVICE_TYPE {
+export const enum GOOGLE_SMART_HOME_DEVICE_TYPE {
 	OUTLET = 'action.devices.types.OUTLET',
 	SPEAKER = 'action.devices.types.SPEAKER',
 	RADIATOR = 'action.devices.types.RADIATOR',
@@ -12,22 +15,59 @@ export const enum SMART_HOME_DEVICE_TYPE {
 	THERMOSTAT = 'action.devices.types.THERMOSTAT',
 }
 /**
+ * A subset of samsung smartthings device types
+ */
+export const enum SAMSUNG_SMART_HOME_DEVICE_TYPE {
+	SWITCH = 'c2c-switch',
+	SPEAKER = 'c2c-switch',
+	RADIATOR = 'c2c-switch',
+	THERMOSTAT = 'c2c-humidity',
+}
+/**
  * A subset of the smart home device types
  */
 export const enum SMART_HOME_DEVICE_TRAIT {
-	COLOR_SETTING = 'action.devices.traits.ColorSetting',
-	BRIGHTNESS = 'action.devices.traits.Brightness',
-	TEMPERATURE_CONTROL = 'action.devices.traits.TemperatureControl',
-	TEMPERATURE_SETTING = 'action.devices.traits.TemperatureSetting',
-	MODES = 'action.devices.traits.Modes',
-	SCENE = 'action.devices.traits.Scene',
-	ON_OFF = 'action.devices.traits.OnOff',
+	COLOR_SETTING,
+	BRIGHTNESS,
+	SAMSUNG_BRIGHTNESS,
+	// TEMPERATURE_CONTROL,
+	TEMPERATURE_SETTING_AND_READING,
+	// SCENE,
+	ON_OFF,
 }
+
+export const GOOGLE_SMART_HOME_DEVICE_TRAITS: {
+	[K in SMART_HOME_DEVICE_TRAIT]: string | undefined;
+} = {
+	[SMART_HOME_DEVICE_TRAIT.COLOR_SETTING]:
+		'action.devices.traits.ColorSetting',
+	[SMART_HOME_DEVICE_TRAIT.BRIGHTNESS]: 'action.devices.traits.Brightness',
+	// [SMART_HOME_DEVICE_TRAIT.TEMPERATURE_CONTROL]:
+	// 	'action.devices.traits.TemperatureControl',
+	[SMART_HOME_DEVICE_TRAIT.TEMPERATURE_SETTING_AND_READING]:
+		'action.devices.traits.TemperatureSetting',
+	// [SMART_HOME_DEVICE_TRAIT.MODES]: 'action.devices.traits.Modes',
+	// [SMART_HOME_DEVICE_TRAIT.SCENE]: 'action.devices.traits.Scene',
+	[SMART_HOME_DEVICE_TRAIT.ON_OFF]: 'action.devices.traits.OnOff',
+	[SMART_HOME_DEVICE_TRAIT.SAMSUNG_BRIGHTNESS]: undefined,
+};
+
+export const SAMSUNG_SMART_HOME_DEVICE_CAPABILITIES: {
+	[K in SMART_HOME_DEVICE_TRAIT]: string | undefined;
+} = {
+	[SMART_HOME_DEVICE_TRAIT.COLOR_SETTING]: 'colorControl',
+	[SMART_HOME_DEVICE_TRAIT.BRIGHTNESS]: 'switchLevel',
+	[SMART_HOME_DEVICE_TRAIT.SAMSUNG_BRIGHTNESS]: 'switchLevel',
+	[SMART_HOME_DEVICE_TRAIT.TEMPERATURE_SETTING_AND_READING]:
+		'temperatureMeasurement',
+	[SMART_HOME_DEVICE_TRAIT.ON_OFF]: 'switch',
+};
 
 /**
  * A subset of the commands sent by google home
  */
 export const enum SMART_HOME_COMMAND {
+	// Google
 	ON_OFF = 'action.devices.commands.OnOff',
 	COLOR_ABSOLUTE = 'action.devices.commands.ColorAbsolute',
 	BRIGHTNESS_ABSOLUTE = 'action.devices.commands.BrightnessAbsolute',
@@ -36,6 +76,14 @@ export const enum SMART_HOME_COMMAND {
 	SET_MODES = 'action.devices.commands.SetModes',
 	ACTIVATE_SCENE = 'action.devices.commands.ActivateScene',
 	THERMOSTAT_TEMPERATURE_SETPOINT = 'action.devices.commands.ThermostatTemperatureSetpoint',
+
+	// Samsung
+	SWITCH_OFF = 'off',
+	SWITCH_ON = 'on',
+	COLOR_CONTROL_SET_COLOR = 'setColor',
+	COLOR_CONTROL_SET_HUE = 'setHue',
+	COLOR_CONTROL_SET_SATURATION = 'setSaturation',
+	SWITCH_SET_LEVEL = 'setLevel',
 }
 
 type ColorState =
@@ -75,7 +123,7 @@ type ThermostatMode =
 	| 'eco'
 	| 'dry';
 
-export type SmartHomeQuery<TR extends SMART_HOME_DEVICE_TRAIT> =
+export type SmartHomeGoogleQuery<TR extends SMART_HOME_DEVICE_TRAIT> =
 	(TR extends SMART_HOME_DEVICE_TRAIT.COLOR_SETTING
 		? {
 				color: ColorState;
@@ -89,15 +137,7 @@ export type SmartHomeQuery<TR extends SMART_HOME_DEVICE_TRAIT> =
 					brightness?: number;
 			  }
 			: {}) &
-		(TR extends SMART_HOME_DEVICE_TRAIT.TEMPERATURE_CONTROL
-			? {
-					// The target temperature
-					temperatureSetpointCelsius?: number;
-					// The actual temperature
-					temperatureAmbientCelsius?: number;
-			  }
-			: {}) &
-		(TR extends SMART_HOME_DEVICE_TRAIT.TEMPERATURE_SETTING
+		(TR extends SMART_HOME_DEVICE_TRAIT.TEMPERATURE_SETTING_AND_READING
 			? {
 					activeThermostatMode: ThermostatMode | 'none';
 					targetTempReachedEstimateUnixTimestampSec?: number;
@@ -116,22 +156,37 @@ export type SmartHomeQuery<TR extends SMART_HOME_DEVICE_TRAIT> =
 					  }
 			  )
 			: {}) &
-		(TR extends SMART_HOME_DEVICE_TRAIT.MODES
-			? {
-					/**
-					 * An object with the key being the mode name
-					 * and the value being the value of the mode.
-					 * So for example {
-					 * 	effect: 'rainbow'
-					 * }
-					 */
-					[modeName: string]: string;
-			  }
-			: {}) &
-		(TR extends SMART_HOME_DEVICE_TRAIT.SCENE ? {} : {}) &
 		(TR extends SMART_HOME_DEVICE_TRAIT.ON_OFF
 			? {
 					on?: boolean;
+			  }
+			: {});
+
+export type SmartHomeSamsungQuery<TR extends SMART_HOME_DEVICE_TRAIT> =
+	(TR extends SMART_HOME_DEVICE_TRAIT.COLOR_SETTING
+		? {
+				hue: number;
+				saturation: number;
+		  }
+		: {}) &
+		(TR extends
+			| SMART_HOME_DEVICE_TRAIT.BRIGHTNESS
+			| SMART_HOME_DEVICE_TRAIT.SAMSUNG_BRIGHTNESS
+			? {
+					/**
+					 * The brightness as a number between 0 and 100
+					 */
+					level: number;
+			  }
+			: {}) &
+		(TR extends SMART_HOME_DEVICE_TRAIT.TEMPERATURE_SETTING_AND_READING
+			? {
+					temperature: number;
+			  }
+			: {}) &
+		(TR extends SMART_HOME_DEVICE_TRAIT.ON_OFF
+			? {
+					switch: 'on' | 'off';
 			  }
 			: {});
 
@@ -150,19 +205,7 @@ export type SmartHomeAttributes<TR extends SMART_HOME_DEVICE_TRAIT> =
 					commandOnlyBrightness?: boolean;
 			  }
 			: {}) &
-		(TR extends SMART_HOME_DEVICE_TRAIT.TEMPERATURE_CONTROL
-			? {
-					temperatureRange: {
-						minThresholdCelcius: number;
-						maxThresholdCelcius: number;
-					};
-					temperatureStepCelsius?: number;
-					temperatureUnitForUX: 'C' | 'F';
-					commandOnlyTemperatureControl?: boolean;
-					queryOnlyTemperatureControl?: boolean;
-			  }
-			: {}) &
-		(TR extends SMART_HOME_DEVICE_TRAIT.TEMPERATURE_SETTING
+		(TR extends SMART_HOME_DEVICE_TRAIT.TEMPERATURE_SETTING_AND_READING
 			? {
 					availableThermostatModes: ThermostatMode[];
 					thermostatTemperatureRange?: {
@@ -173,32 +216,6 @@ export type SmartHomeAttributes<TR extends SMART_HOME_DEVICE_TRAIT> =
 					bufferRangeCelsius?: number;
 					commandOnlyTemperatureSetting?: boolean;
 					queryOnlyTemperatureSetting?: boolean;
-			  }
-			: {}) &
-		(TR extends SMART_HOME_DEVICE_TRAIT.MODES
-			? {
-					availableModes: {
-						name: string;
-						name_values: {
-							name_synonym: string;
-							lang: string;
-						}[];
-						settings: {
-							setting_name: string;
-							setting_values: {
-								setting_synonym: string;
-								lang: string;
-							}[];
-						}[];
-						ordered?: boolean;
-					}[];
-					commandOnlyModes?: boolean;
-					queryOnlyModes?: boolean;
-			  }
-			: {}) &
-		(TR extends SMART_HOME_DEVICE_TRAIT.SCENE
-			? {
-					sceneReversible?: boolean;
 			  }
 			: {}) &
 		(TR extends SMART_HOME_DEVICE_TRAIT.ON_OFF
@@ -271,16 +288,41 @@ export type SmartHomeParam<TR extends SMART_HOME_COMMAND> =
 			? {
 					on: boolean;
 			  }
-			: {});
+			: {}) &
+		(TR extends SMART_HOME_COMMAND.SWITCH_OFF ? [] : []) &
+		(TR extends SMART_HOME_COMMAND.SWITCH_ON ? [] : []) &
+		(TR extends SMART_HOME_COMMAND.COLOR_CONTROL_SET_COLOR
+			? [
+					color:
+						| {
+								hex: string;
+						  }
+						| {
+								hue: number;
+								saturation: number;
+						  }
+			  ]
+			: []) &
+		(TR extends SMART_HOME_COMMAND.COLOR_CONTROL_SET_HUE
+			? [hue: number]
+			: []) &
+		(TR extends SMART_HOME_COMMAND.COLOR_CONTROL_SET_SATURATION
+			? [saturation: number]
+			: []) &
+		(TR extends SMART_HOME_COMMAND.SWITCH_SET_LEVEL
+			? [level: number, rate: number]
+			: []);
 
 export interface SmartHomeDeviceSync {
 	id: string;
-	type: SMART_HOME_DEVICE_TYPE;
+	googleType: GOOGLE_SMART_HOME_DEVICE_TYPE;
+	samsungType: SAMSUNG_SMART_HOME_DEVICE_TYPE;
 	traits: SMART_HOME_DEVICE_TRAIT[];
 	name: string;
 	nicknames: string[];
 	willReportState: boolean;
 	attributes?: {};
+	self: SmartHomeDevice;
 }
 
 export type SmartHomeDeviceUpdateCallback<
@@ -289,5 +331,5 @@ export type SmartHomeDeviceUpdateCallback<
 
 export type SmartHomeDeviceUpdate<T extends SMART_HOME_DEVICE_TRAIT> = {
 	id: string;
-	data: SmartHomeQuery<T>;
+	data: QueryReturnType<T>;
 };

@@ -10,15 +10,27 @@ import {
 	SmartHomeV1DisconnectRequest,
 } from 'actions-on-google';
 import {
+	GOOGLE_SMART_HOME_DEVICE_TRAITS,
+	SmartHomeDeviceUpdate,
+	SMART_HOME_DEVICE_TRAIT,
+} from '../../../lib/smart-home/smart-home-types';
+import {
 	sharedDisconnect,
 	sharedExecute,
 	sharedQuery,
 	sharedSync,
+	sharedUseradd,
 } from './shared';
 import { SMART_HOME_COMMAND } from '../../../lib/smart-home/smart-home-types';
 import { BuiltinFrameworkMetadata } from 'actions-on-google/dist/framework';
 import { flatMap, flatten, fromEntries } from '../../../lib/util';
+import { GOOGLE_KEY, homeGraph } from '../home-graph';
+import { currentUsers } from '../home-graph/users';
+import { flattenObject } from '../../../lib/util';
+import { warning } from '../../../lib/logger';
 import { getAuth } from '../../oauth/helpers';
+import { smartHomeLogger } from '../shared';
+import { homegraph_v1 } from 'googleapis';
 import { time } from '../../../lib/timer';
 
 export async function googleSync(
@@ -32,14 +44,17 @@ export async function googleSync(
 		framework.express!.response as any
 	);
 	time(framework.express!.response, 'get-auth');
+	await sharedUseradd(
+		auth.token.user,
+		GOOGLE_KEY,
+		framework.express!.response
+	);
 	const response = {
 		requestId: body.requestId,
 		payload: {
 			agentUserId: auth.token.user,
 			debugString: `Sync for username: "${auth.token.user}"`,
-			devices: (
-				await sharedSync(auth.token.user, framework.express!.response)
-			).map((device) => {
+			devices: sharedSync(framework.express!.response).map((device) => {
 				return {
 					id: device.id,
 					name: {
@@ -47,8 +62,10 @@ export async function googleSync(
 						name: device.name,
 						nicknames: device.nicknames,
 					},
-					traits: device.traits,
-					type: device.type,
+					traits: device.traits
+						.map((t) => GOOGLE_SMART_HOME_DEVICE_TRAITS[t])
+						.filter((t): t is string => !!t),
+					type: device.googleType,
 					willReportState: device.willReportState,
 					attributes: device.attributes,
 				};
@@ -57,6 +74,17 @@ export async function googleSync(
 	};
 	time(framework.express!.response, 'gather-google-sync-response');
 	return response;
+}
+
+function objJoin(value: Record<string, unknown>[]): Record<string, unknown> {
+	let joined: Record<string, unknown> = {};
+	for (const obj of value) {
+		joined = {
+			...joined,
+			...obj,
+		};
+	}
+	return joined;
 }
 
 export async function googleQuery(
@@ -85,7 +113,27 @@ export async function googleQuery(
 						framework.express!.response
 					)
 				).map((device) => {
-					return [device.id, device.value];
+					// Google doesn't care about the capability/trait
+					// so we just flatten until we have just one prop left
+					return [
+						device.id,
+						objJoin(
+							flatten(
+								device.value
+									.filter(
+										(v) =>
+											!!GOOGLE_SMART_HOME_DEVICE_TRAITS[
+												v.trait
+											]
+									)
+									.map((d) => ({
+										[GOOGLE_SMART_HOME_DEVICE_TRAITS[
+											d.trait
+										]!]: d.google.map((g) => g.value),
+									}))
+							)
+						),
+					];
 				})
 			),
 		},
@@ -118,12 +166,49 @@ export async function googleExecute(
 									);
 									return flatMap(
 										command.execution,
-										(execution) => {
-											return sharedExecute(
+										async (execution) => {
+											const result = await sharedExecute(
 												deviceIDs,
 												execution.command as SMART_HOME_COMMAND,
 												execution.params || {},
 												framework.express!.response
+											);
+											return result.map(
+												(commandResult) => ({
+													...commandResult,
+													state: !commandResult.state
+														? commandResult.state
+														: objJoin(
+																flatten(
+																	commandResult.state
+																		.filter(
+																			(
+																				d
+																			) =>
+																				GOOGLE_SMART_HOME_DEVICE_TRAITS[
+																					d
+																						.trait
+																				]
+																		)
+																		.map(
+																			(
+																				d
+																			) => ({
+																				[GOOGLE_SMART_HOME_DEVICE_TRAITS[
+																					d
+																						.trait
+																				]!]:
+																					d.google.map(
+																						(
+																							g
+																						) =>
+																							g.value
+																					),
+																			})
+																		)
+																)
+														  ),
+												})
 											);
 										}
 									);
@@ -148,6 +233,64 @@ export async function googleDisconnect(
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		framework.express!.response as any
 	);
-	await sharedDisconnect(auth.token.user);
+	await sharedDisconnect(auth.token.user, GOOGLE_KEY);
 	return {};
+}
+
+export async function dispatchGoogleUsers(
+	data: SmartHomeDeviceUpdate<SMART_HOME_DEVICE_TRAIT>[]
+): Promise<void> {
+	const googleUsers = (await currentUsers.value)[GOOGLE_KEY] ?? {};
+	const requestBody: Omit<
+		homegraph_v1.Schema$ReportStateAndNotificationRequest,
+		'agentUserId'
+	> = {
+		payload: {
+			devices: {
+				states: fromEntries(
+					data.map((dataPart) => [
+						dataPart.id,
+						flattenObject(
+							flatten(
+								dataPart.data.map((subData) => {
+									return subData.google.map((subSubData) => {
+										return subSubData.value;
+									});
+								})
+							)
+						),
+					])
+				),
+			},
+		},
+	};
+	const homeGraphInstance = await homeGraph.value;
+
+	await Promise.all(
+		Object.keys(googleUsers).map(async (user) => {
+			const userRequestBody: homegraph_v1.Schema$ReportStateAndNotificationRequest =
+				{
+					...requestBody,
+					agentUserId: user,
+				};
+			smartHomeLogger(
+				'Sending homegraph update for user',
+				user,
+				Object.keys(userRequestBody.payload!.devices!.states!),
+				JSON.stringify(userRequestBody.payload!.devices!.states!)
+			);
+			try {
+				await homeGraphInstance.devices.reportStateAndNotification({
+					requestBody: userRequestBody,
+				});
+			} catch (e) {
+				warning(
+					'Error response from home-graph',
+					e,
+					'for request',
+					userRequestBody
+				);
+			}
+		})
+	);
 }

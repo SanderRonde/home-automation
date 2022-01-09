@@ -91,6 +91,19 @@ export class Color implements Color {
 	public toDecimal(): number {
 		return parseInt(this.toHex().slice(1), 16);
 	}
+
+	public toHSV(): {
+		hue: number;
+		saturation: number;
+		value: number;
+	} {
+		const { h, s, v } = RGBToHSV(this.r, this.g, this.b);
+		return {
+			hue: h,
+			saturation: s,
+			value: v,
+		};
+	}
 }
 
 function HSVtoRGB(h: number, s: number, v: number) {
@@ -139,5 +152,53 @@ function HSVtoRGB(h: number, s: number, v: number) {
 		r: Math.round(r! * 255),
 		g: Math.round(g! * 255),
 		b: Math.round(b! * 255),
+	};
+}
+
+function RGBToHSV(
+	r: number,
+	g: number,
+	b: number
+): {
+	h: number;
+	s: number;
+	v: number;
+} {
+	const rAbsolute = r / 255;
+	const gAbsolute = g / 255;
+	const bAbsolute = b / 255;
+	const value = Math.max(rAbsolute, gAbsolute, bAbsolute);
+	const diff = value - Math.min(rAbsolute, gAbsolute, bAbsolute);
+	const diffCalculator = (c: number) => (value - c) / 6 / diff + 1 / 2;
+
+	const percentRoundFn = (num: number) => Math.round(num * 100) / 100;
+
+	let h: number = 0;
+	let s: number = 0;
+	if (diff === 0) {
+		h = s = 0;
+	} else {
+		s = diff / value;
+		const rr = diffCalculator(rAbsolute);
+		const gg = diffCalculator(gAbsolute);
+		const bb = diffCalculator(bAbsolute);
+
+		if (rAbsolute === value) {
+			h = bb - gg;
+		} else if (gAbsolute === value) {
+			h = 1 / 3 + rr - bb;
+		} else if (bAbsolute === value) {
+			h = 2 / 3 + gg - rr;
+		}
+		if (h < 0) {
+			h += 1;
+		} else if (h > 1) {
+			h -= 1;
+		}
+	}
+	return {
+		h: Math.round(h * 360),
+		s: percentRoundFn(s * 100),
+		v: percentRoundFn(value * 100),
 	};
 }

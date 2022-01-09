@@ -9,7 +9,6 @@ import {
 	User,
 } from 'oauth2-server';
 import oAuthClients from '../../config/oauth-clients';
-import oauthClients from '../../config/oauth-clients';
 import oauthUsers from '../../config/oauth-users';
 import { SettablePromise } from '../../lib/util';
 import OAuthServer from 'express-oauth-server';
@@ -57,7 +56,15 @@ class OAuthModel implements AuthorizationCodeModel, RefreshTokenModel {
 				clientSecret === null || client.clientSecret === clientSecret
 			);
 		});
-		logTag('oauth', 'cyan', `Found client with ID "${clientID}"`);
+		if (!foundClient) {
+			logTag(
+				'oauth',
+				'cyan',
+				`Failed to find client with ID "${clientID}"`
+			);
+		} else {
+			logTag('oauth', 'cyan', `Found client with ID "${clientID}"`);
+		}
 
 		return Promise.resolve(foundClient);
 	}
@@ -218,7 +225,7 @@ class OAuthModel implements AuthorizationCodeModel, RefreshTokenModel {
 		);
 		if (ENABLE_NEVER_EXPIRING_TOKENS) {
 			return Promise.resolve({
-				client: oauthClients[0],
+				client: oAuthClients[0],
 				refreshToken,
 				user: oauthUsers[0],
 				refreshTokenExpiresAt: new Date(
