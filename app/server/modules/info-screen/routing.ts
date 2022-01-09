@@ -1,8 +1,8 @@
 import express = require('express');
 import { authCode, authenticated, authenticateURL } from './calendar';
+import { initMiddleware, initPostRoutes } from '../../lib/routes';
 import { AsyncExpressApplication } from '../../types/express';
 import { WSClient, WSWrapper } from '../../lib/ws';
-import { initMiddleware } from '../../lib/routes';
 import { createAPIHandler } from '../../lib/api';
 import { WebPageHandler } from './web-page';
 import { logTag } from '../../lib/logger';
@@ -34,7 +34,10 @@ export function initRouting(moduleConfig: ModuleConfig): void {
 	const server = http.createServer(app as express.Application);
 	const ws = new WSWrapper(server);
 
-	initMiddleware(moduleConfig);
+	initMiddleware({
+		...moduleConfig,
+		app,
+	});
 
 	app.all('/', async (_req, res) => {
 		if (!authenticated) {
@@ -99,6 +102,8 @@ export function initRouting(moduleConfig: ModuleConfig): void {
 			clients.delete(client);
 		});
 	});
+
+	initPostRoutes(app as express.Express);
 
 	if (config.debug) {
 		server.listen(config.ports.info, () => {
