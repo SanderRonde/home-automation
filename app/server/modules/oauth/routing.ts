@@ -115,8 +115,7 @@ export async function initRouting({ app }: ModuleConfig): Promise<void> {
 					handle: () => username,
 				},
 			})(req, res, next);
-		},
-		(await authorizationServer.value).authorize()
+		}
 	);
 	router.get('/login', async (_req, res) => {
 		attachSourcedMessage(
