@@ -8,7 +8,6 @@ import { render } from 'lit-html';
 export const AdvancedTemperatureDisplayHTML =
 	new TemplateFn<AdvancedTemperatureDisplay>(
 		(html, { props }) => {
-			console.log(`transform: rotate(${props.windDegrees}deg);`);
 			return html`
 				<div id="centerer">
 					<div id="temp-row">
