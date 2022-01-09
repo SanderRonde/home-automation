@@ -44,7 +44,9 @@ async function sendToLoginPage(
 		'response_mode',
 		'state',
 		'nonce',
-	].map((p) => `${p}=${encodeURIComponent(previousParams[p])}`);
+	]
+		.filter((p) => previousParams[p] !== undefined)
+		.map((p) => `${p}=${encodeURIComponent(previousParams[p])}`);
 	if (invalidReason) {
 		params.push(`errorReason=${invalidReason}`);
 	}
