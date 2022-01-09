@@ -96,6 +96,12 @@ export async function initRouting({ app }: ModuleConfig): Promise<void> {
 				password
 			);
 			if (!valid) {
+				attachMessage(
+					res,
+					`Redirecting to login page, reason: ${
+						invalidReason ?? 'no login supplied'
+					}`
+				);
 				await sendToLoginPage(req, res, invalidReason);
 				return;
 			}
