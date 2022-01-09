@@ -41,7 +41,7 @@ export function initRouting({ app }: ModuleConfig): void {
 
 		// Set last temp
 		const controller = await getController(body['name']);
-		await controller.setLastTemp(temp);
+		controller.setLastTemp(temp);
 
 		attachMessage(
 			res,

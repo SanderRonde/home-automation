@@ -56,7 +56,7 @@ class TempControl {
 		};
 	}
 
-	public async setLastTemp(temp: number, store = true, doLog = true) {
+	public setLastTemp(temp: number, store = true, doLog = true) {
 		this.lastTemp = temp;
 
 		// Write temp to database
@@ -77,7 +77,7 @@ class TempControl {
 			this.lastLogTime = Date.now();
 		}
 
-		await Promise.all(this._listeners.map((listener) => listener(temp)));
+		void Promise.all(this._listeners.map((listener) => listener(temp)));
 	}
 
 	public getTarget() {
@@ -126,7 +126,7 @@ class TempControl {
 
 		const temp = database.get(`${name}.temp`, 20.0);
 
-		await this.setLastTemp(temp, false, false);
+		this.setLastTemp(temp, false, false);
 
 		return this;
 	}
