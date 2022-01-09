@@ -12,7 +12,7 @@
 	"rules": {
 		"quotes": ["warn", "single", { "avoidEscape": true }],
 		"prefer-arrow-callback": "error",
-		"object-property-newline": "warn",
+		"object-property-newline": "off",
 		"curly": "error",
 		"eqeqeq": "warn",
 		"no-async-promise-executor": "warn",
