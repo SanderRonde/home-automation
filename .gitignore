@@ -79,7 +79,8 @@ static/
 
 ai/files/
 ai/annotator/**/*.js
-app/server/config/**
+!app/server/config/**/*.d.ts
+app/server/config/**/*.ts
 app/server/modules/notion/secret/**
 boards/ip_list.txt
 TODO
