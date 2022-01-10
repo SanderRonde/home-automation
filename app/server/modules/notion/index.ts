@@ -26,6 +26,7 @@ export const Notion = new (class Meta extends ModuleMeta {
 
 	private async _getSecret(): Promise<Secret | null> {
 		try {
+			// @ts-ignore
 			return (await import('./secret')) as Secret;
 		} catch (e) {
 			return null;
