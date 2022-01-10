@@ -33,7 +33,7 @@
 		"compile": "yarn html-typings && yarn compile:server && yarn compile:client && yarn compile:ai && yarn bundle",
 		"watch": "tsc -w -p app/server/tsconfig.json",
 		"pretty": "pretty-quick",
-		"format-check": "prettier '**/*.{ts,json,html}'",
+		"format-check": "prettier --check '**/*.{ts,json,html}'",
 		"format": "prettier --write '**/*.{ts,json,html}'",
 		"lint": "eslint --fix \"./app/**/*.ts\"",
 		"start": "node --experimental-modules --enable-source-maps --trace-warnings -r ts-node/register/transpile-only app/server/app.ts --http 1272 --https 1273 -v* --name 1000 --scripts /home/sander/scripts --color -i"
