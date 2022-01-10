@@ -1,3 +1,5 @@
 import { PressureHooks } from '../modules/pressure/types';
 
-export default PressureHooks;
+declare const hooks: PressureHooks;
+
+export default hooks;

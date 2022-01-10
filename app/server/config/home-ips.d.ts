@@ -1,4 +1,4 @@
-type HomeIps = {
+declare const ips: {
 	base: {
 		[key: string]: string[];
 	};
@@ -7,4 +7,4 @@ type HomeIps = {
 	};
 };
 
-export default HomeIps;
+export default ips;

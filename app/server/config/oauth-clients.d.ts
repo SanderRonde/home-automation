@@ -1,7 +1,7 @@
 import type { Client } from 'oauth2-server';
 
-type OAuthClients = (Client & {
+declare const clients: (Client & {
 	clientSecret: string;
-})[]
+})[];
 
-export default OAuthClients;
+export default clients;

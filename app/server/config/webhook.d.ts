@@ -1,3 +1,5 @@
 import { WebHookConfig } from '../modules/webhook/types';
 
-export default WebHookConfig;
+declare const config: WebHookConfig;
+
+export default config;

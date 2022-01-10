@@ -1,5 +1,5 @@
 import { OAuthUser } from '../modules/oauth/types';
 
-type OAuthUsers = OAuthUser[];
+declare const users: OAuthUser[];
 
-export default OAuthUsers
+export default users;

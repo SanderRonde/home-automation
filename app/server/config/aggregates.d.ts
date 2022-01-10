@@ -1,3 +1,5 @@
 import { KeyvalHooks } from "../modules/keyval/types";
 
-export default KeyvalHooks;
+declare const hooks: KeyvalHooks;
+
+export default hooks;

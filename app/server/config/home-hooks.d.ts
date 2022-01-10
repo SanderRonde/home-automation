@@ -1,3 +1,5 @@
 import { HomeHooks } from '../modules/home-detector/types';
 
-export default HomeHooks;
+declare const hooks: HomeHooks;
+
+export default hooks;

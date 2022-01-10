@@ -2,7 +2,6 @@ import {
 	SmartHomeDevice,
 } from '../lib/smart-home/smart-home-classes';
 
-type SmartHomeDevices = SmartHomeDevice[]
+declare const devices: SmartHomeDevice[];
 
-
-export default SmartHomeDevices;
+export default devices;

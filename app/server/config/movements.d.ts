@@ -1,3 +1,5 @@
 import { MovementHooks } from '../modules/movement/types';
 
-export default  MovementHooks;
+declare const hooks: MovementHooks;
+
+export default hooks;
