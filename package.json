@@ -98,7 +98,7 @@
 		"googleapis": "^73.0.0",
 		"lit-html": "^1.1.0",
 		"magic-home": "^2.6.0",
-		"node-fetch": "^2.6.0",
+		"node-fetch": "^3.1.1",
 		"oauth2-server": "^3.1.1",
 		"optional-require": "^1.0.0",
 		"ping": "^0.2.2",
