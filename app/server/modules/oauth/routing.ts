@@ -158,8 +158,8 @@ export async function initRouting({ app }: ModuleConfig): Promise<void> {
 			},
 			async (req, res, next) => {
 				try {
-					(await authorizationServer.value).token({})(req, res, next)
-				} catch(e) {
+					(await authorizationServer.value).token({})(req, res, next);
+				} catch (e) {
 					console.log('threw error', e);
 				}
 			}
