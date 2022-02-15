@@ -1,4 +1,4 @@
-import { attachMessage } from './logger';
+import { attachMessage, ResponseLike } from './logger';
 import * as express from 'express';
 
 interface Timing {
@@ -6,7 +6,7 @@ interface Timing {
 	time: number;
 }
 
-const timedRequests: WeakMap<express.Response, Timing[]> = new WeakMap();
+const timedRequests: WeakMap<ResponseLike, Timing[]> = new WeakMap();
 
 export function attachTimerToReq(res: express.Response): void {
 	timedRequests.set(res, [
@@ -38,7 +38,7 @@ export function gatherTimings(res: express.Response): void {
 	timedRequests.delete(res);
 }
 
-export function time(res: express.Response, label: string): void {
+export function time(res: ResponseLike, label: string): void {
 	if (!timedRequests.has(res)) {
 		throw new Error(
 			'Attempt to time request that has not been initialized for timing'

@@ -11,6 +11,7 @@ import { SettablePromise } from '../../lib/util';
 import { createRouter } from '../../lib/api';
 import { ModuleConfig, OAuth } from '..';
 import { debug } from '../../lib/logger';
+import { getEnv } from '../../lib/io';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 
@@ -143,5 +144,30 @@ export async function initRouting({ app }: ModuleConfig): Promise<void> {
 		},
 		(await authorizationServer.value).token({})
 	);
+	if (getEnv('SECRET_OAUTH_TOKEN_URL_POSTFIX', false)) {
+		router.post(
+			`/token${getEnv('SECRET_OAUTH_TOKEN_URL_POSTFIX', true)}`,
+			async (_req, res, next) => {
+				attachSourcedMessage(
+					res,
+					'OAUTH.API',
+					await OAuth.explainHook,
+					'Refreshing token for OAuth'
+				);
+				return next();
+			},
+			async (req, res, next) => {
+				try {
+					await (await authorizationServer.value).token({})(
+						req,
+						res,
+						next
+					);
+				} catch (e) {
+					console.log('threw error', e);
+				}
+			}
+		);
+	}
 	router.use(app);
 }

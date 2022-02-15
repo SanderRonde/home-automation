@@ -9,16 +9,11 @@ import {
 	SmartHomeDeviceUpdate,
 	SMART_HOME_DEVICE_TRAIT,
 } from '../../../lib/smart-home/smart-home-types';
-import {
-	Batcher,
-	createHookables,
-	fromEntries,
-	SettablePromise,
-} from '../../../lib/util';
+import { Batcher, createHookables, SettablePromise } from '../../../lib/util';
 import { homegraph, homegraph_v1 } from '@googleapis/homegraph';
 import { currentUsers, initHomeGraphUsers } from './users';
-import { warning } from '../../../lib/logger';
-import { smartHomeLogger } from '../shared';
+import { dispatchSamsungUsers } from '../state/samsung';
+import { dispatchGoogleUsers } from '../state/google';
 import { Database } from '../../../lib/db';
 import { google } from 'googleapis';
 import { SmartHome } from '../';
@@ -27,13 +22,14 @@ import * as path from 'path';
 
 export const homeGraph = new SettablePromise<homegraph_v1.Homegraph>();
 export const db = new SettablePromise<Database>();
+export const GOOGLE_KEY = 'google';
+export const SAMSUNG_KEY = 'samsung';
 
 export async function requestSync(): Promise<void> {
 	const hg = await homeGraph.value;
+	const googleUsers = (await currentUsers.value)[GOOGLE_KEY] ?? {};
 	await Promise.all(
-		(
-			await currentUsers.value
-		).map(async (user) => {
+		Object.keys(googleUsers).map(async (user) => {
 			await hg.devices.requestSync({
 				requestBody: {
 					agentUserId: user,
@@ -79,56 +75,10 @@ async function attachUpdateListeners() {
 			minWaitTime: SMART_HOME_BATCH_MIN_TIMEOUT,
 			maxWaitTime: SMART_HOME_BATCH_MAX_TIMEOUT,
 			async onDispatch(data) {
-				const requestBody: Omit<
-					homegraph_v1.Schema$ReportStateAndNotificationRequest,
-					'agentUserId'
-				> = {
-					payload: {
-						devices: {
-							states: fromEntries(
-								data.map((dataPart) => [
-									dataPart.id,
-									dataPart.data,
-								])
-							),
-						},
-					},
-				};
-
-				const homeGraphInstance = await homeGraph.value;
-				await Promise.all(
-					(
-						await currentUsers.value
-					).map(async (user) => {
-						const userRequestBody: homegraph_v1.Schema$ReportStateAndNotificationRequest =
-							{
-								...requestBody,
-								agentUserId: user,
-							};
-						smartHomeLogger(
-							'Sending homegraph update for user',
-							user,
-							Object.keys(
-								userRequestBody.payload!.devices!.states!
-							),
-							JSON.stringify(
-								userRequestBody.payload!.devices!.states!
-							)
-						);
-						try {
-							await homeGraphInstance.devices.reportStateAndNotification(
-								{ requestBody: userRequestBody }
-							);
-						} catch (e) {
-							warning(
-								'Error response from home-graph',
-								e,
-								'for request',
-								userRequestBody
-							);
-						}
-					})
-				);
+				await Promise.all([
+					dispatchGoogleUsers(data),
+					dispatchSamsungUsers(data),
+				]);
 			},
 		}
 	);

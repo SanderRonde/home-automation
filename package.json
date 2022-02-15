@@ -39,7 +39,6 @@
 		"start": "node --experimental-modules --enable-source-maps --trace-warnings -r ts-node/register/transpile-only app/server/app.ts --http 1272 --https 1273 -v* --name 1000 --scripts /home/sander/scripts --color -i"
 	},
 	"devDependencies": {
-		"@types/body-parser": "^1.17.0",
 		"@types/chalk": "^2.2.0",
 		"@types/cookie-parser": "^1.4.1",
 		"@types/dotenv": "^8.2.0",
@@ -104,6 +103,7 @@
 		"ping": "^0.2.2",
 		"serialport": "^8.0.7",
 		"serve-static": "^1.14.1",
+		"st-schema": "latest",
 		"telnet-client": "^1.2.5",
 		"ts-node": "^10.0.0",
 		"uglify-es": "^3.3.9",

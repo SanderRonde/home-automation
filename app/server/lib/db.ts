@@ -157,17 +157,18 @@ export class Database {
 			currentContainer[lastKey] = [val];
 		} else {
 			if (
-				currentTarget.includes(val) ||
+				currentTarget.includes(val) &&
 				duplicateBehavior !== 'duplicate'
 			) {
 				if (duplicateBehavior === 'warning') {
 					warning(
 						'Current value array for',
 						key,
+						'now equal to',
+						currentTarget,
+						'already contains value',
 						val,
-						'already contains',
-						val,
-						'skipping'
+						'Skipping'
 					);
 				}
 			} else {
