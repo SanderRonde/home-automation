@@ -6,6 +6,7 @@ declare module 'st-schema' {
 
 	interface ReqBody {
 		[key: string]: unknown;
+		res: import('express').Response
 	}
 
 	interface DevicesReqBody extends ReqBody {
@@ -106,7 +107,7 @@ declare module 'st-schema' {
 
 		enableEventLogging(level?: number): this;
 		discoveryHandler(
-			handler: (accessToken: string, response: DiscoveryResponse) => void
+			handler: (accessToken: string, response: DiscoveryResponse, body: ReqBody) => void
 		): this;
 		commandHandler(
 			handler: (
@@ -144,7 +145,7 @@ declare module 'st-schema' {
 			handler: (
 				accessToken: string,
 				response: StateRefreshResponse,
-				body: DevicesReqBody
+				body: DevicesReqBody & Body
 			) => void
 		): this;
 		integrationDeletedHandler(

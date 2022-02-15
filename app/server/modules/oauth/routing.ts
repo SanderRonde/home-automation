@@ -146,7 +146,7 @@ export async function initRouting({ app }: ModuleConfig): Promise<void> {
 	);
 	if (getEnv('SECRET_OAUTH_TOKEN_URL_POSTFIX', false)) {
 		router.post(
-			`/token${getEnv('SECRET_OAUTH_TOKEN_URL_POSTFIX', false)!}`,
+			`/token${getEnv('SECRET_OAUTH_TOKEN_URL_POSTFIX', true)}`,
 			async (_req, res, next) => {
 				attachSourcedMessage(
 					res,
@@ -158,7 +158,11 @@ export async function initRouting({ app }: ModuleConfig): Promise<void> {
 			},
 			async (req, res, next) => {
 				try {
-					(await authorizationServer.value).token({})(req, res, next);
+					await (await authorizationServer.value).token({})(
+						req,
+						res,
+						next
+					);
 				} catch (e) {
 					console.log('threw error', e);
 				}

@@ -19,7 +19,7 @@ function registerListeners() {
 	for (const key in aggregates) {
 		const config = aggregates[key];
 		const fullName = `aggregates.${key}`;
-		addListener(fullName, async (value, logObj) => {
+		addListener(fullName, async (value, _key, logObj) => {
 			const handlers = (() => {
 				if (value === '1') {
 					return config.on;
@@ -33,11 +33,12 @@ function registerListeners() {
 			}
 
 			let index = 0;
-			for (const key in handlers) {
-				const fn = handlers[key];
-				await fn(
-					createHookables(
-						await KeyVal.modules,
+			await Promise.all(
+				Object.keys(handlers).map(async (key) => {
+					const fn = handlers[key];
+					const mod = await KeyVal.modules;
+					const hookables = createHookables(
+						mod,
 						'AGGREGATES',
 						key,
 						attachMessage(
@@ -47,9 +48,10 @@ function registerListeners() {
 							':',
 							chalk.bold(key)
 						)
-					)
-				);
-			}
+					);
+					await fn(hookables);
+				})
+			);
 		});
 	}
 }

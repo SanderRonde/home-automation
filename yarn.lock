@@ -532,7 +532,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/body-parser@npm:*, @types/body-parser@npm:^1.17.0":
+"@types/body-parser@npm:*":
   version: 1.19.0
   resolution: "@types/body-parser@npm:1.19.0"
   dependencies:
@@ -4214,7 +4214,6 @@ fsevents@~2.3.2:
     "@pm2/node-runtime-stats": ^0.3.2
     "@sanderronde/write-buffer": 1.0.3
     "@serialport/parser-readline": ^9.0.7
-    "@types/body-parser": ^1.17.0
     "@types/chalk": ^2.2.0
     "@types/cookie-parser": ^1.4.1
     "@types/dotenv": ^8.2.0
@@ -4270,7 +4269,7 @@ fsevents@~2.3.2:
     rollup: ^1.20.3
     serialport: ^8.0.7
     serve-static: ^1.14.1
-    st-schema: ^1.4.2
+    st-schema: latest
     telnet-client: ^1.2.5
     ts-node: ^10.0.0
     typescript: latest
@@ -7943,7 +7942,7 @@ fsevents@~2.3.2:
   languageName: node
   linkType: hard
 
-"st-schema@npm:^1.4.2":
+"st-schema@npm:latest":
   version: 1.4.2
   resolution: "st-schema@npm:1.4.2"
   dependencies:

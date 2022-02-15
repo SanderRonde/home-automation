@@ -24,31 +24,33 @@ import {
 	sharedSync,
 	sharedUseradd,
 } from './shared';
-import { ResponseLike, warning } from '../../../lib/logger';
 import { currentUsers } from '../home-graph/users';
+import { warning } from '../../../lib/logger';
 import { smartHomeLogger } from '../shared';
 import { SAMSUNG_KEY } from '../home-graph';
 import { flatten } from '../../../lib/util';
 import { getEnv } from '../../../lib/io';
 import * as express from 'express';
 
-function samsungSync(response: DiscoveryResponse) {
-	const devices = sharedSync();
+function samsungSync(response: DiscoveryResponse, res: express.Response) {
+	const devices = sharedSync(res);
 	for (const device of devices) {
 		response
 			.addDevice(device.id, device.name, device.samsungType)
-			.manufacturerName('Sander Ronde');
+			.manufacturerName('Sander Ronde')
+			.modelName(device.name);
 	}
 	return response;
 }
 
 async function samsungQuery(
 	response: StateRefreshResponse,
-	body: DevicesReqBody
+	body: DevicesReqBody,
+	res: express.Response
 ) {
 	const devices = await sharedQuery(
 		body.devices.map((d) => d.externalDeviceId),
-		body as unknown as express.Response
+		res
 	);
 	for (const device of devices) {
 		response.addDevice(
@@ -66,8 +68,7 @@ async function samsungQuery(
 									SAMSUNG_SMART_HOME_DEVICE_CAPABILITIES[
 										value.trait
 									]!,
-								attribute: singleValue.attribute,
-								value: singleValue.value,
+								...singleValue,
 							};
 						});
 					})
@@ -77,11 +78,10 @@ async function samsungQuery(
 	return response;
 }
 
-// TODO: dynamica updates and stuff
 async function samsungCommandHandler(
 	response: CommandResponse,
 	body: DeviceCommand[],
-	res: ResponseLike
+	res: express.Response
 ) {
 	await Promise.all(
 		body.map(async (device) => {
@@ -126,18 +126,14 @@ export function createSamsungSchemaHandler(): SchemaConnector | null {
 		clientSecret: clientSecret,
 	})
 		.enableEventLogging(2)
-		.discoveryHandler((_accessToken, response) => {
-			return samsungSync(response);
+		.discoveryHandler((_accessToken, response, body) => {
+			return samsungSync(response, body.res);
 		})
 		.stateRefreshHandler((_accessToken, response, body) => {
-			return samsungQuery(response, body);
+			return samsungQuery(response, body, body.res);
 		})
-		.commandHandler((_accessToken, response, body, res) => {
-			return samsungCommandHandler(
-				response,
-				body,
-				res as unknown as ResponseLike
-			);
+		.commandHandler((_accessToken, response, devices, body) => {
+			return samsungCommandHandler(response, devices, body.res);
 		})
 		.callbackAccessHandler(
 			async (

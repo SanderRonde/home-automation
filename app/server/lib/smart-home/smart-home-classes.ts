@@ -44,10 +44,26 @@ type ExecuteReturnType<
 			success: false;
 	  };
 
+type ExecuteFunction = (
+	prevValue: ExecuteReturnType<SMART_HOME_DEVICE_TRAIT>,
+	command: SMART_HOME_COMMAND,
+	params: {},
+	hookables: ModuleHookables
+) => Promise<ExecuteReturnType<SMART_HOME_DEVICE_TRAIT>>;
+
+type AttachHomeGraphListenerFunction = (
+	hookables: ModuleHookables,
+	callback: SmartHomeDeviceUpdateCallback<SMART_HOME_DEVICE_TRAIT>
+) => Promise<void>;
+
 export abstract class SmartHomeDevice {
 	protected temperatureID?: string;
 	protected keyvalID?: string;
 	protected rgbID?: LED_NAMES;
+
+	protected _executeFunctions: ExecuteFunction[] = [];
+	protected _attachHomeGraphListenerFunctions: AttachHomeGraphListenerFunction[] =
+		[];
 
 	public abstract id: string | LED_NAMES;
 	public abstract name: string;
@@ -87,27 +103,6 @@ export abstract class SmartHomeDevice {
 		) => Promise<QueryReturnType<SMART_HOME_DEVICE_TRAIT>>)[];
 	}
 
-	protected _execute(
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		_command: SMART_HOME_COMMAND,
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		_params: {},
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		_hookables: ModuleHookables
-	): Promise<unknown> {
-		return Promise.resolve({
-			success: true,
-			mergeWithQuery: [],
-		});
-	}
-
-	protected async _attachHomeGraphListeners(
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		_hookables: ModuleHookables,
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		_callback: unknown
-	): Promise<void> {}
-
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	public isOnline(_hookables: ModuleHookables): Promise<boolean> {
 		return Promise.resolve(true);
@@ -145,24 +140,31 @@ export abstract class SmartHomeDevice {
 		return joined;
 	}
 
-	public execute(
-		_command: SMART_HOME_COMMAND,
-		_params: {},
-		_hookables: ModuleHookables
+	public async execute(
+		command: SMART_HOME_COMMAND,
+		params: {},
+		hookables: ModuleHookables
 	): Promise<ExecuteReturnType> {
-		return this._execute(
-			_command,
-			_params,
-			_hookables
-		) as Promise<ExecuteReturnType>;
+		let currentValue: ExecuteReturnType<SMART_HOME_DEVICE_TRAIT> = {
+			success: true,
+			mergeWithQuery: [],
+		};
+		for (const func of this._executeFunctions) {
+			currentValue = await func(currentValue, command, params, hookables);
+		}
+		return currentValue;
 	}
 
 	public async attachHomeGraphListeners(
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		_hookables: ModuleHookables,
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		_callback: SmartHomeDeviceUpdateCallback
-	): Promise<void> {}
+		hookables: ModuleHookables,
+		callback: SmartHomeDeviceUpdateCallback
+	): Promise<void> {
+		await Promise.all(
+			this._attachHomeGraphListenerFunctions.map(async (fn) => [
+				await fn(hookables, callback),
+			])
+		);
+	}
 }
 
 export abstract class SmartHomeLight extends SmartHomeDevice {
@@ -242,6 +244,18 @@ export function SmartHomeMixinOnOffKeyval<
 			return [...super.traits, SMART_HOME_DEVICE_TRAIT.ON_OFF];
 		}
 
+		public constructor() {
+			super();
+			this._executeFunctions.push(
+				this._execute.bind(this) as unknown as ExecuteFunction
+			);
+			this._attachHomeGraphListenerFunctions.push(
+				this._attachHomeGraphListeners.bind(
+					this
+				) as AttachHomeGraphListenerFunction
+			);
+		}
+
 		private _getQueryReturn(
 			isOn: boolean
 		): QueryReturnType<SMART_HOME_DEVICE_TRAIT.ON_OFF> {
@@ -265,21 +279,23 @@ export function SmartHomeMixinOnOffKeyval<
 			];
 		}
 
-		protected async _execute(
+		private _execute(
+			superResult: ExecuteReturnType<SMART_HOME_DEVICE_TRAIT>,
 			command: SMART_HOME_COMMAND,
 			params: SmartHomeParam<SMART_HOME_COMMAND.ON_OFF>,
 			hookables: ModuleHookables
 		): Promise<ExecuteReturnType<SMART_HOME_DEVICE_TRAIT.ON_OFF>> {
-			const superResult = await super.execute(command, params, hookables);
 			if (
 				command !== SMART_HOME_COMMAND.ON_OFF &&
 				command !== SMART_HOME_COMMAND.SWITCH_ON &&
 				command !== SMART_HOME_COMMAND.SWITCH_OFF
 			) {
-				return superResult as ExecuteReturnType<SMART_HOME_DEVICE_TRAIT.ON_OFF>;
+				return Promise.resolve(
+					superResult as ExecuteReturnType<SMART_HOME_DEVICE_TRAIT.ON_OFF>
+				);
 			}
 			if (!superResult.success) {
-				return superResult;
+				return Promise.resolve(superResult);
 			}
 
 			const target = (() => {
@@ -289,18 +305,18 @@ export function SmartHomeMixinOnOffKeyval<
 				return command === SMART_HOME_COMMAND.SWITCH_ON ? '1' : '0';
 			})();
 
-			const status = await hookables.keyval.set(this._queryID, target);
+			void hookables.keyval.set(this._queryID, target);
 
-			return {
-				success: status,
+			return Promise.resolve({
+				success: true,
 				mergeWithQuery: [
 					...superResult.mergeWithQuery,
 					...this._getQueryReturn(target === '1'),
 				] as QueryReturnType<SMART_HOME_DEVICE_TRAIT.ON_OFF>,
-			};
+			});
 		}
 
-		protected async _attachHomeGraphListeners(
+		private async _attachHomeGraphListeners(
 			hookables: ModuleHookables,
 			callback: SmartHomeDeviceUpdateCallback<SMART_HOME_DEVICE_TRAIT.ON_OFF>
 		) {
@@ -340,6 +356,18 @@ export function SmartHomeMixinOnOffRGB<
 			return [...super.traits, SMART_HOME_DEVICE_TRAIT.ON_OFF];
 		}
 
+		public constructor() {
+			super();
+			this._executeFunctions.push(
+				this._execute.bind(this) as unknown as ExecuteFunction
+			);
+			this._attachHomeGraphListenerFunctions.push(
+				this._attachHomeGraphListeners.bind(
+					this
+				) as AttachHomeGraphListenerFunction
+			);
+		}
+
 		private _getQueryReturn(
 			isOn: boolean
 		): QueryReturnType<SMART_HOME_DEVICE_TRAIT.ON_OFF> {
@@ -363,21 +391,23 @@ export function SmartHomeMixinOnOffRGB<
 			];
 		}
 
-		protected async _execute(
+		private _execute(
+			superResult: ExecuteReturnType<SMART_HOME_DEVICE_TRAIT>,
 			command: SMART_HOME_COMMAND,
 			params: SmartHomeParam<SMART_HOME_COMMAND.ON_OFF>,
 			hookables: ModuleHookables
 		): Promise<ExecuteReturnType<SMART_HOME_DEVICE_TRAIT.ON_OFF>> {
-			const superResult = await super.execute(command, params, hookables);
 			if (
 				command !== SMART_HOME_COMMAND.ON_OFF &&
 				command !== SMART_HOME_COMMAND.SWITCH_ON &&
 				command !== SMART_HOME_COMMAND.SWITCH_OFF
 			) {
-				return superResult as ExecuteReturnType<SMART_HOME_DEVICE_TRAIT.ON_OFF>;
+				return Promise.resolve(
+					superResult as ExecuteReturnType<SMART_HOME_DEVICE_TRAIT.ON_OFF>
+				);
 			}
 			if (!superResult.success) {
-				return superResult;
+				return Promise.resolve(superResult);
 			}
 
 			const target = (() => {
@@ -387,20 +417,22 @@ export function SmartHomeMixinOnOffRGB<
 				return command === SMART_HOME_COMMAND.SWITCH_ON ? '1' : '0';
 			})();
 
-			const status = await (await hookables.RGB.getClient(
-				this._queryID as LED_NAMES
-			))!.setPower(target === '1');
+			void (async () => {
+				await (await hookables.RGB.getClient(
+					this._queryID as LED_NAMES
+				))!.setPower(target === '1');
+			})();
 
-			return {
-				success: status,
+			return Promise.resolve({
+				success: true,
 				mergeWithQuery: [
 					...superResult.mergeWithQuery,
 					...this._getQueryReturn(target === '1'),
 				] as QueryReturnType<SMART_HOME_DEVICE_TRAIT.ON_OFF>,
-			};
+			});
 		}
 
-		protected async _attachHomeGraphListeners(
+		private async _attachHomeGraphListeners(
 			hookables: ModuleHookables,
 			callback: SmartHomeDeviceUpdateCallback<SMART_HOME_DEVICE_TRAIT.ON_OFF>
 		) {
@@ -480,6 +512,18 @@ export function SmartHomeMixinColorSetting<
 			};
 		}
 
+		public constructor() {
+			super();
+			this._executeFunctions.push(
+				this._execute.bind(this) as unknown as ExecuteFunction
+			);
+			this._attachHomeGraphListenerFunctions.push(
+				this._attachHomeGraphListeners.bind(
+					this
+				) as AttachHomeGraphListenerFunction
+			);
+		}
+
 		private _getQueryReturnType(
 			color: Color
 		): QueryReturnType<
@@ -518,7 +562,8 @@ export function SmartHomeMixinColorSetting<
 			] as any;
 		}
 
-		protected async _execute(
+		private async _execute(
+			superResult: ExecuteReturnType<SMART_HOME_DEVICE_TRAIT>,
 			command: SMART_HOME_COMMAND,
 			params: SmartHomeParam<SMART_HOME_COMMAND.COLOR_ABSOLUTE>,
 			hookables: ModuleHookables
@@ -528,7 +573,6 @@ export function SmartHomeMixinColorSetting<
 				| SMART_HOME_DEVICE_TRAIT.SAMSUNG_BRIGHTNESS
 			>
 		> {
-			const superResult = await super.execute(command, params, hookables);
 			if (
 				command !== SMART_HOME_COMMAND.COLOR_ABSOLUTE &&
 				command !== SMART_HOME_COMMAND.COLOR_CONTROL_SET_COLOR &&
@@ -555,11 +599,6 @@ export function SmartHomeMixinColorSetting<
 					const rgbColor =
 						params.color['spectrumRGB'] ||
 						params.color['spectrumRgb'];
-					console.log(
-						'color=',
-						`#${pad(rgbColor.toString(16), 6, '0')}`,
-						Color.fromHex(`#${pad(rgbColor.toString(16), 6, '0')}`)
-					);
 					return Color.fromHex(
 						`#${pad(rgbColor.toString(16), 6, '0')}`
 					);
@@ -639,16 +678,17 @@ export function SmartHomeMixinColorSetting<
 				}
 				return null;
 			})();
-			if (
-				!color ||
-				!(await (await hookables.RGB.getClient(
-					this._queryID as LED_NAMES
-				))!.setColor(color.r, color.g, color.b))
-			) {
+			if (!color) {
 				return {
 					success: false,
 				};
 			}
+
+			void (async () => {
+				await (await hookables.RGB.getClient(
+					this._queryID as LED_NAMES
+				))!.setColor(color.r, color.g, color.b);
+			})();
 
 			return {
 				success: true,
@@ -662,7 +702,7 @@ export function SmartHomeMixinColorSetting<
 			>;
 		}
 
-		protected async _attachHomeGraphListeners(
+		private async _attachHomeGraphListeners(
 			hookables: ModuleHookables,
 			callback: SmartHomeDeviceUpdateCallback<
 				| SMART_HOME_DEVICE_TRAIT.COLOR_SETTING
@@ -728,6 +768,18 @@ export function SmartHomeMixinBrightness<
 			};
 		}
 
+		public constructor() {
+			super();
+			this._executeFunctions.push(
+				this._execute.bind(this) as unknown as ExecuteFunction
+			);
+			this._attachHomeGraphListenerFunctions.push(
+				this._attachHomeGraphListeners.bind(
+					this
+				) as AttachHomeGraphListenerFunction
+			);
+		}
+
 		private _getQueryReturnType(
 			brightness: number
 		): QueryReturnType<SMART_HOME_DEVICE_TRAIT.BRIGHTNESS> {
@@ -751,19 +803,22 @@ export function SmartHomeMixinBrightness<
 			];
 		}
 
-		private async _executeBrightnessAbsolute(
+		private _executeBrightnessAbsolute(
 			params: SmartHomeParam<SMART_HOME_COMMAND.BRIGHTNESS_ABSOLUTE>,
 			hookables: ModuleHookables
 		): Promise<{
 			success: boolean;
 			newBrightness: number;
 		}> {
-			return {
-				success: await (await hookables.RGB.getClient(
+			void (async () => {
+				await (await hookables.RGB.getClient(
 					this._queryID as LED_NAMES
-				))!.setBrightness(params.brightness),
+				))!.setBrightness(params.brightness);
+			})();
+			return Promise.resolve({
+				success: true,
 				newBrightness: params.brightness,
-			};
+			});
 		}
 
 		private async _executeBrightnessRelative(
@@ -809,18 +864,20 @@ export function SmartHomeMixinBrightness<
 				};
 			}
 
+			void client.setBrightness(newBrightness);
+
 			return {
-				success: await client.setBrightness(newBrightness),
+				success: true,
 				newBrightness,
 			};
 		}
 
-		protected async _execute(
+		private async _execute(
+			superResult: ExecuteReturnType<SMART_HOME_DEVICE_TRAIT>,
 			command: SMART_HOME_COMMAND,
 			params: {},
 			hookables: ModuleHookables
 		): Promise<ExecuteReturnType<SMART_HOME_DEVICE_TRAIT.BRIGHTNESS>> {
-			const superResult = await super.execute(command, params, hookables);
 			if (
 				command !== SMART_HOME_COMMAND.BRIGHTNESS_ABSOLUTE &&
 				command !== SMART_HOME_COMMAND.BRIGHTNESS_RELATIVE &&
@@ -871,7 +928,7 @@ export function SmartHomeMixinBrightness<
 			} as ExecuteReturnType<SMART_HOME_DEVICE_TRAIT.BRIGHTNESS>;
 		}
 
-		protected async _attachHomeGraphListeners(
+		private async _attachHomeGraphListeners(
 			hookables: ModuleHookables,
 			callback: SmartHomeDeviceUpdateCallback<SMART_HOME_DEVICE_TRAIT.BRIGHTNESS>
 		) {
@@ -1091,6 +1148,18 @@ export function SmartHomeMixinTemperatureSetting<
 			};
 		}
 
+		public constructor() {
+			super();
+			this._executeFunctions.push(
+				this._execute.bind(this) as unknown as ExecuteFunction
+			);
+			this._attachHomeGraphListenerFunctions.push(
+				this._attachHomeGraphListeners.bind(
+					this
+				) as AttachHomeGraphListenerFunction
+			);
+		}
+
 		private _getQueryReturn(
 			temperature: number
 		): QueryReturnType<SMART_HOME_DEVICE_TRAIT.TEMPERATURE_SETTING_AND_READING> {
@@ -1110,35 +1179,36 @@ export function SmartHomeMixinTemperatureSetting<
 					samsung: [
 						{
 							attribute: 'temperature',
+							unit: 'C',
 							value: temperature,
-						},
+						} as any,
 					],
 				},
 			];
 		}
 
-		protected async _execute(
-			command: SMART_HOME_COMMAND,
-			params: SmartHomeParam<SMART_HOME_COMMAND.SET_TEMPERATURE>,
-			hookables: ModuleHookables
+		private _execute(
+			superResult: ExecuteReturnType<SMART_HOME_DEVICE_TRAIT>,
+			command: SMART_HOME_COMMAND
 		): Promise<
 			ExecuteReturnType<SMART_HOME_DEVICE_TRAIT.TEMPERATURE_SETTING_AND_READING>
 		> {
-			const superResult = await super.execute(command, params, hookables);
 			if (command !== SMART_HOME_COMMAND.SET_TEMPERATURE) {
-				return superResult as ExecuteReturnType<SMART_HOME_DEVICE_TRAIT.TEMPERATURE_SETTING_AND_READING>;
+				return Promise.resolve(
+					superResult as ExecuteReturnType<SMART_HOME_DEVICE_TRAIT.TEMPERATURE_SETTING_AND_READING>
+				);
 			}
 			if (!superResult.success) {
-				return superResult;
+				return Promise.resolve(superResult);
 			}
 
 			warning('Setting of temperature not supported');
-			return {
+			return Promise.resolve({
 				success: false,
-			};
+			});
 		}
 
-		protected async _attachHomeGraphListeners(
+		private async _attachHomeGraphListeners(
 			hookables: ModuleHookables,
 			callback: SmartHomeDeviceUpdateCallback<SMART_HOME_DEVICE_TRAIT.TEMPERATURE_SETTING_AND_READING>
 		) {

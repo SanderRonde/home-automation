@@ -55,12 +55,12 @@ export const GOOGLE_SMART_HOME_DEVICE_TRAITS: {
 export const SAMSUNG_SMART_HOME_DEVICE_CAPABILITIES: {
 	[K in SMART_HOME_DEVICE_TRAIT]: string | undefined;
 } = {
-	[SMART_HOME_DEVICE_TRAIT.COLOR_SETTING]: 'colorControl',
-	[SMART_HOME_DEVICE_TRAIT.BRIGHTNESS]: 'switchLevel',
-	[SMART_HOME_DEVICE_TRAIT.SAMSUNG_BRIGHTNESS]: 'switchLevel',
+	[SMART_HOME_DEVICE_TRAIT.COLOR_SETTING]: 'st.colorControl',
+	[SMART_HOME_DEVICE_TRAIT.BRIGHTNESS]: 'st.switchLevel',
+	[SMART_HOME_DEVICE_TRAIT.SAMSUNG_BRIGHTNESS]: 'st.switchLevel',
 	[SMART_HOME_DEVICE_TRAIT.TEMPERATURE_SETTING_AND_READING]:
-		'temperatureMeasurement',
-	[SMART_HOME_DEVICE_TRAIT.ON_OFF]: 'switch',
+		'st.temperatureMeasurement',
+	[SMART_HOME_DEVICE_TRAIT.ON_OFF]: 'st.switch',
 };
 
 /**
@@ -182,6 +182,7 @@ export type SmartHomeSamsungQuery<TR extends SMART_HOME_DEVICE_TRAIT> =
 		(TR extends SMART_HOME_DEVICE_TRAIT.TEMPERATURE_SETTING_AND_READING
 			? {
 					temperature: number;
+					unit: 'C' | 'F';
 			  }
 			: {}) &
 		(TR extends SMART_HOME_DEVICE_TRAIT.ON_OFF
