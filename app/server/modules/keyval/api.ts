@@ -214,24 +214,26 @@ export class APIHandler {
 		source: string
 	): Promise<boolean> {
 		const original = this._db.get(key);
-		this._db.setVal(key, value);
-		const msg = attachSourcedMessage(
-			res,
-			source,
-			await KeyVal.explainHook,
-			`Key: "${key}", val: "${str(value)}"`
-		);
-		const nextMessage = attachMessage(
-			msg,
-			`"${str(original)}" -> "${str(value)}"`
-		);
-		if (performUpdate) {
-			const updated = await update(
-				key,
-				value,
-				attachMessage(nextMessage, 'Updates')
+		if (original !== key) {
+			this._db.setVal(key, value);
+			const msg = attachSourcedMessage(
+				res,
+				source,
+				await KeyVal.explainHook,
+				`Key: "${key}", val: "${str(value)}"`
 			);
-			attachMessage(nextMessage, `Updated ${updated} listeners`);
+			const nextMessage = attachMessage(
+				msg,
+				`"${str(original)}" -> "${str(value)}"`
+			);
+			if (performUpdate) {
+				const updated = await update(
+					key,
+					value,
+					attachMessage(nextMessage, 'Updates')
+				);
+				attachMessage(nextMessage, `Updated ${updated} listeners`);
+			}
 		}
 		res.status(200).write(value);
 		res.end();
