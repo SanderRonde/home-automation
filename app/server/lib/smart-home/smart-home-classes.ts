@@ -796,7 +796,7 @@ export function SmartHomeMixinBrightness<
 					samsung: [
 						{
 							attribute: 'level',
-							value: brightness,
+							value: Math.round(brightness),
 						},
 					],
 				},
