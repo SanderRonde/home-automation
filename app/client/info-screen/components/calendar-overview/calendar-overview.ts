@@ -71,35 +71,115 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 		return Infinity;
 	}
 
-	public getTimeSpacedEvents(): (TimedEvent | null)[][] {
+	public getTimeSpacedEvents(): (TimedEvent & {
+		columnStart: number;
+		columnEnd: number;
+	})[][] {
 		const weekdayEvents = this.getWeekDayEvents();
 		const max = Math.max(
 			...weekdayEvents.map((weekDay) => weekDay.events.length)
 		);
 
-		const arr: (TimedEvent | null)[][] = new Array(max)
-			.fill('')
-			.map(() => new Array(7).fill(null) as null[]);
+		const arr: (TimedEvent & {
+			columnStart: number;
+			columnEnd: number;
+		})[][] = new Array(max).fill('').map(() => []);
 		for (let i = 0; i < arr.length; i++) {
 			for (let j = 0; j < 7; j++) {
-				arr[i][j] = weekdayEvents[j].events[i] || null;
+				const event = weekdayEvents[j].events[i];
+				if (event && event.startTime) {
+					arr[i].push({
+						...weekdayEvents[j].events[i],
+						columnStart: j + 1,
+						columnEnd: j + 1,
+					});
+				}
 			}
 		}
 		return arr;
+	}
+
+	private _getDays() {
+		return new Array(7).fill('').map((_, index) => {
+			return this.getDay(index);
+		});
+	}
+
+	private _getEndsOfDays() {
+		return this._getDays().map((day) => {
+			const copy = new Date(day);
+			copy.setHours(23, 59, 59);
+			return copy;
+		});
+	}
+
+	public getFormattedAllDayEvents(): (ExtendedEvent & {
+		startIndex: number;
+		endIndex: number;
+	})[][] {
+		const formattedEvents: Map<Date, Map<number, true>> = new Map();
+		const days = this._getDays();
+		days.forEach((day) => {
+			formattedEvents.set(day, new Map());
+		});
+		const endsOfDays = this._getEndsOfDays();
+
+		const events = this.props.events;
+		const levels: (ExtendedEvent & {
+			startIndex: number;
+			endIndex: number;
+		})[][] = [];
+		for (const event of events) {
+			if (
+				event.start?.dateTime ||
+				!event.start?.date ||
+				!event.end?.date
+			) {
+				continue;
+			}
+			const startIndex = this.getDayIndex(
+				new Date(event.start?.date),
+				endsOfDays
+			);
+			const endIndex =
+				this.getDayIndex(new Date(event.end?.date), endsOfDays) - 1;
+
+			for (let i = 0; true; i++) {
+				// Check if there is already an event that overlaps on this level
+				let levelTaken = false;
+				for (let j = startIndex; j < endIndex + 1; j++) {
+					if (formattedEvents.get(days[j])!.has(i)) {
+						levelTaken = true;
+						break;
+					}
+				}
+
+				if (!levelTaken) {
+					levels[i] = levels[i] || [];
+					levels[i].push({
+						...event,
+						startIndex,
+						endIndex,
+					});
+					for (let k = 0; k < days.length; k++) {
+						if (k >= startIndex && k <= endIndex) {
+							formattedEvents.get(days[k])!.set(i, true);
+						}
+					}
+					break;
+				}
+			}
+		}
+
+		return levels;
 	}
 
 	public getWeekDayEvents(): {
 		date: Date;
 		events: TimedEvent[];
 	}[] {
-		const days = new Array(7).fill('').map((_, index) => {
-			return this.getDay(index);
-		});
-		const endsOfDays = days.map((day) => {
-			const copy = new Date(day);
-			copy.setHours(23, 59, 59);
-			return copy;
-		});
+		const days = this._getDays();
+		const endsOfDays = this._getEndsOfDays();
 		const dayEvents: {
 			date: Date;
 			events: TimedEvent[];
@@ -112,12 +192,13 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 			minute: '2-digit',
 		});
 		for (const event of this.props.events) {
-			const eventStart = new Date(
-				event.start?.dateTime || event.start?.date || 0
-			);
-			const eventEnd = new Date(
-				event.end?.dateTime || event.start?.date || 0
-			);
+			console.log(event);
+			if (!event.start?.dateTime || !event.end?.dateTime) {
+				continue;
+			}
+
+			const eventStart = new Date(event.start.dateTime);
+			const eventEnd = new Date(event.end.dateTime);
 
 			const startIndex = this.getDayIndex(eventStart, endsOfDays);
 			const endIndex = this.getDayIndex(eventEnd, endsOfDays);

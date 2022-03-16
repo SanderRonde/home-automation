@@ -12,10 +12,12 @@ export const CalendarOverviewCSS = new TemplateFn<CalendarOverview>(
 				#container {
 					margin-left: 4.5vw;
 					margin-right: 4.5vw;
-					display: flex;
 					flex-direction: row;
 					justify-content: center;
 					max-height: 40vh;
+
+					display: grid;
+					grid-template-columns: 4px calc((90vw - 28px) / 7) 5px calc((90vw - 28px) / 7) 5px calc((90vw - 28px) / 7) 5px calc((90vw - 28px) / 7) 5px calc((90vw - 28px) / 7) 5px calc((90vw - 28px) / 7) 5px calc((90vw - 28px) / 7);
 				}
 
 				#table {
@@ -28,10 +30,15 @@ export const CalendarOverviewCSS = new TemplateFn<CalendarOverview>(
 					border-right: 4px solid white;
 				}
 
+				#container td.all-day {
+					border-right: 0px;
+				}
+
 				.weekday {
-					width: 13vw;
 					overflow: hidden;
 					border-bottom: 4px solid white;
+					grid-row-start: 1;
+					grid-row-end: 1;
 				}
 
 				.day-name {
@@ -45,7 +52,8 @@ export const CalendarOverviewCSS = new TemplateFn<CalendarOverview>(
 					vertical-align: top;
 					padding: 0;
 					padding-bottom: 1px;
-					height: 100%;
+					word-break: break-all;
+					border-bottom: 1px solid black;
 				}
 
 				.event-name,
@@ -61,13 +69,30 @@ export const CalendarOverviewCSS = new TemplateFn<CalendarOverview>(
 					font-weight: bold;
 				}
 
+				.event-no-title {
+					opacity: 0;
+				}
+
 				.event-background {
-					height: 100%;
+					border-bottom: 1px solid black;
 				}
 
 				.event-name,
 				.event-location {
 					padding: 2px;
+				}
+
+				#table td, #table th {
+					word-wrap: break-word;
+					max-width: calc((90vw - 28px) / 7);
+				}
+
+				.all-day-spacer {
+					border-bottom: 4px solid rgba(255, 255, 255, 0.23);
+				}
+
+				.calendar-column-spacing {
+					background-color: white;
 				}
 			</style>
 		`;
