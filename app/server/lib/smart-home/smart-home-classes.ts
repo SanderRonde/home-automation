@@ -489,7 +489,7 @@ export function SmartHomeMixinColorSetting<
 							)
 						)?.getColor()) || new Color(255);
 
-					return this._getQueryReturnType(color);
+					return this._getColorQueryReturnType(color);
 				},
 			];
 		}
@@ -524,7 +524,7 @@ export function SmartHomeMixinColorSetting<
 			);
 		}
 
-		private _getQueryReturnType(
+		private _getColorQueryReturnType(
 			color: Color
 		): QueryReturnType<
 			| SMART_HOME_DEVICE_TRAIT.COLOR_SETTING
@@ -544,20 +544,18 @@ export function SmartHomeMixinColorSetting<
 							},
 						},
 					],
-					samsung: [
-						{
-							attribute: 'hue',
-							value: color.toHSV().hue / 2.55,
-						},
-						{
-							attribute: 'saturation',
-							value: color.toHSV().saturation / 2.55,
-						},
-						{
-							attribute: 'brightness',
-							value: color.toHSV().value / 2.55,
-						},
-					],
+					// Color control was secretly deprecated or something?
+					samsung: []
+					// [
+					// 	{
+					// 		attribute: 'hue',
+					// 		value: color.toHSV().hue / 2.55,
+					// 	},
+					// 	{
+					// 		attribute: 'saturation',
+					// 		value: color.toHSV().saturation / 2.55,
+					// 	},
+					// ],
 				},
 			] as any;
 		}
@@ -694,7 +692,7 @@ export function SmartHomeMixinColorSetting<
 				success: true,
 				mergeWithQuery: [
 					...superResult.mergeWithQuery,
-					...this._getQueryReturnType(color),
+					...this._getColorQueryReturnType(color),
 				],
 			} as ExecuteReturnType<
 				| SMART_HOME_DEVICE_TRAIT.COLOR_SETTING
@@ -723,7 +721,7 @@ export function SmartHomeMixinColorSetting<
 			client.onColorChange((color) => {
 				callback({
 					id: this.id,
-					data: this._getQueryReturnType(color),
+					data: this._getColorQueryReturnType(color),
 				});
 			});
 		}
@@ -749,10 +747,13 @@ export function SmartHomeMixinBrightness<
 							this._queryID as LED_NAMES
 						)
 					)?.getBrightness();
+					console.log('initial=', brightness);
 					if (!brightness) {
+						console.log('early return');
 						return [];
 					}
-					return this._getQueryReturnType(brightness);
+					console.log('queryfn', brightness);
+					return this._getBrightnessQueryReturnType(brightness);
 				},
 			];
 		}
@@ -780,7 +781,7 @@ export function SmartHomeMixinBrightness<
 			);
 		}
 
-		private _getQueryReturnType(
+		private _getBrightnessQueryReturnType(
 			brightness: number
 		): QueryReturnType<SMART_HOME_DEVICE_TRAIT.BRIGHTNESS> {
 			return [
@@ -923,7 +924,7 @@ export function SmartHomeMixinBrightness<
 				success: true,
 				mergeWithQuery: [
 					...superResult.mergeWithQuery,
-					...this._getQueryReturnType(newBrightness),
+					...this._getBrightnessQueryReturnType(newBrightness),
 				],
 			} as ExecuteReturnType<SMART_HOME_DEVICE_TRAIT.BRIGHTNESS>;
 		}
@@ -946,7 +947,7 @@ export function SmartHomeMixinBrightness<
 			client.onBrightnessChange((brightness) => {
 				callback({
 					id: this.id,
-					data: this._getQueryReturnType(brightness),
+					data: this._getBrightnessQueryReturnType(brightness),
 				});
 			});
 		}
