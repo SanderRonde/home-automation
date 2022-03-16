@@ -115,24 +115,28 @@ export async function googleQuery(
 				).map((device) => {
 					// Google doesn't care about the capability/trait
 					// so we just flatten until we have just one prop left
+					let returnValue = {};
+					for (const newValue of device.value) {
+						if (!GOOGLE_SMART_HOME_DEVICE_TRAITS[newValue.trait]) {
+							// Samsung-only
+							continue;
+						}
+
+						for (const googleTrait of newValue.google) {
+							returnValue = {
+								...returnValue,
+								...googleTrait.value,
+							};
+						}
+					}
+
 					return [
 						device.id,
-						objJoin(
-							flatten(
-								device.value
-									.filter(
-										(v) =>
-											!!GOOGLE_SMART_HOME_DEVICE_TRAITS[
-												v.trait
-											]
-									)
-									.map((d) => ({
-										[GOOGLE_SMART_HOME_DEVICE_TRAITS[
-											d.trait
-										]!]: d.google.map((g) => g.value),
-									}))
-							)
-						),
+						{
+							...returnValue,
+							online: true,
+							status: 'SUCCESS',
+						},
 					];
 				})
 			),
