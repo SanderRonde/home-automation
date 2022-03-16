@@ -41,6 +41,20 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 		},
 	});
 
+	private _getDays() {
+		return new Array(7).fill('').map((_, index) => {
+			return this.getDay(index);
+		});
+	}
+
+	private _getEndsOfDays() {
+		return this._getDays().map((day) => {
+			const copy = new Date(day);
+			copy.setHours(23, 59, 59);
+			return copy;
+		});
+	}
+
 	public getDay(daysOffset: number): Date {
 		const day = new Date();
 		day.setDate(day.getDate() + daysOffset);
@@ -87,7 +101,7 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 		for (let i = 0; i < arr.length; i++) {
 			for (let j = 0; j < 7; j++) {
 				const event = weekdayEvents[j].events[i];
-				if (event && event.startTime) {
+				if (event?.startTime) {
 					arr[i].push({
 						...weekdayEvents[j].events[i],
 						columnStart: j + 1,
@@ -97,20 +111,6 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 			}
 		}
 		return arr;
-	}
-
-	private _getDays() {
-		return new Array(7).fill('').map((_, index) => {
-			return this.getDay(index);
-		});
-	}
-
-	private _getEndsOfDays() {
-		return this._getDays().map((day) => {
-			const copy = new Date(day);
-			copy.setHours(23, 59, 59);
-			return copy;
-		});
 	}
 
 	public getFormattedAllDayEvents(): (ExtendedEvent & {
@@ -144,7 +144,7 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 			const endIndex =
 				this.getDayIndex(new Date(event.end?.date), endsOfDays) - 1;
 
-			for (let i = 0; true; i++) {
+			for (let i = 0; ; i++) {
 				// Check if there is already an event that overlaps on this level
 				let levelTaken = false;
 				for (let j = startIndex; j < endIndex + 1; j++) {
