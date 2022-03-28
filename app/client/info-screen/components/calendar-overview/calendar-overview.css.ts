@@ -17,13 +17,11 @@ export const CalendarOverviewCSS = new TemplateFn<CalendarOverview>(
 					max-height: 40vh;
 
 					display: grid;
-					grid-template-columns: 4px calc((90vw - 28px) / 7) 5px calc(
-							(90vw - 28px) / 7
-						) 5px calc((90vw - 28px) / 7) 5px calc(
-							(90vw - 28px) / 7
-						) 5px calc((90vw - 28px) / 7) 5px calc(
-							(90vw - 28px) / 7
-						) 5px calc((90vw - 28px) / 7);
+					grid-template-columns:
+						4px calc((90vw - 28px) / 7) 5px calc((90vw - 28px) / 7)
+						5px calc((90vw - 28px) / 7) 5px calc((90vw - 28px) / 7)
+						5px calc((90vw - 28px) / 7) 5px calc((90vw - 28px) / 7)
+						5px calc((90vw - 28px) / 7);
 				}
 
 				#table {
