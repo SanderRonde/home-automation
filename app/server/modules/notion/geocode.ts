@@ -3,9 +3,9 @@ import {
 	SearchResponse,
 } from '@notionhq/client/build/src/api-endpoints';
 import { NOTION_GEOCODE_UPDATE_INTERVAL } from '../../lib/constants';
-import { asyncSetInterval, wait } from '../../lib/util';
+import { getAllForQuery, notionRequest } from './client';
+import { asyncSetInterval } from '../../lib/util';
 import { captureTime } from '../../lib/timer';
-import { getAllForQuery } from './client';
 import { Client } from '@notionhq/client';
 import { logTag } from '../../lib/logger';
 import { WithAuth } from './types';
@@ -97,24 +97,25 @@ async function performDatabaseGeocoding(
 				!textProp.rich_text[0].text.link?.url ||
 				textProp.rich_text[0].text.link?.url !== link
 			) {
-				await wait(400);
-				await client.pages.update({
-					page_id: row.id,
-					properties: {
-						[geocodingProp]: {
-							rich_text: [
-								{
-									type: 'text',
-									text: {
-										content: plainText,
-										link: {
-											url: link,
+				await notionRequest(async () => {
+					await client.pages.update({
+						page_id: row.id,
+						properties: {
+							[geocodingProp]: {
+								rich_text: [
+									{
+										type: 'text',
+										text: {
+											content: plainText,
+											link: {
+												url: link,
+											},
 										},
 									},
-								},
-							],
+								],
+							},
 						},
-					},
+					});
 				});
 				updates++;
 			}

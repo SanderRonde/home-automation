@@ -525,6 +525,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/async-lock@npm:^1":
+  version: 1.1.3
+  resolution: "@types/async-lock@npm:1.1.3"
+  checksum: 90692ad8ce6a3fe83cdd5d2e534deb322bb77d0cc9b825bd6df27214fe44468a16676c626907d81f3c2659298f8ca8c24f848d5c9b462e65fa0dec78e8288cd4
+  languageName: node
+  linkType: hard
+
 "@types/aws-lambda@npm:^0.0.33":
   version: 0.0.33
   resolution: "@types/aws-lambda@npm:0.0.33"
@@ -1488,6 +1495,13 @@ __metadata:
     semver: ^5.3.0
     shimmer: ^1.1.0
   checksum: f64cb835ad1a07d4ee800df6c1532f2a4f99e1c2a11da8e83c1bd4452bc01729a85552377bc120f144abc17be6c0bd0f740ebedfdf4b79ebd18844a51e307326
+  languageName: node
+  linkType: hard
+
+"async-lock@npm:^1.3.1":
+  version: 1.3.1
+  resolution: "async-lock@npm:1.3.1"
+  checksum: b11aca6d74431a42f9a3010ce7e55ac18c208f389433f55c07249ccd69dc63bc77fade28957d2d36212811d80b9c067a010341fb1e3d6a819b4fb74a122c4c27
   languageName: node
   linkType: hard
 
@@ -4214,6 +4228,7 @@ fsevents@~2.3.2:
     "@pm2/node-runtime-stats": ^0.3.2
     "@sanderronde/write-buffer": 1.0.3
     "@serialport/parser-readline": ^9.0.7
+    "@types/async-lock": ^1
     "@types/chalk": ^2.2.0
     "@types/cookie-parser": ^1.4.1
     "@types/dotenv": ^8.2.0
@@ -4234,6 +4249,7 @@ fsevents@~2.3.2:
     "@typescript-eslint/parser": ^5.9.0
     actions-on-google: ^2.14.0
     antd: ^4.15.6
+    async-lock: ^1.3.1
     body-parser: ^1.19.0
     castv2-player: ^2.1.0
     chalk: ^2.4.2

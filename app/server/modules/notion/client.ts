@@ -1,6 +1,8 @@
 import { splitIntoGroups, wait } from '../../lib/util';
 import { Client } from '@notionhq/client';
+import { logTag } from '../../lib/logger';
 import { getEnv } from '../../lib/io';
+import AsyncLock from 'async-lock';
 
 export function createClient(): Client | null {
 	const secret = getEnv('SECRET_NOTION_API_KEY');
@@ -32,6 +34,8 @@ export async function getAllForQuery<Q, R>(
 
 	let cursor;
 	do {
+		const lock = await acquireLock();
+
 		const ret: {
 			results: R[];
 			object: 'list';
@@ -45,10 +49,43 @@ export async function getAllForQuery<Q, R>(
 		}
 		results.push(...ret.results);
 		cursor = ret.next_cursor ?? undefined;
-		await wait(400);
+
+		lock.release();
 	} while (cursor);
 
 	return results;
+}
+
+const notionLock = new AsyncLock();
+async function acquireLock(): Promise<{
+	release(): void;
+}> {
+	return new Promise<{
+		release(): void;
+	}>((resolve) => {
+		void notionLock.acquire('notion', async (done) => {
+			await wait(400);
+			resolve({
+				release() {
+					done();
+				},
+			});
+		});
+	});
+}
+
+export async function notionRequest<R>(callback: () => Promise<R>): Promise<R> {
+	const lock = await acquireLock();
+	let result: R | null = null;
+	try {
+		result = await callback();
+	} catch (e) {
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+		logTag('notion-error', 'red', e.message);
+	} finally {
+		lock.release();
+	}
+	return result as R;
 }
 
 export async function splitUpQuery<
@@ -72,13 +109,14 @@ export async function splitUpQuery<
 	// Or list can be a max of 99 items, split up
 	const groups = splitIntoGroups(args.filter.or, 99);
 	for (const group of groups) {
-		await wait(400);
-		const ret = await fn({
-			...args,
-			filter: {
-				...args.filter,
-				or: group,
-			},
+		const ret = await notionRequest(async () => {
+			return await fn({
+				...args,
+				filter: {
+					...args.filter,
+					or: group,
+				},
+			});
 		});
 
 		if (ret.object !== 'list') {
