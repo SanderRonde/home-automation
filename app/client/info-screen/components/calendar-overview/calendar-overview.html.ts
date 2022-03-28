@@ -16,7 +16,8 @@ export const CalendarOverviewHTML = new TemplateFn<CalendarOverview>(
 				${new Array(
 					timeSpacedEvents.length +
 						(allDayEvents.length ? allDayEvents.length + 1 : 0) +
-						1 + 1
+						1 +
+						1
 				)
 					.fill(null)
 					.map((_, level) => {

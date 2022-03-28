@@ -17,7 +17,13 @@ export const CalendarOverviewCSS = new TemplateFn<CalendarOverview>(
 					max-height: 40vh;
 
 					display: grid;
-					grid-template-columns: 4px calc((90vw - 28px) / 7) 5px calc((90vw - 28px) / 7) 5px calc((90vw - 28px) / 7) 5px calc((90vw - 28px) / 7) 5px calc((90vw - 28px) / 7) 5px calc((90vw - 28px) / 7) 5px calc((90vw - 28px) / 7);
+					grid-template-columns: 4px calc((90vw - 28px) / 7) 5px calc(
+							(90vw - 28px) / 7
+						) 5px calc((90vw - 28px) / 7) 5px calc(
+							(90vw - 28px) / 7
+						) 5px calc((90vw - 28px) / 7) 5px calc(
+							(90vw - 28px) / 7
+						) 5px calc((90vw - 28px) / 7);
 				}
 
 				#table {
@@ -82,7 +88,8 @@ export const CalendarOverviewCSS = new TemplateFn<CalendarOverview>(
 					padding: 2px;
 				}
 
-				#table td, #table th {
+				#table td,
+				#table th {
 					word-wrap: break-word;
 					max-width: calc((90vw - 28px) / 7);
 				}

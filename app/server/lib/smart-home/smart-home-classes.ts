@@ -545,7 +545,7 @@ export function SmartHomeMixinColorSetting<
 						},
 					],
 					// Color control was secretly deprecated or something?
-					samsung: []
+					samsung: [],
 					// [
 					// 	{
 					// 		attribute: 'hue',
