@@ -124,6 +124,9 @@ export class XHR {
 						port: 80,
 						path: `${parsedURL.pathname}${parsedURL.search}`,
 						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+						},
 					},
 					(res) => {
 						let data = '';
@@ -153,6 +156,9 @@ export class XHR {
 						)
 					);
 				});
+			if (Object.values(params).length) {
+				req.write(JSON.stringify(params));
+			}
 			req.end();
 		});
 	}
