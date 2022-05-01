@@ -172,6 +172,144 @@ export const hexEffects = {
 			},
 		},
 	},
+	hexfadepurple: {
+		name: 'Hex fade from red to blue',
+		description: 'Fade from red to blue',
+		effect: {
+			name: 'fade',
+			params: {
+				from: '#ff0000',
+				to: '#0000ff',
+				direction: 'right',
+			},
+		},
+	},
+	hexfadeorange: {
+		name: 'Hex fade from red to yellow',
+		description: 'Fade from red to yellow',
+		effect: {
+			name: 'fade',
+			params: {
+				from: '#ff0000',
+				to: '#FFFF00',
+				direction: 'right',
+			},
+		},
+	},
+	hexfadeanimatedfromred: {
+		name: 'Hex fade from red to animating color',
+		description: 'Fade from red to animating color',
+		effect: {
+			name: 'fade',
+			params: {
+				from: '#ff0000',
+				to: '#FFFF00',
+				direction: 'right',
+				animate_to: 'true',
+				to_interval_min: '10000',
+				to_interval_max: '20000',
+			},
+		},
+	},
+	hexfadeanimatedtored: {
+		name: 'Hex fade to red from animating color',
+		description: 'Fade to red from animating color',
+		effect: {
+			name: 'fade',
+			params: {
+				from: '#ff0000',
+				to: '#F00F00',
+				direction: 'right',
+				animate_from: 'true',
+				from_interval_min: '10000',
+				from_interval_max: '20000',
+			},
+		},
+	},
+	hexfadeanimatedfromblue: {
+		name: 'Hex fade from blue to animating color',
+		description: 'Fade from blue to animating color',
+		effect: {
+			name: 'fade',
+			params: {
+				from: '#0000ff',
+				to: '#FFFF00',
+				direction: 'right',
+				animate_to: 'true',
+				to_interval_min: '10000',
+				to_interval_max: '20000',
+			},
+		},
+	},
+	hexfadeanimatedtoblue: {
+		name: 'Hex fade to blue from animating color',
+		description: 'Fade to blue from animating color',
+		effect: {
+			name: 'fade',
+			params: {
+				from: '#0000ff',
+				to: '#F00F00',
+				direction: 'right',
+				animate_from: 'true',
+				from_interval_min: '10000',
+				from_interval_max: '20000',
+			},
+		},
+	},
+	hexfadeanimateboth: {
+		name: 'Hex fade animating both sides',
+		description: 'Fade animating both sides',
+		effect: {
+			name: 'fade',
+			params: {
+				from: '#0000ff',
+				to: '#F00F00',
+				direction: 'right',
+				animate_from: 'true',
+				from_interval_min: '10000',
+				from_interval_max: '20000',
+				animate_to: 'true',
+				to_interval_min: '10000',
+				to_interval_max: '20000',
+			},
+		},
+	},
+	hexfadeanimatebothfast: {
+		name: 'Hex fade animating both sides (fast)',
+		description: 'Fade animating both sides (fast)',
+		effect: {
+			name: 'fade',
+			params: {
+				from: '#0000ff',
+				to: '#F00F00',
+				direction: 'right',
+				animate_from: 'true',
+				from_interval_min: '5000',
+				from_interval_max: '10000',
+				animate_to: 'true',
+				to_interval_min: '5000',
+				to_interval_max: '10000',
+			},
+		},
+	},
+	hexfadeanimatebothslow: {
+		name: 'Hex fade animating both sides (slow)',
+		description: 'Fade animating both sides (slow)',
+		effect: {
+			name: 'fade',
+			params: {
+				from: '#0000ff',
+				to: '#F00F00',
+				direction: 'right',
+				animate_from: 'true',
+				from_interval_min: '10000',
+				from_interval_max: '20000',
+				animate_to: 'true',
+				to_interval_min: '30000',
+				to_interval_max: '60000',
+			},
+		},
+	},
 } as {
 	[effectName: string]: {
 		name: string;
