@@ -747,12 +747,9 @@ export function SmartHomeMixinBrightness<
 							this._queryID as LED_NAMES
 						)
 					)?.getBrightness();
-					console.log('initial=', brightness);
 					if (!brightness) {
-						console.log('early return');
 						return [];
 					}
-					console.log('queryfn', brightness);
 					return this._getBrightnessQueryReturnType(brightness);
 				},
 			];
