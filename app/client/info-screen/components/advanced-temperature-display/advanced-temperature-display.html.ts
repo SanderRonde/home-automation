@@ -59,7 +59,7 @@ export const AdvancedTemperatureDisplayHTML =
 									src="/info-screen/images/weather/umbrella.png"
 								/>
 							<div id="chance-of-rain">
-							${`${props.chanceOfRain}%`}
+							${`${props.chanceOfRain.toFixed(2)}%`}
 						</div>
 						</div>
 				</div>
