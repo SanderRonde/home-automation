@@ -130,13 +130,23 @@ export class MessageHandler extends BotStateBase {
 	public static async match(
 		config: MatchParameters
 	): Promise<MatchResponse | undefined> {
-		return this._matchMatchables(
-			config,
-			await this._matchSelf(config),
-			...Object.values(await Bot.modules).map((meta) => {
-				return meta.Bot;
-			})
-		);
+		try {
+			return this._matchMatchables(
+				config,
+				await this._matchSelf(config),
+				...Object.values(await Bot.modules).map((meta) => {
+					return meta.Bot;
+				})
+			);
+		} catch (e) {
+			return {
+				end: 0,
+				response: {
+					type: RESPONSE_TYPE.TEXT,
+					text: 'Something went wrong',
+				},
+			};
+		}
 	}
 
 	public static async multiMatch({
