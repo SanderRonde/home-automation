@@ -8,6 +8,7 @@ import { asyncSetInterval } from '../../../lib/util';
 import chalk from 'chalk';
 
 export class EwelinkPower extends EWeLinkInittable {
+	private static _cooldown: NodeJS.Timeout | null = null;
 	private readonly _options: {
 		enableSync: boolean;
 	};
@@ -23,6 +24,17 @@ export class EwelinkPower extends EWeLinkInittable {
 		this._options = {
 			enableSync: options?.enableSync ?? true,
 		};
+	}
+
+	private static _pushCooldown(): void {
+		if (this._cooldown) {
+			clearTimeout(this._cooldown);
+			this._cooldown = null;
+		}
+		const cooldown = setTimeout(() => {
+			this._cooldown = null;
+		}, 2000);
+		this._cooldown = cooldown;
 	}
 
 	private _getKeyval(source: string) {
@@ -71,7 +83,7 @@ export class EwelinkPower extends EWeLinkInittable {
 	}
 
 	private _startTimer() {
-		asyncSetInterval(() => this._syncStatus(), 1000 * 10);
+		asyncSetInterval(() => this._syncStatus(), 1000 * 60);
 	}
 
 	public async init(): Promise<void> {
@@ -107,10 +119,12 @@ export class EwelinkPower extends EWeLinkInittable {
 	}
 
 	public async setPower(isOn: boolean): Promise<void> {
-		await this._eWeLinkConfig.connection.setDevicePowerState(
+		const setter = this._eWeLinkConfig.connection.setDevicePowerState(
 			this._eWeLinkConfig.device.deviceid,
 			isOn ? 'on' : 'off'
 		);
+		EwelinkPower._pushCooldown();
+		await setter;
 	}
 
 	public turnOn(): Promise<void> {
