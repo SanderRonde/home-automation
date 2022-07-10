@@ -7,6 +7,7 @@ import { MessageHandler, ResWrapper } from '../modules/bot/message';
 import { ChatState } from '../modules/bot/message/state-keeping';
 import { attachMessage, LogObj } from './logger';
 import { BotUtil } from './bot-util';
+import { wait } from './util';
 import chalk from 'chalk';
 
 export type MatchHandlerRet =
@@ -168,44 +169,68 @@ export abstract class Matchable extends BotUtil {
 					: 'Matching regex:',
 				chalk.bold(earliestMatch.matchText)
 			);
+			const getResponse = () => {
+				// eslint-disable-next-line no-async-promise-executor
+				return new Promise<MatchHandlerRet>(async (resolve) => {
+					try {
+						resolve(
+							await earliestMatch!.fn({
+								...config,
+								logObj: newLogObj,
+								match: earliestMatch!.match,
+								matchText: earliestMatch!.matchText,
+								ask(question: string) {
+									return config.bot.askQuestion(
+										question,
+										config.message,
+										config.res
+									);
+								},
+								askCancelable(question: string) {
+									let _cancel: () => void;
+									return {
+										prom: config.bot.askCancelable(
+											question,
+											config.message,
+											config.res,
+											(cancel) => {
+												_cancel = cancel;
+											}
+										),
+										cancel() {
+											_cancel?.();
+										},
+									};
+								},
+								sendText(text: string) {
+									return config.bot.sendText(
+										text,
+										config.message,
+										config.res
+									);
+								},
+							})
+						);
+					} catch (e) {
+						resolve({
+							type: RESPONSE_TYPE.TEXT,
+							text: 'Something went wrong',
+						});
+					}
+				});
+			};
+			const response = await Promise.race([
+				getResponse(),
+				wait(1000 * 10).then(() =>
+					Promise.resolve({
+						type: RESPONSE_TYPE.TEXT,
+						text: 'Action timed out',
+					})
+				),
+			]);
 			return {
 				end: earliestMatch.end,
-				response: await earliestMatch.fn({
-					...config,
-					logObj: newLogObj,
-					match: earliestMatch.match,
-					matchText: earliestMatch.matchText,
-					ask(question: string) {
-						return config.bot.askQuestion(
-							question,
-							config.message,
-							config.res
-						);
-					},
-					askCancelable(question: string) {
-						let _cancel: () => void;
-						return {
-							prom: config.bot.askCancelable(
-								question,
-								config.message,
-								config.res,
-								(cancel) => {
-									_cancel = cancel;
-								}
-							),
-							cancel() {
-								_cancel?.();
-							},
-						};
-					},
-					sendText(text: string) {
-						return config.bot.sendText(
-							text,
-							config.message,
-							config.res
-						);
-					},
-				}),
+				response,
 			};
 		}
 
