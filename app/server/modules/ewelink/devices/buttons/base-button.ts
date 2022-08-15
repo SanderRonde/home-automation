@@ -3,6 +3,7 @@ import {
 	EWeLinkSharedConfig,
 	EWeLinkUpdateMessage,
 } from '../shared';
+import { logTag } from '../../../../lib/logger';
 
 export enum ButtonTriggerType {
 	PRESS = 0,
@@ -50,6 +51,7 @@ export class EwelinkButtonBase extends EWeLinkInittable {
 				message.action === 'update' &&
 				message.deviceid === this._eWeLinkConfig.device.deviceid
 			) {
+				logTag('ewelink', 'cyan', 'Button triggered');
 				await this._onTrigger(message as EWeLinkButtonPressMessage);
 			}
 		});

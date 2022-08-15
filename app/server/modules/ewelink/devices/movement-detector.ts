@@ -1,5 +1,6 @@
 import { EWeLinkInittable, EWeLinkSharedConfig } from './shared';
 import { ExternalHandler } from '../../movement/external';
+import { logTag } from '../../../lib/logger';
 
 export class EwelinkMovement extends EWeLinkInittable {
 	private _movementExternal!: ExternalHandler;
@@ -23,6 +24,7 @@ export class EwelinkMovement extends EWeLinkInittable {
 				'deviceid' in data &&
 				data.deviceid === this._eWeLinkConfig.device.deviceid
 			) {
+				logTag('ewelink', 'cyan', 'Movement:', this._movementKey);
 				await this._movementExternal.reportMovement(this._movementKey);
 			}
 		});
