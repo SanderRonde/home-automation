@@ -23,7 +23,7 @@ export function initRoutes({ app, config }: ModuleConfig): void {
 	});
 
 	const router = createRouter(Auth, {});
-	router.all('/key', (req, res) => {
+	router.all('/key/:key', (req, res) => {
 		if (
 			'key' in req.params &&
 			authenticate((req.params as { key: string }).key)
