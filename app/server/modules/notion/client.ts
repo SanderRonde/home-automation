@@ -81,7 +81,7 @@ export async function notionRequest<R>(callback: () => Promise<R>): Promise<R> {
 		result = await callback();
 	} catch (e) {
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-		logTag('notion-error', 'red', e.message);
+		logTag('notion-error', 'red', e.message, e);
 	} finally {
 		lock.release();
 	}
