@@ -192,7 +192,6 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 			minute: '2-digit',
 		});
 		for (const event of this.props.events) {
-			console.log(event);
 			if (!event.start?.dateTime || !event.end?.dateTime) {
 				continue;
 			}

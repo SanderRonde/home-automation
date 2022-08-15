@@ -99,7 +99,6 @@ export class AdvancedTemperatureDisplay extends ConfigurableWebComponent<{
 			type: this.props.tempType,
 			period: this.props.period,
 		});
-		console.log('res=', response);
 		if (!response) {
 			return;
 		}

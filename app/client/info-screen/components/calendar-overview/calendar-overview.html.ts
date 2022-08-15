@@ -7,9 +7,7 @@ import { CalendarOverview } from './calendar-overview.js';
 
 export const CalendarOverviewHTML = new TemplateFn<CalendarOverview>(
 	function (html) {
-		console.log(this.getTimeSpacedEvents());
 		const allDayEvents = this.getFormattedAllDayEvents();
-		console.log(this.getTimeSpacedEvents());
 		const timeSpacedEvents = this.getTimeSpacedEvents();
 		return html`
 			<div id="container">
