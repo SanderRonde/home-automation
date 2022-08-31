@@ -26,7 +26,6 @@ export const hexEffects = {
 			name: 'random_colors',
 			params: {
 				wait_time: '1000',
-				saturation: '90',
 			},
 		},
 	},
@@ -37,7 +36,6 @@ export const hexEffects = {
 			name: 'random_colors',
 			params: {
 				wait_time: '1000',
-				saturation: '100',
 			},
 		},
 	},
@@ -48,7 +46,6 @@ export const hexEffects = {
 			name: 'random_colors',
 			params: {
 				wait_time: '1000',
-				saturation: '75',
 			},
 		},
 	},
@@ -59,7 +56,6 @@ export const hexEffects = {
 			name: 'random_colors',
 			params: {
 				wait_time: '250',
-				saturation: '90',
 			},
 		},
 	},
@@ -70,7 +66,6 @@ export const hexEffects = {
 			name: 'random_colors',
 			params: {
 				wait_time: '25',
-				saturation: '90',
 			},
 		},
 	},
