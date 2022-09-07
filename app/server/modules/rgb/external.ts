@@ -4,7 +4,7 @@ import { APIHandler, ColorTarget } from './api';
 import { LED_NAMES } from '../../lib/constants';
 import { getLed, RGBClient } from './clients';
 import { JoinedConfigs } from './types';
-import { Effects } from './arduino-api';
+import { Effects } from './ring-api';
 import { play } from './marked-audio';
 import { RGB } from '.';
 

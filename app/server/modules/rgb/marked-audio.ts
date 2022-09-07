@@ -185,17 +185,23 @@ export async function play(
 			setTimeout(() => {
 				void Promise.all(
 					ringClients.map((c) =>
-						c.setColor(
-							parsed.color.r,
-							parsed.color.g,
-							parsed.color.b
-						)
+						c
+							.setColor
+							// parsed.color.r,
+							// parsed.color.g,
+							// parsed.color.b
+							()
 					)
 				).then(() => {
 					timeouts.push(
 						setTimeout(() => {
 							void Promise.all(
-								ringClients.map((c) => c.setColor(0, 0, 0))
+								ringClients.map((c) =>
+									c
+										.setColor
+										// 0, 0, 0
+										()
+								)
 							);
 						}, Math.min(item.duration, 1) * 1000)
 					);
@@ -212,7 +218,14 @@ export async function play(
 	void prom.then(async () => {
 		timeouts.forEach((t) => clearTimeout(t));
 		await wait(1000);
-		await Promise.all(ringClients.map((c) => c.setColor(0, 0, 0)));
+		await Promise.all(
+			ringClients.map((c) =>
+				c
+					.setColor
+					// 0, 0, 0
+					()
+			)
+		);
 
 		await helpers.sendText('stopped');
 	});

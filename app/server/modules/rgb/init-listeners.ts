@@ -156,7 +156,7 @@ export function initListeners(): void {
 		);
 		await Promise.all(
 			Object.entries({
-				'room.leds.ceiling': LED_NAMES.RING_LEDS,
+				'room.leds.ring': LED_NAMES.RING_LEDS,
 				'room.leds.bed': LED_NAMES.BED_LEDS,
 				'room.leds.desk': LED_NAMES.DESK_LEDS,
 				'room.leds.wall': LED_NAMES.WALL_LEDS,
