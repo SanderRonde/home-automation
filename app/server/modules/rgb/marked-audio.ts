@@ -1,7 +1,7 @@
 import { MARKED_AUDIO_FOLDER } from '../../lib/constants';
 import { MatchHandlerParams } from '../../lib/bot-state';
-import { arduinoClients } from './clients';
 import { LogObj } from '../../lib/logger';
+import { ringClients } from './clients';
 import { Color } from '../../lib/color';
 import { wait } from '../../lib/util';
 import * as fs from 'fs-extra';
@@ -184,7 +184,7 @@ export async function play(
 		timeouts.push(
 			setTimeout(() => {
 				void Promise.all(
-					arduinoClients.map((c) =>
+					ringClients.map((c) =>
 						c.setColor(
 							parsed.color.r,
 							parsed.color.g,
@@ -195,7 +195,7 @@ export async function play(
 					timeouts.push(
 						setTimeout(() => {
 							void Promise.all(
-								arduinoClients.map((c) => c.setColor(0, 0, 0))
+								ringClients.map((c) => c.setColor(0, 0, 0))
 							);
 						}, Math.min(item.duration, 1) * 1000)
 					);
@@ -212,7 +212,7 @@ export async function play(
 	void prom.then(async () => {
 		timeouts.forEach((t) => clearTimeout(t));
 		await wait(1000);
-		await Promise.all(arduinoClients.map((c) => c.setColor(0, 0, 0)));
+		await Promise.all(ringClients.map((c) => c.setColor(0, 0, 0)));
 
 		await helpers.sendText('stopped');
 	});

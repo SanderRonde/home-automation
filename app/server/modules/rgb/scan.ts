@@ -1,22 +1,17 @@
 import {
-	ArduinoClient,
-	arduinoClients,
+	RingClient,
 	HexClient,
-	hexClients,
 	MagicHomeClient,
-	magicHomeClients,
-	setClients,
 	setHexClients,
 	setMagicHomeClients,
+	setRingClients,
 } from './clients';
 import { LogObj, logTag } from '../../lib/logger';
 import { Control, Discovery } from 'magic-home';
-import { tryConnectBoard } from './board';
 import { getEnv } from '../../lib/io';
 import chalk from 'chalk';
 
 let magicHomeTimer: NodeJS.Timeout | null = null;
-let arduinoTimer: NodeJS.Timeout | null = null;
 const RESCAN_TIME = 1000 * 60;
 
 export async function scanMagicHomeControllers(first = false): Promise<number> {
@@ -32,22 +27,19 @@ export async function scanMagicHomeControllers(first = false): Promise<number> {
 		.map((client) => new MagicHomeClient(client.control, client.address));
 
 	setMagicHomeClients(clients);
-	setClients([...magicHomeClients, ...arduinoClients, ...hexClients]);
 
 	return clients.length;
 }
 
-export async function scanArduinos(): Promise<number> {
-	if (arduinoClients.length === 0) {
-		const board = await tryConnectBoard(true);
-		if (board) {
-			arduinoClients.push(new ArduinoClient(board));
-		}
+export function scanRing(): number {
+	const ip = getEnv('MODULE_LED_RING_IP', false);
+	if (!ip) {
+		return 0;
 	}
 
-	setClients([...magicHomeClients, ...arduinoClients, ...hexClients]);
+	setRingClients([new RingClient(ip)]);
 
-	return arduinoClients.length;
+	return 1;
 }
 
 export function scanHex(): number {
@@ -57,7 +49,6 @@ export function scanHex(): number {
 	}
 
 	setHexClients([new HexClient(ip)]);
-	setClients([...magicHomeClients, ...arduinoClients, ...hexClients]);
 
 	return 1;
 }
@@ -66,12 +57,12 @@ export async function scanRGBControllers(
 	first = false,
 	logObj: LogObj = undefined
 ): Promise<number> {
-	const [magicHomeClients, arduinoClients, hexClients] = await Promise.all([
+	const [magicHomeClients, ringClients, hexClients] = await Promise.all([
 		scanMagicHomeControllers(first),
-		scanArduinos(),
+		scanRing(),
 		scanHex(),
 	]);
-	const clients = magicHomeClients + arduinoClients + hexClients;
+	const clients = magicHomeClients + ringClients + hexClients;
 
 	if (magicHomeClients === 0) {
 		if (magicHomeTimer !== null) {
@@ -81,18 +72,6 @@ export async function scanRGBControllers(
 			void scanMagicHomeControllers().then(() => {
 				if (magicHomeTimer !== null) {
 					clearInterval(magicHomeTimer);
-				}
-			});
-		}, RESCAN_TIME);
-	}
-	if (arduinoClients === 0) {
-		if (arduinoTimer !== null) {
-			clearInterval(arduinoTimer);
-		}
-		arduinoTimer = setTimeout(() => {
-			void scanArduinos().then(() => {
-				if (arduinoTimer !== null) {
-					clearInterval(arduinoTimer);
 				}
 			});
 		}, RESCAN_TIME);

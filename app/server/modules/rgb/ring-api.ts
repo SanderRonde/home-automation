@@ -13,7 +13,7 @@ import {
 import { NUM_LEDS } from '../../lib/constants';
 import { Color } from '../../lib/color';
 
-export type Effects = keyof typeof arduinoEffects;
+export type Effects = keyof typeof ringEffects;
 
 function getIntensityPercentage(percentage: number) {
 	return Math.round((percentage / 100) * 255);
@@ -55,6 +55,40 @@ function interpolate(
 	return stops;
 }
 
+function scale8(input: number, scale: number = input) {
+	return Math.round(input * (scale / 256));
+}
+
+function fadeToBlack(
+	color: Color,
+	steps: number,
+	{
+		start = true,
+		end = true,
+	}: {
+		start?: boolean;
+		end?: boolean;
+	} = {}
+) {
+	const stops: Color[] = [];
+	if (start) {
+		stops.push(color);
+	}
+
+	const delta = 256 / steps;
+	for (let i = 1; i < steps - 1; i++) {
+		const progress = delta * (steps - i);
+		stops.push(
+			new Color(scale8(progress), scale8(progress), scale8(progress))
+		);
+	}
+
+	if (end) {
+		stops.push(new Color(0, 0, 0));
+	}
+	return stops;
+}
+
 function flatten<V>(arr: V[][]): V[] {
 	const flattened: V[] = [];
 	for (const value of arr) {
@@ -68,7 +102,7 @@ function getRandomColor() {
 	return Color.fromHSV(h, 255, 255);
 }
 
-export const arduinoEffects = {
+export const ringEffects = {
 	rainbow: {
 		description: 'Forwards moving rainbow pattern',
 		effect: new LedEffect([
@@ -174,19 +208,15 @@ export const arduinoEffects = {
 							jumpDelay,
 						}),
 						background: new Color(0, 0, 0),
-						sequences: new Leds(NUM_LEDS)
-							.fillWithColors(
-								interpolate(
-									new Color(255, 255, 255),
-									new Color(0, 0, 0),
-									5,
-									{
-										start: true,
-										end: true,
-									}
-								)
-							)
-							.toSequence(),
+						sequences: [
+							new ColorSequence(
+								fadeToBlack(new Color(255, 255, 255), 5, {
+									start: true,
+									end: true,
+								}).reverse(),
+								1
+							),
+						],
 					})
 			)
 		),
@@ -288,7 +318,7 @@ export const arduinoEffects = {
 		]),
 	},
 	strobe: {
-		description: 'A bunch of moving chunks of colors',
+		description: 'A strobe',
 		effect: new LedEffect([
 			new LedSpecStep(
 				{
@@ -487,15 +517,10 @@ export const arduinoEffects = {
 				background: new Color(0, 0, 0),
 				sequences: new Leds(NUM_LEDS)
 					.fillWithColors(
-						interpolate(
-							new Color(0, 0, 0),
-							new Color(255, 0, 0),
-							5,
-							{
-								start: true,
-								end: true,
-							}
-						)
+						fadeToBlack(new Color(255, 0, 0), 5, {
+							start: true,
+							end: true,
+						}).reverse()
 					)
 					.toSequence(),
 			}),
@@ -512,10 +537,12 @@ export const arduinoEffects = {
 				background: new Color(0, 0, 0),
 				sequences: flatten(
 					new Array(90).fill('').map(() =>
-						interpolate(new Color(0, 0, 0), getRandomColor(), 10, {
+						fadeToBlack(getRandomColor(), 10, {
 							start: true,
 							end: true,
-						}).map((color) => new SingleColor(color))
+						})
+							.reverse()
+							.map((color) => new SingleColor(color))
 					)
 				),
 			}),
@@ -564,7 +591,7 @@ export const arduinoEffects = {
 		]),
 	},
 };
-const typeCheck = arduinoEffects as {
+const typeCheck = ringEffects as {
 	[key: string]: {
 		effect: LedEffect;
 		description: string;

@@ -419,6 +419,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@serialport/parser-delimiter@npm:10.3.0":
+  version: 10.3.0
+  resolution: "@serialport/parser-delimiter@npm:10.3.0"
+  checksum: c662485ba08940fb144f7f8da4b525d3d7f0ab4127ddd8e937a4d1a25ed1a8873e1bbe459b16017c17d583c96c69c81c64a30845309c11aa70fd9ec8f9e9d578
+  languageName: node
+  linkType: hard
+
 "@serialport/parser-delimiter@npm:^8.0.6":
   version: 8.0.6
   resolution: "@serialport/parser-delimiter@npm:8.0.6"
@@ -426,10 +433,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@serialport/parser-delimiter@npm:^9.0.7":
-  version: 9.0.7
-  resolution: "@serialport/parser-delimiter@npm:9.0.7"
-  checksum: d70da7a681473ccd6d5ab8d7ffa68831c0dec06cb6214f4b343e58ca106af8b02f18e8975569be9a17acb324baa2b00bf331a2b85814f746b16842f3851638d2
+"@serialport/parser-readline@npm:^10.3.0":
+  version: 10.3.0
+  resolution: "@serialport/parser-readline@npm:10.3.0"
+  dependencies:
+    "@serialport/parser-delimiter": 10.3.0
+  checksum: 3ae9fac58006962f26988702fbb23ab6de30f01a249500fea71afbe70c0ba0eab247c26bf13cc5439a762df0ba5cc68b28698093a9c02665dc7c600cc51ce3c0
   languageName: node
   linkType: hard
 
@@ -439,15 +448,6 @@ __metadata:
   dependencies:
     "@serialport/parser-delimiter": ^8.0.6
   checksum: ed2f075b1ec63dbb1eb0ea2a7a4d6bef9f0118867401485b4fac2aaf776ca3288d8fbc30397e382c49da3894cba377c2bf4f47eb28b93b5a9d0678d28521a4f6
-  languageName: node
-  linkType: hard
-
-"@serialport/parser-readline@npm:^9.0.7":
-  version: 9.0.7
-  resolution: "@serialport/parser-readline@npm:9.0.7"
-  dependencies:
-    "@serialport/parser-delimiter": ^9.0.7
-  checksum: 75bc1c107efa1297e92401060c35c319e82ec37ab0da5d41b328f33c5c0aa582ae07bd9781aece3e975fde22b348388aca2843bca1d0de672a422d82a9e0a4ca
   languageName: node
   linkType: hard
 
@@ -4227,7 +4227,7 @@ fsevents@~2.3.2:
     "@pm2/io": ^5.0.0
     "@pm2/node-runtime-stats": ^0.3.2
     "@sanderronde/write-buffer": 1.0.3
-    "@serialport/parser-readline": ^9.0.7
+    "@serialport/parser-readline": ^10.3.0
     "@types/async-lock": ^1
     "@types/chalk": ^2.2.0
     "@types/cookie-parser": ^1.4.1

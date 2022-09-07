@@ -38,7 +38,7 @@ export const enum LED_NAMES {
 	DESK_LEDS = 'DESK_LEDS',
 	COUCH_LEDS = 'COUCH_LEDS',
 	WALL_LEDS = 'WALL_LEDS',
-	CEILING_LEDS = 'CEILING_LEDS',
+	RING_LEDS = 'RING_LEDS',
 	HEX_LEDS = 'HEX_LEDS',
 }
 export const MAGIC_LEDS = [
@@ -47,7 +47,7 @@ export const MAGIC_LEDS = [
 	LED_NAMES.COUCH_LEDS,
 	LED_NAMES.WALL_LEDS,
 ];
-export const ARDUINO_LEDS = [LED_NAMES.CEILING_LEDS];
+export const RING_LEDS = [LED_NAMES.RING_LEDS];
 export const HEX_LEDS = [LED_NAMES.HEX_LEDS];
 export const LED_IPS: {
 	[key: string]: LED_NAMES;

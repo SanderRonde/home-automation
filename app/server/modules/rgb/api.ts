@@ -1,5 +1,5 @@
 import {
-	arduinoClients,
+	ringClients,
 	clients,
 	getLed,
 	hexClients,
@@ -16,7 +16,7 @@ import {
 	authAll,
 	auth,
 } from '../../lib/decorators';
-import { arduinoEffects, Effects } from './arduino-api';
+import { ringEffects, Effects } from './ring-api';
 import { LED_NAMES } from '../../lib/constants';
 import { scanRGBControllers } from './scan';
 import { colorList } from '../../lib/data';
@@ -61,7 +61,7 @@ export class APIHandler {
 			case 'ceilingled':
 			case 'ceiling-led':
 			case 'arduino':
-				return arduinoClients;
+				return ringClients;
 			case 'all':
 			case 'rgb':
 			case 'led':
@@ -274,7 +274,7 @@ export class APIHandler {
 	): Promise<boolean> {
 		const { effect: effectName } = body;
 		if (
-			!Object.prototype.hasOwnProperty.call(arduinoEffects, effectName) &&
+			!Object.prototype.hasOwnProperty.call(ringEffects, effectName) &&
 			!Object.prototype.hasOwnProperty.call(hexEffects, effectName)
 		) {
 			attachMessage(res, `Effect ${effectName} does not exist`);
@@ -283,9 +283,9 @@ export class APIHandler {
 			return false;
 		}
 
-		const isArduinoEffect = !!arduinoEffects[effectName];
+		const isArduinoEffect = !!ringEffects[effectName];
 		const effects = {
-			...arduinoEffects,
+			...ringEffects,
 			...hexEffects,
 		};
 		const effect = effects[effectName];
@@ -293,8 +293,8 @@ export class APIHandler {
 		try {
 			const strings = isArduinoEffect
 				? await Promise.all(
-						arduinoClients.map(async (c) => {
-							return c.board.runEffect(effect.effect, effectName);
+						ringClients.map(async (c) => {
+							return c.runEffect(effect.effect, effectName);
 						})
 				  )
 				: await Promise.all(
@@ -323,7 +323,7 @@ export class APIHandler {
 						await RGB.explainHook,
 						`Running effect ${effectName}`
 					),
-					`Updated ${arduinoClients.length} clients`
+					`Updated ${ringClients.length} clients`
 				),
 				`Sent string "${String(strings[0])}"`
 			);
@@ -333,7 +333,7 @@ export class APIHandler {
 			console.log(e);
 			attachMessage(
 				attachMessage(res, `Failed to run effect ${effectName}`),
-				`Updated ${arduinoClients.length} clients`
+				`Updated ${ringClients.length} clients`
 			);
 			res.status(400).write('Failed to run effect');
 			res.end();

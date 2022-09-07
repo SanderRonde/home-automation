@@ -70,6 +70,10 @@ export class Color implements Color {
 		};
 	}
 
+	public toJSONArray(): number[] {
+		return [this.r, this.g, this.b];
+	}
+
 	public clone(): Color {
 		return new Color(this.r, this.g, this.b);
 	}

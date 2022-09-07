@@ -1,5 +1,5 @@
 import {
-	ARDUINO_LEDS,
+	RING_LEDS,
 	HEX_LEDS,
 	LED_IPS,
 	LED_NAMES,
@@ -7,10 +7,10 @@ import {
 	NAME_MAP,
 } from '../../lib/constants';
 import { BuiltinPatterns, Control, State } from 'magic-home';
+import { LedEffect } from './effect-config';
 import { warning } from '../../lib/logger';
 import { Color } from '../../lib/color';
 import { XHR } from '../../lib/util';
-import { Board } from './board';
 import { RGB } from '.';
 
 export abstract class RGBClient {
@@ -42,6 +42,11 @@ export abstract class RGBClient {
 
 	public abstract address: string;
 	public abstract id: string;
+	/**
+	 * When false, toggle power using `/on` and `/off`, when
+	 * true, set color to white when using `/on`
+	 */
+	public abstract setWhiteForPower: boolean;
 
 	private async _stateChange(value: string) {
 		const name = this.address;
@@ -234,6 +239,7 @@ export abstract class RGBClient {
 
 export class HexClient extends RGBClient {
 	public id = LED_NAMES.HEX_LEDS;
+	public setWhiteForPower = false;
 
 	public constructor(public address: string) {
 		super();
@@ -386,6 +392,7 @@ export class MagicHomeClient extends RGBClient {
 		}
 		return name;
 	})();
+	public setWhiteForPower = true;
 
 	public constructor(
 		private readonly _control: Control,
@@ -626,43 +633,28 @@ export class MagicHomeClient extends RGBClient {
 	}
 }
 
-export class ArduinoClient extends RGBClient {
-	public address: string;
+export class RingClient extends RGBClient {
+	public id = LED_NAMES.RING_LEDS;
+	public setWhiteForPower = false;
 
-	public id = LED_NAMES.CEILING_LEDS;
-
-	public constructor(public board: Board) {
+	public constructor(public address: string) {
 		super();
-		this.address = board.name;
-		board.client = this;
-	}
-
-	private _sendSuccess(
-		callback?: (err: Error | null, success: boolean) => void
-	) {
-		callback?.(null, true);
-		return true;
-	}
-
-	private async _setSolidColor(
-		red: number,
-		green: number,
-		blue: number,
-		brightness = 100,
-		callback?: (err: Error | null, success: boolean) => void
-	) {
-		await this._turnedOn();
-		await this.board.setSolid({
-			r: red,
-			g: green,
-			b: blue,
-		});
-		this.updateStateColor(new Color(red, green, blue), brightness);
-		return this._sendSuccess(callback);
 	}
 
 	public async isOn(): Promise<boolean> {
-		return Promise.resolve(this._lastState.type !== 'off');
+		const assumedState = this._lastState.type !== 'off';
+		void (async () => {
+			const response = (await XHR.post(
+				`http://${this.address}/is_on`,
+				`ring-${this.address}-is-on`
+			)) as EncodedString<{ enabled: boolean }>;
+			const isEnabled = JSON.parse(response).enabled;
+
+			if (assumedState !== isEnabled) {
+				this._updateStatePower(isEnabled);
+			}
+		})();
+		return Promise.resolve(assumedState);
 	}
 
 	public async getColor(): Promise<Color | null> {
@@ -672,119 +664,91 @@ export class ArduinoClient extends RGBClient {
 		return Promise.resolve(null);
 	}
 
-	public ping(): Promise<boolean> {
-		return this.board.ping();
+	public setColor(): Promise<boolean> {
+		throw new Error('Not implemented');
 	}
 
-	public async setColor(
-		red: number,
-		green: number,
-		blue: number,
-		callback?: (err: Error | null, success: boolean) => void
-	): Promise<boolean> {
-		return this._setSolidColor(
-			red,
-			green,
-			blue,
-			(await this.getBrightness()) || 100,
-			callback
-		);
+	public setBrightness(): Promise<boolean> {
+		throw new Error('Not implemented');
 	}
 
-	public async setBrightness(
-		brightness: number,
-		callback?: (err: Error | null, success: boolean) => void
-	): Promise<boolean> {
-		const color =
-			this._lastState.type === 'fullColor'
-				? this._lastState.color
-				: new Color(255);
-		return this._setSolidColor(
-			color.r,
-			color.g,
-			color.b,
-			brightness,
-			callback
-		);
+	public setColorAndWarmWhite(): Promise<boolean> {
+		throw new Error('Not implemented');
 	}
 
-	public async setColorAndWarmWhite(
-		red: number,
-		green: number,
-		blue: number,
-		_ww: number,
-		callback?: (err: Error | null, success: boolean) => void
-	): Promise<boolean> {
-		return this._setSolidColor(red, green, blue, 100, callback);
-	}
-
-	public async setColorWithBrightness(
-		red: number,
-		green: number,
-		blue: number,
-		brightness: number,
-		callback?: (err: Error | null, success: boolean) => void
-	): Promise<boolean> {
-		return this._setSolidColor(red, green, blue, brightness, callback);
+	public setColorWithBrightness(): Promise<boolean> {
+		throw new Error('Not implemented');
 	}
 
 	public setPattern(): Promise<boolean> {
 		throw new Error('Not implemented');
 	}
 
-	public async setPower(
-		on: boolean,
-		callback?: () => void
-	): Promise<boolean> {
+	public async setPower(on: boolean): Promise<boolean> {
 		if (on) {
 			await this._turnedOn();
-			return this.turnOn(callback);
+			await this.turnOn();
 		} else {
 			await this._turnedOff();
-			return this.turnOff(callback);
+			await this.turnOff();
 		}
+		return Promise.resolve(true);
 	}
 
-	public async setWarmWhite(
-		ww: number,
-		callback?: (err: Error | null, success: boolean) => void
-	): Promise<boolean> {
-		return this._setSolidColor(ww, ww, ww, 100, callback);
+	public setWarmWhite(): Promise<boolean> {
+		throw new Error('Not implemented');
 	}
 
-	public async turnOff(callback?: () => void): Promise<boolean> {
-		await this._turnedOff();
-		this.board.setModeOff();
-		return this._sendSuccess(callback);
-	}
-
-	public async turnOn(callback?: () => void): Promise<boolean> {
+	public async turnOff(): Promise<boolean> {
+		await XHR.post(
+			`http://${this.address}/off`,
+			`ring-${this.address}-off`
+		);
 		await this._turnedOn();
-		return this._sendSuccess(callback);
+		return Promise.resolve(true);
+	}
+
+	public async turnOn(): Promise<boolean> {
+		await XHR.post(`http://${this.address}/on`, `ring-${this.address}-on`);
+		await this._turnedOn();
+		return Promise.resolve(true);
+	}
+
+	public async runEffect(
+		effect: LedEffect,
+		effectName: string
+	): Promise<boolean> {
+		await XHR.post(
+			`http://${this.address}/effects/steps`,
+			`ring-${this.address}-effect`,
+			{
+				data: JSON.stringify(effect.toJSON()),
+			}
+		);
+		this.updateStateEffect(effectName);
+		return Promise.resolve(true);
 	}
 }
 
 // eslint-disable-next-line prefer-const
 export let magicHomeClients: MagicHomeClient[] = [];
-export const arduinoClients: ArduinoClient[] = [];
+export let ringClients: RingClient[] = [];
 // eslint-disable-next-line prefer-const
 export let hexClients: HexClient[] = [];
 // eslint-disable-next-line prefer-const
 export let clients: RGBClient[] = [];
 
-export const arduinoBoards: Board[] = [];
-
 export function getLed(
 	name: LED_NAMES
-): MagicHomeClient | ArduinoClient | HexClient | null {
+): MagicHomeClient | RingClient | HexClient | null {
 	if (MAGIC_LEDS.includes(name)) {
 		return (
 			magicHomeClients.filter((client) => {
 				return LED_IPS[client.address] === name;
 			})[0] || null
 		);
-	} else if (ARDUINO_LEDS.includes(name)) {
-		return arduinoClients[0] || null;
+	} else if (RING_LEDS.includes(name)) {
+		return ringClients[0] || null;
 	} else if (HEX_LEDS.includes(name)) {
 		return hexClients[0] || null;
 	}
@@ -792,15 +756,22 @@ export function getLed(
 }
 
 export function setClients(
-	newClients: (MagicHomeClient | ArduinoClient | HexClient)[]
+	newClients: (MagicHomeClient | RingClient | HexClient)[]
 ): void {
 	clients = newClients;
 }
 
 export function setMagicHomeClients(newClients: MagicHomeClient[]): void {
 	magicHomeClients = newClients;
+	setClients([...magicHomeClients, ...ringClients, ...hexClients]);
 }
 
 export function setHexClients(newClients: HexClient[]): void {
 	hexClients = newClients;
+	setClients([...magicHomeClients, ...ringClients, ...hexClients]);
+}
+
+export function setRingClients(newClients: RingClient[]): void {
+	ringClients = newClients;
+	setClients([...magicHomeClients, ...ringClients, ...hexClients]);
 }

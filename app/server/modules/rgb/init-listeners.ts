@@ -28,7 +28,7 @@ async function switchLed(name: LED_NAMES, value: string, logObj: LogObj) {
 			'keyval listener',
 			logObj
 		);
-		if ([LED_NAMES.HEX_LEDS].includes(name)) {
+		if (client.setWhiteForPower) {
 			return client.turnOn();
 		}
 		return client.setColor(255, 255, 255);
@@ -156,7 +156,7 @@ export function initListeners(): void {
 		);
 		await Promise.all(
 			Object.entries({
-				'room.leds.ceiling': LED_NAMES.CEILING_LEDS,
+				'room.leds.ceiling': LED_NAMES.RING_LEDS,
 				'room.leds.bed': LED_NAMES.BED_LEDS,
 				'room.leds.desk': LED_NAMES.DESK_LEDS,
 				'room.leds.wall': LED_NAMES.WALL_LEDS,

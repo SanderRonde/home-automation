@@ -1,14 +1,14 @@
-import { arduinoClients, getLed, magicHomeClients } from './clients';
+import { ringClients, getLed, magicHomeClients } from './clients';
 import { ArduinoConfig, DIR, JoinedConfigs } from './types';
-import { scanArduinos, scanRGBControllers } from './scan';
 import { attachMessage, logTag } from '../../lib/logger';
-import { arduinoEffects, Effects } from './arduino-api';
 import { arrToObj, asyncTimeout } from '../../lib/util';
 import { BotStateBase } from '../../lib/bot-state';
+import { ringEffects, Effects } from './ring-api';
 import { MatchParameters } from '../bot/message';
 import { ColorTarget, HEX_REGEX } from './api';
 import { ExternalHandler } from './external';
 import { MatchResponse } from '../bot/types';
+import { scanRGBControllers } from './scan';
 import { getLedFromName } from './helpers';
 import { colorList } from '../../lib/data';
 import { Color } from '../../lib/color';
@@ -58,10 +58,10 @@ export class Bot extends BotStateBase {
 		'/restart': 'Restart the server',
 		'/marked': 'Play marked audio file',
 		...arrToObj(
-			[...Object.keys(arduinoEffects), ...Object.keys(hexEffects)].map(
+			[...Object.keys(ringEffects), ...Object.keys(hexEffects)].map(
 				(key) => {
 					const value =
-						arduinoEffects[key as Effects] ||
+						ringEffects[key as Effects] ||
 						hexEffects[key as keyof typeof hexEffects];
 					return [`/effect${key}`, `Effect. ${value.description}`];
 				}
@@ -140,7 +140,7 @@ export class Bot extends BotStateBase {
 					if (
 						(
 							await Promise.all(
-								arduinoClients.map((c) =>
+								ringClients.map((c) =>
 									targetState === 'on'
 										? c.turnOn()
 										: c.turnOff()
@@ -150,11 +150,11 @@ export class Bot extends BotStateBase {
 					) {
 						attachMessage(
 							logObj,
-							`Turned ${targetState} ${arduinoClients.length} arduino clients`
+							`Turned ${targetState} ${ringClients.length} arduino clients`
 						);
-						return `Turned ${targetState} ${arduinoClients.length} arduino clients`;
+						return `Turned ${targetState} ${ringClients.length} arduino clients`;
 					} else {
-						return `Failed to turn ${targetState} ${arduinoClients.length} arduino clients`;
+						return `Failed to turn ${targetState} ${ringClients.length} arduino clients`;
 					}
 				}
 			);
@@ -270,7 +270,7 @@ export class Bot extends BotStateBase {
 				async ({ logObj, match, matchText }) => {
 					const effectName = match[1] as Effects;
 					if (
-						!(effectName in arduinoEffects) &&
+						!(effectName in ringEffects) &&
 						!(effectName in hexEffects)
 					) {
 						return `Effect "${effectName}" does not exist`;
@@ -283,7 +283,7 @@ export class Bot extends BotStateBase {
 						).effect(effectName, {})
 					) {
 						return `Started effect "${effectName}" with config ${JSON.stringify(
-							arduinoEffects[effectName] ||
+							ringEffects[effectName] ||
 								hexEffects[
 									effectName as keyof typeof hexEffects
 								]
@@ -300,7 +300,7 @@ export class Bot extends BotStateBase {
 					if (match?.[1]) {
 						const effectName = `s${match[1]}` as Effects;
 						if (
-							!(effectName in arduinoEffects) &&
+							!(effectName in ringEffects) &&
 							!(effectName in hexEffects)
 						) {
 							return `Effect "${effectName}" does not exist`;
@@ -313,7 +313,7 @@ export class Bot extends BotStateBase {
 							).effect(effectName, {})
 						) {
 							return `Started effect "${effectName}" with config ${JSON.stringify(
-								arduinoEffects[effectName] ||
+								ringEffects[effectName] ||
 									hexEffects[
 										effectName as keyof typeof hexEffects
 									]
@@ -324,12 +324,12 @@ export class Bot extends BotStateBase {
 					}
 
 					return `Effects are:\n${[
-						...Object.keys(arduinoEffects),
+						...Object.keys(ringEffects),
 						...Object.keys(hexEffects),
 					]
 						.map((key) => {
 							const value =
-								arduinoEffects[key as Effects] ||
+								ringEffects[key as Effects] ||
 								hexEffects[key as keyof typeof hexEffects];
 							return `/effect${key} - ${value.description}`;
 						})
@@ -350,11 +350,6 @@ export class Bot extends BotStateBase {
 							.join(', ')}. Texts: ${match.texts.join(', ')}}`;
 					})
 					.join('\n')}`;
-			});
-			mm('/reconnect', /reconnect( to arduino)?/, async () => {
-				logTag('self', 'red', 'Reconnecting to arduino');
-				const amount = await scanArduinos();
-				return `Found ${amount} arduino clients`;
 			});
 			mm('/restart', /restart( yourself)?/, /reboot( yourself)?/, () => {
 				logTag('self', 'red', 'Restarting self');

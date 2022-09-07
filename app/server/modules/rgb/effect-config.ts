@@ -1,33 +1,15 @@
 import { Color } from '../../lib/color';
 
-const BYTE_BITS = 8;
-const MAX_BYTE_VAL = Math.pow(2, BYTE_BITS) - 1;
-
 export enum MOVING_STATUS {
 	OFF = 0,
 	FORWARDS = 1,
 	BACKWARDS = 2,
 }
 
-function flatten<V>(arr: V[][]): V[] {
-	const resultArr: V[] = [];
-	for (const value of arr) {
-		resultArr.push(...value);
-	}
-	return resultArr;
-}
-
 function assert(condition: boolean, message: string) {
 	if (!condition) {
 		throw new Error(message);
 	}
-}
-
-function shortToBytes(short: number) {
-	return [
-		(short & (MAX_BYTE_VAL << BYTE_BITS)) >> BYTE_BITS,
-		short & MAX_BYTE_VAL,
-	];
 }
 
 export class Leds {
@@ -72,7 +54,11 @@ export class Leds {
 	}
 }
 
-export class MoveData {
+interface JSONAble {
+	toJSON(): unknown;
+}
+
+export class MoveData implements JSONAble {
 	public static readonly MOVING_STATUS = MOVING_STATUS;
 
 	public constructor(
@@ -112,22 +98,20 @@ export class MoveData {
 		}
 	) {}
 
-	public toBytes(): number[] {
-		return [
-			this._moving,
-			...shortToBytes(this._movingConfig.jumpSize),
-			...shortToBytes(this._movingConfig.jumpDelay),
-			~~this._alternateConfig.alternate,
-			...shortToBytes(
-				this._alternateConfig.alternate
-					? this._alternateConfig.alternateDelay
-					: 0
-			),
-		];
+	public toJSON(): unknown {
+		return {
+			move_status: this._moving,
+			jump_size: this._movingConfig.jumpSize,
+			jump_delay: this._movingConfig.jumpDelay,
+			alternate: ~~this._alternateConfig.alternate,
+			alternate_delay: this._alternateConfig.alternate
+				? this._alternateConfig.alternateDelay
+				: 0,
+		};
 	}
 }
 
-export class ColorSequence {
+export class ColorSequence implements JSONAble {
 	public colors: Color[];
 
 	public get length(): number {
@@ -141,21 +125,26 @@ export class ColorSequence {
 		this.colors = Array.isArray(colors) ? colors : [colors];
 	}
 
-	public toBytes(): number[] {
-		return [
-			ColorType.COLOR_SEQUENCE,
-			...shortToBytes(this.colors.length),
-			...shortToBytes(this.repetitions),
-			...flatten<number>(this.colors.map((color) => color.toBytes())),
-		];
+	public toJSON(): unknown {
+		return {
+			type: ColorType.COLOR_SEQUENCE,
+			num_colors: this.colors.length,
+			repetitions: this.repetitions,
+			colors: this.colors.map((c) => c.toJSONArray()),
+		};
 	}
 }
 
-export class TransparentSequence {
+export class TransparentSequence implements JSONAble {
 	public constructor(public length: number) {}
 
-	public toBytes(): number[] {
-		return [ColorType.TRANSPARENT, ...shortToBytes(this.length)];
+	public toJSON(): unknown {
+		return {
+			type: ColorType.TRANSPARENT,
+			color: {
+				size: this.length,
+			},
+		};
 	}
 }
 
@@ -167,36 +156,41 @@ export enum ColorType {
 	REPEAT = 4,
 }
 
-export class SingleColor {
+export class SingleColor implements JSONAble {
 	public get length(): number {
 		return 1;
 	}
 
 	public constructor(public color: Color) {}
 
-	public toBytes(): number[] {
-		return [ColorType.SINGLE_COLOR, ...this.color.toBytes()];
+	public toJSON(): unknown {
+		return {
+			type: ColorType.SINGLE_COLOR,
+			color: this.color.toJSONArray(),
+		};
 	}
 }
 
-export class RandomColor {
+export class RandomColor implements JSONAble {
 	public constructor(
 		public size: number,
 		public randomTime: number,
 		public randomEveryTime: boolean
 	) {}
 
-	public toBytes(): number[] {
-		return [
-			ColorType.RANDOM_COLOR,
-			~~this.randomEveryTime,
-			...shortToBytes(this.randomTime),
-			...shortToBytes(this.size),
-		];
+	public toJSON(): unknown {
+		return {
+			type: ColorType.RANDOM_COLOR,
+			color: {
+				random_every_time: this.randomEveryTime,
+				random_time: this.randomTime,
+				size: this.size,
+			},
+		};
 	}
 }
 
-export class Repeat {
+export class Repeat implements JSONAble {
 	public constructor(
 		public repetitions: number,
 		public sequence:
@@ -206,16 +200,16 @@ export class Repeat {
 			| TransparentSequence
 	) {}
 
-	public toBytes(): number[] {
-		return [
-			ColorType.REPEAT,
-			...shortToBytes(this.repetitions),
-			...this.sequence.toBytes(),
-		];
+	public toJSON(): unknown {
+		return {
+			type: ColorType.REPEAT,
+			repetitions: this.repetitions,
+			sequence: this.sequence.toJSON(),
+		};
 	}
 }
 
-export class LedSpecStep {
+export class LedSpecStep implements JSONAble {
 	public moveData: MoveData;
 	public background: Color;
 	public sequences: (
@@ -249,45 +243,39 @@ export class LedSpecStep {
 		this.sequences = sequences;
 	}
 
-	public toBytes(): number[] {
-		return [
-			...shortToBytes(this.delayUntilNext),
-			...this.moveData.toBytes(),
-			...this.background.toBytes(),
-			...shortToBytes(
-				this.sequences
-					.map((sequence) => {
-						if (sequence instanceof Repeat) {
-							return sequence.repetitions;
-						}
-						return 1;
-					})
-					.reduce((p, c) => p + c, 0)
-			),
-			...flatten(this.sequences.map((sequence) => sequence.toBytes())),
-		];
+	public toJSON(): unknown {
+		return {
+			delay_until_next: this.delayUntilNext,
+			move_data: this.moveData.toJSON(),
+			background: this.background.toJSONArray(),
+			num_sequences: this.sequences
+				.map((sequence) => {
+					if (sequence instanceof Repeat) {
+						return sequence.repetitions;
+					}
+					return 1;
+				})
+				.reduce((p, c) => p + c, 0),
+			sequences: this.sequences.map((s) => s.toJSON()),
+		};
 	}
 }
 
-export class LedEffect {
+export class LedEffect implements JSONAble {
 	public constructor(public effect: LedSpecStep[]) {}
 
-	public toBytes(): number[] {
-		return [
-			...shortToBytes(this.effect.length),
-			...flatten(
-				this.effect.map((step) => {
-					return step.toBytes();
-				})
-			),
-		];
+	public toJSON(): unknown {
+		return {
+			num_steps: this.effect.length,
+			steps: this.effect.map((e) => e.toJSON()),
+		};
 	}
 }
 
 export class LedSpec {
 	public constructor(public steps: LedEffect) {}
 
-	public toBytes(): number[] {
-		return ['<'.charCodeAt(0), ...this.steps.toBytes(), '>'.charCodeAt(0)];
+	public toJSON(): unknown {
+		return this.steps.toJSON();
 	}
 }
