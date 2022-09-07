@@ -69,7 +69,7 @@ export const NAME_MAP = {
 		'room.lights.nightstand',
 		'room.leds.wakelight',
 	],
-	[LED_DEVICE_NAME]: ['room.leds.ceiling'],
+	[LED_DEVICE_NAME]: ['room.leds.ring'],
 };
 if (getEnv('MODULE_LED_HEX_IP', false)) {
 	NAME_MAP[getEnv('MODULE_LED_HEX_IP', false) as string] = [
