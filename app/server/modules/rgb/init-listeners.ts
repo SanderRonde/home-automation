@@ -29,9 +29,9 @@ async function switchLed(name: LED_NAMES, value: string, logObj: LogObj) {
 			logObj
 		);
 		if (client.setWhiteForPower) {
-			return client.turnOn();
+			return client.setColor(255, 255, 255);
 		}
-		return client.setColor(255, 255, 255);
+		return client.turnOn();
 	} else if (value === '0') {
 		attachSourcedMessage(
 			logObj,
