@@ -148,7 +148,7 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 				// Check if there is already an event that overlaps on this level
 				let levelTaken = false;
 				for (let j = startIndex; j < endIndex + 1; j++) {
-					if (formattedEvents.get(days[j])!.has(i)) {
+					if (formattedEvents.get(days[j])?.has(i)) {
 						levelTaken = true;
 						break;
 					}
