@@ -141,14 +141,16 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 				new Date(event.start?.date),
 				endsOfDays
 			);
-			const endIndex =
-				this.getDayIndex(new Date(event.end?.date), endsOfDays) - 1;
+			const endIndex = Math.min(
+				endsOfDays.length - 1,
+				this.getDayIndex(new Date(event.end?.date), endsOfDays) - 1
+			);
 
 			for (let i = 0; ; i++) {
 				// Check if there is already an event that overlaps on this level
 				let levelTaken = false;
 				for (let j = startIndex; j < endIndex + 1; j++) {
-					if (formattedEvents.get(days[j])?.has(i)) {
+					if (formattedEvents.get(days[j])!.has(i)) {
 						levelTaken = true;
 						break;
 					}
