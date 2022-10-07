@@ -20,9 +20,6 @@ function getGeocodableProperties(
 	}
 
 	const properties = Object.values(database.properties);
-	if (!properties.some((prop) => prop.type === 'last_edited_time')) {
-		return null;
-	}
 	const props: string[] = [];
 	for (const property of properties) {
 		if (property.type !== 'rich_text') {
@@ -33,7 +30,18 @@ function getGeocodableProperties(
 		}
 	}
 
-	return props.length > 0 ? props : null;
+	if (props.length === 0) {
+		return null;
+	}
+	if (!properties.some((prop) => prop.type === 'last_edited_time')) {
+		logTag(
+			'notion-geocode',
+			'red',
+			`Not geocoding database ${database.url} because column "last_edited_time" is missing`
+		);
+		return null;
+	}
+	return props;
 }
 
 async function performDatabaseGeocoding(
