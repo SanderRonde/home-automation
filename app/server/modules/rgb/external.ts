@@ -4,8 +4,8 @@ import { APIHandler, ColorTarget } from './api';
 import { LED_NAMES } from '../../lib/constants';
 import { getLed, RGBClient } from './clients';
 import { JoinedConfigs } from './types';
-import { Effects } from './ring-api';
 import { play } from './marked-audio';
+import { Effects } from './ring-api';
 import { RGB } from '.';
 
 export class ExternalHandler extends createExternalClass(true) {
