@@ -590,24 +590,24 @@ export function SmartHomeMixinColorSetting<
 			const getGoogleSetColor = () => {
 				// We ignore the temperature setting because we don't pass
 				// that availability
-				if (
-					'spectrumRGB' in params.color ||
-					'spectrumRgb' in params.color
-				) {
-					const rgbColor =
-						params.color['spectrumRGB'] ||
-						params.color['spectrumRgb'];
+				const rgbColor =
+					'spectrumRGB' in params.color
+						? params.color.spectrumRGB
+						: 'spectrumRgb' in params.color
+						? params.color.spectrumRgb
+						: null;
+				if (rgbColor) {
 					return Color.fromHex(
 						`#${pad(rgbColor.toString(16), 6, '0')}`
 					);
 				}
-				if (
-					'spectrumHSV' in params.color ||
-					'spectrumHsv' in params.color
-				) {
-					const hsvColor =
-						params.color['spectrumHSV'] ||
-						params.color['spectrumHsv'];
+				const hsvColor =
+					'spectrumHSV' in params.color
+						? params.color.spectrumHSV
+						: 'spectrumHsv' in params.color
+						? params.color.spectrumHsv
+						: null;
+				if (hsvColor) {
 					return Color.fromHSV(
 						hsvColor.hue || 255,
 						hsvColor.saturation || 255,

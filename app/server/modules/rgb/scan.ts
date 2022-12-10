@@ -8,6 +8,7 @@ import {
 } from './clients';
 import { LogObj, logTag } from '../../lib/logger';
 import { Control, Discovery } from 'magic-home';
+import { LED_NAMES } from '../../lib/constants';
 import { getEnv } from '../../lib/io';
 import chalk from 'chalk';
 
@@ -43,14 +44,18 @@ export function scanRing(): number {
 }
 
 export function scanHex(): number {
-	const ip = getEnv('MODULE_LED_HEX_IP', false);
-	if (!ip) {
-		return 0;
+	const clients: HexClient[] = [];
+	const bedIp = getEnv('MODULE_LED_BED_HEX_IP', false);
+	if (bedIp) {
+		clients.push(new HexClient(bedIp, LED_NAMES.BED_HEX_LEDS));
+	}
+	const deskIp = getEnv('MODULE_LED_DESK_HEX_IP', false);
+	if (deskIp) {
+		clients.push(new HexClient(deskIp, LED_NAMES.DESK_HEX_LEDS));
 	}
 
-	setHexClients([new HexClient(ip)]);
-
-	return 1;
+	setHexClients(clients);
+	return clients.length;
 }
 
 export async function scanRGBControllers(

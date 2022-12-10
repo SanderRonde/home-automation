@@ -161,7 +161,8 @@ export function initListeners(): void {
 				'room.leds.desk': LED_NAMES.DESK_LEDS,
 				'room.leds.wall': LED_NAMES.WALL_LEDS,
 				'room.leds.couch': LED_NAMES.COUCH_LEDS,
-				'room.leds.hexes': LED_NAMES.HEX_LEDS,
+				'room.leds.hexBed': LED_NAMES.BED_HEX_LEDS,
+				'room.leds.hexDesk': LED_NAMES.DESK_HEX_LEDS,
 			}).map(async ([key, ledName]) => {
 				await external.onChange(key, async (value, _key, logObj) => {
 					await switchLed(ledName, value, logObj);

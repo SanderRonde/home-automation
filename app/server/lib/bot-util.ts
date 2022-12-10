@@ -53,7 +53,7 @@ export abstract class BotUtil {
 		return arr1;
 	}
 
-	public static mergeObj<T1>(config: T1, extra: Object): T1 {
+	public static mergeObj<T1 extends object>(config: T1, extra: Object): T1 {
 		const final = { ...config };
 		for (const key in extra) {
 			if (

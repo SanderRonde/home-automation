@@ -238,10 +238,9 @@ export abstract class RGBClient {
 }
 
 export class HexClient extends RGBClient {
-	public id = LED_NAMES.HEX_LEDS;
 	public setWhiteForPower = false;
 
-	public constructor(public address: string) {
+	public constructor(public address: string, public id: LED_NAMES) {
 		super();
 	}
 

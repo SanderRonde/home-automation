@@ -37,7 +37,10 @@ function getGeocodableProperties(
 		logTag(
 			'notion-geocode',
 			'red',
-			`Not geocoding database ${database.url} because column "last_edited_time" is missing`
+			`Not geocoding database ${
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/restrict-template-expressions, @typescript-eslint/no-explicit-any
+				(database as any).url
+			} because column "last_edited_time" is missing`
 		);
 		return null;
 	}
@@ -51,6 +54,9 @@ async function performDatabaseGeocoding(
 	forAll: boolean = false
 ) {
 	const timer = captureTime();
+	if (!('properties' in database)) {
+		return;
+	}
 	const lastEditedProp = Object.values(database.properties).find(
 		(prop: { type: string }) => prop.type === 'last_edited_time'
 	) as {
@@ -90,6 +96,9 @@ async function performDatabaseGeocoding(
 	let updates: number = 0;
 	for (const row of contents) {
 		for (const geocodingProp of geocodingProps) {
+			if (!('properties' in row)) {
+				continue;
+			}
 			const textProp = row.properties[geocodingProp];
 			if (
 				textProp.type !== 'rich_text' ||

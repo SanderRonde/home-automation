@@ -96,6 +96,8 @@ type ColorState =
 			 * (for example FF00FF) as a decimal digit
 			 */
 			spectrumRgb: number;
+	  }
+	| {
 			spectrumRGB: number;
 	  }
 	| {
@@ -104,6 +106,8 @@ type ColorState =
 				saturation?: number;
 				value?: number;
 			};
+	  }
+	| {
 			spectrumHSV: {
 				hue?: number;
 				saturation?: number;

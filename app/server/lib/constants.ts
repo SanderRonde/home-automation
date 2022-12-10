@@ -39,7 +39,8 @@ export const enum LED_NAMES {
 	COUCH_LEDS = 'COUCH_LEDS',
 	WALL_LEDS = 'WALL_LEDS',
 	RING_LEDS = 'RING_LEDS',
-	HEX_LEDS = 'HEX_LEDS',
+	DESK_HEX_LEDS = 'DESK_HEX_LEDS',
+	BED_HEX_LEDS = 'BED_HEX_LEDS',
 }
 export const MAGIC_LEDS = [
 	LED_NAMES.BED_LEDS,
@@ -48,7 +49,7 @@ export const MAGIC_LEDS = [
 	LED_NAMES.WALL_LEDS,
 ];
 export const RING_LEDS = [LED_NAMES.RING_LEDS];
-export const HEX_LEDS = [LED_NAMES.HEX_LEDS];
+export const HEX_LEDS = [LED_NAMES.BED_HEX_LEDS, LED_NAMES.DESK_HEX_LEDS];
 export const LED_IPS: {
 	[key: string]: LED_NAMES;
 } = {
@@ -57,8 +58,13 @@ export const LED_IPS: {
 	[getEnv('MODULE_LED_COUCH_LED_IP', true)]: LED_NAMES.COUCH_LEDS,
 	[getEnv('MODULE_LED_WALL_LED_IP', true)]: LED_NAMES.WALL_LEDS,
 };
-if (getEnv('MODULE_LED_HEX_IP', false)) {
-	LED_IPS[getEnv('MODULE_LED_HEX_IP', false) as string] = LED_NAMES.HEX_LEDS;
+if (getEnv('MODULE_LED_BED_HEX_IP', false)) {
+	LED_IPS[getEnv('MODULE_LED_BED_HEX_IP', false) as string] =
+		LED_NAMES.BED_HEX_LEDS;
+}
+if (getEnv('MODULE_LED_DESK_HEX_IP', false)) {
+	LED_IPS[getEnv('MODULE_LED_DESK_HEX_IP', false) as string] =
+		LED_NAMES.DESK_HEX_LEDS;
 }
 export const NAME_MAP = {
 	[getEnv('MODULE_LED_DESK_LED_IP', true)]: ['room.leds.desk'],
@@ -71,9 +77,14 @@ export const NAME_MAP = {
 	],
 	[LED_DEVICE_NAME]: ['room.leds.ring'],
 };
-if (getEnv('MODULE_LED_HEX_IP', false)) {
-	NAME_MAP[getEnv('MODULE_LED_HEX_IP', false) as string] = [
-		'room.leds.hexes',
+if (getEnv('MODULE_LED_BED_HEX_IP', false)) {
+	NAME_MAP[getEnv('MODULE_LED_BED_HEX_IP', false) as string] = [
+		'room.leds.hexBed',
+	];
+}
+if (getEnv('MODULE_LED_DESK_HEX_IP', false)) {
+	NAME_MAP[getEnv('MODULE_LED_DESK_HEX_IP', false) as string] = [
+		'room.leds.hexDesk',
 	];
 }
 export const NIGHTSTAND_COLOR: Color = (() => {
