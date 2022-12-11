@@ -113,7 +113,6 @@ export const COMMON_SWITCH_MAPPINGS: [RegExp, string][] = [
 	[/((all|the|my)\s+)?speakers/, 'room.speakers'],
 	[/((the|my)\s+)?couch\s+speakers/, 'room.speakers.couch'],
 	[/((the|my)\s+)?desk\s+speakers/, 'room.speakers.desk'],
-	[/((the|my)\s+)?hex(es)?/, 'room.leds.hexes'],
 ];
 
 // Cast

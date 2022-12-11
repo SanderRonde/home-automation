@@ -8,9 +8,9 @@ export class EWeLinkPowerButton extends EwelinkButtonBase {
 	public constructor(
 		eWeLinkConfig: EWeLinkSharedConfig,
 		private readonly _keyVal:
-			| string
+			| string[]
 			| {
-					[K in ButtonTriggerType]?: string;
+					[K in ButtonTriggerType]?: string[];
 			  }
 	) {
 		super(eWeLinkConfig, {});
@@ -25,14 +25,15 @@ export class EWeLinkPowerButton extends EwelinkButtonBase {
 	}
 
 	private async _onPress(button: ButtonTriggerType): Promise<void> {
-		const usedKeyval =
-			typeof this._keyVal === 'string'
-				? this._keyVal
-				: this._keyVal[button];
+		const usedKeyval = Array.isArray(this._keyVal)
+			? this._keyVal
+			: this._keyVal[button];
 		if (!usedKeyval) {
 			return;
 		}
-		await this._keyvalExternal.toggle(usedKeyval);
+		await Promise.all(
+			usedKeyval.map((val) => this._keyvalExternal.toggle(val))
+		);
 	}
 
 	public async init(): Promise<void> {
