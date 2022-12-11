@@ -214,14 +214,14 @@ if (hasArg('help', 'h')) {
 	process.exit(0);
 }
 function getVerbosity() {
-	if (hasArg('verbose*', 'v*')) {
-		return Infinity;
-	}
 	if (hasArg('verbose', 'v')) {
 		return 1;
 	}
 	if (hasArg('veryverbose', 'vv')) {
 		return 2;
+	}
+	if (hasArg('verbose*', 'v*')) {
+		return Infinity;
 	}
 	for (let i = 0; i < process.argv.length; i++) {
 		const arg = process.argv[i];

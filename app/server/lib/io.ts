@@ -1,4 +1,29 @@
-export function getArg(name: string, short?: string): string | void {
+type NumArg = `${number}`;
+type BoolArg = '1' | 'true';
+
+interface Args {
+	http?: NumArg;
+	https?: NumArg;
+	'info-port'?: string;
+
+	scripts?: string;
+	uid?: NumArg;
+
+	'log-secrets'?: BoolArg;
+	'ignore-pressure'?: BoolArg;
+	'error-log-path'?: string;
+
+	IO_DEBUG?: string;
+	debug?: BoolArg;
+	instant?: BoolArg;
+	verbose?: BoolArg;
+	veryverbose?: BoolArg;
+	'verbose*'?: BoolArg;
+
+	help?: BoolArg;
+}
+
+export function getArg(name: keyof Args, short?: string): string | void {
 	for (let i = 0; i < process.argv.length; i++) {
 		if (process.argv[i] === `--${name}`) {
 			return process.argv[i + 1];
@@ -11,7 +36,7 @@ export function getArg(name: string, short?: string): string | void {
 	return void 0;
 }
 
-export function hasArg(name: string, short?: string): boolean | undefined {
+export function hasArg(name: keyof Args, short?: string): boolean | undefined {
 	for (let i = 0; i < process.argv.length; i++) {
 		if (process.argv[i] === `--${name}`) {
 			return true;
@@ -24,7 +49,7 @@ export function hasArg(name: string, short?: string): boolean | undefined {
 	return void 0;
 }
 
-export function getNumberArg(name: string): number | void {
+export function getNumberArg(name: keyof Args): number | void {
 	const arg = getArg(name);
 	if (arg === void 0) {
 		return void 0;
@@ -32,11 +57,78 @@ export function getNumberArg(name: string): number | void {
 	return ~~arg;
 }
 
-export function getEnv(name: string): string | void;
-export function getEnv(name: string, required: false): string | void;
-export function getEnv(name: string, required: true): string;
-export function getEnv(name: string, required: boolean): string | void;
-export function getEnv(name: string, required = false): string | void {
+export interface EnvShape {
+	// IO
+	IO_PORT_HTTP: NumArg;
+	IO_PORT_HTTPS: NumArg;
+	IO_PORT_INFO: string;
+	IO_SCRIPT_DIR: string;
+	IO_UID: NumArg;
+	IO_DEBUG: BoolArg;
+
+	// LED IPs
+	SELF_IP: string;
+
+	// Cast config
+	CAST_DEVICE_NAME: string;
+
+	// Heating
+	ENABLE_HEATING: BoolArg;
+	HEATING_KEY: string;
+
+	// Info-screen
+	INFO_SCREEN_KEYVAL: string;
+
+	// Secrets
+	SECRET_AUTH: string;
+	SECRET_BOT: string;
+	SECRET_REMOTE_CONTROL: string;
+	SECRET_OAUTH_TOKEN_URL_POSTFIX: string;
+
+	SECRET_GOOGLE_CLIENT_ID: string;
+	SECRET_GOOGLE_CLIENT_SECRET: string;
+	SECRET_GOOGLE_REDIRECT_URL: string;
+
+	SECRET_SAMSUNG_REDIRECT_URI: string;
+	SECRET_SAMSUNG_APP_ID: string;
+	SECRET_SAMSUNG_CLIENT_ID: string;
+	SECRET_SAMSUNG_CLIENT_SECRET: string;
+	SECRET_SAMSUNG_URL_POSTFIX: string;
+
+	SECRET_OPENWEATHERMAP_API_KEY: string;
+	SECRET_OPENWEATHERMAP_LAT: string;
+	SECRET_OPENWEATHERMAP_LON: string;
+	SECRET_OPENWEATHERMAP_UNITS: string;
+
+	SECRET_SPOTIFY_ID: string;
+	SECRET_SPOTIFY_SECRET: string;
+	SECRET_SPOTIFY_REDIRECT_URL_BASE: string;
+
+	SECRET_EWELINK_EMAIL: string;
+	SECRET_EWELINK_PASSWORD: string;
+
+	SECRET_NOTION_API_KEY: string;
+}
+
+export function getEnv<S extends EnvShape>(
+	name: Extract<keyof S, string>
+): string | void;
+export function getEnv<S extends EnvShape>(
+	name: Extract<keyof S, string>,
+	required: false
+): string | void;
+export function getEnv<S extends EnvShape>(
+	name: Extract<keyof S, string>,
+	required: true
+): string;
+export function getEnv<S extends EnvShape>(
+	name: Extract<keyof S, string>,
+	required: boolean
+): string | void;
+export function getEnv<S extends EnvShape>(
+	name: Extract<keyof S, string>,
+	required = false
+): string | void {
 	const value = process.env[name];
 	if (value === void 0) {
 		if (!required) {
@@ -49,10 +141,21 @@ export function getEnv(name: string, required = false): string | void {
 	return value;
 }
 
-export function getNumberEnv(name: string): number | void;
-export function getNumberEnv(name: string, required: false): number | void;
-export function getNumberEnv(name: string, required: true): number;
-export function getNumberEnv(name: string, required = false): number | void {
+export function getNumberEnv<S extends EnvShape>(
+	name: Extract<keyof S, string>
+): number | void;
+export function getNumberEnv<S extends EnvShape>(
+	name: Extract<keyof S, string>,
+	required: false
+): number | void;
+export function getNumberEnv<S extends EnvShape>(
+	name: Extract<keyof S, string>,
+	required: true
+): number;
+export function getNumberEnv<S extends EnvShape>(
+	name: Extract<keyof S, string>,
+	required = false
+): number | void {
 	const value = getEnv(name, required);
 	if (typeof value !== 'string') {
 		return value;
