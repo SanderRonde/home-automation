@@ -742,14 +742,14 @@ export function getLed(
 ): MagicHomeClient | RingClient | HexClient | null {
 	if (MAGIC_LEDS.includes(name)) {
 		return (
-			magicHomeClients.filter((client) => {
+			magicHomeClients.find((client) => {
 				return LED_IPS[client.address] === name;
-			})[0] || null
+			}) ?? null
 		);
 	} else if (RING_LEDS.includes(name)) {
 		return ringClients[0] || null;
 	} else if (HEX_LEDS.includes(name)) {
-		return hexClients[0] || null;
+		return hexClients.find((client) => client.id === name) ?? null;
 	}
 	return null;
 }
