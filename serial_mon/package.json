@@ -1,0 +1,8 @@
+{
+	"name": "serial_mon",
+	"packageManager": "yarn@3.0.2",
+	"dependencies": {
+		"@serialport/parser-readline": "^10.5.0",
+		"serialport": "^10.5.0"
+	}
+}
