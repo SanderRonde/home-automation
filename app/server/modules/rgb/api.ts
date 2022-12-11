@@ -20,8 +20,8 @@ import { ringEffects, Effects } from './ring-api';
 import { LED_NAMES } from '../../lib/constants';
 import { scanRGBControllers } from './scan';
 import { colorList } from '../../lib/data';
-import { CustomMode } from 'magic-home';
 import { Color } from '../../lib/color';
+import { CustomMode } from 'magic-home';
 import { hexEffects } from './hex-api';
 import chalk from 'chalk';
 import { RGB } from '.';
@@ -290,6 +290,7 @@ export class APIHandler {
 		};
 		const effect = effects[effectName];
 
+		const clients = isArduinoEffect ? ringClients : hexClients;
 		try {
 			const strings = isArduinoEffect
 				? await Promise.all(
@@ -323,7 +324,7 @@ export class APIHandler {
 						await RGB.explainHook,
 						`Running effect ${effectName}`
 					),
-					`Updated ${ringClients.length} clients`
+					`Updated ${clients.length} clients`
 				),
 				`Sent string "${String(strings[0])}"`
 			);
@@ -333,7 +334,7 @@ export class APIHandler {
 			console.log(e);
 			attachMessage(
 				attachMessage(res, `Failed to run effect ${effectName}`),
-				`Updated ${ringClients.length} clients`
+				`Updated ${clients.length} clients`
 			);
 			res.status(400).write('Failed to run effect');
 			res.end();
