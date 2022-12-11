@@ -2,6 +2,7 @@ import { initTempController } from './temp-controller';
 import { AllModules, ModuleConfig } from '..';
 import { ExternalHandler } from './external';
 import { initRouting } from './routing';
+import { getEnv } from '../../lib/io';
 import { ModuleMeta } from '../meta';
 import { Bot } from './bot';
 
@@ -25,15 +26,20 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 	}
 
 	public notifyModules(modules: unknown): Promise<void> {
-		void new (modules as AllModules).keyval.External(
-			{},
-			'TEMPERATURE.INIT'
-		).onChange('room.heating', async (value, _key, logObj) => {
-			return new ExternalHandler(logObj, 'TEMPERATURE.INIT').setMode(
-				'room',
-				value === '1' ? 'on' : 'off'
+		if (getEnv('HEATING_KEY', false)) {
+			void new (modules as AllModules).keyval.External(
+				{},
+				'TEMPERATURE.INIT'
+			).onChange(
+				getEnv('HEATING_KEY', true),
+				async (value, _key, logObj) => {
+					return new ExternalHandler(
+						logObj,
+						'TEMPERATURE.INIT'
+					).setMode('room', value === '1' ? 'on' : 'off');
+				}
 			);
-		});
+		}
 
 		return Promise.resolve(void 0);
 	}

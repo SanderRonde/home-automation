@@ -1,11 +1,10 @@
 import {
-	RING_LEDS,
 	HEX_LEDS,
-	LED_IPS,
-	LED_NAMES,
+	LED_KEYVAL_MAP,
+	LED_NAME,
 	MAGIC_LEDS,
-	NAME_MAP,
-} from '../../lib/constants';
+	RING_LEDS,
+} from '../../config/led-config';
 import { BuiltinPatterns, Control, State } from 'magic-home';
 import { LedEffect } from './effect-config';
 import { warning } from '../../lib/logger';
@@ -41,7 +40,7 @@ export abstract class RGBClient {
 	};
 
 	public abstract address: string;
-	public abstract id: string;
+	public abstract id: LED_NAME;
 	/**
 	 * When false, toggle power using `/on` and `/off`, when
 	 * true, set color to white when using `/on`
@@ -49,13 +48,12 @@ export abstract class RGBClient {
 	public abstract setWhiteForPower: boolean;
 
 	private async _stateChange(value: string) {
-		const name = this.address;
-		if (name in NAME_MAP) {
-			const keys = NAME_MAP[name as keyof typeof NAME_MAP];
+		if (this.id in LED_KEYVAL_MAP) {
+			const keys = LED_KEYVAL_MAP[this.id];
 			for (const key of keys) {
 				await new (
 					await RGB.modules
-				).keyval.External({}, `RGB_NAMEMAP.${name}`).set(
+				).keyval.External({}, `RGB_NAMEMAP.${this.id}`).set(
 					key,
 					value,
 					false
@@ -240,7 +238,7 @@ export abstract class RGBClient {
 export class HexClient extends RGBClient {
 	public setWhiteForPower = false;
 
-	public constructor(public address: string, public id: LED_NAMES) {
+	public constructor(public address: string, public id: LED_NAME) {
 		super();
 	}
 
@@ -383,7 +381,7 @@ export class HexClient extends RGBClient {
 export class MagicHomeClient extends RGBClient {
 	private _lastQueriedState: State | null = null;
 	public id = (() => {
-		const name = LED_IPS[this.address];
+		const name = MAGIC_LEDS[this.address];
 		if (!name) {
 			warning(
 				`Found magic-home LED without valid name (ip = "${this.address}")`
@@ -512,7 +510,7 @@ export class MagicHomeClient extends RGBClient {
 				!this._isScaledColor(
 					assumedColor,
 					actualColor!,
-					assumedBrightness!
+					assumedBrightness
 				)
 			) {
 				// Color is defined and not the same
@@ -633,10 +631,9 @@ export class MagicHomeClient extends RGBClient {
 }
 
 export class RingClient extends RGBClient {
-	public id = LED_NAMES.RING_LEDS;
 	public setWhiteForPower = false;
 
-	public constructor(public address: string) {
+	public constructor(public address: string, public id: LED_NAME, public numLeds: number) {
 		super();
 	}
 
@@ -738,17 +735,17 @@ export let hexClients: HexClient[] = [];
 export let clients: RGBClient[] = [];
 
 export function getLed(
-	name: LED_NAMES
+	name: LED_NAME
 ): MagicHomeClient | RingClient | HexClient | null {
-	if (MAGIC_LEDS.includes(name)) {
+	if (Object.values(MAGIC_LEDS).includes(name)) {
 		return (
 			magicHomeClients.find((client) => {
-				return LED_IPS[client.address] === name;
+				return MAGIC_LEDS[client.address] === name;
 			}) ?? null
 		);
-	} else if (RING_LEDS.includes(name)) {
-		return ringClients[0] || null;
-	} else if (HEX_LEDS.includes(name)) {
+	} else if (Object.values(RING_LEDS).map(v => v[0]).includes(name)) {
+		return ringClients.find((client) => client.id === name) ?? null;
+	} else if (Object.values(HEX_LEDS).includes(name)) {
 		return hexClients.find((client) => client.id === name) ?? null;
 	}
 	return null;

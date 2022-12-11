@@ -1,7 +1,7 @@
-import { createExternalClass } from '../../lib/external';
 import { MatchHandlerParams } from '../../lib/bot-state';
+import { createExternalClass } from '../../lib/external';
+import { LED_NAME } from '../../config/led-config';
 import { APIHandler, ColorTarget } from './api';
-import { LED_NAMES } from '../../lib/constants';
 import { getLed, RGBClient } from './clients';
 import { JoinedConfigs } from './types';
 import { play } from './marked-audio';
@@ -11,7 +11,7 @@ import { RGB } from '.';
 export class ExternalHandler extends createExternalClass(true) {
 	public async color(
 		color: string,
-		target: ColorTarget | LED_NAMES = 'all',
+		target: ColorTarget | LED_NAME = 'all',
 		intensity = 0
 	): Promise<boolean> {
 		return this.runRequest(async (res, source) => {
@@ -33,7 +33,7 @@ export class ExternalHandler extends createExternalClass(true) {
 		green: string,
 		blue: string,
 		intensity = 0,
-		target: ColorTarget | LED_NAMES = 'all'
+		target: ColorTarget | LED_NAME = 'all'
 	): Promise<boolean> {
 		return this.runRequest(async (res, source) => {
 			return APIHandler.setRGB(
@@ -53,7 +53,7 @@ export class ExternalHandler extends createExternalClass(true) {
 
 	public async power(
 		state: 'on' | 'off',
-		target: ColorTarget | LED_NAMES = 'all'
+		target: ColorTarget | LED_NAME = 'all'
 	): Promise<boolean> {
 		return this.runRequest(async (res, source) => {
 			return APIHandler.setPower(
@@ -94,7 +94,7 @@ export class ExternalHandler extends createExternalClass(true) {
 		});
 	}
 
-	public async getClient(name: LED_NAMES): Promise<RGBClient | null> {
+	public async getClient(name: LED_NAME): Promise<RGBClient | null> {
 		return this.runRequest(() => {
 			return getLed(name);
 		});

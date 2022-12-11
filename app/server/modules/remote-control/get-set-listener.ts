@@ -64,7 +64,7 @@ export async function update(
 		promises.push(
 			(async () => {
 				if (!any) {
-					const listenerParts = listenerKey!.split('.');
+					const listenerParts = listenerKey.split('.');
 					let next = false;
 					for (
 						let i = 0;

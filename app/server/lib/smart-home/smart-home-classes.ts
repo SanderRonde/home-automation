@@ -13,7 +13,8 @@ import {
 	SmartHomeGoogleQuery,
 	SmartHomeSamsungQuery,
 } from './smart-home-types';
-import { LED_NAMES, TEMPERATURE_REPORT_MAX_TIMEOUT } from '../constants';
+import { TEMPERATURE_REPORT_MAX_TIMEOUT } from '../constants';
+import { LED_NAME } from '../../config/led-config';
 import { ResponseLike, warning } from '../logger';
 import { ModuleHookables } from '../../modules';
 import { captureTime, time } from '../timer';
@@ -59,13 +60,13 @@ type AttachHomeGraphListenerFunction = (
 export abstract class SmartHomeDevice {
 	protected temperatureID?: string;
 	protected keyvalID?: string;
-	protected rgbID?: LED_NAMES;
+	protected rgbID?: LED_NAME;
 
 	protected _executeFunctions: ExecuteFunction[] = [];
 	protected _attachHomeGraphListenerFunctions: AttachHomeGraphListenerFunction[] =
 		[];
 
-	public abstract id: string | LED_NAMES;
+	public abstract id: string | LED_NAME;
 	public abstract name: string;
 	public abstract nicknames: string[];
 
@@ -343,9 +344,7 @@ export function SmartHomeMixinOnOffRGB<
 					hookables: ModuleHookables
 				): Promise<QueryReturnType<SMART_HOME_DEVICE_TRAIT.ON_OFF>> => {
 					const isOn = await (
-						await hookables.RGB.getClient(
-							this._queryID as LED_NAMES
-						)
+						await hookables.RGB.getClient(this._queryID as LED_NAME)
 					)?.isOn();
 					return this._getQueryReturn(isOn ?? false);
 				},
@@ -419,7 +418,7 @@ export function SmartHomeMixinOnOffRGB<
 
 			void (async () => {
 				await (await hookables.RGB.getClient(
-					this._queryID as LED_NAMES
+					this._queryID as LED_NAME
 				))!.setPower(target === '1');
 			})();
 
@@ -437,7 +436,7 @@ export function SmartHomeMixinOnOffRGB<
 			callback: SmartHomeDeviceUpdateCallback<SMART_HOME_DEVICE_TRAIT.ON_OFF>
 		) {
 			const client = await hookables.RGB.getClient(
-				this._queryID as LED_NAMES
+				this._queryID as LED_NAME
 			);
 
 			if (!client) {
@@ -456,9 +455,7 @@ export function SmartHomeMixinOnOffRGB<
 		}
 
 		public async isOnline(hookables: ModuleHookables) {
-			return !!(await hookables.RGB.getClient(
-				this._queryID as LED_NAMES
-			));
+			return !!(await hookables.RGB.getClient(this._queryID as LED_NAME));
 		}
 	}
 	return SmartHomeOnOff;
@@ -469,7 +466,7 @@ export function SmartHomeMixinColorSetting<
 >(Constructor: C) {
 	// @ts-ignore
 	abstract class SmartHomeColorsetting extends (Constructor as typeof SmartHomeDevice) {
-		public abstract ledName: LED_NAMES;
+		public abstract ledName: LED_NAME;
 
 		protected get _queryFunctions() {
 			return [
@@ -485,7 +482,7 @@ export function SmartHomeMixinColorSetting<
 					const color =
 						(await (
 							await hookables.RGB.getClient(
-								this._queryID as LED_NAMES
+								this._queryID as LED_NAME
 							)
 						)?.getColor()) || new Color(255);
 
@@ -644,9 +641,7 @@ export function SmartHomeMixinColorSetting<
 				}
 				const lastColor =
 					(await (
-						await hookables.RGB.getClient(
-							this._queryID as LED_NAMES
-						)
+						await hookables.RGB.getClient(this._queryID as LED_NAME)
 					)?.getColor()) || new Color(255);
 				if (command === SMART_HOME_COMMAND.SWITCH_SET_LEVEL) {
 					const hsv = lastColor.toHSV();
@@ -684,7 +679,7 @@ export function SmartHomeMixinColorSetting<
 
 			void (async () => {
 				await (await hookables.RGB.getClient(
-					this._queryID as LED_NAMES
+					this._queryID as LED_NAME
 				))!.setColor(color.r, color.g, color.b);
 			})();
 
@@ -708,7 +703,7 @@ export function SmartHomeMixinColorSetting<
 			>
 		) {
 			const client = await hookables.RGB.getClient(
-				this._queryID as LED_NAMES
+				this._queryID as LED_NAME
 			);
 
 			if (!client) {
@@ -743,9 +738,7 @@ export function SmartHomeMixinBrightness<
 					QueryReturnType<SMART_HOME_DEVICE_TRAIT.BRIGHTNESS>
 				> => {
 					const brightness = await (
-						await hookables.RGB.getClient(
-							this._queryID as LED_NAMES
-						)
+						await hookables.RGB.getClient(this._queryID as LED_NAME)
 					)?.getBrightness();
 					if (!brightness) {
 						return [];
@@ -810,7 +803,7 @@ export function SmartHomeMixinBrightness<
 		}> {
 			void (async () => {
 				await (await hookables.RGB.getClient(
-					this._queryID as LED_NAMES
+					this._queryID as LED_NAME
 				))!.setBrightness(params.brightness);
 			})();
 			return Promise.resolve({
@@ -827,7 +820,7 @@ export function SmartHomeMixinBrightness<
 			newBrightness: number;
 		}> {
 			const client = (await hookables.RGB.getClient(
-				this._queryID as LED_NAMES
+				this._queryID as LED_NAME
 			))!;
 			const brightness = (await client.getBrightness()) || 100;
 			const newBrightness = (() => {
@@ -931,7 +924,7 @@ export function SmartHomeMixinBrightness<
 			callback: SmartHomeDeviceUpdateCallback<SMART_HOME_DEVICE_TRAIT.BRIGHTNESS>
 		) {
 			const client = await hookables.RGB.getClient(
-				this._queryID as LED_NAMES
+				this._queryID as LED_NAME
 			);
 
 			if (!client) {

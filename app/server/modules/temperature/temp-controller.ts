@@ -2,6 +2,7 @@ import { SettablePromise } from '../../lib/util';
 import { LOG_INTERVAL_SECS } from './constants';
 import { logTag } from '../../lib/logger';
 import { Database } from '../../lib/db';
+import { getEnv } from '../../lib/io';
 import { Temperature } from '..';
 import { Mode } from './types';
 import chalk from 'chalk';
@@ -31,17 +32,17 @@ class TempControl {
 		this.db!.setVal(`${this.name}.mode`, newMode);
 		this.mode = newMode;
 
-		if (this.name === 'room') {
+		if (getEnv('HEATING_KEY', false)) {
 			const modules = await Temperature.modules;
 			if (newMode === 'off') {
 				await new modules.keyval.External({}, 'HEATING.off').set(
-					'room.heating',
+					getEnv('HEATING_KEY', true),
 					'0',
 					false
 				);
 			} else {
 				await new modules.keyval.External({}, 'HEATING.on').set(
-					'room.heating',
+					getEnv('HEATING_KEY', true),
 					'1',
 					false
 				);

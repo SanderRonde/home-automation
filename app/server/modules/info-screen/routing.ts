@@ -6,6 +6,7 @@ import { WSClient, WSWrapper } from '../../lib/ws';
 import { createAPIHandler } from '../../lib/api';
 import { WebPageHandler } from './web-page';
 import { logTag } from '../../lib/logger';
+import { getEnv } from '../../lib/io';
 import { APIHandler } from './api';
 import { ModuleConfig } from '..';
 import { InfoScreen } from '.';
@@ -74,33 +75,40 @@ export function initRouting(moduleConfig: ModuleConfig): void {
 
 	ws.all('/blanking', async (client) => {
 		clients.add(client);
-		const listener = await new (
-			await InfoScreen.modules
-		).keyval.External({}, 'INFO_SCREEN.BLANKING').onChange(
-			'room.lights.ceiling',
-			(value) => {
-				client.send(
-					JSON.stringify({
-						blank: value === '0',
-					})
-				);
-			},
-			{ notifyOnInitial: true }
-		);
-		client.send(
-			JSON.stringify({
-				blank:
-					(await new (
-						await InfoScreen.modules
-					).keyval.External({}, 'INFO_SCREEN.BLANKING').get(
-						'room.lights.ceiling'
-					)) === '0',
-			})
-		);
-		client.onDead(() => {
-			listener.remove();
-			clients.delete(client);
-		});
+
+		if (getEnv('INFO_SCREEN_KEYVAL', false)) {
+			const listener = await new (
+				await InfoScreen.modules
+			).keyval.External({}, 'INFO_SCREEN.BLANKING').onChange(
+				getEnv('INFO_SCREEN_KEYVAL', true),
+				(value) => {
+					client.send(
+						JSON.stringify({
+							blank: value === '0',
+						})
+					);
+				},
+				{ notifyOnInitial: true }
+			);
+			client.send(
+				JSON.stringify({
+					blank:
+						(await new (
+							await InfoScreen.modules
+						).keyval.External({}, 'INFO_SCREEN.BLANKING').get(
+							getEnv('INFO_SCREEN_KEYVAL', true)
+						)) === '0',
+				})
+			);
+			client.onDead(() => {
+				listener.remove();
+				clients.delete(client);
+			});
+		} else {
+			client.onDead(() => {
+				clients.delete(client);
+			});
+		}
 	});
 
 	initPostRoutes(app as express.Express);

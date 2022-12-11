@@ -6,10 +6,9 @@ import {
 	setMagicHomeClients,
 	setRingClients,
 } from './clients';
+import { HEX_LEDS, RING_LEDS } from '../../config/led-config';
 import { LogObj, logTag } from '../../lib/logger';
 import { Control, Discovery } from 'magic-home';
-import { LED_NAMES } from '../../lib/constants';
-import { getEnv } from '../../lib/io';
 import chalk from 'chalk';
 
 let magicHomeTimer: NodeJS.Timeout | null = null;
@@ -33,27 +32,17 @@ export async function scanMagicHomeControllers(first = false): Promise<number> {
 }
 
 export function scanRing(): number {
-	const ip = getEnv('MODULE_LED_RING_IP', false);
-	if (!ip) {
-		return 0;
-	}
-
-	setRingClients([new RingClient(ip)]);
-
-	return 1;
+	const clients = Object.entries(RING_LEDS).map(
+		([ip, name]) => new RingClient(ip, name[0], name[1].numLeds)
+	);
+	setRingClients(clients);
+	return clients.length;
 }
 
 export function scanHex(): number {
-	const clients: HexClient[] = [];
-	const bedIp = getEnv('MODULE_LED_BED_HEX_IP', false);
-	if (bedIp) {
-		clients.push(new HexClient(bedIp, LED_NAMES.BED_HEX_LEDS));
-	}
-	const deskIp = getEnv('MODULE_LED_DESK_HEX_IP', false);
-	if (deskIp) {
-		clients.push(new HexClient(deskIp, LED_NAMES.DESK_HEX_LEDS));
-	}
-
+	const clients = Object.entries(HEX_LEDS).map(
+		([ip, name]) => new HexClient(ip, name)
+	);
 	setHexClients(clients);
 	return clients.length;
 }

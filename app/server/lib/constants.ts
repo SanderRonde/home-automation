@@ -1,5 +1,4 @@
-import { getEnv, getNumberEnv } from './io';
-import { Color } from './color';
+import { getEnv } from './io';
 import * as path from 'path';
 
 const ROOT = path.join(__dirname, '../../../');
@@ -28,92 +27,6 @@ export const TELEGRAM_IPS = [
 	},
 ];
 export const TELEGRAM_API = 'api.telegram.org';
-
-// Serial
-export const LED_DEVICE_NAME = getEnv('MODULE_LED_DEVICE_NAME', true);
-
-// Rgb
-export const enum LED_NAMES {
-	BED_LEDS = 'BED_LEDS',
-	DESK_LEDS = 'DESK_LEDS',
-	COUCH_LEDS = 'COUCH_LEDS',
-	WALL_LEDS = 'WALL_LEDS',
-	RING_LEDS = 'RING_LEDS',
-	DESK_HEX_LEDS = 'DESK_HEX_LEDS',
-	BED_HEX_LEDS = 'BED_HEX_LEDS',
-}
-export const MAGIC_LEDS = [
-	LED_NAMES.BED_LEDS,
-	LED_NAMES.DESK_LEDS,
-	LED_NAMES.COUCH_LEDS,
-	LED_NAMES.WALL_LEDS,
-];
-export const RING_LEDS = [LED_NAMES.RING_LEDS];
-export const HEX_LEDS = [LED_NAMES.BED_HEX_LEDS, LED_NAMES.DESK_HEX_LEDS];
-export const LED_IPS: {
-	[key: string]: LED_NAMES;
-} = {
-	[getEnv('MODULE_LED_DESK_LED_IP', true)]: LED_NAMES.DESK_LEDS,
-	[getEnv('MODULE_LED_BED_LED_IP', true)]: LED_NAMES.BED_LEDS,
-	[getEnv('MODULE_LED_COUCH_LED_IP', true)]: LED_NAMES.COUCH_LEDS,
-	[getEnv('MODULE_LED_WALL_LED_IP', true)]: LED_NAMES.WALL_LEDS,
-};
-if (getEnv('MODULE_LED_BED_HEX_IP', false)) {
-	LED_IPS[getEnv('MODULE_LED_BED_HEX_IP', false) as string] =
-		LED_NAMES.BED_HEX_LEDS;
-}
-if (getEnv('MODULE_LED_DESK_HEX_IP', false)) {
-	LED_IPS[getEnv('MODULE_LED_DESK_HEX_IP', false) as string] =
-		LED_NAMES.DESK_HEX_LEDS;
-}
-export const NAME_MAP = {
-	[getEnv('MODULE_LED_DESK_LED_IP', true)]: ['room.leds.desk'],
-	[getEnv('MODULE_LED_WALL_LED_IP', true)]: ['room.leds.wall'],
-	[getEnv('MODULE_LED_COUCH_LED_IP', true)]: ['room.leds.couch'],
-	[getEnv('MODULE_LED_BED_LED_IP', true)]: [
-		'room.leds.bed',
-		'room.lights.nightstand',
-		'room.leds.wakelight',
-	],
-	[LED_DEVICE_NAME]: ['room.leds.ring'],
-};
-if (getEnv('MODULE_LED_BED_HEX_IP', false)) {
-	NAME_MAP[getEnv('MODULE_LED_BED_HEX_IP', false) as string] = [
-		'room.leds.hexBed',
-	];
-}
-if (getEnv('MODULE_LED_DESK_HEX_IP', false)) {
-	NAME_MAP[getEnv('MODULE_LED_DESK_HEX_IP', false) as string] = [
-		'room.leds.hexDesk',
-	];
-}
-export const NIGHTSTAND_COLOR: Color = (() => {
-	const [r, g, b] = getEnv('MODULE_LED_NIGHTSTAND_COLOR', true).split(',');
-	return new Color(~~r, ~~g, ~~b);
-})();
-export const WAKELIGHT_TIME = getNumberEnv('MODULE_LED_WAKELIGHT_TIME', true);
-export const NUM_LEDS = 1025;
-
-// Keyval
-export const MAIN_LIGHTS = (() => {
-	const str = getEnv('MODULE_LED_MAIN_LIGHTS', true);
-	if (!str) {
-		return [];
-	}
-	return str.split(',');
-})();
-export const COMMON_SWITCH_MAPPINGS: [RegExp, string][] = [
-	[/((ceiling|the|my)\s+)?light/, 'room.lights.ceiling'],
-	[/((the)\s+)?lights/, 'room.lights.ceiling'],
-	[
-		/((the|my)\s+)?(nightlight|(nightstand\s*light))/,
-		'room.lights.nightstand',
-	],
-	[/all\s+lights/, 'room.lights'],
-	[/((all|the|my)\s+)?speakers/, 'room.speakers'],
-	[/((the|my)\s+)?couch\s+speakers/, 'room.speakers.couch'],
-	[/((the|my)\s+)?desk\s+speakers/, 'room.speakers.desk'],
-];
 
 // Cast
 export const CAST_DEVICE_NAME = getEnv('CAST_DEVICE_NAME', true);

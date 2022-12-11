@@ -1,9 +1,9 @@
-import { COMMON_SWITCH_MAPPINGS, MAIN_LIGHTS } from '../../lib/constants';
+import { COMMON_SWITCH_MAPPINGS } from '../../config/led-config';
 import { ChatState } from '../bot/message/state-keeping';
 import { BotStateBase } from '../../lib/bot-state';
 import { MatchParameters } from '../bot/message';
-import { ExternalHandler } from './external';
 import { MatchResponse } from '../bot/types';
+import { ExternalHandler } from './external';
 
 export interface State {
 	lastSubjects: string[] | null;
@@ -21,73 +21,6 @@ export class Bot extends BotStateBase {
 
 	public static readonly matches = Bot.createMatchMaker(
 		({ matchMaker: mm, fallbackSetter: fallback, conditional }) => {
-			mm(
-				'/islighton',
-				/is the light (on|off)/,
-				/are the lights (on|off)/,
-				async ({ match, logObj, state, matchText }) => {
-					const results = await Promise.all(
-						MAIN_LIGHTS.map((light) => {
-							return new ExternalHandler(
-								logObj,
-								`BOT.${matchText}`
-							).get(light);
-						})
-					);
-
-					const actualState = (() => {
-						if (results.every((v) => v === '1')) {
-							return 'ON';
-						}
-						if (results.every((v) => v === '0')) {
-							return 'OFF';
-						}
-						return 'BETWEEN';
-					})();
-
-					(state.states.keyval as unknown as State).lastSubjects =
-						MAIN_LIGHTS;
-
-					switch (actualState) {
-						case 'ON':
-							return !match.length || match[1] === 'on'
-								? 'Yep'
-								: 'Nope';
-						case 'OFF':
-							return match.length && match[1] === 'off'
-								? 'Yep'
-								: 'Nope';
-						default:
-							return 'Some are on some are off';
-					}
-				}
-			);
-			mm('/lighton', async ({ logObj, state, matchText }) => {
-				(state.states.keyval as unknown as State).lastSubjects =
-					MAIN_LIGHTS;
-				await Promise.all(
-					MAIN_LIGHTS.map((light) => {
-						return new ExternalHandler(
-							logObj,
-							`BOT.${matchText}`
-						).set(light, '1');
-					})
-				);
-				return `Turned ${MAIN_LIGHTS.length > 1 ? 'them' : 'it'} on`;
-			});
-			mm('/lightoff', async ({ logObj, state, matchText }) => {
-				(state.states.keyval as unknown as State).lastSubjects =
-					MAIN_LIGHTS;
-				await Promise.all(
-					MAIN_LIGHTS.map((light) => {
-						return new ExternalHandler(
-							logObj,
-							`BOT.${matchText}`
-						).set(light, '0');
-					})
-				);
-				return `Turned ${MAIN_LIGHTS.length > 1 ? 'them' : 'it'} off`;
-			});
 			for (const [reg, switchName] of COMMON_SWITCH_MAPPINGS) {
 				mm(
 					new RegExp('turn (on|off) ' + reg.source),

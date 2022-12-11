@@ -16,8 +16,8 @@ import {
 	authAll,
 	auth,
 } from '../../lib/decorators';
+import { LED_NAME } from '../../config/led-config';
 import { ringEffects, Effects } from './ring-api';
-import { LED_NAMES } from '../../lib/constants';
 import { scanRGBControllers } from './scan';
 import { colorList } from '../../lib/data';
 import { Color } from '../../lib/color';
@@ -48,7 +48,7 @@ export type ColorTarget =
 	| 'color';
 
 export class APIHandler {
-	private static _getClientSetFromTarget(target: ColorTarget | LED_NAMES) {
+	private static _getClientSetFromTarget(target: ColorTarget | LED_NAME) {
 		switch (target) {
 			case 'hex':
 			case 'hexes':
@@ -106,7 +106,7 @@ export class APIHandler {
 			color: string;
 			intensity?: number;
 			auth?: string;
-			target?: ColorTarget | LED_NAMES;
+			target?: ColorTarget | LED_NAME;
 		},
 		source: string
 	): Promise<boolean> {
@@ -173,7 +173,7 @@ export class APIHandler {
 			blue: string;
 			auth?: string;
 			intensity?: number;
-			target?: ColorTarget | LED_NAMES;
+			target?: ColorTarget | LED_NAME;
 		},
 		source: string
 	): Promise<boolean> {
@@ -228,7 +228,7 @@ export class APIHandler {
 		}: {
 			power: string;
 			auth?: string;
-			target?: ColorTarget | LED_NAMES;
+			target?: ColorTarget | LED_NAME;
 		},
 		source: string
 	): Promise<boolean> {
@@ -295,7 +295,10 @@ export class APIHandler {
 			const strings = isArduinoEffect
 				? await Promise.all(
 						ringClients.map(async (c) => {
-							return c.runEffect(effect.effect, effectName);
+							return c.runEffect(
+								effect.effect(c.numLeds),
+								effectName
+							);
 						})
 				  )
 				: await Promise.all(

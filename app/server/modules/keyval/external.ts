@@ -16,8 +16,8 @@ export class ExternalHandler extends createExternalClass(true) {
 		await super.init();
 	}
 
-	public async set(
-		key: string,
+	public async set<KeyType extends string>(
+		key: KeyType,
 		value: string,
 		notify = true
 	): Promise<boolean> {
@@ -35,7 +35,7 @@ export class ExternalHandler extends createExternalClass(true) {
 		});
 	}
 
-	public async get(key: string): Promise<string> {
+	public async get<KeyType extends string>(key: KeyType): Promise<string> {
 		return this.runRequest(async (res, source) => {
 			return ExternalHandler._apiHandler!.get(
 				res,
@@ -48,7 +48,7 @@ export class ExternalHandler extends createExternalClass(true) {
 		});
 	}
 
-	public async toggle(key: string): Promise<string> {
+	public async toggle<KeyType extends string>(key: KeyType): Promise<string> {
 		return this.runRequest(async (res, source) => {
 			return ExternalHandler._apiHandler!.toggle(
 				res,
@@ -61,8 +61,8 @@ export class ExternalHandler extends createExternalClass(true) {
 		});
 	}
 
-	public async onChange(
-		key: string | null,
+	public async onChange<KeyType extends string>(
+		key: KeyType | null,
 		callback: (
 			value: string,
 			key: string,

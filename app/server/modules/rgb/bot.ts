@@ -1,15 +1,15 @@
 import { ringClients, getLed, magicHomeClients } from './clients';
 import { ArduinoConfig, DIR, JoinedConfigs } from './types';
+import { getLedFromName } from '../../config/led-config';
 import { attachMessage, logTag } from '../../lib/logger';
 import { arrToObj, asyncTimeout } from '../../lib/util';
 import { BotStateBase } from '../../lib/bot-state';
 import { ringEffects, Effects } from './ring-api';
 import { MatchParameters } from '../bot/message';
 import { ColorTarget, HEX_REGEX } from './api';
-import { ExternalHandler } from './external';
 import { MatchResponse } from '../bot/types';
+import { ExternalHandler } from './external';
 import { scanRGBControllers } from './scan';
-import { getLedFromName } from './helpers';
 import { colorList } from '../../lib/data';
 import { Color } from '../../lib/color';
 import { hexEffects } from './hex-api';
@@ -112,27 +112,6 @@ export class Bot extends BotStateBase {
 				}
 			);
 			mm(
-				/turn (on|off) (desk|couch|wall|bed)/,
-				async ({ logObj, match }) => {
-					const targetState = match[1];
-					const ledName = getLedFromName(match[2])!;
-					const client = getLed(ledName);
-					if (!client) {
-						return 'Failed to find client';
-					}
-
-					if (targetState === 'on') {
-						attachMessage(logObj, 'Turned it on');
-						await client.turnOn();
-						return 'Turned it on';
-					} else {
-						attachMessage(logObj, 'Turned it off');
-						await client.turnOff();
-						return 'Turned it off';
-					}
-				}
-			);
-			mm(
 				'/arduinooff',
 				/turn (on|off) (ceiling|arduino|duino)/,
 				async ({ logObj, match }) => {
@@ -158,6 +137,24 @@ export class Bot extends BotStateBase {
 					}
 				}
 			);
+			mm(/turn (on|off) (\w+)/, async ({ logObj, match }) => {
+				const targetState = match[1];
+				const ledName = getLedFromName(match[2])!;
+				const client = getLed(ledName);
+				if (!client) {
+					return 'Failed to find client';
+				}
+
+				if (targetState === 'on') {
+					attachMessage(logObj, 'Turned it on');
+					await client.turnOn();
+					return 'Turned it on';
+				} else {
+					attachMessage(logObj, 'Turned it off');
+					await client.turnOff();
+					return 'Turned it off';
+				}
+			});
 			mm(
 				'/magicoff',
 				/turn (on|off) (magic(-| )home)/,
@@ -374,7 +371,7 @@ export class Bot extends BotStateBase {
 					if (success) {
 						return message || 'Playing!';
 					}
-					return message!;
+					return message;
 				}
 			);
 		}
