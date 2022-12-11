@@ -1,7 +1,7 @@
 import { addListener, removeListener, update } from './get-set-listener';
 import { LogObj, attachMessage, logTag } from '../../lib/logger';
-import { WSSimInstance } from '../../lib/ws';
 import { createRouter } from '../../lib/api';
+import { WSSimInstance } from '../../lib/ws';
 import { WebPageHandler } from './web-page';
 import { APIHandler } from './api';
 import { ModuleConfig } from '..';

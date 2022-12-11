@@ -6,8 +6,8 @@ import {
 	Props,
 	PROP_TYPE,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
-import { JSONBooleanHTML, JSONBooleanCSS } from './json-boolean.templates.js';
 import { MessageToast } from '../../../shared/message-toast/message-toast.js';
+import { JSONBooleanHTML, JSONBooleanCSS } from './json-boolean.templates.js';
 import { JSONSwitches } from '../json-switches/json-switches.js';
 import { PowerSwitch } from '../power-switch/power-switch.js';
 

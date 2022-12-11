@@ -1,8 +1,8 @@
 import { BotStateBase } from '../../lib/bot-state';
-import { MatchParameters } from '../bot/message';
 import { attachMessage } from '../../lib/logger';
-import { ExternalHandler } from './external';
+import { MatchParameters } from '../bot/message';
 import { MatchResponse } from '../bot/types';
+import { ExternalHandler } from './external';
 
 export class Bot extends BotStateBase {
 	public static readonly commands = {};

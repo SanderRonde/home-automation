@@ -1,8 +1,8 @@
 import { ChatState } from '../bot/message/state-keeping';
 import { State as KeyValState } from '../keyval/bot';
 import { BotStateBase } from '../../lib/bot-state';
-import { MatchParameters } from '../bot/message';
 import { attachMessage } from '../../lib/logger';
+import { MatchParameters } from '../bot/message';
 import { getInTimeWindow } from './explaining';
 import { MatchResponse } from '../bot/types';
 

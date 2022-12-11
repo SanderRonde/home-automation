@@ -1,7 +1,7 @@
 import { AllModules, ModuleConfig } from '..';
 import { ExternalHandler } from './external';
-import { startGeocoder } from './geocode';
 import { Client } from '@notionhq/client';
+import { startGeocoder } from './geocode';
 import { createClient } from './client';
 import { ModuleMeta } from '../meta';
 

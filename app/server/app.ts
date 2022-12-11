@@ -20,8 +20,8 @@ import {
 } from './lib/routes';
 import { hasArg, getArg, getNumberArg, getNumberEnv, getEnv } from './lib/io';
 import { notifyAllModules, NoDBModuleConfig } from './modules/modules';
-import { AllModules, getAllModules } from './modules';
 import { printCommands } from './modules/bot/helpers';
+import { AllModules, getAllModules } from './modules';
 import { WSSimulator, WSWrapper } from './lib/ws';
 import { Database } from './lib/db';
 import express from 'express';

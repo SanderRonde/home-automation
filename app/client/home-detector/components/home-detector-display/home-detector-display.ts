@@ -4,8 +4,8 @@ import {
 	config,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { HomeDetectorDisplayHTML } from './home-detector-display.html.js';
-import { HomeDetectorDisplayCSS } from './home-detector-display.css.js';
 import { ServerComm } from '../../../shared/server-comm/server-comm.js';
+import { HomeDetectorDisplayCSS } from './home-detector-display.css.js';
 
 @config({
 	is: 'home-detector-display',

@@ -2,8 +2,8 @@ import { logOutgoingRes, logTag } from '../../../../lib/logger';
 import { SpotifyTypes } from '../../../../types/spotify';
 import { SpotifyAPIEndpoints } from './endpoints';
 import { Database } from '../../../../lib/db';
-import { getEnv } from '../../../../lib/io';
 import { wait } from '../../../../lib/util';
+import { getEnv } from '../../../../lib/io';
 import chalk from 'chalk';
 
 export interface ExtendedResponse<R> extends Response {

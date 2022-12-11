@@ -1,6 +1,6 @@
 import { BotStateBase } from '../../lib/bot-state';
-import { MatchParameters } from '../bot/message';
 import { attachMessage } from '../../lib/logger';
+import { MatchParameters } from '../bot/message';
 import { MatchResponse } from '../bot/types';
 import { refreshClients } from './routing';
 

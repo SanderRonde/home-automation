@@ -5,8 +5,8 @@ import serveStatic from 'serve-static';
 import bodyParser from 'body-parser';
 import express from 'express';
 import * as path from 'path';
-import chalk from 'chalk';
 import pm2 from '@pm2/io';
+import chalk from 'chalk';
 import glob from 'glob';
 
 export function initAnnotatorRoutes(app: express.Express): void {

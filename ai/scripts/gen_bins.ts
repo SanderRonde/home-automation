@@ -3,10 +3,10 @@
 import * as MultiProgress from 'multi-progress';
 import * as httpServer from 'http-server';
 import * as ProgressBar from 'progress';
-import * as puppeteer from 'puppeteer';
 import * as symbols from 'log-symbols';
-import * as chalk from 'chalk';
+import * as puppeteer from 'puppeteer';
 import * as fs from 'fs-extra';
+import * as chalk from 'chalk';
 import * as glob from 'glob';
 import * as http from 'http';
 import * as path from 'path';
@@ -384,16 +384,18 @@ namespace BinGenerator {
 				done: boolean;
 				time: number;
 			}> {
-				return await page.evaluate((): Promise<{
-					done: boolean;
-					time: number;
-				}> => {
-					const puppetGlobal = window as PuppetGlobal;
-					return Promise.resolve({
-						done: puppetGlobal.done!,
-						time: document.querySelector('video')!.currentTime,
-					});
-				});
+				return await page.evaluate(
+					(): Promise<{
+						done: boolean;
+						time: number;
+					}> => {
+						const puppetGlobal = window as PuppetGlobal;
+						return Promise.resolve({
+							done: puppetGlobal.done!,
+							time: document.querySelector('video')!.currentTime,
+						});
+					}
+				);
 			}
 
 			export async function extract(

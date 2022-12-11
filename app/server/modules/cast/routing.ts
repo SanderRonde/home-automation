@@ -1,5 +1,5 @@
-import { ExternalHandler } from './external';
 import { createRouter } from '../../lib/api';
+import { ExternalHandler } from './external';
 import { APIHandler } from './api';
 import { ModuleConfig } from '..';
 import { Cast } from './index';

@@ -3,8 +3,8 @@ import {
 	EWeLinkWebSocketMessage,
 	EWeLinkWSConnection,
 } from './devices/shared';
-import { EWELINK_DEBUG } from '../../lib/constants';
 import onEWeLinkDevices from '../../config/ewelink';
+import { EWELINK_DEBUG } from '../../lib/constants';
 import { getEnv } from '../../lib/io';
 import eWelink from 'ewelink-api';
 import { AllModules } from '..';

@@ -6,8 +6,8 @@ import {
 } from '../../lib/decorators';
 import { ResponseLike, attachSourcedMessage } from '../../lib/logger';
 import { HomeDetector } from './index';
-import { HOME_STATE } from './types';
 import { Detector } from './classes';
+import { HOME_STATE } from './types';
 
 export class APIHandler {
 	private readonly _detector: Detector;

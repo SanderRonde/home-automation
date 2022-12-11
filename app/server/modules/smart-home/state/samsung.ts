@@ -26,9 +26,9 @@ import {
 } from './shared';
 import { currentUsers } from '../home-graph/users';
 import { warning } from '../../../lib/logger';
-import { smartHomeLogger } from '../shared';
-import { SAMSUNG_KEY } from '../home-graph';
 import { flatten } from '../../../lib/util';
+import { SAMSUNG_KEY } from '../home-graph';
+import { smartHomeLogger } from '../shared';
 import { getEnv } from '../../../lib/io';
 import * as express from 'express';
 

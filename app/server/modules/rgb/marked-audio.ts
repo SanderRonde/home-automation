@@ -1,8 +1,8 @@
 import { MARKED_AUDIO_FOLDER } from '../../lib/constants';
 import { MatchHandlerParams } from '../../lib/bot-state';
 import { LogObj } from '../../lib/logger';
-import { ringClients } from './clients';
 import { Color } from '../../lib/color';
+import { ringClients } from './clients';
 import { wait } from '../../lib/util';
 import * as fs from 'fs-extra';
 import * as path from 'path';

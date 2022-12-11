@@ -1,7 +1,7 @@
 import { AsyncExpressApplication } from '../../types/express';
 import { createRouter } from '../../lib/api';
-import { APIHandler } from './api';
 import { Config } from '../../app';
+import { APIHandler } from './api';
 import { Script } from '.';
 
 export function initRouting({

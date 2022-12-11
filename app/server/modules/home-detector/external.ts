@@ -1,7 +1,7 @@
 import { createExternalClass } from '../../lib/external';
 import { handleHooks } from './hooks';
-import { HOME_STATE } from './types';
 import { Detector } from './classes';
+import { HOME_STATE } from './types';
 
 export class ExternalHandler extends createExternalClass(true) {
 	private static _detector: Detector;

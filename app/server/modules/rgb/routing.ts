@@ -1,6 +1,6 @@
 import { createRouter } from '../../lib/api';
-import { scanRGBControllers } from './scan';
 import { WebPageHandler } from './web-page';
+import { scanRGBControllers } from './scan';
 import { APIHandler } from './api';
 import { ModuleConfig } from '..';
 import { RGB } from '.';

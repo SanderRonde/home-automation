@@ -30,8 +30,8 @@ import { flattenObject } from '../../../lib/util';
 import { warning } from '../../../lib/logger';
 import { getAuth } from '../../oauth/helpers';
 import { smartHomeLogger } from '../shared';
-import { homegraph_v1 } from 'googleapis';
 import { time } from '../../../lib/timer';
+import { homegraph_v1 } from 'googleapis';
 
 export async function googleSync(
 	body: SmartHomeV1SyncRequest,

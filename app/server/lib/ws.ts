@@ -2,8 +2,8 @@ import { attachMessage, logOutgoingReq } from './logger';
 import { errorHandle, auth } from './decorators';
 import { Server as WebsocketServer } from 'ws';
 import * as express from 'express';
-import { Socket } from 'net';
 import * as http from 'http';
+import { Socket } from 'net';
 import * as url from 'url';
 import chalk from 'chalk';
 

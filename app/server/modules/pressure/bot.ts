@@ -1,7 +1,7 @@
 import { BotStateBase } from '../../lib/bot-state';
 import { MatchParameters } from '../bot/message';
-import { ExternalHandler } from './external';
 import { MatchResponse } from '../bot/types';
+import { ExternalHandler } from './external';
 import { getAll } from './register';
 
 export class Bot extends BotStateBase {

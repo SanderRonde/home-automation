@@ -1,11 +1,14 @@
-import { KeyvalKeys } from '../config/keyval-types';
 import { HomeHooks } from '../modules/home-detector/types';
+import { KeyvalKeys } from '../config/keyval-types';
 
 export default {
 	phone: {
 		home: {
 			'lights-on': async (modules) => {
-				await modules.keyval.set<KeyvalKeys>('room.lights.ceiling', '1');
+				await modules.keyval.set<KeyvalKeys>(
+					'room.lights.ceiling',
+					'1'
+				);
 			},
 			'pc-on': async (modules) => {
 				await modules.script.script('wake_desktop');

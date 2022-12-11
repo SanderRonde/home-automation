@@ -1,8 +1,8 @@
 import { ModuleConfig, AllModules } from './modules';
 import { HOME_STATE } from './home-detector/types';
 import { BotStateBase } from '../lib/bot-state';
-import { SettablePromise } from '../lib/util';
 import { ExplainHook } from './explain/types';
+import { SettablePromise } from '../lib/util';
 import { LogObj } from '../lib/logger';
 
 export declare class Handler {

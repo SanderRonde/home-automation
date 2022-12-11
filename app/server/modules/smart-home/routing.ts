@@ -8,8 +8,8 @@ import { createSamsungSchemaHandler } from './state/samsung';
 import { attachTimerToReq } from '../../lib/timer';
 import { attachMessage } from '../../lib/logger';
 import { smarthome } from 'actions-on-google';
-import { ModuleConfig, SmartHome } from '..';
 import { createRouter } from '../../lib/api';
+import { ModuleConfig, SmartHome } from '..';
 import { getEnv } from '../../lib/io';
 import * as express from 'express';
 

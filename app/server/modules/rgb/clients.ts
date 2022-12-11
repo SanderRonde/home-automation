@@ -633,7 +633,11 @@ export class MagicHomeClient extends RGBClient {
 export class RingClient extends RGBClient {
 	public setWhiteForPower = false;
 
-	public constructor(public address: string, public id: LED_NAME, public numLeds: number) {
+	public constructor(
+		public address: string,
+		public id: LED_NAME,
+		public numLeds: number
+	) {
 		super();
 	}
 
@@ -743,7 +747,11 @@ export function getLed(
 				return MAGIC_LEDS[client.address] === name;
 			}) ?? null
 		);
-	} else if (Object.values(RING_LEDS).map(v => v[0]).includes(name)) {
+	} else if (
+		Object.values(RING_LEDS)
+			.map((v) => v[0])
+			.includes(name)
+	) {
 		return ringClients.find((client) => client.id === name) ?? null;
 	} else if (Object.values(HEX_LEDS).includes(name)) {
 		return hexClients.find((client) => client.id === name) ?? null;

@@ -1,6 +1,6 @@
 import { initRouting } from './routing';
-import { ModuleMeta } from '../meta';
 import { refresh } from './calendar';
+import { ModuleMeta } from '../meta';
 import { ModuleConfig } from '..';
 import { Bot } from './bot';
 
