@@ -106,61 +106,83 @@ export function splitIntoGroups<V>(arr: V[], size: number): V[][] {
 }
 
 export class XHR {
+	private static _queue: Promise<unknown> = Promise.resolve();
+
+	private static async _enqueue<T>(fn: () => Promise<T>): Promise<T> {
+		this._queue = this._queue
+			.then(() => Promise.race([fn(), wait(10000)]));
+		return this._queue as Promise<T>;
+	}
+
 	public static post(
 		xhrURL: string,
 		name: string,
-		params: Record<string, string> = {}
-	): Promise<string> {
-		return new Promise<string>((resolve) => {
-			const qs = Object.keys(params).length
-				? `?${querystring.stringify(params)}`
-				: '';
-			const fullURL = `${xhrURL}${qs}`;
-			const parsedURL = new url.URL(fullURL);
-			const req = http
-				.request(
-					{
-						hostname: parsedURL.hostname,
-						port: 80,
-						path: `${parsedURL.pathname}${parsedURL.search}`,
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json',
-						},
-					},
-					(res) => {
-						let data = '';
+		params: Record<string, string> = {},
+		attempts: number = 0
+	): Promise<string | null> {
+		return this._enqueue(
+			() =>
+				new Promise<string | null>((resolve) => {
+					const qs = Object.keys(params).length
+						? `?${querystring.stringify(params)}`
+						: '';
+					const fullURL = `${xhrURL}${qs}`;
+					const parsedURL = new url.URL(fullURL);
+					const req = http
+						.request(
+							{
+								hostname: parsedURL.hostname,
+								port: 80,
+								path: `${parsedURL.pathname}${parsedURL.search}`,
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/json',
+								},
+							},
+							(res) => {
+								let data = '';
 
-						res.on('data', (chunk: string | Buffer) => {
-							data += chunk.toString();
-						});
-						res.on('end', () => {
-							attachMessage(
-								req,
-								chalk.cyan(`[${name}]`),
-								xhrURL,
-								JSON.stringify(params)
-							);
-							logOutgoingReq(req, {
-								method: 'GET',
-								target: xhrURL,
-							});
-							resolve(data);
-						});
-					}
-				)
-				.on('error', (e) => {
-					log(
-						chalk.red(
-							`Error while sending request "${name}" with URL "${xhrURL}": "${e.message}"`
+								res.on('data', (chunk: string | Buffer) => {
+									data += chunk.toString();
+								});
+								res.on('end', () => {
+									attachMessage(
+										req,
+										chalk.cyan(`[${name}]`),
+										xhrURL,
+										JSON.stringify(params)
+									);
+									logOutgoingReq(req, {
+										method: 'GET',
+										target: xhrURL,
+									});
+									resolve(data);
+								});
+							}
 						)
-					);
-				});
-			if (Object.values(params).length) {
-				req.write(JSON.stringify(params));
-			}
-			req.end();
-		});
+						.on('error', (e) => {
+							log(
+								chalk.red(
+									`Error while sending request "${name}" with URL "${xhrURL}": "${e.message}"`
+								)
+							);
+							if (attempts <= 9) {
+								void this.post(
+									xhrURL,
+									name,
+									params,
+									attempts + 1
+								).then(resolve);
+							} else {
+								resolve(null);
+							}
+						});
+					if (Object.values(params).length) {
+						req.write(JSON.stringify(params));
+					}
+					req.end();
+				})
+		);
 	}
 
 	public static get(

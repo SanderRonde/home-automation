@@ -262,7 +262,10 @@ export class HexClient extends RGBClient {
 			const response = (await XHR.post(
 				`http://${this.address}/is_on`,
 				`hex-${this.address}-is-on`
-			)) as EncodedString<{ enabled: boolean }>;
+			)) as null | EncodedString<{ enabled: boolean }>;
+			if (!response) {
+				return;
+			}
 			const isEnabled = JSON.parse(response).enabled;
 
 			if (assumedState !== isEnabled) {
@@ -648,6 +651,9 @@ export class RingClient extends RGBClient {
 				`http://${this.address}/is_on`,
 				`ring-${this.address}-is-on`
 			)) as EncodedString<{ enabled: boolean }>;
+			if (!response) {
+				return;
+			}
 			const isEnabled = JSON.parse(response).enabled;
 
 			if (assumedState !== isEnabled) {
