@@ -109,8 +109,7 @@ export class XHR {
 	private static _queue: Promise<unknown> = Promise.resolve();
 
 	private static async _enqueue<T>(fn: () => Promise<T>): Promise<T> {
-		this._queue = this._queue
-			.then(() => Promise.race([fn(), wait(10000)]));
+		this._queue = this._queue.then(() => Promise.race([fn(), wait(10000)]));
 		return this._queue as Promise<T>;
 	}
 
