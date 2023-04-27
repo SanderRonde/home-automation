@@ -7,8 +7,8 @@ import {
 	setRingClients,
 } from './clients';
 import { HEX_LEDS, RING_LEDS } from '../../config/led-config';
-import { LogObj, logTag } from '../../lib/logger';
 import { Control, Discovery } from 'magic-home';
+import { logTag } from '../../lib/logger';
 import chalk from 'chalk';
 
 let magicHomeTimer: NodeJS.Timeout | null = null;
@@ -47,10 +47,7 @@ export function scanHex(): number {
 	return clients.length;
 }
 
-export async function scanRGBControllers(
-	first = false,
-	logObj: LogObj = undefined
-): Promise<number> {
+export async function scanRGBControllers(first = false): Promise<number> {
 	const [magicHomeClients, ringClients, hexClients] = await Promise.all([
 		scanMagicHomeControllers(first),
 		scanRing(),
@@ -71,11 +68,7 @@ export async function scanRGBControllers(
 		}, RESCAN_TIME);
 	}
 
-	if (!logObj) {
-		logTag('rgb', 'cyan', 'Found', chalk.bold(String(clients)), 'clients');
-	} else {
-		logTag('rgb', 'cyan', 'Found', chalk.bold(String(clients)), 'clients');
-	}
+	logTag('rgb', 'cyan', 'Found', chalk.bold(String(clients)), 'clients');
 
 	return clients;
 }

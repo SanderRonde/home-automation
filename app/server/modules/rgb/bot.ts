@@ -333,10 +333,9 @@ export class Bot extends BotStateBase {
 						.join('\n')}`;
 				}
 			);
-			mm('/refresh', /refresh (rgb|led)/, async ({ logObj }) => {
+			mm('/refresh', /refresh (rgb|led)/, async () => {
 				return `Found ${await scanRGBControllers(
-					false,
-					logObj
+					false
 				)} RGB controllers`;
 			});
 			mm('/help_rgb', /what commands are there for rgb/, () => {
