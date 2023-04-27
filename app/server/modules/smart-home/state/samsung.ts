@@ -226,9 +226,9 @@ export async function dispatchSamsungUsers(
 				} catch (e) {
 					warning(
 						'Error response from home-graph',
-						e,
+						JSON.stringify(e),
 						'for request',
-						states
+						JSON.stringify(states)
 					);
 				}
 			}

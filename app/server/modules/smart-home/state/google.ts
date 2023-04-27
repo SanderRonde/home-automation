@@ -290,9 +290,9 @@ export async function dispatchGoogleUsers(
 			} catch (e) {
 				warning(
 					'Error response from home-graph',
-					e,
+					JSON.stringify(e),
 					'for request',
-					userRequestBody
+					JSON.stringify(userRequestBody)
 				);
 			}
 		})
