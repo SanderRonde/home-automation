@@ -1,13 +1,20 @@
 import {
 	EWeLinkInitable,
 	EWeLinkSharedConfig,
+	EWeLinkUpdateMessage,
 	EWeLinkWebSocketMessage,
-} from './shared';
-import { logFixture, ResDummy } from '../../../lib/logger';
-import { asyncSetInterval } from '../../../lib/util';
+} from '../shared';
+import { logFixture, ResDummy } from '../../../../lib/logger';
+import { asyncSetInterval } from '../../../../lib/util';
 import chalk from 'chalk';
 
-export class EwelinkPower extends EWeLinkInitable {
+export interface EwelinkPowerParams {
+	switch?: 'on' | 'off';
+}
+
+export class EwelinkPower<
+	P extends EwelinkPowerParams
+> extends EWeLinkInitable {
 	private static _cooldown: NodeJS.Timeout | null = null;
 	private readonly _options: {
 		enableSync: boolean;
@@ -86,6 +93,11 @@ export class EwelinkPower extends EWeLinkInitable {
 		asyncSetInterval(() => this._syncStatus(), 1000 * 60);
 	}
 
+	protected _onRemoteUpdate(
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		_params: EWeLinkUpdateMessage<P>['params']
+	): void {}
+
 	public async init(): Promise<void> {
 		if (this._options.enableSync) {
 			this._startTimer();
@@ -98,11 +110,10 @@ export class EwelinkPower extends EWeLinkInitable {
 				await this.turnOff();
 			}
 		});
+
 		this._eWeLinkConfig.wsConnection.on(
 			'data',
-			async (
-				data: EWeLinkWebSocketMessage<{ switch?: 'on' | 'off' }>
-			) => {
+			async (data: EWeLinkWebSocketMessage<P>) => {
 				if (
 					typeof data === 'string' ||
 					!('action' in data) ||
@@ -113,6 +124,7 @@ export class EwelinkPower extends EWeLinkInitable {
 					return;
 				}
 
+				this._onRemoteUpdate(data.params);
 				await this._setFromRemoteStatus(
 					data.params.switch,
 					'websocket'
