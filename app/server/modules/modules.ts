@@ -12,6 +12,7 @@ import { Script } from './script/';
 import { Notion } from './notion/';
 import { KeyVal } from './keyval';
 import { OAuth } from './oauth/';
+import { Tuya } from './tuya';
 import { Auth } from './auth';
 import { Cast } from './cast';
 import { Bot } from './bot';
@@ -37,6 +38,7 @@ export { Notion } from './notion/';
 export { Script } from './script/';
 export { KeyVal } from './keyval';
 export { OAuth } from './oauth/';
+export { Tuya } from './tuya';
 export { Auth } from './auth';
 export { Cast } from './cast';
 export { Bot } from './bot';
@@ -71,6 +73,7 @@ const moduleObj = {
 	RGB: RGB,
 	cast: Cast,
 	auth: Auth,
+	tuya: Tuya,
 	oauth: OAuth,
 	script: Script,
 	keyval: KeyVal,

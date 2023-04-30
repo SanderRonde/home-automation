@@ -1,4 +1,3 @@
-import { ExternalHandler } from './external';
 import { initEWeLinkAPI } from './api';
 import { ModuleMeta } from '../meta';
 import { AllModules } from '..';
@@ -8,10 +7,6 @@ export const EWeLink = new (class Meta extends ModuleMeta {
 		refreshWebsocket?(): Promise<void>;
 	} | null = null;
 	public name = 'ewelink';
-
-	public get External() {
-		return ExternalHandler;
-	}
 
 	public init() {
 		return Promise.resolve(void 0);
