@@ -32,6 +32,7 @@ export class TuyaDevice {
 		});
 
 		this._device.on('data', (data) => {
+			// TODO:(sander) use shape and do something with this data
 			console.log('tuyadata=', data);
 		});
 
