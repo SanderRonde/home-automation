@@ -1,5 +1,5 @@
 import {
-	EWeLinkInittable,
+	EWeLinkInitable,
 	EWeLinkSharedConfig,
 	EWeLinkUpdateMessage,
 } from '../shared';
@@ -20,7 +20,7 @@ type EWeLinkButtonPressMessage = EWeLinkUpdateMessage<{
 	key: ButtonTriggerType;
 }>;
 
-export class EwelinkButtonBase extends EWeLinkInittable {
+export class EwelinkButtonBase extends EWeLinkInitable {
 	public constructor(
 		protected _eWeLinkConfig: EWeLinkSharedConfig,
 		private _actions: ButtonTriggerActions

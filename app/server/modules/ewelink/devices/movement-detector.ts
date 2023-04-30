@@ -1,8 +1,8 @@
-import { EWeLinkInittable, EWeLinkSharedConfig } from './shared';
+import { EWeLinkInitable, EWeLinkSharedConfig } from './shared';
 import { ExternalHandler } from '../../movement/external';
 import { logTag } from '../../../lib/logger';
 
-export class EwelinkMovement extends EWeLinkInittable {
+export class EwelinkMovement extends EWeLinkInitable {
 	private _movementExternal!: ExternalHandler;
 
 	public constructor(

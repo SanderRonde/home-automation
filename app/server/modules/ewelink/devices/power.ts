@@ -1,5 +1,5 @@
 import {
-	EWeLinkInittable,
+	EWeLinkInitable,
 	EWeLinkSharedConfig,
 	EWeLinkWebSocketMessage,
 } from './shared';
@@ -7,7 +7,7 @@ import { logFixture, ResDummy } from '../../../lib/logger';
 import { asyncSetInterval } from '../../../lib/util';
 import chalk from 'chalk';
 
-export class EwelinkPower extends EWeLinkInittable {
+export class EwelinkPower extends EWeLinkInitable {
 	private static _cooldown: NodeJS.Timeout | null = null;
 	private readonly _options: {
 		enableSync: boolean;

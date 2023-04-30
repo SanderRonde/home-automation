@@ -40,6 +40,6 @@ export interface EWeLinkSharedConfig {
 	modules: AllModules;
 }
 
-export abstract class EWeLinkInittable {
+export abstract class EWeLinkInitable {
 	public abstract init(): Promise<void>;
 }
