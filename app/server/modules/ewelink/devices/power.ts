@@ -100,12 +100,15 @@ export class EwelinkPower extends EWeLinkInittable {
 		});
 		this._eWeLinkConfig.wsConnection.on(
 			'data',
-			async (data: EWeLinkWebSocketMessage<{ switch: 'on' | 'off' }>) => {
+			async (
+				data: EWeLinkWebSocketMessage<{ switch?: 'on' | 'off' }>
+			) => {
 				if (
 					typeof data === 'string' ||
 					!('action' in data) ||
 					data.action !== 'update' ||
-					data.deviceid !== this._eWeLinkConfig.device.deviceid
+					data.deviceid !== this._eWeLinkConfig.device.deviceid ||
+					!data.params.switch
 				) {
 					return;
 				}
