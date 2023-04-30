@@ -39,29 +39,41 @@ export function initRouting({
 		(instance: WSSimInstance<WSMessages>) => {
 			instance.listen(
 				'listen',
-				(key) => {
-					let lastVal: string | undefined = undefined;
+				(keyString) => {
+					const keys = keyString.split(' ');
+					const lastValues: string[] = keys.map((k) =>
+						db.get(k, '0')
+					);
 					const onChange = (
-						_value: string,
-						_key: string,
-						logObj: LogObj
+						index: number,
+						logObj: LogObj,
+						force: boolean = false
 					) => {
+						const key = keys[index];
 						const val = db.get(key, '0');
-						if (val !== lastVal) {
-							lastVal = val;
+						if (val !== lastValues[index] || force) {
+							lastValues[index] = val;
 							attachMessage(
 								logObj,
 								`Sending "${val}" to`,
 								chalk.bold(instance.ip)
 							);
-							instance.send('valChange', val);
+							instance.send('valChange', lastValues.join(' '));
 						}
 					};
-					const listener = addListener(key, onChange);
-					onChange('0', key, {});
+					const listeners: number[] = [];
+					for (let i = 0; i < keys.length; i++) {
+						const key = keys[i];
+						listeners.push(
+							addListener(key, (_key, _value, logObj) =>
+								onChange(i, logObj)
+							)
+						);
+						onChange(i, {}, true);
+					}
 
 					instance.onClose = () => {
-						removeListener(listener);
+						listeners.forEach((l) => removeListener(l));
 					};
 				},
 				instance.ip
