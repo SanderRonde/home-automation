@@ -3,6 +3,12 @@ import { TuyaDevice } from './devices/device';
 import { ModuleMeta } from '../meta';
 import { AllModules } from '..';
 
+/**
+ * How to add a device
+ * - Install `@tuyapi/cli` globally
+ * - Run `tuya-cli wizard` and follow the instructions
+ */
+
 export const Tuya = new (class Meta extends ModuleMeta {
 	private _devices: TuyaDevice[] = [];
 	public name = 'tuya';
