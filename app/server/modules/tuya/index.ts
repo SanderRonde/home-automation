@@ -6,7 +6,7 @@ import { AllModules } from '..';
 /**
  * How to add a device
  * - Install `@tuyapi/cli` globally
- * - Run `tuya-cli wizard` and follow the instructions
+ * - Run `yarn dlx @tuyapi/cli wizard` and follow the instructions
  */
 
 export const Tuya = new (class Meta extends ModuleMeta {
