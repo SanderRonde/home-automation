@@ -2,5 +2,4 @@ database/
 secrets/
 static/
 
-app/**/*.d.ts
 ai/**/*.d.ts
