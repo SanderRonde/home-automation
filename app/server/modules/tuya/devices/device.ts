@@ -12,12 +12,10 @@ export class TuyaDevice {
 	 */
 	private _lastLowestDigit: number | null = null;
 	private _active: boolean | null = null;
-	// Not used for now
-	// private _connected: boolean = false;
 
 	public constructor(
 		private readonly _modules: AllModules,
-		private readonly _keyVal: string,
+		private readonly _keyval: string,
 		id: string,
 		key: string
 	) {
@@ -29,16 +27,12 @@ export class TuyaDevice {
 			issueRefreshOnPing: true,
 		});
 
-		void this._device.find().then(() => {
-			void this._device.connect();
-		});
-
-		this._device.on('connected', () => {
-			// this._connected = true;
-		});
-
 		this._device.on('disconnected', () => {
-			// this._connected = false;
+			setTimeout(() => {
+				void this._device.find().then(() => {
+					void this._device.connect();
+				});
+			}, 1000 * 10);
 		});
 
 		const onChange = async (value: boolean) => {
@@ -67,7 +61,7 @@ export class TuyaDevice {
 			await new this._modules.keyval.External(
 				{},
 				'TUYA.DEVICE.STATUS'
-			).set(this._keyVal, isEnabled ? '1' : '0', true);
+			).set(this._keyval, isEnabled ? '1' : '0', true);
 
 			if (!this._lastLowestDigit !== null) {
 				this._lastLowestDigit = lowestNumberKey;
@@ -78,7 +72,7 @@ export class TuyaDevice {
 		});
 
 		void new this._modules.keyval.External({}, 'TUYA.DEVICE.INIT').onChange(
-			this._keyVal,
+			this._keyval,
 			async (value) => {
 				if ((value === '1') !== this._active) {
 					await onChange(value === '1');
@@ -86,7 +80,17 @@ export class TuyaDevice {
 			}
 		);
 
-		registerExitHandler(() => this._device.disconnect());
+		const interval = setInterval(() => {
+			if (this._lastLowestDigit) {
+				void this._device.refresh({
+					dps: this._lastLowestDigit,
+				});
+			}
+		}, 1000 * 60);
+		registerExitHandler(() => {
+			this._device.disconnect();
+			clearTimeout(interval);
+		});
 	}
 
 	public async refresh(): Promise<void> {
