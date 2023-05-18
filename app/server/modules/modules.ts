@@ -3,6 +3,7 @@ import { SpotifyBeats } from './spotify-beats';
 import { HomeDetector } from './home-detector';
 import { Temperature } from './temperature';
 import { SmartHome } from './smart-home/';
+import { SwitchBot } from './switchbot/';
 import { Pressure } from './pressure';
 import { Movement } from './movement';
 import { Explain } from './explain';
@@ -29,6 +30,7 @@ export { SpotifyBeats } from './spotify-beats';
 export { HomeDetector } from './home-detector';
 export { Temperature } from './temperature';
 export { SmartHome } from './smart-home/';
+export { SwitchBot } from './switchbot/';
 export { Pressure } from './pressure';
 export { Movement } from './movement';
 export { Explain } from './explain';
@@ -84,6 +86,7 @@ const moduleObj = {
 	pressure: Pressure,
 	movement: Movement,
 	smartHome: SmartHome,
+	switchbot: SwitchBot,
 	infoScreen: InfoScreen,
 	temperature: Temperature,
 	spotifyBeats: SpotifyBeats,
