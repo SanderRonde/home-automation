@@ -5,6 +5,55 @@ __metadata:
   version: 4
   cacheKey: 8
 
+"@abandonware/bluetooth-hci-socket@npm:^0.5.3-10":
+  version: 0.5.3-10
+  resolution: "@abandonware/bluetooth-hci-socket@npm:0.5.3-10"
+  dependencies:
+    "@mapbox/node-pre-gyp": ^1.0.10
+    debug: ^4.3.4
+    nan: ^2.17.0
+    usb: ^1.9.2
+  dependenciesMeta:
+    usb:
+      optional: true
+  checksum: 1dea079908367ae9326091c24d50c615383292d0fe5287923fdaef2ef831e73329fbe0577dae9de6b35586039d65f4599228e4e37d3014637daf130a72e5571f
+  languageName: node
+  linkType: hard
+
+"@abandonware/noble@npm:1.9.2-20":
+  version: 1.9.2-20
+  resolution: "@abandonware/noble@npm:1.9.2-20"
+  dependencies:
+    "@abandonware/bluetooth-hci-socket": ^0.5.3-10
+    debug: ^4.3.4
+    napi-thread-safe-callback: ^0.0.6
+    node-addon-api: ^4.3.0
+    node-gyp: latest
+    node-gyp-build: ^4.5.0
+  dependenciesMeta:
+    "@abandonware/bluetooth-hci-socket":
+      optional: true
+  checksum: 96b5e413378bdb0bb51991e3b8abd7de765972fd2870adef4100b20f58145cbd87779590452f5605e7108e7e98712b79519c39394503d61dc49ffb8887bdde51
+  languageName: node
+  linkType: hard
+
+"@abandonware/noble@npm:^1.9.2-21":
+  version: 1.9.2-21
+  resolution: "@abandonware/noble@npm:1.9.2-21"
+  dependencies:
+    "@abandonware/bluetooth-hci-socket": ^0.5.3-10
+    debug: ^4.3.4
+    napi-thread-safe-callback: ^0.0.6
+    node-addon-api: ^4.3.0
+    node-gyp: latest
+    node-gyp-build: ^4.5.0
+  dependenciesMeta:
+    "@abandonware/bluetooth-hci-socket":
+      optional: true
+  checksum: 281960f0d9aa7f156812d88254a85602644ec3beb0fac198b4403005cec744d12cef0bce7cfb1855170d2f522419fc93403512bc4bdd6a31583402e0ec585c17
+  languageName: node
+  linkType: hard
+
 "@ant-design/colors@npm:^6.0.0":
   version: 6.0.0
   resolution: "@ant-design/colors@npm:6.0.0"
@@ -227,6 +276,25 @@ __metadata:
   version: 2.0.4
   resolution: "@leichtgewicht/ip-codec@npm:2.0.4"
   checksum: 468de1f04d33de6d300892683d7c8aecbf96d1e2c5fe084f95f816e50a054d45b7c1ebfb141a1447d844b86a948733f6eebd92234da8581c84a1ad4de2946a2d
+  languageName: node
+  linkType: hard
+
+"@mapbox/node-pre-gyp@npm:^1.0.10":
+  version: 1.0.10
+  resolution: "@mapbox/node-pre-gyp@npm:1.0.10"
+  dependencies:
+    detect-libc: ^2.0.0
+    https-proxy-agent: ^5.0.0
+    make-dir: ^3.1.0
+    node-fetch: ^2.6.7
+    nopt: ^5.0.0
+    npmlog: ^5.0.1
+    rimraf: ^3.0.2
+    semver: ^7.3.5
+    tar: ^6.1.11
+  bin:
+    node-pre-gyp: bin/node-pre-gyp
+  checksum: 1a98db05d955b74dad3814679593df293b9194853698f3f5f1ed00ecd93128cdd4b14fb8767fe44ac6981ef05c23effcfdc88710e7c1de99ccb6f647890597c8
   languageName: node
   linkType: hard
 
@@ -1382,6 +1450,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"are-we-there-yet@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "are-we-there-yet@npm:2.0.0"
+  dependencies:
+    delegates: ^1.0.0
+    readable-stream: ^3.6.0
+  checksum: 6c80b4fd04ecee6ba6e737e0b72a4b41bdc64b7d279edfc998678567ff583c8df27e27523bc789f2c99be603ffa9eaa612803da1d886962d2086e7ff6fa90c7c
+  languageName: node
+  linkType: hard
+
 "are-we-there-yet@npm:^3.0.0":
   version: 3.0.1
   resolution: "are-we-there-yet@npm:3.0.1"
@@ -2009,7 +2087,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"color-support@npm:^1.1.3":
+"color-support@npm:^1.1.2, color-support@npm:^1.1.3":
   version: 1.1.3
   resolution: "color-support@npm:1.1.3"
   bin:
@@ -2055,7 +2133,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"console-control-strings@npm:^1.1.0":
+"console-control-strings@npm:^1.0.0, console-control-strings@npm:^1.1.0":
   version: 1.1.0
   resolution: "console-control-strings@npm:1.1.0"
   checksum: 8755d76787f94e6cf79ce4666f0c5519906d7f5b02d4b884cf41e11dcd759ed69c57da0670afd9236d229a46e0f9cf519db0cd829c6dca820bb5a5c3def584ed
@@ -2345,6 +2423,13 @@ __metadata:
   version: 1.2.0
   resolution: "destroy@npm:1.2.0"
   checksum: 0acb300b7478a08b92d810ab229d5afe0d2f4399272045ab22affa0d99dbaf12637659411530a6fcd597a9bdac718fc94373a61a95b4651bbc7b83684a565e38
+  languageName: node
+  linkType: hard
+
+"detect-libc@npm:^2.0.0":
+  version: 2.0.1
+  resolution: "detect-libc@npm:2.0.1"
+  checksum: ccb05fcabbb555beb544d48080179c18523a343face9ee4e1a86605a8715b4169f94d663c21a03c310ac824592f2ba9a5270218819bb411ad7be578a527593d7
   languageName: node
   linkType: hard
 
@@ -3511,6 +3596,23 @@ fsevents@~2.3.2:
   languageName: node
   linkType: hard
 
+"gauge@npm:^3.0.0":
+  version: 3.0.2
+  resolution: "gauge@npm:3.0.2"
+  dependencies:
+    aproba: ^1.0.3 || ^2.0.0
+    color-support: ^1.1.2
+    console-control-strings: ^1.0.0
+    has-unicode: ^2.0.1
+    object-assign: ^4.1.1
+    signal-exit: ^3.0.0
+    string-width: ^4.2.3
+    strip-ansi: ^6.0.1
+    wide-align: ^1.1.2
+  checksum: 81296c00c7410cdd48f997800155fbead4f32e4f82109be0719c63edc8560e6579946cc8abd04205297640691ec26d21b578837fd13a4e96288ab4b40b1dc3e9
+  languageName: node
+  linkType: hard
+
 "gauge@npm:^4.0.3":
   version: 4.0.4
   resolution: "gauge@npm:4.0.4"
@@ -4015,6 +4117,7 @@ fsevents@~2.3.2:
   version: 0.0.0-use.local
   resolution: "home-automation@workspace:."
   dependencies:
+    "@abandonware/noble": ^1.9.2-21
     "@googleapis/homegraph": ^2.0.0
     "@notionhq/client": ^0.4.6
     "@pm2/io": ^5.0.0
@@ -4063,6 +4166,7 @@ fsevents@~2.3.2:
     lit-html: ^1.1.0
     magic-home: ^2.6.0
     node-fetch: ^2.6.7
+    node-switchbot: ^1.8.1
     nodemon: ^2.0.12
     oauth2-server: ^3.1.1
     optional-require: ^1.0.0
@@ -4983,6 +5087,15 @@ fsevents@~2.3.2:
   languageName: node
   linkType: hard
 
+"make-dir@npm:^3.1.0":
+  version: 3.1.0
+  resolution: "make-dir@npm:3.1.0"
+  dependencies:
+    semver: ^6.0.0
+  checksum: 484200020ab5a1fdf12f393fe5f385fc8e4378824c940fba1729dcd198ae4ff24867bc7a5646331e50cead8abff5d9270c456314386e629acec6dff4b8016b78
+  languageName: node
+  linkType: hard
+
 "make-error@npm:^1.1.1":
   version: 1.3.6
   resolution: "make-error@npm:1.3.6"
@@ -5350,6 +5463,24 @@ fsevents@~2.3.2:
   languageName: node
   linkType: hard
 
+"nan@npm:^2.17.0":
+  version: 2.17.0
+  resolution: "nan@npm:2.17.0"
+  dependencies:
+    node-gyp: latest
+  checksum: ec609aeaf7e68b76592a3ba96b372aa7f5df5b056c1e37410b0f1deefbab5a57a922061e2c5b369bae9c7c6b5e6eecf4ad2dac8833a1a7d3a751e0a7c7f849ed
+  languageName: node
+  linkType: hard
+
+"napi-thread-safe-callback@npm:^0.0.6":
+  version: 0.0.6
+  resolution: "napi-thread-safe-callback@npm:0.0.6"
+  dependencies:
+    node-gyp: latest
+  checksum: daa894fc9e6c07f9fee962dfe30804255dcf95c765f90b1ddbeb4af61a222250e77fbc5d6555d53c29b7dd941b2d8ec2cd96f8e9acdb50b7e5fc38ba4e59063d
+  languageName: node
+  linkType: hard
+
 "natural-compare-lite@npm:^1.4.0":
   version: 1.4.0
   resolution: "natural-compare-lite@npm:1.4.0"
@@ -5391,6 +5522,15 @@ fsevents@~2.3.2:
   version: 1.1.0
   resolution: "next-tick@npm:1.1.0"
   checksum: 83b5cf36027a53ee6d8b7f9c0782f2ba87f4858d977342bfc3c20c21629290a2111f8374d13a81221179603ffc4364f38374b5655d17b6a8f8a8c77bdea4fe8b
+  languageName: node
+  linkType: hard
+
+"node-addon-api@npm:^4.2.0, node-addon-api@npm:^4.3.0":
+  version: 4.3.0
+  resolution: "node-addon-api@npm:4.3.0"
+  dependencies:
+    node-gyp: latest
+  checksum: 3de396e23cc209f539c704583e8e99c148850226f6e389a641b92e8967953713228109f919765abc1f4355e801e8f41842f96210b8d61c7dcc10a477002dcf00
   languageName: node
   linkType: hard
 
@@ -5442,6 +5582,17 @@ fsevents@~2.3.2:
   languageName: node
   linkType: hard
 
+"node-gyp-build@npm:^4.5.0":
+  version: 4.6.0
+  resolution: "node-gyp-build@npm:4.6.0"
+  bin:
+    node-gyp-build: bin.js
+    node-gyp-build-optional: optional.js
+    node-gyp-build-test: build-test.js
+  checksum: 25d78c5ef1f8c24291f4a370c47ba52fcea14f39272041a90a7894cd50d766f7c8cb8fb06c0f42bf6f69b204b49d9be3c8fc344aac09714d5bdb95965499eb15
+  languageName: node
+  linkType: hard
+
 "node-gyp@npm:latest":
   version: 9.3.0
   resolution: "node-gyp@npm:9.3.0"
@@ -5462,6 +5613,15 @@ fsevents@~2.3.2:
   languageName: node
   linkType: hard
 
+"node-switchbot@npm:^1.8.1":
+  version: 1.8.1
+  resolution: "node-switchbot@npm:1.8.1"
+  dependencies:
+    "@abandonware/noble": 1.9.2-20
+  checksum: 51e16502e93b306de9ebe4b2155b410f66ad7f1b0ac467c0e640f998fd6ea2119b35a954bd25bdf0bca5a809ad90f114a6fc8a8ea460bdbc1c9e055748c4b416
+  languageName: node
+  linkType: hard
+
 "nodemon@npm:^2.0.12":
   version: 2.0.20
   resolution: "nodemon@npm:2.0.20"
@@ -5479,6 +5639,17 @@ fsevents@~2.3.2:
   bin:
     nodemon: bin/nodemon.js
   checksum: 9fe858682414fe703179f4fe36c86e71f40d2693b5345c09803d7b191816a6589c5df8f1f9873bffee92893880183b95a031c86340e46b364ef1b0b7f619edbf
+  languageName: node
+  linkType: hard
+
+"nopt@npm:^5.0.0":
+  version: 5.0.0
+  resolution: "nopt@npm:5.0.0"
+  dependencies:
+    abbrev: 1
+  bin:
+    nopt: bin/nopt.js
+  checksum: d35fdec187269503843924e0114c0c6533fb54bbf1620d0f28b4b60ba01712d6687f62565c55cc20a504eff0fbe5c63e22340c3fad549ad40469ffb611b04f2f
   languageName: node
   linkType: hard
 
@@ -5550,6 +5721,18 @@ fsevents@~2.3.2:
   dependencies:
     path-key: ^3.0.0
   checksum: 5374c0cea4b0bbfdfae62da7bbdf1e1558d338335f4cacf2515c282ff358ff27b2ecb91ffa5330a8b14390ac66a1e146e10700440c1ab868208430f56b5f4d23
+  languageName: node
+  linkType: hard
+
+"npmlog@npm:^5.0.1":
+  version: 5.0.1
+  resolution: "npmlog@npm:5.0.1"
+  dependencies:
+    are-we-there-yet: ^2.0.0
+    console-control-strings: ^1.1.0
+    gauge: ^3.0.0
+    set-blocking: ^2.0.0
+  checksum: 516b2663028761f062d13e8beb3f00069c5664925871a9b57989642ebe09f23ab02145bf3ab88da7866c4e112cafff72401f61a672c7c8a20edc585a7016ef5f
   languageName: node
   linkType: hard
 
@@ -7141,7 +7324,7 @@ fsevents@~2.3.2:
   languageName: node
   linkType: hard
 
-"semver@npm:6.3.0, semver@npm:^6.1.0":
+"semver@npm:6.3.0, semver@npm:^6.0.0, semver@npm:^6.1.0":
   version: 6.3.0
   resolution: "semver@npm:6.3.0"
   bin:
@@ -7296,7 +7479,7 @@ fsevents@~2.3.2:
   languageName: node
   linkType: hard
 
-"signal-exit@npm:^3.0.2, signal-exit@npm:^3.0.3, signal-exit@npm:^3.0.7":
+"signal-exit@npm:^3.0.0, signal-exit@npm:^3.0.2, signal-exit@npm:^3.0.3, signal-exit@npm:^3.0.7":
   version: 3.0.7
   resolution: "signal-exit@npm:3.0.7"
   checksum: a2f098f247adc367dffc27845853e9959b9e88b01cb301658cfe4194352d8d2bb32e18467c786a7fe15f1d44b233ea35633d076d5e737870b7139949d1ab6318
@@ -8067,6 +8250,17 @@ fsevents@~2.3.2:
   languageName: node
   linkType: hard
 
+"usb@npm:^1.9.2":
+  version: 1.9.2
+  resolution: "usb@npm:1.9.2"
+  dependencies:
+    node-addon-api: ^4.2.0
+    node-gyp: latest
+    node-gyp-build: ^4.3.0
+  checksum: 7aaf6669f02c6f4bebe571de1c364447ca44be4dc8c60fc3261f38660e04015099ebed3943935ad64755afccd11213245d697ea05571a2f142d912bb801bb54f
+  languageName: node
+  linkType: hard
+
 "utf-8-validate@npm:^5.0.2":
   version: 5.0.10
   resolution: "utf-8-validate@npm:5.0.10"
@@ -8274,7 +8468,7 @@ fsevents@~2.3.2:
   languageName: node
   linkType: hard
 
-"wide-align@npm:^1.1.5":
+"wide-align@npm:^1.1.2, wide-align@npm:^1.1.5":
   version: 1.1.5
   resolution: "wide-align@npm:1.1.5"
   dependencies:

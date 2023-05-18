@@ -81,6 +81,7 @@
 		"typescript": "latest"
 	},
 	"dependencies": {
+		"@abandonware/noble": "^1.9.2-21",
 		"@googleapis/homegraph": "^2.0.0",
 		"@notionhq/client": "^0.4.6",
 		"@pm2/io": "^5.0.0",
@@ -102,6 +103,7 @@
 		"lit-html": "^1.1.0",
 		"magic-home": "^2.6.0",
 		"node-fetch": "^2.6.7",
+		"node-switchbot": "^1.8.1",
 		"oauth2-server": "^3.1.1",
 		"optional-require": "^1.0.0",
 		"ping": "^0.2.2",
