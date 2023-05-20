@@ -1,6 +1,6 @@
+import { initRegister, isEnabled } from './register';
 import { AllModules, ModuleConfig } from '..';
 import { ExternalHandler } from './external';
-import { initRegister } from './register';
 import { initRouting } from './routing';
 import { ModuleMeta } from '../meta';
 import { Bot } from './bot';
@@ -24,10 +24,12 @@ export const Pressure = new (class Meta extends ModuleMeta {
 
 	public async notifyModules(modules: unknown) {
 		void (async () => {
-			await new (modules as AllModules).keyval.External(
+			const keyval = new (modules as AllModules).keyval.External(
 				{},
 				'PRESSURE.NOTIFY'
-			).onChange(
+			);
+			await keyval.set('state.pressure', isEnabled() ? '1' : '0', false);
+			await keyval.onChange(
 				'state.pressure',
 				async (value, _key, logObj) => {
 					const handler = new ExternalHandler(logObj, 'KEYVAL');
