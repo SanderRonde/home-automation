@@ -16,6 +16,7 @@ import { OAuth } from './oauth/';
 import { Tuya } from './tuya';
 import { Auth } from './auth';
 import { Cast } from './cast';
+import { Hue } from './hue/';
 import { Bot } from './bot';
 import { RGB } from './rgb';
 
@@ -45,6 +46,7 @@ export { Auth } from './auth';
 export { Cast } from './cast';
 export { Bot } from './bot';
 export { RGB } from './rgb';
+export { Hue } from './hue/';
 
 export type AllModules = typeof moduleObj;
 
@@ -73,6 +75,7 @@ export interface ModuleConfig extends NoDBModuleConfig {
 const moduleObj = {
 	bot: Bot,
 	RGB: RGB,
+	hue: Hue,
 	cast: Cast,
 	auth: Auth,
 	tuya: Tuya,

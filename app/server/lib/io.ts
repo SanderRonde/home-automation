@@ -108,6 +108,8 @@ export interface EnvShape {
 	SECRET_EWELINK_PASSWORD: string;
 
 	SECRET_NOTION_API_KEY: string;
+
+	SECRET_HUE_USERNAME: string;
 }
 
 export function getEnv<S extends EnvShape>(
