@@ -10,6 +10,7 @@ import { Explain } from './explain';
 import { Webhook } from './webhook';
 import { EWeLink } from './ewelink';
 import { Script } from './script/';
+import { Secret } from './secret/';
 import { Notion } from './notion/';
 import { KeyVal } from './keyval';
 import { OAuth } from './oauth/';
@@ -40,6 +41,7 @@ export { EWeLink } from './ewelink';
 export { Notion } from './notion/';
 export { Script } from './script/';
 export { KeyVal } from './keyval';
+export { Secret } from './secret/';
 export { OAuth } from './oauth/';
 export { Tuya } from './tuya';
 export { Auth } from './auth';
@@ -82,6 +84,7 @@ const moduleObj = {
 	oauth: OAuth,
 	script: Script,
 	keyval: KeyVal,
+	secret: Secret,
 	notion: Notion,
 	webhook: Webhook,
 	ewelink: EWeLink,
