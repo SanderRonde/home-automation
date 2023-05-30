@@ -416,7 +416,7 @@ export function SmartHomeMixinOpenCloseCurtainKeyval<
 					google: [
 						{
 							value: {
-								openPercent: curtain.progress,
+								openPercent: curtain.openPercent,
 							},
 						},
 					],
@@ -440,21 +440,16 @@ export function SmartHomeMixinOpenCloseCurtainKeyval<
 				return Promise.resolve(superResult);
 			}
 
-			const target = (() => {
-				return params.openPercent > 50 ? '1' : '0';
-			})();
-
 			const curtain = await this._getSwitchbot(hookables);
-			if (params.openPercent === 0) {
+			if (params.openPercent < 5) {
 				void hookables.keyval.set(this._queryID, '0');
-			} else if (params.openPercent === 100) {
+			} else if (params.openPercent > 95) {
 				void hookables.keyval.set(this._queryID, '1');
 			} else {
 				if (curtain) {
-					await curtain.runToPos(params.openPercent);
+					await curtain.runToOpenPercentage(params.openPercent);
 				}
 			}
-			void hookables.keyval.set(this._queryID, target);
 
 			return Promise.resolve({
 				success: true,

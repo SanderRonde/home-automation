@@ -17,12 +17,24 @@ export class SwitchbotCurtain extends SwitchbotDeviceBase {
 
 	public isOpen: EventEmitter<boolean> = new EventEmitter();
 
+	public get openPercent(): number {
+		return SwitchbotCurtain._getOpenPercent(this.progress);
+	}
+
 	public constructor(
 		private readonly _curtainDevice: SwitchbotApiDevice<SwitchbotWoDeviceCurtain>,
 		_modules: AllModules,
 		_keyval: string
 	) {
 		super(_curtainDevice, _modules, _keyval);
+	}
+
+	private static _getOpenPercent(progress: number): number {
+		return 100 - progress;
+	}
+
+	private static _getProgress(openPercent: number): number {
+		return 100 - openPercent;
 	}
 
 	protected override async onChange(value: string): Promise<void> {
@@ -49,7 +61,9 @@ export class SwitchbotCurtain extends SwitchbotDeviceBase {
 		}
 	}
 
-	public async runToPos(position: number): Promise<void> {
-		await this._curtainDevice.device.runToPos(position);
+	public async runToOpenPercentage(openPercentage: number): Promise<void> {
+		await this._curtainDevice.device.runToPos(
+			SwitchbotCurtain._getProgress(openPercentage)
+		);
 	}
 }
