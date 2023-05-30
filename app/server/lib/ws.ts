@@ -129,7 +129,7 @@ export class WSSimInstance<
 			});
 			req.write(`${type} ${data}`);
 			req.on('error', () => {
-				this._die();
+				// Just ignore this one, it'll timeout if it's really a problem
 			});
 			req.end();
 
