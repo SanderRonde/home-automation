@@ -1,6 +1,7 @@
 import { Api } from 'node-hue-api/dist/esm/api/Api';
 import { discoverBridge } from './discover-bridge';
 import { linkHueDevices } from '../../config/hue';
+import { logTag } from '../../lib/logger';
 import { getEnv } from '../../lib/io';
 import { ModuleMeta } from '../meta';
 import { AllModules } from '..';
@@ -18,7 +19,11 @@ export const Hue = new (class Meta extends ModuleMeta {
 		if (!hueUsername) {
 			return;
 		}
-		this._bridge = await discoverBridge(hueUsername);
+		try {
+			this._bridge = await discoverBridge(hueUsername);
+		} catch (e) {
+			logTag('hue', 'red', 'Failed to connect to hue bridge');
+		}
 	}
 
 	public async notifyModules(modules: unknown) {
