@@ -48,4 +48,8 @@ export class SwitchbotCurtain extends SwitchbotDeviceBase {
 			this.isOpen.emit(this.progress > 50);
 		}
 	}
+
+	public async runToPos(position: number): Promise<void> {
+		await this._curtainDevice.device.runToPos(position);
+	}
 }

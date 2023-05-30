@@ -13,6 +13,7 @@ export const enum GOOGLE_SMART_HOME_DEVICE_TYPE {
 	SCENE = 'action.devices.types.SCENE',
 	LIGHT = 'action.devices.types.LIGHT',
 	THERMOSTAT = 'action.devices.types.THERMOSTAT',
+	CURTAIN = 'action.devices.types.CURTAIN',
 }
 /**
  * A subset of samsung smartthings device types
@@ -34,6 +35,7 @@ export const enum SMART_HOME_DEVICE_TRAIT {
 	TEMPERATURE_SETTING_AND_READING,
 	// SCENE,
 	ON_OFF,
+	OPEN_CLOSE,
 }
 
 export const GOOGLE_SMART_HOME_DEVICE_TRAITS: {
@@ -50,6 +52,7 @@ export const GOOGLE_SMART_HOME_DEVICE_TRAITS: {
 	// [SMART_HOME_DEVICE_TRAIT.SCENE]: 'action.devices.traits.Scene',
 	[SMART_HOME_DEVICE_TRAIT.ON_OFF]: 'action.devices.traits.OnOff',
 	[SMART_HOME_DEVICE_TRAIT.SAMSUNG_BRIGHTNESS]: undefined,
+	[SMART_HOME_DEVICE_TRAIT.OPEN_CLOSE]: 'action.devices.traits.OpenClose',
 };
 
 export const SAMSUNG_SMART_HOME_DEVICE_CAPABILITIES: {
@@ -61,6 +64,7 @@ export const SAMSUNG_SMART_HOME_DEVICE_CAPABILITIES: {
 	[SMART_HOME_DEVICE_TRAIT.TEMPERATURE_SETTING_AND_READING]:
 		'st.temperatureMeasurement',
 	[SMART_HOME_DEVICE_TRAIT.ON_OFF]: 'st.switch',
+	[SMART_HOME_DEVICE_TRAIT.OPEN_CLOSE]: 'st.switch',
 };
 
 /**
@@ -76,6 +80,7 @@ export const enum SMART_HOME_COMMAND {
 	SET_MODES = 'action.devices.commands.SetModes',
 	ACTIVATE_SCENE = 'action.devices.commands.ActivateScene',
 	THERMOSTAT_TEMPERATURE_SETPOINT = 'action.devices.commands.ThermostatTemperatureSetpoint',
+	OPEN_CLOSE = 'action.devices.commands.OpenClose',
 
 	// Samsung
 	SWITCH_OFF = 'off',
@@ -164,6 +169,11 @@ export type SmartHomeGoogleQuery<TR extends SMART_HOME_DEVICE_TRAIT> =
 			? {
 					on?: boolean;
 			  }
+			: {}) &
+		(TR extends SMART_HOME_DEVICE_TRAIT.OPEN_CLOSE
+			? {
+					openPercent?: number;
+			  }
 			: {});
 
 export type SmartHomeSamsungQuery<TR extends SMART_HOME_DEVICE_TRAIT> =
@@ -228,6 +238,20 @@ export type SmartHomeAttributes<TR extends SMART_HOME_DEVICE_TRAIT> =
 					commandOnlyOnOff?: boolean;
 					queryOnlyOnOff?: boolean;
 			  }
+			: {}) &
+		(TR extends SMART_HOME_DEVICE_TRAIT.OPEN_CLOSE
+			? {
+					commandOnlyOpenClose?: boolean;
+					queryOnlyOpenClose?: boolean;
+					openDirection?: (
+						| 'UP'
+						| 'DOWN'
+						| 'LEFT'
+						| 'RIGHT'
+						| 'IN'
+						| 'OUT'
+					)[];
+			  }
 			: {});
 
 export type SmartHomeParam<TR extends SMART_HOME_COMMAND> =
@@ -279,6 +303,13 @@ export type SmartHomeParam<TR extends SMART_HOME_COMMAND> =
 		(TR extends SMART_HOME_COMMAND.THERMOSTAT_TEMPERATURE_SETPOINT
 			? {
 					thermostatTemperatureSetpoint: number;
+			  }
+			: {}) &
+		(TR extends SMART_HOME_COMMAND.OPEN_CLOSE
+			? {
+				openPercent: number;
+				openDirection?: 'UP'|'DOWN'|'LEFT'|'RIGHT'|'IN'|'OUT';
+				followUpToken: string
 			  }
 			: {}) &
 		(TR extends SMART_HOME_COMMAND.ACTIVATE_SCENE

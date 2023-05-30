@@ -4,14 +4,17 @@ import Switchbot, {
 } from 'node-switchbot';
 import { createSwitchbots } from '../../config/switchbot';
 import { registerExitHandler } from '../../lib/shutdown';
+import { SwitchbotDeviceBase } from './devices/devices';
 import { EventEmitter } from '../../lib/event-emitter';
 import { logTag } from '../../lib/logger';
 import { AllModules } from '..';
 
-export async function scanSwitchbots(modules: AllModules): Promise<void> {
+export async function scanSwitchbots(
+	modules: AllModules
+): Promise<SwitchbotDeviceBase[]> {
 	const switchbot = new Switchbot();
 	const botMap: Record<string, SwitchbotApiDevice> = {};
-	void createSwitchbots(async (id: string) => {
+	const bots = await createSwitchbots(async (id: string) => {
 		const [device] = await switchbot.discover({
 			duration: 1000 * 60,
 			id,
@@ -32,7 +35,7 @@ export async function scanSwitchbots(modules: AllModules): Promise<void> {
 	});
 	registerExitHandler(() => switchbot.stopScan());
 
-	return Promise.resolve(void 0);
+	return bots;
 }
 
 export class SwitchbotApiDevice<D extends SwitchBotDevice = SwitchBotDevice> {

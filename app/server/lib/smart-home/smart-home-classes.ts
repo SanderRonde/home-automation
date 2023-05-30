@@ -13,6 +13,7 @@ import {
 	SmartHomeGoogleQuery,
 	SmartHomeSamsungQuery,
 } from './smart-home-types';
+import { SwitchbotCurtain } from '../../modules/switchbot/devices/curtain';
 import { TEMPERATURE_REPORT_MAX_TIMEOUT } from '../constants';
 import { LED_NAME } from '../../config/led-config';
 import { ResponseLike, warning } from '../logger';
@@ -222,6 +223,41 @@ export abstract class SmartHomeOutlet extends SmartHomeDevice {
 	}
 }
 
+export abstract class SmartHomeCurtain extends SmartHomeDevice {
+	private __switchbot: Promise<SwitchbotCurtain | null> | undefined;
+	public switchbotIds: string[] = [];
+
+	public get googleType() {
+		return GOOGLE_SMART_HOME_DEVICE_TYPE.CURTAIN;
+	}
+	public get samsungType() {
+		return SAMSUNG_SMART_HOME_DEVICE_TYPE.SWITCH;
+	}
+
+	protected _getSwitchbot(hookables: ModuleHookables) {
+		if (!this.__switchbot) {
+			this.__switchbot = (async () => {
+				const bots = await Promise.all(
+					this.switchbotIds.map(
+						(id) =>
+							hookables.switchbot.getBot(
+								id
+							) as Promise<SwitchbotCurtain | null>
+					)
+				);
+				for (const bot of bots) {
+					if (bot) {
+						return bot;
+					}
+				}
+				this.__switchbot = undefined;
+				return null;
+			})();
+		}
+		return this.__switchbot;
+	}
+}
+
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function SmartHomeMixinOnOffKeyval<
 	C extends abstract new (...args: unknown[]) => {}
@@ -330,6 +366,122 @@ export function SmartHomeMixinOnOffKeyval<
 		}
 	}
 	return SmartHomeOnOff;
+}
+
+export function SmartHomeMixinOpenCloseCurtainKeyval<
+	C extends abstract new (...args: unknown[]) => {}
+>(Constructor: C) {
+	// @ts-ignore
+	abstract class SmartHomeOpenClose extends (Constructor as typeof SmartHomeCurtain) {
+		protected get _queryFunctions() {
+			return [
+				...super._queryFunctions,
+				async (
+					hookables: ModuleHookables
+				): Promise<
+					QueryReturnType<SMART_HOME_DEVICE_TRAIT.OPEN_CLOSE>
+				> => {
+					const curtain = await this._getSwitchbot(hookables);
+					if (!curtain) {
+						return [];
+					}
+					return this._getQueryReturn(curtain);
+				},
+			];
+		}
+
+		public get traits(): SMART_HOME_DEVICE_TRAIT[] {
+			return [...super.traits, SMART_HOME_DEVICE_TRAIT.OPEN_CLOSE];
+		}
+
+		public constructor(...args: unknown[]) {
+			// @ts-ignore
+			super(...args);
+			this._executeFunctions.push(
+				this._execute.bind(this) as unknown as ExecuteFunction
+			);
+			this._attachHomeGraphListenerFunctions.push(
+				this._attachHomeGraphListeners.bind(
+					this
+				) as AttachHomeGraphListenerFunction
+			);
+		}
+
+		private _getQueryReturn(
+			curtain: SwitchbotCurtain
+		): QueryReturnType<SMART_HOME_DEVICE_TRAIT.OPEN_CLOSE> {
+			return [
+				{
+					trait: SMART_HOME_DEVICE_TRAIT.OPEN_CLOSE,
+					google: [
+						{
+							value: {
+								openPercent: curtain.progress,
+							},
+						},
+					],
+					samsung: [],
+				},
+			];
+		}
+
+		private async _execute(
+			superResult: ExecuteReturnType<SMART_HOME_DEVICE_TRAIT>,
+			command: SMART_HOME_COMMAND,
+			params: SmartHomeParam<SMART_HOME_COMMAND.OPEN_CLOSE>,
+			hookables: ModuleHookables
+		): Promise<ExecuteReturnType<SMART_HOME_DEVICE_TRAIT.OPEN_CLOSE>> {
+			if (command !== SMART_HOME_COMMAND.OPEN_CLOSE) {
+				return Promise.resolve(
+					superResult as ExecuteReturnType<SMART_HOME_DEVICE_TRAIT.OPEN_CLOSE>
+				);
+			}
+			if (!superResult.success) {
+				return Promise.resolve(superResult);
+			}
+
+			const target = (() => {
+				return params.openPercent > 50 ? '1' : '0';
+			})();
+
+			const curtain = await this._getSwitchbot(hookables);
+			if (params.openPercent === 0) {
+				void hookables.keyval.set(this._queryID, '0');
+			} else if (params.openPercent === 100) {
+				void hookables.keyval.set(this._queryID, '1');
+			} else {
+				if (curtain) {
+					await curtain.runToPos(params.openPercent);
+				}
+			}
+			void hookables.keyval.set(this._queryID, target);
+
+			return Promise.resolve({
+				success: true,
+				mergeWithQuery: [
+					...superResult.mergeWithQuery,
+					...(curtain ? this._getQueryReturn(curtain) : []),
+				] as QueryReturnType<SMART_HOME_DEVICE_TRAIT.OPEN_CLOSE>,
+			});
+		}
+
+		private async _attachHomeGraphListeners(
+			hookables: ModuleHookables,
+			callback: SmartHomeDeviceUpdateCallback<SMART_HOME_DEVICE_TRAIT.OPEN_CLOSE>
+		) {
+			const curtain = await this._getSwitchbot(hookables);
+			if (!curtain) {
+				return;
+			}
+			await hookables.keyval.onChange(this._queryID, () => {
+				callback({
+					id: this.id,
+					data: this._getQueryReturn(curtain),
+				});
+			});
+		}
+	}
+	return SmartHomeOpenClose;
 }
 
 export function SmartHomeMixinOnOffRGB<

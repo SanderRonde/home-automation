@@ -8,6 +8,10 @@ import { AllModules } from '../..';
 export type SwitchbotDevice = SwitchbotCurtain;
 
 export abstract class SwitchbotDeviceBase {
+	public get deviceId(): string {
+		return this._apiDevice.device.id;
+	}
+
 	public constructor(
 		private readonly _apiDevice: SwitchbotApiDevice,
 		protected readonly _modules: AllModules,
