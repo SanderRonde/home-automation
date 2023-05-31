@@ -1,46 +1,15 @@
-import { ButtonTriggerType, EwelinkButtonBase } from './base-button';
-import { ExternalHandler } from '../../../keyval/external';
-import { EWeLinkSharedConfig } from '../shared';
+import { EwelinkKeyvalButtonBase } from './base-button';
 
-export class EWeLinkPowerButton extends EwelinkButtonBase {
-	private _keyvalExternal!: ExternalHandler;
+export enum ButtonTriggerType {
+	PRESS = 0,
+	DOUBLE_PRESS = 1,
+	HOLD = 2,
+}
 
-	public constructor(
-		eWeLinkConfig: EWeLinkSharedConfig,
-		private readonly _keyVal:
-			| string[]
-			| {
-					[K in ButtonTriggerType]?: string[];
-			  }
-	) {
-		super(eWeLinkConfig, {});
-		this.setActions({
-			[ButtonTriggerType.PRESS]: () =>
-				this._onPress(ButtonTriggerType.PRESS),
-			[ButtonTriggerType.DOUBLE_PRESS]: () =>
-				this._onPress(ButtonTriggerType.DOUBLE_PRESS),
-			[ButtonTriggerType.HOLD]: () =>
-				this._onPress(ButtonTriggerType.HOLD),
-		});
-	}
+export type ButtonTriggerActions = {
+	[K in ButtonTriggerType]?: () => Promise<unknown>;
+};
 
-	private async _onPress(button: ButtonTriggerType): Promise<void> {
-		const usedKeyval = Array.isArray(this._keyVal)
-			? this._keyVal
-			: this._keyVal[button];
-		if (!usedKeyval) {
-			return;
-		}
-		await Promise.all(
-			usedKeyval.map((val) => this._keyvalExternal.toggle(val))
-		);
-	}
-
-	public async init(): Promise<void> {
-		await super.init();
-		this._keyvalExternal = new this._eWeLinkConfig.modules.keyval.External(
-			{},
-			'EWELINK.POWER.INIT'
-		);
-	}
+export class EWeLinkPowerButton extends EwelinkKeyvalButtonBase<ButtonTriggerType> {
+	public static TriggerType = ButtonTriggerType;
 }

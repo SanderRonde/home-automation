@@ -3,42 +3,36 @@ import {
 	EWeLinkSharedConfig,
 	EWeLinkUpdateMessage,
 } from '../shared';
+import { ExternalHandler } from '../../../keyval/external';
 import { logTag } from '../../../../lib/logger';
 
-export enum ButtonTriggerType {
-	PRESS = 0,
-	DOUBLE_PRESS = 1,
-	HOLD = 2,
-}
-
-export type ButtonTriggerActions = {
-	[K in ButtonTriggerType]?: () => Promise<unknown>;
-};
-
-type EWeLinkButtonPressMessage = EWeLinkUpdateMessage<{
+type EWeLinkButtonPressMessage<A extends number> = EWeLinkUpdateMessage<{
 	trigTime: string;
-	key: ButtonTriggerType;
+	key: A;
+	outlet?: A;
 }>;
 
-export class EwelinkButtonBase extends EWeLinkInitable {
+export class EwelinkButtonBase<A extends number> extends EWeLinkInitable {
 	public constructor(
 		protected _eWeLinkConfig: EWeLinkSharedConfig,
-		private _actions: ButtonTriggerActions
+		private readonly _actions:
+			| Record<A, (action: A) => Promise<unknown>>
+			| { default: (action: A) => Promise<unknown> }
 	) {
 		super();
 	}
 
-	private async _onTrigger(
-		message: EWeLinkButtonPressMessage
+	protected async _onTrigger(
+		message: EWeLinkButtonPressMessage<A>
 	): Promise<void> {
-		const action = this._actions[message.params.key];
+		const key = message.params.outlet ?? message.params.key;
+		const action =
+			'default' in this._actions
+				? this._actions.default
+				: this._actions[key];
 		if (action) {
-			await action();
+			await action(key);
 		}
-	}
-
-	protected setActions(actions: ButtonTriggerActions): void {
-		this._actions = actions;
 	}
 
 	public init(): Promise<void> {
@@ -52,9 +46,44 @@ export class EwelinkButtonBase extends EWeLinkInitable {
 				message.deviceid === this._eWeLinkConfig.device.deviceid
 			) {
 				logTag('ewelink', 'cyan', 'Button triggered');
-				await this._onTrigger(message as EWeLinkButtonPressMessage);
+				await this._onTrigger(message as EWeLinkButtonPressMessage<A>);
 			}
 		});
 		return Promise.resolve();
+	}
+}
+
+export class EwelinkKeyvalButtonBase<
+	A extends number
+> extends EwelinkButtonBase<A> {
+	private _keyvalExternal!: ExternalHandler;
+
+	public constructor(
+		eWeLinkConfig: EWeLinkSharedConfig,
+		private readonly _keyVal: {
+			[K in A]?: string[];
+		}
+	) {
+		super(eWeLinkConfig, {
+			default: (action) => this._onPress(action),
+		});
+	}
+
+	private async _onPress(button: A): Promise<void> {
+		const usedKeyval = this._keyVal[button];
+		if (!usedKeyval) {
+			return;
+		}
+		await Promise.all(
+			usedKeyval.map((val) => this._keyvalExternal.toggle(val))
+		);
+	}
+
+	public async init(): Promise<void> {
+		await super.init();
+		this._keyvalExternal = new this._eWeLinkConfig.modules.keyval.External(
+			{},
+			'EWELINK.POWER.INIT'
+		);
 	}
 }
