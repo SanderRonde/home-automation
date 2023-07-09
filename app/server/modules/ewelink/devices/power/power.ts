@@ -15,7 +15,6 @@ export interface EwelinkPowerParams {
 export class EwelinkPower<
 	P extends EwelinkPowerParams
 > extends EWeLinkInitable {
-	private static _cooldown: NodeJS.Timeout | null = null;
 	private readonly _options: {
 		enableSync: boolean;
 	};
@@ -31,17 +30,6 @@ export class EwelinkPower<
 		this._options = {
 			enableSync: options?.enableSync ?? true,
 		};
-	}
-
-	private static _pushCooldown(): void {
-		if (this._cooldown) {
-			clearTimeout(this._cooldown);
-			this._cooldown = null;
-		}
-		const cooldown = setTimeout(() => {
-			this._cooldown = null;
-		}, 2000);
-		this._cooldown = cooldown;
 	}
 
 	private _getKeyval(source: string) {
@@ -134,12 +122,10 @@ export class EwelinkPower<
 	}
 
 	public async setPower(isOn: boolean): Promise<void> {
-		const setter = this._eWeLinkConfig.connection.setDevicePowerState(
+		await this._eWeLinkConfig.connection.setDevicePowerState(
 			this._eWeLinkConfig.device.deviceid,
 			isOn ? 'on' : 'off'
 		);
-		EwelinkPower._pushCooldown();
-		await setter;
 	}
 
 	public turnOn(): Promise<void> {
