@@ -65,18 +65,6 @@ export class PowerSwitch extends ConfigurableWebComponent<{
 		return this.checked;
 	}
 
-	public constructor() {
-		super();
-
-		this._updateScale();
-
-		const original = window.onresize;
-		window.onresize = (e: unknown) => {
-			original?.call(window, e);
-			this._updateScale();
-		};
-	}
-
 	private _onChange() {
 		this._updateClasses();
 	}
@@ -165,10 +153,6 @@ export class PowerSwitch extends ConfigurableWebComponent<{
 			this._updateClasses();
 			this._element.classList.add('is-upgraded');
 		}
-	}
-
-	private _updateScale() {
-		this.props.scale = (Math.min(1000, window.innerWidth) / 411) * 200;
 	}
 
 	public onChange(): void {

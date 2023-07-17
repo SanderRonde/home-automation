@@ -95,31 +95,31 @@ export const JSONObjectCSS = new TemplateFn<JSONObject>(
 				}
 
 				#header {
-					height: 14.5vw;
+					height: 50px;
 					display: flex;
 					flex-direction: row;
 					justify-content: space-between;
 					background-color: rgb(115, 115, 115);
 					color: rgb(217, 217, 217);
-					margin-right: 2vw;
+					margin-right: 20px;
 					font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif
 				}
 
 				${clampWidthSelector('#header')(
-					['height', '14.5vw'],
-					['margin-right', '2vw']
+					['height', '50px'],
+					['margin-right', '20px']
 				)}
 
 				#name {
-					font-size: 10vw;
+					font-size: 200%;
 					font-weight: bold;
-					margin-left: 3.5vw;
+					margin-left: 20px;
 					text-align: center;
 				}
 
 				${clampWidthSelector('#name')(
-					['font-size', '10vw'],
-					['margin-left', '3.5vw']
+					['font-size', '200%'],
+					['margin-left', '20px']
 				)}
 
 				#groupToggle {
@@ -130,11 +130,11 @@ export const JSONObjectCSS = new TemplateFn<JSONObject>(
 					justify-content: center;
 				}
 
-				${clampWidth('#groupToggle', 'right', '5vw')}
+				${clampWidth('#groupToggle', 'right', '20px')}
 
 				${clampWidthSelector('#subsection')(
-					['margin-left', '2vw'],
-					['margin-top', '2vw']
+					['margin-left', '20px'],
+					['margin-top', '20px']
 				)}
 			</style>
 		`;

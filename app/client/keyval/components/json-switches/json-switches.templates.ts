@@ -28,6 +28,7 @@ export const JSONSwitchesCSS = new TemplateFn<JSONSwitches>(
 			<style>
 				#background {
 					width: 100vw;
+					max-width: 450px;
 					height: 100vh;
 					background-color: rgb(70, 70, 70);
 					margin-left: auto;
@@ -39,8 +40,8 @@ export const JSONSwitchesCSS = new TemplateFn<JSONSwitches>(
 				}
 
 				${clampWidthSelector('#jsonValue')(
-					['margin-top', '2vw'],
-					['margin-left', '2vw']
+					['margin-top', '20px'],
+					['margin-left', '20px']
 				)}
 			</style>
 		`;

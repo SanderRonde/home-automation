@@ -54,8 +54,8 @@ export const JSONBooleanCSS = new TemplateFn<JSONBoolean>(
 				}
 
 				${clampWidthSelector('#container')(
-					['height', '14.5vw'],
-					['margin-right', '2vw']
+					['height', '50px'],
+					['margin-right', '10px']
 				)}
 
 				#name {
@@ -63,8 +63,8 @@ export const JSONBooleanCSS = new TemplateFn<JSONBoolean>(
 				}
 
 				${clampWidthSelector('#name')(
-					['font-size', '10vw'],
-					['margin-left', '3.5vw']
+					['font-size', '200%'],
+					['margin-left', '20px']
 				)}
 
 				#switchContainer {
@@ -75,7 +75,7 @@ export const JSONBooleanCSS = new TemplateFn<JSONBoolean>(
 					justify-content: center;
 				}
 
-				${clampWidth('#switchContainer', 'right', '5vw')}
+				${clampWidth('#switchContainer', 'right', '40px')}
 			</style>
 		`;
 	},
