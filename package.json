@@ -41,7 +41,8 @@
 		"format-check": "prettier --check '**/*.{ts,json,html}'",
 		"format": "prettier --write '**/*.{ts,json,html}'",
 		"lint": "eslint --fix \"./app/**/*.ts\"",
-		"start": "node --experimental-modules --enable-source-maps --trace-warnings -r ts-node/register/transpile-only app/server/app.ts --http 1272 --https 1273 -v* --name 1000 --scripts /home/sander/scripts --color -i"
+		"compile-ewelink": "esbuild --bundle node_modules/ewelink-api-next/dist/index.js --outfile=temp/ewelink-api-next.js --platform=node --format=cjs",
+		"start": "yarn compile-ewelink && node --experimental-modules --enable-source-maps --trace-warnings -r ts-node/register/transpile-only app/server/app.ts --http 1272 --https 1273 -vvvvvv --name 1000 --scripts /home/sander/scripts --color -i"
 	},
 	"devDependencies": {
 		"@types/async-lock": "^1",
@@ -93,7 +94,7 @@
 		"chalk": "^2.4.2",
 		"cookie-parser": "^1.4.4",
 		"dotenv": "^8.2.0",
-		"ewelink-api": "^3.1.1",
+		"ewelink-api-next": "^0.0.8",
 		"express": "^4.17.1",
 		"express-oauth-server": "^2.0.0",
 		"fs-extra": "^8.0.1",

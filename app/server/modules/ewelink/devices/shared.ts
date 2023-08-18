@@ -1,4 +1,5 @@
-import eWelink, { Device } from 'ewelink-api';
+import eWelink from '../../../../../temp/ewelink-api-next';
+import { EwelinkDeviceResponse } from '../api';
 import { AllModules } from '../..';
 import EventEmitter from 'events';
 
@@ -34,8 +35,8 @@ export class EWeLinkWSConnection extends EventEmitter {
 }
 
 export interface EWeLinkSharedConfig {
-	connection: eWelink;
-	device: Device;
+	connection: InstanceType<typeof eWelink.WebAPI>;
+	device: EwelinkDeviceResponse;
 	wsConnection: EWeLinkWSConnection;
 	modules: AllModules;
 }

@@ -439,3 +439,20 @@ export function asyncTimeout(
 		void callback();
 	}, interval);
 }
+
+export function createUrlWithOrderedParams(
+	url: string,
+	params: [string, string|number][]
+): string {
+	let query = params
+		.map(([key, value]) => {
+			if (key === undefined || value === undefined || value === null) {
+				return undefined;
+			}
+			return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+		})
+		.filter(Boolean)
+		.join('&');
+	query = query ? `?${query}` : '';
+	return url + query;
+}

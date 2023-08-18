@@ -62,19 +62,20 @@ export class EwelinkPower<
 	}
 
 	private async _syncStatus() {
-		const remoteState =
-			await this._eWeLinkConfig.connection.getDevicePowerState(
-				this._eWeLinkConfig.device.deviceid
-			);
+		const status =
+			(await this._eWeLinkConfig.connection.device.getThingStatus({
+				id: this._eWeLinkConfig.device.itemData.deviceid,
+				// Type 1 means deviceid
+				type: 1,
+			})) as {
+				data: {
+					params: {
+						switch: 'on' | 'off';
+					};
+				};
+			};
 
-		if (!remoteState.state) {
-			return;
-		}
-
-		await this._setFromRemoteStatus(
-			remoteState.state as 'on' | 'off',
-			'sync'
-		);
+		await this._setFromRemoteStatus(status.data.params.switch, 'sync');
 	}
 
 	private _startTimer() {
@@ -106,7 +107,8 @@ export class EwelinkPower<
 					typeof data === 'string' ||
 					!('action' in data) ||
 					data.action !== 'update' ||
-					data.deviceid !== this._eWeLinkConfig.device.deviceid ||
+					data.deviceid !==
+						this._eWeLinkConfig.device.itemData.deviceid ||
 					!data.params.switch
 				) {
 					return;
@@ -122,10 +124,13 @@ export class EwelinkPower<
 	}
 
 	public async setPower(isOn: boolean): Promise<void> {
-		await this._eWeLinkConfig.connection.setDevicePowerState(
-			this._eWeLinkConfig.device.deviceid,
-			isOn ? 'on' : 'off'
-		);
+		await this._eWeLinkConfig.connection.device.setThingStatus({
+			id: this._eWeLinkConfig.device.itemData.deviceid,
+			type: 1,
+			params: {
+				switch: isOn ? 'on' : 'off',
+			},
+		});
 	}
 
 	public turnOn(): Promise<void> {

@@ -43,7 +43,7 @@ export class EwelinkButtonBase<A extends number> extends EWeLinkInitable {
 			if (
 				'action' in message &&
 				message.action === 'update' &&
-				message.deviceid === this._eWeLinkConfig.device.deviceid
+				message.deviceid === this._eWeLinkConfig.device.itemData.deviceid
 			) {
 				logTag('ewelink', 'cyan', 'Button triggered');
 				await this._onTrigger(message as EWeLinkButtonPressMessage<A>);

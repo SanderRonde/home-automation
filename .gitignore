@@ -99,3 +99,5 @@ ai/beat-detector/modes/realtime_test/public/files/
 !.yarn/sdks
 !.yarn/versions
 .pnp.*
+
+temp/

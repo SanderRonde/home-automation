@@ -22,7 +22,7 @@ export class EwelinkMovement extends EWeLinkInitable {
 			if (
 				typeof data === 'object' &&
 				'deviceid' in data &&
-				data.deviceid === this._eWeLinkConfig.device.deviceid
+				data.deviceid === this._eWeLinkConfig.device.itemData.deviceid
 			) {
 				logTag('ewelink', 'cyan', 'Movement:', this._movementKey);
 				await this._movementExternal.reportMovement(this._movementKey);
