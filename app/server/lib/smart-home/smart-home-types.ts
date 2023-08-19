@@ -307,9 +307,15 @@ export type SmartHomeParam<TR extends SMART_HOME_COMMAND> =
 			: {}) &
 		(TR extends SMART_HOME_COMMAND.OPEN_CLOSE
 			? {
-				openPercent: number;
-				openDirection?: 'UP'|'DOWN'|'LEFT'|'RIGHT'|'IN'|'OUT';
-				followUpToken: string
+					openPercent: number;
+					openDirection?:
+						| 'UP'
+						| 'DOWN'
+						| 'LEFT'
+						| 'RIGHT'
+						| 'IN'
+						| 'OUT';
+					followUpToken: string;
 			  }
 			: {}) &
 		(TR extends SMART_HOME_COMMAND.ACTIVATE_SCENE

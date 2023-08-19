@@ -3,10 +3,10 @@ export const PASTAS: {
 		lang: string;
 		text: string;
 	};
-}
+};
 
 export const LOCAL_URLS: {
 	[key: string]: string;
-}
+};
 
-export const CAST_DEVICE_NAMES: string[]
+export const CAST_DEVICE_NAMES: string[];

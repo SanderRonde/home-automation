@@ -1,6 +1,4 @@
-import {
-	SmartHomeDevice,
-} from '../lib/smart-home/smart-home-classes';
+import { SmartHomeDevice } from '../lib/smart-home/smart-home-classes';
 
 declare class NonAbstractSmartHomeDevice extends SmartHomeDevice {
 	public id: string;
@@ -8,6 +6,6 @@ declare class NonAbstractSmartHomeDevice extends SmartHomeDevice {
 	public nicknames: string[];
 }
 
-declare const devices: (typeof NonAbstractSmartHomeDevice)[];
+declare const devices: typeof NonAbstractSmartHomeDevice[];
 
 export default devices;

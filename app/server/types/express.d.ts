@@ -37,7 +37,7 @@ export interface AsyncRouterMatcher<
 		path: PathParams,
 		// tslint:disable-next-line no-unnecessary-generics (This generic is meant to be passed explicitly.)
 		...handlers: Array<
-		AsyncRequestHandler<P, ResBody, ReqBody, ReqQuery, Locals>
+			AsyncRequestHandler<P, ResBody, ReqBody, ReqQuery, Locals>
 		>
 	): T;
 	<
@@ -50,7 +50,13 @@ export interface AsyncRouterMatcher<
 		path: PathParams,
 		// tslint:disable-next-line no-unnecessary-generics (This generic is meant to be passed explicitly.)
 		...handlers: Array<
-			import('express').RequestHandlerParams<P, ResBody, ReqBody, ReqQuery, Locals>
+			import('express').RequestHandlerParams<
+				P,
+				ResBody,
+				ReqBody,
+				ReqQuery,
+				Locals
+			>
 		>
 	): T;
 	(path: PathParams, subApplication: Application): T;

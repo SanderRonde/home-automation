@@ -442,7 +442,7 @@ export function asyncTimeout(
 
 export function createUrlWithOrderedParams(
 	url: string,
-	params: [string, string|number][]
+	params: [string, string | number][]
 ): string {
 	let query = params
 		.map(([key, value]) => {

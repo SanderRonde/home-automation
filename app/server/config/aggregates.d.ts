@@ -1,4 +1,4 @@
-import { KeyvalHooks } from "../modules/keyval/types";
+import { KeyvalHooks } from '../modules/keyval/types';
 
 declare const hooks: KeyvalHooks;
 
