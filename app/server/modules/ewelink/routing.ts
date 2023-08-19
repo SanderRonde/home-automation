@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import eWelink from '../../../../temp/ewelink-api-next';
 import { Database } from '../../lib/db';
 import { getEnv } from '../../lib/io';
@@ -64,9 +65,14 @@ export function queueEwelinkTokenRefresh(
 		return;
 	}
 	const refresh = async () => {
-		const { data } = await api.user.refreshToken({
+		const { data } = (await api.user.refreshToken({
 			rt: refreshToken,
-		});
+		})) as {
+			data: {
+				at: string;
+				rt: string;
+			};
+		};
 		api.at = data.at;
 
 		db.setVal('accessToken', data.at);

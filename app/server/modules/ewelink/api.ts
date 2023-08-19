@@ -30,7 +30,7 @@ async function createWebsocketListener(
 			region: connection.region!,
 			userApiKey,
 		},
-		async () => {
+		() => {
 			logTag('ewelink', 'blue', 'WS connection established');
 		},
 		() => {
