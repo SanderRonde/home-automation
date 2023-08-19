@@ -57,7 +57,13 @@ export class EwelinkPower<
 				remoteState === 'on' ? '1' : '0',
 				true
 			);
-			logFixture(resDummy, chalk.magenta('[ewelink]'), `[${source}]`);
+			logFixture(
+				resDummy,
+				chalk.magenta('[ewelink]'),
+				`[${source}]`,
+				'Set to',
+				remoteState
+			);
 		}
 	}
 
