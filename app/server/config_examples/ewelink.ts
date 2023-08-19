@@ -1,4 +1,4 @@
-import { EwelinkMovement } from '../modules/ewelink/devices/movement-detector';
+import { EwelinkMovement } from '../modules/ewelink/devices/sensors/movement-sensor';
 import { EwelinkPower } from '../modules/ewelink/devices/power/power';
 import { LinkEWeLinkDevice } from '../modules/ewelink/api';
 
