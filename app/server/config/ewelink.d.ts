@@ -1,5 +1,7 @@
 import { LinkEWeLinkDevice } from '../modules/ewelink/api';
+import { AllModules } from '../modules';
 
 export default function onEWeLinkDevices(
-	linkDevice: LinkEWeLinkDevice
+	linkDevice: LinkEWeLinkDevice,
+	modules: AllModules
 ): Promise<void>;

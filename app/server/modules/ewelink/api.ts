@@ -94,7 +94,7 @@ export async function initEWeLinkAPI(
 				modules,
 			});
 		}
-	});
+	}, modules);
 	logTag('ewelink', 'blue', 'API connection established');
 
 	let wsRefresh = undefined;
