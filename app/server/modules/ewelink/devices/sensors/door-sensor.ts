@@ -9,7 +9,9 @@ export class EwelinkDoorSensor extends EWeLinkInitable {
 	public constructor(
 		private readonly _eWeLinkConfig: EWeLinkSharedConfig,
 		private readonly _name: string,
-		private readonly _callback: (isClosed: boolean) => void | Promise<void>
+		private readonly _callback: (
+			state: 'opened' | 'closed'
+		) => void | Promise<void>
 	) {
 		super();
 	}
@@ -36,13 +38,9 @@ export class EwelinkDoorSensor extends EWeLinkInitable {
 						this._eWeLinkConfig.device.itemData.deviceid
 				) {
 					const isClosed = data.params.lock === 0;
-					logTag(
-						'ewelink',
-						'cyan',
-						`Door ${isClosed ? 'closed' : 'opened'}:`,
-						this._name
-					);
-					await this._callback(isClosed);
+					const state = isClosed ? 'closed' : 'opened';
+					logTag('ewelink', 'cyan', `Door ${state}:`, this._name);
+					await this._callback(state);
 				}
 			}
 		);
