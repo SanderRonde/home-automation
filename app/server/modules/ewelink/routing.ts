@@ -39,6 +39,11 @@ export function initRouting(
 			)}/ewelink/redirect_url`,
 			region: getEnv('SECRET_EWELINK_REGION', true),
 		});
+		if (!token.data) {
+			res.write('Failed to get token! ' + (token.msg as string));
+			res.end();
+			return;
+		}
 
 		db.setVal('accessToken', token.data.accessToken);
 		db.setVal('refreshToken', token.data.refreshToken);
@@ -46,7 +51,7 @@ export function initRouting(
 		api.at = token.data.accessToken;
 		queueEwelinkTokenRefresh(api, db);
 
-		res.write('Success!');
+		res.write('Success! Please restart the server');
 		res.end();
 	});
 }
