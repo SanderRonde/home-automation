@@ -1,8 +1,8 @@
 import { SwitchbotAdvertisement } from 'node-switchbot';
+import { debounce, wait } from '../../../lib/util';
 import { SwitchbotApiDevice } from '../scanner';
 import { logTag } from '../../../lib/logger';
 import { SwitchbotCurtain } from './curtain';
-import { wait } from '../../../lib/util';
 import { AllModules } from '../..';
 
 export type SwitchbotDevice = SwitchbotCurtain;
@@ -36,9 +36,10 @@ export abstract class SwitchbotDeviceBase {
 			await this._apiDevice.device.disconnect();
 		});
 
-		this._apiDevice.onMessage.listen((message) => {
+		const listener = debounce((message: SwitchbotAdvertisement) => {
 			void this.onMessage(message);
-		});
+		}, 250);
+		this._apiDevice.onMessage.listen(listener);
 		return this;
 	}
 

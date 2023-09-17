@@ -456,3 +456,19 @@ export function createUrlWithOrderedParams(
 	query = query ? `?${query}` : '';
 	return url + query;
 }
+
+export function debounce<T extends (...args: unknown[]) => unknown>(
+	fn: T,
+	wait: number
+): T {
+	let timeout: NodeJS.Timeout | null = null;
+	return ((...args: unknown[]) => {
+		if (timeout) {
+			clearTimeout(timeout);
+		}
+		timeout = setTimeout(() => {
+			timeout = null;
+			fn(...args);
+		}, wait);
+	}) as unknown as T;
+}
