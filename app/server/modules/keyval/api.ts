@@ -214,7 +214,8 @@ export class APIHandler {
 		source: string
 	): Promise<boolean> {
 		const original = this._db.get(key);
-		if (original !== key) {
+		console.log(original, value, 'original -> key');
+		if (original !== value) {
 			this._db.setVal(key, value);
 			const msg = attachSourcedMessage(
 				res,
