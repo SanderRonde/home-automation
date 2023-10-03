@@ -51,7 +51,11 @@ export function initRouting(
 		api.at = token.data.accessToken;
 		queueEwelinkTokenRefresh(api, db);
 
-		res.write('Success! Please restart the server');
+		res.write(
+			`Success! Please restart the server\nResponse:${JSON.stringify(
+				token
+			)}`
+		);
 		res.end();
 	});
 }

@@ -1,5 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { EWeLinkSharedConfig, EWeLinkWSConnection } from './devices/shared';
+import {
+	EWeLinkSharedConfig,
+	EWeLinkWSConnection,
+	WrappedEWeLinkAPI,
+} from './devices/shared';
 import eWelink from '../../../../temp/ewelink-api-next';
 import { queueEwelinkTokenRefresh } from './routing';
 import onEWeLinkDevices from '../../config/ewelink';
@@ -89,7 +93,7 @@ export async function initEWeLinkAPI(
 		if (device) {
 			await onDevice({
 				device,
-				connection: api,
+				connection: new WrappedEWeLinkAPI(api),
 				wsConnection: wsConnectionWrapper,
 				modules,
 			});
