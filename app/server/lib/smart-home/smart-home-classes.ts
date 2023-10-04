@@ -951,7 +951,7 @@ export function SmartHomeMixinBrightness<
 			void (async () => {
 				await (await hookables.RGB.getClient(
 					this._queryID as LED_NAME
-				))!.setBrightness(params.brightness);
+				))!.setBrightness(params.brightness / 100);
 			})();
 			return Promise.resolve({
 				success: true,
@@ -1002,7 +1002,7 @@ export function SmartHomeMixinBrightness<
 				};
 			}
 
-			void client.setBrightness(newBrightness);
+			void client.setBrightness(newBrightness / 100);
 
 			return {
 				success: true,

@@ -104,6 +104,9 @@ export abstract class RGBClient {
 		blue: number,
 		callback?: (err: Error | null, success: boolean) => void
 	): Promise<boolean>;
+	/**
+	 * @param {number} brightness - Number between 0 and 1
+	 */
 	public abstract setBrightness(
 		brightness: number,
 		callback?: (err: Error | null, success: boolean) => void
@@ -297,7 +300,7 @@ export class HexClient extends RGBClient {
 			color.r,
 			color.g,
 			color.b,
-			brightness
+			brightness * 100
 		);
 	}
 
@@ -566,7 +569,7 @@ export class MagicHomeClient extends RGBClient {
 			color.r,
 			color.g,
 			color.b,
-			brightness
+			brightness * 100
 		);
 	}
 
