@@ -22,6 +22,9 @@ export const HEX_LEDS: Record<string, LED_NAME> = {
 export const MAGIC_LEDS: Record<string, LED_NAME> = {
 	'192.168.0.3': 'bed',
 };
+export const WLED_LEDS: Record<string, LED_NAME> = {
+	'192.168.0.4': 'lamp',
+};
 export const LED_KEYVAL_MAP: Record<LED_NAME, string[]> = {
 	ceiling: ['bedroom.ceiling'],
 	tv: ['livingroom.tv'],

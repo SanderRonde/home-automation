@@ -11,6 +11,7 @@ export const RING_LEDS: Record<
 >;
 export const HEX_LEDS: Record<string, LED_NAME>;
 export const MAGIC_LEDS: Record<string, LED_NAME>;
+export const WLED_LEDS: Record<string, LED_NAME>;
 export const LED_KEYVAL_MAP: Record<LED_NAME, string[]>;
 export function initRGBListeners(): Promise<void>;
 export function getLedFromName(name: string): LED_NAME | null;

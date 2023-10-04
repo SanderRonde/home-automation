@@ -2,10 +2,14 @@ import {
 	HEX_LEDS,
 	LED_KEYVAL_MAP,
 	LED_NAME,
+	LED_NAMES_ENUM,
 	MAGIC_LEDS,
 	RING_LEDS,
+	WLED_LEDS,
 } from '../../config/led-config';
 import { BuiltinPatterns, Control, State } from 'magic-home';
+import { WLEDClient } from 'wled-client';
+
 import { LedEffect } from './effect-config';
 import { warning } from '../../lib/logger';
 import { Color } from '../../lib/color';
@@ -49,7 +53,7 @@ export abstract class RGBClient {
 
 	private async _stateChange(value: string) {
 		if (this.id in LED_KEYVAL_MAP) {
-			const keys = LED_KEYVAL_MAP[this.id];
+			const keys = LED_KEYVAL_MAP[this.id] ?? [];
 			for (const key of keys) {
 				await new (
 					await RGB.modules
@@ -636,6 +640,128 @@ export class MagicHomeClient extends RGBClient {
 	}
 }
 
+export class WLEDRGBClient extends RGBClient {
+	private readonly _client: WLEDClient;
+	public setWhiteForPower = false;
+
+	public constructor(
+		public address: string,
+		public readonly id: LED_NAMES_ENUM
+	) {
+		super();
+		this._client = new WLEDClient(address);
+		void this._client.init();
+	}
+
+	public setPattern(): Promise<boolean> {
+		throw new Error('Method not implemented.');
+	}
+
+	public isOn(): Promise<boolean> {
+		return Promise.resolve(this._client.state.on ?? false);
+	}
+
+	public getColor(): Promise<Color | null> {
+		const firstColor = this._client.state.segments?.[0].colors?.[0];
+		return Promise.resolve(
+			firstColor
+				? new Color(firstColor[0], firstColor[1], firstColor[2])
+				: null
+		);
+	}
+
+	public async getBrightness(): Promise<number | null> {
+		return Promise.resolve(this._client.state.brightness ?? null);
+	}
+
+	public async setColor(
+		red: number,
+		green: number,
+		blue: number,
+		callback?: (err: Error | null, success: boolean) => void
+	): Promise<boolean> {
+		await this._client.setColor([red, green, blue], {
+			method: 'ws',
+		});
+		callback?.(null, true);
+		return Promise.resolve(true);
+	}
+
+	public async setBrightness(brightness: number): Promise<boolean> {
+		await this._client.setBrightness(brightness * 255);
+		return Promise.resolve(true);
+	}
+
+	public async setColorAndWarmWhite(
+		red: number,
+		green: number,
+		blue: number,
+		ww: number,
+		callback?: (err: Error | null, success: boolean) => void
+	): Promise<boolean> {
+		await this._client.setColor([red, green, blue, ww], {
+			method: 'ws',
+		});
+		callback?.(null, true);
+		return Promise.resolve(true);
+	}
+
+	public async setColorWithBrightness(
+		red: number,
+		green: number,
+		blue: number,
+		brightness: number,
+		callback?: (err: Error | null, success: boolean) => void
+	): Promise<boolean> {
+		await Promise.all([
+			this.setColor(red, green, blue),
+			this.setBrightness(brightness),
+		]);
+		callback?.(null, true);
+		return Promise.resolve(true);
+	}
+
+	public async setPower(
+		on: boolean,
+		callback?: () => void
+	): Promise<boolean> {
+		if (on) {
+			await this._turnedOn();
+			return this.turnOn(callback);
+		} else {
+			await this._turnedOff();
+			return this.turnOff(callback);
+		}
+	}
+
+	public async setWarmWhite(
+		ww: number,
+		callback?: (err: Error | null, success: boolean) => void
+	): Promise<boolean> {
+		await this._turnedOn();
+
+		const color = (await this.getColor()) ?? new Color(255);
+		await this._client.setColor([color.r, color.g, color.b, ww]);
+		this.updateStateColor(color, 100);
+		callback?.(null, true);
+		return Promise.resolve(true);
+	}
+
+	public async turnOff(callback?: () => void): Promise<boolean> {
+		await this._turnedOff();
+		await this._client.turnOff();
+		callback?.();
+		return Promise.resolve(true);
+	}
+
+	public async turnOn(callback?: () => void): Promise<boolean> {
+		await this._turnedOn();
+		await this._client.turnOn();
+		callback?.();
+		return Promise.resolve(true);
+	}
+}
+
 export class RingClient extends RGBClient {
 	public setWhiteForPower = false;
 
@@ -739,52 +865,55 @@ export class RingClient extends RGBClient {
 	}
 }
 
-// eslint-disable-next-line prefer-const
 export let magicHomeClients: MagicHomeClient[] = [];
 export let ringClients: RingClient[] = [];
-// eslint-disable-next-line prefer-const
 export let hexClients: HexClient[] = [];
-// eslint-disable-next-line prefer-const
 export let clients: RGBClient[] = [];
+export let wledClients: WLEDRGBClient[] = [];
 
-export function getLed(
-	name: LED_NAME
-): MagicHomeClient | RingClient | HexClient | null {
-	if (Object.values(MAGIC_LEDS).includes(name)) {
-		return (
-			magicHomeClients.find((client) => {
-				return MAGIC_LEDS[client.address] === name;
-			}) ?? null
-		);
-	} else if (
-		Object.values(RING_LEDS)
-			.map((v) => v[0])
-			.includes(name)
-	) {
-		return ringClients.find((client) => client.id === name) ?? null;
-	} else if (Object.values(HEX_LEDS).includes(name)) {
-		return hexClients.find((client) => client.id === name) ?? null;
+export function getLed(name: LED_NAME): RGBClient | null {
+	const joinedNames = {
+		...MAGIC_LEDS,
+		...HEX_LEDS,
+		...WLED_LEDS,
+		...Object.fromEntries(
+			Object.entries(RING_LEDS).map(([k, v]) => [v[0], k])
+		),
+	};
+
+	if (Object.values(joinedNames).includes(name)) {
+		return clients.find((client) => client.id === name) ?? null;
 	}
 	return null;
 }
 
 export function setClients(
-	newClients: (MagicHomeClient | RingClient | HexClient)[]
+	newClients: (MagicHomeClient | RingClient | HexClient | WLEDRGBClient)[] = [
+		...magicHomeClients,
+		...ringClients,
+		...hexClients,
+		...wledClients,
+	]
 ): void {
 	clients = newClients;
 }
 
 export function setMagicHomeClients(newClients: MagicHomeClient[]): void {
 	magicHomeClients = newClients;
-	setClients([...magicHomeClients, ...ringClients, ...hexClients]);
+	setClients();
 }
 
 export function setHexClients(newClients: HexClient[]): void {
 	hexClients = newClients;
-	setClients([...magicHomeClients, ...ringClients, ...hexClients]);
+	setClients();
+}
+
+export function setWLEDClients(newClients: WLEDRGBClient[]): void {
+	wledClients = newClients;
+	setClients();
 }
 
 export function setRingClients(newClients: RingClient[]): void {
 	ringClients = newClients;
-	setClients([...magicHomeClients, ...ringClients, ...hexClients]);
+	setClients();
 }

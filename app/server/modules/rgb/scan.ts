@@ -5,8 +5,10 @@ import {
 	setHexClients,
 	setMagicHomeClients,
 	setRingClients,
+	WLEDRGBClient,
+	setWLEDClients,
 } from './clients';
-import { HEX_LEDS, RING_LEDS } from '../../config/led-config';
+import { HEX_LEDS, RING_LEDS, WLED_LEDS } from '../../config/led-config';
 import { Control, Discovery } from 'magic-home';
 import { logTag } from '../../lib/logger';
 import chalk from 'chalk';
@@ -47,13 +49,22 @@ export function scanHex(): number {
 	return clients.length;
 }
 
+export function scanWLed(): number {
+	const clients = Object.entries(WLED_LEDS).map(
+		([ip, name]) => new WLEDRGBClient(ip, name)
+	);
+	setWLEDClients(clients);
+	return clients.length;
+}
+
 export async function scanRGBControllers(first = false): Promise<number> {
-	const [magicHomeClients, ringClients, hexClients] = await Promise.all([
+	const [magicHomeClients, ringClients, hexClients, wledClients] = await Promise.all([
 		scanMagicHomeControllers(first),
 		scanRing(),
 		scanHex(),
+		scanWLed(),
 	]);
-	const clients = magicHomeClients + ringClients + hexClients;
+	const clients = magicHomeClients + ringClients + hexClients + wledClients;
 
 	if (magicHomeClients === 0) {
 		if (magicHomeTimer !== null) {
