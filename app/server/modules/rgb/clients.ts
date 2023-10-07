@@ -134,6 +134,10 @@ export abstract class RGBClient {
 		speed: number,
 		callback?: () => void
 	): Promise<boolean>;
+	public abstract setPreset(
+		preset: number,
+		callback?: () => void
+	): Promise<boolean>;
 	public abstract setPower(
 		on: boolean,
 		callback?: () => void
@@ -347,6 +351,10 @@ export class HexClient extends RGBClient {
 		);
 		this.updateStateEffect(pattern);
 		return Promise.resolve(true);
+	}
+
+	public setPreset(): Promise<boolean> {
+		throw new Error('Method not implemented.');
 	}
 
 	public async setPower(on: boolean): Promise<boolean> {
@@ -607,6 +615,10 @@ export class MagicHomeClient extends RGBClient {
 		return this._control.setPattern(pattern, speed, callback);
 	}
 
+	public setPreset(): Promise<boolean> {
+		throw new Error('Method not implemented.');
+	}
+
 	public async setPower(
 		on: boolean,
 		callback?: () => void
@@ -655,6 +667,11 @@ export class WLEDRGBClient extends RGBClient {
 
 	public setPattern(): Promise<boolean> {
 		throw new Error('Method not implemented.');
+	}
+
+	public async setPreset(preset: number): Promise<boolean> {
+		await this._client.setPreset(preset)
+		return Promise.resolve(true)
 	}
 
 	public isOn(): Promise<boolean> {
@@ -817,6 +834,10 @@ export class RingClient extends RGBClient {
 
 	public setPattern(): Promise<boolean> {
 		throw new Error('Not implemented');
+	}
+
+	public setPreset(): Promise<boolean> {
+		throw new Error('Method not implemented.');
 	}
 
 	public async setPower(on: boolean): Promise<boolean> {
