@@ -1,8 +1,8 @@
 import { disable, enable, initRegister } from './register';
-import { AllModules, ModuleConfig } from '..';
 import { ExternalHandler } from './external';
 import { initRouting } from './routing';
 import { ModuleMeta } from '../meta';
+import { ModuleConfig } from '..';
 
 export const Movement = new (class Meta extends ModuleMeta {
 	public name = 'movement';
@@ -11,16 +11,12 @@ export const Movement = new (class Meta extends ModuleMeta {
 		return ExternalHandler;
 	}
 
-	public async init(config: ModuleConfig) {
+	public init(config: ModuleConfig) {
 		initRegister(config.db);
 		initRouting(config);
 
-		return Promise.resolve(void 0);
-	}
-
-	public notifyModules(modules: unknown) {
 		void (async () => {
-			await new (modules as AllModules).keyval.External(
+			await new config.modules.keyval.External(
 				{},
 				'MOVEMENT.NOTIFY'
 			).onChange(
@@ -35,6 +31,5 @@ export const Movement = new (class Meta extends ModuleMeta {
 				{ notifyOnInitial: true }
 			);
 		})();
-		return Promise.resolve(void 0);
 	}
 })();

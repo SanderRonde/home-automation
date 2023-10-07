@@ -107,9 +107,9 @@ class WebServer {
 	}
 
 	private async _initModules() {
-		await notifyAllModules();
+		notifyAllModules();
 
-		const modules = await getAllModules();
+		const modules = getAllModules();
 
 		const config: BaseModuleConfig = this._getModuleConfig();
 		await Promise.all(
@@ -162,7 +162,7 @@ class WebServer {
 	public async init() {
 		this._initLogger = new ProgressLogger(
 			'Server start',
-			8 + Object.keys(await getAllModules(false)).length
+			8 + Object.keys(getAllModules(false)).length
 		);
 		PM2.init({
 			catchExceptions: true,

@@ -12,7 +12,5 @@ export const Auth = new (class Meta extends ModuleMeta {
 
 	public init(config: ModuleConfig) {
 		initRoutes(config);
-
-		return Promise.resolve(void 0);
 	}
 })();

@@ -1,4 +1,4 @@
-import { AllModules, ModuleConfig } from '..';
+import { ModuleConfig } from '..';
 import { ExternalHandler } from './external';
 import { initHooks } from './explaining';
 import { initRouting } from './routing';
@@ -18,13 +18,6 @@ export const Explain = new (class Meta extends ModuleMeta {
 
 	public init(config: ModuleConfig) {
 		initRouting({ ...config });
-
-		return Promise.resolve(void 0);
-	}
-
-	public notifyModules(modules: unknown) {
-		initHooks(modules as AllModules);
-
-		return Promise.resolve(void 0);
+		initHooks(config.modules);
 	}
 })();

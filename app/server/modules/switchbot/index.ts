@@ -2,7 +2,7 @@ import { SwitchbotDeviceBase } from './devices/devices';
 import { ExternalHandler } from './external';
 import { scanSwitchbots } from './scanner';
 import { ModuleMeta } from '../meta';
-import { AllModules } from '..';
+import { ModuleConfig } from '..';
 
 export const SwitchBot = new (class Meta extends ModuleMeta {
 	private _bots: SwitchbotDeviceBase[] = [];
@@ -12,15 +12,10 @@ export const SwitchBot = new (class Meta extends ModuleMeta {
 		return ExternalHandler;
 	}
 
-	public init() {
-		return Promise.resolve(void 0);
-	}
-
-	public async notifyModules(modules: unknown) {
+	public init({ modules }: ModuleConfig) {
 		void (async () => {
-			this._bots = await scanSwitchbots(modules as AllModules);
+			this._bots = await scanSwitchbots(modules);
 			await ExternalHandler.init(this._bots);
 		})();
-		return Promise.resolve(void 0);
 	}
 })();

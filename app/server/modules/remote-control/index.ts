@@ -15,9 +15,7 @@ export const RemoteControl = new (class Meta extends ModuleMeta {
 		return Bot;
 	}
 
-	public async init(config: ModuleConfig) {
+	public init(config: ModuleConfig) {
 		initRouting(config);
-
-		return Promise.resolve(void 0);
 	}
 })();

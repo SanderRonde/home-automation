@@ -323,7 +323,7 @@ export class MessageHandler extends BotStateBase {
 				logObj: matchMsg,
 				text: message.text,
 				message,
-				state: await this._stateKeeper.getState(message.chat.id),
+				state: this._stateKeeper.getState(message.chat.id),
 				res,
 				bot: this,
 			})) ||

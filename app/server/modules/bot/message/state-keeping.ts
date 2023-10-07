@@ -11,12 +11,12 @@ type ChatStateInitJSON = Record<keyof AllModules, unknown>;
 export class ChatState {
 	public states!: ChatStateType;
 
-	public async init(
+	public init(
 		json: ChatStateInitJSON = {} as Record<keyof AllModules, unknown>
-	): Promise<this> {
+	): this {
 		this.states = {} as ChatStateType;
 
-		const modules = await getAllModules();
+		const modules = getAllModules();
 		Object.keys(modules).map((key: keyof AllModules) => {
 			const meta = modules[key];
 			const Bot = meta.Bot;
@@ -28,10 +28,10 @@ export class ChatState {
 		return this;
 	}
 
-	public async toJSON(): Promise<Record<keyof AllModules, unknown>> {
+	public toJSON(): Record<keyof AllModules, unknown> {
 		const obj: Partial<Record<keyof AllModules, unknown>> = {};
 
-		const modules = await getAllModules();
+		const modules = getAllModules();
 		Object.keys(modules).forEach((key: keyof AllModules) => {
 			obj[key] = this.states[key].toJSON();
 		});
@@ -50,7 +50,7 @@ export class StateKeeper {
 		for (const requestId in data) {
 			this.chatIds.set(
 				parseInt(requestId, 10),
-				await new ChatState().init(data[requestId] as ChatStateInitJSON)
+				new ChatState().init(data[requestId] as ChatStateInitJSON)
 			);
 		}
 	}
@@ -67,9 +67,9 @@ export class StateKeeper {
 		return this;
 	}
 
-	public async getState(chatId: number): Promise<ChatState> {
+	public getState(chatId: number): ChatState {
 		if (!this.chatIds.has(chatId)) {
-			this.chatIds.set(chatId, await new ChatState().init());
+			this.chatIds.set(chatId, new ChatState().init());
 		}
 		return this.chatIds.get(chatId)!;
 	}

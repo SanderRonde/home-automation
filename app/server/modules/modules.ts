@@ -103,17 +103,17 @@ const moduleObj = {
 const moduleArr = Object.values(moduleObj);
 
 let notified = false;
-export async function notifyAllModules(): Promise<void> {
+export function notifyAllModules(): void {
 	notified = true;
 
 	for (const mod of moduleArr) {
-		await mod.notifyModulesFromExternal(moduleObj);
+		mod.notifyModulesFromExternal(moduleObj);
 	}
 }
 
-export async function getAllModules(notify = true): Promise<typeof moduleObj> {
+export function getAllModules(notify = true): typeof moduleObj {
 	if (!notified && notify) {
-		await notifyAllModules();
+		notifyAllModules();
 	}
 
 	return moduleObj;

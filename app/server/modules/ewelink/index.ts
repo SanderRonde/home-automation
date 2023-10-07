@@ -34,7 +34,6 @@ export const EWeLink = new (class Meta extends ModuleMeta {
 			const modules = await this.modules;
 			await initEWeLinkAPI(config.db, modules, this._api);
 		})();
-		return Promise.resolve(void 0);
 	}
 
 	public async onBackOnline() {

@@ -57,18 +57,14 @@ export abstract class ModuleMeta {
 		return this._loggerName || `/${this.name}`;
 	}
 
-	public abstract init(config: ModuleConfig): Promise<void>;
+	public abstract init(config: ModuleConfig): Promise<void>|void;
 
 	public postInit(): Promise<void> {
 		return Promise.resolve(void 0);
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	public async notifyModules(_modules: unknown): Promise<void> {}
-
-	public async notifyModulesFromExternal(modules: AllModules): Promise<void> {
+	public notifyModulesFromExternal(modules: AllModules): void {
 		this._modules.set(modules);
-		await this.notifyModules(modules);
 		const external = new modules.homeDetector.External(
 			{},
 			`META.${this.name}`

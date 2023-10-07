@@ -12,6 +12,5 @@ export const Webhook = new (class Meta extends ModuleMeta {
 
 	public init(config: ModuleConfig) {
 		initRouting(config);
-		return Promise.resolve(void 0);
 	}
 })();
