@@ -1,12 +1,14 @@
 import { auth, errorHandle, requireParams } from '../../lib/decorators';
 import { ResponseLike, attachMessage } from '../../lib/logger';
-import { setPressure } from './register';
+import { PressureValueKeeper } from './values';
 
 export class APIHandler {
+	public constructor(private readonly _valueKeeper: PressureValueKeeper) {}
+
 	@errorHandle
 	@requireParams('key', 'pressure')
 	@auth
-	public static async reportPressure(
+	public async reportPressure(
 		res: ResponseLike,
 		{
 			key,
@@ -18,7 +20,7 @@ export class APIHandler {
 		}
 	): Promise<void> {
 		attachMessage(res, `Setting pressure key ${key} to ${pressure}`);
-		await setPressure(key, ~~pressure, res);
+		await this._valueKeeper.setPressure(key, ~~pressure, res);
 		res.status(200);
 		res.end();
 	}

@@ -1,8 +1,9 @@
-import { initRegister, isEnabled } from './register';
-import { AllModules, ModuleConfig } from '..';
+import { PressureStateKeeper } from './enabled';
+import { PressureValueKeeper } from './values';
 import { ExternalHandler } from './external';
 import { initRouting } from './routing';
 import { ModuleMeta } from '../meta';
+import { ModuleConfig } from '..';
 import { Bot } from './bot';
 
 export const Pressure = new (class Meta extends ModuleMeta {
@@ -16,32 +17,39 @@ export const Pressure = new (class Meta extends ModuleMeta {
 		return Bot;
 	}
 
-	public init(config: ModuleConfig): Promise<void> {
-		initRegister(config.db);
-		initRouting(config);
-		return Promise.resolve(void 0);
-	}
+	public async init(config: ModuleConfig): Promise<void> {
+		const stateKeeper = new PressureStateKeeper(config.db);
+		const valueKeeper = new PressureValueKeeper(stateKeeper);
 
-	public async notifyModules(modules: unknown) {
+		Bot.valueKeeper = valueKeeper;
+
+		await ExternalHandler.init({
+			pressureStateKeeper: stateKeeper,
+			pressureValueKeeper: valueKeeper,
+		});
+		initRouting(config, valueKeeper);
+
 		void (async () => {
-			const keyval = new (modules as AllModules).keyval.External(
+			const keyval = new config.modules.keyval.External(
 				{},
 				'PRESSURE.NOTIFY'
 			);
-			await keyval.set('state.pressure', isEnabled() ? '1' : '0', false);
+			await keyval.set(
+				'state.pressure',
+				stateKeeper.isEnabled() ? '1' : '0',
+				false
+			);
 			await keyval.onChange(
 				'state.pressure',
-				async (value, _key, logObj) => {
-					const handler = new ExternalHandler(logObj, 'KEYVAL');
+				async (value) => {
 					if (value === '1') {
-						await handler.enable();
+						await stateKeeper.enable(false);
 					} else {
-						await handler.disable();
+						await stateKeeper.disable(false);
 					}
 				},
 				{ notifyOnInitial: true }
 			);
 		})();
-		return Promise.resolve(void 0);
 	}
 })();

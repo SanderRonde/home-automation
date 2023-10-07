@@ -19,7 +19,7 @@ import {
 	initPostRoutes,
 } from './lib/routes';
 import { hasArg, getArg, getNumberArg, getNumberEnv, getEnv } from './lib/io';
-import { notifyAllModules, NoDBModuleConfig } from './modules/modules';
+import { notifyAllModules, BaseModuleConfig } from './modules/modules';
 import { printCommands } from './modules/bot/helpers';
 import { AllModules, getAllModules } from './modules';
 import { WSSimulator, WSWrapper } from './lib/ws';
@@ -96,7 +96,7 @@ class WebServer {
 		};
 	}
 
-	private _getModuleConfig(): NoDBModuleConfig {
+	private _getModuleConfig(): BaseModuleConfig {
 		return {
 			app: this.app,
 			websocketSim: this.websocketSim,
@@ -111,12 +111,13 @@ class WebServer {
 
 		const modules = await getAllModules();
 
-		const config: NoDBModuleConfig = this._getModuleConfig();
+		const config: BaseModuleConfig = this._getModuleConfig();
 		await Promise.all(
 			Object.values(modules).map(async (meta) => {
 				await meta.init({
 					...config,
 					db: await new Database(`${meta.dbName}.json`).init(),
+					modules,
 				});
 				this._initLogger.increment(meta.loggerName);
 			})

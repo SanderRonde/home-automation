@@ -62,7 +62,7 @@ export type ModuleHookables = {
 	[K in keyof AllModules]: InstanceType<AllModules[K]['External']>;
 };
 
-export interface NoDBModuleConfig {
+export interface BaseModuleConfig {
 	app: AsyncExpressApplication;
 	websocketSim: WSSimulator;
 	websocket: WSWrapper;
@@ -70,8 +70,9 @@ export interface NoDBModuleConfig {
 	randomNum: number;
 }
 
-export interface ModuleConfig extends NoDBModuleConfig {
+export interface ModuleConfig extends BaseModuleConfig {
 	db: Database;
+	modules: AllModules;
 }
 
 const moduleObj = {

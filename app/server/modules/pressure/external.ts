@@ -1,25 +1,41 @@
-import { disable, enable, getPressure, isEnabled } from './register';
 import { createExternalClass } from '../../lib/external';
 import { attachMessage } from '../../lib/logger';
+import { PressureStateKeeper } from './enabled';
+import { PressureValueKeeper } from './values';
 
-export class ExternalHandler extends createExternalClass(false) {
+export class ExternalHandler extends createExternalClass(true) {
+	private static _pressureStateKeeper: PressureStateKeeper;
+	private static _pressureValueKeeper: PressureValueKeeper;
+
+	public static async init({
+		pressureStateKeeper,
+		pressureValueKeeper,
+	}: {
+		pressureStateKeeper: PressureStateKeeper;
+		pressureValueKeeper: PressureValueKeeper;
+	}): Promise<void> {
+		await super.init();
+		this._pressureStateKeeper = pressureStateKeeper;
+		this._pressureValueKeeper = pressureValueKeeper;
+	}
+
 	public async enable(): Promise<void> {
 		return this.runRequest(async (_res, _source, logObj) => {
-			await enable();
+			await ExternalHandler._pressureStateKeeper.enable();
 			attachMessage(logObj, 'Enabled pressure module');
 		});
 	}
 
 	public async disable(): Promise<void> {
 		return this.runRequest(async (_res, _source, logObj) => {
-			await disable();
+			await ExternalHandler._pressureStateKeeper.disable();
 			attachMessage(logObj, 'Disabled pressure module');
 		});
 	}
 
 	public async isEnabled(): Promise<boolean> {
 		return this.runRequest((_res, _source, logObj) => {
-			const enabled = isEnabled();
+			const enabled = ExternalHandler._pressureStateKeeper.isEnabled();
 			attachMessage(logObj, 'Got enabled status of pressure module');
 			return enabled;
 		});
@@ -27,7 +43,8 @@ export class ExternalHandler extends createExternalClass(false) {
 
 	public async get(key: string): Promise<number | null> {
 		return this.runRequest((_res, _source, logObj) => {
-			const pressure = getPressure(key);
+			const pressure =
+				ExternalHandler._pressureValueKeeper.getPressure(key);
 			attachMessage(
 				logObj,
 				`Returning pressure ${String(pressure)} for key ${key}`

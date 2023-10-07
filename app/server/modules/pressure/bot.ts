@@ -1,10 +1,12 @@
 import { BotStateBase } from '../../lib/bot-state';
 import { MatchParameters } from '../bot/message';
+import { PressureValueKeeper } from './values';
 import { MatchResponse } from '../bot/types';
 import { ExternalHandler } from './external';
-import { getAll } from './register';
 
 export class Bot extends BotStateBase {
+	public static valueKeeper: PressureValueKeeper | null = null;
+
 	public static readonly commands = {
 		'/pressure': 'Turn on pressure module',
 		'/pressureoff': 'Turn off pressure module',
@@ -26,11 +28,11 @@ export class Bot extends BotStateBase {
 			mm('/pressures', /what are the pressures/, () => {
 				return Bot.makeTable({
 					header: ['key', 'value'],
-					contents: Array.from(getAll().entries()).map(
-						([key, pressure]) => {
-							return [key, String(pressure)];
-						}
-					),
+					contents: Array.from(
+						(this.valueKeeper?.getAll() ?? new Map()).entries()
+					).map(([key, pressure]) => {
+						return [key, String(pressure)];
+					}),
 				});
 			});
 			mm(

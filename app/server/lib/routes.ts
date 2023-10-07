@@ -1,5 +1,5 @@
 import { logReq, reportReqError } from './logger';
-import { NoDBModuleConfig } from '../modules';
+import { BaseModuleConfig } from '../modules';
 import cookieParser from 'cookie-parser';
 import serveStatic from 'serve-static';
 import bodyParser from 'body-parser';
@@ -34,7 +34,7 @@ export function initAnnotatorRoutes(app: express.Express): void {
 	});
 }
 
-export function initMiddleware({ app, config }: NoDBModuleConfig): void {
+export function initMiddleware({ app, config }: BaseModuleConfig): void {
 	app.use((req, res, next) => {
 		logReq(req, res, config);
 		next();
