@@ -51,7 +51,7 @@ export function initListeners(): void {
 			'RGB.INIT'
 		);
 
-		await initRGBListeners();
+		await initRGBListeners(await RGB.modules);
 		await Promise.all(
 			Object.entries(LED_KEYVAL_MAP).map(async ([ledName, keyvals]) => {
 				return Promise.all(
