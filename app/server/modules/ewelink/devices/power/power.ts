@@ -112,7 +112,7 @@ export class EwelinkPower<
 
 		this._eWeLinkConfig.wsConnection.on(
 			'data',
-			async (data: EWeLinkWebSocketMessage<P>) => {
+			(data: EWeLinkWebSocketMessage<P>) => {
 				if (
 					typeof data === 'string' ||
 					!('action' in data) ||
@@ -125,10 +125,10 @@ export class EwelinkPower<
 				}
 
 				this._onRemoteUpdate(data.params);
-				await this._setFromRemoteStatus(
-					data.params.switch,
-					'websocket'
-				);
+				// await this._setFromRemoteStatus(
+				// 	data.params.switch,
+				// 	'websocket'
+				// );
 			}
 		);
 	}
