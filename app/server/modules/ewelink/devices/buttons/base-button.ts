@@ -23,9 +23,8 @@ export class EwelinkButtonBase<A extends number> extends EWeLinkInitable {
 	}
 
 	protected async _onTrigger(
-		message: EWeLinkButtonPressMessage<A>
+		key: A
 	): Promise<void> {
-		const key = message.params.outlet ?? message.params.key;
 		const action =
 			'default' in this._actions
 				? this._actions.default
@@ -46,8 +45,10 @@ export class EwelinkButtonBase<A extends number> extends EWeLinkInitable {
 				message.deviceid ===
 					this._eWeLinkConfig.device.itemData.deviceid
 			) {
-				logTag('ewelink', 'cyan', 'Button triggered');
-				await this._onTrigger(message as EWeLinkButtonPressMessage<A>);
+				const ewelinkMessage = message as EWeLinkButtonPressMessage<A>
+				const key = ewelinkMessage.params.outlet ?? ewelinkMessage.params.key;
+				logTag('ewelink', 'cyan', `Button triggered: ${key}`);
+				await this._onTrigger(key);
 			}
 		});
 		return Promise.resolve();
