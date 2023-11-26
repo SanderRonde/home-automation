@@ -9,10 +9,6 @@ export enum SceneControllerTriggerType {
 	BOTTOM_RIGHT = 2,
 }
 
-export type ButtonTriggerActions = {
-	[K in SceneControllerTriggerType]?: () => Promise<unknown>;
-};
-
 export class EWeLinkSceneController extends EwelinkKeyvalButtonBase<SceneControllerTriggerType> {
 	public static TriggerType = SceneControllerTriggerType;
 }

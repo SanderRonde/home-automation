@@ -22,9 +22,7 @@ export class EwelinkButtonBase<A extends number> extends EWeLinkInitable {
 		super();
 	}
 
-	protected async _onTrigger(
-		key: A
-	): Promise<void> {
+	protected async _onTrigger(key: A): Promise<void> {
 		const action =
 			'default' in this._actions
 				? this._actions.default
@@ -45,8 +43,9 @@ export class EwelinkButtonBase<A extends number> extends EWeLinkInitable {
 				message.deviceid ===
 					this._eWeLinkConfig.device.itemData.deviceid
 			) {
-				const ewelinkMessage = message as EWeLinkButtonPressMessage<A>
-				const key = ewelinkMessage.params.outlet ?? ewelinkMessage.params.key;
+				const ewelinkMessage = message as EWeLinkButtonPressMessage<A>;
+				const key =
+					ewelinkMessage.params.outlet ?? ewelinkMessage.params.key;
 				logTag('ewelink', 'cyan', `Button triggered: ${key}`);
 				await this._onTrigger(key);
 			}
@@ -56,14 +55,15 @@ export class EwelinkButtonBase<A extends number> extends EWeLinkInitable {
 }
 
 export class EwelinkKeyvalButtonBase<
-	A extends number
+	C extends number,
+	A extends number = C
 > extends EwelinkButtonBase<A> {
 	private _keyvalExternal!: ExternalHandler;
 
 	public constructor(
 		eWeLinkConfig: EWeLinkSharedConfig,
-		private readonly _keyVal: {
-			[K in A]?: string[];
+		protected readonly _keyVal: {
+			[K in C]?: string[];
 		}
 	) {
 		super(eWeLinkConfig, {
@@ -71,7 +71,7 @@ export class EwelinkKeyvalButtonBase<
 		});
 	}
 
-	private async _onPress(button: A): Promise<void> {
+	protected async _triggerHandler(button: C): Promise<void> {
 		const usedKeyval = this._keyVal[button];
 		if (!usedKeyval) {
 			return;
@@ -79,6 +79,10 @@ export class EwelinkKeyvalButtonBase<
 		await Promise.all(
 			usedKeyval.map((val) => this._keyvalExternal.toggle(val))
 		);
+	}
+
+	protected async _onPress(button: A): Promise<void> {
+		await this._triggerHandler(button as unknown as C);
 	}
 
 	public async init(): Promise<void> {
