@@ -45,11 +45,21 @@ async function createWebsocketListener(
 			logTag('ewelink', 'red', 'WS connection errored');
 		},
 		(_ws, msg) => {
-			const data = JSON.parse(msg.data.toString());
-			if (EWELINK_DEBUG) {
-				console.log(data);
+			try {
+				const data = JSON.parse(msg.data.toString());
+				if (EWELINK_DEBUG) {
+					console.log(data);
+				}
+				wsConnection.emit('data', data);
+			} catch (e) {
+				logTag(
+					'ewelink',
+					'red',
+					`Failed to parse ewelink message: ${
+						msg.data.toString() as string
+					}`
+				);
 			}
-			wsConnection.emit('data', data);
 		}
 	);
 
