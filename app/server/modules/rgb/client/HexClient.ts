@@ -4,7 +4,6 @@ import { Color } from '../../../lib/color';
 import { XHR } from '../../../lib/util';
 import { RGBClient } from './RGBClient';
 
-
 export class HexClient extends RGBClient {
 	public setWhiteForPower = false;
 
@@ -32,7 +31,7 @@ export class HexClient extends RGBClient {
 			const response = (await XHR.post(
 				`http://${this.address}/is_on`,
 				`hex-${this.address}-is-on`
-			)) as null | EncodedString<{ enabled: boolean; }>;
+			)) as null | EncodedString<{ enabled: boolean }>;
 			if (!response) {
 				return;
 			}
@@ -59,9 +58,10 @@ export class HexClient extends RGBClient {
 	}
 
 	public async setBrightness(brightness: number): Promise<boolean> {
-		const color = this._lastState.type === 'fullColor'
-			? this._lastState.color
-			: new Color(255);
+		const color =
+			this._lastState.type === 'fullColor'
+				? this._lastState.color
+				: new Color(255);
 		return this.setColorWithBrightness(
 			color.r,
 			color.g,

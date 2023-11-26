@@ -1,8 +1,8 @@
-import { ModuleConfig } from '..';
 import { ExternalHandler } from './external';
 import { initHooks } from './explaining';
 import { initRouting } from './routing';
 import { ModuleMeta } from '../meta';
+import { ModuleConfig } from '..';
 import { Bot } from './bot';
 
 export const Explain = new (class Meta extends ModuleMeta {

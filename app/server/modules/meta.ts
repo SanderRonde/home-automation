@@ -57,7 +57,7 @@ export abstract class ModuleMeta {
 		return this._loggerName || `/${this.name}`;
 	}
 
-	public abstract init(config: ModuleConfig): Promise<void>|void;
+	public abstract init(config: ModuleConfig): Promise<void> | void;
 
 	public postInit(): Promise<void> {
 		return Promise.resolve(void 0);

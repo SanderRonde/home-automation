@@ -1,9 +1,8 @@
-import { MAGIC_LEDS } from '../../../config/led-config';
 import { BuiltinPatterns, Control, State } from 'magic-home';
+import { MAGIC_LEDS } from '../../../config/led-config';
 import { warning } from '../../../lib/logger';
 import { Color } from '../../../lib/color';
 import { RGBClient } from './RGBClient';
-
 
 export class MagicHomeClient extends RGBClient {
 	private _lastQueriedState: State | null = null;
@@ -109,12 +108,14 @@ export class MagicHomeClient extends RGBClient {
 				if (state.mode !== 'color') {
 					return null;
 				}
-				if (this._lastState.type === 'fullColor' &&
+				if (
+					this._lastState.type === 'fullColor' &&
 					this._isScaledColor(
 						this._lastState.color,
 						new Color(state.color),
 						this._lastState.brightness
-					)) {
+					)
+				) {
 					return this._lastState.color;
 				}
 				return null;
@@ -129,13 +130,15 @@ export class MagicHomeClient extends RGBClient {
 				}
 				return;
 			}
-			if (assumedColor &&
+			if (
+				assumedColor &&
 				!assumedColor.isSame(actualColor!) &&
 				!this._isScaledColor(
 					assumedColor,
 					actualColor!,
 					assumedBrightness
-				)) {
+				)
+			) {
 				// Color is defined and not the same
 				this.updateStateColor(actualColor!, 100);
 				return;
@@ -156,8 +159,10 @@ export class MagicHomeClient extends RGBClient {
 			return null;
 		}
 
-		if (this._lastState.type === 'fullColor' &&
-			actualColor.isSame(this._lastState.color)) {
+		if (
+			this._lastState.type === 'fullColor' &&
+			actualColor.isSame(this._lastState.color)
+		) {
 			return this._lastState.brightness;
 		}
 		return null;

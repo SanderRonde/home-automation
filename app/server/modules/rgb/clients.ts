@@ -8,8 +8,8 @@ import {
 
 import { MagicHomeClient } from './client/MagicHomeClient';
 import { WLEDRGBClient } from './client/WLEDRGBClient';
-import { RGBClient } from './client/RGBClient';
 import { RingClient } from './client/RingClient';
+import { RGBClient } from './client/RGBClient';
 import { HexClient } from './client/HexClient';
 
 export let magicHomeClients: MagicHomeClient[] = [];

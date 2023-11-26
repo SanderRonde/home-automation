@@ -4,7 +4,6 @@ import { Color } from '../../../lib/color';
 import { XHR } from '../../../lib/util';
 import { RGBClient } from './RGBClient';
 
-
 export class RingClient extends RGBClient {
 	public setWhiteForPower = false;
 
@@ -22,7 +21,7 @@ export class RingClient extends RGBClient {
 			const response = (await XHR.post(
 				`http://${this.address}/is_on`,
 				`ring-${this.address}-is-on`
-			)) as EncodedString<{ enabled: boolean; }>;
+			)) as EncodedString<{ enabled: boolean }>;
 			if (!response) {
 				return;
 			}

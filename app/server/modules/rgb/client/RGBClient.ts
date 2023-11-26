@@ -1,11 +1,7 @@
-import {
-	LED_KEYVAL_MAP,
-	LED_NAME
-} from '../../../config/led-config';
+import { LED_KEYVAL_MAP, LED_NAME } from '../../../config/led-config';
 import { BuiltinPatterns, Control } from 'magic-home';
 import { Color } from '../../../lib/color';
 import { RGB } from '..';
-
 
 export abstract class RGBClient {
 	public static patternNames: {
@@ -15,23 +11,24 @@ export abstract class RGBClient {
 		type: 'color' | 'brightness' | 'effect' | 'power';
 		listener: (value: unknown) => void;
 	}[] = [];
-	protected _lastState: {
-		type: 'fullColor';
-		color: Color;
-		brightness: number;
-	} |
-	{
-		type: 'effect';
-		effectName: string;
-	} |
-	{
-		type: 'off';
-	} |
-	{
-		type: 'on';
-	} = {
-			type: 'off',
-		};
+	protected _lastState:
+		| {
+				type: 'fullColor';
+				color: Color;
+				brightness: number;
+		  }
+		| {
+				type: 'effect';
+				effectName: string;
+		  }
+		| {
+				type: 'off';
+		  }
+		| {
+				type: 'on';
+		  } = {
+		type: 'off',
+	};
 
 	public abstract address: string;
 	public abstract id: LED_NAME;
@@ -83,8 +80,8 @@ export abstract class RGBClient {
 		this._lastState = isOn
 			? { type: 'on' }
 			: {
-				type: 'off',
-			};
+					type: 'off',
+			  };
 
 		if (oldValue.type !== this._lastState.type) {
 			this._triggerListener('power', isOn);
