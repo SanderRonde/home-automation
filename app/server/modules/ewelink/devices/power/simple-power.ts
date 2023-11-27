@@ -9,8 +9,12 @@ export interface EwelinkPowerParams {
 export class EwelinkSimplePower extends EwelinkPowerBase<EwelinkPowerParams> {
 	protected override _onRemoteUpdate(): void {}
 
-	protected override _getStatusFromState(state: EwelinkPowerParams): boolean {
-		return state.switch === 'on';
+	protected override _getStatusFromState(state: {
+		data: {
+			params: EwelinkPowerParams;
+		};
+	}): boolean {
+		return state.data.params.switch === 'on';
 	}
 
 	protected override async setPower(isOn: boolean): Promise<void> {

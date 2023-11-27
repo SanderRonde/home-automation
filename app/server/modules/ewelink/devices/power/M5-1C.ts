@@ -12,8 +12,12 @@ interface PowerParams {
 export class EwelinkM51C extends EwelinkPowerBase<PowerParams> {
 	protected _onRemoteUpdate(): void {}
 
-	protected override _getStatusFromState(state: PowerParams): boolean {
-		return state.switches[0].switch === 'on';
+	protected override _getStatusFromState(state: {
+		data: {
+			params: PowerParams;
+		};
+	}): boolean {
+		return state.data.params.switches[0].switch === 'on';
 	}
 
 	protected override async setPower(isOn: boolean): Promise<void> {

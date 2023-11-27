@@ -36,10 +36,12 @@ export class EwelinkLightPower extends EwelinkPowerBase<EwelinkLightPowerPowerPa
 		this.colorTemperature = ltypeParams.ct;
 	}
 
-	protected override _getStatusFromState(
-		state: EwelinkLightPowerPowerParams
-	): boolean {
-		return state.switch === 'on';
+	protected override _getStatusFromState(state: {
+		data: {
+			params: EwelinkLightPowerPowerParams;
+		};
+	}): boolean {
+		return state.data.params.switch === 'on';
 	}
 
 	protected override async setPower(isOn: boolean): Promise<void> {

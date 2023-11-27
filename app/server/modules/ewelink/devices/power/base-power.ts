@@ -56,7 +56,11 @@ export abstract class EwelinkPowerBase<P> extends EWeLinkInitable {
 	}
 
 	private async _syncStatus() {
-		const status = await this._eWeLinkConfig.connection.getThingStatus<P>({
+		const status = await this._eWeLinkConfig.connection.getThingStatus<{
+			data: {
+				params: P;
+			};
+		}>({
 			id: this._eWeLinkConfig.device.itemData.deviceid,
 			// Type 1 means deviceid
 			type: 1,
@@ -80,7 +84,11 @@ export abstract class EwelinkPowerBase<P> extends EWeLinkInitable {
 		params: EWeLinkUpdateMessage<P>['params']
 	): void;
 
-	protected abstract _getStatusFromState(state: P): boolean;
+	protected abstract _getStatusFromState(state: {
+		data: {
+			params: P;
+		};
+	}): boolean;
 
 	protected abstract setPower(isOn: boolean): Promise<void>;
 
