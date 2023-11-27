@@ -48,7 +48,7 @@ async function createWebsocketListener(
 			try {
 				const data = JSON.parse(msg.data.toString());
 				if (EWELINK_DEBUG) {
-					console.log(data);
+					console.log(JSON.stringify(data, null, '\t'));
 				}
 				wsConnection.emit('data', data);
 			} catch (e) {
