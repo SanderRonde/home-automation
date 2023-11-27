@@ -1,4 +1,5 @@
-import { EwelinkPower, EwelinkPowerParams } from './power';
+import { EwelinkPowerParams } from './simple-power';
+import { EwelinkPowerBase } from './base-power';
 
 type EwelinkLightPowerPowerParams = EwelinkPowerParams & {
 	ltype?: string;
@@ -9,7 +10,7 @@ type EwelinkLightPowerPowerParams = EwelinkPowerParams & {
 	};
 };
 
-export class EwelinkLightPower extends EwelinkPower<EwelinkLightPowerPowerParams> {
+export class EwelinkLightPower extends EwelinkPowerBase<EwelinkLightPowerPowerParams> {
 	/**
 	 * 0 to 100
 	 */
@@ -22,7 +23,7 @@ export class EwelinkLightPower extends EwelinkPower<EwelinkLightPowerPowerParams
 	public colorTemperature: number = 0;
 
 	protected _onRemoteUpdate(params: EwelinkLightPowerPowerParams): void {
-		if (!params.ltype) {
+		if (!params.ltype || !params.switch) {
 			return;
 		}
 		const ltype = params.ltype;
@@ -33,5 +34,21 @@ export class EwelinkLightPower extends EwelinkPower<EwelinkLightPowerPowerParams
 
 		this.brightness = ltypeParams.br;
 		this.colorTemperature = ltypeParams.ct;
+	}
+
+	protected override _getStatusFromState(
+		state: EwelinkLightPowerPowerParams
+	): boolean {
+		return state.switch === 'on';
+	}
+
+	protected override async setPower(isOn: boolean): Promise<void> {
+		await this._eWeLinkConfig.connection.setThingStatus({
+			id: this._eWeLinkConfig.device.itemData.deviceid,
+			type: 1,
+			params: {
+				switch: isOn ? 'on' : 'off',
+			} as EwelinkLightPowerPowerParams,
+		});
 	}
 }

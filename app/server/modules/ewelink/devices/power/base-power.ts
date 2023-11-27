@@ -9,19 +9,13 @@ import { logFixture, ResDummy } from '../../../../lib/logger';
 import { asyncSetInterval } from '../../../../lib/util';
 import chalk from 'chalk';
 
-export interface EwelinkPowerParams {
-	switch?: 'on' | 'off';
-}
-
-export class EwelinkPower<
-	P extends EwelinkPowerParams
-> extends EWeLinkInitable {
+export abstract class EwelinkPowerBase<P> extends EWeLinkInitable {
 	private readonly _options: {
 		enableSync: boolean;
 	};
 
 	public constructor(
-		private readonly _eWeLinkConfig: EWeLinkSharedConfig,
+		protected readonly _eWeLinkConfig: EWeLinkSharedConfig,
 		private readonly _keyVal: string,
 		options?: {
 			enableSync?: boolean;
@@ -44,38 +38,25 @@ export class EwelinkPower<
 		};
 	}
 
-	private async _setFromRemoteStatus(
-		remoteState: 'on' | 'off',
-		source: string
-	) {
+	private async _setFromRemoteStatus(remoteState: boolean, source: string) {
 		const logName = `EWELINK.POWER.${source.toUpperCase()}`;
 		const { keyval, resDummy } = this._getKeyval(logName);
 		const localState = await keyval.get(this._keyVal);
 
-		if ((remoteState === 'on') !== (localState === '1')) {
-			await keyval.set(
-				this._keyVal,
-				remoteState === 'on' ? '1' : '0',
-				true
-			);
+		if (remoteState !== (localState === '1')) {
+			await keyval.set(this._keyVal, remoteState ? '1' : '0', true);
 			logFixture(
 				resDummy,
 				chalk.magenta('[ewelink]'),
 				`[${source}]`,
 				'Set to',
-				remoteState
+				remoteState ? 'on' : 'off'
 			);
 		}
 	}
 
 	private async _syncStatus() {
-		const status = await this._eWeLinkConfig.connection.getThingStatus<{
-			data: {
-				params: {
-					switch: 'on' | 'off';
-				};
-			};
-		}>({
+		const status = await this._eWeLinkConfig.connection.getThingStatus<P>({
 			id: this._eWeLinkConfig.device.itemData.deviceid,
 			// Type 1 means deviceid
 			type: 1,
@@ -85,17 +66,23 @@ export class EwelinkPower<
 			return;
 		}
 
-		await this._setFromRemoteStatus(status.data.params.switch, 'sync');
+		await this._setFromRemoteStatus(
+			this._getStatusFromState(status),
+			'sync'
+		);
 	}
 
 	private _startTimer() {
 		asyncSetInterval(() => this._syncStatus(), 1000 * 300);
 	}
 
-	protected _onRemoteUpdate(
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		_params: EWeLinkUpdateMessage<P>['params']
-	): void {}
+	protected abstract _onRemoteUpdate(
+		params: EWeLinkUpdateMessage<P>['params']
+	): void;
+
+	protected abstract _getStatusFromState(state: P): boolean;
+
+	protected abstract setPower(isOn: boolean): Promise<void>;
 
 	public async init(): Promise<void> {
 		if (this._options.enableSync) {
@@ -118,8 +105,7 @@ export class EwelinkPower<
 					!('action' in data) ||
 					data.action !== 'update' ||
 					data.deviceid !==
-						this._eWeLinkConfig.device.itemData.deviceid ||
-					!data.params.switch
+						this._eWeLinkConfig.device.itemData.deviceid
 				) {
 					return;
 				}
@@ -131,16 +117,6 @@ export class EwelinkPower<
 				// );
 			}
 		);
-	}
-
-	public async setPower(isOn: boolean): Promise<void> {
-		await this._eWeLinkConfig.connection.setThingStatus({
-			id: this._eWeLinkConfig.device.itemData.deviceid,
-			type: 1,
-			params: {
-				switch: isOn ? 'on' : 'off',
-			},
-		});
 	}
 
 	public turnOn(): Promise<void> {
