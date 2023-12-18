@@ -24,7 +24,7 @@ export class EwelinkDoorSensor extends EWeLinkInitable {
 					/**
 					 * 0=closed, 1=open
 					 */
-					lock: 0 | 1;
+					lock?: 0 | 1;
 					/**
 					 * Stringified number of milliseconds since epoch
 					 */
@@ -35,7 +35,8 @@ export class EwelinkDoorSensor extends EWeLinkInitable {
 					typeof data === 'object' &&
 					'deviceid' in data &&
 					data.deviceid ===
-						this._eWeLinkConfig.device.itemData.deviceid
+						this._eWeLinkConfig.device.itemData.deviceid &&
+					'lock' in data.params
 				) {
 					const isClosed = data.params.lock === 0;
 					const state = isClosed ? 'closed' : 'opened';

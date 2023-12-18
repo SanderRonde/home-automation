@@ -40,11 +40,21 @@ async function createWebsocketListener(
 		},
 		() => {
 			logTag('ewelink', 'yellow', 'WS connection closed');
+			setTimeout(() => {
+				void createWebsocketListener(connection, userApiKey, wsConnection);
+			}, 1000 * 60)
 		},
 		() => {
 			logTag('ewelink', 'red', 'WS connection errored');
+			setTimeout(() => {
+				void createWebsocketListener(connection, userApiKey, wsConnection);
+			}, 1000 * 60)
 		},
 		(_ws, msg) => {
+			if (msg.data.toString() === 'pong') {
+				// Just a keep-alive
+				return;
+			}
 			try {
 				const data = JSON.parse(msg.data.toString());
 				if (EWELINK_DEBUG) {
