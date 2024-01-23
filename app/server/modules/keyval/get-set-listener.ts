@@ -69,18 +69,32 @@ export async function triggerGroups(
 
 	const group = groups[key];
 	for (const key in group) {
-		const opposite = value === '1' ? '0' : '1';
 		const effect = group[key];
-		attachMessage(
-			logObj,
-			`Setting "${key}" to "${
-				effect === KEYVAL_GROUP_EFFECT.SAME ? value : opposite
-			}" (db only)`
-		);
-		(await db.value).setVal(
-			key,
-			effect === KEYVAL_GROUP_EFFECT.SAME ? value : opposite
-		);
+
+		const newValue = (() => {
+			const opposite = value === '1' ? '0' : '1';
+			switch (effect) {
+				case KEYVAL_GROUP_EFFECT.SAME_ALWAYS:
+					return value;
+				case KEYVAL_GROUP_EFFECT.INVERT_ALWAYS:
+					return opposite;
+				case KEYVAL_GROUP_EFFECT.SAME_ON_TRUE:
+					return value === '1' ? value : undefined;
+				case KEYVAL_GROUP_EFFECT.SAME_ON_FALSE:
+					return value === '0' ? value : undefined;
+				case KEYVAL_GROUP_EFFECT.INVERT_ON_TRUE:
+					return value === '1' ? opposite : undefined;
+				case KEYVAL_GROUP_EFFECT.INVERT_ON_FALSE:
+					return value === '0' ? opposite : undefined;
+			}
+		})();
+
+		if (newValue === undefined) {
+			continue;
+		}
+
+		attachMessage(logObj, `Setting "${key}" to "${newValue}" (db only)`);
+		(await db.value).setVal(key, newValue);
 	}
 }
 

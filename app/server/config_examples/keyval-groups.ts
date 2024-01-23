@@ -6,7 +6,7 @@ import { GroupConfig, KEYVAL_GROUP_EFFECT } from '../modules/keyval/types';
 // without triggering any listeners
 export default {
 	'some.key.val': {
-		'other.key.val': KEYVAL_GROUP_EFFECT.SAME,
-		'another.key.val': KEYVAL_GROUP_EFFECT.INVERT,
+		'other.key.val': KEYVAL_GROUP_EFFECT.SAME_ALWAYS,
+		'another.key.val': KEYVAL_GROUP_EFFECT.INVERT_ALWAYS,
 	},
 } as GroupConfig;
