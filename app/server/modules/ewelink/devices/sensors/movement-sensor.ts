@@ -1,4 +1,8 @@
-import { EWeLinkInitable, EWeLinkSharedConfig } from '../shared';
+import {
+	EWeLinkInitable,
+	EWeLinkSharedConfig,
+	EWeLinkWebSocketMessage,
+} from '../shared';
 import { ExternalHandler } from '../../../movement/external';
 import { logTag } from '../../../../lib/logger';
 
@@ -18,16 +22,23 @@ export class EwelinkMovement extends EWeLinkInitable {
 				{},
 				'EWELINK.MOVEMENT.INIT'
 			);
-		this._eWeLinkConfig.wsConnection.on('data', async (data) => {
-			if (
-				typeof data === 'object' &&
-				'deviceid' in data &&
-				data.deviceid === this._eWeLinkConfig.device.itemData.deviceid
-			) {
-				logTag('ewelink', 'cyan', 'Movement:', this._movementKey);
-				await this._movementExternal.reportMovement(this._movementKey);
+		this._eWeLinkConfig.wsConnection.on(
+			'data',
+			async (data: EWeLinkWebSocketMessage<{ online: boolean }>) => {
+				if (
+					typeof data === 'object' &&
+					'deviceid' in data &&
+					data.deviceid ===
+						this._eWeLinkConfig.device.itemData.deviceid &&
+					data.params.online
+				) {
+					logTag('ewelink', 'cyan', 'Movement:', this._movementKey);
+					await this._movementExternal.reportMovement(
+						this._movementKey
+					);
+				}
 			}
-		});
+		);
 		return Promise.resolve();
 	}
 }
