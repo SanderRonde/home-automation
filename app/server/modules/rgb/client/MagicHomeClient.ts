@@ -15,7 +15,7 @@ export class MagicHomeClient extends RGBClient {
 		}
 		return name;
 	})();
-	public setWhiteForPower = true;
+	public setWhiteForPower = false;
 
 	public constructor(
 		private readonly _control: Control,
