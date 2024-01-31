@@ -118,5 +118,6 @@
 		"wc-lib": "^1.1.36",
 		"wled-client": "^0.22.1",
 		"ws": "^7.4.6"
-	}
+	},
+	"packageManager": "yarn@4.1.0"
 }
