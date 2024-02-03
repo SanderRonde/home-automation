@@ -16,12 +16,23 @@ export class WLEDRGBClient extends RGBClient {
 		void this._client.init();
 	}
 
+	private async _retry<T>(fn: () => Promise<T>): Promise<T | null> {
+		for (let i = 0; i < 5; i++) {
+			try {
+				return await fn();
+			} catch (e) {
+				console.log(e);
+			}
+		}
+		return null;
+	}
+
 	public setPattern(): Promise<boolean> {
 		throw new Error('Method not implemented.');
 	}
 
 	public async setPreset(preset: number): Promise<boolean> {
-		await this._client.setPreset(preset);
+		await this._retry(() => this._client.setPreset(preset));
 		await this.turnOn();
 		return Promise.resolve(true);
 	}
@@ -49,16 +60,20 @@ export class WLEDRGBClient extends RGBClient {
 		blue: number,
 		callback?: (err: Error | null, success: boolean) => void
 	): Promise<boolean> {
-		await this._client.setColor([red, green, blue], {
-			method: 'ws',
-		});
+		await this._retry(() =>
+			this._client.setColor([red, green, blue], {
+				method: 'ws',
+			})
+		);
 		await this.turnOn();
 		callback?.(null, true);
 		return Promise.resolve(true);
 	}
 
 	public async setBrightness(brightness: number): Promise<boolean> {
-		await this._client.setBrightness(Math.round(brightness * 255));
+		await this._retry(() =>
+			this._client.setBrightness(Math.round(brightness * 255))
+		);
 		await this.turnOn();
 		return Promise.resolve(true);
 	}
@@ -70,9 +85,11 @@ export class WLEDRGBClient extends RGBClient {
 		ww: number,
 		callback?: (err: Error | null, success: boolean) => void
 	): Promise<boolean> {
-		await this._client.setColor([red, green, blue, ww], {
-			method: 'ws',
-		});
+		await this._retry(() =>
+			this._client.setColor([red, green, blue, ww], {
+				method: 'ws',
+			})
+		);
 		await this.turnOn();
 		callback?.(null, true);
 		return Promise.resolve(true);
@@ -85,15 +102,17 @@ export class WLEDRGBClient extends RGBClient {
 		brightness: number,
 		callback?: (err: Error | null, success: boolean) => void
 	): Promise<boolean> {
-		await this._client.updateState({
-			on: true,
-			brightness: Math.round(brightness * 255),
-			segments: [
-				{
-					colors: [[red, green, blue]],
-				},
-			],
-		});
+		await this._retry(() =>
+			this._client.updateState({
+				on: true,
+				brightness: Math.round(brightness * 255),
+				segments: [
+					{
+						colors: [[red, green, blue]],
+					},
+				],
+			})
+		);
 		await this.turnOn();
 		callback?.(null, true);
 		return Promise.resolve(true);
@@ -119,7 +138,9 @@ export class WLEDRGBClient extends RGBClient {
 		await this._turnedOn();
 
 		const color = (await this.getColor()) ?? new Color(255);
-		await this._client.setColor([color.r, color.g, color.b, ww]);
+		await this._retry(() =>
+			this._client.setColor([color.r, color.g, color.b, ww])
+		);
 		this.updateStateColor(color, 100);
 		callback?.(null, true);
 		return Promise.resolve(true);
@@ -127,14 +148,14 @@ export class WLEDRGBClient extends RGBClient {
 
 	public async turnOff(callback?: () => void): Promise<boolean> {
 		await this._turnedOff();
-		await this._client.turnOff();
+		await this._retry(() => this._client.turnOff());
 		callback?.();
 		return Promise.resolve(true);
 	}
 
 	public async turnOn(callback?: () => void): Promise<boolean> {
 		await this._turnedOn();
-		await this._client.turnOn();
+		await this._retry(() => this._client.turnOn());
 		callback?.();
 		return Promise.resolve(true);
 	}
