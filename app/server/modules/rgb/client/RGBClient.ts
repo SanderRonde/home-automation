@@ -59,9 +59,6 @@ export abstract class RGBClient {
 	}
 
 	protected async _turnedOff(): Promise<void> {
-		this._lastState = {
-			type: 'off',
-		};
 		await this._stateChange('0');
 		this._updateStatePower(false);
 	}
