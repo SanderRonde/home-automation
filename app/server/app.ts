@@ -25,6 +25,7 @@ import { AllModules, getAllModules } from './modules';
 import { WSSimulator, WSWrapper } from './lib/ws';
 import { Database } from './lib/db';
 import express from 'express';
+import 'express-async-errors';
 import * as path from 'path';
 import * as http from 'http';
 import PM2 from '@pm2/io';

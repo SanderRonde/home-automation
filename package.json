@@ -96,6 +96,7 @@
 		"dotenv": "^8.2.0",
 		"ewelink-api-next": "^0.0.8",
 		"express": "^4.17.1",
+		"express-async-errors": "^3.1.1",
 		"express-oauth-server": "^2.0.0",
 		"fs-extra": "^8.0.1",
 		"glob": "^7.1.6",
