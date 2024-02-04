@@ -22,7 +22,7 @@ export const RGB = new (class Meta extends ModuleMeta {
 	public async init(config: ModuleConfig) {
 		await (this.setup = new Promise((resolve) => {
 			void (async () => {
-				await scanRGBControllers(true);
+				void scanRGBControllers(true);
 				setInterval(() => {
 					void scanRGBControllers();
 				}, 1000 * 60 * 60);
