@@ -1,4 +1,5 @@
 import * as dotenv from 'dotenv';
+console.log(process.version);
 dotenv.config({
 	path: (require('path') as typeof import('path')).join(
 		__dirname,
@@ -12,6 +13,7 @@ import {
 	startInit,
 	endInit,
 	logTag,
+	warning,
 } from './lib/logger';
 import {
 	initMiddleware,
@@ -20,12 +22,15 @@ import {
 } from './lib/routes';
 import { hasArg, getArg, getNumberArg, getNumberEnv, getEnv } from './lib/io';
 import { notifyAllModules, BaseModuleConfig } from './modules/modules';
+import { ProfilingIntegration } from '@sentry/profiling-node';
 import { printCommands } from './modules/bot/helpers';
 import { AllModules, getAllModules } from './modules';
 import { WSSimulator, WSWrapper } from './lib/ws';
+import * as Sentry from '@sentry/node';
+import { exec } from 'child_process';
 import { Database } from './lib/db';
-import express from 'express';
 import 'express-async-errors';
+import express from 'express';
 import * as path from 'path';
 import * as http from 'http';
 import PM2 from '@pm2/io';
@@ -174,6 +179,37 @@ class WebServer {
 		this._initLogger.increment('IO');
 
 		this.app = express();
+		const sentryEnv = getEnv('SECRET_SENTRY_DSN');
+		if (sentryEnv) {
+			const release = await new Promise<string>((resolve) => {
+				exec(
+					'git rev-parse HEAD',
+					{
+						cwd: path.join(__dirname, '../../'),
+					},
+					(err, stdout) => {
+						if (err) {
+							warning('Failed to get git commit hash');
+							resolve('???');
+						} else {
+							resolve(stdout.trim());
+						}
+					}
+				);
+			});
+			Sentry.init({
+				dsn: sentryEnv,
+				integrations: [
+					new Sentry.Integrations.Http({ tracing: true }),
+					new Sentry.Integrations.Express({ app: this.app }),
+					new ProfilingIntegration(),
+				],
+				release,
+				tracesSampleRate: 1,
+				profilesSampleRate: 1.0,
+			});
+		}
+
 		this._initLogger.increment('express');
 		initMiddleware(this._getModuleConfig());
 		initAnnotatorRoutes(this.app);

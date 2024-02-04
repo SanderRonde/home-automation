@@ -115,6 +115,8 @@ export interface EnvShape {
 	SECRET_NOTION_API_KEY: string;
 
 	SECRET_HUE_USERNAME: string;
+
+	SECRET_SENTRY_DSN: string
 }
 
 export function getEnv<S extends EnvShape>(

@@ -2,8 +2,10 @@ import { logReq, reportReqError } from './logger';
 import { BaseModuleConfig } from '../modules';
 import cookieParser from 'cookie-parser';
 import serveStatic from 'serve-static';
+import * as Sentry from '@sentry/node';
 import bodyParser from 'body-parser';
 import express from 'express';
+import { getEnv } from './io';
 import * as path from 'path';
 import pm2 from '@pm2/io';
 import chalk from 'chalk';
@@ -35,6 +37,17 @@ export function initAnnotatorRoutes(app: express.Express): void {
 }
 
 export function initMiddleware({ app, config }: BaseModuleConfig): void {
+	if (getEnv('SECRET_SENTRY_DSN')) {
+		app.use(
+			Sentry.Handlers.requestHandler({
+				ip: true,
+				request: true,
+				user: false,
+				serverName: true,
+			})
+		);
+		app.use(Sentry.Handlers.tracingHandler());
+	}
 	app.use((req, res, next) => {
 		logReq(req, res, config);
 		next();
@@ -74,10 +87,14 @@ export function initMiddleware({ app, config }: BaseModuleConfig): void {
 }
 
 export function initPostRoutes(app: express.Express): void {
+	if (getEnv('SECRET_SENTRY_DSN')) {
+		app.use(Sentry.Handlers.errorHandler());
+	}
 	app.use((_req, res) => {
 		res.status(404).send('404');
 	});
 	app.use((err: Error, req: express.Request, res: express.Response) => {
+		console.log('got err', err);
 		if (err?.message) {
 			if (res.headersSent) {
 				console.log(
