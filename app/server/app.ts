@@ -1,5 +1,4 @@
 import * as dotenv from 'dotenv';
-console.log(process.version);
 dotenv.config({
 	path: (require('path') as typeof import('path')).join(
 		__dirname,
