@@ -74,7 +74,9 @@ async function acquireLock(): Promise<{
 	});
 }
 
-export async function notionRequest<R>(callback: () => Promise<R>): Promise<R> {
+export async function notionRequest<R>(
+	callback: () => Promise<R>
+): Promise<R | null> {
 	const lock = await acquireLock();
 	let result: R | null = null;
 	try {
@@ -85,7 +87,7 @@ export async function notionRequest<R>(callback: () => Promise<R>): Promise<R> {
 	} finally {
 		lock.release();
 	}
-	return result as R;
+	return result;
 }
 
 export async function splitUpQuery<
@@ -103,7 +105,7 @@ export async function splitUpQuery<
 		next_cursor: null | string;
 	}>,
 	args: Q
-): Promise<R[]> {
+): Promise<R[] | null> {
 	const results: R[] = [];
 
 	// Or list can be a max of 99 items, split up
@@ -118,6 +120,10 @@ export async function splitUpQuery<
 				},
 			});
 		});
+
+		if (ret === null) {
+			return null;
+		}
 
 		if (ret.object !== 'list') {
 			throw new Error('Return type is not a list');
