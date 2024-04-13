@@ -59,7 +59,7 @@ export const InfoScreenCSS = new TemplateFn<InfoScreen>(
 					grid-row-end: 5;
 				}
 
-				#right-temp {
+				#inside-temp {
 					grid-column-start: 4;
 					grid-column-end: 5;
 					grid-row-start: 1;
