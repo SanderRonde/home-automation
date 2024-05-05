@@ -20,9 +20,13 @@ function report(temperature: number) {
 		},
 		(res) => {
 			if (res.statusCode === 200) {
-				console.log(`Reported temperature ${temperature}`);
+				console.log(
+					`[${new Date().toLocaleTimeString()}] Reported temperature ${temperature}`
+				);
 			} else {
-				console.log('Failed to report temperature');
+				console.log(
+					`[${new Date().toLocaleTimeString()}] Failed to report temperature`
+				);
 			}
 		}
 	);
