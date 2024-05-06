@@ -21,6 +21,7 @@ import {
 } from './lib/routes';
 import { hasArg, getArg, getNumberArg, getNumberEnv, getEnv } from './lib/io';
 import { notifyAllModules, BaseModuleConfig } from './modules/modules';
+import { SQLDatabase, SQLDatabaseWithSchema } from './lib/sql-db';
 import { ProfilingIntegration } from '@sentry/profiling-node';
 import { printCommands } from './modules/bot/helpers';
 import { AllModules, getAllModules } from './modules';
@@ -122,6 +123,10 @@ class WebServer {
 				await meta.init({
 					...config,
 					db: await new Database(`${meta.dbName}.json`).init(),
+					sqlDB: (await new SQLDatabase(
+						`${meta.dbName}.sqlite`
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					).applySchema(meta.schema)) as SQLDatabaseWithSchema<any>,
 					modules,
 				});
 				this._initLogger.increment(meta.loggerName);

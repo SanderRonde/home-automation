@@ -41,6 +41,11 @@ export abstract class ModuleMeta {
 		return BotBase;
 	}
 
+	// eslint-disable-next-line @typescript-eslint/ban-types
+	public get schema(): {} {
+		return {} as const;
+	}
+
 	public get explainHook(): Promise<ExplainHook> {
 		return this._explainHook.value;
 	}
@@ -57,7 +62,7 @@ export abstract class ModuleMeta {
 		return this._loggerName || `/${this.name}`;
 	}
 
-	public abstract init(config: ModuleConfig): Promise<void> | void;
+	public abstract init(config: ModuleConfig<this>): Promise<void> | void;
 
 	public postInit(): Promise<void> {
 		return Promise.resolve(void 0);

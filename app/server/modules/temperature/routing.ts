@@ -4,8 +4,12 @@ import { ModuleConfig, Temperature } from '..';
 import { createRouter } from '../../lib/api';
 import { APIHandler } from './api';
 
-export function initRouting({ app }: ModuleConfig): void {
-	const router = createRouter(Temperature, APIHandler);
+export function initRouting({
+	app,
+	sqlDB,
+}: ModuleConfig<typeof Temperature>): void {
+	const api = new APIHandler(sqlDB);
+	const router = createRouter(Temperature, api);
 	router.post('/target/:target?', 'setTargetTemp');
 	router.post('/mode/:mode?', 'setMode');
 	router.all('/temp', 'getTemp');
@@ -40,8 +44,8 @@ export function initRouting({ app }: ModuleConfig): void {
 		}
 
 		// Set last temp
-		const controller = await getController(body['name']);
-		controller.setLastTemp(temp);
+		const controller = await getController(sqlDB, body['name']);
+		await controller.setLastTemp(temp);
 
 		attachMessage(
 			res,
@@ -60,7 +64,7 @@ export function initRouting({ app }: ModuleConfig): void {
 			name: string;
 		};
 
-		const controller = await getController(body['name']);
+		const controller = await getController(sqlDB, body['name']);
 
 		const advice = controller.getHeaterState();
 		attachMessage(
@@ -84,7 +88,7 @@ export function initRouting({ app }: ModuleConfig): void {
 			name: string;
 		};
 
-		const controller = await getController(body['name']);
+		const controller = await getController(sqlDB, body['name']);
 
 		const move = controller.getMove();
 		if (!move) {

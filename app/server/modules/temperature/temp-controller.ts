@@ -1,9 +1,7 @@
-import { SettablePromise } from '../../lib/util';
 import { LOG_INTERVAL_SECS } from './constants';
+import { ModuleConfig, Temperature } from '..';
 import { logTag } from '../../lib/logger';
-import { Database } from '../../lib/db';
 import { getEnv } from '../../lib/io';
-import { Temperature } from '..';
 import { Mode } from './types';
 import chalk from 'chalk';
 
@@ -13,23 +11,40 @@ class TempControl {
 	public target = 20.0;
 	public mode: Mode = 'auto';
 	public lastTemp = -1;
-	public db: Database | null = null;
 	public lastLogTime = 0;
 	public lastLoggedTemp = -1;
-	public name!: string;
 
 	public move: {
 		direction: 'left' | 'right';
 		ms: number;
 	} | null = null;
 
-	public setTarget(targetTemp: number) {
-		this.db!.setVal(`${this.name}.target`, targetTemp);
+	public constructor(
+		public readonly db: ModuleConfig<typeof Temperature>['sqlDB'],
+		public readonly name: string
+	) {}
+
+	public async setTarget(targetTemp: number) {
+		await this.db.targets.set(
+			{
+				location: this.name,
+			},
+			{
+				target: targetTemp,
+			}
+		);
 		this.target = targetTemp;
 	}
 
 	public async setMode(newMode: Mode) {
-		this.db!.setVal(`${this.name}.mode`, newMode);
+		await this.db.modes.set(
+			{
+				location: this.name,
+			},
+			{
+				mode: newMode,
+			}
+		);
 		this.mode = newMode;
 
 		if (getEnv('HEATING_KEY', false)) {
@@ -57,12 +72,16 @@ class TempControl {
 		};
 	}
 
-	public setLastTemp(temp: number, store = true, doLog = true) {
+	public async setLastTemp(temp: number, store = true, doLog = true) {
 		this.lastTemp = temp;
 
 		// Write temp to database
 		if (store) {
-			this.db!.setVal(`${this.name}.temp`, temp);
+			await this.db.temperatures.insert({
+				time: Date.now(),
+				location: this.name,
+				temperature: temp,
+			});
 		}
 
 		if (
@@ -115,40 +134,42 @@ class TempControl {
 		this._listeners.push(listener);
 	}
 
-	public async init(database: Database, name: string) {
-		this.db = database;
-		this.name = name;
+	public async init() {
+		const target =
+			(await this.db.targets.querySingle({ location: this.name }))
+				?.target ?? 20.0;
+		const prevMode =
+			(await this.db.modes.querySingle({ location: this.name }))?.mode ??
+			'auto';
 
-		const target = database.get(`${name}.target`, 20.0);
-		const prevMode = database.get(`${name}.mode`, 'auto');
-
-		this.setTarget(target);
+		await this.setTarget(target);
 		await this.setMode(prevMode);
 
-		const temp = database.get(`${name}.temp`, 20.0);
+		const temp =
+			(
+				await this.db.temperatures.querySingle(
+					{ location: this.name },
+					'last'
+				)
+			)?.temperature ?? 20.0;
 
-		this.setLastTemp(temp, false, false);
+		await this.setLastTemp(temp, false, false);
 
 		return this;
 	}
 }
 
-const db = new SettablePromise<Database>();
 const controllers: Map<string, TempControl> = new Map();
 
-export async function getController(name = 'default'): Promise<TempControl> {
+export async function getController(
+	db: ModuleConfig<typeof Temperature>['sqlDB'],
+	name = 'default'
+): Promise<TempControl> {
 	if (!controllers.has(name)) {
-		controllers.set(
-			name,
-			await new TempControl().init((await db.value)!, name)
-		);
+		controllers.set(name, await new TempControl(db, name).init());
 	}
 
 	return controllers.get(name)!;
-}
-
-export function initTempController(_db: Database): void {
-	db.set(_db);
 }
 
 export function getAll(): TempControl[] {

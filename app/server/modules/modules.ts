@@ -22,9 +22,11 @@ import { Bot } from './bot';
 import { RGB } from './rgb';
 
 import { AsyncExpressApplication } from '../types/express';
+import { SQLDatabaseWithSchema } from '../lib/sql-db';
 import { WSSimulator, WSWrapper } from '../lib/ws';
 import { InfoScreen } from './info-screen';
 import { Database } from '../lib/db';
+import { ModuleMeta } from './meta';
 import { Config } from '../app';
 
 export { RemoteControl } from './remote-control';
@@ -70,8 +72,9 @@ export interface BaseModuleConfig {
 	randomNum: number;
 }
 
-export interface ModuleConfig extends BaseModuleConfig {
+export interface ModuleConfig<M extends ModuleMeta> extends BaseModuleConfig {
 	db: Database;
+	sqlDB: SQLDatabaseWithSchema<M['schema']>;
 	modules: AllModules;
 }
 

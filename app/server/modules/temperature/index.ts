@@ -1,5 +1,5 @@
-import { initTempController } from './temp-controller';
 import { ExternalHandler } from './external';
+import { Schema } from '../../lib/sql-db';
 import { initRouting } from './routing';
 import { getEnv } from '../../lib/io';
 import { ModuleMeta } from '../meta';
@@ -17,9 +17,50 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		return Bot;
 	}
 
-	public init(config: ModuleConfig) {
-		initTempController(config.db);
+	public get schema() {
+		return {
+			modes: {
+				location: {
+					type: 'TEXT',
+					nullable: false,
+					primaryKey: true,
+				},
+				mode: {
+					type: 'TEXT',
+					nullable: false,
+					enum: ['on', 'off', 'auto'],
+				},
+			},
+			targets: {
+				location: {
+					type: 'TEXT',
+					nullable: false,
+					primaryKey: true,
+				},
+				target: {
+					type: 'INTEGER',
+					nullable: false,
+				},
+			},
+			temperatures: {
+				time: {
+					type: 'INTEGER',
+					nullable: false,
+					primaryKey: true,
+				},
+				location: {
+					type: 'TEXT',
+					nullable: false,
+				},
+				temperature: {
+					type: 'INTEGER',
+					nullable: false,
+				},
+			},
+		} as const satisfies Schema;
+	}
 
+	public init(config: ModuleConfig<Temperature>) {
 		initRouting(config);
 
 		if (getEnv('HEATING_KEY', false)) {

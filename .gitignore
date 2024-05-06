@@ -60,6 +60,7 @@ typings/
 # next.js build output
 .next
 database/
+database copy/
 secrets/
 app/**/*.js
 serial_mon/**/*.js

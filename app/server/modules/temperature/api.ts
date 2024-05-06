@@ -6,14 +6,18 @@ import {
 } from '../../lib/decorators';
 import { ResponseLike, attachSourcedMessage } from '../../lib/logger';
 import { getController } from './temp-controller';
-import { Temperature } from '..';
+import { ModuleConfig, Temperature } from '..';
 import { Mode } from './types';
 
 export class APIHandler {
+	public constructor(
+		private readonly _db: ModuleConfig<typeof Temperature>['sqlDB']
+	) {}
+
 	@errorHandle
 	@requireParams('mode', 'name')
 	@auth
-	public static async setMode(
+	public async setMode(
 		res: ResponseLike,
 		{
 			mode,
@@ -25,7 +29,7 @@ export class APIHandler {
 		},
 		source: string
 	): Promise<void> {
-		const controller = await getController(name);
+		const controller = await getController(this._db, name);
 		const oldMode = controller.getMode();
 		attachSourcedMessage(
 			res,
@@ -41,7 +45,7 @@ export class APIHandler {
 	@errorHandle
 	@requireParams('target', 'name')
 	@auth
-	public static async setTargetTemp(
+	public async setTargetTemp(
 		res: ResponseLike,
 		{
 			target,
@@ -53,7 +57,7 @@ export class APIHandler {
 		},
 		source: string
 	): Promise<void> {
-		const controller = await getController(name);
+		const controller = await getController(this._db, name);
 		const oldTemp = controller.getTarget();
 		attachSourcedMessage(
 			res,
@@ -61,14 +65,14 @@ export class APIHandler {
 			await Temperature.explainHook,
 			`Setting target temp to ${target} from ${oldTemp}`
 		);
-		controller.setTarget(target);
+		await controller.setTarget(target);
 		res.status(200);
 		res.end();
 	}
 
 	@errorHandle
 	@authAll
-	public static async getTemp(
+	public async getTemp(
 		res: ResponseLike,
 		{
 			name,
@@ -80,7 +84,7 @@ export class APIHandler {
 	): Promise<{
 		temp: number;
 	}> {
-		const controller = await getController(name);
+		const controller = await getController(this._db, name);
 		attachSourcedMessage(
 			res,
 			source,
@@ -101,7 +105,7 @@ export class APIHandler {
 
 	@errorHandle
 	@authAll
-	public static async moveDir(
+	public async moveDir(
 		res: ResponseLike,
 		{
 			name,
@@ -115,7 +119,7 @@ export class APIHandler {
 		},
 		source: string
 	): Promise<string> {
-		const controller = await getController(name);
+		const controller = await getController(this._db, name);
 		attachSourcedMessage(
 			res,
 			source,
