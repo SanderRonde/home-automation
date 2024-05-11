@@ -56,7 +56,9 @@ async function sendToLoginPage(
 	res.redirect(`/oauth/login?${params.join('&')}`);
 }
 
-export async function initRouting({ app }: ModuleConfig<typeof OAuth>): Promise<void> {
+export async function initRouting({
+	app,
+}: ModuleConfig<typeof OAuth>): Promise<void> {
 	const router = createRouter(OAuth, {});
 	router.all(
 		'/authorize',

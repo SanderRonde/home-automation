@@ -25,7 +25,7 @@ export abstract class ServerComm<
 		IDS: Record<string, never>;
 		CLASSES: Record<string, never>;
 	},
-	E extends EventListenerObj = Record<string, never>
+	E extends EventListenerObj = Record<string, never>,
 > extends ConfigurableWebComponent<{
 	selectors: ELS;
 	events: E;

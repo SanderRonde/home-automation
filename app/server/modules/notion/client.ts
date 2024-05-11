@@ -97,7 +97,7 @@ export async function splitUpQuery<
 		};
 	},
 	R,
-	F
+	F,
 >(
 	fn: (args: Q & Record<string, unknown>) => Promise<{
 		results: R[];

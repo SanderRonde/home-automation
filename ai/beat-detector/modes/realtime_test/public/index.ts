@@ -206,9 +206,8 @@ namespace RealtimeTester {
 				export function show(data: number[]) {
 					if (bins.length === 0) return;
 					data.forEach((value, index) => {
-						bins[
-							index
-						].style.transform = `scaleY(${value.toPrecision(5)})`;
+						bins[index].style.transform =
+							`scaleY(${value.toPrecision(5)})`;
 					});
 				}
 			}

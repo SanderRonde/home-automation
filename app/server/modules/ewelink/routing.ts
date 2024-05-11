@@ -6,6 +6,7 @@ import { getEnv } from '../../lib/io';
 
 export function initRouting(
 	{ app, db }: ModuleConfig<typeof EWeLink>,
+	// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 	api: InstanceType<typeof eWelink.WebAPI> | null
 ): void {
 	app.get('/ewelink/oauth/', (_, res) => {
@@ -61,6 +62,7 @@ export function initRouting(
 }
 
 export function queueEwelinkTokenRefresh(
+	// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 	api: InstanceType<typeof eWelink.WebAPI> | null,
 	db: Database
 ): void {

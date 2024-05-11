@@ -5,7 +5,7 @@ import { AllModules } from '../../..';
 
 export class EwelinkDynamicHandlerButton<
 	C extends number,
-	A extends number = C
+	A extends number = C,
 > extends EwelinkButtonBase<A> {
 	public static TriggerType = ButtonTriggerType;
 

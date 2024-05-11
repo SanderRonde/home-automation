@@ -1,12 +1,12 @@
 export const LED_NAMES: string[] = ['ceiling', 'tv', 'bed'];
-export type LED_NAME = typeof LED_NAMES[number];
+export type LED_NAME = (typeof LED_NAMES)[number];
 export const RING_LEDS: Record<
 	string,
 	[
 		LED_NAME,
 		{
 			numLeds: number;
-		}
+		},
 	]
 > = {
 	'192.168.0.1': [

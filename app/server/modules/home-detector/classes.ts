@@ -44,7 +44,7 @@ class Pinger {
 			(await HomeDetector.explainHook)(
 				`${this._config.name} state changed to ${newState}`,
 				'time',
-				null
+				{}
 			);
 		}
 

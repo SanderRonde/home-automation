@@ -39,9 +39,7 @@ export async function initRouting({
 			return next();
 		},
 		// @ts-ignore
-		await new (
-			await SmartHome.modules
-		).oauth.External(
+		await new (await SmartHome.modules).oauth.External(
 			{},
 			'SMART_HOME.ROUTING_INIT'
 		).getAuthenticateMiddleware(),

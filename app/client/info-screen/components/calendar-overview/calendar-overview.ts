@@ -294,9 +294,12 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 
 	public async setup(): Promise<void> {
 		await this.updateCalendar();
-		setInterval(() => {
-			void this.updateCalendar();
-		}, 1000 * 60 * 60);
+		setInterval(
+			() => {
+				void this.updateCalendar();
+			},
+			1000 * 60 * 60
+		);
 	}
 
 	public async mounted(): Promise<void> {

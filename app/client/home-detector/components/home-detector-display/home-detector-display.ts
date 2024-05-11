@@ -67,7 +67,7 @@ export class HomeDetectorDisplay extends ServerComm {
 			void this._refreshJSON();
 		}, 1000 * 15);
 		this.props.key = this.props.key || localStorage.getItem('key')!;
-		localStorage.setItem('key', this.props.key!);
+		localStorage.setItem('key', this.props.key);
 		if (!this.props.json || Object.keys(this.props.json).length === 0) {
 			await this._refreshJSON();
 		}

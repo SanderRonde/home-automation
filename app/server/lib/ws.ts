@@ -30,7 +30,7 @@ export class WSSimInstance<
 	} = {
 		receive: '';
 		send: '';
-	}
+	},
 > {
 	private static readonly TIMEOUT = 10 * 60 * 60 * 1000;
 	private _listeners: {
@@ -406,6 +406,7 @@ export class WSWrapper {
 					},
 					addListener(messageListener) {
 						ws.on('message', (data) => {
+							// eslint-disable-next-line @typescript-eslint/no-base-to-string
 							void messageListener(data.toString());
 						});
 					},

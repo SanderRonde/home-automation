@@ -14,7 +14,7 @@ export function initRoutes({ app, config }: ModuleConfig<typeof Auth>): void {
 			attachMessage(
 				res,
 				`{"id": "${chalk.underline(id)}", "auth": "${chalk.underline(
-					getClientSecret(parseInt(id, 10))!
+					getClientSecret(parseInt(id, 10))
 				)}" }`
 			);
 		}

@@ -1,14 +1,14 @@
 import { AllModules } from '../modules/index';
 
 export const LED_NAMES: string[];
-export type LED_NAME = typeof LED_NAMES[number];
+export type LED_NAME = (typeof LED_NAMES)[number];
 export const RING_LEDS: Record<
 	string,
 	[
 		LED_NAME,
 		{
 			numLeds: number;
-		}
+		},
 	]
 >;
 export const HEX_LEDS: Record<string, LED_NAME>;

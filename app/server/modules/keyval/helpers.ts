@@ -1,3 +1,3 @@
-export function str(value: unknown | undefined): string {
+export function str(value: unknown): string {
 	return JSON.stringify(value || null);
 }

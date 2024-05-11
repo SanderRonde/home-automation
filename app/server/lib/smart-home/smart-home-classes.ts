@@ -23,7 +23,7 @@ import { Batcher, pad } from '../util';
 import { Color } from '../color';
 
 export type QueryReturnType<
-	TRAIT extends SMART_HOME_DEVICE_TRAIT = SMART_HOME_DEVICE_TRAIT
+	TRAIT extends SMART_HOME_DEVICE_TRAIT = SMART_HOME_DEVICE_TRAIT,
 > = {
 	trait: SMART_HOME_DEVICE_TRAIT;
 	google: {
@@ -36,7 +36,7 @@ export type QueryReturnType<
 }[];
 
 type ExecuteReturnType<
-	TRAIT extends SMART_HOME_DEVICE_TRAIT = SMART_HOME_DEVICE_TRAIT
+	TRAIT extends SMART_HOME_DEVICE_TRAIT = SMART_HOME_DEVICE_TRAIT,
 > =
 	| {
 			success: true;
@@ -260,7 +260,7 @@ export abstract class SmartHomeCurtain extends SmartHomeDevice {
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function SmartHomeMixinOnOffKeyval<
-	C extends abstract new (...args: unknown[]) => {}
+	C extends abstract new (...args: unknown[]) => {},
 >(Constructor: C) {
 	// @ts-ignore
 	abstract class SmartHomeOnOff extends (Constructor as typeof SmartHomeDevice) {
@@ -369,7 +369,7 @@ export function SmartHomeMixinOnOffKeyval<
 }
 
 export function SmartHomeMixinOpenCloseCurtainKeyval<
-	C extends abstract new (...args: unknown[]) => {}
+	C extends abstract new (...args: unknown[]) => {},
 >(Constructor: C) {
 	// @ts-ignore
 	abstract class SmartHomeOpenClose extends (Constructor as typeof SmartHomeCurtain) {
@@ -480,7 +480,7 @@ export function SmartHomeMixinOpenCloseCurtainKeyval<
 }
 
 export function SmartHomeMixinOnOffRGB<
-	C extends abstract new (...args: unknown[]) => {}
+	C extends abstract new (...args: unknown[]) => {},
 >(Constructor: C) {
 	// @ts-ignore
 	abstract class SmartHomeOnOff extends (Constructor as typeof SmartHomeDevice) {
@@ -609,7 +609,7 @@ export function SmartHomeMixinOnOffRGB<
 }
 
 export function SmartHomeMixinColorSetting<
-	C extends abstract new (...args: unknown[]) => {}
+	C extends abstract new (...args: unknown[]) => {},
 >(Constructor: C) {
 	// @ts-ignore
 	abstract class SmartHomeColorsetting extends (Constructor as typeof SmartHomeDevice) {
@@ -738,8 +738,8 @@ export function SmartHomeMixinColorSetting<
 					'spectrumRGB' in params.color
 						? params.color.spectrumRGB
 						: 'spectrumRgb' in params.color
-						? params.color.spectrumRgb
-						: null;
+							? params.color.spectrumRgb
+							: null;
 				if (rgbColor) {
 					return Color.fromHex(
 						`#${pad(rgbColor.toString(16), 6, '0')}`
@@ -749,8 +749,8 @@ export function SmartHomeMixinColorSetting<
 					'spectrumHSV' in params.color
 						? params.color.spectrumHSV
 						: 'spectrumHsv' in params.color
-						? params.color.spectrumHsv
-						: null;
+							? params.color.spectrumHsv
+							: null;
 				if (hsvColor) {
 					return Color.fromHSV(
 						hsvColor.hue || 255,
@@ -872,7 +872,7 @@ export function SmartHomeMixinColorSetting<
 }
 
 export function SmartHomeMixinBrightness<
-	C extends abstract new (...args: unknown[]) => {}
+	C extends abstract new (...args: unknown[]) => {},
 >(Constructor: C) {
 	// @ts-ignore
 	abstract class SmartHomeBrightness extends (Constructor as typeof SmartHomeDevice) {
@@ -1246,7 +1246,7 @@ export function SmartHomeMixinBrightness<
 // }
 
 export function SmartHomeMixinTemperatureSetting<
-	C extends abstract new (...args: unknown[]) => {}
+	C extends abstract new (...args: unknown[]) => {},
 >(Constructor: C) {
 	// @ts-ignore
 	abstract class SmartHomeTemperatureControl extends (Constructor as typeof SmartHomeDevice) {

@@ -41,14 +41,22 @@ async function createWebsocketListener(
 		() => {
 			logTag('ewelink', 'yellow', 'WS connection closed');
 			setTimeout(() => {
-				void createWebsocketListener(connection, userApiKey, wsConnection);
-			}, 1000 * 60)
+				void createWebsocketListener(
+					connection,
+					userApiKey,
+					wsConnection
+				);
+			}, 1000 * 60);
 		},
 		() => {
 			logTag('ewelink', 'red', 'WS connection errored');
 			setTimeout(() => {
-				void createWebsocketListener(connection, userApiKey, wsConnection);
-			}, 1000 * 60)
+				void createWebsocketListener(
+					connection,
+					userApiKey,
+					wsConnection
+				);
+			}, 1000 * 60);
 		},
 		(_ws, msg) => {
 			if (msg.data.toString() === 'pong') {
@@ -79,6 +87,7 @@ async function createWebsocketListener(
 export async function initEWeLinkAPI(
 	db: Database,
 	modules: AllModules,
+	// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 	api: InstanceType<typeof eWelink.WebAPI> | null
 ): Promise<{
 	refreshWebsocket?(): Promise<void>;

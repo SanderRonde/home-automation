@@ -25,7 +25,9 @@ export function refreshClients(): number {
 	return clients.size;
 }
 
-export function initRouting(moduleConfig: ModuleConfig<typeof InfoScreen>): void {
+export function initRouting(
+	moduleConfig: ModuleConfig<typeof InfoScreen>
+): void {
 	const { config, randomNum } = moduleConfig;
 	const app = express() as AsyncExpressApplication;
 	const webpageHandler = new WebPageHandler({
@@ -93,11 +95,10 @@ export function initRouting(moduleConfig: ModuleConfig<typeof InfoScreen>): void
 			client.send(
 				JSON.stringify({
 					blank:
-						(await new (
-							await InfoScreen.modules
-						).keyval.External({}, 'INFO_SCREEN.BLANKING').get(
-							getEnv('INFO_SCREEN_KEYVAL', true)
-						)) === '0',
+						(await new (await InfoScreen.modules).keyval.External(
+							{},
+							'INFO_SCREEN.BLANKING'
+						).get(getEnv('INFO_SCREEN_KEYVAL', true))) === '0',
 				})
 			);
 			client.onDead(() => {

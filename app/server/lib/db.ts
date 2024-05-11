@@ -13,7 +13,7 @@ class DBFileManager {
 	public static async read<
 		R extends {
 			___last_updated: number;
-		}
+		},
 	>(fileName: string): Promise<R> {
 		const filePath = path.join(DB_FOLDER, fileName);
 		if (!(await fs.pathExists(filePath))) {

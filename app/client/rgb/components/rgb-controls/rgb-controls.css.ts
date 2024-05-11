@@ -107,7 +107,9 @@ export const RgbControlsCSS = new TemplateFn<RgbControls>(
 					width: 100%;
 					height: 8.4px;
 					cursor: pointer;
-					box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
+					box-shadow:
+						1px 1px 1px #000000,
+						0px 0px 1px #0d0d0d;
 					background: linear-gradient(
 						to right,
 						rgb(255, 0, 0),

@@ -80,13 +80,16 @@ export class API {
 		this._refreshToken = token;
 		this._db.setVal('refresh', token);
 
-		this._refresher = setTimeout(() => {
-			void this.refreshToken().then(() => {
-				if (this._refresher) {
-					clearTimeout(this._refresher);
-				}
-			});
-		}, expireTime * 1000 * 0.9);
+		this._refresher = setTimeout(
+			() => {
+				void this.refreshToken().then(() => {
+					if (this._refresher) {
+						clearTimeout(this._refresher);
+					}
+				});
+			},
+			expireTime * 1000 * 0.9
+		);
 	}
 
 	public async refreshToken(): Promise<boolean | null> {

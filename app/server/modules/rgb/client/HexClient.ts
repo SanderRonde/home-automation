@@ -7,7 +7,10 @@ import { RGBClient } from './RGBClient';
 export class HexClient extends RGBClient {
 	public setWhiteForPower = false;
 
-	public constructor(public address: string, public id: LED_NAME) {
+	public constructor(
+		public address: string,
+		public id: LED_NAME
+	) {
 		super();
 	}
 

@@ -2,7 +2,7 @@ import { genId, getClientSecret } from './client-secret';
 
 export function genCookie(): string {
 	const id = genId();
-	const clientSecret = getClientSecret(id)!;
+	const clientSecret = getClientSecret(id);
 
 	return JSON.stringify([id, clientSecret]);
 }

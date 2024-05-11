@@ -15,13 +15,13 @@ export const PatternButtonHTML = new TemplateFn<PatternButton>(
 								<div id="leftLine"></div>
 								<div id="rightLine"></div>
 							</div>
-					  `
+						`
 					: html`
 							<div
 								?selected="${props.selected}"
 								id="pattern"
 							></div>
-					  `}
+						`}
 			</div>
 		`;
 	},

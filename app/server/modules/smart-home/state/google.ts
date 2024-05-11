@@ -211,7 +211,7 @@ export async function googleExecute(
 																			})
 																		)
 																)
-														  ),
+															),
 												})
 											);
 										}

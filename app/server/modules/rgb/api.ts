@@ -39,7 +39,6 @@ export type ColorTarget =
 	| 'ceilingled'
 	| 'ceiling-led'
 	| 'arduino'
-	| 'all'
 	| 'rgb'
 	| 'led'
 	| 'leds'
@@ -300,7 +299,7 @@ export class APIHandler {
 								effectName
 							);
 						})
-				  )
+					)
 				: await Promise.all(
 						hexClients.map(async (c) =>
 							c.runEffect(
@@ -318,7 +317,7 @@ export class APIHandler {
 								).params
 							)
 						)
-				  );
+					);
 			attachMessage(
 				attachMessage(
 					attachSourcedMessage(

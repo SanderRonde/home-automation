@@ -121,7 +121,10 @@ export class ColorSequence implements JSONAble {
 		);
 	}
 
-	public constructor(colors: Color[] | Color, public repetitions: number) {
+	public constructor(
+		colors: Color[] | Color,
+		public repetitions: number
+	) {
 		this.colors = Array.isArray(colors) ? colors : [colors];
 	}
 

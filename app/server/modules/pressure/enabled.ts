@@ -12,13 +12,10 @@ export class PressureStateKeeper {
 		this.enabled = true;
 		this._db.setVal('enabled', this.enabled);
 		if (updateKeyval) {
-			await new (
-				await Pressure.modules
-			).keyval.External({}, 'PRESSURE.ON').set(
-				'state.pressure',
-				'1',
-				false
-			);
+			await new (await Pressure.modules).keyval.External(
+				{},
+				'PRESSURE.ON'
+			).set('state.pressure', '1', false);
 		}
 	}
 
@@ -26,13 +23,10 @@ export class PressureStateKeeper {
 		this.enabled = false;
 		this._db.setVal('enabled', this.enabled);
 		if (updateKeyval) {
-			await new (
-				await Pressure.modules
-			).keyval.External({}, 'PRESSURE.OFF').set(
-				'state.pressure',
-				'0',
-				false
-			);
+			await new (await Pressure.modules).keyval.External(
+				{},
+				'PRESSURE.OFF'
+			).set('state.pressure', '0', false);
 		}
 	}
 

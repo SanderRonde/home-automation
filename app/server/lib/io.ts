@@ -116,7 +116,7 @@ export interface EnvShape {
 
 	SECRET_HUE_USERNAME: string;
 
-	SECRET_SENTRY_DSN: string
+	SECRET_SENTRY_DSN: string;
 }
 
 export function getEnv<S extends EnvShape>(

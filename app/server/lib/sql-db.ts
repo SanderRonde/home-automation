@@ -36,7 +36,9 @@ export class SQLDatabase {
 	private readonly _db: Database;
 
 	public constructor(fileName: string) {
-		this._db = new Database(path.join(__dirname, '../../../database', fileName));
+		this._db = new Database(
+			path.join(__dirname, '../../../database', fileName)
+		);
 	}
 
 	public async applySchema<S extends Schema>(
@@ -94,12 +96,12 @@ type TableToRow<T extends Table> = {
 	[ColumnName in keyof T]: T[ColumnName] extends { type: 'boolean' }
 		? boolean
 		: T[ColumnName] extends { type: 'INTEGER' }
-		? number
-		: T[ColumnName] extends { type: 'TEXT' }
-		? T[ColumnName] extends { enum: (infer E)[] }
-			? E
-			: string
-		: never;
+			? number
+			: T[ColumnName] extends { type: 'TEXT' }
+				? T[ColumnName] extends { enum: (infer E)[] }
+					? E
+					: string
+				: never;
 };
 
 export class SQLTableWithSchema<T extends Table> extends WithQueryAndRun {
@@ -161,7 +163,7 @@ export class SQLTableWithSchema<T extends Table> extends WithQueryAndRun {
 	public query<
 		Q extends {
 			[K in keyof T]?: TableToRow<T>[K];
-		}
+		},
 	>(q: Q): Promise<TableToRow<T>[]> {
 		const columns = Object.keys(q);
 		const query = `SELECT * FROM ${this._tableName} WHERE ${columns
@@ -176,7 +178,7 @@ export class SQLTableWithSchema<T extends Table> extends WithQueryAndRun {
 	public async querySingle<
 		Q extends {
 			[K in keyof T]?: TableToRow<T>[K];
-		}
+		},
 	>(q: Q, pick: 'first' | 'last' = 'first'): Promise<TableToRow<T> | null> {
 		const result = await this.query<Q>(q);
 		if (pick === 'first') {

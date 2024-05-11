@@ -9,6 +9,7 @@ export const EWeLink = new (class EWeLink extends ModuleMeta {
 	private _ewelinkApiInstance: {
 		refreshWebsocket?(): Promise<void>;
 	} | null = null;
+	// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 	private __api: InstanceType<typeof eWelink.WebAPI> | null = null;
 	public name = 'ewelink';
 

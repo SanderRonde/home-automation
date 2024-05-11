@@ -110,7 +110,9 @@ export const PatternControlsCSS = new TemplateFn<PatternControls>(
 				input[type='range']::-webkit-slider-runnable-track {
 					height: 8.4px;
 					cursor: pointer;
-					box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
+					box-shadow:
+						1px 1px 1px #000000,
+						0px 0px 1px #0d0d0d;
 					background: rgb(0, 136, 253);
 					border-radius: 15px;
 					border: 0.2px solid #010101;

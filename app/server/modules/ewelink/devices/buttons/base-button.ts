@@ -56,7 +56,7 @@ export class EwelinkButtonBase<A extends number> extends EWeLinkInitable {
 
 export class EwelinkKeyvalButtonBase<
 	C extends number,
-	A extends number = C
+	A extends number = C,
 > extends EwelinkButtonBase<A> {
 	private _keyvalExternal!: ExternalHandler;
 

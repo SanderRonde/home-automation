@@ -54,7 +54,7 @@ export const InfoScreenHTML = new TemplateFn<InfoScreen>(
 										></path>
 									</svg>
 								</div>
-						  `
+							`
 						: ''}
 				</div>
 			</div>

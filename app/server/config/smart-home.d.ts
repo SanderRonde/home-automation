@@ -6,6 +6,6 @@ declare class NonAbstractSmartHomeDevice extends SmartHomeDevice {
 	public nicknames: string[];
 }
 
-declare const devices: typeof NonAbstractSmartHomeDevice[];
+declare const devices: (typeof NonAbstractSmartHomeDevice)[];
 
 export default devices;

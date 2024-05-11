@@ -182,31 +182,37 @@ export async function play(
 	const timeouts: NodeJS.Timeout[] = [];
 	parsed.items.forEach((item) => {
 		timeouts.push(
-			setTimeout(() => {
-				void Promise.all(
-					ringClients.map((c) =>
-						c
-							.setColor
-							// parsed.color.r,
-							// parsed.color.g,
-							// parsed.color.b
-							()
-					)
-				).then(() => {
-					timeouts.push(
-						setTimeout(() => {
-							void Promise.all(
-								ringClients.map((c) =>
-									c
-										.setColor
-										// 0, 0, 0
-										()
-								)
-							);
-						}, Math.min(item.duration, 1) * 1000)
-					);
-				});
-			}, item.time * 1000 - playingTime)
+			setTimeout(
+				() => {
+					void Promise.all(
+						ringClients.map((c) =>
+							c
+								.setColor
+								// parsed.color.r,
+								// parsed.color.g,
+								// parsed.color.b
+								()
+						)
+					).then(() => {
+						timeouts.push(
+							setTimeout(
+								() => {
+									void Promise.all(
+										ringClients.map((c) =>
+											c
+												.setColor
+												// 0, 0, 0
+												()
+										)
+									);
+								},
+								Math.min(item.duration, 1) * 1000
+							)
+						);
+					});
+				},
+				item.time * 1000 - playingTime
+			)
 		);
 	});
 

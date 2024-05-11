@@ -57,9 +57,10 @@ export function createExternalClass(requiresInit: boolean, name?: string) {
 			logObj: LogObj,
 			module: ModuleMeta
 		): Promise<string> {
-			return await new (
-				await module.modules
-			).auth.External(logObj, `${module.name}.EXTERNAL`).getSecretKey();
+			return await new (await module.modules).auth.External(
+				logObj,
+				`${module.name}.EXTERNAL`
+			).getSecretKey();
 		}
 
 		/**

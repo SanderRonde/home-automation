@@ -10,7 +10,7 @@ import * as http from 'http';
 import chalk from 'chalk';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type LogObj = any;
+export type LogObj = object;
 
 interface AssociatedMessage {
 	content: string[];
@@ -20,7 +20,8 @@ const msgMap: WeakMap<
 	| http.ClientRequest
 	| ResponseLike
 	| AssociatedMessage
-	| Record<string, unknown>,
+	| Record<string, unknown>
+	| LogObj,
 	AssociatedMessage[]
 > = new WeakMap();
 const ignoredSet: WeakSet<
@@ -28,7 +29,7 @@ const ignoredSet: WeakSet<
 > = new WeakSet();
 const rootMap: WeakMap<
 	LogObj,
-	ResponseLike | AssociatedMessage | Record<string, unknown>
+	ResponseLike | AssociatedMessage | Record<string, unknown> | LogObj
 > = new WeakMap();
 const logListeners: WeakMap<LogObj, (captured: LogCapturer) => void> =
 	new WeakMap();
@@ -103,9 +104,11 @@ interface RequestLike {
 	url?: string;
 	method?: string;
 	ip?: string;
-	headers: {
-		[key: string]: string | string[];
-	};
+	headers:
+		| {
+				[key: string]: string | string[];
+		  }
+		| http.IncomingHttpHeaders;
 }
 
 function getIP(req: RequestLike) {
@@ -227,7 +230,7 @@ function logErrorToErrorFile(err: Error, errorFile: string): string {
 }
 
 export function logReq(
-	req: RequestLike | LogObj,
+	req: RequestLike,
 	res: express.Response & {
 		body?: Record<string, string>;
 	},
@@ -374,7 +377,7 @@ export function logOutgoingReq(
 }
 
 export function logFixture(
-	obj: ResponseLike | AssociatedMessage | Record<string, unknown>,
+	obj: ResponseLike | AssociatedMessage | Record<string, unknown> | LogObj,
 	...name: string[]
 ): void {
 	const target = new LogCapturer();
@@ -382,7 +385,6 @@ export function logFixture(
 
 	target.log(getTime(), ...name);
 
-	// Log attached messages
 	// Log attached messages
 	if (logLevel >= 2 && msgMap.has(obj)) {
 		logAssociatedMessages(target, msgMap.get(obj)!);
@@ -392,7 +394,7 @@ export function logFixture(
 
 export function transferAttached(
 	from: ResponseLike | AssociatedMessage | Record<string, unknown>,
-	to: ResponseLike | AssociatedMessage | Record<string, unknown>
+	to: ResponseLike | AssociatedMessage | Record<string, unknown> | LogObj
 ): void {
 	const attached = msgMap.get(from) || [];
 	if (!msgMap.has(to)) {
@@ -445,7 +447,7 @@ export function attachMessage(
 }
 
 export function attachSourcedMessage(
-	obj: ResponseLike | AssociatedMessage | Record<string, unknown>,
+	obj: ResponseLike | AssociatedMessage | Record<string, unknown> | LogObj,
 	source: string,
 	hook: ExplainHook | null,
 	...messages: string[]
@@ -487,13 +489,6 @@ export function addLogListener(
 	logListeners.set(obj, listener);
 }
 
-export function getRootLogObj(obj: LogObj): LogObj {
-	if (typeof obj !== 'object' || !obj) {
-		return;
-	}
-	return rootMap.get(obj);
-}
-
 export interface ResponseLike {
 	status(code: number): this;
 	redirect(url: string, status?: number): void;
@@ -518,7 +513,7 @@ export class ResDummy implements ResponseLike {
 	public cookie(): void {}
 
 	public transferTo(
-		obj: ResponseLike | AssociatedMessage | Record<string, unknown>
+		obj: ResponseLike | AssociatedMessage | Record<string, unknown> | LogObj
 	): void {
 		transferAttached(this, obj);
 	}
@@ -662,7 +657,7 @@ const chalkColors = [
 ] as const;
 export function logTag(
 	tag: string,
-	color: typeof chalkColors[Extract<keyof typeof chalkColors, number>],
+	color: (typeof chalkColors)[Extract<keyof typeof chalkColors, number>],
 	...messages: unknown[]
 ): void {
 	log(getTime(), chalk[color](`[${tag}]`), ...messages);

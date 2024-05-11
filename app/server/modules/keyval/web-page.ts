@@ -5,9 +5,10 @@ import { Database } from '../../lib/db';
 import { KeyVal } from '.';
 
 async function keyvalHTML(json: string, randomNum: number, res: ResponseLike) {
-	const key = await new (
-		await KeyVal.modules
-	).auth.External(res, 'HOME_DETECTOR.WEB_PAGE').getSecretKey();
+	const key = await new (await KeyVal.modules).auth.External(
+		res,
+		'HOME_DETECTOR.WEB_PAGE'
+	).getSecretKey();
 	return `<!DOCTYPE HTML>
 			<html lang="en" style="background-color: rgb(70,70,70);">
 				<head>

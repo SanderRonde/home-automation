@@ -115,7 +115,7 @@ export class MessageHandler extends BotStateBase {
 	private static async _matchMatchables<V>(
 		config: MatchParameters,
 		value: V,
-		...matchables: typeof Matchable[]
+		...matchables: (typeof Matchable)[]
 	): Promise<V> {
 		for (let i = 0; i < matchables.length; i++) {
 			if (!value) {
@@ -204,14 +204,13 @@ export class MessageHandler extends BotStateBase {
 			type: RESPONSE_TYPE;
 			text: string | number;
 		}[] = [response[0]];
-		const lastType: string = response[0].type;
+		const lastType: RESPONSE_TYPE = response[0].type;
 		for (let i = 1; i < response.length; i++) {
 			if (lastType !== response[i].type) {
 				responses.push(response[i]);
 			} else {
-				responses[
-					responses.length - 1
-				].text += `'\n'${response[i].text}`;
+				responses[responses.length - 1].text +=
+					`'\n'${response[i].text}`;
 			}
 		}
 		return responses;
@@ -265,7 +264,7 @@ export class MessageHandler extends BotStateBase {
 					? {}
 					: {
 							parse_mode: type,
-					  }),
+						}),
 			});
 			const req = https.request({
 				method: 'POST',

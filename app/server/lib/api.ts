@@ -15,7 +15,7 @@ export function createAPIHandler<A extends Record<string, unknown>, R>(
 			...req.body,
 			...req.query,
 			cookies: req.cookies,
-		} as A)
+		}) as A
 ) {
 	return async (
 		req: express.Request,
@@ -33,7 +33,7 @@ type _Remove<
 	A extends {
 		[key: string]: unknown;
 	},
-	B
+	B,
 > = {
 	[K in keyof A]: A[K] extends B ? never : K;
 }[keyof A];
@@ -42,7 +42,7 @@ type RemoveType<
 	A extends {
 		[key: string]: unknown;
 	},
-	B
+	B,
 > = {
 	[K in _Remove<A, B>]: A[K];
 };
@@ -141,7 +141,7 @@ export function createRouter<A>(
 										...req.body,
 										...req.query,
 										cookies: req.cookies,
-									} as A));
+									}) as A);
 							return await fn(
 								res,
 								getArgsFn(req),

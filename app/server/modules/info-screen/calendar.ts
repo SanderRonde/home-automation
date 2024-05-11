@@ -7,7 +7,7 @@ import { SCOPES } from './constants';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-call
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const optionalRequire = require('optional-require')(require) as (
 	requirePath: string
 ) => unknown;

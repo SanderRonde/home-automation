@@ -9,9 +9,10 @@ export class APIHandler {
 		descr: string,
 		actions: Action[]
 	) {
-		await new (
-			await Explain.modules
-		).cast.External(logObj, 'EXPLAIN.API').say(
+		await new (await Explain.modules).cast.External(
+			logObj,
+			'EXPLAIN.API'
+		).say(
 			`${descr}. ${actions
 				.map((action) => {
 					return `At ${new Date(

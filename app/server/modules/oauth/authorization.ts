@@ -46,7 +46,7 @@ class OAuthModel implements AuthorizationCodeModel, RefreshTokenModel {
 	public getClient(
 		clientID: string,
 		clientSecret: string | null
-	): Promise<typeof oAuthClients[number] | undefined> {
+	): Promise<(typeof oAuthClients)[number] | undefined> {
 		logTag('oauth', 'cyan', `Finding client "${clientID}"`);
 		const foundClient = oAuthClients.find((client) => {
 			if (client.id !== clientID) {
@@ -117,7 +117,7 @@ class OAuthModel implements AuthorizationCodeModel, RefreshTokenModel {
 							(ENABLE_NEVER_EXPIRING_TOKENS
 								? 1000 * 60 * 60 * 24 * 365 * 20
 								: 0)
-				  )
+					)
 				: undefined,
 			refreshTokenExpiresAt: match.refreshTokenExpiresAt
 				? new Date(match.refreshTokenExpiresAt)

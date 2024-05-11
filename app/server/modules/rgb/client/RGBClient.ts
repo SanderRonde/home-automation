@@ -42,13 +42,10 @@ export abstract class RGBClient {
 		if (this.id in LED_KEYVAL_MAP) {
 			const keys = LED_KEYVAL_MAP[this.id] ?? [];
 			for (const key of keys) {
-				await new (
-					await RGB.modules
-				).keyval.External({}, `RGB_NAMEMAP.${this.id}`).set(
-					key,
-					value,
-					false
-				);
+				await new (await RGB.modules).keyval.External(
+					{},
+					`RGB_NAMEMAP.${this.id}`
+				).set(key, value, false);
 			}
 		}
 	}
@@ -78,7 +75,7 @@ export abstract class RGBClient {
 			? { type: 'on' }
 			: {
 					type: 'off',
-			  };
+				};
 
 		if (oldValue.type !== this._lastState.type) {
 			this._triggerListener('power', isOn);

@@ -209,7 +209,7 @@ export async function dispatchSamsungUsers(
 						clientSecret: string;
 					};
 					callbackUrls: string[];
-				}
+				},
 			]) => {
 				smartHomeLogger(
 					'Sending smart things update for user',

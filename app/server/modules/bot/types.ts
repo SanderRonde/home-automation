@@ -38,7 +38,7 @@ export interface TelegramText {
 }
 
 export type TelegramReply<
-	C = TelegramText | TelegramImage | TelegramVoice | TelegramDocument
+	C = TelegramText | TelegramImage | TelegramVoice | TelegramDocument,
 > = {
 	reply_to_message: TelegramMessage<C>;
 } & TelegramText;
@@ -49,7 +49,7 @@ export type TelegramMessage<
 		| TelegramText
 		| TelegramImage
 		| TelegramVoice
-		| TelegramDocument
+		| TelegramDocument,
 > = {
 	message_id: number;
 	from: {

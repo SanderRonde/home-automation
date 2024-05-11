@@ -170,7 +170,10 @@ declare module 'st-schema' {
 	}
 
 	export declare class StateUpdateRequest extends STBase {
-		constructor(public clientId: string, public clientSecret: string);
+		public clientId: string;
+		public clientSecret: string;
+
+		constructor(clientId: string, clientSecret: string);
 
 		updateState(
 			callbackUrls: string[],

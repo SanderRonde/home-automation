@@ -9,7 +9,7 @@ import { RESPONSE_TYPE } from '../modules/bot/types';
 type NotUndefined<
 	O extends {
 		[key: string]: unknown;
-	}
+	},
 > = {
 	[K in keyof O]: O[K] extends undefined ? void : O[K];
 };
@@ -17,7 +17,7 @@ type NotUndefined<
 type Defined<
 	O extends {
 		[key: string]: unknown;
-	}
+	},
 > = Pick<O, keyof NotUndefined<O>>;
 
 export function padWord(word: string, length: number, padChar = ' ') {
@@ -78,9 +78,9 @@ export abstract class BotUtil {
 		return final;
 	}
 
-	public static unsetUndefined<
-		O extends { [key: string]: unknown | undefined }
-	>(obj: O): Defined<O> {
+	public static unsetUndefined<O extends { [key: string]: unknown }>(
+		obj: O
+	): Defined<O> {
 		const finalObj: Partial<Defined<O>> = {};
 		for (const key in obj) {
 			if (obj[key] !== undefined) {

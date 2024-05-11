@@ -1,6 +1,6 @@
 import { Client } from '@notionhq/client';
 
-declare type IdRequest = string | string;
+declare type IdRequest = string;
 declare type TextRequest = string;
 declare type StringRequest = string;
 declare type RichTextItemRequest =
@@ -5246,15 +5246,13 @@ export type NotionPage = {
 					url: string;
 				};
 		  }
-		| null
 		| {
 				type: 'file';
 				file: {
 					url: string;
 					expiry_time: string;
 				};
-		  }
-		| null;
+		  };
 	cover:
 		| {
 				type: 'external';
@@ -5269,8 +5267,7 @@ export type NotionPage = {
 					url: string;
 					expiry_time: string;
 				};
-		  }
-		| null;
+		  };
 	object: 'page';
 	id: string;
 	created_time: string;
@@ -9255,15 +9252,13 @@ export type NotionDatabase = {
 					url: string;
 				};
 		  }
-		| null
 		| {
 				type: 'file';
 				file: {
 					url: string;
 					expiry_time: string;
 				};
-		  }
-		| null;
+		  };
 	cover:
 		| {
 				type: 'external';
@@ -9278,8 +9273,7 @@ export type NotionDatabase = {
 					url: string;
 					expiry_time: string;
 				};
-		  }
-		| null;
+		  };
 	properties: Record<string, NotionDatabaseProperty>;
 	parent:
 		| {
@@ -9367,8 +9361,7 @@ export type NotionDBEntryCreateProps =
 									| 'purple'
 									| 'pink'
 									| 'red';
-						  }
-						| null;
+						  };
 					type?: 'select';
 			  }
 			| {
@@ -9511,11 +9504,9 @@ export type NotionDBEntryCreateProps =
 	| Record<
 			string,
 			| Array<RichTextItemRequest>
-			| Array<RichTextItemRequest>
 			| number
 			| null
 			| TextRequest
-			| null
 			| {
 					id: StringRequest;
 					name?: StringRequest;
@@ -9531,7 +9522,6 @@ export type NotionDBEntryCreateProps =
 						| 'pink'
 						| 'red';
 			  }
-			| null
 			| {
 					name: StringRequest;
 					id?: StringRequest;
@@ -9547,7 +9537,6 @@ export type NotionDBEntryCreateProps =
 						| 'pink'
 						| 'red';
 			  }
-			| null
 			| Array<
 					| {
 							id: StringRequest;
@@ -9633,15 +9622,10 @@ export type NotionDBEntryCreateProps =
 							object?: 'user';
 					  }
 			  >
-			| StringRequest
-			| null
-			| StringRequest
-			| null
 			| {
 					start: string;
 					end?: string | null;
 			  }
-			| null
 			| boolean
 			| Array<{
 					id: IdRequest;

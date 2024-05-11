@@ -23,9 +23,12 @@ export const RGB = new (class RGB extends ModuleMeta {
 		await (this.setup = new Promise((resolve) => {
 			void (async () => {
 				void scanRGBControllers(true);
-				setInterval(() => {
-					void scanRGBControllers();
-				}, 1000 * 60 * 60);
+				setInterval(
+					() => {
+						void scanRGBControllers();
+					},
+					1000 * 60 * 60
+				);
 				await ExternalHandler.init();
 				initListeners();
 
@@ -36,8 +39,11 @@ export const RGB = new (class RGB extends ModuleMeta {
 
 	public async onBackOnline() {
 		await scanRGBControllers(true);
-		setInterval(() => {
-			void scanRGBControllers();
-		}, 1000 * 60 * 60);
+		setInterval(
+			() => {
+				void scanRGBControllers();
+			},
+			1000 * 60 * 60
+		);
 	}
 })();

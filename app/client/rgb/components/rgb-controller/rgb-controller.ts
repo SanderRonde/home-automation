@@ -81,7 +81,7 @@ export class RGBController extends ServerComm<{
 	public async setColor([red, green, blue]: [
 		number,
 		number,
-		number
+		number,
 	]): Promise<void> {
 		await this.request(
 			`${location.origin}/rgb/color/${red}/${green}/${blue}`,

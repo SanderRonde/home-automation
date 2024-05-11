@@ -13,7 +13,7 @@ export async function finishManualAuth(token: string): Promise<void> {
 
 let lastURL: string | null = null;
 export function generateNew(): string {
-	const api = getSpotifyAPI()!;
+	const api = getSpotifyAPI();
 	const url = api.createAuthURL(
 		[
 			'user-read-currently-playing',

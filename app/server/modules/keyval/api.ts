@@ -162,7 +162,7 @@ export class APIHandler {
 		let triggered = false;
 		const id = addListener(
 			key,
-			(value, logObj) => {
+			(value, _key, logObj) => {
 				triggered = true;
 				const msg = attachMessage(
 					res,
@@ -181,19 +181,22 @@ export class APIHandler {
 			},
 			{ once: true }
 		);
-		setTimeout(() => {
-			if (!triggered) {
-				removeListener(id);
-				const value = this._db.get(key, '0');
-				const msg = attachMessage(
-					res,
-					`Key: "${key}", val: "${str(value)}"`
-				);
-				attachMessage(msg, `Timeout. Expected "${expected}"`);
-				res.status(200).write(value === undefined ? '' : value);
-				res.end();
-			}
-		}, parseInt(maxtime, 10) * 1000);
+		setTimeout(
+			() => {
+				if (!triggered) {
+					removeListener(id);
+					const value = this._db.get(key, '0');
+					const msg = attachMessage(
+						res,
+						`Key: "${key}", val: "${str(value)}"`
+					);
+					attachMessage(msg, `Timeout. Expected "${expected}"`);
+					res.status(200).write(value === undefined ? '' : value);
+					res.end();
+				}
+			},
+			parseInt(maxtime, 10) * 1000
+		);
 	}
 
 	@errorHandle

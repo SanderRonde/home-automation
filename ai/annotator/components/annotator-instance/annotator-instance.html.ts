@@ -101,7 +101,7 @@ export const AnnotatorInstanceHTML = new TemplateFn<AnnotatorInstance>(
 											src="${location.origin}/${this.props
 												.filename}"
 										></audio>
-								  `}
+									`}
 						</div>
 					</div>
 				</div>

@@ -5,7 +5,7 @@ export interface AsyncRequestHandler<
 	ResBody = any,
 	ReqBody = any,
 	ReqQuery = ParsedQs,
-	Locals extends Record<string, any> = Record<string, any>
+	Locals extends Record<string, any> = Record<string, any>,
 > {
 	// tslint:disable-next-line callable-types (This is extended from and can't extend from a type alias in ts<2.2)
 	(
@@ -25,14 +25,14 @@ export interface AsyncRouterMatcher<
 		| 'delete'
 		| 'patch'
 		| 'options'
-		| 'head' = any
+		| 'head' = any,
 > {
 	<
 		P = import('express').ParamsDictionary,
 		ResBody = any,
 		ReqBody = any,
 		ReqQuery = import('express').ParsedQs,
-		Locals extends Record<string, any> = Record<string, any>
+		Locals extends Record<string, any> = Record<string, any>,
 	>(
 		path: PathParams,
 		// tslint:disable-next-line no-unnecessary-generics (This generic is meant to be passed explicitly.)
@@ -45,7 +45,7 @@ export interface AsyncRouterMatcher<
 		ResBody = any,
 		ReqBody = any,
 		ReqQuery = import('express').ParsedQs,
-		Locals extends Record<string, any> = Record<string, any>
+		Locals extends Record<string, any> = Record<string, any>,
 	>(
 		path: PathParams,
 		// tslint:disable-next-line no-unnecessary-generics (This generic is meant to be passed explicitly.)

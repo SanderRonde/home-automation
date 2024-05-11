@@ -174,11 +174,11 @@ export abstract class Matchable extends BotUtil {
 				return new Promise<MatchHandlerRet>(async (resolve) => {
 					try {
 						resolve(
-							await earliestMatch!.fn({
+							await earliestMatch.fn({
 								...config,
 								logObj: newLogObj,
-								match: earliestMatch!.match,
-								matchText: earliestMatch!.matchText,
+								match: earliestMatch.match,
+								matchText: earliestMatch.matchText,
 								ask(question: string) {
 									return config.bot.askQuestion(
 										question,

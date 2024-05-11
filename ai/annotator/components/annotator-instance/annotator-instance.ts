@@ -128,7 +128,7 @@ export class AnnotatorInstance extends ConfigurableWebComponent<{
 			type === 'beat'
 				? 1
 				: ((time + duration) / this.$.vid.duration) * canvas.width -
-				  startX;
+					startX;
 		ctx.fillRect(startX, 0, endX, canvas.height);
 
 		const zoomedStartX = time * 10;

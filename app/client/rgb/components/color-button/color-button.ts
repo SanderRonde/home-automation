@@ -222,9 +222,13 @@ export class ColorButton
 
 		// Queue render
 		this._lastQueuedColor = {
-			timeout: window.setTimeout(() => {
-				void this._updateColor(color);
-			}, ColorButton._COLOR_UPDATE_INTERVAL - (Date.now() - this._lastColorUpdate)),
+			timeout: window.setTimeout(
+				() => {
+					void this._updateColor(color);
+				},
+				ColorButton._COLOR_UPDATE_INTERVAL -
+					(Date.now() - this._lastColorUpdate)
+			),
 			color,
 		};
 	}
@@ -272,7 +276,7 @@ export class ColorButton
 	public updateCanvasColor([red, green, blue]: [
 		number,
 		number,
-		number
+		number,
 	]): void {
 		const ctx = this.canvas.getContext('2d')!;
 

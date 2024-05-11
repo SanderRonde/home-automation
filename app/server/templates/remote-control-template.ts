@@ -3,7 +3,7 @@ import { html } from './template-join';
 export function remoteControlHTML(randomNum: number): string {
 	// This is just here for syntax highlighting
 	return html`
-		<!DOCTYPE html>
+		<!doctype html>
 		<html>
 			<head>
 				<meta charset="utf-8" />

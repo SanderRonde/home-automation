@@ -94,7 +94,7 @@ export const CalendarOverviewHTML = new TemplateFn<CalendarOverview>(
 									'grid-column-end': 16,
 								}}"
 							></div>
-					  `
+						`
 					: ''}
 				${timeSpacedEvents.map((timeslot, level) => {
 					return html`
