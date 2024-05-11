@@ -3,11 +3,11 @@ import {
 	requireParams,
 	authAll,
 	auth,
-} from '../../lib/decorators';
-import { ResponseLike, attachSourcedMessage } from '../../lib/logger';
-import { HomeDetector } from './index';
-import { Detector } from './classes';
-import { HOME_STATE } from './types';
+} from '@server/lib/decorators';
+import { ResponseLike, attachSourcedMessage } from '@server/lib/logger';
+import { HomeDetector } from '@server/modules/home-detector/index';
+import { Detector } from '@server/modules/home-detector/classes';
+import { HOME_STATE } from '@server/modules/home-detector/types';
 
 export class APIHandler {
 	private readonly _detector: Detector;

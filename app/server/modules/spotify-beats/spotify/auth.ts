@@ -1,4 +1,4 @@
-import { getSpotifyAPI } from './api';
+import { getSpotifyAPI } from '@server/modules/spotify-beats/spotify/api';
 
 export async function authFromToken(token: string): Promise<void> {
 	const api = getSpotifyAPI();

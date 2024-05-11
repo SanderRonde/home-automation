@@ -1,5 +1,5 @@
-import { AsyncExpressApplication, AsyncRequestHandler } from '../types/express';
-import { ModuleMeta } from '../modules/meta';
+import { AsyncExpressApplication, AsyncRequestHandler } from '@server/types/express';
+import { ModuleMeta } from '@server/modules/meta';
 import * as express from 'express';
 
 export function createAPIHandler<A extends Record<string, unknown>, R>(

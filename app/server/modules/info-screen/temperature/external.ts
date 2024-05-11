@@ -2,9 +2,9 @@ import {
 	ExternalTemperatureResult,
 	ExternalWeatherTimePeriod,
 	WeatherAPIResponse,
-} from '../types';
-import { getEnv } from '../../../lib/io';
-import { XHR } from '../../../lib/util';
+} from '@server/modules/info-screen/types';
+import { getEnv } from '@server/lib/io';
+import { XHR } from '@server/lib/util';
 
 const openweathermapSecrets = {
 	api_key: getEnv('SECRET_OPENWEATHERMAP_API_KEY', false),

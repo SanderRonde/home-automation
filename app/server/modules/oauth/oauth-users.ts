@@ -1,4 +1,4 @@
-import oAuthUsers from '../../config/oauth-users';
+import oAuthUsers from '@server/config/oauth-users';
 
 export function validateOAUthUsers(
 	username: string,

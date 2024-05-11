@@ -1,15 +1,18 @@
-import smartHomeConfig from '../../../config/smart-home';
+import smartHomeConfig from '@server/config/smart-home';
 
 import {
 	SmartHomeDeviceSync,
 	SMART_HOME_COMMAND,
-} from '../../../lib/smart-home/smart-home-types';
-import { QueryReturnType } from '../../../lib/smart-home/smart-home-classes';
-import { attachMessage, ResponseLike } from '../../../lib/logger';
-import { addUser, removeUser } from '../home-graph/users';
-import { createHookables } from '../../../lib/util';
-import { ModuleHookables, SmartHome } from '../..';
-import { time } from '../../../lib/timer';
+} from '@server/lib/smart-home/smart-home-types';
+import {
+	addUser,
+	removeUser,
+} from '@server/modules/smart-home/home-graph/users';
+import { QueryReturnType } from '@server/lib/smart-home/smart-home-classes';
+import { attachMessage, ResponseLike } from '@server/lib/logger';
+import { ModuleHookables, SmartHome } from '@server/modules';
+import { createHookables } from '@server/lib/util';
+import { time } from '@server/lib/timer';
 import * as express from 'express';
 
 export async function sharedUseradd<D>(

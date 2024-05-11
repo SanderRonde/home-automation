@@ -3,14 +3,14 @@ import {
 	googleQuery,
 	googleExecute,
 	googleDisconnect,
-} from './state/google';
-import { createSamsungSchemaHandler } from './state/samsung';
-import { attachTimerToReq } from '../../lib/timer';
-import { attachMessage } from '../../lib/logger';
+} from '@server/modules/smart-home/state/google';
+import { createSamsungSchemaHandler } from '@server/modules/smart-home/state/samsung';
+import { attachTimerToReq } from '@server/lib/timer';
+import { attachMessage } from '@server/lib/logger';
 import { smarthome } from 'actions-on-google';
-import { createRouter } from '../../lib/api';
+import { createRouter } from '@server/lib/api';
 import { ModuleConfig, SmartHome } from '..';
-import { getEnv } from '../../lib/io';
+import { getEnv } from '@server/lib/io';
 import * as express from 'express';
 
 export async function initRouting({

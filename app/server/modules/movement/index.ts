@@ -1,7 +1,7 @@
-import { disable, enable, initRegister } from './register';
-import { ExternalHandler } from './external';
-import { initRouting } from './routing';
-import { ModuleMeta } from '../meta';
+import { disable, enable, initRegister } from '@server/modules/movement/register';
+import { ExternalHandler } from '@server/modules/movement/external';
+import { initRouting } from '@server/modules/movement/routing';
+import { ModuleMeta } from '@server/modules/meta';
 import { ModuleConfig } from '..';
 
 export const Movement = new (class Movement extends ModuleMeta {

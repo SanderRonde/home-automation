@@ -1,5 +1,5 @@
-import { ModuleMeta } from '../modules/meta';
-import { LogObj, ResDummy } from './logger';
+import { ModuleMeta } from '@server/modules/meta';
+import { LogObj, ResDummy } from '@server/lib/logger';
 
 type QueuedRequestFn<T> = (
 	res: ResDummy,

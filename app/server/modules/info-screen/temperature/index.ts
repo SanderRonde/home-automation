@@ -2,10 +2,10 @@ import {
 	ExternalTemperatureResult,
 	ExternalWeatherTimePeriod,
 	InternalTemperatureResult,
-} from '../types';
-import { get as _getInternal } from './internal';
-import { get as _getExternal } from './external';
-import { LogObj } from '../../../lib/logger';
+} from '@server/modules/info-screen/types';
+import { get as _getInternal } from '@server/modules/info-screen/temperature/internal';
+import { get as _getExternal } from '@server/modules/info-screen/temperature/external';
+import { LogObj } from '@server/lib/logger';
 
 export function getInternal(
 	logObj?: LogObj,

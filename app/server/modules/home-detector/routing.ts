@@ -1,7 +1,7 @@
-import { createRouter } from '../../lib/api';
-import { WebPageHandler } from './web-page';
-import { Detector } from './classes';
-import { APIHandler } from './api';
+import { createRouter } from '@server/lib/api';
+import { WebPageHandler } from '@server/modules/home-detector/web-page';
+import { Detector } from '@server/modules/home-detector/classes';
+import { APIHandler } from '@server/modules/home-detector/api';
 import { ModuleConfig } from '..';
 import { HomeDetector } from '.';
 

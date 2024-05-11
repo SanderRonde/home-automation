@@ -1,4 +1,4 @@
-import { attachMessage, ResponseLike } from './logger';
+import { attachMessage, ResponseLike } from '@server/lib/logger';
 import * as express from 'express';
 
 interface Timing {

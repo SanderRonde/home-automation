@@ -1,6 +1,6 @@
-import { AllModules, getAllModules } from '../..';
-import { Database } from '../../../lib/db';
-import { BotBase } from '../../meta';
+import { AllModules, getAllModules } from '@server/modules';
+import { Database } from '@server/lib/db';
+import { BotBase } from '@server/modules/meta';
 
 type ChatStateType = {
 	[K in keyof AllModules]: BotBase;

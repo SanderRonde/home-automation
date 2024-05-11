@@ -1,9 +1,9 @@
-import { MARKED_AUDIO_FOLDER } from '../../lib/constants';
-import { MatchHandlerParams } from '../../lib/bot-state';
-import { LogObj } from '../../lib/logger';
-import { Color } from '../../lib/color';
-import { ringClients } from './clients';
-import { wait } from '../../lib/util';
+import { MARKED_AUDIO_FOLDER } from '@server/lib/constants';
+import { MatchHandlerParams } from '@server/lib/bot-state';
+import { LogObj } from '@server/lib/logger';
+import { Color } from '@server/lib/color';
+import { ringClients } from '@server/modules/rgb/clients';
+import { wait } from '@server/lib/util';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import { RGB } from '.';

@@ -1,4 +1,4 @@
-import { SpotifyTypes } from '../../../../types/spotify';
+import { SpotifyTypes } from '@server/types/spotify';
 import { API, ExtendedResponse } from '.';
 
 export class SpotifyAPIEndpoints {

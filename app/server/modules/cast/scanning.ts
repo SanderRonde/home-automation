@@ -1,6 +1,6 @@
-import { CAST_DEVICE_NAMES } from '../../config/casts';
+import { CAST_DEVICE_NAMES } from '@server/config/casts';
 import * as castv2 from 'castv2-player';
-import { DummyCastLog } from './types';
+import { DummyCastLog } from '@server/modules/cast/types';
 
 const scannerPromise = castv2.ScannerPromise(new DummyCastLog());
 

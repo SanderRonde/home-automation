@@ -1,6 +1,6 @@
-import { errorHandle, authAll, requireParams } from '../../lib/decorators';
-import { ResponseLike, attachMessage } from '../../lib/logger';
-import { update } from './get-set-listener';
+import { errorHandle, authAll, requireParams } from '@server/lib/decorators';
+import { ResponseLike, attachMessage } from '@server/lib/logger';
+import { update } from '@server/modules/remote-control/get-set-listener';
 
 export class APIHandler {
 	@errorHandle

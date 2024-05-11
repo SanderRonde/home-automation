@@ -14,22 +14,22 @@ import {
 	endInit,
 	logTag,
 	warning,
-} from './lib/logger';
+} from '@server/lib/logger';
 import {
 	initMiddleware,
 	initAnnotatorRoutes,
 	initPostRoutes,
-} from './lib/routes';
-import { hasArg, getArg, getNumberArg, getNumberEnv, getEnv } from './lib/io';
-import { notifyAllModules, BaseModuleConfig } from './modules/modules';
-import { SQLDatabase, SQLDatabaseWithSchema } from './lib/sql-db';
+} from '@server/lib/routes';
+import { hasArg, getArg, getNumberArg, getNumberEnv, getEnv } from '@server/lib/io';
+import { notifyAllModules, BaseModuleConfig } from '@server/modules/modules';
+import { SQLDatabase, SQLDatabaseWithSchema } from '@server/lib/sql-db';
 import { ProfilingIntegration } from '@sentry/profiling-node';
-import { printCommands } from './modules/bot/helpers';
-import { AllModules, getAllModules } from './modules';
-import { WSSimulator, WSWrapper } from './lib/ws';
+import { printCommands } from '@server/modules/bot/helpers';
+import { AllModules, getAllModules } from '@server/modules';
+import { WSSimulator, WSWrapper } from '@server/lib/ws';
 import * as Sentry from '@sentry/node';
 import { exec } from 'child_process';
-import { Database } from './lib/db';
+import { Database } from '@server/lib/db';
 import 'express-async-errors';
 import express from 'express';
 import * as path from 'path';

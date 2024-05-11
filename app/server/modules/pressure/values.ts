@@ -4,16 +4,16 @@ import {
 	MAX_PRESSURE_TIME,
 	MIN_PRESSURE,
 	PRESSURE_SAMPLE_TIME,
-} from '../../lib/constants';
+} from '@server/lib/constants';
 import {
 	PRESSURE_REGISTER,
 	PRESSURE_CHANGE_DIRECTION,
 	PressureRange,
-} from './types';
-import { LogObj, attachMessage } from '../../lib/logger';
-import pressureConfig from '../../config/pressures';
-import { createHookables } from '../../lib/util';
-import { PressureStateKeeper } from './enabled';
+} from '@server/modules/pressure/types';
+import { LogObj, attachMessage } from '@server/lib/logger';
+import pressureConfig from '@server/config/pressures';
+import { createHookables } from '@server/lib/util';
+import { PressureStateKeeper } from '@server/modules/pressure/enabled';
 import { Pressure } from '..';
 
 export class PressureValueKeeper {

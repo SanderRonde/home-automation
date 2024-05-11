@@ -3,13 +3,13 @@ import {
 	EWeLinkSharedConfig,
 	EWeLinkWSConnection,
 	WrappedEWeLinkAPI,
-} from './devices/shared';
+} from '@server/modules/ewelink/devices/shared';
 import eWelink from '../../../../temp/ewelink-api-next';
-import { queueEwelinkTokenRefresh } from './routing';
-import onEWeLinkDevices from '../../config/ewelink';
-import { EWELINK_DEBUG } from '../../lib/constants';
-import { logTag } from '../../lib/logger';
-import { Database } from '../../lib/db';
+import { queueEwelinkTokenRefresh } from '@server/modules/ewelink/routing';
+import onEWeLinkDevices from '@server/config/ewelink';
+import { EWELINK_DEBUG } from '@server/lib/constants';
+import { logTag } from '@server/lib/logger';
+import { Database } from '@server/lib/db';
 import { AllModules } from '..';
 
 export type LinkEWeLinkDevice = (

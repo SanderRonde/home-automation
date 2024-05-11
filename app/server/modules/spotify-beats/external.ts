@@ -3,9 +3,9 @@ import {
 	getPlayState,
 	getSpotifyAPI,
 	PlaybackState,
-} from './spotify/api';
-import { createExternalClass } from '../../lib/external';
-import { SpotifyTypes } from '../../types/spotify';
+} from '@server/modules/spotify-beats/spotify/api';
+import { createExternalClass } from '@server/lib/external';
+import { SpotifyTypes } from '@server/types/spotify';
 
 export class ExternalHandler extends createExternalClass(true) {
 	public requiresInit = true;

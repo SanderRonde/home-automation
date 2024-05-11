@@ -1,3 +1,3 @@
-import { PASTAS as _PASTAS } from '../../config/casts';
+import { PASTAS as _PASTAS } from '@server/config/casts';
 
 export const PASTAS = _PASTAS;

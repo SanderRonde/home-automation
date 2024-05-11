@@ -1,8 +1,8 @@
-import { LOG_INTERVAL_SECS } from './constants';
+import { LOG_INTERVAL_SECS } from '@server/modules/temperature/constants';
 import { ModuleConfig, Temperature } from '..';
-import { logTag } from '../../lib/logger';
-import { getEnv } from '../../lib/io';
-import { Mode } from './types';
+import { logTag } from '@server/lib/logger';
+import { getEnv } from '@server/lib/io';
+import { Mode } from '@server/modules/temperature/types';
 import chalk from 'chalk';
 
 class TempControl {

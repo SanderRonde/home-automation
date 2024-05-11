@@ -1,9 +1,9 @@
-import { disable, enable } from './spotify/checking';
-import { BotStateBase } from '../../lib/bot-state';
-import { MatchParameters } from '../bot/message';
-import { getSpotifyAPI } from './spotify/api';
-import { MatchResponse } from '../bot/types';
-import { getURL } from './spotify/auth';
+import { disable, enable } from '@server/modules/spotify-beats/spotify/checking';
+import { BotStateBase } from '@server/lib/bot-state';
+import { MatchParameters } from '@server/modules/bot/message';
+import { getSpotifyAPI } from '@server/modules/spotify-beats/spotify/api';
+import { MatchResponse } from '@server/modules/bot/types';
+import { getURL } from '@server/modules/spotify-beats/spotify/auth';
 
 export class Bot extends BotStateBase {
 	public static readonly commands = {

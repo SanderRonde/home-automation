@@ -8,12 +8,12 @@ import {
 	Token,
 	User,
 } from 'oauth2-server';
-import oAuthClients from '../../config/oauth-clients';
-import oauthUsers from '../../config/oauth-users';
-import { SettablePromise } from '../../lib/util';
+import oAuthClients from '@server/config/oauth-clients';
+import oauthUsers from '@server/config/oauth-users';
+import { SettablePromise } from '@server/lib/util';
 import OAuthServer from 'express-oauth-server';
-import { logTag } from '../../lib/logger';
-import { Database } from '../../lib/db';
+import { logTag } from '@server/lib/logger';
+import { Database } from '@server/lib/db';
 
 /**
  * When true, access tokens never expire. This

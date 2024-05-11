@@ -1,5 +1,5 @@
-import { MovementHooks } from '../modules/movement/types';
-import { ModuleHookables } from '../modules';
+import { MovementHooks } from '@server/modules/movement/types';
+import { ModuleHookables } from '@server/modules';
 
 export default {
 	'some-name': [

@@ -1,7 +1,7 @@
-import { LED_NAMES_ENUM } from '../../../config/led-config';
-import { Color } from '../../../lib/color';
+import { LED_NAMES_ENUM } from '@server/config/led-config';
+import { Color } from '@server/lib/color';
 import { WLEDClient } from 'wled-client';
-import { RGBClient } from './RGBClient';
+import { RGBClient } from '@server/modules/rgb/client/RGBClient';
 
 export class WLEDRGBClient extends RGBClient {
 	private readonly _client: WLEDClient;

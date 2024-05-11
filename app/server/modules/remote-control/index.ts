@@ -1,8 +1,8 @@
-import { ExternalHandler } from './external';
-import { initRouting } from './routing';
-import { ModuleMeta } from '../meta';
+import { ExternalHandler } from '@server/modules/remote-control/external';
+import { initRouting } from '@server/modules/remote-control/routing';
+import { ModuleMeta } from '@server/modules/meta';
 import { ModuleConfig } from '..';
-import { Bot } from './bot';
+import { Bot } from '@server/modules/remote-control/bot';
 
 export const RemoteControl = new (class RemoteControl extends ModuleMeta {
 	public name = 'remote-control';

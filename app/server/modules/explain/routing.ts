@@ -1,6 +1,6 @@
-import { createRouter } from '../../lib/api';
-import { APIHandler } from './api';
-import { Explain } from './index';
+import { createRouter } from '@server/lib/api';
+import { APIHandler } from '@server/modules/explain/api';
+import { Explain } from '@server/modules/explain/index';
 import { ModuleConfig } from '..';
 
 export function initRouting({ app }: ModuleConfig<typeof Explain>): void {

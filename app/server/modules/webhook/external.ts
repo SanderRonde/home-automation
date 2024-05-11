@@ -1,5 +1,5 @@
-import { createExternalClass } from '../../lib/external';
-import { APIHandler } from './api';
+import { createExternalClass } from '@server/lib/external';
+import { APIHandler } from '@server/modules/webhook/api';
 import { Webhook } from '.';
 
 export class ExternalHandler extends createExternalClass(true) {

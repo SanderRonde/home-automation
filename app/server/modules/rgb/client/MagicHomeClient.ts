@@ -1,8 +1,8 @@
 import { BuiltinPatterns, Control, State } from 'magic-home';
-import { MAGIC_LEDS } from '../../../config/led-config';
-import { warning } from '../../../lib/logger';
-import { Color } from '../../../lib/color';
-import { RGBClient } from './RGBClient';
+import { MAGIC_LEDS } from '@server/config/led-config';
+import { warning } from '@server/lib/logger';
+import { Color } from '@server/lib/color';
+import { RGBClient } from '@server/modules/rgb/client/RGBClient';
 
 export class MagicHomeClient extends RGBClient {
 	private _lastQueriedState: State | null = null;

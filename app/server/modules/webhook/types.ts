@@ -1,4 +1,4 @@
-import { PossiblePromise } from '../../lib/types';
+import { PossiblePromise } from '@server/lib/types';
 import { ModuleHookables } from '..';
 
 export type WebHookConfig = {

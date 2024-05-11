@@ -1,8 +1,8 @@
-import { ExternalHandler } from './external';
-import { initRouting } from './routing';
-import { ModuleMeta } from '../meta';
+import { ExternalHandler } from '@server/modules/script/external';
+import { initRouting } from '@server/modules/script/routing';
+import { ModuleMeta } from '@server/modules/meta';
 import { ModuleConfig } from '..';
-import { Bot } from './bot';
+import { Bot } from '@server/modules/script/bot';
 
 export const Script = new (class Script extends ModuleMeta {
 	public name = 'script';

@@ -1,7 +1,7 @@
-import { disableMessages } from '../../lib/logger';
-import { PressureValueKeeper } from './values';
-import { createRouter } from '../../lib/api';
-import { APIHandler } from './api';
+import { disableMessages } from '@server/lib/logger';
+import { PressureValueKeeper } from '@server/modules/pressure/values';
+import { createRouter } from '@server/lib/api';
+import { APIHandler } from '@server/modules/pressure/api';
 import { ModuleConfig } from '..';
 import { Pressure } from '.';
 

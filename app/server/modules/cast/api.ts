@@ -2,14 +2,14 @@ import {
 	attachMessage,
 	attachSourcedMessage,
 	ResponseLike,
-} from '../../lib/logger';
-import { auth, errorHandle, requireParams } from '../../lib/decorators';
-import { playURL, playURLs, stop } from './casting';
-import { LOCAL_URLS } from './local-urls';
+} from '@server/lib/logger';
+import { auth, errorHandle, requireParams } from '@server/lib/decorators';
+import { playURL, playURLs, stop } from '@server/modules/cast/casting';
+import { LOCAL_URLS } from '@server/modules/cast/local-urls';
 import * as castv2 from 'castv2-player';
-import { PASTAS } from './pasta';
-import { Cast } from './index';
-import { tts } from './tts';
+import { PASTAS } from '@server/modules/cast/pasta';
+import { Cast } from '@server/modules/cast/index';
+import { tts } from '@server/modules/cast/tts';
 
 export class APIHandler {
 	@errorHandle

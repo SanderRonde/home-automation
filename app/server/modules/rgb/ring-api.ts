@@ -9,8 +9,8 @@ import {
 	Repeat,
 	SingleColor,
 	TransparentSequence,
-} from './effect-config';
-import { Color } from '../../lib/color';
+} from '@server/modules/rgb/effect-config';
+import { Color } from '@server/lib/color';
 
 export type Effects = keyof typeof ringEffects;
 

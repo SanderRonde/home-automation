@@ -1,7 +1,7 @@
-import { initAuthorization } from './authorization';
-import { ExternalHandler } from './external';
-import { initRouting } from './routing';
-import { ModuleMeta } from '../meta';
+import { initAuthorization } from '@server/modules/oauth/authorization';
+import { ExternalHandler } from '@server/modules/oauth/external';
+import { initRouting } from '@server/modules/oauth/routing';
+import { ModuleMeta } from '@server/modules/meta';
 import { ModuleConfig } from '..';
 
 export const OAuth = new (class OAuth extends ModuleMeta {

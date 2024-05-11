@@ -1,8 +1,8 @@
-import { ExternalHandler } from './external';
-import { initRouting } from './routing';
-import { ModuleMeta } from '../meta';
+import { ExternalHandler } from '@server/modules/cast/external';
+import { initRouting } from '@server/modules/cast/routing';
+import { ModuleMeta } from '@server/modules/meta';
 import { ModuleConfig } from '..';
-import { Bot } from './bot';
+import { Bot } from '@server/modules/cast/bot';
 
 export const Cast = new (class Cast extends ModuleMeta {
 	public name = 'cast';

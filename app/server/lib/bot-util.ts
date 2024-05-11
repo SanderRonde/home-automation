@@ -4,7 +4,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 
-import { RESPONSE_TYPE } from '../modules/bot/types';
+import { RESPONSE_TYPE } from '@server/modules/bot/types';
 
 type NotUndefined<
 	O extends {

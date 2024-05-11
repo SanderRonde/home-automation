@@ -1,6 +1,6 @@
-import { addLogListener, LogCapturer, LogObj } from '../../lib/logger';
-import { ACTION_TIMEOUT_TIME } from './constants';
-import { Explain } from './index';
+import { addLogListener, LogCapturer, LogObj } from '@server/lib/logger';
+import { ACTION_TIMEOUT_TIME } from '@server/modules/explain/constants';
+import { Explain } from '@server/modules/explain/index';
 import { AllModules } from '..';
 
 export interface Action {

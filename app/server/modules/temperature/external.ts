@@ -1,9 +1,9 @@
-import { createExternalClass } from '../../lib/external';
-import { getController } from './temp-controller';
-import { APIHandler } from './api';
+import { createExternalClass } from '@server/lib/external';
+import { getController } from '@server/modules/temperature/temp-controller';
+import { APIHandler } from '@server/modules/temperature/api';
 import { ModuleConfig } from '..';
 import { Temperature } from '.';
-import { Mode } from './types';
+import { Mode } from '@server/modules/temperature/types';
 
 export class ExternalHandler extends createExternalClass(true) {
 	private static _db: ModuleConfig<typeof Temperature>['sqlDB'];

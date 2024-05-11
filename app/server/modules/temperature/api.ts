@@ -3,11 +3,11 @@ import {
 	requireParams,
 	authAll,
 	auth,
-} from '../../lib/decorators';
-import { ResponseLike, attachSourcedMessage } from '../../lib/logger';
-import { getController } from './temp-controller';
+} from '@server/lib/decorators';
+import { ResponseLike, attachSourcedMessage } from '@server/lib/logger';
+import { getController } from '@server/modules/temperature/temp-controller';
 import { ModuleConfig, Temperature } from '..';
-import { Mode } from './types';
+import { Mode } from '@server/modules/temperature/types';
 
 export class APIHandler {
 	public constructor(

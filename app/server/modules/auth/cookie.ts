@@ -1,4 +1,4 @@
-import { genId, getClientSecret } from './client-secret';
+import { genId, getClientSecret } from '@server/modules/auth/client-secret';
 
 export function genCookie(): string {
 	const id = genId();

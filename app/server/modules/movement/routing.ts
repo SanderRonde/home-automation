@@ -1,5 +1,5 @@
-import { createRouter } from '../../lib/api';
-import { APIHandler } from './api';
+import { createRouter } from '@server/lib/api';
+import { APIHandler } from '@server/modules/movement/api';
 import { ModuleConfig } from '..';
 import { Movement } from '.';
 

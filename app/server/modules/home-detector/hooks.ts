@@ -1,7 +1,7 @@
-import { attachMessage, logFixture, LogObj } from '../../lib/logger';
-import { createHookables } from '../../lib/util';
-import hooks from '../../config/home-hooks';
-import { HOME_STATE } from './types';
+import { attachMessage, logFixture, LogObj } from '@server/lib/logger';
+import { createHookables } from '@server/lib/util';
+import hooks from '@server/config/home-hooks';
+import { HOME_STATE } from '@server/modules/home-detector/types';
 import { HomeDetector } from '.';
 import chalk from 'chalk';
 

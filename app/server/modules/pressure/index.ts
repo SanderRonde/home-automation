@@ -1,10 +1,10 @@
-import { PressureStateKeeper } from './enabled';
-import { PressureValueKeeper } from './values';
-import { ExternalHandler } from './external';
-import { initRouting } from './routing';
-import { ModuleMeta } from '../meta';
+import { PressureStateKeeper } from '@server/modules/pressure/enabled';
+import { PressureValueKeeper } from '@server/modules/pressure/values';
+import { ExternalHandler } from '@server/modules/pressure/external';
+import { initRouting } from '@server/modules/pressure/routing';
+import { ModuleMeta } from '@server/modules/meta';
 import { ModuleConfig } from '..';
-import { Bot } from './bot';
+import { Bot } from '@server/modules/pressure/bot';
 
 export const Pressure = new (class Pressure extends ModuleMeta {
 	public name = 'pressure';

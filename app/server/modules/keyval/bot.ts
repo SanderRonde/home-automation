@@ -1,9 +1,9 @@
-import { COMMON_SWITCH_MAPPINGS } from '../../config/led-config';
-import { ChatState } from '../bot/message/state-keeping';
-import { BotStateBase } from '../../lib/bot-state';
-import { MatchParameters } from '../bot/message';
-import { MatchResponse } from '../bot/types';
-import { ExternalHandler } from './external';
+import { COMMON_SWITCH_MAPPINGS } from '@server/config/led-config';
+import { ChatState } from '@server/modules/bot/message/state-keeping';
+import { BotStateBase } from '@server/lib/bot-state';
+import { MatchParameters } from '@server/modules/bot/message';
+import { MatchResponse } from '@server/modules/bot/types';
+import { ExternalHandler } from '@server/modules/keyval/external';
 
 export interface State {
 	lastSubjects: string[] | null;

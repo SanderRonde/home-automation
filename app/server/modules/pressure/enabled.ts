@@ -1,4 +1,4 @@
-import { Database } from '../../lib/db';
+import { Database } from '@server/lib/db';
 import { Pressure } from '.';
 
 export class PressureStateKeeper {

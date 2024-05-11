@@ -1,9 +1,9 @@
-import { TELEGRAM_IPS } from '../../lib/constants';
-import { SettablePromise } from '../../lib/util';
-import { createRouter } from '../../lib/api';
-import { MessageHandler } from './message';
-import { getEnv } from '../../lib/io';
-import { TelegramReq } from './types';
+import { TELEGRAM_IPS } from '@server/lib/constants';
+import { SettablePromise } from '@server/lib/util';
+import { createRouter } from '@server/lib/api';
+import { MessageHandler } from '@server/modules/bot/message';
+import { getEnv } from '@server/lib/io';
+import { TelegramReq } from '@server/modules/bot/types';
 import { ModuleConfig } from '..';
 import { Bot } from '.';
 

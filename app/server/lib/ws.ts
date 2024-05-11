@@ -1,5 +1,5 @@
-import { attachMessage, logOutgoingReq } from './logger';
-import { errorHandle, auth } from './decorators';
+import { attachMessage, logOutgoingReq } from '@server/lib/logger';
+import { errorHandle, auth } from '@server/lib/decorators';
 import { Server as WebsocketServer } from 'ws';
 import * as express from 'express';
 import * as http from 'http';

@@ -1,5 +1,5 @@
-import { createExternalClass } from '../../lib/external';
-import { authenticate, getKey } from './secret';
+import { createExternalClass } from '@server/lib/external';
+import { authenticate, getKey } from '@server/modules/auth/secret';
 
 export class ExternalHandler extends createExternalClass(false) {
 	public async getSecretKey(): Promise<string> {

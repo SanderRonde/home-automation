@@ -1,8 +1,8 @@
-import { initRouting } from './routing';
-import { refresh } from './calendar';
-import { ModuleMeta } from '../meta';
+import { initRouting } from '@server/modules/info-screen/routing';
+import { refresh } from '@server/modules/info-screen/calendar';
+import { ModuleMeta } from '@server/modules/meta';
 import { ModuleConfig } from '..';
-import { Bot } from './bot';
+import { Bot } from '@server/modules/info-screen/bot';
 
 export const InfoScreen = new (class InfoScreen extends ModuleMeta {
 	public name = 'info-screen';

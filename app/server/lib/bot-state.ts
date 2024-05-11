@@ -2,12 +2,12 @@ import {
 	MatchResponse,
 	RESPONSE_TYPE,
 	TelegramMessage,
-} from '../modules/bot/types';
-import { MessageHandler, ResWrapper } from '../modules/bot/message';
-import { ChatState } from '../modules/bot/message/state-keeping';
-import { attachMessage, LogObj } from './logger';
-import { BotUtil } from './bot-util';
-import { wait } from './util';
+} from '@server/modules/bot/types';
+import { MessageHandler, ResWrapper } from '@server/modules/bot/message';
+import { ChatState } from '@server/modules/bot/message/state-keeping';
+import { attachMessage, LogObj } from '@server/lib/logger';
+import { BotUtil } from '@server/lib/bot-util';
+import { wait } from '@server/lib/util';
 import chalk from 'chalk';
 
 export type MatchHandlerRet =

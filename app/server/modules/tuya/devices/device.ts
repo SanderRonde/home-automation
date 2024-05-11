@@ -1,5 +1,5 @@
-import { registerExitHandler } from '../../../lib/shutdown';
-import { AllModules } from '../..';
+import { registerExitHandler } from '@server/lib/shutdown';
+import { AllModules } from '@server/modules';
 import TuyAPI from 'tuyapi';
 
 export class TuyaDevice {

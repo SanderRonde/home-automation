@@ -1,6 +1,6 @@
-import { authenticate } from './client-secret';
-import { checkCookie } from './cookie';
-import { redact } from './secret';
+import { authenticate } from '@server/modules/auth/client-secret';
+import { checkCookie } from '@server/modules/auth/cookie';
+import { redact } from '@server/modules/auth/secret';
 
 export function externalRedact(text: string): string {
 	return redact(text);

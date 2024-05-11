@@ -1,4 +1,4 @@
-import { EwelinkKeyvalButtonBase } from './base-button';
+import { EwelinkKeyvalButtonBase } from '@server/modules/ewelink/devices/buttons/base-button';
 
 export enum ButtonTriggerType {
 	PRESS = 0,

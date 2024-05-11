@@ -1,5 +1,5 @@
 import { Api } from 'node-hue-api/dist/esm/api/Api';
-import { logTag } from '../../lib/logger';
+import { logTag } from '@server/lib/logger';
 import * as hue from 'node-hue-api';
 
 export async function createUser(): Promise<void> {

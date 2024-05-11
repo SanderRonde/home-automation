@@ -1,18 +1,18 @@
-import { ringClients, getLed, magicHomeClients } from './clients';
-import { ArduinoConfig, DIR, JoinedConfigs } from './types';
-import { getLedFromName } from '../../config/led-config';
-import { attachMessage, logTag } from '../../lib/logger';
-import { arrToObj, asyncTimeout } from '../../lib/util';
-import { BotStateBase } from '../../lib/bot-state';
-import { ringEffects, Effects } from './ring-api';
-import { MatchParameters } from '../bot/message';
-import { ColorTarget, HEX_REGEX } from './api';
-import { MatchResponse } from '../bot/types';
-import { ExternalHandler } from './external';
-import { scanRGBControllers } from './scan';
-import { colorList } from '../../lib/data';
-import { Color } from '../../lib/color';
-import { hexEffects } from './hex-api';
+import { ringClients, getLed, magicHomeClients } from '@server/modules/rgb/clients';
+import { ArduinoConfig, DIR, JoinedConfigs } from '@server/modules/rgb/types';
+import { getLedFromName } from '@server/config/led-config';
+import { attachMessage, logTag } from '@server/lib/logger';
+import { arrToObj, asyncTimeout } from '@server/lib/util';
+import { BotStateBase } from '@server/lib/bot-state';
+import { ringEffects, Effects } from '@server/modules/rgb/ring-api';
+import { MatchParameters } from '@server/modules/bot/message';
+import { ColorTarget, HEX_REGEX } from '@server/modules/rgb/api';
+import { MatchResponse } from '@server/modules/bot/types';
+import { ExternalHandler } from '@server/modules/rgb/external';
+import { scanRGBControllers } from '@server/modules/rgb/scan';
+import { colorList } from '@server/lib/data';
+import { Color } from '@server/lib/color';
+import { hexEffects } from '@server/modules/rgb/hex-api';
 import { exec } from 'child_process';
 
 function restartSelf() {

@@ -1,4 +1,4 @@
-import { createExternalClass } from '../../lib/external';
+import { createExternalClass } from '@server/lib/external';
 import { Client } from '@notionhq/client';
 
 export class ExternalHandler extends createExternalClass(true) {

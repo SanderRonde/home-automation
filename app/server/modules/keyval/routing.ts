@@ -1,9 +1,9 @@
-import { addListener, removeListener, update } from './get-set-listener';
-import { LogObj, attachMessage, logTag } from '../../lib/logger';
-import { createRouter } from '../../lib/api';
-import { WSSimInstance } from '../../lib/ws';
-import { WebPageHandler } from './web-page';
-import { APIHandler } from './api';
+import { addListener, removeListener, update } from '@server/modules/keyval/get-set-listener';
+import { LogObj, attachMessage, logTag } from '@server/lib/logger';
+import { createRouter } from '@server/lib/api';
+import { WSSimInstance } from '@server/lib/ws';
+import { WebPageHandler } from '@server/modules/keyval/web-page';
+import { APIHandler } from '@server/modules/keyval/api';
 import { ModuleConfig } from '..';
 import { KeyVal } from '.';
 import chalk from 'chalk';

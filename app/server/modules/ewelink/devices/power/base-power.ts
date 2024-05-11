@@ -4,9 +4,9 @@ import {
 	EWeLinkSharedConfig,
 	EWeLinkUpdateMessage,
 	EWeLinkWebSocketMessage,
-} from '../shared';
-import { logFixture, ResDummy } from '../../../../lib/logger';
-import { asyncSetInterval } from '../../../../lib/util';
+} from '@server/modules/ewelink/devices/shared';
+import { logFixture, ResDummy } from '@server/lib/logger';
+import { asyncSetInterval } from '@server/lib/util';
 import chalk from 'chalk';
 
 export abstract class EwelinkPowerBase<P> extends EWeLinkInitable {

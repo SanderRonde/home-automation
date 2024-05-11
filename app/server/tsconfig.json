@@ -5,6 +5,8 @@
 		"module": "commonjs",
 		"moduleResolution": "node",
 		"noImplicitAny": true,
+		"baseUrl": ".",
+		"rootDir": ".",
 		"noImplicitThis": true,
 		"preserveConstEnums": false,
 		"listFiles": false,
@@ -20,9 +22,12 @@
 		"strictBindCallApply": true,
 		"skipLibCheck": true,
 		"esModuleInterop": true,
-		"noEmit": true
+		"noEmit": true,
+		"paths": {
+			"@server/*": ["./*"]
+		}
 	},
 	"compileOnSave": true,
 	"allowJs": true,
-	"include": ["./**/*.ts", "../../types/*", "./types"]
+	"include": ["./**/*.ts", "../../types/*", "./types"],
 }

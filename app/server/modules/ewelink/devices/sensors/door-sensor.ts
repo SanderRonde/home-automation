@@ -2,8 +2,8 @@ import {
 	EWeLinkInitable,
 	EWeLinkSharedConfig,
 	EWeLinkWebSocketMessage,
-} from '../shared';
-import { logTag } from '../../../../lib/logger';
+} from '@server/modules/ewelink/devices/shared';
+import { logTag } from '@server/lib/logger';
 
 export class EwelinkDoorSensor extends EWeLinkInitable {
 	public constructor(

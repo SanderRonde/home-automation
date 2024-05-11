@@ -1,9 +1,9 @@
 import { AllModules, ModuleConfig } from '..';
-import { ExternalHandler } from './external';
+import { ExternalHandler } from '@server/modules/notion/external';
 import { Client } from '@notionhq/client';
-import { startGeocoder } from './geocode';
-import { createClient } from './client';
-import { ModuleMeta } from '../meta';
+import { startGeocoder } from '@server/modules/notion/geocode';
+import { createClient } from '@server/modules/notion/client';
+import { ModuleMeta } from '@server/modules/meta';
 
 type Secret = {
 	init(config: ModuleConfig<typeof Notion>, client: Client): Promise<void>;

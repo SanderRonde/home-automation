@@ -1,7 +1,7 @@
-import { SwitchbotDeviceBase } from './devices/devices';
-import { ExternalHandler } from './external';
-import { scanSwitchbots } from './scanner';
-import { ModuleMeta } from '../meta';
+import { SwitchbotDeviceBase } from '@server/modules/switchbot/devices/devices';
+import { ExternalHandler } from '@server/modules/switchbot/external';
+import { scanSwitchbots } from '@server/modules/switchbot/scanner';
+import { ModuleMeta } from '@server/modules/meta';
 import { ModuleConfig } from '..';
 
 export const SwitchBot = new (class SwitchBot extends ModuleMeta {

@@ -1,7 +1,7 @@
-import { createExternalClass } from '../../lib/external';
-import { attachMessage } from '../../lib/logger';
-import { PressureStateKeeper } from './enabled';
-import { PressureValueKeeper } from './values';
+import { createExternalClass } from '@server/lib/external';
+import { attachMessage } from '@server/lib/logger';
+import { PressureStateKeeper } from '@server/modules/pressure/enabled';
+import { PressureValueKeeper } from '@server/modules/pressure/values';
 
 export class ExternalHandler extends createExternalClass(true) {
 	private static _pressureStateKeeper: PressureStateKeeper;

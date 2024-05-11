@@ -1,6 +1,6 @@
-import { errorHandle, authCookie, upgradeToHTTPS } from '../../lib/decorators';
-import { remoteControlHTML } from '../../templates/remote-control-template';
-import { ResponseLike } from '../../lib/logger';
+import { errorHandle, authCookie, upgradeToHTTPS } from '@server/lib/decorators';
+import { remoteControlHTML } from '@server/templates/remote-control-template';
+import { ResponseLike } from '@server/lib/logger';
 
 export class WebPageHandler {
 	public constructor(private readonly _randomNum: number) {}

@@ -1,7 +1,7 @@
-import { ButtonTriggerType } from './power-button';
-import { EwelinkButtonBase } from './base-button';
-import { EWeLinkSharedConfig } from '../shared';
-import { AllModules } from '../../..';
+import { ButtonTriggerType } from '@server/modules/ewelink/devices/buttons/power-button';
+import { EwelinkButtonBase } from '@server/modules/ewelink/devices/buttons/base-button';
+import { EWeLinkSharedConfig } from '@server/modules/ewelink/devices/shared';
+import { AllModules } from '@server/modules';
 
 export class EwelinkDynamicHandlerButton<
 	C extends number,

@@ -3,14 +3,14 @@ import {
 	setMagicHomeClients,
 	setRingClients,
 	setWLEDClients,
-} from './clients';
-import { HEX_LEDS, RING_LEDS, WLED_LEDS } from '../../config/led-config';
-import { MagicHomeClient } from './client/MagicHomeClient';
-import { WLEDRGBClient } from './client/WLEDRGBClient';
-import { RingClient } from './client/RingClient';
+} from '@server/modules/rgb/clients';
+import { HEX_LEDS, RING_LEDS, WLED_LEDS } from '@server/config/led-config';
+import { MagicHomeClient } from '@server/modules/rgb/client/MagicHomeClient';
+import { WLEDRGBClient } from '@server/modules/rgb/client/WLEDRGBClient';
+import { RingClient } from '@server/modules/rgb/client/RingClient';
 import { Control, Discovery } from 'magic-home';
-import { HexClient } from './client/HexClient';
-import { logTag } from '../../lib/logger';
+import { HexClient } from '@server/modules/rgb/client/HexClient';
+import { logTag } from '@server/lib/logger';
 import chalk from 'chalk';
 
 let magicHomeTimer: NodeJS.Timeout | null = null;

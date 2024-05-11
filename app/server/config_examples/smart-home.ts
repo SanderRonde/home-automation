@@ -1,7 +1,7 @@
 import {
 	SmartHomeLight,
 	SmartHomeMixinOnOffKeyval,
-} from '../lib/smart-home/smart-home-classes';
+} from '@server/lib/smart-home/smart-home-classes';
 
 const devices = [
 	class _ extends SmartHomeMixinOnOffKeyval(SmartHomeLight) {

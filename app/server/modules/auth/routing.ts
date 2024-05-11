@@ -1,8 +1,8 @@
-import { genId, getClientSecret } from './client-secret';
-import { attachMessage } from '../../lib/logger';
-import { createRouter } from '../../lib/api';
-import { authenticate } from './secret';
-import { genCookie } from './cookie';
+import { genId, getClientSecret } from '@server/modules/auth/client-secret';
+import { attachMessage } from '@server/lib/logger';
+import { createRouter } from '@server/lib/api';
+import { authenticate } from '@server/modules/auth/secret';
+import { genCookie } from '@server/modules/auth/cookie';
 import { ModuleConfig } from '..';
 import chalk from 'chalk';
 import { Auth } from '.';

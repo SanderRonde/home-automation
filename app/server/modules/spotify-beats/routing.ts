@@ -1,5 +1,5 @@
-import { finishManualAuth } from './spotify/auth';
-import { createRouter } from '../../lib/api';
+import { finishManualAuth } from '@server/modules/spotify-beats/spotify/auth';
+import { createRouter } from '@server/lib/api';
 import { ModuleConfig } from '..';
 import { SpotifyBeats } from '.';
 

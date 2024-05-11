@@ -1,3 +1,3 @@
-import { LOCAL_URLS as _LOCAL_URLS } from '../../config/casts';
+import { LOCAL_URLS as _LOCAL_URLS } from '@server/config/casts';
 
 export const LOCAL_URLS = _LOCAL_URLS;

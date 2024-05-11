@@ -1,7 +1,7 @@
 import express = require('express');
-import { errorHandle, authCookie, upgradeToHTTPS } from '../../lib/decorators';
-import { CustomPattern, patterns } from './patterns';
-import { ResponseLike } from '../../lib/logger';
+import { errorHandle, authCookie, upgradeToHTTPS } from '@server/lib/decorators';
+import { CustomPattern, patterns } from '@server/modules/rgb/patterns';
+import { ResponseLike } from '@server/lib/logger';
 import { RGB } from '.';
 
 const patternPreviews = JSON.stringify(

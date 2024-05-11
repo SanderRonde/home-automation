@@ -2,10 +2,10 @@ import {
 	SwitchbotAdvertisement,
 	SwitchbotWoDeviceCurtain,
 } from 'node-switchbot';
-import { EventEmitter } from '../../../lib/event-emitter';
-import { SwitchbotApiDevice } from '../scanner';
-import { SwitchbotDeviceBase } from './devices';
-import { AllModules } from '../..';
+import { EventEmitter } from '@server/lib/event-emitter';
+import { SwitchbotApiDevice } from '@server/modules/switchbot/scanner';
+import { SwitchbotDeviceBase } from '@server/modules/switchbot/devices/devices';
+import { AllModules } from '@server/modules';
 
 export class SwitchbotCurtain extends SwitchbotDeviceBase {
 	private _keyvalHandler = new this._modules.keyval.External(

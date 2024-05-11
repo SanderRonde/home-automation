@@ -1,6 +1,6 @@
-import { errorHandle, authCookie, upgradeToHTTPS } from '../../lib/decorators';
-import { ResponseLike } from '../../lib/logger';
-import { Detector } from './classes';
+import { errorHandle, authCookie, upgradeToHTTPS } from '@server/lib/decorators';
+import { ResponseLike } from '@server/lib/logger';
+import { Detector } from '@server/modules/home-detector/classes';
 import * as express from 'express';
 import { HomeDetector } from '.';
 

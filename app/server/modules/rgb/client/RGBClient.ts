@@ -1,6 +1,6 @@
-import { LED_KEYVAL_MAP, LED_NAME } from '../../../config/led-config';
+import { LED_KEYVAL_MAP, LED_NAME } from '@server/config/led-config';
 import { BuiltinPatterns, Control } from 'magic-home';
-import { Color } from '../../../lib/color';
+import { Color } from '@server/lib/color';
 import { RGB } from '..';
 
 export abstract class RGBClient {

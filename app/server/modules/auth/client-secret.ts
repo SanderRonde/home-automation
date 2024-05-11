@@ -1,4 +1,4 @@
-import { getKey } from './secret';
+import { getKey } from '@server/modules/auth/secret';
 
 const ids: Map<number, string> = new Map();
 

@@ -1,6 +1,6 @@
-import { auth, errorHandle, requireParams } from '../../lib/decorators';
-import { ResponseLike, attachSourcedMessage } from '../../lib/logger';
-import { reportMovement } from './register';
+import { auth, errorHandle, requireParams } from '@server/lib/decorators';
+import { ResponseLike, attachSourcedMessage } from '@server/lib/logger';
+import { reportMovement } from '@server/modules/movement/register';
 import { Movement } from '.';
 
 export class APIHandler {

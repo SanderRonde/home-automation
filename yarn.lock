@@ -3227,6 +3227,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"eslint-plugin-no-relative-import-paths@npm:^1.5.4":
+  version: 1.5.4
+  resolution: "eslint-plugin-no-relative-import-paths@npm:1.5.4"
+  checksum: 10c0/93fde7e0aca874874d2a4a544f2e090d30a7c06bbd1280e228cd7a85358c9f2de6ef4b7a449f29befd995f9dc78545968a06e911b693c2ca4ac0af5bc197f76a
+  languageName: node
+  linkType: hard
+
 "eslint-plugin-node@npm:^11.1.0":
   version: 11.1.0
   resolution: "eslint-plugin-node@npm:11.1.0"
@@ -4536,6 +4543,7 @@ __metadata:
     esbuild: "npm:^0.21.1"
     eslint: "npm:8"
     eslint-config-prettier: "npm:^8.3.0"
+    eslint-plugin-no-relative-import-paths: "npm:^1.5.4"
     eslint-plugin-node: "npm:^11.1.0"
     eslint-plugin-prettier: "npm:^4.0.0"
     eslint-plugin-unused-imports: "npm:^3.2.0"
