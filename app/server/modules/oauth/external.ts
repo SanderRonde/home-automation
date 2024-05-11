@@ -1,5 +1,5 @@
-import { createExternalClass } from '@server/lib/external';
-import { authorizationServer } from '@server/modules/oauth/authorization';
+import { createExternalClass } from '../../lib/external';
+import { authorizationServer } from './authorization';
 import { Token } from 'oauth2-server';
 import * as express from 'express';
 

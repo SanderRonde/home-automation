@@ -1,10 +1,10 @@
-import { externalRedact } from '@server/modules/auth/helpers';
-import { ExplainHook } from '@server/modules/explain/types';
-import { generateRandomString } from '@server/lib/util';
-import { IP_LOG_VERSION } from '@server/lib/constants';
-import { gatherTimings } from '@server/lib/timer';
+import { externalRedact } from '../modules/auth/helpers';
+import { ExplainHook } from '../modules/explain/types';
+import { generateRandomString } from './util';
+import { IP_LOG_VERSION } from './constants';
+import { gatherTimings } from './timer';
 import * as express from 'express';
-import { Config } from '@server/app';
+import { Config } from '../app';
 import * as fs from 'fs-extra';
 import * as http from 'http';
 import chalk from 'chalk';

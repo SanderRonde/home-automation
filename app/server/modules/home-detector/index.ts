@@ -1,13 +1,13 @@
-import { ExternalHandler } from '@server/modules/home-detector/external';
-import { logTag } from '@server/lib/logger';
-import { initRouting } from '@server/modules/home-detector/routing';
-import { handleHooks } from '@server/modules/home-detector/hooks';
-import { Detector } from '@server/modules/home-detector/classes';
-import { HOME_STATE } from '@server/modules/home-detector/types';
-import { ModuleMeta } from '@server/modules/meta';
-import { APIHandler } from '@server/modules/home-detector/api';
+import { ExternalHandler } from './external';
+import { logTag } from '../../lib/logger';
+import { initRouting } from './routing';
+import { handleHooks } from './hooks';
+import { Detector } from './classes';
+import { HOME_STATE } from './types';
+import { ModuleMeta } from '../meta';
+import { APIHandler } from './api';
 import { ModuleConfig } from '..';
-import { Bot } from '@server/modules/home-detector/bot';
+import { Bot } from './bot';
 import chalk from 'chalk';
 
 export const HomeDetector = new (class HomeDetector extends ModuleMeta {

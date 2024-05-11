@@ -1,6 +1,6 @@
-import { SceneControllerTriggerType } from '@server/modules/ewelink/devices/buttons/r5-scene-controller';
-import { EwelinkKeyvalButtonBase } from '@server/modules/ewelink/devices/buttons/base-button';
-import { debounce } from '@server/lib/util';
+import { SceneControllerTriggerType } from './r5-scene-controller';
+import { EwelinkKeyvalButtonBase } from './base-button';
+import { debounce } from '../../../../lib/util';
 
 enum SceneControllerExtendedTriggerType {
 	TOP_LEFT_PRESS,

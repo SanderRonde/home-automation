@@ -3,12 +3,12 @@ import {
 	CHANGE_PING_INTERVAL,
 	HOME_PING_INTERVAL,
 	AWAY_PING_INTERVAL,
-} from '@server/modules/home-detector/constants';
-import homeIps from '@server/config/home-ips';
-import { Database } from '@server/lib/db';
-import { HomeDetector } from '@server/modules/home-detector/index';
-import { getEnv } from '@server/lib/io';
-import { HOME_STATE } from '@server/modules/home-detector/types';
+} from './constants';
+import homeIps from '../../config/home-ips';
+import { Database } from '../../lib/db';
+import { HomeDetector } from './index';
+import { getEnv } from '../../lib/io';
+import { HOME_STATE } from './types';
 import * as ping from 'ping';
 
 function wait(time: number) {

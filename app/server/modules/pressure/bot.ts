@@ -1,8 +1,8 @@
-import { BotStateBase } from '@server/lib/bot-state';
-import { MatchParameters } from '@server/modules/bot/message';
-import { PressureValueKeeper } from '@server/modules/pressure/values';
-import { MatchResponse } from '@server/modules/bot/types';
-import { ExternalHandler } from '@server/modules/pressure/external';
+import { BotStateBase } from '../../lib/bot-state';
+import { MatchParameters } from '../bot/message';
+import { PressureValueKeeper } from './values';
+import { MatchResponse } from '../bot/types';
+import { ExternalHandler } from './external';
 
 export class Bot extends BotStateBase {
 	public static valueKeeper: PressureValueKeeper | null = null;

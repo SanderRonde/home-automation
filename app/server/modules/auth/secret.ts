@@ -1,4 +1,4 @@
-import { getEnv } from '@server/lib/io';
+import { getEnv } from '../../lib/io';
 
 const key: string = getEnv('SECRET_AUTH', true);
 const botSecret: string = getEnv('SECRET_BOT', true);

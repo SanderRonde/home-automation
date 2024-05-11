@@ -1,8 +1,8 @@
-import { getController } from '@server/modules/temperature/temp-controller';
-import { attachMessage } from '@server/lib/logger';
+import { getController } from './temp-controller';
+import { attachMessage } from '../../lib/logger';
 import { ModuleConfig, Temperature } from '..';
-import { createRouter } from '@server/lib/api';
-import { APIHandler } from '@server/modules/temperature/api';
+import { createRouter } from '../../lib/api';
+import { APIHandler } from './api';
 
 export function initRouting({
 	app,

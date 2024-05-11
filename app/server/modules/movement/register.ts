@@ -1,7 +1,7 @@
-import { SettablePromise, createHookables } from '@server/lib/util';
-import { LogObj, attachMessage } from '@server/lib/logger';
-import movementConfig from '@server/config/movements';
-import { Database } from '@server/lib/db';
+import { SettablePromise, createHookables } from '../../lib/util';
+import { LogObj, attachMessage } from '../../lib/logger';
+import movementConfig from '../../config/movements';
+import { Database } from '../../lib/db';
 import { Movement } from '.';
 
 let enabled: boolean | null = null;

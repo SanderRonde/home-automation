@@ -1,12 +1,12 @@
-import { attachMessage, ResDummy } from '@server/lib/logger';
-import { ChatState } from '@server/modules/bot/message/state-keeping';
-import { State as KeyValState } from '@server/modules/keyval/bot';
-import { BotStateBase } from '@server/lib/bot-state';
-import { MatchParameters } from '@server/modules/bot/message';
-import { MatchResponse } from '@server/modules/bot/types';
-import { Detector } from '@server/modules/home-detector/classes';
-import { HOME_STATE } from '@server/modules/home-detector/types';
-import { APIHandler } from '@server/modules/home-detector/api';
+import { attachMessage, ResDummy } from '../../lib/logger';
+import { ChatState } from '../bot/message/state-keeping';
+import { State as KeyValState } from '../keyval/bot';
+import { BotStateBase } from '../../lib/bot-state';
+import { MatchParameters } from '../bot/message';
+import { MatchResponse } from '../bot/types';
+import { Detector } from './classes';
+import { HOME_STATE } from './types';
+import { APIHandler } from './api';
 import { HomeDetector } from '.';
 import chalk from 'chalk';
 

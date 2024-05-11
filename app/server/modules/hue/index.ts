@@ -1,8 +1,8 @@
-import { discoverBridge } from '@server/modules/hue/discover-bridge';
-import { linkHueDevices } from '@server/config/hue';
-import { logTag } from '@server/lib/logger';
-import { getEnv } from '@server/lib/io';
-import { ModuleMeta } from '@server/modules/meta';
+import { discoverBridge } from './discover-bridge';
+import { linkHueDevices } from '../../config/hue';
+import { logTag } from '../../lib/logger';
+import { getEnv } from '../../lib/io';
+import { ModuleMeta } from '../meta';
 import { ModuleConfig } from '..';
 
 export const Hue = new (class Hue extends ModuleMeta {

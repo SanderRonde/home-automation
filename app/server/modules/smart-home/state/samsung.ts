@@ -16,20 +16,20 @@ import {
 	SmartHomeDeviceUpdate,
 	SMART_HOME_COMMAND,
 	SMART_HOME_DEVICE_TRAIT,
-} from '@server/lib/smart-home/smart-home-types';
+} from '../../../lib/smart-home/smart-home-types';
 import {
 	sharedDisconnect,
 	sharedExecute,
 	sharedQuery,
 	sharedSync,
 	sharedUseradd,
-} from '@server/modules/smart-home/state/shared';
-import { currentUsers } from '@server/modules/smart-home/home-graph/users';
-import { warning } from '@server/lib/logger';
-import { flatten } from '@server/lib/util';
-import { SAMSUNG_KEY } from '@server/modules/smart-home/home-graph';
-import { smartHomeLogger } from '@server/modules/smart-home/shared';
-import { getEnv } from '@server/lib/io';
+} from './shared';
+import { currentUsers } from '../home-graph/users';
+import { warning } from '../../../lib/logger';
+import { flatten } from '../../../lib/util';
+import { SAMSUNG_KEY } from '../home-graph';
+import { smartHomeLogger } from '../shared';
+import { getEnv } from '../../../lib/io';
 import * as express from 'express';
 
 function samsungSync(response: DiscoveryResponse, res: express.Response) {

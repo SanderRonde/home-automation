@@ -4,13 +4,13 @@ import {
 	MAGIC_LEDS,
 	RING_LEDS,
 	WLED_LEDS,
-} from '@server/config/led-config';
+} from '../../config/led-config';
 
-import { MagicHomeClient } from '@server/modules/rgb/client/MagicHomeClient';
-import { WLEDRGBClient } from '@server/modules/rgb/client/WLEDRGBClient';
-import { RingClient } from '@server/modules/rgb/client/RingClient';
-import { RGBClient } from '@server/modules/rgb/client/RGBClient';
-import { HexClient } from '@server/modules/rgb/client/HexClient';
+import { MagicHomeClient } from './client/MagicHomeClient';
+import { WLEDRGBClient } from './client/WLEDRGBClient';
+import { RingClient } from './client/RingClient';
+import { RGBClient } from './client/RGBClient';
+import { HexClient } from './client/HexClient';
 
 export let magicHomeClients: MagicHomeClient[] = [];
 export let ringClients: RingClient[] = [];

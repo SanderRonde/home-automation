@@ -1,9 +1,9 @@
-import { ModuleConfig, AllModules } from '@server/modules/modules';
-import { HOME_STATE } from '@server/modules/home-detector/types';
-import { BotStateBase } from '@server/lib/bot-state';
-import { ExplainHook } from '@server/modules/explain/types';
-import { SettablePromise } from '@server/lib/util';
-import { LogObj } from '@server/lib/logger';
+import { ModuleConfig, AllModules } from './modules';
+import { HOME_STATE } from './home-detector/types';
+import { BotStateBase } from '../lib/bot-state';
+import { ExplainHook } from './explain/types';
+import { SettablePromise } from '../lib/util';
+import { LogObj } from '../lib/logger';
 
 export declare class Handler {
 	public constructor(_logObj: LogObj, _source: string);

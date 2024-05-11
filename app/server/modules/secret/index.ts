@@ -1,5 +1,5 @@
-import { initSecretModule, notifySecretModules } from '@server/config/secret';
-import { ModuleMeta } from '@server/modules/meta';
+import { initSecretModule, notifySecretModules } from '../../config/secret';
+import { ModuleMeta } from '../meta';
 import { ModuleConfig } from '..';
 
 export const Secret = new (class Secret extends ModuleMeta {

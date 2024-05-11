@@ -1,7 +1,7 @@
-import { SwitchbotDeviceBase } from '@server/modules/switchbot/devices/devices';
-import { SwitchbotCurtain } from '@server/modules/switchbot/devices/curtain';
-import { SwitchbotApiDevice } from '@server/modules/switchbot/scanner';
-import { AllModules } from '@server/modules';
+import { SwitchbotDeviceBase } from '../modules/switchbot/devices/devices';
+import { SwitchbotCurtain } from '../modules/switchbot/devices/curtain';
+import { SwitchbotApiDevice } from '../modules/switchbot/scanner';
+import { AllModules } from '../modules';
 
 export async function createSwitchbots(
 	findDevice: (id: string) => Promise<SwitchbotApiDevice | null>,

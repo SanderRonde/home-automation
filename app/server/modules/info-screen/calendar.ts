@@ -1,9 +1,9 @@
-import { SettablePromise, flatten } from '@server/lib/util';
-import { SECRETS_FOLDER } from '@server/lib/constants';
+import { SettablePromise, flatten } from '../../lib/util';
+import { SECRETS_FOLDER } from '../../lib/constants';
 import { Credentials } from 'google-auth-library';
 import { google, calendar_v3 } from 'googleapis';
-import { getEnv } from '@server/lib/io';
-import { SCOPES } from '@server/modules/info-screen/constants';
+import { getEnv } from '../../lib/io';
+import { SCOPES } from './constants';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 

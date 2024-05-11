@@ -2,11 +2,11 @@ import {
 	ResponseLike,
 	attachSourcedMessage,
 	attachMessage,
-} from '@server/lib/logger';
-import { errorHandle, requireParams, authAll } from '@server/lib/decorators';
+} from '../../lib/logger';
+import { errorHandle, requireParams, authAll } from '../../lib/decorators';
 import * as childProcess from 'child_process';
-import { AuthError } from '@server/lib/errors';
-import { Config } from '@server/app';
+import { AuthError } from '../../lib/errors';
+import { Config } from '../../app';
 import * as path from 'path';
 import { Script } from '.';
 import chalk from 'chalk';

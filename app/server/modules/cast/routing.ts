@@ -1,8 +1,8 @@
-import { createRouter } from '@server/lib/api';
-import { ExternalHandler } from '@server/modules/cast/external';
-import { APIHandler } from '@server/modules/cast/api';
+import { createRouter } from '../../lib/api';
+import { ExternalHandler } from './external';
+import { APIHandler } from './api';
 import { ModuleConfig } from '..';
-import { Cast } from '@server/modules/cast/index';
+import { Cast } from './index';
 
 export async function initRouting({
 	app,

@@ -4,25 +4,25 @@ import {
 	getLed,
 	hexClients,
 	magicHomeClients,
-} from '@server/modules/rgb/clients';
+} from './clients';
 import {
 	ResponseLike,
 	attachMessage,
 	attachSourcedMessage,
-} from '@server/lib/logger';
+} from '../../lib/logger';
 import {
 	errorHandle,
 	requireParams,
 	authAll,
 	auth,
-} from '@server/lib/decorators';
-import { LED_NAME } from '@server/config/led-config';
-import { ringEffects, Effects } from '@server/modules/rgb/ring-api';
-import { scanRGBControllers } from '@server/modules/rgb/scan';
-import { colorList } from '@server/lib/data';
-import { Color } from '@server/lib/color';
+} from '../../lib/decorators';
+import { LED_NAME } from '../../config/led-config';
+import { ringEffects, Effects } from './ring-api';
+import { scanRGBControllers } from './scan';
+import { colorList } from '../../lib/data';
+import { Color } from '../../lib/color';
 import { CustomMode } from 'magic-home';
-import { hexEffects } from '@server/modules/rgb/hex-api';
+import { hexEffects } from './hex-api';
 import chalk from 'chalk';
 import { RGB } from '.';
 

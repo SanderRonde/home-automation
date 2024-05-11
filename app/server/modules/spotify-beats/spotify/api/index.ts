@@ -1,9 +1,9 @@
-import { logOutgoingRes, logTag } from '@server/lib/logger';
-import { SpotifyTypes } from '@server/types/spotify';
-import { SpotifyAPIEndpoints } from '@server/modules/spotify-beats/spotify/api/endpoints';
-import { Database } from '@server/lib/db';
-import { wait } from '@server/lib/util';
-import { getEnv } from '@server/lib/io';
+import { logOutgoingRes, logTag } from '../../../../lib/logger';
+import { SpotifyTypes } from '../../../../types/spotify';
+import { SpotifyAPIEndpoints } from './endpoints';
+import { Database } from '../../../../lib/db';
+import { wait } from '../../../../lib/util';
+import { getEnv } from '../../../../lib/io';
 import chalk from 'chalk';
 
 export interface ExtendedResponse<R> extends Response {

@@ -1,6 +1,6 @@
-import { EwelinkMovement } from '@server/modules/ewelink/devices/sensors/movement-sensor';
-import { EwelinkSimplePower } from '@server/modules/ewelink/devices/power/simple-power';
-import { LinkEWeLinkDevice } from '@server/modules/ewelink/api';
+import { EwelinkMovement } from '../modules/ewelink/devices/sensors/movement-sensor';
+import { EwelinkSimplePower } from '../modules/ewelink/devices/power/simple-power';
+import { LinkEWeLinkDevice } from '../modules/ewelink/api';
 
 export default async function onEWeLinkDevices(
 	linkDevice: LinkEWeLinkDevice

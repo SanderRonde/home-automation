@@ -1,6 +1,6 @@
-import { initHomeGraph, requestSync } from '@server/modules/smart-home/home-graph';
-import { initRouting } from '@server/modules/smart-home/routing';
-import { ModuleMeta } from '@server/modules/meta';
+import { initHomeGraph, requestSync } from './home-graph';
+import { initRouting } from './routing';
+import { ModuleMeta } from '../meta';
 import { ModuleConfig } from '..';
 
 export const SmartHome = new (class SmartHome extends ModuleMeta {

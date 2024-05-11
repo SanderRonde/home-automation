@@ -1,5 +1,5 @@
-import { EwelinkPowerParams } from '@server/modules/ewelink/devices/power/simple-power';
-import { EwelinkPowerBase } from '@server/modules/ewelink/devices/power/base-power';
+import { EwelinkPowerParams } from './simple-power';
+import { EwelinkPowerBase } from './base-power';
 
 type EwelinkLightPowerPowerParams = EwelinkPowerParams & {
 	ltype?: string;

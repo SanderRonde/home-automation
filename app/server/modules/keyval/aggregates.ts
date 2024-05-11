@@ -1,8 +1,8 @@
-import aggregates from '@server/config/aggregates';
-import { addListener } from '@server/modules/keyval/get-set-listener';
-import { attachMessage } from '@server/lib/logger';
-import { createHookables } from '@server/lib/util';
-import { Database } from '@server/lib/db';
+import aggregates from '../../config/aggregates';
+import { addListener } from './get-set-listener';
+import { attachMessage } from '../../lib/logger';
+import { createHookables } from '../../lib/util';
+import { Database } from '../../lib/db';
 import { KeyVal } from '.';
 import chalk from 'chalk';
 

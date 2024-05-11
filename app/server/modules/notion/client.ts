@@ -1,7 +1,7 @@
-import { splitIntoGroups, wait } from '@server/lib/util';
+import { splitIntoGroups, wait } from '../../lib/util';
 import { Client } from '@notionhq/client';
-import { logTag } from '@server/lib/logger';
-import { getEnv } from '@server/lib/io';
+import { logTag } from '../../lib/logger';
+import { getEnv } from '../../lib/io';
 import AsyncLock from 'async-lock';
 
 export function createClient(): Client | null {

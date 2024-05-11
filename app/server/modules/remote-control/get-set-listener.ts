@@ -1,5 +1,5 @@
-import { LogObj } from '@server/lib/logger';
-import { Commands } from '@server/modules/remote-control/types';
+import { LogObj } from '../../lib/logger';
+import { Commands } from './types';
 
 const _listeners: Map<
 	number,

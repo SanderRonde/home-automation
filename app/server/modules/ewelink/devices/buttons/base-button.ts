@@ -2,9 +2,9 @@ import {
 	EWeLinkInitable,
 	EWeLinkSharedConfig,
 	EWeLinkUpdateMessage,
-} from '@server/modules/ewelink/devices/shared';
-import { ExternalHandler } from '@server/modules/keyval/external';
-import { logTag } from '@server/lib/logger';
+} from '../shared';
+import { ExternalHandler } from '../../../keyval/external';
+import { logTag } from '../../../../lib/logger';
 
 type EWeLinkButtonPressMessage<A extends number> = EWeLinkUpdateMessage<{
 	trigTime: string;

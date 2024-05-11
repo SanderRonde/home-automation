@@ -1,4 +1,4 @@
-import { AllModules, ModuleConfig } from '../../../@server/modules';
+import { AllModules, ModuleConfig } from '../../../app/server/modules';
 
 export function initSecretModule(config: ModuleConfig): Promise<void>;
 

@@ -1,4 +1,4 @@
-import { getEnv } from '@server/lib/io';
+import { getEnv } from './io';
 import * as path from 'path';
 
 const ROOT = path.join(__dirname, '../../../');

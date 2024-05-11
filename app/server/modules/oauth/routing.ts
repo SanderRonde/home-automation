@@ -3,15 +3,15 @@ import {
 	ResponseLike,
 	attachSourcedMessage,
 	attachMessage,
-} from '@server/lib/logger';
-import { authorizationServer } from '@server/modules/oauth/authorization';
-import { CLIENT_FOLDER } from '@server/lib/constants';
-import { validateOAUthUsers } from '@server/modules/oauth/oauth-users';
-import { SettablePromise } from '@server/lib/util';
-import { createRouter } from '@server/lib/api';
-import { debug } from '@server/lib/logger';
+} from '../../lib/logger';
+import { authorizationServer } from './authorization';
+import { CLIENT_FOLDER } from '../../lib/constants';
+import { validateOAUthUsers } from './oauth-users';
+import { SettablePromise } from '../../lib/util';
+import { createRouter } from '../../lib/api';
+import { debug } from '../../lib/logger';
 import { ModuleConfig, OAuth } from '..';
-import { getEnv } from '@server/lib/io';
+import { getEnv } from '../../lib/io';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 

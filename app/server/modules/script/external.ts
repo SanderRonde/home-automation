@@ -1,6 +1,6 @@
-import { createExternalClass } from '@server/lib/external';
-import { Config } from '@server/app';
-import { APIHandler } from '@server/modules/script/api';
+import { createExternalClass } from '../../lib/external';
+import { Config } from '../../app';
+import { APIHandler } from './api';
 import { Script } from '.';
 
 export class ExternalHandler extends createExternalClass(true) {

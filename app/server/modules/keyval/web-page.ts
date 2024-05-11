@@ -1,7 +1,7 @@
 import express = require('express');
-import { errorHandle, authCookie, upgradeToHTTPS } from '@server/lib/decorators';
-import { ResponseLike } from '@server/lib/logger';
-import { Database } from '@server/lib/db';
+import { errorHandle, authCookie, upgradeToHTTPS } from '../../lib/decorators';
+import { ResponseLike } from '../../lib/logger';
+import { Database } from '../../lib/db';
 import { KeyVal } from '.';
 
 async function keyvalHTML(json: string, randomNum: number, res: ResponseLike) {

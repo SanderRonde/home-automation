@@ -13,24 +13,24 @@ import {
 	GOOGLE_SMART_HOME_DEVICE_TRAITS,
 	SmartHomeDeviceUpdate,
 	SMART_HOME_DEVICE_TRAIT,
-} from '@server/lib/smart-home/smart-home-types';
+} from '../../../lib/smart-home/smart-home-types';
 import {
 	sharedDisconnect,
 	sharedExecute,
 	sharedQuery,
 	sharedSync,
 	sharedUseradd,
-} from '@server/modules/smart-home/state/shared';
-import { SMART_HOME_COMMAND } from '@server/lib/smart-home/smart-home-types';
+} from './shared';
+import { SMART_HOME_COMMAND } from '../../../lib/smart-home/smart-home-types';
 import { BuiltinFrameworkMetadata } from 'actions-on-google/dist/framework';
-import { flatMap, flatten, fromEntries } from '@server/lib/util';
-import { GOOGLE_KEY, homeGraph } from '@server/modules/smart-home/home-graph';
-import { currentUsers } from '@server/modules/smart-home/home-graph/users';
-import { flattenObject } from '@server/lib/util';
-import { warning } from '@server/lib/logger';
-import { getAuth } from '@server/modules/oauth/helpers';
-import { smartHomeLogger } from '@server/modules/smart-home/shared';
-import { time } from '@server/lib/timer';
+import { flatMap, flatten, fromEntries } from '../../../lib/util';
+import { GOOGLE_KEY, homeGraph } from '../home-graph';
+import { currentUsers } from '../home-graph/users';
+import { flattenObject } from '../../../lib/util';
+import { warning } from '../../../lib/logger';
+import { getAuth } from '../../oauth/helpers';
+import { smartHomeLogger } from '../shared';
+import { time } from '../../../lib/timer';
 import { homegraph_v1 } from 'googleapis';
 
 export async function googleSync(

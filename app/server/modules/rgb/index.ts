@@ -1,10 +1,10 @@
-import { initListeners } from '@server/modules/rgb/init-listeners';
-import { ExternalHandler } from '@server/modules/rgb/external';
-import { scanRGBControllers } from '@server/modules/rgb/scan';
-import { initRouting } from '@server/modules/rgb/routing';
-import { ModuleMeta } from '@server/modules/meta';
+import { initListeners } from './init-listeners';
+import { ExternalHandler } from './external';
+import { scanRGBControllers } from './scan';
+import { initRouting } from './routing';
+import { ModuleMeta } from '../meta';
 import { ModuleConfig } from '..';
-import { Bot } from '@server/modules/rgb/bot';
+import { Bot } from './bot';
 
 export const RGB = new (class RGB extends ModuleMeta {
 	public name = 'rgb';

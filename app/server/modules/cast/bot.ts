@@ -1,9 +1,9 @@
-import { BotStateBase } from '@server/lib/bot-state';
-import { MatchParameters } from '@server/modules/bot/message';
-import { MatchResponse } from '@server/modules/bot/types';
-import { ExternalHandler } from '@server/modules/cast/external';
-import { LOCAL_URLS } from '@server/modules/cast/local-urls';
-import { PASTAS } from '@server/modules/cast/pasta';
+import { BotStateBase } from '../../lib/bot-state';
+import { MatchParameters } from '../bot/message';
+import { MatchResponse } from '../bot/types';
+import { ExternalHandler } from './external';
+import { LOCAL_URLS } from './local-urls';
+import { PASTAS } from './pasta';
 
 export class Bot extends BotStateBase {
 	public static readonly commands = {

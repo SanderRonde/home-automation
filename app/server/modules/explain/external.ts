@@ -1,7 +1,7 @@
-import { createExternalClass } from '@server/lib/external';
-import { Action } from '@server/modules/explain/explaining';
-import { APIHandler } from '@server/modules/explain/api';
-import { Auth } from '@server/modules/auth';
+import { createExternalClass } from '../../lib/external';
+import { Action } from './explaining';
+import { APIHandler } from './api';
+import { Auth } from '../auth';
 
 export class ExternalHandler extends createExternalClass(false) {
 	public requiresInit = false;

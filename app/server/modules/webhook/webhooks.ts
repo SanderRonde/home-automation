@@ -1,6 +1,6 @@
-import { attachMessage, LogObj } from '@server/lib/logger';
-import { createHookables } from '@server/lib/util';
-import webhooks from '@server/config/webhook';
+import { attachMessage, LogObj } from '../../lib/logger';
+import { createHookables } from '../../lib/util';
+import webhooks from '../../config/webhook';
 import { Webhook } from '.';
 import chalk from 'chalk';
 

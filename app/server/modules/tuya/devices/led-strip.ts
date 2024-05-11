@@ -1,3 +1,3 @@
-import { TuyaDevice } from '@server/modules/tuya/devices/device';
+import { TuyaDevice } from './device';
 
 export class TuyaLedStrip extends TuyaDevice {}

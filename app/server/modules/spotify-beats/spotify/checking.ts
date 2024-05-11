@@ -2,12 +2,12 @@ import {
 	BEAT_CACHE_CLEAR_INTERVAL,
 	PLAYBACK_CLOSE_RANGE,
 	PLAYSTATE_CHECK_INTERVAL,
-} from '@server/lib/constants';
-import { getPlayState, getSongInfo, PlaybackState } from '@server/modules/spotify-beats/spotify/api';
-import { SpotifyTypes } from '@server/types/spotify';
-import { BeatChanges, FullState } from '@server/modules/spotify-beats/types';
-import { notifyChanges } from '@server/modules/spotify-beats/transfer';
-import { wait } from '@server/lib/util';
+} from '../../../lib/constants';
+import { getPlayState, getSongInfo, PlaybackState } from './api';
+import { SpotifyTypes } from '../../../types/spotify';
+import { BeatChanges, FullState } from '../types';
+import { notifyChanges } from '../transfer';
+import { wait } from '../../../lib/util';
 
 let active = false;
 

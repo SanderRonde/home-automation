@@ -1,7 +1,7 @@
-import { addListener, removeListener } from '@server/modules/keyval/get-set-listener';
-import { createExternalClass } from '@server/lib/external';
-import { LogObj } from '@server/lib/logger';
-import { APIHandler } from '@server/modules/keyval/api';
+import { addListener, removeListener } from './get-set-listener';
+import { createExternalClass } from '../../lib/external';
+import { LogObj } from '../../lib/logger';
+import { APIHandler } from './api';
 import { KeyVal } from '.';
 
 export class ExternalHandler extends createExternalClass(true) {

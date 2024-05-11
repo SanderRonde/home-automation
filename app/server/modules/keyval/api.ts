@@ -2,16 +2,16 @@ import {
 	ResponseLike,
 	attachSourcedMessage,
 	attachMessage,
-} from '@server/lib/logger';
+} from '../../lib/logger';
 import {
 	errorHandle,
 	requireParams,
 	authAll,
 	auth,
-} from '@server/lib/decorators';
-import { addListener, removeListener, update } from '@server/modules/keyval/get-set-listener';
-import { Database } from '@server/lib/db';
-import { str } from '@server/modules/keyval/helpers';
+} from '../../lib/decorators';
+import { addListener, removeListener, update } from './get-set-listener';
+import { Database } from '../../lib/db';
+import { str } from './helpers';
 import { KeyVal } from '.';
 
 type MultiValueResolver<V> = (values: V[]) => V;

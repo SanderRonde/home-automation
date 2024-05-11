@@ -2,9 +2,9 @@ import {
 	EWeLinkInitable,
 	EWeLinkSharedConfig,
 	EWeLinkWebSocketMessage,
-} from '@server/modules/ewelink/devices/shared';
-import { ExternalHandler } from '@server/modules/movement/external';
-import { logTag } from '@server/lib/logger';
+} from '../shared';
+import { ExternalHandler } from '../../../movement/external';
+import { logTag } from '../../../../lib/logger';
 
 export class EwelinkMovement extends EWeLinkInitable {
 	private _movementExternal!: ExternalHandler;

@@ -2,11 +2,11 @@ import Switchbot, {
 	SwitchBotDevice,
 	SwitchbotAdvertisement,
 } from 'node-switchbot';
-import { createSwitchbots } from '@server/config/switchbot';
-import { registerExitHandler } from '@server/lib/shutdown';
-import { SwitchbotDeviceBase } from '@server/modules/switchbot/devices/devices';
-import { EventEmitter } from '@server/lib/event-emitter';
-import { logTag } from '@server/lib/logger';
+import { createSwitchbots } from '../../config/switchbot';
+import { registerExitHandler } from '../../lib/shutdown';
+import { SwitchbotDeviceBase } from './devices/devices';
+import { EventEmitter } from '../../lib/event-emitter';
+import { logTag } from '../../lib/logger';
 import { AllModules } from '..';
 
 export async function scanSwitchbots(

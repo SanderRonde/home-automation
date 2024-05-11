@@ -1,6 +1,6 @@
-import { MAX_PART_LEN } from '@server/modules/cast/constants';
-import { LogObj } from '@server/lib/logger';
-import { Cast } from '@server/modules/cast/index';
+import { MAX_PART_LEN } from './constants';
+import { LogObj } from '../../lib/logger';
+import { Cast } from './index';
 
 function splitTTSParts(text: string) {
 	const words = text.split(' ');

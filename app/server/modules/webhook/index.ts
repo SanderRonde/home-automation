@@ -1,6 +1,6 @@
-import { ExternalHandler } from '@server/modules/webhook/external';
-import { initRouting } from '@server/modules/webhook/routing';
-import { ModuleMeta } from '@server/modules/meta';
+import { ExternalHandler } from './external';
+import { initRouting } from './routing';
+import { ModuleMeta } from '../meta';
 import { ModuleConfig } from '..';
 
 export const Webhook = new (class Webhook extends ModuleMeta {

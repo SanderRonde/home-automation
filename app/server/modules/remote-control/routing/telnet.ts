@@ -1,7 +1,7 @@
-import { attachMessage, LogObj, logTag } from '@server/lib/logger';
+import { attachMessage, LogObj, logTag } from '../../../lib/logger';
 import telnet_client, * as TelnetClient from 'telnet-client';
-import { getEnv } from '@server/lib/io';
-import { Commands } from '@server/modules/remote-control/types';
+import { getEnv } from '../../../lib/io';
+import { Commands } from '../types';
 import chalk from 'chalk';
 
 let TELNET_IPS: [string, string, string][] | null;

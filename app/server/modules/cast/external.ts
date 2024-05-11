@@ -1,6 +1,6 @@
-import { createExternalClass } from '@server/lib/external';
+import { createExternalClass } from '../../lib/external';
 import * as castv2 from 'castv2-player';
-import { APIHandler } from '@server/modules/cast/api';
+import { APIHandler } from './api';
 import { Cast } from '.';
 
 export class ExternalHandler extends createExternalClass(true) {

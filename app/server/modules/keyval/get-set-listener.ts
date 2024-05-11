@@ -1,9 +1,9 @@
-import { attachMessage, LogObj } from '@server/lib/logger';
-import { SettablePromise } from '@server/lib/util';
-import groups from '@server/config/keyval-groups';
-import { KEYVAL_GROUP_EFFECT } from '@server/modules/keyval/types';
-import { ExternalHandler } from '@server/modules/keyval/external';
-import { Database } from '@server/lib/db';
+import { attachMessage, LogObj } from '../../lib/logger';
+import { SettablePromise } from '../../lib/util';
+import groups from '../../config/keyval-groups';
+import { KEYVAL_GROUP_EFFECT } from './types';
+import { ExternalHandler } from './external';
+import { Database } from '../../lib/db';
 
 const _listeners: Map<
 	number,

@@ -1,22 +1,22 @@
-import smartHomeConfig from '@server/config/smart-home';
+import smartHomeConfig from '../../../config/smart-home';
 
 import {
 	SECRETS_FOLDER,
 	SMART_HOME_BATCH_MAX_TIMEOUT,
 	SMART_HOME_BATCH_MIN_TIMEOUT,
-} from '@server/lib/constants';
+} from '../../../lib/constants';
 import {
 	SmartHomeDeviceUpdate,
 	SMART_HOME_DEVICE_TRAIT,
-} from '@server/lib/smart-home/smart-home-types';
-import { Batcher, createHookables, SettablePromise } from '@server/lib/util';
+} from '../../../lib/smart-home/smart-home-types';
+import { Batcher, createHookables, SettablePromise } from '../../../lib/util';
 import { homegraph, homegraph_v1 } from '@googleapis/homegraph';
-import { currentUsers, initHomeGraphUsers } from '@server/modules/smart-home/home-graph/users';
-import { dispatchSamsungUsers } from '@server/modules/smart-home/state/samsung';
-import { dispatchGoogleUsers } from '@server/modules/smart-home/state/google';
-import { Database } from '@server/lib/db';
+import { currentUsers, initHomeGraphUsers } from './users';
+import { dispatchSamsungUsers } from '../state/samsung';
+import { dispatchGoogleUsers } from '../state/google';
+import { Database } from '../../../lib/db';
 import { google } from 'googleapis';
-import { SmartHome } from '@server/modules/smart-home';
+import { SmartHome } from '../';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 

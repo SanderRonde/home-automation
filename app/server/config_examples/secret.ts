@@ -1,8 +1,7 @@
-import { AllModules, ModuleConfig, Secret } from '@server/modules';
+import { AllModules, ModuleConfig, Secret } from '../modules';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function initSecretModule(
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	_config: ModuleConfig<typeof Secret>
 ): Promise<void> {
 	return Promise.resolve();

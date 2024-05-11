@@ -12,15 +12,15 @@ import {
 	SAMSUNG_SMART_HOME_DEVICE_TYPE,
 	SmartHomeGoogleQuery,
 	SmartHomeSamsungQuery,
-} from '@server/lib/smart-home/smart-home-types';
-import { SwitchbotCurtain } from '@server/modules/switchbot/devices/curtain';
-import { TEMPERATURE_REPORT_MAX_TIMEOUT } from '@server/lib/constants';
-import { LED_NAME } from '@server/config/led-config';
-import { ResponseLike, warning } from '@server/lib/logger';
-import { ModuleHookables } from '@server/modules';
-import { captureTime, time } from '@server/lib/timer';
-import { Batcher, pad } from '@server/lib/util';
-import { Color } from '@server/lib/color';
+} from './smart-home-types';
+import { SwitchbotCurtain } from '../../modules/switchbot/devices/curtain';
+import { TEMPERATURE_REPORT_MAX_TIMEOUT } from '../constants';
+import { LED_NAME } from '../../config/led-config';
+import { ResponseLike, warning } from '../logger';
+import { ModuleHookables } from '../../modules';
+import { captureTime, time } from '../timer';
+import { Batcher, pad } from '../util';
+import { Color } from '../color';
 
 export type QueryReturnType<
 	TRAIT extends SMART_HOME_DEVICE_TRAIT = SMART_HOME_DEVICE_TRAIT,

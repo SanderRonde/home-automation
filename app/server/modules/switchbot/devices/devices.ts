@@ -1,9 +1,9 @@
 import { SwitchbotAdvertisement } from 'node-switchbot';
-import { debounce, wait } from '@server/lib/util';
-import { SwitchbotApiDevice } from '@server/modules/switchbot/scanner';
-import { logTag } from '@server/lib/logger';
-import { SwitchbotCurtain } from '@server/modules/switchbot/devices/curtain';
-import { AllModules } from '@server/modules';
+import { debounce, wait } from '../../../lib/util';
+import { SwitchbotApiDevice } from '../scanner';
+import { logTag } from '../../../lib/logger';
+import { SwitchbotCurtain } from './curtain';
+import { AllModules } from '../..';
 
 export type SwitchbotDevice = SwitchbotCurtain;
 

@@ -1,6 +1,6 @@
-import { createExternalClass } from '@server/lib/external';
-import { messageHandlerInstance } from '@server/modules/bot/routing';
-import { RESPONSE_TYPE } from '@server/modules/bot/types';
+import { createExternalClass } from '../../lib/external';
+import { messageHandlerInstance } from './routing';
+import { RESPONSE_TYPE } from './types';
 
 export class ExternalHandler extends createExternalClass(true) {
 	public async sendMessage(

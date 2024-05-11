@@ -1,8 +1,8 @@
-import { LED_NAME } from '@server/config/led-config';
+import { LED_NAME } from '../../../config/led-config';
 import { BuiltinPatterns } from 'magic-home';
-import { Color } from '@server/lib/color';
-import { XHR } from '@server/lib/util';
-import { RGBClient } from '@server/modules/rgb/client/RGBClient';
+import { Color } from '../../../lib/color';
+import { XHR } from '../../../lib/util';
+import { RGBClient } from './RGBClient';
 
 export class HexClient extends RGBClient {
 	public setWhiteForPower = false;

@@ -1,7 +1,7 @@
-import { attachSourcedMessage, LogObj, ResponseLike } from '@server/lib/logger';
-import { auth, errorHandle, requireParams } from '@server/lib/decorators';
-import { Action, getInTimeWindow, getLastX } from '@server/modules/explain/explaining';
-import { Explain } from '@server/modules/explain/index';
+import { attachSourcedMessage, LogObj, ResponseLike } from '../../lib/logger';
+import { auth, errorHandle, requireParams } from '../../lib/decorators';
+import { Action, getInTimeWindow, getLastX } from './explaining';
+import { Explain } from './index';
 
 export class APIHandler {
 	private static async _castActions(

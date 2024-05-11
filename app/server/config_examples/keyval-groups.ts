@@ -1,4 +1,4 @@
-import { GroupConfig, KEYVAL_GROUP_EFFECT } from '@server/modules/keyval/types';
+import { GroupConfig, KEYVAL_GROUP_EFFECT } from '../modules/keyval/types';
 
 // When the inital key is triggered, the others are updated
 // to that value (or the inverted value) as well

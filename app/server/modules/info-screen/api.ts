@@ -1,8 +1,8 @@
-import { ExternalTemperatureResult, ExternalWeatherTimePeriod } from '@server/modules/info-screen/types';
-import { errorHandle, requireParams } from '@server/lib/decorators';
-import { ResponseLike, attachMessage } from '@server/lib/logger';
-import { getInternal, getExternal } from '@server/modules/info-screen/temperature';
-import { CalendarEvent, getEvents } from '@server/modules/info-screen/calendar';
+import { ExternalTemperatureResult, ExternalWeatherTimePeriod } from './types';
+import { errorHandle, requireParams } from '../../lib/decorators';
+import { ResponseLike, attachMessage } from '../../lib/logger';
+import { getInternal, getExternal } from './temperature/';
+import { CalendarEvent, getEvents } from './calendar';
 
 export class APIHandler {
 	@errorHandle

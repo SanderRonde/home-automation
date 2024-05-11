@@ -9,9 +9,9 @@
 import {
 	externalAuthenticate,
 	externalCheckCookie,
-} from '@server/modules/auth/helpers';
-import { KeyError, AuthError } from '@server/lib/errors';
-import { attachMessage } from '@server/lib/logger';
+} from '../modules/auth/helpers';
+import { KeyError, AuthError } from './errors';
+import { attachMessage } from './logger';
 import * as express from 'express';
 import chalk from 'chalk';
 

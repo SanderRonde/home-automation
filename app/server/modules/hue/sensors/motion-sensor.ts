@@ -1,4 +1,4 @@
-import { EventEmitter } from '@server/lib/event-emitter';
+import { EventEmitter } from '../../../lib/event-emitter';
 import { model } from '@peter-murray/hue-bridge-model';
 import { Api } from 'node-hue-api/dist/esm/api/Api';
 

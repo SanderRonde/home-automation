@@ -1,6 +1,6 @@
-import { logTag } from '@server/lib/logger';
-import { Database } from '@server/lib/db';
-import { createSpotifyAPI } from '@server/modules/spotify-beats/spotify/api';
+import { logTag } from '../../../lib/logger';
+import { Database } from '../../../lib/db';
+import { createSpotifyAPI } from './api';
 
 export async function initSpotify(db: Database): Promise<void> {
 	const api = createSpotifyAPI(db);

@@ -1,4 +1,4 @@
-import { logFirst } from '@server/lib/logger';
+import { logFirst } from '../../lib/logger';
 import chalk from 'chalk';
 import { Bot } from '.';
 

@@ -2,13 +2,13 @@ import {
 	QueryDatabaseParameters,
 	SearchResponse,
 } from '@notionhq/client/build/src/api-endpoints';
-import { NOTION_GEOCODE_UPDATE_INTERVAL } from '@server/lib/constants';
-import { getAllForQuery, notionRequest } from '@server/modules/notion/client';
-import { asyncSetInterval } from '@server/lib/util';
-import { captureTime } from '@server/lib/timer';
+import { NOTION_GEOCODE_UPDATE_INTERVAL } from '../../lib/constants';
+import { getAllForQuery, notionRequest } from './client';
+import { asyncSetInterval } from '../../lib/util';
+import { captureTime } from '../../lib/timer';
 import { Client } from '@notionhq/client';
-import { logTag } from '@server/lib/logger';
-import { WithAuth } from '@server/modules/notion/types';
+import { logTag } from '../../lib/logger';
+import { WithAuth } from './types';
 
 const geocodeLocationRegex = /(.*) \(#location\)/;
 

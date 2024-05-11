@@ -1,8 +1,8 @@
-import { LED_NAME } from '@server/config/led-config';
-import { LedEffect } from '@server/modules/rgb/effect-config';
-import { Color } from '@server/lib/color';
-import { XHR } from '@server/lib/util';
-import { RGBClient } from '@server/modules/rgb/client/RGBClient';
+import { LED_NAME } from '../../../config/led-config';
+import { LedEffect } from '../effect-config';
+import { Color } from '../../../lib/color';
+import { XHR } from '../../../lib/util';
+import { RGBClient } from './RGBClient';
 
 export class RingClient extends RGBClient {
 	public setWhiteForPower = false;

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 
-import { EwelinkPowerBase } from '@server/modules/ewelink/devices/power/base-power';
+import { EwelinkPowerBase } from './base-power';
 
 export interface EwelinkPowerParams {
 	switch?: 'on' | 'off';

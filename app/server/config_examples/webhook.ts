@@ -1,5 +1,5 @@
-import { WebHookConfig } from '@server/modules/webhook/types';
-import { ModuleHookables } from '@server/modules';
+import { WebHookConfig } from '../modules/webhook/types';
+import { ModuleHookables } from '../modules';
 
 export default {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars

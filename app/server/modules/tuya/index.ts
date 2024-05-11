@@ -1,6 +1,6 @@
-import { linkTuyaDevices } from '@server/config/tuya';
-import { TuyaDevice } from '@server/modules/tuya/devices/device';
-import { ModuleMeta } from '@server/modules/meta';
+import { linkTuyaDevices } from '../../config/tuya';
+import { TuyaDevice } from './devices/device';
+import { ModuleMeta } from '../meta';
 import { ModuleConfig } from '..';
 
 /**

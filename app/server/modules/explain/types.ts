@@ -1,4 +1,4 @@
-import { LogObj } from '@server/lib/logger';
+import { LogObj } from '../../lib/logger';
 
 export type ExplainHook = (
 	description: string,

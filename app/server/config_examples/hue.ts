@@ -1,5 +1,5 @@
-import { MotionSensor } from '@server/modules/hue/devices';
-import { AllModules } from '@server/modules';
+import { MotionSensor } from '../../../app/server/modules/hue/devices';
+import { AllModules } from '../../../app/server/modules';
 import { Api } from 'node-hue-api/dist/esm/api/Api';
 
 export async function linkHueDevices(

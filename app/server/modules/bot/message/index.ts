@@ -4,19 +4,19 @@ import {
 	TelegramMessage,
 	TelegramReq,
 	TelegramText,
-} from '@server/modules/bot/types';
+} from '../types';
 import {
 	attachMessage,
 	log,
 	LogObj,
 	logOutgoingReq,
 	ResponseLike,
-} from '@server/lib/logger';
-import { BotStateBase, Matchable } from '@server/lib/bot-state';
-import { ChatState, StateKeeper } from '@server/modules/bot/message/state-keeping';
-import { TELEGRAM_API } from '@server/lib/constants';
-import { Database } from '@server/lib/db';
-import { BOT_NAME } from '@server/modules/bot/constants';
+} from '../../../lib/logger';
+import { BotStateBase, Matchable } from '../../../lib/bot-state';
+import { ChatState, StateKeeper } from './state-keeping';
+import { TELEGRAM_API } from '../../../lib/constants';
+import { Database } from '../../../lib/db';
+import { BOT_NAME } from '../constants';
 import * as https from 'https';
 import chalk from 'chalk';
 import { Bot } from '..';

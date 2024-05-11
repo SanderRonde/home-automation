@@ -1,5 +1,5 @@
-import { SettablePromise } from '@server/lib/util';
-import { smartHomeLogger } from '@server/modules/smart-home/shared';
+import { SettablePromise } from '../../../lib/util';
+import { smartHomeLogger } from '../shared';
 import { db } from '.';
 
 export const currentUsers = new SettablePromise<{

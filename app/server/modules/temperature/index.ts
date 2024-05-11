@@ -1,10 +1,10 @@
-import { ExternalHandler } from '@server/modules/temperature/external';
-import { Schema } from '@server/lib/sql-db';
-import { initRouting } from '@server/modules/temperature/routing';
-import { getEnv } from '@server/lib/io';
-import { ModuleMeta } from '@server/modules/meta';
+import { ExternalHandler } from './external';
+import { Schema } from '../../lib/sql-db';
+import { initRouting } from './routing';
+import { getEnv } from '../../lib/io';
+import { ModuleMeta } from '../meta';
 import { ModuleConfig } from '..';
-import { Bot } from '@server/modules/temperature/bot';
+import { Bot } from './bot';
 
 export const Temperature = new (class Temperature extends ModuleMeta {
 	public name = 'temperature';

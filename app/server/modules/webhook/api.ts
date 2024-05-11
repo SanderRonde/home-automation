@@ -1,6 +1,6 @@
-import { errorHandle, requireParams, authAll } from '@server/lib/decorators';
-import { ResponseLike, attachSourcedMessage } from '@server/lib/logger';
-import { triggerWebhooks } from '@server/modules/webhook/webhooks';
+import { errorHandle, requireParams, authAll } from '../../lib/decorators';
+import { ResponseLike, attachSourcedMessage } from '../../lib/logger';
+import { triggerWebhooks } from './webhooks';
 import { Webhook } from '.';
 
 export class APIHandler {

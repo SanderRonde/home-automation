@@ -2,9 +2,9 @@ import {
 	initRGBListeners,
 	LED_KEYVAL_MAP,
 	LED_NAME,
-} from '@server/config/led-config';
-import { LogObj, attachSourcedMessage } from '@server/lib/logger';
-import { getLed } from '@server/modules/rgb/clients';
+} from '../../config/led-config';
+import { LogObj, attachSourcedMessage } from '../../lib/logger';
+import { getLed } from './clients';
 import chalk from 'chalk';
 import { RGB } from '.';
 

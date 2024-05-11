@@ -1,6 +1,6 @@
-import { auth, errorHandle, requireParams } from '@server/lib/decorators';
-import { ResponseLike, attachMessage } from '@server/lib/logger';
-import { PressureValueKeeper } from '@server/modules/pressure/values';
+import { auth, errorHandle, requireParams } from '../../lib/decorators';
+import { ResponseLike, attachMessage } from '../../lib/logger';
+import { PressureValueKeeper } from './values';
 
 export class APIHandler {
 	public constructor(private readonly _valueKeeper: PressureValueKeeper) {}

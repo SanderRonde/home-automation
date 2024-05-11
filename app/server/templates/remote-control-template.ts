@@ -1,4 +1,4 @@
-import { html } from '@server/templates/template-join';
+import { html } from './template-join';
 
 export function remoteControlHTML(randomNum: number): string {
 	// This is just here for syntax highlighting

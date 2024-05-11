@@ -1,8 +1,8 @@
-import { BotStateBase } from '@server/lib/bot-state';
-import { attachMessage } from '@server/lib/logger';
-import { MatchParameters } from '@server/modules/bot/message';
-import { MatchResponse } from '@server/modules/bot/types';
-import { refreshClients } from '@server/modules/info-screen/routing';
+import { BotStateBase } from '../../lib/bot-state';
+import { attachMessage } from '../../lib/logger';
+import { MatchParameters } from '../bot/message';
+import { MatchResponse } from '../bot/types';
+import { refreshClients } from './routing';
 
 export class Bot extends BotStateBase {
 	public static readonly commands = {

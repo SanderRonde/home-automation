@@ -1,11 +1,11 @@
-import { logReq, reportReqError } from '@server/lib/logger';
-import { BaseModuleConfig } from '@server/modules';
+import { logReq, reportReqError } from './logger';
+import { BaseModuleConfig } from '../modules';
 import cookieParser from 'cookie-parser';
 import serveStatic from 'serve-static';
 import * as Sentry from '@sentry/node';
 import bodyParser from 'body-parser';
 import express from 'express';
-import { getEnv } from '@server/lib/io';
+import { getEnv } from './io';
 import * as path from 'path';
 import pm2 from '@pm2/io';
 import chalk from 'chalk';

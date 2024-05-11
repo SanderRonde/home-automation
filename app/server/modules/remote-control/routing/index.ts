@@ -1,10 +1,10 @@
-import { listenAny, removeListener } from '@server/modules/remote-control/get-set-listener';
-import { attachMessage } from '@server/lib/logger';
-import { createRouter } from '@server/lib/api';
-import { WebPageHandler } from '@server/modules/remote-control/web-page';
-import { sendMessage } from '@server/modules/remote-control/routing/telnet';
-import { ModuleConfig } from '@server/modules';
-import { APIHandler } from '@server/modules/remote-control/api';
+import { listenAny, removeListener } from '../get-set-listener';
+import { attachMessage } from '../../../lib/logger';
+import { createRouter } from '../../../lib/api';
+import { WebPageHandler } from '../web-page';
+import { sendMessage } from './telnet';
+import { ModuleConfig } from '../..';
+import { APIHandler } from '../api';
 import { RemoteControl } from '..';
 
 export function initRouting({

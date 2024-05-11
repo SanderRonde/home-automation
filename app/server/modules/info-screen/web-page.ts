@@ -1,5 +1,5 @@
-import { errorHandle } from '@server/lib/decorators';
-import { ResponseLike } from '@server/lib/logger';
+import { errorHandle } from '../../lib/decorators';
+import { ResponseLike } from '../../lib/logger';
 
 function infoScreenHTML(randomNum: number): string {
 	return `<!DOCTYPE HTML>

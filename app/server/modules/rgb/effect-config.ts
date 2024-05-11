@@ -1,4 +1,4 @@
-import { Color } from '@server/lib/color';
+import { Color } from '../../lib/color';
 
 export enum MOVING_STATUS {
 	OFF = 0,

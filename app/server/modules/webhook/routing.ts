@@ -1,5 +1,5 @@
-import { createRouter } from '@server/lib/api';
-import { APIHandler } from '@server/modules/webhook/api';
+import { createRouter } from '../../lib/api';
+import { APIHandler } from './api';
 import { ModuleConfig } from '..';
 import { Webhook } from '.';
 
