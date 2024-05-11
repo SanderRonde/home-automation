@@ -19,7 +19,7 @@ export function initRouting({
 	randomNum,
 	apiHandler,
 	websocketSim,
-}: ModuleConfig & { apiHandler: APIHandler }): void {
+}: ModuleConfig<typeof KeyVal> & { apiHandler: APIHandler }): void {
 	const webpageHandler = new WebPageHandler({ randomNum, db });
 
 	const router = createRouter(KeyVal, apiHandler);

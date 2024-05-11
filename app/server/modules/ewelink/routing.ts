@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import eWelink from '../../../../temp/ewelink-api-next';
+import { EWeLink, ModuleConfig } from '..';
 import { Database } from '../../lib/db';
 import { getEnv } from '../../lib/io';
-import { ModuleConfig } from '..';
 
 export function initRouting(
-	{ app, db }: ModuleConfig,
+	{ app, db }: ModuleConfig<typeof EWeLink>,
 	api: InstanceType<typeof eWelink.WebAPI> | null
 ): void {
 	app.get('/ewelink/oauth/', (_, res) => {

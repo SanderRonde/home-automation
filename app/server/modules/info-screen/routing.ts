@@ -25,7 +25,7 @@ export function refreshClients(): number {
 	return clients.size;
 }
 
-export function initRouting(moduleConfig: ModuleConfig): void {
+export function initRouting(moduleConfig: ModuleConfig<typeof InfoScreen>): void {
 	const { config, randomNum } = moduleConfig;
 	const app = express() as AsyncExpressApplication;
 	const webpageHandler = new WebPageHandler({

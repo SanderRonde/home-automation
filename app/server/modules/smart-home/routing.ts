@@ -13,7 +13,9 @@ import { ModuleConfig, SmartHome } from '..';
 import { getEnv } from '../../lib/io';
 import * as express from 'express';
 
-export async function initRouting({ app }: ModuleConfig): Promise<void> {
+export async function initRouting({
+	app,
+}: ModuleConfig<typeof SmartHome>): Promise<void> {
 	const smartHomeApp = smarthome({});
 
 	smartHomeApp.onSync(googleSync);

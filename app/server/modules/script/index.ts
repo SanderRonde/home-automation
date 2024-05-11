@@ -4,7 +4,7 @@ import { ModuleMeta } from '../meta';
 import { ModuleConfig } from '..';
 import { Bot } from './bot';
 
-export const Script = new (class Meta extends ModuleMeta {
+export const Script = new (class Script extends ModuleMeta {
 	public name = 'script';
 
 	public get External() {
@@ -15,7 +15,7 @@ export const Script = new (class Meta extends ModuleMeta {
 		return Bot;
 	}
 
-	public init(config: ModuleConfig) {
+	public init(config: ModuleConfig<Script>) {
 		initRouting(config);
 	}
 })();

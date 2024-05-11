@@ -3,7 +3,7 @@ import { APIHandler } from './api';
 import { ModuleConfig } from '..';
 import { Movement } from '.';
 
-export function initRouting({ app }: ModuleConfig): void {
+export function initRouting({ app }: ModuleConfig<typeof Movement>): void {
 	const router = createRouter(Movement, APIHandler);
 	router.post('/:key', 'reportMovement');
 	router.use(app);

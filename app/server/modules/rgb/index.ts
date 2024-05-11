@@ -6,7 +6,7 @@ import { ModuleMeta } from '../meta';
 import { ModuleConfig } from '..';
 import { Bot } from './bot';
 
-export const RGB = new (class Meta extends ModuleMeta {
+export const RGB = new (class RGB extends ModuleMeta {
 	public name = 'rgb';
 
 	public setup!: Promise<void>;
@@ -19,7 +19,7 @@ export const RGB = new (class Meta extends ModuleMeta {
 		return Bot;
 	}
 
-	public async init(config: ModuleConfig) {
+	public async init(config: ModuleConfig<RGB>) {
 		await (this.setup = new Promise((resolve) => {
 			void (async () => {
 				void scanRGBControllers(true);

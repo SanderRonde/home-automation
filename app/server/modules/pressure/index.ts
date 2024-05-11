@@ -6,7 +6,7 @@ import { ModuleMeta } from '../meta';
 import { ModuleConfig } from '..';
 import { Bot } from './bot';
 
-export const Pressure = new (class Meta extends ModuleMeta {
+export const Pressure = new (class Pressure extends ModuleMeta {
 	public name = 'pressure';
 
 	public get External() {
@@ -17,7 +17,7 @@ export const Pressure = new (class Meta extends ModuleMeta {
 		return Bot;
 	}
 
-	public async init(config: ModuleConfig): Promise<void> {
+	public async init(config: ModuleConfig<Pressure>): Promise<void> {
 		const stateKeeper = new PressureStateKeeper(config.db);
 		const valueKeeper = new PressureValueKeeper(stateKeeper);
 

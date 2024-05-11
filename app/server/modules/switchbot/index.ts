@@ -4,7 +4,7 @@ import { scanSwitchbots } from './scanner';
 import { ModuleMeta } from '../meta';
 import { ModuleConfig } from '..';
 
-export const SwitchBot = new (class Meta extends ModuleMeta {
+export const SwitchBot = new (class SwitchBot extends ModuleMeta {
 	private _bots: SwitchbotDeviceBase[] = [];
 	public name = 'switchbot';
 
@@ -12,7 +12,7 @@ export const SwitchBot = new (class Meta extends ModuleMeta {
 		return ExternalHandler;
 	}
 
-	public init({ modules }: ModuleConfig) {
+	public init({ modules }: ModuleConfig<SwitchBot>) {
 		void (async () => {
 			this._bots = await scanSwitchbots(modules);
 			await ExternalHandler.init(this._bots);

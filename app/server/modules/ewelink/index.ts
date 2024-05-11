@@ -5,7 +5,7 @@ import { getEnv } from '../../lib/io';
 import { ModuleMeta } from '../meta';
 import { ModuleConfig } from '..';
 
-export const EWeLink = new (class Meta extends ModuleMeta {
+export const EWeLink = new (class EWeLink extends ModuleMeta {
 	private _ewelinkApiInstance: {
 		refreshWebsocket?(): Promise<void>;
 	} | null = null;
@@ -28,7 +28,7 @@ export const EWeLink = new (class Meta extends ModuleMeta {
 		return this.__api;
 	}
 
-	public init(config: ModuleConfig) {
+	public init(config: ModuleConfig<EWeLink>) {
 		initRouting(config, this._api);
 		void (async () => {
 			const modules = await this.modules;

@@ -5,7 +5,7 @@ import { APIHandler } from './api';
 import { ModuleConfig } from '..';
 import { RGB } from '.';
 
-export function initRouting({ app, randomNum }: ModuleConfig): void {
+export function initRouting({ app, randomNum }: ModuleConfig<typeof RGB>): void {
 	const router = createRouter(RGB, APIHandler);
 	router.post('/color', 'setColor');
 	router.post('/color/:color/:instensity?', 'setColor');

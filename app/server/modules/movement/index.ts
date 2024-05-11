@@ -4,14 +4,14 @@ import { initRouting } from './routing';
 import { ModuleMeta } from '../meta';
 import { ModuleConfig } from '..';
 
-export const Movement = new (class Meta extends ModuleMeta {
+export const Movement = new (class Movement extends ModuleMeta {
 	public name = 'movement';
 
 	public get External() {
 		return ExternalHandler;
 	}
 
-	public init(config: ModuleConfig) {
+	public init(config: ModuleConfig<Movement>) {
 		initRegister(config.db);
 		initRouting(config);
 

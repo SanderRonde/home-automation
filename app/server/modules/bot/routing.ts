@@ -33,7 +33,7 @@ function isFromTelegram(req: TelegramReq) {
 }
 
 export const messageHandlerInstance = new SettablePromise<MessageHandler>();
-export async function initRouting({ app, db }: ModuleConfig): Promise<void> {
+export async function initRouting({ app, db }: ModuleConfig<typeof Bot>): Promise<void> {
 	const secret = getEnv('SECRET_BOT', true);
 	messageHandlerInstance.set(await new MessageHandler(secret, db).init());
 

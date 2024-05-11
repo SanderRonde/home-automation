@@ -6,17 +6,17 @@ import { createClient } from './client';
 import { ModuleMeta } from '../meta';
 
 type Secret = {
-	init(config: ModuleConfig, client: Client): Promise<void>;
+	init(config: ModuleConfig<typeof Notion>, client: Client): Promise<void>;
 	start(
-		config: ModuleConfig,
+		config: ModuleConfig<typeof Notion>,
 		client: Client,
 		allModules: AllModules
 	): Promise<void>;
 };
 
-export const Notion = new (class Meta extends ModuleMeta {
+export const Notion = new (class Notion extends ModuleMeta {
 	private _client: Client | null = null;
-	private _config: ModuleConfig | null = null;
+	private _config: ModuleConfig<Notion> | null = null;
 
 	public name = 'notion';
 
@@ -33,7 +33,7 @@ export const Notion = new (class Meta extends ModuleMeta {
 		}
 	}
 
-	public async init(config: ModuleConfig) {
+	public async init(config: ModuleConfig<Notion>) {
 		this._client = createClient();
 		this._config = config;
 		if (!this._client) {

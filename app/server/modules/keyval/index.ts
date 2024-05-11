@@ -7,7 +7,7 @@ import { APIHandler } from './api';
 import { ModuleConfig } from '..';
 import { Bot } from './bot';
 
-export const KeyVal = new (class Meta extends ModuleMeta {
+export const KeyVal = new (class KeyVal extends ModuleMeta {
 	public name = 'keyval';
 
 	public get External() {
@@ -18,7 +18,7 @@ export const KeyVal = new (class Meta extends ModuleMeta {
 		return Bot;
 	}
 
-	public async init(config: ModuleConfig) {
+	public async init(config: ModuleConfig<KeyVal>) {
 		const { db } = config;
 		setDB(db);
 		const apiHandler = new APIHandler({ db });

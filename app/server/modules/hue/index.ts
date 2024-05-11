@@ -5,10 +5,10 @@ import { getEnv } from '../../lib/io';
 import { ModuleMeta } from '../meta';
 import { ModuleConfig } from '..';
 
-export const Hue = new (class Meta extends ModuleMeta {
+export const Hue = new (class Hue extends ModuleMeta {
 	public name = 'hue';
 
-	public init(config: ModuleConfig) {
+	public init(config: ModuleConfig<Hue>) {
 		// If you don't have a username, uncomment this line and run the server once
 		// Be sure to press the connect button before calling this!
 		// await createUser();

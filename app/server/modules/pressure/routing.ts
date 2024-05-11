@@ -6,7 +6,7 @@ import { ModuleConfig } from '..';
 import { Pressure } from '.';
 
 export function initRouting(
-	{ app, config }: ModuleConfig,
+	{ app, config }: ModuleConfig<typeof Pressure>,
 	valueKeeper: PressureValueKeeper
 ): void {
 	const apiHandler = new APIHandler(valueKeeper);

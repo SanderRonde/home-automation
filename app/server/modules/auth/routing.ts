@@ -7,7 +7,7 @@ import { ModuleConfig } from '..';
 import chalk from 'chalk';
 import { Auth } from '.';
 
-export function initRoutes({ app, config }: ModuleConfig): void {
+export function initRoutes({ app, config }: ModuleConfig<typeof Auth>): void {
 	app.post('/authid', (_req, res) => {
 		const id = String(genId());
 		if (config.log.secrets) {

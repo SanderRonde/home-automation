@@ -5,7 +5,7 @@ import { ModuleMeta } from '../meta';
 import { ModuleConfig } from '..';
 import { Bot } from './bot';
 
-export const Explain = new (class Meta extends ModuleMeta {
+export const Explain = new (class Explain extends ModuleMeta {
 	public name = 'explain';
 
 	public get External() {
@@ -16,7 +16,7 @@ export const Explain = new (class Meta extends ModuleMeta {
 		return Bot;
 	}
 
-	public init(config: ModuleConfig) {
+	public init(config: ModuleConfig<Explain>) {
 		initRouting({ ...config });
 		initHooks(config.modules);
 	}

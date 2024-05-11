@@ -7,7 +7,11 @@ import { ModuleConfig } from '../..';
 import { APIHandler } from '../api';
 import { RemoteControl } from '..';
 
-export function initRouting({ app, randomNum, websocket }: ModuleConfig): void {
+export function initRouting({
+	app,
+	randomNum,
+	websocket,
+}: ModuleConfig<typeof RemoteControl>): void {
 	const webpageHandler = new WebPageHandler(randomNum);
 
 	const router = createRouter(RemoteControl, APIHandler);

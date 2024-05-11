@@ -10,7 +10,7 @@ export function initRouting({
 	apiHandler,
 	randomNum,
 	detector,
-}: ModuleConfig & {
+}: ModuleConfig<typeof HomeDetector> & {
 	detector: Detector;
 	apiHandler: APIHandler;
 }): void {

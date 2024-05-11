@@ -10,7 +10,7 @@ import { ModuleConfig } from '..';
 import { Bot } from './bot';
 import chalk from 'chalk';
 
-export const HomeDetector = new (class Meta extends ModuleMeta {
+export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 	public name = 'home-detector';
 
 	public get External() {
@@ -36,7 +36,7 @@ export const HomeDetector = new (class Meta extends ModuleMeta {
 		});
 	}
 
-	public async init(config: ModuleConfig) {
+	public async init(config: ModuleConfig<HomeDetector>) {
 		const detector = new Detector({ db: config.db });
 		const apiHandler = new APIHandler({ detector });
 		Bot.init({

@@ -3,7 +3,7 @@ import { APIHandler } from './api';
 import { Explain } from './index';
 import { ModuleConfig } from '..';
 
-export function initRouting({ app }: ModuleConfig): void {
+export function initRouting({ app }: ModuleConfig<typeof Explain>): void {
 	const router = createRouter(Explain, APIHandler);
 	router.post('/time/:mins', 'getLastXMins');
 	router.post('/amount/:amount', 'getLastX');

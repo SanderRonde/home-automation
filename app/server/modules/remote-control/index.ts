@@ -4,7 +4,7 @@ import { ModuleMeta } from '../meta';
 import { ModuleConfig } from '..';
 import { Bot } from './bot';
 
-export const RemoteControl = new (class Meta extends ModuleMeta {
+export const RemoteControl = new (class RemoteControl extends ModuleMeta {
 	public name = 'remote-control';
 
 	public get External() {
@@ -15,7 +15,7 @@ export const RemoteControl = new (class Meta extends ModuleMeta {
 		return Bot;
 	}
 
-	public init(config: ModuleConfig) {
+	public init(config: ModuleConfig<RemoteControl>) {
 		initRouting(config);
 	}
 })();

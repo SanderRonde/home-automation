@@ -4,7 +4,7 @@ import { ModuleMeta } from '../meta';
 import { ModuleConfig } from '..';
 import { Bot } from './bot';
 
-export const Cast = new (class Meta extends ModuleMeta {
+export const Cast = new (class Cast extends ModuleMeta {
 	public name = 'cast';
 
 	public get External() {
@@ -15,7 +15,7 @@ export const Cast = new (class Meta extends ModuleMeta {
 		return Bot;
 	}
 
-	public async init(config: ModuleConfig) {
+	public async init(config: ModuleConfig<Cast>) {
 		await initRouting(config);
 	}
 })();

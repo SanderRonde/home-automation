@@ -9,11 +9,11 @@ import { ModuleConfig } from '..';
  * - Run `yarn dlx @tuyapi/cli wizard` and follow the instructions
  */
 
-export const Tuya = new (class Meta extends ModuleMeta {
+export const Tuya = new (class Tuya extends ModuleMeta {
 	private _devices: TuyaDevice[] = [];
 	public name = 'tuya';
 
-	public init({ modules }: ModuleConfig) {
+	public init({ modules }: ModuleConfig<Tuya>) {
 		this._devices = linkTuyaDevices(modules);
 	}
 

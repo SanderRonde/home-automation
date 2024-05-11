@@ -3,10 +3,10 @@ import { initRouting } from './routing';
 import { ModuleMeta } from '../meta';
 import { ModuleConfig } from '..';
 
-export const SmartHome = new (class Meta extends ModuleMeta {
+export const SmartHome = new (class SmartHome extends ModuleMeta {
 	public name = 'smart-home';
 
-	public async init(config: ModuleConfig) {
+	public async init(config: ModuleConfig<SmartHome>) {
 		await initRouting(config);
 		await initHomeGraph(config.db);
 	}

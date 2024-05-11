@@ -4,7 +4,7 @@ import { APIHandler } from './api';
 import { ModuleConfig } from '..';
 import { Cast } from './index';
 
-export async function initRouting({ app }: ModuleConfig): Promise<void> {
+export async function initRouting({ app }: ModuleConfig<typeof Cast>): Promise<void> {
 	await ExternalHandler.init();
 
 	const router = createRouter(Cast, APIHandler);

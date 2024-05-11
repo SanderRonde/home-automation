@@ -425,7 +425,7 @@ export function optionalArrayValue<V>(
 export function asyncSetInterval(
 	callback: () => void | Promise<void>,
 	interval: number
-): NodeJS.Timer {
+): NodeJS.Timeout {
 	return setInterval(() => {
 		void callback();
 	}, interval);
