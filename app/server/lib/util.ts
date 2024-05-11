@@ -1,7 +1,7 @@
 import { attachMessage, logOutgoingReq, log, LogObj } from './logger';
 import { ModuleHookables } from '../modules/modules';
-import * as querystring from 'querystring';
 import { AllModules } from '../modules';
+import * as querystring from 'querystring';
 import * as https from 'https';
 import * as http from 'http';
 import * as url from 'url';
@@ -190,8 +190,8 @@ export class XHR {
 		params: {
 			[key: string]: string;
 		} = {}
-	): Promise<string> {
-		return new Promise<string>((resolve) => {
+	): Promise<string | null> {
+		return new Promise<string | null>((resolve) => {
 			const parsedURL = new url.URL(xhrURL);
 			let basePackage: typeof http | typeof https | null = null;
 			if (parsedURL.protocol === 'https:') {
@@ -233,6 +233,7 @@ export class XHR {
 							`Error while sending request "${name}" with URL "${xhrURL}": "${e.message}"`
 						)
 					);
+					resolve(null);
 				});
 		});
 	}

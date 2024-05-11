@@ -4,11 +4,10 @@ import { ModuleConfig, Temperature } from '..';
 import { createRouter } from '../../lib/api';
 import { APIHandler } from './api';
 
-export function initRouting({
-	app,
-	sqlDB,
-}: ModuleConfig<typeof Temperature>): void {
-	const api = new APIHandler(sqlDB);
+export function initRouting(
+	api: APIHandler,
+	{ app, sqlDB }: ModuleConfig<typeof Temperature>
+): void {
 	const router = createRouter(Temperature, api);
 	router.post('/target/:target?', 'setTargetTemp');
 	router.post('/mode/:mode?', 'setMode');

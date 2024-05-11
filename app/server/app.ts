@@ -22,11 +22,11 @@ import {
 } from './lib/routes';
 import { hasArg, getArg, getNumberArg, getNumberEnv, getEnv } from './lib/io';
 import { notifyAllModules, BaseModuleConfig } from './modules/modules';
-import { SQLDatabase, SQLDatabaseWithSchema } from './lib/sql-db';
 import { ProfilingIntegration } from '@sentry/profiling-node';
 import { printCommands } from './modules/bot/helpers';
 import { AllModules, getAllModules } from './modules';
 import { WSSimulator, WSWrapper } from './lib/ws';
+import { SQLDatabase } from './lib/sql-db';
 import * as Sentry from '@sentry/node';
 import { exec } from 'child_process';
 import { Database } from './lib/db';
@@ -127,7 +127,7 @@ class WebServer {
 					sqlDB: (await new SQLDatabase(
 						`${meta.dbName}.sqlite`
 						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					).applySchema(meta.schema)) as SQLDatabaseWithSchema<any>,
+					).applySchema(meta.schema)) as any,
 					modules,
 				});
 				this._initLogger.increment(meta.loggerName);

@@ -36,6 +36,9 @@ export async function get(
 				mode: 'json',
 			}
 		);
+		if (!response) {
+			throw new Error('Failed to fetch weather data');
+		}
 		const parsed = JSON.parse(response) as WeatherAPIResponse;
 		if (timePeriod === ExternalWeatherTimePeriod.CURRENT) {
 			const hourlyForecast = parsed.hourly[0];

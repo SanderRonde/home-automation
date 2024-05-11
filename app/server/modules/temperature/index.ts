@@ -3,6 +3,7 @@ import { Schema } from '../../lib/sql-db';
 import { initRouting } from './routing';
 import { getEnv } from '../../lib/io';
 import { ModuleMeta } from '../meta';
+import { APIHandler } from './api';
 import { ModuleConfig } from '..';
 import { Bot } from './bot';
 
@@ -61,7 +62,12 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 	}
 
 	public init(config: ModuleConfig<Temperature>) {
-		initRouting(config);
+		const api = new APIHandler(config.sqlDB);
+		initRouting(api, config);
+		void ExternalHandler.init({
+			db: config.sqlDB,
+			api: api,
+		});
 
 		if (getEnv('HEATING_KEY', false)) {
 			void new config.modules.keyval.External(

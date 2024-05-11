@@ -116,6 +116,7 @@
 		"st-schema": "latest",
 		"telnet-client": "^1.2.5",
 		"ts-node": "^10.0.0",
+		"tsconfig-paths": "^4.2.0",
 		"tuyapi": "^7.5.2",
 		"uglify-es": "^3.3.9",
 		"wc-lib": "^1.1.36",

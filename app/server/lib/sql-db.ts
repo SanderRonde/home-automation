@@ -2,11 +2,18 @@
 import { Database } from 'sqlite3';
 import * as path from 'path';
 
-interface ColumnBase {
-	type: 'TEXT' | 'boolean' | 'INTEGER';
-	primaryKey?: true;
-	enum?: string[];
-}
+type ColumnBase =
+	| {
+			type: 'TEXT';
+			primaryKey?: true;
+			enum?: string[];
+			json?: unknown;
+	  }
+	| {
+			type: 'boolean' | 'INTEGER';
+			primaryKey?: true;
+			enum?: string[];
+	  };
 
 type Column =
 	| (ColumnBase & {
@@ -47,7 +54,11 @@ export class SQLDatabase {
 		await new DBMigrator(this._db).applySchema(schema);
 		const tableMap: Partial<SQLDatabaseWithSchema<S>> = {};
 		for (const tableName in schema) {
-			tableMap[tableName] = new SQLTableWithSchema(this._db, tableName);
+			tableMap[tableName] = new SQLTableWithSchema(
+				this._db,
+				tableName,
+				schema[tableName]
+			);
 		}
 		return tableMap as SQLDatabaseWithSchema<S>;
 	}
@@ -100,21 +111,78 @@ type TableToRow<T extends Table> = {
 			: T[ColumnName] extends { type: 'TEXT' }
 				? T[ColumnName] extends { enum: (infer E)[] }
 					? E
-					: string
+					: T[ColumnName] extends { json: infer J }
+						? J
+						: string
 				: never;
 };
 
 export class SQLTableWithSchema<T extends Table> extends WithQueryAndRun {
 	public constructor(
 		protected readonly _db: Database,
-		private readonly _tableName: string
+		private readonly _tableName: string,
+		private readonly _schema: T
 	) {
 		super();
 	}
 
+	private _toSql(
+		columnName: string,
+		data: unknown
+	): string | number | boolean {
+		const column = this._schema[columnName];
+		if (column.type === 'TEXT') {
+			if (column.enum) {
+				if (!column.enum.includes(data as string)) {
+					throw new Error(
+						`Invalid enum value for column ${columnName}`
+					);
+				}
+			}
+			if ('json' in column) {
+				return JSON.stringify(data);
+			}
+			return data as string;
+		} else if (column.type === 'INTEGER') {
+			return data as number;
+		} else if (column.type === 'boolean') {
+			return data as boolean;
+		} else {
+			throw new Error(`Invalid column type for column ${columnName}`);
+		}
+	}
+
+	private _fromSql(
+		columnName: string,
+		data: string | number | boolean
+	): unknown {
+		const column = this._schema[columnName];
+		if (column.type === 'TEXT') {
+			if (column.enum) {
+				if (!column.enum.includes(data as string)) {
+					throw new Error(
+						`Invalid enum value for column ${columnName}`
+					);
+				}
+			}
+			if ('json' in column) {
+				return JSON.parse(data as string);
+			}
+			return data as string;
+		} else if (column.type === 'INTEGER') {
+			return data as number;
+		} else if (column.type === 'boolean') {
+			return data as boolean;
+		} else {
+			throw new Error(`Invalid column type for column ${columnName}`);
+		}
+	}
+
 	public async insert<R extends TableToRow<T>>(row: R): Promise<void> {
 		const columns = Object.keys(row);
-		const values = columns.map((column) => row[column]);
+		const values = columns.map((column) =>
+			this._toSql(column, row[column])
+		);
 		const query = `INSERT INTO ${this._tableName} (${columns.join(
 			', '
 		)}) VALUES (${values.map(() => '?').join(', ')})`;
@@ -138,8 +206,10 @@ export class SQLTableWithSchema<T extends Table> extends WithQueryAndRun {
 			.join(' AND ')}`;
 		await this._run(
 			queryStr,
-			...columns.map((column) => values[column]),
-			...Object.values(query)
+			...columns.map((column) => this._toSql(column, values[column])),
+			...Object.entries(query).map(([column, value]) =>
+				this._toSql(column, value)
+			)
 		);
 	}
 
@@ -160,7 +230,7 @@ export class SQLTableWithSchema<T extends Table> extends WithQueryAndRun {
 		}
 	}
 
-	public query<
+	public async query<
 		Q extends {
 			[K in keyof T]?: TableToRow<T>[K];
 		},
@@ -169,10 +239,19 @@ export class SQLTableWithSchema<T extends Table> extends WithQueryAndRun {
 		const query = `SELECT * FROM ${this._tableName} WHERE ${columns
 			.map((column) => `${column} = ?`)
 			.join(' AND ')}`;
-		return this._query<TableToRow<T>>(
-			query,
-			...columns.map((column) => q[column])
-		);
+		const sqlData = await this._query<
+			Record<keyof T, string | number | boolean>
+		>(query, ...columns.map((column) => this._toSql(column, q[column])));
+		return sqlData.map((row) => {
+			const data: Partial<TableToRow<T>> = {};
+			for (const column in row) {
+				data[column] = this._fromSql(
+					column,
+					row[column]
+				) as TableToRow<T>[keyof T];
+			}
+			return data as TableToRow<T>;
+		});
 	}
 
 	public async querySingle<
