@@ -14,7 +14,7 @@
 		"noUnusedLocals": true,
 		"target": "es6",
 		"noUnusedParameters": true,
-		"experimentalDecorators": true,
+		"experimentalDecorators": false,
 		"strictPropertyInitialization": true,
 		"strictNullChecks": true,
 		"strictBindCallApply": true,

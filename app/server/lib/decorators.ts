@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/prefer-optional-chain */
 /* eslint-disable @typescript-eslint/restrict-template-expressions */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
@@ -15,96 +16,104 @@ import { attachMessage } from './logger';
 import * as express from 'express';
 import chalk from 'chalk';
 
-interface KeyVal {
-	[key: string]: string;
-}
-
 export function requireParams(...keys: string[]) {
-	return function (
-		_target: any,
-		_propertyKey: string,
-		descriptor: PropertyDescriptor
-	) {
-		const original = descriptor.value;
-		descriptor.value = function (
+	return function <
+		T,
+		F extends (
+			this: T,
 			res: express.Response,
-			params: KeyVal,
-			...args: any[]
-		) {
+			params: any,
+			...args: unknown[]
+		) => unknown,
+	>(target: F, _context: ClassMethodDecoratorContext<T, F>) {
+		return function (res: express.Response, params: any, ...args: any[]) {
 			for (const key of keys) {
 				if (!params || !params[key]) {
 					throw new KeyError(`Missing key "${key}"`);
 				}
 			}
 
-			return original.bind(this)(res, params, ...args);
-		};
+			return target.bind(this)(res, params, ...args);
+		} as F;
 	};
 }
 
-export function auth(
-	target: any,
-	propertyKey: string,
-	descriptor: PropertyDescriptor
-) {
-	requireParams('auth')(target, propertyKey, descriptor);
-
-	const original = descriptor.value;
-	descriptor.value = function (
+export function auth<
+	T,
+	F extends (
+		this: T,
 		res: express.Response,
-		params: KeyVal,
+		params: any,
+		...args: unknown[]
+	) => unknown,
+>(target: F, context: ClassMethodDecoratorContext<T, F>) {
+	requireParams('auth')(target, context);
+
+	return function (
+		this: T,
+		res: express.Response,
+		params: any,
 		...args: any[]
 	) {
 		if (!externalAuthenticate(params.auth, params.id || '0')) {
 			throw new AuthError('Invalid auth key');
 		}
 
-		return original.bind(this)(res, params, ...args);
-	};
+		return target.bind(this)(res, params, ...args);
+	} as F;
 }
 
-export function authCookie(
-	_target: any,
-	_propertyKey: string,
-	descriptor: PropertyDescriptor
-) {
-	const original = descriptor.value;
-	descriptor.value = function (
+export function authCookie<
+	T,
+	F extends (
+		this: T,
 		res: express.Response,
-		req:
-			| express.Request
-			| {
-					cookies: {
-						[key: string]: string;
-					};
-			  },
-		...args: any[]
-	) {
-		if (!externalCheckCookie(req)) {
-			throw new AuthError('Invalid or missing auth cookie');
-		}
-
-		return original.bind(this)(res, req, ...args);
-	};
-}
-
-export function authAll(
-	_target: any,
-	_propertyKey: string,
-	descriptor: PropertyDescriptor
-) {
-	const original = descriptor.value;
-	descriptor.value = function (
+		req: {
+			cookies: {
+				[key: string]: string;
+			};
+		},
+		...args: unknown[]
+	) => unknown,
+>(target: F, _context: ClassMethodDecoratorContext<T, F>) {
+	return function (
+		this: T,
 		res: express.Response,
-		params: KeyVal & {
+		req: {
 			cookies: {
 				[key: string]: string;
 			};
 		},
 		...args: any[]
 	) {
-		if (externalCheckCookie(params)) {
-			return original.bind(this)(res, params, ...args);
+		if (!externalCheckCookie(req)) {
+			throw new AuthError('Invalid or missing auth cookie');
+		}
+
+		return target.bind(this)(res, req, ...args);
+	} as F;
+}
+
+export function authAll<
+	T,
+	F extends (
+		this: T,
+		res: express.Response,
+		params: any,
+		...args: unknown[]
+	) => unknown,
+>(target: F, _context: ClassMethodDecoratorContext<T, F>) {
+	return function (
+		this: T,
+		res: express.Response,
+		params: any,
+		...args: Parameters<F>
+	): ReturnType<F> {
+		if (
+			params.cookies &&
+			externalCheckCookie({ cookies: params.cookies })
+		) {
+			return target.bind(this)(res, params, ...args) as ReturnType<F>;
 		} else if (params.cookies && params.cookies['key']) {
 			throw new AuthError('Invalid auth cookie');
 		}
@@ -113,22 +122,28 @@ export function authAll(
 			throw new KeyError('Missing key "auth"');
 		}
 		if (externalAuthenticate(params.auth, params.id || '0')) {
-			return original.bind(this)(res, params, ...args);
+			return target.bind(this)(res, params, ...args) as ReturnType<F>;
 		} else {
 			throw new AuthError('Invalid auth key');
 		}
-	};
+	} as F;
 }
 
-export function errorHandle(
-	_target: any,
-	_propertyKey: string,
-	descriptor: PropertyDescriptor
-) {
-	const original = descriptor.value;
-	descriptor.value = async function (res: express.Response, ...args: any[]) {
+export function errorHandle<
+	T,
+	F extends (
+		this: T,
+		res: express.Response,
+		...args: unknown[]
+	) => unknown,
+>(target: F, _context: ClassMethodDecoratorContext<T, F>) {
+	return async function (
+		this: T,
+		res: express.Response,
+		...args: Parameters<F>
+	): Promise<any> {
 		try {
-			return await original.bind(this)(res, ...args);
+			return (await target.bind(this)(res, ...args)) as ReturnType<F>;
 		} catch (e) {
 			if (e instanceof KeyError) {
 				res.status(400).write(e.message);
@@ -146,16 +161,20 @@ export function errorHandle(
 			}
 			res.end();
 		}
-	};
+	} as F;
 }
 
-export function upgradeToHTTPS(
-	_target: any,
-	_propertyKey: string,
-	descriptor: PropertyDescriptor
-) {
-	const original = descriptor.value;
-	descriptor.value = async function (
+export function upgradeToHTTPS<
+	T,
+	F extends (
+		this: T,
+		res: express.Response,
+		req: express.Request,
+		...args: unknown[]
+	) => unknown,
+>(target: F, _context: ClassMethodDecoratorContext<T, F>) {
+	return async function (
+		this: T,
 		res: express.Response,
 		req: express.Request,
 		...args: any[]
@@ -178,6 +197,6 @@ export function upgradeToHTTPS(
 			return;
 		}
 
-		return original.bind(this)(res, req, ...args);
-	};
+		return target.bind(this)(res, req, ...args);
+	} as F;
 }
