@@ -1,5 +1,6 @@
 import { errorHandle, requireParams, authAll } from '../../lib/decorators';
-import { ResponseLike, attachMessage } from '../../lib/logger';
+import { ResponseLike } from '../../lib/logging/response-logger';
+import { LogObj } from '../../lib/logging/lob-obj';
 import * as childProcess from 'child_process';
 import { AuthError } from '../../lib/errors';
 import { Config } from '../../app';
@@ -22,7 +23,8 @@ export class APIHandler {
 			throw new AuthError('Going up dirs is not allowed');
 		}
 		const scriptPath = path.join(config.scripts.scriptDir, params.name);
-		attachMessage(res, `Script: "${scriptPath}"`);
+		const logObj = LogObj.fromRes(res);
+		logObj.attachMessage(`Script: "${scriptPath}"`);
 		try {
 			const output = childProcess
 				.execFileSync(
@@ -33,7 +35,7 @@ export class APIHandler {
 					}
 				)
 				.toString();
-			attachMessage(res, `Output: "${output}"`);
+			logObj.attachMessage(`Output: "${output}"`);
 			res.write(output);
 			res.status(200);
 			res.end();
@@ -43,12 +45,11 @@ export class APIHandler {
 				message: string;
 				stack: string;
 			};
-			const errMsg = attachMessage(
-				res,
+			const errMsg = logObj.attachMessage(
 				chalk.bgRed(chalk.black(`Error: ${err.message}`))
 			);
 			for (const line of err.stack.split('\n')) {
-				attachMessage(errMsg, chalk.bgRed(chalk.black(line)));
+				errMsg.attachMessage(chalk.bgRed(chalk.black(line)));
 			}
 			res.status(400).end();
 			return '';

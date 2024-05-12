@@ -16,7 +16,8 @@ import {
 import { SwitchbotCurtain } from '../../modules/switchbot/devices/curtain';
 import { TEMPERATURE_REPORT_MAX_TIMEOUT } from '../constants';
 import { LED_NAME } from '../../config/led-config';
-import { ResponseLike, warning } from '../logger';
+import { warning } from '../logging/logger';
+import { ResponseLike } from '../logging/response-logger';
 import { ModuleHookables } from '../../modules';
 import { captureTime, time } from '../timer';
 import { Batcher, pad } from '../util';

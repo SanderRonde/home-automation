@@ -1,6 +1,5 @@
 import aggregates from '../../config/aggregates';
 import { addListener } from './get-set-listener';
-import { attachMessage } from '../../lib/logger';
 import { createHookables } from '../../lib/util';
 import { Database } from '../../lib/db';
 import { KeyVal } from '.';
@@ -41,8 +40,7 @@ function registerListeners() {
 						mod,
 						'AGGREGATES',
 						key,
-						attachMessage(
-							logObj,
+						logObj.attachMessage(
 							'Aggregate',
 							chalk.bold(`${index++}`),
 							':',

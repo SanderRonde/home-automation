@@ -11,7 +11,8 @@ import {
 	authAll,
 	auth,
 } from '../../lib/decorators';
-import { ResponseLike, attachMessage } from '../../lib/logger';
+import { ResponseLike } from '../../lib/logging/response-logger';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { LED_NAME } from '../../config/led-config';
 import { ringEffects, Effects } from './ring-api';
 import { scanRGBControllers } from './scan';
@@ -105,7 +106,7 @@ export class APIHandler {
 	): Promise<boolean> {
 		color = color.toLowerCase().trim();
 		if (!(color in colorList)) {
-			attachMessage(res, `Unknown color "${color}"`);
+			LogObj.fromRes(res).attachMessage(`Unknown color "${color}"`);
 			res.status(400).end();
 			return false;
 		}
@@ -113,13 +114,10 @@ export class APIHandler {
 		const { r, g, b } = Color.fromHex(hexColor);
 
 		const clientSet = this._getClientSetFromTarget(target);
-		attachMessage(
-			attachMessage(
-				attachMessage(res, `rgb(${r}, ${g}, ${b})`),
-				chalk.bgHex(hexColor)('   ')
-			),
-			`Updated ${clientSet.length} clients`
-		);
+		LogObj.fromRes(res)
+			.attachMessage(`rgb(${r}, ${g}, ${b})`)
+			.attachMessage(chalk.bgHex(hexColor)('   '))
+			.attachMessage(`Updated ${clientSet.length} clients`);
 
 		if (
 			(
@@ -168,13 +166,12 @@ export class APIHandler {
 		const greenNum = Math.min(255, Math.max(0, parseInt(green, 10)));
 		const blueNum = Math.min(255, Math.max(0, parseInt(blue, 10)));
 		const clientSet = this._getClientSetFromTarget(target);
-		attachMessage(
-			attachMessage(
-				attachMessage(res, `rgb(${red}, ${green}, ${blue})`),
+		LogObj.fromRes(res)
+			.attachMessage(`rgb(${red}, ${green}, ${blue})`)
+			.attachMessage(
 				chalk.bgHex(new Color(redNum, greenNum, blueNum).toHex())('   ')
-			),
-			`Updated ${clientSet.length} clients`
-		);
+			)
+			.attachMessage(`Updated ${clientSet.length} clients`);
 
 		if (
 			(
@@ -215,10 +212,9 @@ export class APIHandler {
 	): Promise<boolean> {
 		const clientSet = this._getClientSetFromTarget(target);
 
-		attachMessage(
-			attachMessage(res, `Turned ${power}`),
-			`Updated ${clientSet.length} clients`
-		);
+		LogObj.fromRes(res)
+			.attachMessage(`Turned ${power}`)
+			.attachMessage(`Updated ${clientSet.length} clients`);
 		if (
 			(
 				await Promise.all(
@@ -252,7 +248,9 @@ export class APIHandler {
 			!Object.prototype.hasOwnProperty.call(ringEffects, effectName) &&
 			!Object.prototype.hasOwnProperty.call(hexEffects, effectName)
 		) {
-			attachMessage(res, `Effect ${effectName} does not exist`);
+			LogObj.fromRes(res).attachMessage(
+				`Effect ${effectName} does not exist`
+			);
 			res.status(400).write('Unknown effect');
 			res.end();
 			return false;
@@ -294,21 +292,17 @@ export class APIHandler {
 							)
 						)
 					);
-			attachMessage(
-				attachMessage(
-					attachMessage(res, `Running effect ${effectName}`),
-					`Updated ${clients.length} clients`
-				),
-				`Sent string "${String(strings[0])}"`
-			);
+			LogObj.fromRes(res)
+				.attachMessage(`Running effect ${effectName}`)
+				.attachMessage(`Updated ${clients.length} clients`)
+				.attachMessage(`Sent string "${String(strings[0])}"`);
 			res.status(200).end();
 			return true;
 		} catch (e) {
 			console.log(e);
-			attachMessage(
-				attachMessage(res, `Failed to run effect ${effectName}`),
-				`Updated ${clients.length} clients`
-			);
+			LogObj.fromRes(res)
+				.attachMessage(`Failed to run effect ${effectName}`)
+				.attachMessage(`Updated ${clients.length} clients`);
 			res.status(400).write('Failed to run effect');
 			res.end();
 			return false;

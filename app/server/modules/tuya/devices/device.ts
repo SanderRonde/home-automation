@@ -1,4 +1,5 @@
 import { registerExitHandler } from '../../../lib/shutdown';
+import { LogObj } from '../../../lib/logging/lob-obj';
 import { AllModules } from '../..';
 import TuyAPI from 'tuyapi';
 
@@ -56,23 +57,20 @@ export class TuyaDevice {
 			const lowestNumberKey = Math.min(...numberKeys);
 			const isEnabled = !!data.dps[lowestNumberKey];
 			this._active = isEnabled;
-			await new this._modules.keyval.External({}).set(
-				this._keyval,
-				isEnabled ? '1' : '0',
-				true
-			);
+			await new this._modules.keyval.External(
+				LogObj.fromEvent('TUYA.DATA')
+			).set(this._keyval, isEnabled ? '1' : '0', true);
 
 			this._lastLowestDigit = lowestNumberKey;
 		});
 
-		void new this._modules.keyval.External({}).onChange(
-			this._keyval,
-			async (value) => {
-				if ((value === '1') !== this._active) {
-					await onChange(value === '1');
-				}
+		void new this._modules.keyval.External(
+			LogObj.fromEvent('TUYA.KEYVAL')
+		).onChange(this._keyval, async (value) => {
+			if ((value === '1') !== this._active) {
+				await onChange(value === '1');
 			}
-		);
+		});
 
 		const interval = setInterval(() => {
 			if (this._lastLowestDigit) {

@@ -1,5 +1,4 @@
 import { BotStateBase } from '../../lib/bot-state';
-import { attachMessage } from '../../lib/logger';
 import { MatchParameters } from '../bot/message';
 import { MatchResponse } from '../bot/types';
 import { refreshClients } from './routing';
@@ -15,7 +14,7 @@ export class Bot extends BotStateBase {
 		({ matchMaker: mm }) => {
 			mm('/info_refresh', /refresh info screen/, ({ logObj }) => {
 				const amount = refreshClients();
-				attachMessage(logObj, `Refreshed ${amount} clients`);
+				logObj.attachMessage(`Refreshed ${amount} clients`);
 				return `Refreshed ${amount} clients`;
 			});
 		}

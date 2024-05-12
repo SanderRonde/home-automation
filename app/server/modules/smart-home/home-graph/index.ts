@@ -19,6 +19,7 @@ import { google } from 'googleapis';
 import { SmartHome } from '../';
 import * as fs from 'fs-extra';
 import * as path from 'path';
+import { LogObj } from '../../../lib/logging/lob-obj';
 
 export const homeGraph = new SettablePromise<homegraph_v1.Homegraph>();
 export const db = new SettablePromise<Database>();
@@ -87,7 +88,7 @@ async function attachUpdateListeners() {
 		await SmartHome.modules,
 		'SMART_HOME',
 		'HOME_GRAPH',
-		{}
+		LogObj.fromEvent('SMART_HOME.INIT')
 	);
 	await Promise.all(
 		smartHomeConfig.map((Device) =>

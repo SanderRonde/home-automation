@@ -1,4 +1,4 @@
-import { LogObj, attachMessage } from '../../lib/logger';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { MAX_PART_LEN } from './constants';
 
 function splitTTSParts(text: string) {
@@ -21,7 +21,7 @@ function splitTTSParts(text: string) {
 
 export function tts(text: string, lang: string) {
 	return (loggable: LogObj): string[] => {
-		attachMessage(loggable, `Casting TTS ${text} in lang ${lang}`);
+		loggable.attachMessage(`Casting TTS ${text} in lang ${lang}`);
 
 		const parts = splitTTSParts(text);
 		return parts.map((part) => {

@@ -1,4 +1,4 @@
-import { LogObj, createLogObjWithName } from '../lib/logger';
+import { LogObj } from '../lib/logging/lob-obj';
 import { ModuleConfig, AllModules } from './modules';
 import { HOME_STATE } from './home-detector/types';
 import { BotStateBase } from '../lib/bot-state';
@@ -65,7 +65,7 @@ export abstract class ModuleMeta {
 	public notifyModulesFromExternal(modules: AllModules): void {
 		this._modules.set(modules);
 		const external = new modules.homeDetector.External(
-			createLogObjWithName(`META.${this.name}`)
+			LogObj.fromEvent(`META.${this.name}`)
 		);
 
 		let initialSelfChangeDone: boolean = false;

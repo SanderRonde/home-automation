@@ -1,5 +1,6 @@
 import { errorHandle, requireParams, authAll } from '../../lib/decorators';
-import { ResponseLike, attachMessage } from '../../lib/logger';
+import { ResponseLike } from '../../lib/logging/response-logger';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { triggerWebhooks } from './webhooks';
 
 export class APIHandler {
@@ -21,7 +22,7 @@ export class APIHandler {
 		await triggerWebhooks(
 			name,
 			params,
-			attachMessage(res, `Webhook ${name}`)
+			LogObj.fromRes(res).attachMessage(`Webhook ${name}`)
 		);
 		res.status(200);
 		res.end();

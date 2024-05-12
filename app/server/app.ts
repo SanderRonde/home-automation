@@ -8,28 +8,24 @@ dotenv.config({
 	),
 });
 import {
-	setLogLevel,
-	ProgressLogger,
-	startInit,
-	endInit,
-	logTag,
-	warning,
-} from './lib/logger';
-import {
 	initMiddleware,
 	initAnnotatorRoutes,
 	initPostRoutes,
 } from './lib/routes';
 import { hasArg, getArg, getNumberArg, getNumberEnv, getEnv } from './lib/io';
 import { notifyAllModules, BaseModuleConfig } from './modules/modules';
+import { logReady, logTag, warning } from './lib/logging/logger';
+import { ProgressLogger } from './lib/logging/progress-logger';
 import { ProfilingIntegration } from '@sentry/profiling-node';
 import { printCommands } from './modules/bot/helpers';
 import { AllModules, getAllModules } from './modules';
 import { WSSimulator, WSWrapper } from './lib/ws';
+import { LogObj } from './lib/logging/lob-obj';
 import { SQLDatabase } from './lib/sql-db';
 import * as Sentry from '@sentry/node';
 import { exec } from 'child_process';
 import { Database } from './lib/db';
+import { wait } from './lib/util';
 import 'express-async-errors';
 import express from 'express';
 import * as path from 'path';
@@ -73,7 +69,6 @@ class WebServer {
 
 	public constructor(config: PartialConfig = {}) {
 		this._config = this._setConfigDefaults(config);
-		startInit();
 	}
 
 	private _setConfigDefaults(config: PartialConfig): Config {
@@ -150,10 +145,11 @@ class WebServer {
 
 	private _listen(modules: AllModules) {
 		// HTTPS is unused for now
-		this._server.listen(this._config.ports.http, () => {
+		this._server.listen(this._config.ports.http, async () => {
 			this._initLogger.increment('listening');
 			this._initLogger.done();
-			endInit();
+			await wait(100);
+			logReady();
 
 			logTag(
 				'HTTP server',
@@ -216,16 +212,16 @@ class WebServer {
 		}
 
 		this._initLogger.increment('express');
-		initMiddleware(this._getModuleConfig());
+		initMiddleware(this._getModuleConfig().app);
 		initAnnotatorRoutes(this.app);
 		this._initLogger.increment('middleware');
 		this._initServers();
 		this._initLogger.increment('servers');
 		const modules = await this._initModules();
 		this._initLogger.increment('modules');
-		initPostRoutes(this.app);
+		initPostRoutes({ app: this.app, config: this._config });
 
-		setLogLevel(this._config.log.level);
+		LogObj.logLevel = this._config.log.level;
 		await printCommands();
 		this._listen(modules);
 	}

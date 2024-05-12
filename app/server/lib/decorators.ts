@@ -12,7 +12,7 @@ import {
 	externalCheckCookie,
 } from '../modules/auth/helpers';
 import { KeyError, AuthError } from './errors';
-import { attachMessage } from './logger';
+import { LogObj } from './logging/lob-obj';
 import * as express from 'express';
 import chalk from 'chalk';
 
@@ -146,12 +146,11 @@ export function errorHandle<
 			} else if (e instanceof AuthError) {
 				res.status(403).write(e.message);
 			} else {
-				const msg = attachMessage(
-					res,
+				const msg = LogObj.fromRes(res).attachMessage(
 					chalk.red(chalk.bgBlack(e?.message || '?'))
 				);
 				for (const line of e?.stack?.split('\n') || []) {
-					attachMessage(msg, line);
+					msg.attachMessage(line);
 				}
 				res.status(500).write('Internal server error');
 			}

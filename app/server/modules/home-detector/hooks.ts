@@ -1,4 +1,4 @@
-import { attachMessage, logFixture, LogObj } from '../../lib/logger';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { createHookables } from '../../lib/util';
 import hooks from '../../config/home-hooks';
 import { HOME_STATE } from './types';
@@ -8,7 +8,7 @@ import chalk from 'chalk';
 export async function handleHooks(
 	newState: HOME_STATE,
 	name: string,
-	logObj: LogObj = {}
+	logObj: LogObj
 ): Promise<void> {
 	if (!(name in hooks)) {
 		return;
@@ -34,8 +34,7 @@ export async function handleHooks(
 				await HomeDetector.modules,
 				'HOMEHOOK',
 				name,
-				attachMessage(
-					logObj,
+				logObj.attachMessage(
 					'Hook',
 					chalk.bold(String(index++)),
 					':',
@@ -44,9 +43,7 @@ export async function handleHooks(
 			)
 		);
 	}
-	logFixture(
-		logObj,
-		chalk.cyan('[hook]'),
+	logObj.attachMessage(
 		'State for',
 		chalk.bold(name),
 		'changed to',

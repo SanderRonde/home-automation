@@ -5,7 +5,7 @@ import {
 } from '../modules/bot/types';
 import { MessageHandler, ResWrapper } from '../modules/bot/message';
 import { ChatState } from '../modules/bot/message/state-keeping';
-import { attachMessage, LogObj } from './logger';
+import { LogObj } from './logging/lob-obj';
 import { BotUtil } from './bot-util';
 import { wait } from './util';
 import chalk from 'chalk';
@@ -162,8 +162,7 @@ export abstract class Matchable extends BotUtil {
 		}
 
 		if (earliestMatch) {
-			const newLogObj = attachMessage(
-				logObj,
+			const newLogObj = logObj.attachMessage(
 				earliestMatch.type === 'text'
 					? 'Matching string:'
 					: 'Matching regex:',

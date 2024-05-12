@@ -1,4 +1,5 @@
 import { createExternalClass } from '../../lib/external';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { getController } from './temp-controller';
 import { APIHandler } from './api';
 import { ModuleConfig } from '..';
@@ -24,7 +25,7 @@ export class ExternalHandler extends createExternalClass(true) {
 	public setMode(name: string, mode: Mode): Promise<void> {
 		return this.runRequest(async (res) => {
 			return ExternalHandler._api.setMode(res, {
-				auth: await this._getKey(res, Temperature),
+				auth: await this._getKey(LogObj.fromRes(res), Temperature),
 				mode,
 				name,
 			});
@@ -34,7 +35,7 @@ export class ExternalHandler extends createExternalClass(true) {
 	public setTarget(name: string, target: number): Promise<void> {
 		return this.runRequest(async (res) => {
 			return ExternalHandler._api.setTargetTemp(res, {
-				auth: await this._getKey(res, Temperature),
+				auth: await this._getKey(LogObj.fromRes(res), Temperature),
 				target,
 				name,
 			});
@@ -46,7 +47,7 @@ export class ExternalHandler extends createExternalClass(true) {
 	}> {
 		return this.runRequest(async (res) => {
 			return ExternalHandler._api.getTemp(res, {
-				auth: await this._getKey(res, Temperature),
+				auth: await this._getKey(LogObj.fromRes(res), Temperature),
 				name,
 			});
 		});
@@ -59,7 +60,7 @@ export class ExternalHandler extends createExternalClass(true) {
 	): Promise<string> {
 		return this.runRequest(async (res) => {
 			return ExternalHandler._api.moveDir(res, {
-				auth: await this._getKey(res, Temperature),
+				auth: await this._getKey(LogObj.fromRes(res), Temperature),
 				direction,
 				ms,
 				name,

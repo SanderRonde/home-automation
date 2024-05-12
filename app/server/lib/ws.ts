@@ -1,6 +1,6 @@
-import { attachMessage, logOutgoingReq } from './logger';
 import { errorHandle, auth } from './decorators';
 import { Server as WebsocketServer } from 'ws';
+import { LogObj } from './logging/lob-obj';
 import * as express from 'express';
 import * as http from 'http';
 import { Socket } from 'net';
@@ -127,24 +127,20 @@ export class WSSimInstance<
 					'Content-Length': type.length + data.length + 1,
 				},
 			});
+			const logObj = LogObj.fromOutgoingReq(req);
 			req.write(`${type} ${data}`);
 			req.on('error', () => {
 				// Just ignore this one, it'll timeout if it's really a problem
 			});
 			req.end();
 
-			attachMessage(
-				req,
+			logObj.attachMessage(
 				chalk.cyan('[ws]'),
 				'Type:',
 				chalk.bold(type),
 				'data:',
 				chalk.bold(data)
 			);
-			logOutgoingReq(req, {
-				method: 'POST',
-				target: this._ip,
-			});
 		} catch (e) {
 			this._die();
 		}
@@ -190,8 +186,7 @@ export class WSSimInstance<
 		const msgData = msgDataParts.join(' ');
 		for (const { type, handler } of this._listeners) {
 			if (type === msgType) {
-				attachMessage(
-					res,
+				LogObj.fromRes(res).attachMessage(
 					'Type:',
 					chalk.bold(msgType),
 					'data:',
@@ -267,7 +262,7 @@ export class WSSimulator {
 				instanceIDs
 					.get(parseInt(id, 10))!
 					.instance.refreshTimeoutListener();
-				attachMessage(res, `ping from ${id}`);
+				LogObj.fromRes(res).attachMessage(`ping from ${id}`);
 				res.status(200).write('OK');
 				res.end();
 				return true;

@@ -1,4 +1,4 @@
-import { SmartHomeDevice } from '../lib/smart-home/smart-home-classes';
+import { SmartHomeDevice } from '../../../app/server/lib/smart-home/smart-home-classes';
 
 declare class NonAbstractSmartHomeDevice extends SmartHomeDevice {
 	public id: string;

@@ -1,6 +1,7 @@
+import { LogObj } from '../../lib/logging/lob-obj';
+import { logTag } from '../../lib/logging/logger';
 import { LOG_INTERVAL_SECS } from './constants';
 import { ModuleConfig, Temperature } from '..';
-import { logTag } from '../../lib/logger';
 import { getEnv } from '../../lib/io';
 import { Mode } from './types';
 import chalk from 'chalk';
@@ -36,7 +37,7 @@ class TempControl {
 		this.target = targetTemp;
 	}
 
-	public async setMode(newMode: Mode) {
+	public async setMode(newMode: Mode, logObj: LogObj) {
 		await this.db.modes.set(
 			{
 				location: this.name,
@@ -50,13 +51,13 @@ class TempControl {
 		if (getEnv('HEATING_KEY', false)) {
 			const modules = await Temperature.modules;
 			if (newMode === 'off') {
-				await new modules.keyval.External({}).set(
+				await new modules.keyval.External(logObj).set(
 					getEnv('HEATING_KEY', true),
 					'0',
 					false
 				);
 			} else {
-				await new modules.keyval.External({}).set(
+				await new modules.keyval.External(logObj).set(
 					getEnv('HEATING_KEY', true),
 					'1',
 					false
@@ -143,7 +144,7 @@ class TempControl {
 			'auto';
 
 		await this.setTarget(target);
-		await this.setMode(prevMode);
+		await this.setMode(prevMode, LogObj.fromEvent('TEMPERATURE.INIT'));
 
 		const temp =
 			(

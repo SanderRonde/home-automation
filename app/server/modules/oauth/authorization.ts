@@ -12,7 +12,7 @@ import oAuthClients from '../../config/oauth-clients';
 import oauthUsers from '../../config/oauth-users';
 import { SettablePromise } from '../../lib/util';
 import OAuthServer from 'express-oauth-server';
-import { logTag } from '../../lib/logger';
+import { logTag } from '../../lib/logging/logger';
 import { Database } from '../../lib/db';
 
 /**

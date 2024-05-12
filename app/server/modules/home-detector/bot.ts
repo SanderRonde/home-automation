@@ -1,6 +1,7 @@
-import { attachMessage, ResDummy } from '../../lib/logger';
+import { ResDummy } from '../../lib/logging/response-logger';
 import { ChatState } from '../bot/message/state-keeping';
 import { State as KeyValState } from '../keyval/bot';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { BotStateBase } from '../../lib/bot-state';
 import { MatchParameters } from '../bot/message';
 import { MatchResponse } from '../bot/types';
@@ -41,7 +42,7 @@ export class Bot extends BotStateBase {
 							await HomeDetector.modules
 						).auth.External(logObj).getSecretKey(),
 					});
-					resDummy.transferTo(logObj);
+					LogObj.fromRes(resDummy).transferTo(logObj);
 
 					const matches: string[] = [];
 					for (const name in all) {
@@ -82,7 +83,7 @@ export class Bot extends BotStateBase {
 					).getSecretKey(),
 					name: match[1],
 				});
-				resDummy.transferTo(logObj);
+				LogObj.fromRes(resDummy).transferTo(logObj);
 
 				(state.states.homeDetector as unknown as State).lastSubjects = [
 					match[1],
@@ -105,22 +106,20 @@ export class Bot extends BotStateBase {
 							: HOME_STATE.AWAY;
 					const target = match[1];
 
-					const nameMsg = attachMessage(logObj, `Name: ${target}`);
+					const nameMsg = logObj.attachMessage(`Name: ${target}`);
 					const pinger = Bot._config!.detector.getPinger(
 						target.toLowerCase()
 					);
 					if (!pinger) {
-						attachMessage(nameMsg, chalk.bold('Nonexistent'));
+						nameMsg.attachMessage(chalk.bold('Nonexistent'));
 						return 'Person does not exist';
 					}
 
-					attachMessage(
-						nameMsg,
+					nameMsg.attachMessage(
 						'Left at:',
 						chalk.bold(String(pinger.leftAt))
 					);
-					attachMessage(
-						nameMsg,
+					nameMsg.attachMessage(
 						'Arrived at:',
 						chalk.bold(String(pinger.joinedAt))
 					);
@@ -154,28 +153,24 @@ export class Bot extends BotStateBase {
 						for (const target of (
 							state.states.homeDetector as unknown as State
 						).lastSubjects!) {
-							const nameMsg = attachMessage(
-								logObj,
+							const nameMsg = logObj.attachMessage(
 								`Name: ${target}`
 							);
 							const pinger = Bot._config!.detector.getPinger(
 								target.toLowerCase()
 							);
 							if (!pinger) {
-								attachMessage(
-									nameMsg,
+								nameMsg.attachMessage(
 									chalk.bold('Nonexistent')
 								);
 								continue;
 							}
 
-							attachMessage(
-								nameMsg,
+							nameMsg.attachMessage(
 								'Left at:',
 								chalk.bold(String(pinger.leftAt))
 							);
-							attachMessage(
-								nameMsg,
+							nameMsg.attachMessage(
 								'Arrived at:',
 								chalk.bold(String(pinger.joinedAt))
 							);

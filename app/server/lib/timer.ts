@@ -1,4 +1,5 @@
-import { attachMessage, ResponseLike } from './logger';
+import { ResponseLike } from './logging/response-logger';
+import { LogObj } from './logging/lob-obj';
 import * as express from 'express';
 
 interface Timing {
@@ -28,11 +29,11 @@ export function gatherTimings(res: express.Response): void {
 		time: Date.now(),
 	});
 
-	const timingsLog = attachMessage(res, 'Timings:');
+	const timingsLog = LogObj.fromRes(res).attachMessage('Timings:');
 	const startTime = timings[0].time;
 
 	for (const { label, time } of timings) {
-		attachMessage(timingsLog, `+${time - startTime}ms - ${label}`);
+		timingsLog.attachMessage(`+${time - startTime}ms - ${label}`);
 	}
 
 	timedRequests.delete(res);

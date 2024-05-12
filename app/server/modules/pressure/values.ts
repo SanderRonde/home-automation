@@ -10,7 +10,7 @@ import {
 	PRESSURE_CHANGE_DIRECTION,
 	PressureRange,
 } from './types';
-import { LogObj, attachMessage } from '../../lib/logger';
+import { LogObj } from '../../lib/logging/lob-obj';
 import pressureConfig from '../../config/pressures';
 import { createHookables } from '../../lib/util';
 import { PressureStateKeeper } from './enabled';
@@ -90,7 +90,7 @@ export class PressureValueKeeper {
 								await Pressure.modules,
 								'PRESSURE',
 								key,
-								attachMessage(logObj, 'Pressure hooks range')
+								logObj.attachMessage('Pressure hooks range')
 							)
 						)) === PRESSURE_REGISTER.REGISTER_CHANGED
 					) {
@@ -127,7 +127,7 @@ export class PressureValueKeeper {
 							await Pressure.modules,
 							'PRESSURE',
 							key,
-							attachMessage(logObj, 'Pressure hooks jump')
+							logObj.attachMessage('Pressure hooks jump')
 						)
 					);
 				}

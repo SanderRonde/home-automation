@@ -1,5 +1,6 @@
 import { MatchHandlerParams } from '../../lib/bot-state';
 import { createExternalClass } from '../../lib/external';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { LED_NAME } from '../../config/led-config';
 import { APIHandler, ColorTarget } from './api';
 import { RGBClient } from './client/RGBClient';
@@ -19,7 +20,7 @@ export class ExternalHandler extends createExternalClass(true) {
 			return APIHandler.setColor(res, {
 				color,
 				intensity: intensity,
-				auth: await this._getKey(res, RGB),
+				auth: await this._getKey(LogObj.fromRes(res), RGB),
 				target: target,
 			});
 		});
@@ -38,7 +39,7 @@ export class ExternalHandler extends createExternalClass(true) {
 				green,
 				blue,
 				intensity: intensity,
-				auth: await this._getKey(res, RGB),
+				auth: await this._getKey(LogObj.fromRes(res), RGB),
 				target: target,
 			});
 		});
@@ -51,7 +52,7 @@ export class ExternalHandler extends createExternalClass(true) {
 		return this.runRequest(async (res) => {
 			return APIHandler.setPower(res, {
 				power: state,
-				auth: await this._getKey(res, RGB),
+				auth: await this._getKey(LogObj.fromRes(res), RGB),
 				target,
 			});
 		});
@@ -64,7 +65,7 @@ export class ExternalHandler extends createExternalClass(true) {
 		return this.runRequest(async (res) => {
 			return APIHandler.runEffect(res, {
 				effect: name,
-				auth: await this._getKey(res, RGB),
+				auth: await this._getKey(LogObj.fromRes(res), RGB),
 				...extra,
 			});
 		});

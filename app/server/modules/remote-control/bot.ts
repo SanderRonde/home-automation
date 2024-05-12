@@ -1,5 +1,4 @@
 import { BotStateBase } from '../../lib/bot-state';
-import { attachMessage } from '../../lib/logger';
 import { MatchParameters } from '../bot/message';
 import { MatchResponse } from '../bot/types';
 import { ExternalHandler } from './external';
@@ -15,7 +14,7 @@ export class Bot extends BotStateBase {
 				/play( (music|netflix|youtube|vlc|movie))?/,
 				async ({ logObj }) => {
 					await new ExternalHandler(
-						attachMessage(logObj, 'Playing')
+						logObj.attachMessage('Playing')
 					).play();
 					return 'Playing';
 				}
@@ -24,7 +23,7 @@ export class Bot extends BotStateBase {
 				/pause( (music|netflix|youtube|vlc|movie))?/,
 				async ({ logObj }) => {
 					await new ExternalHandler(
-						attachMessage(logObj, 'Pausing')
+						logObj.attachMessage('Pausing')
 					).play();
 					return 'Pausing';
 				}
@@ -33,7 +32,7 @@ export class Bot extends BotStateBase {
 				/playpause( (music|netflix|youtube|vlc|movie))?/,
 				async ({ logObj }) => {
 					await new ExternalHandler(
-						attachMessage(logObj, 'Playpausing')
+						logObj.attachMessage('Playpausing')
 					).play();
 					return 'Playpausing';
 				}
@@ -42,7 +41,7 @@ export class Bot extends BotStateBase {
 				/close( (music|netflix|youtube|vlc|movie))?/,
 				async ({ logObj }) => {
 					await new ExternalHandler(
-						attachMessage(logObj, 'Closing')
+						logObj.attachMessage('Closing')
 					).play();
 					return 'Closing';
 				}
@@ -52,7 +51,7 @@ export class Bot extends BotStateBase {
 				/(?:increase|up) volume( by (\d+))?/,
 				async ({ logObj, match }) => {
 					await new ExternalHandler(
-						attachMessage(logObj, 'Increasing Volume')
+						logObj.attachMessage('Increasing Volume')
 					).volumeUp(match[1] ? parseInt(match[1], 10) : undefined);
 					return 'Increasing Volume';
 				}
@@ -61,7 +60,7 @@ export class Bot extends BotStateBase {
 				/(?:decrease|reduce|down) volume( by (\d+))?/,
 				async ({ logObj, match }) => {
 					await new ExternalHandler(
-						attachMessage(logObj, 'Decreasing Volume')
+						logObj.attachMessage('Decreasing Volume')
 					).volumeUp(match[1] ? parseInt(match[1], 10) : undefined);
 					return 'Decreasing Volume';
 				}
@@ -69,7 +68,7 @@ export class Bot extends BotStateBase {
 
 			mm(/set volume to (\d+)/, async ({ logObj, match }) => {
 				await new ExternalHandler(
-					attachMessage(logObj, 'Setting Volume')
+					logObj.attachMessage('Setting Volume')
 				).setVolume(parseInt(match[1], 10));
 				return 'Setting Volume';
 			});

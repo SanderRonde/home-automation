@@ -3,7 +3,7 @@ import {
 	EWeLinkSharedConfig,
 	EWeLinkWebSocketMessage,
 } from '../shared';
-import { logTag } from '../../../../lib/logger';
+import { logTag } from '../../../../lib/logging/logger';
 
 export class EwelinkDoorSensor extends EWeLinkInitable {
 	public constructor(

@@ -1,6 +1,6 @@
 import { splitIntoGroups, wait } from '../../lib/util';
 import { Client } from '@notionhq/client';
-import { logTag } from '../../lib/logger';
+import { logTag } from '../../lib/logging/logger';
 import { getEnv } from '../../lib/io';
 import AsyncLock from 'async-lock';
 

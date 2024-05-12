@@ -1,12 +1,13 @@
 import express = require('express');
 import { errorHandle, authCookie, upgradeToHTTPS } from '../../lib/decorators';
-import { ResponseLike } from '../../lib/logger';
+import { ResponseLike } from '../../lib/logging/response-logger';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { Database } from '../../lib/db';
 import { KeyVal } from '.';
 
-async function keyvalHTML(json: string, randomNum: number, res: ResponseLike) {
+async function keyvalHTML(json: string, randomNum: number, logObj: LogObj) {
 	const key = await new (await KeyVal.modules).auth.External(
-		res
+		logObj
 	).getSecretKey();
 	return `<!DOCTYPE HTML>
 			<html lang="en" style="background-color: rgb(70,70,70);">
@@ -45,7 +46,11 @@ export class WebPageHandler {
 		res.status(200);
 		res.contentType('.html');
 		res.write(
-			await keyvalHTML(await this._db.json(true), this._randomNum, res)
+			await keyvalHTML(
+				await this._db.json(true),
+				this._randomNum,
+				LogObj.fromRes(res)
+			)
 		);
 		res.end();
 	}

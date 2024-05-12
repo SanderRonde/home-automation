@@ -1,5 +1,6 @@
-import { createLogObjWithName, logTag } from '../../../lib/logger';
 import { SwitchbotAdvertisement } from 'node-switchbot';
+import { LogObj } from '../../../lib/logging/lob-obj';
+import { logTag } from '../../../lib/logging/logger';
 import { debounce, wait } from '../../../lib/util';
 import { SwitchbotApiDevice } from '../scanner';
 import { SwitchbotCurtain } from './curtain';
@@ -25,7 +26,7 @@ export abstract class SwitchbotDeviceBase {
 
 	public async init(): Promise<this> {
 		const keyval = new this._modules.keyval.External(
-			createLogObjWithName('SWITCHBOT.DEVICE.INIT')
+			LogObj.fromEvent('SWITCHBOT.DEVICE.INIT')
 		);
 
 		await keyval.onChange(this._keyval, async (value) => {

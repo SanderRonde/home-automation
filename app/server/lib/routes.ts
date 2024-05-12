@@ -1,5 +1,6 @@
-import { logReq, reportReqError } from './logger';
+import { AsyncExpressApplication } from '../types/express';
 import { BaseModuleConfig } from '../modules';
+import { LogObj } from './logging/lob-obj';
 import cookieParser from 'cookie-parser';
 import serveStatic from 'serve-static';
 import * as Sentry from '@sentry/node';
@@ -36,7 +37,7 @@ export function initAnnotatorRoutes(app: express.Express): void {
 	});
 }
 
-export function initMiddleware({ app, config }: BaseModuleConfig): void {
+export function initMiddleware(app: AsyncExpressApplication): void {
 	if (getEnv('SECRET_SENTRY_DSN')) {
 		app.use(
 			Sentry.Handlers.requestHandler({
@@ -49,7 +50,7 @@ export function initMiddleware({ app, config }: BaseModuleConfig): void {
 		app.use(Sentry.Handlers.tracingHandler());
 	}
 	app.use((req, res, next) => {
-		logReq(req, res, config);
+		LogObj.fromIncomingReq(req, res);
 		next();
 	});
 	app.use(cookieParser());
@@ -86,7 +87,10 @@ export function initMiddleware({ app, config }: BaseModuleConfig): void {
 	);
 }
 
-export function initPostRoutes(app: express.Express): void {
+export function initPostRoutes({
+	app,
+	config,
+}: Pick<BaseModuleConfig, 'app' | 'config'>): void {
 	if (getEnv('SECRET_SENTRY_DSN')) {
 		app.use(Sentry.Handlers.errorHandler());
 	}
@@ -94,7 +98,6 @@ export function initPostRoutes(app: express.Express): void {
 		res.status(404).send('404');
 	});
 	app.use((err: Error, req: express.Request, res: express.Response) => {
-		console.log('got err', err);
 		if (err?.message) {
 			if (res.headersSent) {
 				console.log(
@@ -109,7 +112,7 @@ export function initPostRoutes(app: express.Express): void {
 				return;
 			}
 			res.status(500).write('Internal server error');
-			reportReqError(req, err);
+			LogObj.fromIncomingReq(req, res).reportError(err, config);
 			pm2.expressErrorHandler()(err, req, res, () => {});
 			res.end();
 		}

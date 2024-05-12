@@ -1,6 +1,6 @@
 import { MARKED_AUDIO_FOLDER } from '../../lib/constants';
 import { MatchHandlerParams } from '../../lib/bot-state';
-import { LogObj } from '../../lib/logger';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { Color } from '../../lib/color';
 import { ringClients } from './clients';
 import { wait } from '../../lib/util';

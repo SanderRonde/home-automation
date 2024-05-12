@@ -4,10 +4,9 @@ import {
 	googleExecute,
 	googleDisconnect,
 } from './state/google';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { createSamsungSchemaHandler } from './state/samsung';
-import { createLogObjWithName } from '../../lib/logger';
 import { attachTimerToReq } from '../../lib/timer';
-import { attachMessage } from '../../lib/logger';
 import { smarthome } from 'actions-on-google';
 import { createRouter } from '../../lib/api';
 import { ModuleConfig, SmartHome } from '..';
@@ -35,13 +34,13 @@ export async function initRouting({
 					}[];
 				}
 			).inputs[0].intent;
-			attachMessage(res, `Intent: ${intent}`);
+			LogObj.fromRes(res).attachMessage( `Intent: ${intent}`);
 			attachTimerToReq(res);
 			return next();
 		},
 		// @ts-ignore
 		await new (await SmartHome.modules).oauth.External(
-			createLogObjWithName('SMART_HOME.ROUTING_INIT')
+			LogObj.fromEvent('SMART_HOME.ROUTING_INIT')
 		).getAuthenticateMiddleware(),
 		smartHomeApp
 	);

@@ -1,5 +1,4 @@
 import { createExternalClass } from '../../lib/external';
-import { attachMessage } from '../../lib/logger';
 import { PressureStateKeeper } from './enabled';
 import { PressureValueKeeper } from './values';
 
@@ -22,21 +21,21 @@ export class ExternalHandler extends createExternalClass(true) {
 	public async enable(): Promise<void> {
 		return this.runRequest(async (_res, logObj) => {
 			await ExternalHandler._pressureStateKeeper.enable();
-			attachMessage(logObj, 'Enabled pressure module');
+			logObj.attachMessage('Enabled pressure module');
 		});
 	}
 
 	public async disable(): Promise<void> {
 		return this.runRequest(async (_res, logObj) => {
 			await ExternalHandler._pressureStateKeeper.disable();
-			attachMessage(logObj, 'Disabled pressure module');
+			logObj.attachMessage('Disabled pressure module');
 		});
 	}
 
 	public async isEnabled(): Promise<boolean> {
 		return this.runRequest((_res, logObj) => {
 			const enabled = ExternalHandler._pressureStateKeeper.isEnabled();
-			attachMessage(logObj, 'Got enabled status of pressure module');
+			logObj.attachMessage('Got enabled status of pressure module');
 			return enabled;
 		});
 	}
@@ -45,8 +44,7 @@ export class ExternalHandler extends createExternalClass(true) {
 		return this.runRequest((_res, logObj) => {
 			const pressure =
 				ExternalHandler._pressureValueKeeper.getPressure(key);
-			attachMessage(
-				logObj,
+			logObj.attachMessage(
 				`Returning pressure ${String(pressure)} for key ${key}`
 			);
 			return pressure;

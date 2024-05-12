@@ -5,7 +5,8 @@ import {
 	auth,
 } from '../../lib/decorators';
 import { addListener, removeListener, update } from './get-set-listener';
-import { ResponseLike, attachMessage } from '../../lib/logger';
+import { ResponseLike } from '../../lib/logging/response-logger';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { Database } from '../../lib/db';
 import { str } from './helpers';
 
@@ -70,7 +71,9 @@ export class APIHandler {
 		}
 	): string {
 		const value = ensureString(this._db.get(key, '0'));
-		attachMessage(res, `Key: "${key}", val: "${str(value)}"`);
+		LogObj.fromRes(res).attachMessage(
+			`Key: "${key}", val: "${str(value)}"`
+		);
 		res.status(200).write(value === undefined ? '' : value);
 		res.end();
 		return value;
@@ -91,21 +94,19 @@ export class APIHandler {
 		const original = ensureString(this._db.get<string>(key, '0'));
 		const value = original === '0' ? '1' : '0';
 		this._db.setVal(key, value);
-		const msg = attachMessage(
-			res,
+		const msg = LogObj.fromRes(res).attachMessage(
 			`Toggling key: "${key}", to val: "${str(value)}"`
 		);
-		const nextMessage = attachMessage(
-			msg,
+		const nextMessage = msg.attachMessage(
 			`"${str(original)}" -> "${str(value)}"`
 		);
 		const updated = await update(
 			key,
 			value,
-			attachMessage(nextMessage, 'Updates'),
+			nextMessage.attachMessage('Updates'),
 			this._db
 		);
-		attachMessage(nextMessage, `Updated ${updated} listeners`);
+		nextMessage.attachMessage(`Updated ${updated} listeners`);
 		res.status(200).write(value);
 		res.end();
 		return value;
@@ -129,12 +130,10 @@ export class APIHandler {
 	): void {
 		const value = this._db.get(key, '0');
 		if (value !== expected) {
-			const msg = attachMessage(
-				res,
+			const msg = LogObj.fromRes(res).attachMessage(
 				`Key: "${key}", val: "${str(value)}"`
 			);
-			attachMessage(
-				msg,
+			msg.attachMessage(
 				`(current) "${str(value)}" != (expected) "${expected}"`
 			);
 			res.status(200).write(value === undefined ? '' : value);
@@ -148,18 +147,13 @@ export class APIHandler {
 			key,
 			(value, _key, logObj) => {
 				triggered = true;
-				const msg = attachMessage(
-					res,
+				const msg = logObj.attachMessage(
 					`Key: "${key}", val: "${str(value)}"`
 				);
-				attachMessage(
-					msg,
+				msg.attachMessage(
 					`Set to "${str(value)}". Expected "${expected}"`
 				);
-				attachMessage(
-					logObj,
-					`Returned longpoll with value "${value}"`
-				);
+				logObj.attachMessage(`Returned longpoll with value "${value}"`);
 				res.status(200).write(value === undefined ? '' : value);
 				res.end();
 			},
@@ -170,11 +164,10 @@ export class APIHandler {
 				if (!triggered) {
 					removeListener(id);
 					const value = this._db.get(key, '0');
-					const msg = attachMessage(
-						res,
+					const msg = LogObj.fromRes(res).attachMessage(
 						`Key: "${key}", val: "${str(value)}"`
 					);
-					attachMessage(msg, `Timeout. Expected "${expected}"`);
+					msg.attachMessage(`Timeout. Expected "${expected}"`);
 					res.status(200).write(value === undefined ? '' : value);
 					res.end();
 				}
@@ -202,22 +195,20 @@ export class APIHandler {
 		const original = this._db.get(key);
 		if (original !== value) {
 			this._db.setVal(key, value);
-			const msg = attachMessage(
-				res,
+			const msg = LogObj.fromRes(res).attachMessage(
 				`Key: "${key}", val: "${str(value)}"`
 			);
-			const nextMessage = attachMessage(
-				msg,
+			const nextMessage = msg.attachMessage(
 				`"${str(original)}" -> "${str(value)}"`
 			);
 			if (performUpdate) {
 				const updated = await update(
 					key,
 					value,
-					attachMessage(nextMessage, 'Updates'),
+					nextMessage.attachMessage('Updates'),
 					this._db
 				);
-				attachMessage(nextMessage, `Updated ${updated} listeners`);
+				nextMessage.attachMessage(`Updated ${updated} listeners`);
 			}
 		}
 		res.status(200).write(value);
@@ -236,8 +227,8 @@ export class APIHandler {
 		}
 	): Promise<void> {
 		const data = await this._db.json(force);
-		const msg = attachMessage(res, data);
-		attachMessage(msg, `Force? ${force ? 'true' : 'false'}`);
+		const msg = LogObj.fromRes(res).attachMessage(data);
+		msg.attachMessage(`Force? ${force ? 'true' : 'false'}`);
 		res.status(200).write(data);
 		res.end();
 	}

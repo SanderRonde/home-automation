@@ -2,6 +2,7 @@ import { createExternalClass } from '../../lib/external';
 import { Config } from '../../app';
 import { APIHandler } from './api';
 import { Script } from '.';
+import { LogObj } from '../../lib/logging/lob-obj';
 
 export class ExternalHandler extends createExternalClass(true) {
 	private static _config: Config | null = null;
@@ -17,7 +18,7 @@ export class ExternalHandler extends createExternalClass(true) {
 				res,
 				{
 					name,
-					auth: await this._getKey(res, Script),
+					auth: await this._getKey(LogObj.fromRes(res), Script),
 				},
 				ExternalHandler._config!
 			);

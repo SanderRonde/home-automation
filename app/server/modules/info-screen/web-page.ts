@@ -1,5 +1,5 @@
 import { errorHandle } from '../../lib/decorators';
-import { ResponseLike } from '../../lib/logger';
+import { ResponseLike } from '../../lib/logging/response-logger';
 
 function infoScreenHTML(randomNum: number): string {
 	return `<!DOCTYPE HTML>

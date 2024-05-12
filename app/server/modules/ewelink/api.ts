@@ -8,7 +8,7 @@ import eWelink from '../../../../temp/ewelink-api-next';
 import { queueEwelinkTokenRefresh } from './routing';
 import onEWeLinkDevices from '../../config/ewelink';
 import { EWELINK_DEBUG } from '../../lib/constants';
-import { logTag } from '../../lib/logger';
+import { logTag } from '../../lib/logging/logger';
 import { Database } from '../../lib/db';
 import { AllModules } from '..';
 

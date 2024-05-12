@@ -1,5 +1,6 @@
-import { attachMessage, logOutgoingReq, log, LogObj } from './logger';
 import { ModuleHookables } from '../modules/modules';
+import { LogObj } from './logging/lob-obj';
+import { warning } from './logging/logger';
 import * as querystring from 'querystring';
 import { AllModules } from '../modules';
 import * as https from 'https';
@@ -145,25 +146,18 @@ export class XHR {
 									data += chunk.toString();
 								});
 								res.on('end', () => {
-									attachMessage(
-										req,
+									logObj.attachMessage(
 										chalk.cyan(`[${name}]`),
 										xhrURL,
 										JSON.stringify(params)
 									);
-									logOutgoingReq(req, {
-										method: 'GET',
-										target: xhrURL,
-									});
 									resolve(data);
 								});
 							}
 						)
 						.on('error', (e) => {
-							log(
-								chalk.red(
-									`Error while sending request "${name}" with URL "${xhrURL}": "${e.message}"`
-								)
+							warning(
+								`Error while sending request "${name}" with URL "${xhrURL}": "${e.message}"`
 							);
 							if (attempts <= 9) {
 								void this.post(
@@ -176,6 +170,7 @@ export class XHR {
 								resolve(null);
 							}
 						});
+					const logObj = LogObj.fromOutgoingReq(req);
 					if (Object.values(params).length) {
 						req.write(JSON.stringify(params));
 					}
@@ -214,27 +209,21 @@ export class XHR {
 						data += chunk.toString();
 					});
 					res.on('end', () => {
-						attachMessage(
-							req,
+						logObj.attachMessage(
 							chalk.cyan(`[${name}]`),
 							xhrURL,
 							JSON.stringify(params)
 						);
-						logOutgoingReq(req, {
-							method: 'GET',
-							target: xhrURL,
-						});
 						resolve(data);
 					});
 				})
 				.on('error', (e) => {
-					log(
-						chalk.red(
-							`Error while sending request "${name}" with URL "${xhrURL}": "${e.message}"`
-						)
+					warning(
+						`Error while sending request "${name}" with URL "${xhrURL}": "${e.message}"`
 					);
 					resolve(null);
 				});
+			const logObj = LogObj.fromOutgoingReq(req);
 		});
 	}
 }

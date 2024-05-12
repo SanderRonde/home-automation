@@ -7,7 +7,7 @@ import { getAllForQuery, notionRequest } from './client';
 import { asyncSetInterval } from '../../lib/util';
 import { captureTime } from '../../lib/timer';
 import { Client } from '@notionhq/client';
-import { logTag } from '../../lib/logger';
+import { logTag } from '../../lib/logging/logger';
 import { WithAuth } from './types';
 
 const geocodeLocationRegex = /(.*) \(#location\)/;

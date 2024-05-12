@@ -25,7 +25,7 @@ import {
 	sharedUseradd,
 } from './shared';
 import { currentUsers } from '../home-graph/users';
-import { warning } from '../../../lib/logger';
+import { warning } from '../../../lib/logging/logger';
 import { flatten } from '../../../lib/util';
 import { SAMSUNG_KEY } from '../home-graph';
 import { smartHomeLogger } from '../shared';

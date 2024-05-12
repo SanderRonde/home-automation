@@ -1,11 +1,12 @@
 import express = require('express');
-import { ResponseLike, attachMessage } from '../../lib/logger';
+import { ResponseLike } from '../../lib/logging/response-logger';
 import { authorizationServer } from './authorization';
 import { CLIENT_FOLDER } from '../../lib/constants';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { validateOAUthUsers } from './oauth-users';
+import { debug } from '../../lib/logging/logger';
 import { SettablePromise } from '../../lib/util';
 import { createRouter } from '../../lib/api';
-import { debug } from '../../lib/logger';
 import { ModuleConfig, OAuth } from '..';
 import { getEnv } from '../../lib/io';
 import * as fs from 'fs-extra';
@@ -60,7 +61,7 @@ export async function initRouting({
 		'/authorize',
 		// @ts-ignore
 		async (req, res, next) => {
-			attachMessage(res, 'Authorizing OAuth');
+			LogObj.fromRes(res).attachMessage('Authorizing OAuth');
 
 			// Somehow Google sends a wrong URL so we have to fix it
 			const query = req.query as {
@@ -90,8 +91,7 @@ export async function initRouting({
 				password
 			);
 			if (!valid) {
-				attachMessage(
-					res,
+				LogObj.fromRes(res).attachMessage(
 					`Redirecting to login page, reason: ${
 						invalidReason ?? 'no login supplied'
 					}`
@@ -100,10 +100,9 @@ export async function initRouting({
 				return;
 			}
 
-			attachMessage(
-				attachMessage(res, 'Login success'),
-				`Username: ${username}`
-			);
+			LogObj.fromRes(res)
+				.attachMessage('Login success')
+				.attachMessage(`Username: ${username}`);
 			return (await authorizationServer.value).authorize({
 				authenticateHandler: {
 					handle: () => username,
@@ -112,7 +111,7 @@ export async function initRouting({
 		}
 	);
 	router.get('/login', async (_req, res) => {
-		attachMessage(res, 'Logging in to auth');
+		LogObj.fromRes(res).attachMessage('Logging in to auth');
 
 		res.status(200);
 		res.write(await oauthHTMLFile.value);
@@ -122,7 +121,7 @@ export async function initRouting({
 	router.post(
 		'/token',
 		(_req, res, next) => {
-			attachMessage(res, 'Refreshing token for OAuth');
+			LogObj.fromRes(res).attachMessage('Refreshing token for OAuth');
 			return next();
 		},
 		(await authorizationServer.value).token({})
@@ -131,7 +130,7 @@ export async function initRouting({
 		router.post(
 			`/token${getEnv('SECRET_OAUTH_TOKEN_URL_POSTFIX', true)}`,
 			(_req, res, next) => {
-				attachMessage(res, 'Refreshing token for OAuth');
+				LogObj.fromRes(res).attachMessage('Refreshing token for OAuth');
 				return next();
 			},
 			async (req, res, next) => {

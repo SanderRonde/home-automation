@@ -6,7 +6,7 @@ import { createSwitchbots } from '../../config/switchbot';
 import { registerExitHandler } from '../../lib/shutdown';
 import { SwitchbotDeviceBase } from './devices/devices';
 import { EventEmitter } from '../../lib/event-emitter';
-import { logTag } from '../../lib/logger';
+import { logTag } from '../../lib/logging/logger';
 import { AllModules } from '..';
 
 export async function scanSwitchbots(

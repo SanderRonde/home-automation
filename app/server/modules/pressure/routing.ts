@@ -1,4 +1,4 @@
-import { disableMessages } from '../../lib/logger';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { PressureValueKeeper } from './values';
 import { createRouter } from '../../lib/api';
 import { APIHandler } from './api';
@@ -13,7 +13,7 @@ export function initRouting(
 	const router = createRouter(Pressure, apiHandler);
 	router.post('/:key/:pressure', async (req, res) => {
 		if (config.log.ignorePressure) {
-			disableMessages(res);
+			LogObj.fromIncomingReq(req, res).ignore = true;
 		}
 		await apiHandler.reportPressure(res, {
 			...req.params,

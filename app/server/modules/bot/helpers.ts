@@ -1,9 +1,8 @@
-import { logFirst } from '../../lib/logger';
 import chalk from 'chalk';
 import { Bot } from '.';
 
 export async function printCommands(): Promise<void> {
-	logFirst(
+	console.log(
 		`${chalk.bold('Available commands are')}:\n\n${Object.values(
 			await Bot.modules
 		)

@@ -3,7 +3,8 @@ import {
 	EWeLinkSharedConfig,
 	EWeLinkUpdateMessage,
 } from '../shared';
-import { createLogObjWithName, logTag } from '../../../../lib/logger';
+import { logTag } from '../../../../lib/logging/logger';
+import { LogObj } from '../../../../lib/logging/lob-obj';
 import { ExternalHandler } from '../../../keyval/external';
 
 type EWeLinkButtonPressMessage<A extends number> = EWeLinkUpdateMessage<{
@@ -88,7 +89,7 @@ export class EwelinkKeyvalButtonBase<
 	public async init(): Promise<void> {
 		await super.init();
 		this._keyvalExternal = new this._eWeLinkConfig.modules.keyval.External(
-			createLogObjWithName('EWELINK.POWER.INIT')
+			LogObj.fromEvent('EWELINK.POWER.INIT')
 		);
 	}
 }

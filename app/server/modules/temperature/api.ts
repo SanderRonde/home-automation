@@ -4,7 +4,8 @@ import {
 	authAll,
 	auth,
 } from '../../lib/decorators';
-import { ResponseLike, attachMessage } from '../../lib/logger';
+import { ResponseLike } from '../../lib/logging/response-logger';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { getController } from './temp-controller';
 import { ModuleConfig, Temperature } from '..';
 import { Mode } from './types';
@@ -30,8 +31,10 @@ export class APIHandler {
 	): Promise<void> {
 		const controller = await getController(this._db, name);
 		const oldMode = controller.getMode();
-		attachMessage(res, `Setting mode to ${mode} from ${oldMode}`);
-		await controller.setMode(mode);
+		LogObj.fromRes(res).attachMessage(
+			`Setting mode to ${mode} from ${oldMode}`
+		);
+		await controller.setMode(mode, LogObj.fromRes(res));
 		res.status(200);
 		res.end();
 	}
@@ -52,7 +55,9 @@ export class APIHandler {
 	): Promise<void> {
 		const controller = await getController(this._db, name);
 		const oldTemp = controller.getTarget();
-		attachMessage(res, `Setting target temp to ${target} from ${oldTemp}`);
+		LogObj.fromRes(res).attachMessage(
+			`Setting target temp to ${target} from ${oldTemp}`
+		);
 		await controller.setTarget(target);
 		res.status(200);
 		res.end();
@@ -72,8 +77,7 @@ export class APIHandler {
 		temp: number;
 	}> {
 		const controller = await getController(this._db, name);
-		attachMessage(
-			res,
+		LogObj.fromRes(res).attachMessage(
 			`Getting temp. Returning ${controller.getLastTemp()}`
 		);
 		res.status(200);
@@ -104,8 +108,7 @@ export class APIHandler {
 		}
 	): Promise<string> {
 		const controller = await getController(this._db, name);
-		attachMessage(
-			res,
+		LogObj.fromRes(res).attachMessage(
 			`Setting move for controller ${name} to ${ms}ms in the direction ${direction}`
 		);
 		controller.setMove(direction, ms);

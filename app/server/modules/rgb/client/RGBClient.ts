@@ -1,5 +1,5 @@
+import { LogObj } from '../../../lib/logging/lob-obj';
 import { LED_KEYVAL_MAP, LED_NAME } from '../../../config/led-config';
-import { createLogObjWithName } from '../../../lib/logger';
 import { BuiltinPatterns, Control } from 'magic-home';
 import { Color } from '../../../lib/color';
 import { RGB } from '..';
@@ -44,7 +44,7 @@ export abstract class RGBClient {
 			const keys = LED_KEYVAL_MAP[this.id] ?? [];
 			for (const key of keys) {
 				await new (await RGB.modules).keyval.External(
-					createLogObjWithName(`RGB_NAMEMAP.${this.id}`)
+					LogObj.fromEvent(`RGB_NAMEMAP.${this.id}`)
 				).set(key, value, false);
 			}
 		}

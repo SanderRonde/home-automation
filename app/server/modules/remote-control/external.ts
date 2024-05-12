@@ -1,4 +1,5 @@
 import { createExternalClass } from '../../lib/external';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { APIHandler } from './api';
 import { RemoteControl } from '.';
 
@@ -7,7 +8,7 @@ export class ExternalHandler extends createExternalClass(false) {
 		return this.runRequest(async (res) => {
 			return APIHandler.play(res, {
 				// TODO: replace with external
-				auth: await this._getKey(res, RemoteControl),
+				auth: await this._getKey(LogObj.fromRes(res), RemoteControl),
 			});
 		});
 	}
@@ -15,7 +16,7 @@ export class ExternalHandler extends createExternalClass(false) {
 	public pause(): Promise<void> {
 		return this.runRequest(async (res) => {
 			return APIHandler.pause(res, {
-				auth: await this._getKey(res, RemoteControl),
+				auth: await this._getKey(LogObj.fromRes(res), RemoteControl),
 			});
 		});
 	}
@@ -23,7 +24,7 @@ export class ExternalHandler extends createExternalClass(false) {
 	public playpause(): Promise<void> {
 		return this.runRequest(async (res) => {
 			return APIHandler.playpause(res, {
-				auth: await this._getKey(res, RemoteControl),
+				auth: await this._getKey(LogObj.fromRes(res), RemoteControl),
 			});
 		});
 	}
@@ -31,7 +32,7 @@ export class ExternalHandler extends createExternalClass(false) {
 	public close(): Promise<void> {
 		return this.runRequest(async (res) => {
 			return APIHandler.close(res, {
-				auth: await this._getKey(res, RemoteControl),
+				auth: await this._getKey(LogObj.fromRes(res), RemoteControl),
 			});
 		});
 	}
@@ -39,7 +40,7 @@ export class ExternalHandler extends createExternalClass(false) {
 	public volumeUp(amount = 10): Promise<void> {
 		return this.runRequest(async (res) => {
 			return APIHandler.volumeUp(res, {
-				auth: await this._getKey(res, RemoteControl),
+				auth: await this._getKey(LogObj.fromRes(res), RemoteControl),
 				amount,
 			});
 		});
@@ -48,7 +49,7 @@ export class ExternalHandler extends createExternalClass(false) {
 	public volumeDown(amount = 10): Promise<void> {
 		return this.runRequest(async (res) => {
 			return APIHandler.volumeDown(res, {
-				auth: await this._getKey(res, RemoteControl),
+				auth: await this._getKey(LogObj.fromRes(res), RemoteControl),
 				amount,
 			});
 		});
@@ -57,7 +58,7 @@ export class ExternalHandler extends createExternalClass(false) {
 	public async setVolume(amount: number): Promise<void> {
 		return this.runRequest(async (res) => {
 			return APIHandler.setVolume(res, {
-				auth: await this._getKey(res, RemoteControl),
+				auth: await this._getKey(LogObj.fromRes(res), RemoteControl),
 				amount,
 			});
 		});

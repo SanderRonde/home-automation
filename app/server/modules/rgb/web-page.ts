@@ -1,7 +1,8 @@
 import express = require('express');
 import { errorHandle, authCookie, upgradeToHTTPS } from '../../lib/decorators';
+import { ResponseLike } from '../../lib/logging/response-logger';
 import { CustomPattern, patterns } from './patterns';
-import { ResponseLike } from '../../lib/logger';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { RGB } from '.';
 
 const patternPreviews = JSON.stringify(
@@ -19,8 +20,10 @@ const patternPreviews = JSON.stringify(
 	})
 );
 
-async function rgbHTML(randomNum: number, res: ResponseLike) {
-	const key = await new (await RGB.modules).auth.External(res).getSecretKey();
+async function rgbHTML(randomNum: number, logObj: LogObj) {
+	const key = await new (await RGB.modules).auth.External(
+		logObj
+	).getSecretKey();
 	return `<html style="background-color: rgb(70,70,70);">
 			<head>
 				<link rel="icon" href="/rgb/favicon.ico" type="image/x-icon" />
@@ -46,7 +49,7 @@ export class WebPageHandler {
 	): Promise<void> {
 		res.status(200);
 		res.contentType('.html');
-		res.write(await rgbHTML(randomNum, res));
+		res.write(await rgbHTML(randomNum, LogObj.fromRes(res)));
 		res.end();
 	}
 }

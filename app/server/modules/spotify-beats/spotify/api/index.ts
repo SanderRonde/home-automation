@@ -1,5 +1,5 @@
-import { logOutgoingRes, logTag } from '../../../../lib/logger';
 import { SpotifyTypes } from '../../../../types/spotify';
+import { logTag } from '../../../../lib/logging/logger';
 import { SpotifyAPIEndpoints } from './endpoints';
 import { Database } from '../../../../lib/db';
 import { wait } from '../../../../lib/util';
@@ -121,10 +121,6 @@ export class API {
 		const url = `${API.SPOTIFY_BASE}${path}`;
 		try {
 			const response = await request();
-			logOutgoingRes(response, {
-				method,
-				path,
-			});
 			switch (response.status) {
 				case 200:
 				case 201:

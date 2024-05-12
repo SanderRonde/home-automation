@@ -27,7 +27,7 @@ import { flatMap, flatten, fromEntries } from '../../../lib/util';
 import { GOOGLE_KEY, homeGraph } from '../home-graph';
 import { currentUsers } from '../home-graph/users';
 import { flattenObject } from '../../../lib/util';
-import { warning } from '../../../lib/logger';
+import { warning } from '../../../lib/logging/logger';
 import { getAuth } from '../../oauth/helpers';
 import { smartHomeLogger } from '../shared';
 import { time } from '../../../lib/timer';

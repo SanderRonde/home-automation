@@ -1,5 +1,6 @@
 import { addListener, removeListener, update } from './get-set-listener';
-import { LogObj, attachMessage, logTag } from '../../lib/logger';
+import { LogObj } from '../../lib/logging/lob-obj';
+import { logTag } from '../../lib/logging/logger';
 import { createRouter } from '../../lib/api';
 import { WSSimInstance } from '../../lib/ws';
 import { WebPageHandler } from './web-page';
@@ -53,8 +54,7 @@ export function initRouting({
 						const val = db.get(key, '0');
 						if (val !== lastValues[index] || force) {
 							lastValues[index] = val;
-							attachMessage(
-								logObj,
+							logObj.attachMessage(
 								`Sending "${val}" to`,
 								chalk.bold(instance.ip)
 							);
@@ -69,7 +69,7 @@ export function initRouting({
 								onChange(i, logObj)
 							)
 						);
-						onChange(i, {}, true);
+						onChange(i, LogObj.fromEvent('KEYVAL.WS.LISTEN'), true);
 					}
 
 					instance.onClose = () => {
@@ -84,7 +84,12 @@ export function initRouting({
 					logTag('touch-screen', 'cyan', chalk.bold(data));
 					const [key, value] = data.split(' ');
 					db.setVal(key, value.trim());
-					await update(key, value.trim(), {}, db);
+					await update(
+						key,
+						value.trim(),
+						LogObj.fromEvent('KEYVAL.WS.BUTTON'),
+						db
+					);
 				},
 				instance.ip
 			);

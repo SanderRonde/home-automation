@@ -5,7 +5,7 @@ import {
 } from '../types';
 import { get as _getInternal } from './internal';
 import { get as _getExternal } from './external';
-import { LogObj } from '../../../lib/logger';
+import { LogObj } from '../../../lib/logging/lob-obj';
 
 export function getInternal(
 	logObj?: LogObj,

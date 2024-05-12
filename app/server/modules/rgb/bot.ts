@@ -1,9 +1,9 @@
 import { ringClients, getLed, magicHomeClients } from './clients';
 import { ArduinoConfig, DIR, JoinedConfigs } from './types';
 import { getLedFromName } from '../../config/led-config';
-import { attachMessage, logTag } from '../../lib/logger';
 import { arrToObj, asyncTimeout } from '../../lib/util';
 import { BotStateBase } from '../../lib/bot-state';
+import { logTag } from '../../lib/logging/logger';
 import { ringEffects, Effects } from './ring-api';
 import { MatchParameters } from '../bot/message';
 import { ColorTarget, HEX_REGEX } from './api';
@@ -115,8 +115,7 @@ export class Bot extends BotStateBase {
 							)
 						).every((v) => v)
 					) {
-						attachMessage(
-							logObj,
+						logObj.attachMessage(
 							`Turned ${targetState} ${ringClients.length} arduino clients`
 						);
 						return `Turned ${targetState} ${ringClients.length} arduino clients`;
@@ -134,11 +133,11 @@ export class Bot extends BotStateBase {
 				}
 
 				if (targetState === 'on') {
-					attachMessage(logObj, 'Turned it on');
+					logObj.attachMessage('Turned it on');
 					await client.turnOn();
 					return 'Turned it on';
 				} else {
-					attachMessage(logObj, 'Turned it off');
+					logObj.attachMessage('Turned it off');
 					await client.turnOff();
 					return 'Turned it off';
 				}
@@ -160,8 +159,7 @@ export class Bot extends BotStateBase {
 							)
 						).every((v) => v)
 					) {
-						attachMessage(
-							logObj,
+						logObj.attachMessage(
 							`Turned ${targetState} ${magicHomeClients.length} magichome clients`
 						);
 						return `Turned ${targetState} ${magicHomeClients.length} magichome clients`;

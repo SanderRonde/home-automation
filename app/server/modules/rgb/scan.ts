@@ -10,7 +10,7 @@ import { WLEDRGBClient } from './client/WLEDRGBClient';
 import { RingClient } from './client/RingClient';
 import { Control, Discovery } from 'magic-home';
 import { HexClient } from './client/HexClient';
-import { logTag } from '../../lib/logger';
+import { logTag } from '../../lib/logging/logger';
 import chalk from 'chalk';
 
 let magicHomeTimer: NodeJS.Timeout | null = null;

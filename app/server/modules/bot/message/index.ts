@@ -5,16 +5,12 @@ import {
 	TelegramReq,
 	TelegramText,
 } from '../types';
-import {
-	attachMessage,
-	log,
-	LogObj,
-	logOutgoingReq,
-	ResponseLike,
-} from '../../../lib/logger';
+import { ResponseLike } from '../../../lib/logging/response-logger';
 import { BotStateBase, Matchable } from '../../../lib/bot-state';
 import { ChatState, StateKeeper } from './state-keeping';
+import { LogObj } from '../../../lib/logging/lob-obj';
 import { TELEGRAM_API } from '../../../lib/constants';
+import { logTag } from '../../../lib/logging/logger';
 import { Database } from '../../../lib/db';
 import { BOT_NAME } from '../constants';
 import * as https from 'https';
@@ -248,7 +244,9 @@ export class MessageHandler extends BotStateBase {
 		chatId?: number
 	): Promise<boolean> {
 		if (!this._lastChatID && !chatId) {
-			log(
+			logTag(
+				'bot',
+				'yellow',
 				`Did not send message ${text} because no last chat ID is known`
 			);
 			return Promise.resolve(false);
@@ -274,10 +272,11 @@ export class MessageHandler extends BotStateBase {
 					'Content-Type': 'application/json',
 				},
 			});
+			const reqLogObj = LogObj.fromOutgoingReq(req);
+
 			req.write(msg);
 			req.on('error', (e) => {
-				attachMessage(
-					req,
+				reqLogObj.attachMessage(
 					chalk.red('Error sending telegram msg'),
 					e.toString()
 				);
@@ -285,21 +284,13 @@ export class MessageHandler extends BotStateBase {
 			});
 			req.on('finish', () => {
 				resolve(true);
-				logOutgoingReq(req, {
-					method: 'POST',
-					target: TELEGRAM_API + '/sendMessage',
-				});
 			});
 			req.end();
 
-			const botLogObj = attachMessage(req, chalk.cyan('[bot]'));
-			attachMessage(botLogObj, 'ID: ', chalk.bold(String(chatId)));
-			attachMessage(botLogObj, 'Type: ', chalk.bold(String(type)));
-			attachMessage(
-				botLogObj,
-				'Text: ',
-				chalk.bold(JSON.stringify(text))
-			);
+			const botLogObj = reqLogObj.attachMessage(chalk.cyan('[bot]'));
+			botLogObj.attachMessage('ID: ', chalk.bold(String(chatId)));
+			botLogObj.attachMessage('Type: ', chalk.bold(String(type)));
+			botLogObj.attachMessage('Text: ', chalk.bold(JSON.stringify(text)));
 		});
 	}
 
@@ -313,9 +304,9 @@ export class MessageHandler extends BotStateBase {
 			text: string | number;
 		}[]
 	> {
-		attachMessage(logObj, 'Message text:', chalk.bold(message.text));
-		attachMessage(logObj, 'Chat ID:', chalk.bold(String(message.chat.id)));
-		const matchMsg = attachMessage(logObj, 'Match');
+		logObj.attachMessage('Message text:', chalk.bold(message.text));
+		logObj.attachMessage('Chat ID:', chalk.bold(String(message.chat.id)));
+		const matchMsg = logObj.attachMessage('Match');
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
 		return (
 			(await MessageHandler.multiMatch({
@@ -326,7 +317,7 @@ export class MessageHandler extends BotStateBase {
 				res,
 				bot: this,
 			})) ||
-			(attachMessage(matchMsg, 'None') && [
+			(matchMsg.attachMessage('None') && [
 				{
 					type: RESPONSE_TYPE.TEXT,
 					text: "I'm not sure what you mean",
@@ -419,7 +410,9 @@ export class MessageHandler extends BotStateBase {
 		res: ResponseLike
 	): Promise<void> {
 		const { message, edited_message } = req.body;
-		const logObj = attachMessage(res, chalk.bold(chalk.cyan('[bot]')));
+		const logObj = LogObj.fromRes(res).attachMessage(
+			chalk.bold(chalk.cyan('[bot]'))
+		);
 
 		const resWrapped = new ResWrapper(res);
 		const responses = await (() => {
@@ -448,8 +441,7 @@ export class MessageHandler extends BotStateBase {
 				},
 			];
 		})();
-		attachMessage(
-			logObj,
+		logObj.attachMessage(
 			'Return value(s)',
 			chalk.bold(JSON.stringify(responses))
 		);

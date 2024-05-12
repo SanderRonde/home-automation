@@ -1,9 +1,10 @@
 import express = require('express');
 import { authCode, authenticated, authenticateURL } from './calendar';
 import { initMiddleware, initPostRoutes } from '../../lib/routes';
-import { createLogObjWithName, logTag } from '../../lib/logger';
 import { AsyncExpressApplication } from '../../types/express';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { WSClient, WSWrapper } from '../../lib/ws';
+import { logTag } from '../../lib/logging/logger';
 import { createAPIHandler } from '../../lib/api';
 import { WebPageHandler } from './web-page';
 import { getEnv } from '../../lib/io';
@@ -37,10 +38,7 @@ export function initRouting(
 	const server = http.createServer(app as express.Application);
 	const ws = new WSWrapper(server);
 
-	initMiddleware({
-		...moduleConfig,
-		app,
-	});
+	initMiddleware(app);
 
 	app.all('/', async (_req, res) => {
 		if (!authenticated) {
@@ -82,7 +80,7 @@ export function initRouting(
 			const listener = await new (
 				await InfoScreen.modules
 			).keyval.External(
-				createLogObjWithName('INFO_SCREEN.BLANKING')
+				LogObj.fromEvent('INFO_SCREEN.BLANKING')
 			).onChange(
 				getEnv('INFO_SCREEN_KEYVAL', true),
 				(value) => {
@@ -98,7 +96,7 @@ export function initRouting(
 				JSON.stringify({
 					blank:
 						(await new (await InfoScreen.modules).keyval.External(
-							createLogObjWithName('INFO_SCREEN.BLANKING')
+							LogObj.fromEvent('INFO_SCREEN.BLANKING')
 						).get(getEnv('INFO_SCREEN_KEYVAL', true))) === '0',
 				})
 			);
@@ -113,7 +111,7 @@ export function initRouting(
 		}
 	});
 
-	initPostRoutes(app as express.Express);
+	initPostRoutes({ app: app as express.Express, config });
 
 	if (config.debug) {
 		server.listen(config.ports.info, () => {

@@ -4,9 +4,10 @@ import {
 	authAll,
 	auth,
 } from '../../lib/decorators';
-import { ResponseLike, attachMessage } from '../../lib/logger';
+import { ResponseLike } from '../../lib/logging/response-logger';
 import { Detector } from './classes';
 import { HOME_STATE } from './types';
+import { LogObj } from '../../lib/logging/lob-obj';
 
 export class APIHandler {
 	private readonly _detector: Detector;
@@ -28,7 +29,7 @@ export class APIHandler {
 		}
 	): HOME_STATE | '?' {
 		const result = this._detector.get(name);
-		attachMessage(res, `Name: ${name}, val: ${result}`);
+		LogObj.fromRes(res).attachMessage(`Name: ${name}, val: ${result}`);
 		res.write(result);
 		res.end();
 		return result;
@@ -45,7 +46,7 @@ export class APIHandler {
 	): Record<string, HOME_STATE | '?'> {
 		const all = this._detector.getAll(true);
 		const result = JSON.stringify(all);
-		attachMessage(res, `JSON: ${result}`);
+		LogObj.fromRes(res).attachMessage( `JSON: ${result}`);
 		res.write(result);
 		res.end();
 		return all;

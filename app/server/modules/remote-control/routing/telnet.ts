@@ -1,5 +1,6 @@
-import { attachMessage, LogObj, logTag } from '../../../lib/logger';
 import telnet_client, * as TelnetClient from 'telnet-client';
+import { LogObj } from '../../../lib/logging/lob-obj';
+import { logTag } from '../../../lib/logging/logger';
 import { getEnv } from '../../../lib/io';
 import { Commands } from '../types';
 import chalk from 'chalk';
@@ -123,16 +124,14 @@ export async function sendMessage(
 	while ((next = await gen.next()) && !next.done) {
 		void (async () => {
 			try {
-				attachMessage(
-					logObj,
+				logObj.attachMessage(
 					`Executing telnet command: ${JSON.stringify(
 						command
 					)} on host ${next.value.host}`
 				);
 				await executeTelnetCommand(next.value.conn, command);
 			} catch (e) {
-				attachMessage(
-					logObj,
+				logObj.attachMessage(
 					`Failed Executing telnet command: ${JSON.stringify(
 						command
 					)} on host ${next.value.host}`

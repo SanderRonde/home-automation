@@ -1,5 +1,6 @@
 import { auth, errorHandle, requireParams } from '../../lib/decorators';
-import { ResponseLike, attachMessage } from '../../lib/logger';
+import { ResponseLike } from '../../lib/logging/response-logger';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { reportMovement } from './register';
 
 export class APIHandler {
@@ -15,8 +16,8 @@ export class APIHandler {
 			key: string;
 		}
 	): Promise<void> {
-		attachMessage(res, `Reporting movement for key ${key}`);
-		await reportMovement(key, res);
+		LogObj.fromRes(res).attachMessage( `Reporting movement for key ${key}`);
+		await reportMovement(key, LogObj.fromRes(res));
 		res.status(200);
 		res.end();
 	}

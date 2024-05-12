@@ -5,7 +5,8 @@ import {
 	EWeLinkUpdateMessage,
 	EWeLinkWebSocketMessage,
 } from '../shared';
-import { logFixture, ResDummy } from '../../../../lib/logger';
+import { ResDummy } from '../../../../lib/logging/response-logger';
+import { LogObj } from '../../../../lib/logging/lob-obj';
 import { asyncSetInterval } from '../../../../lib/util';
 import chalk from 'chalk';
 
@@ -27,27 +28,23 @@ export abstract class EwelinkPowerBase<P> extends EWeLinkInitable {
 		};
 	}
 
-	private _getKeyval() {
+	private _getKeyval(logObj: LogObj) {
 		const resDummy = new ResDummy();
 		return {
 			resDummy,
-			keyval: new this._eWeLinkConfig.modules.keyval.External(resDummy),
+			keyval: new this._eWeLinkConfig.modules.keyval.External(logObj),
 		};
 	}
 
 	private async _setFromRemoteStatus(remoteState: boolean, source: string) {
-		const { keyval, resDummy } = this._getKeyval();
+		const logObj = LogObj.fromFixture(chalk.magenta('[ewelink]'), source);
+		const { keyval, resDummy } = this._getKeyval(logObj);
 		const localState = await keyval.get(this._keyVal);
 
 		if (remoteState !== (localState === '1')) {
 			await keyval.set(this._keyVal, remoteState ? '1' : '0', true);
-			logFixture(
-				resDummy,
-				chalk.magenta('[ewelink]'),
-				`[${source}]`,
-				'Set to',
-				remoteState ? 'on' : 'off'
-			);
+			LogObj.fromRes(resDummy).transferTo(logObj);
+			logObj.attachMessage('Set to', remoteState ? 'on' : 'off');
 		}
 	}
 
@@ -92,7 +89,7 @@ export abstract class EwelinkPowerBase<P> extends EWeLinkInitable {
 		if (this._options.enableSync) {
 			this._startTimer();
 		}
-		const { keyval } = this._getKeyval();
+		const { keyval } = this._getKeyval(LogObj.fromEvent('EWELINK.INIT'));
 		await keyval.onChange(this._keyVal, async (value: string) => {
 			if (value === '1') {
 				await this.turnOn();

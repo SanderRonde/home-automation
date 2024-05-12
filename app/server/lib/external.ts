@@ -1,5 +1,6 @@
+import { ResDummy } from './logging/response-logger';
 import { ModuleMeta } from '../modules/meta';
-import { LogObj, ResDummy } from './logger';
+import { LogObj } from './logging/lob-obj';
 
 type QueuedRequestFn<T> = (res: ResDummy, logObj: LogObj) => Promise<T> | T;
 
@@ -33,7 +34,7 @@ export function createExternalClass(requiresInit: boolean, name?: string) {
 			const { _logObj: logObj } = instance;
 			const resDummy = new ResDummy();
 			const value = await fn(resDummy, logObj);
-			resDummy.transferTo(logObj);
+			LogObj.fromRes(resDummy).transferTo(logObj);
 			return value;
 		}
 

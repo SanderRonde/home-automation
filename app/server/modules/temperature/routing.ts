@@ -1,5 +1,5 @@
+import { LogObj } from '../../lib/logging/lob-obj';
 import { getController } from './temp-controller';
-import { attachMessage } from '../../lib/logger';
 import { ModuleConfig, Temperature } from '..';
 import { createRouter } from '../../lib/api';
 import { APIHandler } from './api';
@@ -46,8 +46,7 @@ export function initRouting(
 		const controller = await getController(sqlDB, body['name']);
 		await controller.setLastTemp(temp);
 
-		attachMessage(
-			res,
+		LogObj.fromRes(res).attachMessage(
 			`Reported temperature: "${controller.getLastTemp()}`
 		);
 		res.status(200);
@@ -66,13 +65,13 @@ export function initRouting(
 		const controller = await getController(sqlDB, body['name']);
 
 		const advice = controller.getHeaterState();
-		attachMessage(
-			attachMessage(
-				res,
+		LogObj.fromRes(res)
+			.attachMessage(
 				`Returning advice: "${advice}" for temp ${controller.getLastTemp()}°`
-			),
-			`Heater mode: "${controller.getMode()}, target: ${controller.getTarget()}`
-		);
+			)
+			.attachMessage(
+				`Heater mode: "${controller.getMode()}, target: ${controller.getTarget()}`
+			);
 		res.write(`${advice} ${controller.getMode()}`);
 		res.status(200);
 		res.end();
@@ -91,11 +90,12 @@ export function initRouting(
 
 		const move = controller.getMove();
 		if (!move) {
-			attachMessage(res, `Returning no move for controller ${body.name}`);
+			LogObj.fromRes(res).attachMessage(
+				`Returning no move for controller ${body.name}`
+			);
 			res.write('0 l');
 		} else {
-			attachMessage(
-				res,
+			LogObj.fromRes(res).attachMessage(
 				`Returning move ${move.ms}ms in direction ${move.direction} for controller ${body['name']}`
 			);
 			res.write(`${move.ms} ${move.direction === 'left' ? 'l' : 'r'}`);

@@ -2,12 +2,13 @@ import { createExternalClass } from '../../lib/external';
 import * as castv2 from 'castv2-player';
 import { APIHandler } from './api';
 import { Cast } from '.';
+import { LogObj } from '../../lib/logging/lob-obj';
 
 export class ExternalHandler extends createExternalClass(true) {
 	public async stop(): Promise<castv2.MediaPlayerClass[]> {
 		return this.runRequest(async (res) => {
 			return APIHandler.stop(res, {
-				auth: await this._getKey(res, Cast),
+				auth: await this._getKey(LogObj.fromRes(res), Cast),
 			});
 		});
 	}
@@ -18,7 +19,7 @@ export class ExternalHandler extends createExternalClass(true) {
 		return this.runRequest(async (res) => {
 			return APIHandler.pasta(res, {
 				pasta: pasta,
-				auth: await this._getKey(res, Cast),
+				auth: await this._getKey(LogObj.fromRes(res), Cast),
 			});
 		});
 	}
@@ -31,7 +32,7 @@ export class ExternalHandler extends createExternalClass(true) {
 			return APIHandler.say(res, {
 				text,
 				lang,
-				auth: await this._getKey(res, Cast),
+				auth: await this._getKey(LogObj.fromRes(res), Cast),
 			});
 		});
 	}
@@ -40,7 +41,7 @@ export class ExternalHandler extends createExternalClass(true) {
 		return this.runRequest(async (res) => {
 			return APIHandler.url(res, {
 				url,
-				auth: await this._getKey(res, Cast),
+				auth: await this._getKey(LogObj.fromRes(res), Cast),
 			});
 		});
 	}

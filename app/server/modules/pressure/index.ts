@@ -1,4 +1,4 @@
-import { createLogObjWithName } from '../../lib/logger';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { PressureStateKeeper } from './enabled';
 import { PressureValueKeeper } from './values';
 import { ExternalHandler } from './external';
@@ -32,7 +32,7 @@ export const Pressure = new (class Pressure extends ModuleMeta {
 
 		void (async () => {
 			const keyval = new config.modules.keyval.External(
-				createLogObjWithName('PRESSURE.NOTIFY')
+				LogObj.fromEvent('PRESSURE.NOTIFY')
 			);
 			await keyval.set(
 				'state.pressure',

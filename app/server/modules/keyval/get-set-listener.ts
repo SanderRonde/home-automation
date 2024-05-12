@@ -1,4 +1,4 @@
-import { attachMessage, createLogObjWithName, LogObj } from '../../lib/logger';
+import { LogObj } from '../../lib/logging/lob-obj';
 import groups from '../../config/keyval-groups';
 import { KEYVAL_GROUP_EFFECT } from './types';
 import { ExternalHandler } from './external';
@@ -31,7 +31,7 @@ export function addListener(
 	}: { once?: boolean; notifyOnInitial?: boolean } = {}
 ): number {
 	if (notifyOnInitial && key !== null) {
-		const logObj = createLogObjWithName('KEYVAL.ADD_LISTENER');
+		const logObj = LogObj.fromEvent('KEYVAL.ADD_LISTENER');
 		void new ExternalHandler(logObj).get(key).then((value) => {
 			return listener(value, key, logObj);
 		});
@@ -56,7 +56,7 @@ function triggerGroups(
 	db: Database
 ): void {
 	if (!(key in groups)) {
-		attachMessage(logObj, 'No groups');
+		logObj.attachMessage('No groups');
 		return;
 	}
 
@@ -86,7 +86,7 @@ function triggerGroups(
 			continue;
 		}
 
-		attachMessage(logObj, `Setting "${key}" to "${newValue}" (db only)`);
+		logObj.attachMessage(`Setting "${key}" to "${newValue}" (db only)`);
 		db.setVal(key, newValue);
 	}
 }
@@ -126,7 +126,7 @@ export async function update(
 		}
 	}
 
-	triggerGroups(key, value, attachMessage(logObj, 'Triggering groups'), db);
+	triggerGroups(key, value, logObj.attachMessage('Triggering groups'), db);
 
 	return updated;
 }

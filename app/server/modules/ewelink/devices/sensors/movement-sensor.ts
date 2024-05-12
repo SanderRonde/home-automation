@@ -3,7 +3,8 @@ import {
 	EWeLinkSharedConfig,
 	EWeLinkWebSocketMessage,
 } from '../shared';
-import { createLogObjWithName, logTag } from '../../../../lib/logger';
+import { logTag } from '../../../../lib/logging/logger';
+import { LogObj } from '../../../../lib/logging/lob-obj';
 import { ExternalHandler } from '../../../movement/external';
 
 export class EwelinkMovement extends EWeLinkInitable {
@@ -19,7 +20,7 @@ export class EwelinkMovement extends EWeLinkInitable {
 	public init(): Promise<void> {
 		this._movementExternal =
 			new this._eWeLinkConfig.modules.movement.External(
-				createLogObjWithName('EWELINK.MOVEMENT.INIT')
+				LogObj.fromEvent('EWELINK.MOVEMENT.INIT')
 			);
 		this._eWeLinkConfig.wsConnection.on(
 			'data',

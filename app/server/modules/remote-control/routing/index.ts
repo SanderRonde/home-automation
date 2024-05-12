@@ -1,4 +1,4 @@
-import { attachMessage, createLogObjWithName } from '../../../lib/logger';
+import { LogObj } from '../../../lib/logging/lob-obj';
 import { listenAny, removeListener } from '../get-set-listener';
 import { createRouter } from '../../../lib/api';
 import { WebPageHandler } from '../web-page';
@@ -32,13 +32,13 @@ export function initRouting({
 			}
 
 			const external = new (await RemoteControl.modules).auth.External(
-				createLogObjWithName('REMOTE_CONTROL.WS')
+				LogObj.fromEvent('REMOTE_CONTROL.WS')
 			);
 			if (await external.authenticate(message)) {
 				authenticated = true;
 
 				const listener = listenAny((command, logObj) => {
-					attachMessage(logObj, 'Sending remote control message');
+					logObj.attachMessage('Sending remote control message');
 					send(JSON.stringify(command));
 				});
 
@@ -51,7 +51,7 @@ export function initRouting({
 
 	// Update any VLC telnet instances on change
 	listenAny(async (command, logObj) => {
-		attachMessage(logObj, 'Sending vlc telnet remote control message');
+		logObj.attachMessage('Sending vlc telnet remote control message');
 		await sendMessage(command, logObj);
 	});
 

@@ -1,4 +1,4 @@
-import { attachMessage, LogObj } from '../../lib/logger';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { createHookables } from '../../lib/util';
 import webhooks from '../../config/webhook';
 import { Webhook } from '.';
@@ -10,7 +10,7 @@ export async function triggerWebhooks(
 	logObj: LogObj
 ): Promise<void> {
 	if (!(name in webhooks)) {
-		attachMessage(logObj, chalk.red('Webhook not found'));
+		logObj.attachMessage(chalk.red('Webhook not found'));
 		return;
 	}
 

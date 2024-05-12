@@ -1,4 +1,4 @@
-import { LogObj } from '../../lib/logger';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { Commands } from './types';
 
 const _listeners: Map<

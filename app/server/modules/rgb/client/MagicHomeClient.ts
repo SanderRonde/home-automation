@@ -1,6 +1,6 @@
 import { BuiltinPatterns, Control, State } from 'magic-home';
 import { MAGIC_LEDS } from '../../../config/led-config';
-import { warning } from '../../../lib/logger';
+import { warning } from '../../../lib/logging/logger';
 import { Color } from '../../../lib/color';
 import { RGBClient } from './RGBClient';
 

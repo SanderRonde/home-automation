@@ -1,3 +1,4 @@
+import { LogObj } from '../../lib/logging/lob-obj';
 import { ExternalHandler } from './external';
 import { Schema } from '../../lib/sql-db';
 import { initRouting } from './routing';
@@ -70,7 +71,9 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		});
 
 		if (getEnv('HEATING_KEY', false)) {
-			void new config.modules.keyval.External({}).onChange(
+			void new config.modules.keyval.External(
+				LogObj.fromEvent('TEMPERATURE.INIT')
+			).onChange(
 				getEnv('HEATING_KEY', true),
 				async (value, _key, logObj) => {
 					return new ExternalHandler(logObj).setMode(

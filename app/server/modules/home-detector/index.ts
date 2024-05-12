@@ -1,5 +1,6 @@
+import { LogObj } from '../../lib/logging/lob-obj';
+import { logTag } from '../../lib/logging/logger';
 import { ExternalHandler } from './external';
-import { logTag } from '../../lib/logger';
 import { initRouting } from './routing';
 import { handleHooks } from './hooks';
 import { Detector } from './classes';
@@ -32,7 +33,11 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 			);
 		});
 		Detector.addListener(null, async (newState, name) => {
-			await handleHooks(newState, name);
+			await handleHooks(
+				newState,
+				name,
+				LogObj.fromFixture(chalk.cyan('[hook]'), name),
+			);
 		});
 	}
 

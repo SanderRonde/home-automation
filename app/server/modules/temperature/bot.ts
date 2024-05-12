@@ -1,5 +1,4 @@
 import { BotStateBase } from '../../lib/bot-state';
-import { attachMessage } from '../../lib/logger';
 import { MatchParameters } from '../bot/message';
 import { MatchResponse } from '../bot/types';
 import { ExternalHandler } from './external';
@@ -25,8 +24,7 @@ export class Bot extends BotStateBase {
 				/what temp(erature)? is it(\?)?/,
 				/how (warm|cold) is it(\?)?/,
 				({ logObj }) => {
-					attachMessage(
-						logObj,
+					logObj.attachMessage(
 						`Reporting temperatures ${getAll()
 							.map((controller) => {
 								return Math.round(controller.getLastTemp());
@@ -69,7 +67,7 @@ export class Bot extends BotStateBase {
 				async ({ logObj, match }) => {
 					const tempName = match[1];
 					await new ExternalHandler(
-						attachMessage(logObj, 'Stopping heating')
+						logObj.attachMessage('Stopping heating')
 					).setMode(tempName, 'off');
 					return 'Stopping heating';
 				}
@@ -77,7 +75,7 @@ export class Bot extends BotStateBase {
 			mm(/\/heatauto (\w+)/, async ({ logObj, match }) => {
 				const tempName = match[1];
 				await new ExternalHandler(
-					attachMessage(logObj, 'Set heat mode to auto')
+					logObj.attachMessage('Set heat mode to auto')
 				).setMode(tempName, 'auto');
 				return 'Set heat mode to auto';
 			});
@@ -89,7 +87,7 @@ export class Bot extends BotStateBase {
 				async ({ logObj, match }) => {
 					const tempName = match[1];
 					await new ExternalHandler(
-						attachMessage(logObj, 'Heating')
+						logObj.attachMessage('Heating')
 					).setMode(tempName, 'on');
 					return 'Heating';
 				}
@@ -99,7 +97,7 @@ export class Bot extends BotStateBase {
 				async ({ logObj, match }) => {
 					const tempName = match[1];
 					await new ExternalHandler(
-						attachMessage(logObj, 'Moving')
+						logObj.attachMessage('Moving')
 					).moveDir(
 						tempName,
 						match[2] as 'left' | 'right',
@@ -117,7 +115,7 @@ export class Bot extends BotStateBase {
 						return 'Invalid mode';
 					}
 					await new ExternalHandler(
-						attachMessage(logObj, `Setting mode to ${mode}`)
+						logObj.attachMessage(`Setting mode to ${mode}`)
 					).setMode(tempName, mode as Mode);
 					return `Set mode to ${mode}`;
 				}
@@ -131,7 +129,7 @@ export class Bot extends BotStateBase {
 						return 'Invalid target';
 					}
 					await new ExternalHandler(
-						attachMessage(logObj, `Setting temp to ${target}`)
+						logObj.attachMessage(`Setting temp to ${target}`)
 					).setTarget(tempName, target);
 					return `Set target to ${target}`;
 				}

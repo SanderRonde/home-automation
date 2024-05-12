@@ -1,6 +1,6 @@
 import { addListener, removeListener } from './get-set-listener';
 import { createExternalClass } from '../../lib/external';
-import { LogObj } from '../../lib/logger';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { APIHandler } from './api';
 import { KeyVal } from '.';
 
@@ -26,7 +26,7 @@ export class ExternalHandler extends createExternalClass(true) {
 				key,
 				value,
 				update: notify,
-				auth: await this._getKey(res, KeyVal),
+				auth: await this._getKey(LogObj.fromRes(res), KeyVal),
 			});
 		});
 	}
@@ -35,7 +35,7 @@ export class ExternalHandler extends createExternalClass(true) {
 		return this.runRequest(async (res) => {
 			return ExternalHandler._apiHandler!.get(res, {
 				key,
-				auth: await this._getKey(res, KeyVal),
+				auth: await this._getKey(LogObj.fromRes(res), KeyVal),
 			});
 		});
 	}
@@ -44,7 +44,7 @@ export class ExternalHandler extends createExternalClass(true) {
 		return this.runRequest(async (res) => {
 			return ExternalHandler._apiHandler!.toggle(res, {
 				key,
-				auth: await this._getKey(res, KeyVal),
+				auth: await this._getKey(LogObj.fromRes(res), KeyVal),
 			});
 		});
 	}

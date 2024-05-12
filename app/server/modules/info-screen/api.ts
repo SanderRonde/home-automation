@@ -1,8 +1,9 @@
 import { ExternalTemperatureResult, ExternalWeatherTimePeriod } from './types';
 import { errorHandle, requireParams } from '../../lib/decorators';
-import { ResponseLike, attachMessage } from '../../lib/logger';
+import { ResponseLike } from '../../lib/logging/response-logger';
 import { getInternal, getExternal } from './temperature/';
 import { CalendarEvent, getEvents } from './calendar';
+import { LogObj } from '../../lib/logging/lob-obj';
 
 export class APIHandler {
 	@errorHandle
@@ -20,10 +21,10 @@ export class APIHandler {
 		const response = await (async () => {
 			if (type === 'inside') {
 				// Use temperature module
-				const temp = await getInternal(res);
+				const temp = await getInternal(LogObj.fromRes(res));
 				return { temperature: temp.temp, icon: 'inside.png' };
 			} else if (type === 'server') {
-				const temp = await getInternal(res, 'server');
+				const temp = await getInternal(LogObj.fromRes(res), 'server');
 				return { temperature: temp.temp, icon: 'server.png' };
 			} else {
 				// Use openweathermap
@@ -46,7 +47,7 @@ export class APIHandler {
 		})();
 		const { temperature, icon } = response;
 
-		attachMessage(res, `Temp: "${String(temperature)}", icon: ${icon}`);
+		LogObj.fromRes(res).attachMessage( `Temp: "${String(temperature)}", icon: ${icon}`);
 		res.status(200).write(
 			JSON.stringify({
 				...response,
@@ -61,7 +62,7 @@ export class APIHandler {
 	public async getEvents(res: ResponseLike): Promise<CalendarEvent[]> {
 		try {
 			const events = await getEvents(7);
-			attachMessage(res, `Fetched ${events.length} events`);
+			LogObj.fromRes(res).attachMessage( `Fetched ${events.length} events`);
 			res.status(200).write(
 				JSON.stringify({
 					events,

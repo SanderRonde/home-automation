@@ -1,5 +1,6 @@
 import { errorHandle, authAll, requireParams } from '../../lib/decorators';
-import { ResponseLike, attachMessage } from '../../lib/logger';
+import { ResponseLike } from '../../lib/logging/response-logger';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { update } from './get-set-listener';
 
 export class APIHandler {
@@ -12,12 +13,12 @@ export class APIHandler {
 			auth?: string;
 		}
 	): Promise<void> {
-		const msg = attachMessage(res, 'Command: "play"');
+		const msg = LogObj.fromRes(res).attachMessage('Command: "play"');
 		await update(
 			{
 				action: 'play',
 			},
-			attachMessage(msg, 'Updates')
+			msg.attachMessage('Updates')
 		);
 		res.status(200);
 		res.end();
@@ -32,12 +33,12 @@ export class APIHandler {
 			auth?: string;
 		}
 	): Promise<void> {
-		const msg = attachMessage(res, 'Command: "pause"');
+		const msg = LogObj.fromRes(res).attachMessage('Command: "pause"');
 		await update(
 			{
 				action: 'pause',
 			},
-			attachMessage(msg, 'Updates')
+			msg.attachMessage('Updates')
 		);
 		res.status(200);
 		res.end();
@@ -52,12 +53,12 @@ export class APIHandler {
 			auth?: string;
 		}
 	): Promise<void> {
-		const msg = attachMessage(res, 'Command: "playpause"');
+		const msg = LogObj.fromRes(res).attachMessage('Command: "playpause"');
 		await update(
 			{
 				action: 'playpause',
 			},
-			attachMessage(msg, 'Updates')
+			msg.attachMessage('Updates')
 		);
 		res.status(200);
 		res.end();
@@ -72,12 +73,12 @@ export class APIHandler {
 			auth?: string;
 		}
 	): Promise<void> {
-		const msg = attachMessage(res, 'Command: "close"');
+		const msg = LogObj.fromRes(res).attachMessage('Command: "close"');
 		await update(
 			{
 				action: 'close',
 			},
-			attachMessage(msg, 'Updates')
+			msg.attachMessage('Updates')
 		);
 		res.status(200);
 		res.end();
@@ -94,8 +95,7 @@ export class APIHandler {
 			amount?: number;
 		}
 	): Promise<void> {
-		const msg = attachMessage(
-			res,
+		const msg = LogObj.fromRes(res).attachMessage(
 			`Command: "volumeUp", amount: "${amount}"`
 		);
 		await update(
@@ -103,7 +103,7 @@ export class APIHandler {
 				action: 'volumeUp',
 				amount: amount,
 			},
-			attachMessage(msg, 'Updates')
+			msg.attachMessage('Updates')
 		);
 		res.status(200);
 		res.end();
@@ -120,8 +120,7 @@ export class APIHandler {
 			amount?: number;
 		}
 	): Promise<void> {
-		const msg = attachMessage(
-			res,
+		const msg = LogObj.fromRes(res).attachMessage(
 			`Command: "volumeDown", amount: "${amount}"`
 		);
 		await update(
@@ -129,7 +128,7 @@ export class APIHandler {
 				action: 'volumeDown',
 				amount: amount,
 			},
-			attachMessage(msg, 'Updates')
+			msg.attachMessage('Updates')
 		);
 		res.status(200);
 		res.end();
@@ -147,8 +146,7 @@ export class APIHandler {
 			amount: number;
 		}
 	): Promise<void> {
-		const msg = attachMessage(
-			res,
+		const msg = LogObj.fromRes(res).attachMessage(
 			`Command: "setVolume", amount: "${amount}"`
 		);
 		await update(
@@ -156,7 +154,7 @@ export class APIHandler {
 				action: 'setVolume',
 				amount,
 			},
-			attachMessage(msg, 'Updates')
+			msg.attachMessage('Updates')
 		);
 		res.status(200);
 		res.end();

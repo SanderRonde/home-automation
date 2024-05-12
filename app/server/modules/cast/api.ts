@@ -1,6 +1,7 @@
 import { auth, errorHandle, requireParams } from '../../lib/decorators';
-import { attachMessage, ResponseLike } from '../../lib/logger';
+import { ResponseLike } from '../../lib/logging/response-logger';
 import { playURL, playURLs, stop } from './casting';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { LOCAL_URLS } from './local-urls';
 import * as castv2 from 'castv2-player';
 import { PASTAS } from './pasta';
@@ -24,18 +25,15 @@ export class APIHandler {
 		}
 
 		const mediaPlayers = await playURL(url);
-		const playerLog = attachMessage(
-			res,
+		const playerLog = LogObj.fromRes(res).attachMessage(
 			`Playing on ${mediaPlayers.length} players`
 		);
-		attachMessage(
-			playerLog,
+		playerLog.attachMessage(
 			`Device names: ${mediaPlayers
 				.map((p) => p.connection.name)
 				.join(', ')}`
 		);
-		attachMessage(
-			playerLog,
+		playerLog.attachMessage(
 			`Device IPs: ${mediaPlayers
 				.map((p) => p.connection.host)
 				.join(', ')}`
@@ -55,7 +53,9 @@ export class APIHandler {
 		}
 	): Promise<castv2.MediaPlayerClass[]> {
 		const mediaPlayers = await stop();
-		attachMessage(res, `Stopped ${mediaPlayers.length} players`);
+		LogObj.fromRes(res).attachMessage(
+			`Stopped ${mediaPlayers.length} players`
+		);
 		res.status(200).write('Success');
 		res.end();
 		return mediaPlayers;
@@ -74,23 +74,21 @@ export class APIHandler {
 			auth?: string;
 		}
 	): Promise<castv2.MediaPlayerClass[]> {
-		const urls = tts(text, lang)(res);
-		attachMessage(res, `Got urls ${urls.join(', ')}`);
+		const urls = tts(text, lang)(LogObj.fromRes(res));
+		const logObj = LogObj.fromRes(res);
+		logObj.attachMessage(`Got urls ${urls.join(', ')}`);
 
 		const mediaPlayers = await playURLs(urls);
-		attachMessage(res, `Saying in lang "${lang}": "${text}"`);
-		const playerLog = attachMessage(
-			res,
+		logObj.attachMessage(`Saying in lang "${lang}": "${text}"`);
+		const playerLog = logObj.attachMessage(
 			`Playing on ${mediaPlayers.length} players`
 		);
-		attachMessage(
-			playerLog,
+		playerLog.attachMessage(
 			`Device names: ${mediaPlayers
 				.map((p) => p.connection.name)
 				.join(', ')}`
 		);
-		attachMessage(
-			playerLog,
+		playerLog.attachMessage(
 			`Device IPs: ${mediaPlayers
 				.map((p) => p.connection.host)
 				.join(', ')}`
@@ -118,23 +116,21 @@ export class APIHandler {
 			return;
 		}
 		const { lang, text } = PASTAS[pasta];
-		const urls = tts(text, lang)(res);
+		const logObj = LogObj.fromRes(res);
+		const urls = tts(text, lang)(logObj);
 
-		attachMessage(res, `Got urls ${urls.join(', ')}`);
+		logObj.attachMessage(`Got urls ${urls.join(', ')}`);
 		const mediaPlayers = await playURLs(urls);
-		attachMessage(res, `Saying pasta in lang "${lang}": "${text}"`);
-		const playerLog = attachMessage(
-			res,
+		logObj.attachMessage(`Saying pasta in lang "${lang}": "${text}"`);
+		const playerLog = logObj.attachMessage(
 			`Playing on ${mediaPlayers.length} players`
 		);
-		attachMessage(
-			playerLog,
+		playerLog.attachMessage(
 			`Device names: ${mediaPlayers
 				.map((p) => p.connection.name)
 				.join(', ')}`
 		);
-		attachMessage(
-			playerLog,
+		playerLog.attachMessage(
 			`Device IPs: ${mediaPlayers
 				.map((p) => p.connection.host)
 				.join(', ')}`

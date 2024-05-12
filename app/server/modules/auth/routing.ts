@@ -1,5 +1,5 @@
 import { genId, getClientSecret } from './client-secret';
-import { attachMessage } from '../../lib/logger';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { createRouter } from '../../lib/api';
 import { authenticate } from './secret';
 import { genCookie } from './cookie';
@@ -11,8 +11,7 @@ export function initRoutes({ app, config }: ModuleConfig<typeof Auth>): void {
 	app.post('/authid', (_req, res) => {
 		const id = String(genId());
 		if (config.log.secrets) {
-			attachMessage(
-				res,
+			LogObj.fromRes(res).attachMessage(
 				`{"id": "${chalk.underline(id)}", "auth": "${chalk.underline(
 					getClientSecret(parseInt(id, 10))
 				)}" }`

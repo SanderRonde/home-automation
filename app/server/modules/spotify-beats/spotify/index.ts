@@ -1,4 +1,4 @@
-import { logTag } from '../../../lib/logger';
+import { logTag } from '../../../lib/logging/logger';
 import { Database } from '../../../lib/db';
 import { createSpotifyAPI } from './api';
 

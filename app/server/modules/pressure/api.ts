@@ -1,5 +1,6 @@
 import { auth, errorHandle, requireParams } from '../../lib/decorators';
-import { ResponseLike, attachMessage } from '../../lib/logger';
+import { ResponseLike } from '../../lib/logging/response-logger';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { PressureValueKeeper } from './values';
 
 export class APIHandler {
@@ -19,8 +20,14 @@ export class APIHandler {
 			pressure: string;
 		}
 	): Promise<void> {
-		attachMessage(res, `Setting pressure key ${key} to ${pressure}`);
-		await this._valueKeeper.setPressure(key, ~~pressure, res);
+		LogObj.fromRes(res).attachMessage(
+			`Setting pressure key ${key} to ${pressure}`
+		);
+		await this._valueKeeper.setPressure(
+			key,
+			~~pressure,
+			LogObj.fromRes(res)
+		);
 		res.status(200);
 		res.end();
 	}

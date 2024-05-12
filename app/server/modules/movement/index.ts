@@ -1,5 +1,5 @@
+import { LogObj } from '../../lib/logging/lob-obj';
 import { disable, enable, initRegister } from './register';
-import { createLogObjWithName } from '../../lib/logger';
 import { ExternalHandler } from './external';
 import { initRouting } from './routing';
 import { ModuleMeta } from '../meta';
@@ -18,7 +18,7 @@ export const Movement = new (class Movement extends ModuleMeta {
 
 		void (async () => {
 			await new config.modules.keyval.External(
-				createLogObjWithName('MOVEMENT.NOTIFY')
+				LogObj.fromEvent('MOVEMENT.NOTIFY')
 			).onChange(
 				'state.movement',
 				async (value) => {
