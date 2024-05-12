@@ -13,6 +13,7 @@ import {
 	GOOGLE_SMART_HOME_DEVICE_TRAITS,
 	SmartHomeDeviceUpdate,
 	SMART_HOME_DEVICE_TRAIT,
+	SMART_HOME_COMMAND,
 } from '../../../lib/smart-home/smart-home-types';
 import {
 	sharedDisconnect,
@@ -21,13 +22,16 @@ import {
 	sharedSync,
 	sharedUseradd,
 } from './shared';
-import { SMART_HOME_COMMAND } from '../../../lib/smart-home/smart-home-types';
+import {
+	flatMap,
+	flatten,
+	fromEntries,
+	flattenObject,
+} from '../../../lib/util';
 import { BuiltinFrameworkMetadata } from 'actions-on-google/dist/framework';
-import { flatMap, flatten, fromEntries } from '../../../lib/util';
+import { warning } from '../../../lib/logging/logger';
 import { GOOGLE_KEY, homeGraph } from '../home-graph';
 import { currentUsers } from '../home-graph/users';
-import { flattenObject } from '../../../lib/util';
-import { warning } from '../../../lib/logging/logger';
 import { getAuth } from '../../oauth/helpers';
 import { smartHomeLogger } from '../shared';
 import { time } from '../../../lib/timer';
