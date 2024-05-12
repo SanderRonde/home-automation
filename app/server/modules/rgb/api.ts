@@ -6,16 +6,12 @@ import {
 	magicHomeClients,
 } from './clients';
 import {
-	ResponseLike,
-	attachMessage,
-	attachSourcedMessage,
-} from '../../lib/logger';
-import {
 	errorHandle,
 	requireParams,
 	authAll,
 	auth,
 } from '../../lib/decorators';
+import { ResponseLike, attachMessage } from '../../lib/logger';
 import { LED_NAME } from '../../config/led-config';
 import { ringEffects, Effects } from './ring-api';
 import { scanRGBControllers } from './scan';
@@ -24,7 +20,6 @@ import { Color } from '../../lib/color';
 import { CustomMode } from 'magic-home';
 import { hexEffects } from './hex-api';
 import chalk from 'chalk';
-import { RGB } from '.';
 
 export const HEX_REGEX = /#([a-fA-F\d]{2})([a-fA-F\d]{2})([a-fA-F\d]{2})/;
 
@@ -106,8 +101,7 @@ export class APIHandler {
 			intensity?: number;
 			auth?: string;
 			target?: ColorTarget | LED_NAME;
-		},
-		source: string
+		}
 	): Promise<boolean> {
 		color = color.toLowerCase().trim();
 		if (!(color in colorList)) {
@@ -121,12 +115,7 @@ export class APIHandler {
 		const clientSet = this._getClientSetFromTarget(target);
 		attachMessage(
 			attachMessage(
-				attachSourcedMessage(
-					res,
-					source,
-					await RGB.explainHook,
-					`rgb(${r}, ${g}, ${b})`
-				),
+				attachMessage(res, `rgb(${r}, ${g}, ${b})`),
 				chalk.bgHex(hexColor)('   ')
 			),
 			`Updated ${clientSet.length} clients`
@@ -173,8 +162,7 @@ export class APIHandler {
 			auth?: string;
 			intensity?: number;
 			target?: ColorTarget | LED_NAME;
-		},
-		source: string
+		}
 	): Promise<boolean> {
 		const redNum = Math.min(255, Math.max(0, parseInt(red, 10)));
 		const greenNum = Math.min(255, Math.max(0, parseInt(green, 10)));
@@ -182,12 +170,7 @@ export class APIHandler {
 		const clientSet = this._getClientSetFromTarget(target);
 		attachMessage(
 			attachMessage(
-				attachSourcedMessage(
-					res,
-					source,
-					await RGB.explainHook,
-					`rgb(${red}, ${green}, ${blue})`
-				),
+				attachMessage(res, `rgb(${red}, ${green}, ${blue})`),
 				chalk.bgHex(new Color(redNum, greenNum, blueNum).toHex())('   ')
 			),
 			`Updated ${clientSet.length} clients`
@@ -228,18 +211,12 @@ export class APIHandler {
 			power: string;
 			auth?: string;
 			target?: ColorTarget | LED_NAME;
-		},
-		source: string
+		}
 	): Promise<boolean> {
 		const clientSet = this._getClientSetFromTarget(target);
 
 		attachMessage(
-			attachSourcedMessage(
-				res,
-				source,
-				await RGB.explainHook,
-				`Turned ${power}`
-			),
+			attachMessage(res, `Turned ${power}`),
 			`Updated ${clientSet.length} clients`
 		);
 		if (
@@ -268,8 +245,7 @@ export class APIHandler {
 		body: {
 			effect: Effects;
 			auth?: string;
-		} & Record<string, unknown>,
-		source: string
+		} & Record<string, unknown>
 	): Promise<boolean> {
 		const { effect: effectName } = body;
 		if (
@@ -320,12 +296,7 @@ export class APIHandler {
 					);
 			attachMessage(
 				attachMessage(
-					attachSourcedMessage(
-						res,
-						source,
-						await RGB.explainHook,
-						`Running effect ${effectName}`
-					),
+					attachMessage(res, `Running effect ${effectName}`),
 					`Updated ${clients.length} clients`
 				),
 				`Sent string "${String(strings[0])}"`

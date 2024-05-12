@@ -131,11 +131,7 @@ export function authAll<
 
 export function errorHandle<
 	T,
-	F extends (
-		this: T,
-		res: express.Response,
-		...args: unknown[]
-	) => unknown,
+	F extends (this: T, res: express.Response, ...args: unknown[]) => unknown,
 >(target: F, _context: ClassMethodDecoratorContext<T, F>) {
 	return async function (
 		this: T,

@@ -27,20 +27,16 @@ export abstract class EwelinkPowerBase<P> extends EWeLinkInitable {
 		};
 	}
 
-	private _getKeyval(source: string) {
+	private _getKeyval() {
 		const resDummy = new ResDummy();
 		return {
 			resDummy,
-			keyval: new this._eWeLinkConfig.modules.keyval.External(
-				resDummy,
-				source
-			),
+			keyval: new this._eWeLinkConfig.modules.keyval.External(resDummy),
 		};
 	}
 
 	private async _setFromRemoteStatus(remoteState: boolean, source: string) {
-		const logName = `EWELINK.POWER.${source.toUpperCase()}`;
-		const { keyval, resDummy } = this._getKeyval(logName);
+		const { keyval, resDummy } = this._getKeyval();
 		const localState = await keyval.get(this._keyVal);
 
 		if (remoteState !== (localState === '1')) {
@@ -96,7 +92,7 @@ export abstract class EwelinkPowerBase<P> extends EWeLinkInitable {
 		if (this._options.enableSync) {
 			this._startTimer();
 		}
-		const { keyval } = this._getKeyval('EWELINK.POWER.INIT');
+		const { keyval } = this._getKeyval();
 		await keyval.onChange(this._keyVal, async (value: string) => {
 			if (value === '1') {
 				await this.turnOn();

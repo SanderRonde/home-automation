@@ -1,5 +1,4 @@
 import { externalRedact } from '../modules/auth/helpers';
-import { ExplainHook } from '../modules/explain/types';
 import { generateRandomString } from './util';
 import { IP_LOG_VERSION } from './constants';
 import { gatherTimings } from './timer';
@@ -446,38 +445,6 @@ export function attachMessage(
 	return msg;
 }
 
-export function attachSourcedMessage(
-	obj: ResponseLike | AssociatedMessage | Record<string, unknown> | LogObj,
-	source: string,
-	hook: ExplainHook | null,
-	...messages: string[]
-): LogObj {
-	if (typeof obj !== 'object' && typeof obj !== 'function') {
-		console.warn('Invalid log target', obj);
-		console.trace();
-		return {};
-	}
-	if (!msgMap.has(obj)) {
-		msgMap.set(obj, []);
-	}
-
-	if (hook) {
-		hook(messages.join(' '), source, obj);
-	}
-
-	const prevMessages = msgMap.get(obj)!;
-	const msg: AssociatedMessage = {
-		content: messages,
-	};
-	prevMessages.push(msg);
-
-	if (!rootMap.has(obj)) {
-		rootMap.set(obj, obj);
-	}
-	rootMap.set(msg, rootMap.get(obj)!);
-	return msg;
-}
-
 export function addLogListener(
 	obj: LogObj,
 	listener: (captured: LogCapturer) => void
@@ -633,6 +600,11 @@ export function logTimed(...args: unknown[]): void {
 	} else {
 		console.log(...[getTime(), ...args]);
 	}
+}
+
+export function createLogObjWithName(name: string) {
+	// TODO:(sander) implement
+	return {} as LogObj;
 }
 
 const chalkColors = [

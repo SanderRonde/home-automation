@@ -16,7 +16,7 @@ export class ExternalHandler extends createExternalClass(true) {
 	}
 
 	public triggerHook(newState: HOME_STATE, name: string): Promise<void> {
-		return this.runRequest((_res, _source, logObj) => {
+		return this.runRequest((_res, logObj) => {
 			return handleHooks(newState, name, logObj);
 		});
 	}

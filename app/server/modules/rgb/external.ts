@@ -15,17 +15,13 @@ export class ExternalHandler extends createExternalClass(true) {
 		target: ColorTarget | LED_NAME = 'all',
 		intensity = 0
 	): Promise<boolean> {
-		return this.runRequest(async (res, source) => {
-			return APIHandler.setColor(
-				res,
-				{
-					color,
-					intensity: intensity,
-					auth: await this._getKey(res, RGB),
-					target: target,
-				},
-				source
-			);
+		return this.runRequest(async (res) => {
+			return APIHandler.setColor(res, {
+				color,
+				intensity: intensity,
+				auth: await this._getKey(res, RGB),
+				target: target,
+			});
 		});
 	}
 
@@ -36,19 +32,15 @@ export class ExternalHandler extends createExternalClass(true) {
 		intensity = 0,
 		target: ColorTarget | LED_NAME = 'all'
 	): Promise<boolean> {
-		return this.runRequest(async (res, source) => {
-			return APIHandler.setRGB(
-				res,
-				{
-					red,
-					green,
-					blue,
-					intensity: intensity,
-					auth: await this._getKey(res, RGB),
-					target: target,
-				},
-				source
-			);
+		return this.runRequest(async (res) => {
+			return APIHandler.setRGB(res, {
+				red,
+				green,
+				blue,
+				intensity: intensity,
+				auth: await this._getKey(res, RGB),
+				target: target,
+			});
 		});
 	}
 
@@ -56,16 +48,12 @@ export class ExternalHandler extends createExternalClass(true) {
 		state: 'on' | 'off',
 		target: ColorTarget | LED_NAME = 'all'
 	): Promise<boolean> {
-		return this.runRequest(async (res, source) => {
-			return APIHandler.setPower(
-				res,
-				{
-					power: state,
-					auth: await this._getKey(res, RGB),
-					target,
-				},
-				source
-			);
+		return this.runRequest(async (res) => {
+			return APIHandler.setPower(res, {
+				power: state,
+				auth: await this._getKey(res, RGB),
+				target,
+			});
 		});
 	}
 
@@ -73,16 +61,12 @@ export class ExternalHandler extends createExternalClass(true) {
 		name: Effects,
 		extra: JoinedConfigs = {}
 	): Promise<boolean> {
-		return this.runRequest(async (res, source) => {
-			return APIHandler.runEffect(
-				res,
-				{
-					effect: name,
-					auth: await this._getKey(res, RGB),
-					...extra,
-				},
-				source
-			);
+		return this.runRequest(async (res) => {
+			return APIHandler.runEffect(res, {
+				effect: name,
+				auth: await this._getKey(res, RGB),
+				...extra,
+			});
 		});
 	}
 
@@ -90,7 +74,7 @@ export class ExternalHandler extends createExternalClass(true) {
 		file: string,
 		helpers: Pick<MatchHandlerParams, 'ask' | 'sendText' | 'askCancelable'>
 	): ReturnType<typeof play> {
-		return this.runRequest((_res, _source, logObj) => {
+		return this.runRequest((_res, logObj) => {
 			return play(file, logObj, helpers);
 		});
 	}

@@ -1,18 +1,13 @@
 import {
-	ResponseLike,
-	attachSourcedMessage,
-	attachMessage,
-} from '../../lib/logger';
-import {
 	errorHandle,
 	requireParams,
 	authAll,
 	auth,
 } from '../../lib/decorators';
 import { addListener, removeListener, update } from './get-set-listener';
+import { ResponseLike, attachMessage } from '../../lib/logger';
 import { Database } from '../../lib/db';
 import { str } from './helpers';
-import { KeyVal } from '.';
 
 type MultiValueResolver<V> = (values: V[]) => V;
 
@@ -65,23 +60,17 @@ export class APIHandler {
 	@errorHandle
 	@requireParams('key')
 	@auth
-	public async get(
+	public get(
 		res: ResponseLike,
 		{
 			key,
 		}: {
 			key: string;
 			auth?: string;
-		},
-		source: string
-	): Promise<string> {
+		}
+	): string {
 		const value = ensureString(this._db.get(key, '0'));
-		attachSourcedMessage(
-			res,
-			source,
-			await KeyVal.explainHook,
-			`Key: "${key}", val: "${str(value)}"`
-		);
+		attachMessage(res, `Key: "${key}", val: "${str(value)}"`);
 		res.status(200).write(value === undefined ? '' : value);
 		res.end();
 		return value;
@@ -97,16 +86,13 @@ export class APIHandler {
 		}: {
 			key: string;
 			auth?: string;
-		},
-		source: string
+		}
 	): Promise<string> {
 		const original = ensureString(this._db.get<string>(key, '0'));
 		const value = original === '0' ? '1' : '0';
 		this._db.setVal(key, value);
-		const msg = attachSourcedMessage(
+		const msg = attachMessage(
 			res,
-			source,
-			await KeyVal.explainHook,
 			`Toggling key: "${key}", to val: "${str(value)}"`
 		);
 		const nextMessage = attachMessage(
@@ -128,7 +114,7 @@ export class APIHandler {
 	@errorHandle
 	@requireParams('key', 'maxtime', 'expected')
 	@auth
-	public async getLongPoll(
+	public getLongPoll(
 		res: ResponseLike,
 		{
 			key,
@@ -139,15 +125,12 @@ export class APIHandler {
 			expected: string;
 			auth: string;
 			maxtime: string;
-		},
-		source: string
-	): Promise<void> {
+		}
+	): void {
 		const value = this._db.get(key, '0');
 		if (value !== expected) {
-			const msg = attachSourcedMessage(
+			const msg = attachMessage(
 				res,
-				source,
-				await KeyVal.explainHook,
 				`Key: "${key}", val: "${str(value)}"`
 			);
 			attachMessage(
@@ -214,16 +197,13 @@ export class APIHandler {
 			value: string;
 			auth?: string;
 			update?: boolean;
-		},
-		source: string
+		}
 	): Promise<boolean> {
 		const original = this._db.get(key);
 		if (original !== value) {
 			this._db.setVal(key, value);
-			const msg = attachSourcedMessage(
+			const msg = attachMessage(
 				res,
-				source,
-				await KeyVal.explainHook,
 				`Key: "${key}", val: "${str(value)}"`
 			);
 			const nextMessage = attachMessage(
@@ -253,16 +233,10 @@ export class APIHandler {
 			force = false,
 		}: {
 			force?: boolean;
-		},
-		source: string
+		}
 	): Promise<void> {
 		const data = await this._db.json(force);
-		const msg = attachSourcedMessage(
-			res,
-			source,
-			await KeyVal.explainHook,
-			data
-		);
+		const msg = attachMessage(res, data);
 		attachMessage(msg, `Force? ${force ? 'true' : 'false'}`);
 		res.status(200).write(data);
 		res.end();

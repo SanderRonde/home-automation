@@ -1,3 +1,4 @@
+import { createLogObjWithName } from '../../lib/logger';
 import { Database } from '../../lib/db';
 import { Pressure } from '.';
 
@@ -13,8 +14,7 @@ export class PressureStateKeeper {
 		this._db.setVal('enabled', this.enabled);
 		if (updateKeyval) {
 			await new (await Pressure.modules).keyval.External(
-				{},
-				'PRESSURE.ON'
+				createLogObjWithName('PRESSURE.ON')
 			).set('state.pressure', '1', false);
 		}
 	}
@@ -24,8 +24,7 @@ export class PressureStateKeeper {
 		this._db.setVal('enabled', this.enabled);
 		if (updateKeyval) {
 			await new (await Pressure.modules).keyval.External(
-				{},
-				'PRESSURE.OFF'
+				createLogObjWithName('PRESSURE.OFF')
 			).set('state.pressure', '0', false);
 		}
 	}

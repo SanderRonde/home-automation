@@ -73,44 +73,32 @@ export class Bot extends BotStateBase {
 
 	public static readonly matches = Bot.createMatchMaker(
 		({ matchMaker: mm }) => {
-			mm('/rgbon', async ({ logObj, matchText }) => {
-				if (
-					await new ExternalHandler(logObj, `BOT.${matchText}`).power(
-						'on'
-					)
-				) {
+			mm('/rgbon', async ({ logObj }) => {
+				if (await new ExternalHandler(logObj).power('on')) {
 					return 'Turned it on';
 				} else {
 					return 'Failed to turn it on';
 				}
 			});
-			mm('/rgboff', async ({ logObj, matchText }) => {
-				if (
-					await new ExternalHandler(logObj, `BOT.${matchText}`).power(
-						'off'
-					)
-				) {
+			mm('/rgboff', async ({ logObj }) => {
+				if (await new ExternalHandler(logObj).power('off')) {
 					return 'Turned it off';
 				} else {
 					return 'Failed tot turn it on';
 				}
 			});
-			mm(
-				/turn (on|off) (rgb|led)/,
-				async ({ logObj, match, matchText }) => {
-					const targetState = match[1];
-					if (
-						await new ExternalHandler(
-							logObj,
-							`BOT.${matchText}`
-						).power(targetState as 'on' | 'off')
-					) {
-						return `Turned it ${targetState}`;
-					} else {
-						return `Failed to turn it ${targetState}`;
-					}
+			mm(/turn (on|off) (rgb|led)/, async ({ logObj, match }) => {
+				const targetState = match[1];
+				if (
+					await new ExternalHandler(logObj).power(
+						targetState as 'on' | 'off'
+					)
+				) {
+					return `Turned it ${targetState}`;
+				} else {
+					return `Failed to turn it ${targetState}`;
 				}
-			);
+			});
 			mm(
 				'/arduinooff',
 				/turn (on|off) (ceiling|arduino|duino)/,
@@ -184,7 +172,7 @@ export class Bot extends BotStateBase {
 			);
 			mm(
 				/set (rgb|led(?:s)?|it|them|color|hexes|hex|ceiling|ceilingled|arduino|magic|magichome) to (?:(?:(\d+) (\d+) (\d+))|([^ ]+))(\s+with intensity (\d+))?/,
-				async ({ logObj, match, matchText }) => {
+				async ({ logObj, match }) => {
 					const target = match[1] as ColorTarget;
 					const colorR = match[2];
 					const colorG = match[3];
@@ -206,10 +194,7 @@ export class Bot extends BotStateBase {
 					})();
 					if (
 						resolvedColor &&
-						(await new ExternalHandler(
-							logObj,
-							`BOT.${matchText}`
-						).rgb(
+						(await new ExternalHandler(logObj).rgb(
 							String(resolvedColor.r),
 							String(resolvedColor.g),
 							String(resolvedColor.b),
@@ -225,7 +210,7 @@ export class Bot extends BotStateBase {
 			);
 			mm(
 				/\/color (?:(?:(\d+) (\d+) (\d+))|([^ ]+))/,
-				async ({ logObj, match, matchText }) => {
+				async ({ logObj, match }) => {
 					const colorR = match[1];
 					const colorG = match[2];
 					const colorB = match[3];
@@ -246,10 +231,7 @@ export class Bot extends BotStateBase {
 					})();
 					if (
 						resolvedColor &&
-						(await new ExternalHandler(
-							logObj,
-							`BOT.${matchText}`
-						).rgb(
+						(await new ExternalHandler(logObj).rgb(
 							String(resolvedColor.r),
 							String(resolvedColor.g),
 							String(resolvedColor.b),
@@ -262,38 +244,28 @@ export class Bot extends BotStateBase {
 					}
 				}
 			);
-			mm(
-				/\/effect((\w{2,})|[^s])/,
-				async ({ logObj, match, matchText }) => {
-					const effectName = match[1] as Effects;
-					if (
-						!(effectName in ringEffects) &&
-						!(effectName in hexEffects)
-					) {
-						return `Effect "${effectName}" does not exist`;
-					}
-
-					if (
-						await new ExternalHandler(
-							logObj,
-							`BOT.${matchText}`
-						).effect(effectName, {})
-					) {
-						return `Started effect "${effectName}" with config ${JSON.stringify(
-							ringEffects[effectName] ||
-								hexEffects[
-									effectName as keyof typeof hexEffects
-								]
-						)}`;
-					} else {
-						return 'Failed to start effect';
-					}
+			mm(/\/effect((\w{2,})|[^s])/, async ({ logObj, match }) => {
+				const effectName = match[1] as Effects;
+				if (
+					!(effectName in ringEffects) &&
+					!(effectName in hexEffects)
+				) {
+					return `Effect "${effectName}" does not exist`;
 				}
-			);
+
+				if (await new ExternalHandler(logObj).effect(effectName, {})) {
+					return `Started effect "${effectName}" with config ${JSON.stringify(
+						ringEffects[effectName] ||
+							hexEffects[effectName as keyof typeof hexEffects]
+					)}`;
+				} else {
+					return 'Failed to start effect';
+				}
+			});
 			mm(
 				'/effects',
 				/what effects are there(\?)?/,
-				async ({ logObj, match, matchText }) => {
+				async ({ logObj, match }) => {
 					if (match?.[1]) {
 						const effectName = `s${match[1]}` as Effects;
 						if (
@@ -304,10 +276,10 @@ export class Bot extends BotStateBase {
 						}
 
 						if (
-							await new ExternalHandler(
-								logObj,
-								`BOT.${matchText}`
-							).effect(effectName, {})
+							await new ExternalHandler(logObj).effect(
+								effectName,
+								{}
+							)
 						) {
 							return `Started effect "${effectName}" with config ${JSON.stringify(
 								ringEffects[effectName] ||
@@ -359,8 +331,7 @@ export class Bot extends BotStateBase {
 				async ({ logObj, match, ask, sendText, askCancelable }) => {
 					const file = match[1];
 					const { message, success } = await new ExternalHandler(
-						logObj,
-						'BOT.marked'
+						logObj
 					).markedAudio(file, {
 						ask,
 						sendText,

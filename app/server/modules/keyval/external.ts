@@ -21,43 +21,31 @@ export class ExternalHandler extends createExternalClass(true) {
 		value: string,
 		notify = true
 	): Promise<boolean> {
-		return this.runRequest(async (res, source) => {
-			return ExternalHandler._apiHandler!.set(
-				res,
-				{
-					key,
-					value,
-					update: notify,
-					auth: await this._getKey(res, KeyVal),
-				},
-				source
-			);
+		return this.runRequest(async (res) => {
+			return ExternalHandler._apiHandler!.set(res, {
+				key,
+				value,
+				update: notify,
+				auth: await this._getKey(res, KeyVal),
+			});
 		});
 	}
 
 	public async get<KeyType extends string>(key: KeyType): Promise<string> {
-		return this.runRequest(async (res, source) => {
-			return ExternalHandler._apiHandler!.get(
-				res,
-				{
-					key,
-					auth: await this._getKey(res, KeyVal),
-				},
-				source
-			);
+		return this.runRequest(async (res) => {
+			return ExternalHandler._apiHandler!.get(res, {
+				key,
+				auth: await this._getKey(res, KeyVal),
+			});
 		});
 	}
 
 	public async toggle<KeyType extends string>(key: KeyType): Promise<string> {
-		return this.runRequest(async (res, source) => {
-			return ExternalHandler._apiHandler!.toggle(
-				res,
-				{
-					key,
-					auth: await this._getKey(res, KeyVal),
-				},
-				source
-			);
+		return this.runRequest(async (res) => {
+			return ExternalHandler._apiHandler!.toggle(res, {
+				key,
+				auth: await this._getKey(res, KeyVal),
+			});
 		});
 	}
 

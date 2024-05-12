@@ -6,7 +6,6 @@ import {
 } from './constants';
 import homeIps from '../../config/home-ips';
 import { Database } from '../../lib/db';
-import { HomeDetector } from './index';
 import { getEnv } from '../../lib/io';
 import { HOME_STATE } from './types';
 import * as ping from 'ping';
@@ -37,18 +36,6 @@ class Pinger {
 		) => void | Promise<void>
 	) {
 		void this._init();
-	}
-
-	private async _change(newState: HOME_STATE) {
-		if (await HomeDetector.explainHook) {
-			(await HomeDetector.explainHook)(
-				`${this._config.name} state changed to ${newState}`,
-				'time',
-				{}
-			);
-		}
-
-		await this._onChange(newState);
 	}
 
 	private async _ping(ip: string) {
@@ -144,7 +131,7 @@ class Pinger {
 					// A ping definitely landed, device is home
 				}
 				if (finalState !== this._state && this._state !== null) {
-					await this._change(finalState);
+					await this._onChange(finalState);
 				}
 				if (finalState === HOME_STATE.AWAY) {
 					this.leftAt = new Date();

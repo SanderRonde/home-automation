@@ -1,5 +1,6 @@
 import { MotionSensor } from '../../../app/server/modules/hue/devices';
 import { AllModules } from '../../../app/server/modules';
+import { createLogObjWithName } from '../lib/logger';
 import { Api } from 'node-hue-api/dist/esm/api/Api';
 
 export async function linkHueDevices(
@@ -13,10 +14,9 @@ export async function linkHueDevices(
 			const motionSensor = new MotionSensor(sensor, api);
 			motionSensor.onMotion.listen(() => {
 				// TODO: trigger some keyval module
-				void new modules.keyval.External({}, 'HUE.MOTION').set(
-					'someKey',
-					'1'
-				);
+				void new modules.keyval.External(
+					createLogObjWithName('HUE.MOTION')
+				).set('someKey', '1');
 			});
 		}
 	}

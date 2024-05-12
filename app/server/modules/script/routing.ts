@@ -12,8 +12,8 @@ export function initRouting({
 	config: Config;
 }): void {
 	const router = createRouter(Script, APIHandler);
-	router.post('/:name', async (req, res) => {
-		await APIHandler.script(
+	router.post('/:name', (req, res) => {
+		APIHandler.script(
 			res,
 			{
 				...req.params,
@@ -21,8 +21,7 @@ export function initRouting({
 				...req.query,
 				cookies: req.cookies,
 			},
-			config,
-			`${Script.name}.API.${req.url}`
+			config
 		);
 	});
 	router.use(app);

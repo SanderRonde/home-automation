@@ -1,39 +1,28 @@
-import {
-	ResponseLike,
-	attachSourcedMessage,
-	attachMessage,
-} from '../../lib/logger';
 import { errorHandle, requireParams, authAll } from '../../lib/decorators';
+import { ResponseLike, attachMessage } from '../../lib/logger';
 import * as childProcess from 'child_process';
 import { AuthError } from '../../lib/errors';
 import { Config } from '../../app';
 import * as path from 'path';
-import { Script } from '.';
 import chalk from 'chalk';
 
 export class APIHandler {
 	@errorHandle
 	@requireParams('auth', 'name')
 	@authAll
-	public static async script(
+	public static script(
 		res: ResponseLike,
 		params: {
 			auth?: string;
 			name: string;
 		},
-		config: Config,
-		source: string
-	): Promise<string> {
+		config: Config
+	): string {
 		if (params.name.indexOf('..') > -1 || params.name.indexOf('/') > -1) {
 			throw new AuthError('Going up dirs is not allowed');
 		}
 		const scriptPath = path.join(config.scripts.scriptDir, params.name);
-		attachSourcedMessage(
-			res,
-			source,
-			await Script.explainHook,
-			`Script: "${scriptPath}"`
-		);
+		attachMessage(res, `Script: "${scriptPath}"`);
 		try {
 			const output = childProcess
 				.execFileSync(

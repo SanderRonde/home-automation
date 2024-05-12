@@ -1,5 +1,5 @@
+import { attachMessage, createLogObjWithName } from '../../../lib/logger';
 import { listenAny, removeListener } from '../get-set-listener';
-import { attachMessage } from '../../../lib/logger';
 import { createRouter } from '../../../lib/api';
 import { WebPageHandler } from '../web-page';
 import { sendMessage } from './telnet';
@@ -32,8 +32,7 @@ export function initRouting({
 			}
 
 			const external = new (await RemoteControl.modules).auth.External(
-				{},
-				'REMOTE_CONTROL.WS'
+				createLogObjWithName('REMOTE_CONTROL.WS')
 			);
 			if (await external.authenticate(message)) {
 				authenticated = true;

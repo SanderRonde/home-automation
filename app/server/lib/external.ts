@@ -1,11 +1,7 @@
 import { ModuleMeta } from '../modules/meta';
 import { LogObj, ResDummy } from './logger';
 
-type QueuedRequestFn<T> = (
-	res: ResDummy,
-	source: string,
-	logObj: LogObj
-) => Promise<T> | T;
+type QueuedRequestFn<T> = (res: ResDummy, logObj: LogObj) => Promise<T> | T;
 
 type QueuedRequest<T = unknown> = {
 	fn: QueuedRequestFn<T>;
@@ -21,10 +17,7 @@ export function createExternalClass(requiresInit: boolean, name?: string) {
 		protected static _initialized = false;
 		protected static _name = name;
 
-		public constructor(
-			private readonly _logObj: LogObj,
-			private readonly _source: string
-		) {}
+		public constructor(private readonly _logObj: LogObj) {}
 
 		private static _isReady(requiresInit: boolean) {
 			if (requiresInit === undefined) {
@@ -37,9 +30,9 @@ export function createExternalClass(requiresInit: boolean, name?: string) {
 			fn,
 			instance,
 		}: QueuedRequest<T>): Promise<T> {
-			const { _logObj: logObj, _source: source } = instance;
+			const { _logObj: logObj } = instance;
 			const resDummy = new ResDummy();
-			const value = await fn(resDummy, source, logObj);
+			const value = await fn(resDummy, logObj);
 			resDummy.transferTo(logObj);
 			return value;
 		}
@@ -58,8 +51,7 @@ export function createExternalClass(requiresInit: boolean, name?: string) {
 			module: ModuleMeta
 		): Promise<string> {
 			return await new (await module.modules).auth.External(
-				logObj,
-				`${module.name}.EXTERNAL`
+				logObj
 			).getSecretKey();
 		}
 
@@ -79,8 +71,8 @@ export function createExternalClass(requiresInit: boolean, name?: string) {
 						.then(resolve);
 				} else {
 					constructor._queuedRequests.push({
-						fn: (res, source, logObj) => {
-							const result = fn(res, source, logObj);
+						fn: (res, logObj) => {
+							const result = fn(res, logObj);
 							resolve(result);
 							return result;
 						},

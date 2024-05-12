@@ -69,8 +69,7 @@ export class Bot extends BotStateBase {
 				async ({ logObj, match }) => {
 					const tempName = match[1];
 					await new ExternalHandler(
-						attachMessage(logObj, 'Stopping heating'),
-						'TEMPERATURE.BOT'
+						attachMessage(logObj, 'Stopping heating')
 					).setMode(tempName, 'off');
 					return 'Stopping heating';
 				}
@@ -78,8 +77,7 @@ export class Bot extends BotStateBase {
 			mm(/\/heatauto (\w+)/, async ({ logObj, match }) => {
 				const tempName = match[1];
 				await new ExternalHandler(
-					attachMessage(logObj, 'Set heat mode to auto'),
-					'TEMPERATURE.BOT'
+					attachMessage(logObj, 'Set heat mode to auto')
 				).setMode(tempName, 'auto');
 				return 'Set heat mode to auto';
 			});
@@ -91,8 +89,7 @@ export class Bot extends BotStateBase {
 				async ({ logObj, match }) => {
 					const tempName = match[1];
 					await new ExternalHandler(
-						attachMessage(logObj, 'Heating'),
-						'TEMPERATURE.BOT'
+						attachMessage(logObj, 'Heating')
 					).setMode(tempName, 'on');
 					return 'Heating';
 				}
@@ -102,8 +99,7 @@ export class Bot extends BotStateBase {
 				async ({ logObj, match }) => {
 					const tempName = match[1];
 					await new ExternalHandler(
-						attachMessage(logObj, 'Moving'),
-						'TEMPERATURE.BOT'
+						attachMessage(logObj, 'Moving')
 					).moveDir(
 						tempName,
 						match[2] as 'left' | 'right',
@@ -121,8 +117,7 @@ export class Bot extends BotStateBase {
 						return 'Invalid mode';
 					}
 					await new ExternalHandler(
-						attachMessage(logObj, `Setting mode to ${mode}`),
-						'TEMPERATURE.BOT'
+						attachMessage(logObj, `Setting mode to ${mode}`)
 					).setMode(tempName, mode as Mode);
 					return `Set mode to ${mode}`;
 				}
@@ -136,8 +131,7 @@ export class Bot extends BotStateBase {
 						return 'Invalid target';
 					}
 					await new ExternalHandler(
-						attachMessage(logObj, `Setting temp to ${target}`),
-						'TEMPERATURE.BOT'
+						attachMessage(logObj, `Setting temp to ${target}`)
 					).setTarget(tempName, target);
 					return `Set target to ${target}`;
 				}

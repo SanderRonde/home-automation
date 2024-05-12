@@ -5,29 +5,21 @@ import { Cast } from '.';
 
 export class ExternalHandler extends createExternalClass(true) {
 	public async stop(): Promise<castv2.MediaPlayerClass[]> {
-		return this.runRequest(async (res, source) => {
-			return APIHandler.stop(
-				res,
-				{
-					auth: await this._getKey(res, Cast),
-				},
-				source
-			);
+		return this.runRequest(async (res) => {
+			return APIHandler.stop(res, {
+				auth: await this._getKey(res, Cast),
+			});
 		});
 	}
 
 	public async pasta(
 		pasta: string
 	): Promise<castv2.MediaPlayerClass[] | undefined> {
-		return this.runRequest(async (res, source) => {
-			return APIHandler.pasta(
-				res,
-				{
-					pasta: pasta,
-					auth: await this._getKey(res, Cast),
-				},
-				source
-			);
+		return this.runRequest(async (res) => {
+			return APIHandler.pasta(res, {
+				pasta: pasta,
+				auth: await this._getKey(res, Cast),
+			});
 		});
 	}
 
@@ -35,29 +27,21 @@ export class ExternalHandler extends createExternalClass(true) {
 		text: string,
 		lang = 'en'
 	): Promise<castv2.MediaPlayerClass[]> {
-		return this.runRequest(async (res, source) => {
-			return APIHandler.say(
-				res,
-				{
-					text,
-					lang,
-					auth: await this._getKey(res, Cast),
-				},
-				source
-			);
+		return this.runRequest(async (res) => {
+			return APIHandler.say(res, {
+				text,
+				lang,
+				auth: await this._getKey(res, Cast),
+			});
 		});
 	}
 
 	public async url(url: string): Promise<castv2.MediaPlayerClass[]> {
-		return this.runRequest(async (res, source) => {
-			return APIHandler.url(
-				res,
-				{
-					url,
-					auth: await this._getKey(res, Cast),
-				},
-				source
-			);
+		return this.runRequest(async (res) => {
+			return APIHandler.url(res, {
+				url,
+				auth: await this._getKey(res, Cast),
+			});
 		});
 	}
 }

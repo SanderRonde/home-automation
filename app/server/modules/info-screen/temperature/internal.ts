@@ -1,5 +1,5 @@
+import { LogObj, createLogObjWithName } from '../../../lib/logger';
 import { InternalTemperatureResult } from '../types';
-import { LogObj } from '../../../lib/logger';
 import { InfoScreen } from '..';
 
 export async function get(
@@ -7,7 +7,6 @@ export async function get(
 	logObj?: LogObj
 ): Promise<InternalTemperatureResult> {
 	return await new (await InfoScreen.modules).temperature.External(
-		logObj || {},
-		'INFO_SCREEN.TEMPERATURE'
+		logObj || createLogObjWithName('INFO_SCREEN.TEMPERATURE')
 	).getTemp(name);
 }

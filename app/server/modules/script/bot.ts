@@ -20,10 +20,9 @@ export class Bot extends BotStateBase {
 				/run script ([^ ]+)/,
 				async ({ logObj, match }) => {
 					const script = match[1];
-					const output = await new ExternalHandler(
-						logObj,
-						'SCRIPT.BOT'
-					).script(script);
+					const output = await new ExternalHandler(logObj).script(
+						script
+					);
 					if (output) {
 						return `Script output: ${output}`;
 					} else {
@@ -32,15 +31,11 @@ export class Bot extends BotStateBase {
 				}
 			);
 			mm('/killpc', /(shutdown|kill) desktop/, async ({ logObj }) => {
-				await new ExternalHandler(logObj, 'SCRIPT.BOT').script(
-					'shutdown_desktop'
-				);
+				await new ExternalHandler(logObj).script('shutdown_desktop');
 				return 'Shut it down';
 			});
 			mm('/wakepc', /(wake|start|boot) desktop/, async ({ logObj }) => {
-				await new ExternalHandler(logObj, 'SCRIPT.BOT').script(
-					'wake_desktop'
-				);
+				await new ExternalHandler(logObj).script('wake_desktop');
 				return 'Started it';
 			});
 			mm('/help_script', /what commands are there for script/, () => {

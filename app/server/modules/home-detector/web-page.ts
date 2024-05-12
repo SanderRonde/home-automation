@@ -10,8 +10,7 @@ async function homeDetectorHTML(
 	res: ResponseLike
 ) {
 	const key = await new (await HomeDetector.modules).auth.External(
-		res,
-		'HOME_DETECTOR.WEB_PAGE'
+		res
 	).getSecretKey();
 	return `<html style="background-color: rgb(40, 40, 40);">
 			<head>

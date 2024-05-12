@@ -24,27 +24,26 @@ export class Bot extends BotStateBase {
 			for (const [reg, switchName] of COMMON_SWITCH_MAPPINGS) {
 				mm(
 					new RegExp('turn (on|off) ' + reg.source),
-					async ({ logObj, state, match, matchText }) => {
+					async ({ logObj, state, match }) => {
 						const keyvalState = match[1];
 						(state.states.keyval as unknown as State).lastSubjects =
 							[switchName];
-						await new ExternalHandler(
-							logObj,
-							`BOT.${matchText}`
-						).set(switchName, keyvalState === 'on' ? '1' : '0');
+						await new ExternalHandler(logObj).set(
+							switchName,
+							keyvalState === 'on' ? '1' : '0'
+						);
 						return `Turned it ${keyvalState}`;
 					}
 				);
 				mm(
 					new RegExp('is ' + reg.source + ' (on|off)'),
-					async ({ logObj, state, match, matchText }) => {
+					async ({ logObj, state, match }) => {
 						const keyvalState = match.pop();
 						(state.states.keyval as unknown as State).lastSubjects =
 							[switchName];
-						const res = await new ExternalHandler(
-							logObj,
-							`BOT.${matchText}`
-						).get(switchName);
+						const res = await new ExternalHandler(logObj).get(
+							switchName
+						);
 						if ((res === '1') === (keyvalState === 'on')) {
 							return 'Yep';
 						} else {
@@ -56,14 +55,14 @@ export class Bot extends BotStateBase {
 			conditional(
 				mm(
 					/turn (it|them) (on|off)( again)?/,
-					async ({ state, logObj, match, matchText }) => {
+					async ({ state, logObj, match }) => {
 						for (const lastSubject of (
 							state.states.keyval as unknown as State
 						).lastSubjects!) {
-							await new ExternalHandler(
-								logObj,
-								`BOT.${matchText}`
-							).set(lastSubject, match[2] === 'on' ? '1' : '0');
+							await new ExternalHandler(logObj).set(
+								lastSubject,
+								match[2] === 'on' ? '1' : '0'
+							);
 						}
 						return `Turned ${match[1]} ${match[2]}`;
 					}

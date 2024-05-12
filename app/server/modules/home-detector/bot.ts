@@ -36,18 +36,11 @@ export class Bot extends BotStateBase {
 				/who (is|are) (home|away)/,
 				async ({ logObj, state, match }) => {
 					const resDummy = new ResDummy();
-					const all = await Bot._config!.apiHandler.getAll(
-						resDummy,
-						{
-							auth: await new (
-								await HomeDetector.modules
-							).auth.External(
-								logObj,
-								'HOME_DETECTOR.BOT'
-							).getSecretKey(),
-						},
-						'BOT.WHOSHOME'
-					);
+					const all = Bot._config!.apiHandler.getAll(resDummy, {
+						auth: await new (
+							await HomeDetector.modules
+						).auth.External(logObj).getSecretKey(),
+					});
 					resDummy.transferTo(logObj);
 
 					const matches: string[] = [];
@@ -83,19 +76,12 @@ export class Bot extends BotStateBase {
 				const checkTarget = match[2];
 
 				const resDummy = new ResDummy();
-				const homeState = await Bot._config!.apiHandler.get(
-					resDummy,
-					{
-						auth: await new (
-							await HomeDetector.modules
-						).auth.External(
-							logObj,
-							'HOME_DETECTOR.BOT'
-						).getSecretKey(),
-						name: match[1],
-					},
-					'BOT.IS_HOME'
-				);
+				const homeState = Bot._config!.apiHandler.get(resDummy, {
+					auth: await new (await HomeDetector.modules).auth.External(
+						logObj
+					).getSecretKey(),
+					name: match[1],
+				});
 				resDummy.transferTo(logObj);
 
 				(state.states.homeDetector as unknown as State).lastSubjects = [

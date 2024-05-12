@@ -56,15 +56,16 @@ export class TuyaDevice {
 			const lowestNumberKey = Math.min(...numberKeys);
 			const isEnabled = !!data.dps[lowestNumberKey];
 			this._active = isEnabled;
-			await new this._modules.keyval.External(
-				{},
-				'TUYA.DEVICE.STATUS'
-			).set(this._keyval, isEnabled ? '1' : '0', true);
+			await new this._modules.keyval.External({}).set(
+				this._keyval,
+				isEnabled ? '1' : '0',
+				true
+			);
 
 			this._lastLowestDigit = lowestNumberKey;
 		});
 
-		void new this._modules.keyval.External({}, 'TUYA.DEVICE.INIT').onChange(
+		void new this._modules.keyval.External({}).onChange(
 			this._keyval,
 			async (value) => {
 				if ((value === '1') !== this._active) {

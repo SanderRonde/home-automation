@@ -21,7 +21,7 @@ export class Bot extends BotStateBase {
 				'/pressureoff',
 				/turn off pressure( module)?/,
 				async ({ logObj }) => {
-					await new ExternalHandler(logObj, 'PRESSURE.BOT').disable();
+					await new ExternalHandler(logObj).disable();
 					return 'Turned off pressure module';
 				}
 			);
@@ -39,7 +39,7 @@ export class Bot extends BotStateBase {
 				'/pressure',
 				/turn on pressure( module)?/,
 				async ({ logObj }) => {
-					await new ExternalHandler(logObj, 'PRESSURE.BOT').enable();
+					await new ExternalHandler(logObj).enable();
 					return 'Turned on pressure module';
 				}
 			);

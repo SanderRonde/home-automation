@@ -1,14 +1,9 @@
-import {
-	attachMessage,
-	attachSourcedMessage,
-	ResponseLike,
-} from '../../lib/logger';
 import { auth, errorHandle, requireParams } from '../../lib/decorators';
+import { attachMessage, ResponseLike } from '../../lib/logger';
 import { playURL, playURLs, stop } from './casting';
 import { LOCAL_URLS } from './local-urls';
 import * as castv2 from 'castv2-player';
 import { PASTAS } from './pasta';
-import { Cast } from './index';
 import { tts } from './tts';
 
 export class APIHandler {
@@ -22,18 +17,15 @@ export class APIHandler {
 		}: {
 			url: string;
 			auth?: string;
-		},
-		source: string
+		}
 	): Promise<castv2.MediaPlayerClass[]> {
 		if (url in LOCAL_URLS) {
 			url = LOCAL_URLS[url];
 		}
 
 		const mediaPlayers = await playURL(url);
-		const playerLog = attachSourcedMessage(
+		const playerLog = attachMessage(
 			res,
-			source,
-			await Cast.explainHook,
 			`Playing on ${mediaPlayers.length} players`
 		);
 		attachMessage(
@@ -57,18 +49,13 @@ export class APIHandler {
 	@auth
 	public static async stop(
 		res: ResponseLike,
-		_options: {
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		_params?: {
 			auth?: string;
-		},
-		source: string
+		}
 	): Promise<castv2.MediaPlayerClass[]> {
 		const mediaPlayers = await stop();
-		attachSourcedMessage(
-			res,
-			source,
-			await Cast.explainHook,
-			`Stopped ${mediaPlayers.length} players`
-		);
+		attachMessage(res, `Stopped ${mediaPlayers.length} players`);
 		res.status(200).write('Success');
 		res.end();
 		return mediaPlayers;
@@ -85,19 +72,13 @@ export class APIHandler {
 			text: string;
 			lang?: string;
 			auth?: string;
-		},
-		source: string
+		}
 	): Promise<castv2.MediaPlayerClass[]> {
-		const urls = await tts(text, lang)('API.say', res);
+		const urls = tts(text, lang)(res);
 		attachMessage(res, `Got urls ${urls.join(', ')}`);
 
 		const mediaPlayers = await playURLs(urls);
-		attachSourcedMessage(
-			res,
-			source,
-			await Cast.explainHook,
-			`Saying in lang "${lang}": "${text}"`
-		);
+		attachMessage(res, `Saying in lang "${lang}": "${text}"`);
 		const playerLog = attachMessage(
 			res,
 			`Playing on ${mediaPlayers.length} players`
@@ -129,8 +110,7 @@ export class APIHandler {
 		}: {
 			pasta: string;
 			auth?: string;
-		},
-		source: string
+		}
 	): Promise<castv2.MediaPlayerClass[] | undefined> {
 		if (!(pasta in PASTAS)) {
 			res.status(400).write('Unknown pasta');
@@ -138,16 +118,11 @@ export class APIHandler {
 			return;
 		}
 		const { lang, text } = PASTAS[pasta];
-		const urls = await tts(text, lang)('API.pasta', res);
+		const urls = tts(text, lang)(res);
 
 		attachMessage(res, `Got urls ${urls.join(', ')}`);
 		const mediaPlayers = await playURLs(urls);
-		attachSourcedMessage(
-			res,
-			source,
-			await Cast.explainHook,
-			`Saying pasta in lang "${lang}": "${text}"`
-		);
+		attachMessage(res, `Saying pasta in lang "${lang}": "${text}"`);
 		const playerLog = attachMessage(
 			res,
 			`Playing on ${mediaPlayers.length} players`

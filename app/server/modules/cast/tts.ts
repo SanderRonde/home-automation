@@ -1,6 +1,5 @@
+import { LogObj, attachMessage } from '../../lib/logger';
 import { MAX_PART_LEN } from './constants';
-import { LogObj } from '../../lib/logger';
-import { Cast } from './index';
 
 function splitTTSParts(text: string) {
 	const words = text.split(' ');
@@ -21,14 +20,8 @@ function splitTTSParts(text: string) {
 }
 
 export function tts(text: string, lang: string) {
-	return async (source: string, loggable: LogObj): Promise<string[]> => {
-		if (await Cast.explainHook) {
-			(await Cast.explainHook)(
-				`Casting TTS ${text} in lang ${lang}`,
-				source,
-				loggable
-			);
-		}
+	return (loggable: LogObj): string[] => {
+		attachMessage(loggable, `Casting TTS ${text} in lang ${lang}`);
 
 		const parts = splitTTSParts(text);
 		return parts.map((part) => {

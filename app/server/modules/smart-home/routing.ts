@@ -5,6 +5,7 @@ import {
 	googleDisconnect,
 } from './state/google';
 import { createSamsungSchemaHandler } from './state/samsung';
+import { createLogObjWithName } from '../../lib/logger';
 import { attachTimerToReq } from '../../lib/timer';
 import { attachMessage } from '../../lib/logger';
 import { smarthome } from 'actions-on-google';
@@ -40,8 +41,7 @@ export async function initRouting({
 		},
 		// @ts-ignore
 		await new (await SmartHome.modules).oauth.External(
-			{},
-			'SMART_HOME.ROUTING_INIT'
+			createLogObjWithName('SMART_HOME.ROUTING_INIT')
 		).getAuthenticateMiddleware(),
 		smartHomeApp
 	);

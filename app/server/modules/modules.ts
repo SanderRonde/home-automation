@@ -7,7 +7,6 @@ import { Visualize } from './/visualize/';
 import { SwitchBot } from './switchbot/';
 import { Pressure } from './pressure';
 import { Movement } from './movement';
-import { Explain } from './explain';
 import { Webhook } from './webhook';
 import { EWeLink } from './ewelink';
 import { Script } from './script/';
@@ -39,7 +38,6 @@ export { Visualize } from './visualize/';
 export { SwitchBot } from './switchbot/';
 export { Pressure } from './pressure';
 export { Movement } from './movement';
-export { Explain } from './explain';
 export { Webhook } from './webhook';
 export { EWeLink } from './ewelink';
 export { Notion } from './notion/';
@@ -94,7 +92,6 @@ const moduleObj = {
 	notion: Notion,
 	webhook: Webhook,
 	ewelink: EWeLink,
-	explain: Explain,
 	pressure: Pressure,
 	movement: Movement,
 	smartHome: SmartHome,

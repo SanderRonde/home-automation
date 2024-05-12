@@ -1,11 +1,11 @@
 import express = require('express');
 import { authCode, authenticated, authenticateURL } from './calendar';
 import { initMiddleware, initPostRoutes } from '../../lib/routes';
+import { createLogObjWithName, logTag } from '../../lib/logger';
 import { AsyncExpressApplication } from '../../types/express';
 import { WSClient, WSWrapper } from '../../lib/ws';
 import { createAPIHandler } from '../../lib/api';
 import { WebPageHandler } from './web-page';
-import { logTag } from '../../lib/logger';
 import { getEnv } from '../../lib/io';
 import { APIHandler } from './api';
 import { ModuleConfig } from '..';
@@ -67,12 +67,12 @@ export function initRouting(
 
 	app.post(
 		'/weather',
-		createAPIHandler(InfoScreen, apiHandler.getTemperature.bind(apiHandler))
+		createAPIHandler(apiHandler.getTemperature.bind(apiHandler))
 	);
 
 	app.post(
 		'/calendar',
-		createAPIHandler(InfoScreen, apiHandler.getEvents.bind(apiHandler))
+		createAPIHandler(apiHandler.getEvents.bind(apiHandler))
 	);
 
 	ws.all('/blanking', async (client) => {
@@ -81,7 +81,9 @@ export function initRouting(
 		if (getEnv('INFO_SCREEN_KEYVAL', false)) {
 			const listener = await new (
 				await InfoScreen.modules
-			).keyval.External({}, 'INFO_SCREEN.BLANKING').onChange(
+			).keyval.External(
+				createLogObjWithName('INFO_SCREEN.BLANKING')
+			).onChange(
 				getEnv('INFO_SCREEN_KEYVAL', true),
 				(value) => {
 					client.send(
@@ -96,8 +98,7 @@ export function initRouting(
 				JSON.stringify({
 					blank:
 						(await new (await InfoScreen.modules).keyval.External(
-							{},
-							'INFO_SCREEN.BLANKING'
+							createLogObjWithName('INFO_SCREEN.BLANKING')
 						).get(getEnv('INFO_SCREEN_KEYVAL', true))) === '0',
 				})
 			);

@@ -1,4 +1,4 @@
-import { attachMessage, LogObj } from '../../lib/logger';
+import { attachMessage, createLogObjWithName, LogObj } from '../../lib/logger';
 import groups from '../../config/keyval-groups';
 import { KEYVAL_GROUP_EFFECT } from './types';
 import { ExternalHandler } from './external';
@@ -31,12 +31,10 @@ export function addListener(
 	}: { once?: boolean; notifyOnInitial?: boolean } = {}
 ): number {
 	if (notifyOnInitial && key !== null) {
-		const logObj = {};
-		void new ExternalHandler(logObj, 'KEYVAL.ADD_LISTENER')
-			.get(key)
-			.then((value) => {
-				return listener(value, key, logObj);
-			});
+		const logObj = createLogObjWithName('KEYVAL.ADD_LISTENER');
+		void new ExternalHandler(logObj).get(key).then((value) => {
+			return listener(value, key, logObj);
+		});
 	}
 	const index = _lastIndex++;
 	_listeners.set(index, {

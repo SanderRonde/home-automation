@@ -12,15 +12,14 @@ export class ExternalHandler extends createExternalClass(true) {
 	}
 
 	public async script(name: string): Promise<string> {
-		return this.runRequest(async (res, source) => {
+		return this.runRequest(async (res) => {
 			return APIHandler.script(
 				res,
 				{
 					name,
 					auth: await this._getKey(res, Script),
 				},
-				ExternalHandler._config!,
-				source
+				ExternalHandler._config!
 			);
 		});
 	}

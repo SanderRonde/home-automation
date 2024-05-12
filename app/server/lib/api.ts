@@ -3,12 +3,7 @@ import { ModuleMeta } from '../modules/meta';
 import * as express from 'express';
 
 export function createAPIHandler<A extends Record<string, unknown>, R>(
-	self:
-		| {
-				meta: ModuleMeta;
-		  }
-		| ModuleMeta,
-	fn: (res: express.Response, args: A, source: string) => Promise<R> | void,
+	fn: (res: express.Response, args: A) => Promise<R> | void,
 	getArgs: (req: express.Request) => A = (req) =>
 		({
 			...req.params,
@@ -21,11 +16,7 @@ export function createAPIHandler<A extends Record<string, unknown>, R>(
 		req: express.Request,
 		res: express.Response
 	): Promise<void> => {
-		await fn(
-			res,
-			getArgs(req),
-			`${'meta' in self ? self.meta.name : self.name}.API.${req.url}`
-		);
+		await fn(res, getArgs(req));
 	};
 }
 
@@ -47,11 +38,7 @@ type RemoveType<
 	[K in _Remove<A, B>]: A[K];
 };
 
-type APIHandler = (
-	res: express.Response,
-	args: unknown,
-	source: string
-) => Promise<unknown> | void;
+type APIHandler = (res: express.Response, args: unknown) => unknown;
 
 type IsAPIHandler<F> = F extends APIHandler ? true : false;
 
@@ -142,11 +129,7 @@ export function createRouter<A>(
 										...req.query,
 										cookies: req.cookies,
 									}) as A);
-							return await fn(
-								res,
-								getArgsFn(req),
-								`${self.name}.API.${req.url}`
-							);
+							return await fn(res, getArgsFn(req));
 						},
 					],
 				});

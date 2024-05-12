@@ -4,8 +4,7 @@ import {
 	authAll,
 	auth,
 } from '../../lib/decorators';
-import { ResponseLike, attachSourcedMessage } from '../../lib/logger';
-import { HomeDetector } from './index';
+import { ResponseLike, attachMessage } from '../../lib/logger';
 import { Detector } from './classes';
 import { HOME_STATE } from './types';
 
@@ -19,23 +18,17 @@ export class APIHandler {
 	@errorHandle
 	@requireParams('name')
 	@auth
-	public async get(
+	public get(
 		res: ResponseLike,
 		{
 			name,
 		}: {
 			name: string;
 			auth: string;
-		},
-		source: string
-	): Promise<HOME_STATE | '?'> {
+		}
+	): HOME_STATE | '?' {
 		const result = this._detector.get(name);
-		attachSourcedMessage(
-			res,
-			source,
-			await HomeDetector.explainHook,
-			`Name: ${name}, val: ${result}`
-		);
+		attachMessage(res, `Name: ${name}, val: ${result}`);
 		res.write(result);
 		res.end();
 		return result;
@@ -43,21 +36,16 @@ export class APIHandler {
 
 	@errorHandle
 	@authAll
-	public async getAll(
+	public getAll(
 		res: ResponseLike,
-		_params: {
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		_params?: {
 			auth: string;
-		},
-		source: string
-	): Promise<Record<string, HOME_STATE | '?'>> {
+		}
+	): Record<string, HOME_STATE | '?'> {
 		const all = this._detector.getAll(true);
 		const result = JSON.stringify(all);
-		attachSourcedMessage(
-			res,
-			source,
-			await HomeDetector.explainHook,
-			`JSON: ${result}`
-		);
+		attachMessage(res, `JSON: ${result}`);
 		res.write(result);
 		res.end();
 		return all;

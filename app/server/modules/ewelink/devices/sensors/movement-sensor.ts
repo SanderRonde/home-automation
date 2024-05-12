@@ -3,8 +3,8 @@ import {
 	EWeLinkSharedConfig,
 	EWeLinkWebSocketMessage,
 } from '../shared';
+import { createLogObjWithName, logTag } from '../../../../lib/logger';
 import { ExternalHandler } from '../../../movement/external';
-import { logTag } from '../../../../lib/logger';
 
 export class EwelinkMovement extends EWeLinkInitable {
 	private _movementExternal!: ExternalHandler;
@@ -19,8 +19,7 @@ export class EwelinkMovement extends EWeLinkInitable {
 	public init(): Promise<void> {
 		this._movementExternal =
 			new this._eWeLinkConfig.modules.movement.External(
-				{},
-				'EWELINK.MOVEMENT.INIT'
+				createLogObjWithName('EWELINK.MOVEMENT.INIT')
 			);
 		this._eWeLinkConfig.wsConnection.on(
 			'data',

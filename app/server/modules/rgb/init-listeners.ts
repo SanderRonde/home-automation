@@ -3,7 +3,7 @@ import {
 	LED_KEYVAL_MAP,
 	LED_NAME,
 } from '../../config/led-config';
-import { LogObj, attachSourcedMessage } from '../../lib/logger';
+import { LogObj, attachMessage, createLogObjWithName } from '../../lib/logger';
 import { getLed } from './clients';
 import chalk from 'chalk';
 import { RGB } from '.';
@@ -14,31 +14,13 @@ async function switchLed(name: LED_NAME, value: string, logObj: LogObj) {
 		return;
 	}
 	if (value === '1') {
-		attachSourcedMessage(
-			logObj,
-			'keyval listener',
-			await RGB.explainHook,
-			'Setting',
-			chalk.bold(client.address),
-			'to on'
-		);
-		(await RGB.explainHook)(
-			`Set rgb ${name} to white`,
-			'keyval listener',
-			logObj
-		);
+		attachMessage(logObj, 'Setting', chalk.bold(client.address), 'to on');
 		if (client.setWhiteForPower) {
 			return client.setColor(255, 255, 255);
 		}
 		return client.turnOn();
 	} else if (value === '0') {
-		attachSourcedMessage(
-			logObj,
-			'keyval listener',
-			await RGB.explainHook,
-			'Turned off',
-			chalk.bold(client.address)
-		);
+		attachMessage(logObj, 'Turned off', chalk.bold(client.address));
 		return client.turnOff();
 	}
 	return Promise.resolve();
@@ -47,8 +29,7 @@ async function switchLed(name: LED_NAME, value: string, logObj: LogObj) {
 export function initListeners(): void {
 	void (async () => {
 		const external = new (await RGB.modules).keyval.External(
-			{},
-			'RGB.INIT'
+			createLogObjWithName('RGB.INIT')
 		);
 
 		await initRGBListeners(await RGB.modules);

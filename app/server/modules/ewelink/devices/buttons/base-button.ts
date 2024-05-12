@@ -3,8 +3,8 @@ import {
 	EWeLinkSharedConfig,
 	EWeLinkUpdateMessage,
 } from '../shared';
+import { createLogObjWithName, logTag } from '../../../../lib/logger';
 import { ExternalHandler } from '../../../keyval/external';
-import { logTag } from '../../../../lib/logger';
 
 type EWeLinkButtonPressMessage<A extends number> = EWeLinkUpdateMessage<{
 	trigTime: string;
@@ -88,8 +88,7 @@ export class EwelinkKeyvalButtonBase<
 	public async init(): Promise<void> {
 		await super.init();
 		this._keyvalExternal = new this._eWeLinkConfig.modules.keyval.External(
-			{},
-			'EWELINK.POWER.INIT'
+			createLogObjWithName('EWELINK.POWER.INIT')
 		);
 	}
 }

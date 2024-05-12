@@ -1,7 +1,7 @@
 import { attachMessage, logOutgoingReq, log, LogObj } from './logger';
 import { ModuleHookables } from '../modules/modules';
-import { AllModules } from '../modules';
 import * as querystring from 'querystring';
+import { AllModules } from '../modules';
 import * as https from 'https';
 import * as http from 'http';
 import * as url from 'url';

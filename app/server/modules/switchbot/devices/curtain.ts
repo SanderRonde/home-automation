@@ -2,6 +2,7 @@ import {
 	SwitchbotAdvertisement,
 	SwitchbotWoDeviceCurtain,
 } from 'node-switchbot';
+import { createLogObjWithName } from '../../../lib/logger';
 import { EventEmitter } from '../../../lib/event-emitter';
 import { SwitchbotApiDevice } from '../scanner';
 import { SwitchbotDeviceBase } from './devices';
@@ -9,8 +10,7 @@ import { AllModules } from '../..';
 
 export class SwitchbotCurtain extends SwitchbotDeviceBase {
 	private _keyvalHandler = new this._modules.keyval.External(
-		{},
-		'SWITCHBOT.DEVICE.CURTAIN'
+		createLogObjWithName('SWITCHBOT.DEVICE.CURTAIN')
 	);
 	public progress: number = 0;
 	public inMotion: boolean = false;

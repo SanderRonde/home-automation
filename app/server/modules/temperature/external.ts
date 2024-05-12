@@ -22,45 +22,33 @@ export class ExternalHandler extends createExternalClass(true) {
 	}
 
 	public setMode(name: string, mode: Mode): Promise<void> {
-		return this.runRequest(async (res, source) => {
-			return ExternalHandler._api.setMode(
-				res,
-				{
-					auth: await this._getKey(res, Temperature),
-					mode,
-					name,
-				},
-				source
-			);
+		return this.runRequest(async (res) => {
+			return ExternalHandler._api.setMode(res, {
+				auth: await this._getKey(res, Temperature),
+				mode,
+				name,
+			});
 		});
 	}
 
 	public setTarget(name: string, target: number): Promise<void> {
-		return this.runRequest(async (res, source) => {
-			return ExternalHandler._api.setTargetTemp(
-				res,
-				{
-					auth: await this._getKey(res, Temperature),
-					target,
-					name,
-				},
-				source
-			);
+		return this.runRequest(async (res) => {
+			return ExternalHandler._api.setTargetTemp(res, {
+				auth: await this._getKey(res, Temperature),
+				target,
+				name,
+			});
 		});
 	}
 
 	public getTemp(name: string): Promise<{
 		temp: number;
 	}> {
-		return this.runRequest(async (res, source) => {
-			return ExternalHandler._api.getTemp(
-				res,
-				{
-					auth: await this._getKey(res, Temperature),
-					name,
-				},
-				source
-			);
+		return this.runRequest(async (res) => {
+			return ExternalHandler._api.getTemp(res, {
+				auth: await this._getKey(res, Temperature),
+				name,
+			});
 		});
 	}
 
@@ -69,17 +57,13 @@ export class ExternalHandler extends createExternalClass(true) {
 		direction: 'left' | 'right',
 		ms: number
 	): Promise<string> {
-		return this.runRequest(async (res, source) => {
-			return ExternalHandler._api.moveDir(
-				res,
-				{
-					auth: await this._getKey(res, Temperature),
-					direction,
-					ms,
-					name,
-				},
-				source
-			);
+		return this.runRequest(async (res) => {
+			return ExternalHandler._api.moveDir(res, {
+				auth: await this._getKey(res, Temperature),
+				direction,
+				ms,
+				name,
+			});
 		});
 	}
 

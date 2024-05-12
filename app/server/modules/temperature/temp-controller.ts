@@ -50,13 +50,13 @@ class TempControl {
 		if (getEnv('HEATING_KEY', false)) {
 			const modules = await Temperature.modules;
 			if (newMode === 'off') {
-				await new modules.keyval.External({}, 'HEATING.off').set(
+				await new modules.keyval.External({}).set(
 					getEnv('HEATING_KEY', true),
 					'0',
 					false
 				);
 			} else {
-				await new modules.keyval.External({}, 'HEATING.on').set(
+				await new modules.keyval.External({}).set(
 					getEnv('HEATING_KEY', true),
 					'1',
 					false

@@ -20,21 +20,21 @@ export class ExternalHandler extends createExternalClass(true) {
 	}
 
 	public async enable(): Promise<void> {
-		return this.runRequest(async (_res, _source, logObj) => {
+		return this.runRequest(async (_res, logObj) => {
 			await ExternalHandler._pressureStateKeeper.enable();
 			attachMessage(logObj, 'Enabled pressure module');
 		});
 	}
 
 	public async disable(): Promise<void> {
-		return this.runRequest(async (_res, _source, logObj) => {
+		return this.runRequest(async (_res, logObj) => {
 			await ExternalHandler._pressureStateKeeper.disable();
 			attachMessage(logObj, 'Disabled pressure module');
 		});
 	}
 
 	public async isEnabled(): Promise<boolean> {
-		return this.runRequest((_res, _source, logObj) => {
+		return this.runRequest((_res, logObj) => {
 			const enabled = ExternalHandler._pressureStateKeeper.isEnabled();
 			attachMessage(logObj, 'Got enabled status of pressure module');
 			return enabled;
@@ -42,7 +42,7 @@ export class ExternalHandler extends createExternalClass(true) {
 	}
 
 	public async get(key: string): Promise<number | null> {
-		return this.runRequest((_res, _source, logObj) => {
+		return this.runRequest((_res, logObj) => {
 			const pressure =
 				ExternalHandler._pressureValueKeeper.getPressure(key);
 			attachMessage(

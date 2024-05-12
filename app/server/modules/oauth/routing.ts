@@ -1,9 +1,5 @@
 import express = require('express');
-import {
-	ResponseLike,
-	attachSourcedMessage,
-	attachMessage,
-} from '../../lib/logger';
+import { ResponseLike, attachMessage } from '../../lib/logger';
 import { authorizationServer } from './authorization';
 import { CLIENT_FOLDER } from '../../lib/constants';
 import { validateOAUthUsers } from './oauth-users';
@@ -64,12 +60,7 @@ export async function initRouting({
 		'/authorize',
 		// @ts-ignore
 		async (req, res, next) => {
-			attachSourcedMessage(
-				res,
-				'OAUTH.API',
-				await OAuth.explainHook,
-				'Authorizing OAuth'
-			);
+			attachMessage(res, 'Authorizing OAuth');
 
 			// Somehow Google sends a wrong URL so we have to fix it
 			const query = req.query as {
@@ -121,12 +112,7 @@ export async function initRouting({
 		}
 	);
 	router.get('/login', async (_req, res) => {
-		attachSourcedMessage(
-			res,
-			'OAUTH.API',
-			await OAuth.explainHook,
-			'Logging in to auth'
-		);
+		attachMessage(res, 'Logging in to auth');
 
 		res.status(200);
 		res.write(await oauthHTMLFile.value);
@@ -135,13 +121,8 @@ export async function initRouting({
 	// @ts-ignore
 	router.post(
 		'/token',
-		async (_req, res, next) => {
-			attachSourcedMessage(
-				res,
-				'OAUTH.API',
-				await OAuth.explainHook,
-				'Refreshing token for OAuth'
-			);
+		(_req, res, next) => {
+			attachMessage(res, 'Refreshing token for OAuth');
 			return next();
 		},
 		(await authorizationServer.value).token({})
@@ -149,13 +130,8 @@ export async function initRouting({
 	if (getEnv('SECRET_OAUTH_TOKEN_URL_POSTFIX', false)) {
 		router.post(
 			`/token${getEnv('SECRET_OAUTH_TOKEN_URL_POSTFIX', true)}`,
-			async (_req, res, next) => {
-				attachSourcedMessage(
-					res,
-					'OAUTH.API',
-					await OAuth.explainHook,
-					'Refreshing token for OAuth'
-				);
+			(_req, res, next) => {
+				attachMessage(res, 'Refreshing token for OAuth');
 				return next();
 			},
 			async (req, res, next) => {

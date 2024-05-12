@@ -70,16 +70,13 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		});
 
 		if (getEnv('HEATING_KEY', false)) {
-			void new config.modules.keyval.External(
-				{},
-				'TEMPERATURE.INIT'
-			).onChange(
+			void new config.modules.keyval.External({}).onChange(
 				getEnv('HEATING_KEY', true),
 				async (value, _key, logObj) => {
-					return new ExternalHandler(
-						logObj,
-						'TEMPERATURE.INIT'
-					).setMode('room', value === '1' ? 'on' : 'off');
+					return new ExternalHandler(logObj).setMode(
+						'room',
+						value === '1' ? 'on' : 'off'
+					);
 				}
 			);
 		}

@@ -4,7 +4,7 @@ import {
 	authAll,
 	auth,
 } from '../../lib/decorators';
-import { ResponseLike, attachSourcedMessage } from '../../lib/logger';
+import { ResponseLike, attachMessage } from '../../lib/logger';
 import { getController } from './temp-controller';
 import { ModuleConfig, Temperature } from '..';
 import { Mode } from './types';
@@ -26,17 +26,11 @@ export class APIHandler {
 			auth?: string;
 			mode: Mode;
 			name: string;
-		},
-		source: string
+		}
 	): Promise<void> {
 		const controller = await getController(this._db, name);
 		const oldMode = controller.getMode();
-		attachSourcedMessage(
-			res,
-			source,
-			await Temperature.explainHook,
-			`Setting mode to ${mode} from ${oldMode}`
-		);
+		attachMessage(res, `Setting mode to ${mode} from ${oldMode}`);
 		await controller.setMode(mode);
 		res.status(200);
 		res.end();
@@ -54,17 +48,11 @@ export class APIHandler {
 			auth?: string;
 			target: number;
 			name: string;
-		},
-		source: string
+		}
 	): Promise<void> {
 		const controller = await getController(this._db, name);
 		const oldTemp = controller.getTarget();
-		attachSourcedMessage(
-			res,
-			source,
-			await Temperature.explainHook,
-			`Setting target temp to ${target} from ${oldTemp}`
-		);
+		attachMessage(res, `Setting target temp to ${target} from ${oldTemp}`);
 		await controller.setTarget(target);
 		res.status(200);
 		res.end();
@@ -79,16 +67,13 @@ export class APIHandler {
 		}: {
 			auth?: string;
 			name: string;
-		},
-		source: string
+		}
 	): Promise<{
 		temp: number;
 	}> {
 		const controller = await getController(this._db, name);
-		attachSourcedMessage(
+		attachMessage(
 			res,
-			source,
-			await Temperature.explainHook,
 			`Getting temp. Returning ${controller.getLastTemp()}`
 		);
 		res.status(200);
@@ -116,14 +101,11 @@ export class APIHandler {
 			name: string;
 			direction: 'left' | 'right';
 			ms: number;
-		},
-		source: string
+		}
 	): Promise<string> {
 		const controller = await getController(this._db, name);
-		attachSourcedMessage(
+		attachMessage(
 			res,
-			source,
-			await Temperature.explainHook,
 			`Setting move for controller ${name} to ${ms}ms in the direction ${direction}`
 		);
 		controller.setMove(direction, ms);
