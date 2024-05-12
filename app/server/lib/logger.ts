@@ -30,8 +30,6 @@ const rootMap: WeakMap<
 	LogObj,
 	ResponseLike | AssociatedMessage | Record<string, unknown> | LogObj
 > = new WeakMap();
-const logListeners: WeakMap<LogObj, (captured: LogCapturer) => void> =
-	new WeakMap();
 
 let logLevel = 1;
 export function setLogLevel(level: number): void {
@@ -52,12 +50,6 @@ function setDefaultArrValues<T>(arr: T[], len: number, value: T): T[] {
 
 interface Loggable {
 	log(message?: unknown, ...optionalParams: unknown[]): void;
-}
-
-function checkForLogListeners(logObj: LogObj, target: LogCapturer) {
-	if (logListeners.has(logObj)) {
-		logListeners.get(logObj)!(target);
-	}
 }
 
 function logAssociatedMessages(
@@ -81,7 +73,6 @@ function logAssociatedMessages(
 			})
 			.join('');
 		const message = messages[i];
-		checkForLogListeners(message, target);
 		const timeFiller = getTimeFiller();
 		if (i === messages.length - 1) {
 			target.log(timeFiller, `${padding} \\- `, ...message.content);
@@ -240,8 +231,6 @@ export function logReq(
 	const start = Date.now();
 	const ip = getIP(req);
 	res.on('finish', () => {
-		checkForLogListeners(res, target);
-
 		if (logLevel < 1 || ignoredSet.has(res)) {
 			target.logToConsole();
 			return;
@@ -311,10 +300,6 @@ export function logOutgoingRes(
 	}
 ): void {
 	const target = new LogCapturer();
-	if (logListeners.has(res)) {
-		logListeners.get(res)!(target);
-	}
-	checkForLogListeners(res, target);
 
 	if (logLevel < 1) {
 		target.logToConsole();
@@ -346,10 +331,6 @@ export function logOutgoingReq(
 	}
 ): void {
 	const target = new LogCapturer();
-	if (logListeners.has(req)) {
-		logListeners.get(req)!(target);
-	}
-	checkForLogListeners(req, target);
 
 	const ip = req.path;
 
@@ -380,7 +361,6 @@ export function logFixture(
 	...name: string[]
 ): void {
 	const target = new LogCapturer();
-	checkForLogListeners(obj, target);
 
 	target.log(getTime(), ...name);
 
@@ -407,10 +387,6 @@ export function transferAttached(
 	msgMap.delete(from);
 
 	rootMap.set(to, rootMap.get(from)!);
-	if (logListeners.has(from)) {
-		logListeners.set(to, logListeners.get(from)!);
-		logListeners.delete(from);
-	}
 }
 
 export function disableMessages(
@@ -443,17 +419,6 @@ export function attachMessage(
 	}
 	rootMap.set(msg, rootMap.get(obj)!);
 	return msg;
-}
-
-export function addLogListener(
-	obj: LogObj,
-	listener: (captured: LogCapturer) => void
-): void {
-	if (typeof obj !== 'object' || !obj) {
-		return;
-	}
-
-	logListeners.set(obj, listener);
 }
 
 export interface ResponseLike {
