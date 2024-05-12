@@ -1,5 +1,5 @@
-import { LogObj } from '../../../lib/logging/lob-obj';
 import { listenAny, removeListener } from '../get-set-listener';
+import { LogObj } from '../../../lib/logging/lob-obj';
 import { createRouter } from '../../../lib/api';
 import { WebPageHandler } from '../web-page';
 import { sendMessage } from './telnet';

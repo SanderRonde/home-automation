@@ -1,5 +1,5 @@
-import { LogObj } from '../../lib/logging/lob-obj';
 import { disable, enable, initRegister } from './register';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { ExternalHandler } from './external';
 import { initRouting } from './routing';
 import { ModuleMeta } from '../meta';

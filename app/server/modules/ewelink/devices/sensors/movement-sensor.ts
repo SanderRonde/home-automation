@@ -3,9 +3,9 @@ import {
 	EWeLinkSharedConfig,
 	EWeLinkWebSocketMessage,
 } from '../shared';
-import { logTag } from '../../../../lib/logging/logger';
-import { LogObj } from '../../../../lib/logging/lob-obj';
 import { ExternalHandler } from '../../../movement/external';
+import { LogObj } from '../../../../lib/logging/lob-obj';
+import { logTag } from '../../../../lib/logging/logger';
 
 export class EwelinkMovement extends EWeLinkInitable {
 	private _movementExternal!: ExternalHandler;

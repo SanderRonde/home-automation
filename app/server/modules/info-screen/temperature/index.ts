@@ -3,9 +3,9 @@ import {
 	ExternalWeatherTimePeriod,
 	InternalTemperatureResult,
 } from '../types';
+import { LogObj } from '../../../lib/logging/lob-obj';
 import { get as _getInternal } from './internal';
 import { get as _getExternal } from './external';
-import { LogObj } from '../../../lib/logging/lob-obj';
 
 export function getInternal(
 	logObj?: LogObj,

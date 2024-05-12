@@ -3,9 +3,9 @@ import {
 	EWeLinkSharedConfig,
 	EWeLinkUpdateMessage,
 } from '../shared';
-import { logTag } from '../../../../lib/logging/logger';
-import { LogObj } from '../../../../lib/logging/lob-obj';
 import { ExternalHandler } from '../../../keyval/external';
+import { LogObj } from '../../../../lib/logging/lob-obj';
+import { logTag } from '../../../../lib/logging/logger';
 
 type EWeLinkButtonPressMessage<A extends number> = EWeLinkUpdateMessage<{
 	trigTime: string;

@@ -47,7 +47,9 @@ export class APIHandler {
 		})();
 		const { temperature, icon } = response;
 
-		LogObj.fromRes(res).attachMessage( `Temp: "${String(temperature)}", icon: ${icon}`);
+		LogObj.fromRes(res).attachMessage(
+			`Temp: "${String(temperature)}", icon: ${icon}`
+		);
 		res.status(200).write(
 			JSON.stringify({
 				...response,
@@ -62,7 +64,9 @@ export class APIHandler {
 	public async getEvents(res: ResponseLike): Promise<CalendarEvent[]> {
 		try {
 			const events = await getEvents(7);
-			LogObj.fromRes(res).attachMessage( `Fetched ${events.length} events`);
+			LogObj.fromRes(res).attachMessage(
+				`Fetched ${events.length} events`
+			);
 			res.status(200).write(
 				JSON.stringify({
 					events,

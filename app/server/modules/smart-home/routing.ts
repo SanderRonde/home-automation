@@ -4,8 +4,8 @@ import {
 	googleExecute,
 	googleDisconnect,
 } from './state/google';
-import { LogObj } from '../../lib/logging/lob-obj';
 import { createSamsungSchemaHandler } from './state/samsung';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { attachTimerToReq } from '../../lib/timer';
 import { smarthome } from 'actions-on-google';
 import { createRouter } from '../../lib/api';
@@ -34,7 +34,7 @@ export async function initRouting({
 					}[];
 				}
 			).inputs[0].intent;
-			LogObj.fromRes(res).attachMessage( `Intent: ${intent}`);
+			LogObj.fromRes(res).attachMessage(`Intent: ${intent}`);
 			attachTimerToReq(res);
 			return next();
 		},

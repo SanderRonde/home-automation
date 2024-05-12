@@ -2,8 +2,8 @@ import {
 	SwitchbotAdvertisement,
 	SwitchbotWoDeviceCurtain,
 } from 'node-switchbot';
-import { LogObj } from '../../../lib/logging/lob-obj';
 import { EventEmitter } from '../../../lib/event-emitter';
+import { LogObj } from '../../../lib/logging/lob-obj';
 import { SwitchbotApiDevice } from '../scanner';
 import { SwitchbotDeviceBase } from './devices';
 import { AllModules } from '../..';

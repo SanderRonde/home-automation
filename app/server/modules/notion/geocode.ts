@@ -4,10 +4,10 @@ import {
 } from '@notionhq/client/build/src/api-endpoints';
 import { NOTION_GEOCODE_UPDATE_INTERVAL } from '../../lib/constants';
 import { getAllForQuery, notionRequest } from './client';
+import { logTag } from '../../lib/logging/logger';
 import { asyncSetInterval } from '../../lib/util';
 import { captureTime } from '../../lib/timer';
 import { Client } from '@notionhq/client';
-import { logTag } from '../../lib/logging/logger';
 import { WithAuth } from './types';
 
 const geocodeLocationRegex = /(.*) \(#location\)/;

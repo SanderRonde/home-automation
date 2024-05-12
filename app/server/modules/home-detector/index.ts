@@ -36,7 +36,7 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 			await handleHooks(
 				newState,
 				name,
-				LogObj.fromFixture(chalk.cyan('[hook]'), name),
+				LogObj.fromFixture(chalk.cyan('[hook]'), name)
 			);
 		});
 	}

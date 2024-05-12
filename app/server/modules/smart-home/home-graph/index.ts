@@ -13,13 +13,13 @@ import { Batcher, createHookables, SettablePromise } from '../../../lib/util';
 import { homegraph, homegraph_v1 } from '@googleapis/homegraph';
 import { currentUsers, initHomeGraphUsers } from './users';
 import { dispatchSamsungUsers } from '../state/samsung';
+import { LogObj } from '../../../lib/logging/lob-obj';
 import { dispatchGoogleUsers } from '../state/google';
 import { Database } from '../../../lib/db';
 import { google } from 'googleapis';
 import { SmartHome } from '../';
 import * as fs from 'fs-extra';
 import * as path from 'path';
-import { LogObj } from '../../../lib/logging/lob-obj';
 
 export const homeGraph = new SettablePromise<homegraph_v1.Homegraph>();
 export const db = new SettablePromise<Database>();

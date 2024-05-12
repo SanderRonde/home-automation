@@ -10,8 +10,8 @@ import {
 	PRESSURE_CHANGE_DIRECTION,
 	PressureRange,
 } from './types';
-import { LogObj } from '../../lib/logging/lob-obj';
 import pressureConfig from '../../config/pressures';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { createHookables } from '../../lib/util';
 import { PressureStateKeeper } from './enabled';
 import { Pressure } from '..';

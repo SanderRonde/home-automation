@@ -1,6 +1,6 @@
-import { LogObj } from '../../lib/logging/lob-obj';
 import { SettablePromise, createHookables } from '../../lib/util';
 import movementConfig from '../../config/movements';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { Database } from '../../lib/db';
 import { Movement } from '.';
 

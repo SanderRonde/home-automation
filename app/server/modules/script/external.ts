@@ -1,8 +1,8 @@
 import { createExternalClass } from '../../lib/external';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { Config } from '../../app';
 import { APIHandler } from './api';
 import { Script } from '.';
-import { LogObj } from '../../lib/logging/lob-obj';
 
 export class ExternalHandler extends createExternalClass(true) {
 	private static _config: Config | null = null;

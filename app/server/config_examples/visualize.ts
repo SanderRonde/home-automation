@@ -1,5 +1,5 @@
-import { LogObj } from '../lib/logging/lob-obj';
 import { createReporter } from '../modules/visualize/report';
+import { LogObj } from '../lib/logging/lob-obj';
 import { AllModules } from '../modules';
 
 export function initVisualizerHooks(

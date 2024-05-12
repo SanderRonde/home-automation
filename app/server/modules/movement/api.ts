@@ -16,7 +16,7 @@ export class APIHandler {
 			key: string;
 		}
 	): Promise<void> {
-		LogObj.fromRes(res).attachMessage( `Reporting movement for key ${key}`);
+		LogObj.fromRes(res).attachMessage(`Reporting movement for key ${key}`);
 		await reportMovement(key, LogObj.fromRes(res));
 		res.status(200);
 		res.end();

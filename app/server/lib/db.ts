@@ -1,5 +1,5 @@
-import { DB_FOLDER } from './constants';
 import { warning } from './logging/logger';
+import { DB_FOLDER } from './constants';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 

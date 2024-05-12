@@ -7,11 +7,11 @@ import {
 import { QueryReturnType } from '../../../lib/smart-home/smart-home-classes';
 import { ResponseLike } from '../../../lib/logging/response-logger';
 import { addUser, removeUser } from '../home-graph/users';
+import { LogObj } from '../../../lib/logging/lob-obj';
 import { createHookables } from '../../../lib/util';
 import { ModuleHookables, SmartHome } from '../..';
 import { time } from '../../../lib/timer';
 import * as express from 'express';
-import { LogObj } from '../../../lib/logging/lob-obj';
 
 export async function sharedUseradd<D>(
 	username: string,
@@ -45,7 +45,7 @@ export async function createSmartHomeHookables(
 		awaitModules,
 		'SMART_HOME',
 		'QUERY',
-		LogObj.fromRes(res).attachMessage( 'Smart Home Query')
+		LogObj.fromRes(res).attachMessage('Smart Home Query')
 	);
 	time(res, 'create-hookables');
 	return hookables;
@@ -98,7 +98,7 @@ export async function sharedExecute(
 		awaitedModules,
 		'SMART_HOME',
 		'EXECUTE',
-		LogObj.fromRes(res).attachMessage( 'Smart Home Execute')
+		LogObj.fromRes(res).attachMessage('Smart Home Execute')
 	);
 	time(res, 'create-hookables');
 	const result = await Promise.all(

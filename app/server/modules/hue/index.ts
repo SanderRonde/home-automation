@@ -1,6 +1,6 @@
 import { discoverBridge } from './discover-bridge';
-import { linkHueDevices } from '../../config/hue';
 import { logTag } from '../../lib/logging/logger';
+import { linkHueDevices } from '../../config/hue';
 import { getEnv } from '../../lib/io';
 import { ModuleMeta } from '../meta';
 import { ModuleConfig } from '..';
