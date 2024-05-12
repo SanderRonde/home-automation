@@ -1,5 +1,4 @@
 import { attachMessage, LogObj } from '../../lib/logger';
-import { SettablePromise } from '../../lib/util';
 import groups from '../../config/keyval-groups';
 import { KEYVAL_GROUP_EFFECT } from './types';
 import { ExternalHandler } from './external';
@@ -18,11 +17,6 @@ const _listeners: Map<
 	}
 > = new Map();
 let _lastIndex = 0;
-const db = new SettablePromise<Database>();
-
-export function setDB(_db: Database): void {
-	db.set(_db);
-}
 
 export function addListener(
 	key: string | null,
@@ -57,11 +51,12 @@ export function removeListener(index: number): void {
 	_listeners.delete(index);
 }
 
-export async function triggerGroups(
+function triggerGroups(
 	key: string,
 	value: string,
-	logObj: LogObj
-): Promise<void> {
+	logObj: LogObj,
+	db: Database
+): void {
 	if (!(key in groups)) {
 		attachMessage(logObj, 'No groups');
 		return;
@@ -94,14 +89,15 @@ export async function triggerGroups(
 		}
 
 		attachMessage(logObj, `Setting "${key}" to "${newValue}" (db only)`);
-		(await db.value).setVal(key, newValue);
+		db.setVal(key, newValue);
 	}
 }
 
 export async function update(
 	key: string,
 	value: string,
-	logObj: LogObj
+	logObj: LogObj,
+	db: Database
 ): Promise<number> {
 	let updated = 0;
 	const updatedKeyParts = key.split('.');
@@ -132,7 +128,7 @@ export async function update(
 		}
 	}
 
-	await triggerGroups(key, value, attachMessage(logObj, 'Triggering groups'));
+	triggerGroups(key, value, attachMessage(logObj, 'Triggering groups'), db);
 
 	return updated;
 }

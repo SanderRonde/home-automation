@@ -84,7 +84,7 @@ export function initRouting({
 					logTag('touch-screen', 'cyan', chalk.bold(data));
 					const [key, value] = data.split(' ');
 					db.setVal(key, value.trim());
-					await update(key, value.trim(), {});
+					await update(key, value.trim(), {}, db);
 				},
 				instance.ip
 			);

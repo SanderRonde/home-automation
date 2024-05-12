@@ -116,7 +116,8 @@ export class APIHandler {
 		const updated = await update(
 			key,
 			value,
-			attachMessage(nextMessage, 'Updates')
+			attachMessage(nextMessage, 'Updates'),
+			this._db
 		);
 		attachMessage(nextMessage, `Updated ${updated} listeners`);
 		res.status(200).write(value);
@@ -233,7 +234,8 @@ export class APIHandler {
 				const updated = await update(
 					key,
 					value,
-					attachMessage(nextMessage, 'Updates')
+					attachMessage(nextMessage, 'Updates'),
+					this._db
 				);
 				attachMessage(nextMessage, `Updated ${updated} listeners`);
 			}
