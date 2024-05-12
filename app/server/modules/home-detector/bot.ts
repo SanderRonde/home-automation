@@ -11,7 +11,7 @@ import { APIHandler } from './api';
 import { HomeDetector } from '.';
 import chalk from 'chalk';
 
-export interface State {
+interface State {
 	lastSubjects: string[] | null;
 }
 

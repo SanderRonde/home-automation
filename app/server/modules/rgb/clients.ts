@@ -16,7 +16,7 @@ export let magicHomeClients: MagicHomeClient[] = [];
 export let ringClients: RingClient[] = [];
 export let hexClients: HexClient[] = [];
 export let clients: RGBClient[] = [];
-export let wledClients: WLEDRGBClient[] = [];
+let wledClients: WLEDRGBClient[] = [];
 
 export function getLed(name: LED_NAME): RGBClient | null {
 	const joinedNames = {
@@ -34,7 +34,7 @@ export function getLed(name: LED_NAME): RGBClient | null {
 	return null;
 }
 
-export function setClients(
+function setClients(
 	newClients: (MagicHomeClient | RingClient | HexClient | WLEDRGBClient)[] = [
 		...magicHomeClients,
 		...ringClients,

@@ -20,7 +20,7 @@ type Defined<
 	},
 > = Pick<O, keyof NotUndefined<O>>;
 
-export function padWord(word: string, length: number, padChar = ' ') {
+function padWord(word: string, length: number, padChar = ' ') {
 	if (word.length === length) {
 		return word;
 	}

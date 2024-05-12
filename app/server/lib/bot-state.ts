@@ -10,7 +10,7 @@ import { BotUtil } from './bot-util';
 import { wait } from './util';
 import chalk from 'chalk';
 
-export type MatchHandlerRet =
+type MatchHandlerRet =
 	| string
 	| number
 	| {
@@ -44,9 +44,9 @@ export interface MatchHandlerParams {
 	sendText(text: string): Promise<boolean>;
 }
 
-export type MatchHandler = (config: MatchHandlerParams) => MatchHandlerRet;
+type MatchHandler = (config: MatchHandlerParams) => MatchHandlerRet;
 
-export interface MatchBaseParams {
+interface MatchBaseParams {
 	text: string;
 	message: TelegramMessage;
 	state: ChatState;
@@ -54,32 +54,29 @@ export interface MatchBaseParams {
 	res: ResWrapper;
 }
 
-export interface MatchParams extends MatchBaseParams {
+interface MatchParams extends MatchBaseParams {
 	logObj: LogObj;
 }
 
-export type MatchFallback = (config: MatchBaseParams) => void;
+type MatchFallback = (config: MatchBaseParams) => void;
 
-export interface MatchConfig {
+interface MatchConfig {
 	matches: MatchData[];
 	fallback: MatchFallback;
 }
 
-export interface MatchData {
+interface MatchData {
 	fn: MatchHandler;
 	texts: string[];
 	regexps: RegExp[];
 	conditions: ((params: MatchParams) => boolean)[];
 }
 
-export type MatchMaker = (
+type MatchMaker = (
 	...args: (string[] | string | RegExp[] | RegExp | MatchHandler)[]
 ) => MatchData;
 
-export type SameMaker = (
-	str: TemplateStringsArray,
-	...values: string[][]
-) => string[];
+type SameMaker = (str: TemplateStringsArray, ...values: string[][]) => string[];
 
 export abstract class Matchable extends BotUtil {
 	public static readonly matches: MatchConfig;

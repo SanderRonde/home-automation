@@ -19,21 +19,6 @@ const _listeners: Map<
 > = new Map();
 let _lastIndex = 0;
 
-export function addListener(
-	command: Commands,
-	listener: (command: Commands, logObj: LogObj) => void,
-	once = false
-): number {
-	const index = _lastIndex++;
-	_listeners.set(index, {
-		key: command['action'],
-		listener,
-		once,
-		any: false,
-	});
-	return index;
-}
-
 export function listenAny(
 	listener: (command: Commands, logObj: LogObj) => void | Promise<void>,
 	once = false

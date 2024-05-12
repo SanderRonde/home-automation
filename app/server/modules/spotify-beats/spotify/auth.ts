@@ -1,6 +1,6 @@
 import { getSpotifyAPI } from './api';
 
-export async function authFromToken(token: string): Promise<void> {
+async function authFromToken(token: string): Promise<void> {
 	const api = getSpotifyAPI();
 	if (!(await api.grantAuthCode(token))) {
 		return;

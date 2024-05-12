@@ -7,16 +7,16 @@ import {
 import { HEX_LEDS, RING_LEDS, WLED_LEDS } from '../../config/led-config';
 import { MagicHomeClient } from './client/MagicHomeClient';
 import { WLEDRGBClient } from './client/WLEDRGBClient';
+import { logTag } from '../../lib/logging/logger';
 import { RingClient } from './client/RingClient';
 import { Control, Discovery } from 'magic-home';
 import { HexClient } from './client/HexClient';
-import { logTag } from '../../lib/logging/logger';
 import chalk from 'chalk';
 
 let magicHomeTimer: NodeJS.Timeout | null = null;
 const RESCAN_TIME = 1000 * 60;
 
-export async function scanMagicHomeControllers(first = false): Promise<number> {
+async function scanMagicHomeControllers(first = false): Promise<number> {
 	const scanTime =
 		first && process.argv.indexOf('--debug') > -1 ? 250 : 10000;
 	const clients = (await new Discovery().scan(scanTime))
@@ -33,7 +33,7 @@ export async function scanMagicHomeControllers(first = false): Promise<number> {
 	return clients.length;
 }
 
-export function scanRing(): number {
+function scanRing(): number {
 	const clients = Object.entries(RING_LEDS).map(
 		([ip, name]) => new RingClient(ip, name[0], name[1].numLeds)
 	);
@@ -41,7 +41,7 @@ export function scanRing(): number {
 	return clients.length;
 }
 
-export function scanHex(): number {
+function scanHex(): number {
 	const clients = Object.entries(HEX_LEDS).map(
 		([ip, name]) => new HexClient(ip, name)
 	);
@@ -49,7 +49,7 @@ export function scanHex(): number {
 	return clients.length;
 }
 
-export function scanWLed(): number {
+function scanWLed(): number {
 	const clients = Object.entries(WLED_LEDS).map(
 		([ip, name]) => new WLEDRGBClient(ip, name)
 	);

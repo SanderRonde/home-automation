@@ -205,7 +205,7 @@ export class WSSimInstance<
 	public onClose(): void {}
 }
 
-export const enum ACCEPT_STATE {
+const enum ACCEPT_STATE {
 	ACCEPTED = 1,
 	REJECTED = -1,
 	IGNORED = 0,

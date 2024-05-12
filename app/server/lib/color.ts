@@ -1,6 +1,6 @@
 import { Color as MagicHomeColor } from 'magic-home';
 
-export interface IColor {
+interface IColor {
 	r: number;
 	g: number;
 	b: number;

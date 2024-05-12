@@ -6,7 +6,7 @@ export const enum RESPONSE_TYPE {
 	TEXT = 'Text',
 }
 
-export interface TelegramImage {
+interface TelegramImage {
 	photo: {
 		file_id: string;
 		file_size: number;
@@ -15,7 +15,7 @@ export interface TelegramImage {
 	}[];
 }
 
-export interface TelegramVoice {
+interface TelegramVoice {
 	voice: {
 		duration: number;
 		mime_type: string;
@@ -24,7 +24,7 @@ export interface TelegramVoice {
 	};
 }
 
-export interface TelegramDocument {
+interface TelegramDocument {
 	document: {
 		file_name: string;
 		mime_type: string;
@@ -37,7 +37,7 @@ export interface TelegramText {
 	text: string;
 }
 
-export type TelegramReply<
+type TelegramReply<
 	C = TelegramText | TelegramImage | TelegramVoice | TelegramDocument,
 > = {
 	reply_to_message: TelegramMessage<C>;

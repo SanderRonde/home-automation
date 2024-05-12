@@ -117,7 +117,7 @@ type TableToRow<T extends Table> = {
 				: never;
 };
 
-export class SQLTableWithSchema<T extends Table> extends WithQueryAndRun {
+class SQLTableWithSchema<T extends Table> extends WithQueryAndRun {
 	public constructor(
 		protected readonly _db: Database,
 		private readonly _tableName: string,

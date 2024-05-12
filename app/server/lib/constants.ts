@@ -1,4 +1,3 @@
-import { getEnv } from './io';
 import * as path from 'path';
 
 const ROOT = path.join(__dirname, '../../../');
@@ -28,14 +27,10 @@ export const TELEGRAM_IPS = [
 ];
 export const TELEGRAM_API = 'api.telegram.org';
 
-// Cast
-export const CAST_DEVICE_NAME = getEnv('CAST_DEVICE_NAME', true);
-
 // Pressure
 export const MIN_PRESSURE = 0;
 export const MAX_PRESSURE = 1024;
 export const DEFAULT_MIN_TIME = 500;
-export const DEFAULT_TIME_DIFF = 2000;
 export const PRESSURE_SAMPLE_TIME = 500;
 export const MAX_PRESSURE_TIME = 10000;
 
@@ -43,7 +38,6 @@ export const MAX_PRESSURE_TIME = 10000;
 export const PLAYSTATE_CHECK_INTERVAL = 1000;
 export const BEAT_CACHE_CLEAR_INTERVAL = 1000 * 60 * 60;
 export const PLAYBACK_CLOSE_RANGE = 10;
-export const MAX_BEATS_ARR_LENGTH = 2000;
 
 // Smart-home
 export const SMART_HOME_BATCH_MIN_TIMEOUT = 50;

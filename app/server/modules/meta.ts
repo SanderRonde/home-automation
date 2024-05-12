@@ -1,10 +1,10 @@
-import { LogObj } from '../lib/logging/lob-obj';
 import { ModuleConfig, AllModules } from './modules';
 import { HOME_STATE } from './home-detector/types';
+import { LogObj } from '../lib/logging/lob-obj';
 import { BotStateBase } from '../lib/bot-state';
 import { SettablePromise } from '../lib/util';
 
-export declare class Handler {
+declare class Handler {
 	public constructor(_logObj: LogObj, _source: string);
 }
 

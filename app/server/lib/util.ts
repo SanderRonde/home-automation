@@ -14,10 +14,6 @@ export function wait(time: number): Promise<void> {
 	});
 }
 
-export function objToArr<V>(obj: { [key: string]: V }): [string, V][] {
-	return Object.keys(obj).map((k) => [k, obj[k]]);
-}
-
 export function arrToObj<V>(arr: [string, V][]): {
 	[key: string]: V;
 } {
@@ -28,20 +24,6 @@ export function arrToObj<V>(arr: [string, V][]): {
 		obj[key] = val;
 	}
 	return obj;
-}
-
-export async function awaitCondition(
-	condition: () => boolean,
-	interval: number,
-	maxTime = Infinity
-): Promise<void> {
-	let tests = 0;
-	const maxTests = maxTime / interval;
-
-	while (!condition() && tests < maxTests) {
-		await wait(interval);
-		tests++;
-	}
 }
 
 export class Time {
@@ -428,23 +410,6 @@ export function asyncTimeout(
 	return setTimeout(() => {
 		void callback();
 	}, interval);
-}
-
-export function createUrlWithOrderedParams(
-	url: string,
-	params: [string, string | number][]
-): string {
-	let query = params
-		.map(([key, value]) => {
-			if (key === undefined || value === undefined || value === null) {
-				return undefined;
-			}
-			return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
-		})
-		.filter(Boolean)
-		.join('&');
-	query = query ? `?${query}` : '';
-	return url + query;
 }
 
 export function debounce<T extends (...args: unknown[]) => unknown>(

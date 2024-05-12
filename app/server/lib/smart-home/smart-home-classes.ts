@@ -15,11 +15,11 @@ import {
 } from './smart-home-types';
 import { SwitchbotCurtain } from '../../modules/switchbot/devices/curtain';
 import { TEMPERATURE_REPORT_MAX_TIMEOUT } from '../constants';
-import { LED_NAME } from '../../config/led-config';
-import { warning } from '../logging/logger';
 import { ResponseLike } from '../logging/response-logger';
+import { LED_NAME } from '../../config/led-config';
 import { ModuleHookables } from '../../modules';
 import { captureTime, time } from '../timer';
+import { warning } from '../logging/logger';
 import { Batcher, pad } from '../util';
 import { Color } from '../color';
 
