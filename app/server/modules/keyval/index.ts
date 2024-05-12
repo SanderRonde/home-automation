@@ -1,6 +1,5 @@
 import { initAggregates } from './aggregates';
 import { ExternalHandler } from './external';
-import { setDB } from './get-set-listener';
 import { initRouting } from './routing';
 import { ModuleMeta } from '../meta';
 import { APIHandler } from './api';
@@ -20,7 +19,6 @@ export const KeyVal = new (class KeyVal extends ModuleMeta {
 
 	public async init(config: ModuleConfig<KeyVal>) {
 		const { db } = config;
-		setDB(db);
 		const apiHandler = new APIHandler({ db });
 		await ExternalHandler.init({ apiHandler });
 		initAggregates(db);
