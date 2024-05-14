@@ -4,6 +4,7 @@ import { initVisualizerHooks } from '../../config/visualize';
 import { ModuleMeta } from '../../modules/meta';
 import { ModuleConfig } from '../../modules';
 import { Schema } from '../../lib/sql-db';
+import { initRouting } from './routing';
 
 export type VisualizeDataType = string | number | boolean;
 
@@ -17,6 +18,10 @@ export const Visualize = new (class Visualize extends ModuleMeta {
 	public get schema() {
 		return {
 			data: {
+				time: {
+					type: 'INTEGER',
+					nullable: false,
+				},
 				tag: {
 					type: 'TEXT',
 					nullable: false,
@@ -35,9 +40,10 @@ export const Visualize = new (class Visualize extends ModuleMeta {
 		} as const satisfies Schema;
 	}
 
-	public init({ sqlDB, modules }: ModuleConfig<Visualize>) {
-		void ExternalHandler.init(sqlDB);
+	public async init(config: ModuleConfig<Visualize>) {
+		await ExternalHandler.init(config.sqlDB);
+		initRouting(config);
 
-		initVisualizerHooks(modules, createReporter(sqlDB));
+		initVisualizerHooks(config.modules, createReporter(config.sqlDB));
 	}
 })();

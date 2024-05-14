@@ -7,7 +7,7 @@ export function report(
 	key: string,
 	datum: VisualizeDataType
 ): Promise<void> {
-	return db.data.insert({ tag, key, datum });
+	return db.data.insert({ tag, key, datum, time: Date.now() });
 }
 
 export function createReporter(db: ModuleConfig<typeof Visualize>['sqlDB']) {

@@ -1,6 +1,7 @@
+import { AllModules, ModuleConfig, Visualize } from '../modules';
 import { createReporter } from '../modules/visualize/report';
+import { API } from '../../client/visualize/api';
 import { LogObj } from '../lib/logging/lob-obj';
-import { AllModules } from '../modules';
 
 export function initVisualizerHooks(
 	modules: AllModules,
@@ -10,4 +11,22 @@ export function initVisualizerHooks(
 	void new modules.temperature.External(logObj).onUpdate('mytemp', (temp) => {
 		void reporter('temperature', 'mytemp', temp);
 	});
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function getData(_db: ModuleConfig<typeof Visualize>['sqlDB']): API {
+	return {
+		graphs: [
+			{
+				name: 'Numbers',
+				labels: ['A', 'B', 'C'],
+				datasets: [
+					{
+						label: 'Numbers',
+						data: [1, 2, 3],
+					},
+				],
+			},
+		],
+	};
 }

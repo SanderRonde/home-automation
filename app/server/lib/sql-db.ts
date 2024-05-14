@@ -232,16 +232,30 @@ class SQLTableWithSchema<T extends Table> extends WithQueryAndRun {
 
 	public async query<
 		Q extends {
-			[K in keyof T]?: TableToRow<T>[K];
+			[K in keyof T]?:
+				| TableToRow<T>[K]
+				| {
+						$gt?: TableToRow<T>[K];
+				  };
 		},
 	>(q: Q): Promise<TableToRow<T>[]> {
-		const columns = Object.keys(q);
-		const query = `SELECT * FROM ${this._tableName} WHERE ${columns
-			.map((column) => `${column} = ?`)
-			.join(' AND ')}`;
+		const whereClauses = [];
+		const values: (string | number | boolean)[] = [];
+		for (const column in q) {
+			const value = q[column];
+			if (typeof value === 'object' && value && '$gt' in value) {
+				whereClauses.push(`${column} > ?`);
+				values.push(this._toSql(column, value.$gt));
+			} else {
+				whereClauses.push(`${column} = ?`);
+				values.push(this._toSql(column, value));
+			}
+		}
+
+		const query = `SELECT * FROM ${this._tableName} WHERE ${whereClauses.join(' AND ')}`;
 		const sqlData = await this._query<
 			Record<keyof T, string | number | boolean>
-		>(query, ...columns.map((column) => this._toSql(column, q[column])));
+		>(query, ...values);
 		return sqlData.map((row) => {
 			const data: Partial<TableToRow<T>> = {};
 			for (const column in row) {
