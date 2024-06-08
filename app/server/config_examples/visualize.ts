@@ -1,6 +1,6 @@
-import { AllModules, ModuleConfig, Visualize } from '../modules';
-import { createReporter } from '../modules/visualize/report';
-import { API } from '../../client/visualize/api';
+import type { AllModules, ModuleConfig, Visualize } from '../modules';
+import type { createReporter } from '../modules/visualize/report';
+import type { API } from '../../client/visualize/api';
 import { LogObj } from '../lib/logging/lob-obj';
 
 export function initVisualizerHooks(

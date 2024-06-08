@@ -1,4 +1,4 @@
-import { OAuthUser } from '../modules/oauth/types';
+import type { OAuthUser } from '../modules/oauth/types';
 
 export default [
 	{

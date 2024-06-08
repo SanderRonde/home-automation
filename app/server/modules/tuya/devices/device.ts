@@ -1,6 +1,6 @@
 import { registerExitHandler } from '../../../lib/shutdown';
 import { LogObj } from '../../../lib/logging/lob-obj';
-import { AllModules } from '../..';
+import type { AllModules } from '../..';
 import TuyAPI from 'tuyapi';
 
 export class TuyaDevice {

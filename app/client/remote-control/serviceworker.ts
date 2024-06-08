@@ -1,4 +1,4 @@
-import { ServiceworkerSelf } from '../../../types/serviceworker';
+import type { ServiceworkerSelf } from '../../../types/serviceworker';
 
 declare const self: ServiceworkerSelf;
 

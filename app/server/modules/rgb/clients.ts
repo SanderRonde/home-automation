@@ -1,16 +1,16 @@
 import {
 	HEX_LEDS,
-	LED_NAME,
 	MAGIC_LEDS,
 	RING_LEDS,
 	WLED_LEDS,
 } from '../../config/led-config';
+import type { LED_NAME } from '../../config/led-config';
 
-import { MagicHomeClient } from './client/MagicHomeClient';
-import { WLEDRGBClient } from './client/WLEDRGBClient';
-import { RingClient } from './client/RingClient';
-import { RGBClient } from './client/RGBClient';
-import { HexClient } from './client/HexClient';
+import type { MagicHomeClient } from './client/MagicHomeClient';
+import type { WLEDRGBClient } from './client/WLEDRGBClient';
+import type { RingClient } from './client/RingClient';
+import type { RGBClient } from './client/RGBClient';
+import type { HexClient } from './client/HexClient';
 
 export let magicHomeClients: MagicHomeClient[] = [];
 export let ringClients: RingClient[] = [];

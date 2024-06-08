@@ -3,7 +3,7 @@ import {
 	TemplateFn,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
-import { RGBController, PatternConfig } from './rgb-controller';
+import type { RGBController, PatternConfig } from './rgb-controller';
 
 function fillPatterns(patterns: PatternConfig[]): PatternConfig[] {
 	const newPatterns = [...patterns];

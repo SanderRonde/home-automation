@@ -1,7 +1,7 @@
 import { addListener, removeListener } from './get-set-listener';
 import { createExternalClass } from '../../lib/external';
 import { LogObj } from '../../lib/logging/lob-obj';
-import { APIHandler } from './api';
+import type { APIHandler } from './api';
 import { KeyVal } from '.';
 
 export class ExternalHandler extends createExternalClass(true) {

@@ -1,7 +1,7 @@
 import { ExternalHandler } from './external';
 import { initRouting } from './routing';
+import type { ModuleConfig } from '..';
 import { ModuleMeta } from '../meta';
-import { ModuleConfig } from '..';
 import { Bot } from './bot';
 
 export const Script = new (class Script extends ModuleMeta {

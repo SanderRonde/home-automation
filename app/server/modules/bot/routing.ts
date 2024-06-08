@@ -2,9 +2,9 @@ import { TELEGRAM_IPS } from '../../lib/constants';
 import { SettablePromise } from '../../lib/util';
 import { createRouter } from '../../lib/api';
 import { MessageHandler } from './message';
+import type { TelegramReq } from './types';
+import type { ModuleConfig } from '..';
 import { getEnv } from '../../lib/io';
-import { TelegramReq } from './types';
-import { ModuleConfig } from '..';
 import { Bot } from '.';
 
 function isInIPRange(

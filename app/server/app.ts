@@ -13,15 +13,17 @@ import {
 	initPostRoutes,
 } from './lib/routes';
 import { hasArg, getArg, getNumberArg, getNumberEnv, getEnv } from './lib/io';
-import { notifyAllModules, BaseModuleConfig } from './modules/modules';
 import { logReady, logTag, warning } from './lib/logging/logger';
 import { ProgressLogger } from './lib/logging/progress-logger';
 import { ProfilingIntegration } from '@sentry/profiling-node';
+import type { BaseModuleConfig } from './modules/modules';
 import { printCommands } from './modules/bot/helpers';
-import { AllModules, getAllModules } from './modules';
+import { notifyAllModules } from './modules/modules';
 import { WSSimulator, WSWrapper } from './lib/ws';
 import { LogObj } from './lib/logging/lob-obj';
 import { SQLDatabase } from './lib/sql-db';
+import type { AllModules } from './modules';
+import { getAllModules } from './modules';
 import * as Sentry from '@sentry/node';
 import { exec } from 'child_process';
 import { Database } from './lib/db';

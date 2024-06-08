@@ -1,11 +1,7 @@
-import {
-	ExtendedResponse,
-	getPlayState,
-	getSpotifyAPI,
-	PlaybackState,
-} from './spotify/api';
+import type { ExtendedResponse, PlaybackState } from './spotify/api';
+import { getPlayState, getSpotifyAPI } from './spotify/api';
 import { createExternalClass } from '../../lib/external';
-import { SpotifyTypes } from '../../types/spotify';
+import type { SpotifyTypes } from '../../types/spotify';
 
 export class ExternalHandler extends createExternalClass(true) {
 	public requiresInit = true;

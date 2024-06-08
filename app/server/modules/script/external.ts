@@ -1,6 +1,6 @@
 import { createExternalClass } from '../../lib/external';
 import { LogObj } from '../../lib/logging/lob-obj';
-import { Config } from '../../app';
+import type { Config } from '../../app';
 import { APIHandler } from './api';
 import { Script } from '.';
 

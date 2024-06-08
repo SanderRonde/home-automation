@@ -3,7 +3,7 @@ import {
 	CHANGE_TYPE,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
-import { PatternControls } from './pattern-controls.js';
+import type { PatternControls } from './pattern-controls.js';
 
 export const PatternControlsHTML = new TemplateFn<PatternControls>(
 	function (html, { props }) {

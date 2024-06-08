@@ -1,9 +1,9 @@
 import eWelink from '../../../../temp/ewelink-api-next';
 import { initRouting } from './routing';
 import { initEWeLinkAPI } from './api';
+import type { ModuleConfig } from '..';
 import { getEnv } from '../../lib/io';
 import { ModuleMeta } from '../meta';
-import { ModuleConfig } from '..';
 
 export const EWeLink = new (class EWeLink extends ModuleMeta {
 	private _ewelinkApiInstance: {

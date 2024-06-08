@@ -1,6 +1,6 @@
+import type { model } from '@peter-murray/hue-bridge-model';
 import { EventEmitter } from '../../../lib/event-emitter';
-import { model } from '@peter-murray/hue-bridge-model';
-import { Api } from 'node-hue-api/dist/esm/api/Api';
+import type { Api } from 'node-hue-api/dist/esm/api/Api';
 
 export class MotionSensor {
 	private _hadPresence: boolean = false;

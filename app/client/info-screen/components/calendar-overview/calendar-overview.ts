@@ -4,7 +4,7 @@ import {
 	ComplexType,
 	ConfigurableWebComponent,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
-import { calendar_v3 } from 'googleapis/build/src/apis/calendar/v3';
+import type { calendar_v3 } from 'googleapis/build/src/apis/calendar/v3';
 import { CalendarOverviewHTML } from './calendar-overview.html.js';
 import { CalendarOverviewCSS } from './calendar-overview.css.js';
 

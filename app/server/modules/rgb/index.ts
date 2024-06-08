@@ -2,8 +2,8 @@ import { initListeners } from './init-listeners';
 import { ExternalHandler } from './external';
 import { scanRGBControllers } from './scan';
 import { initRouting } from './routing';
+import type { ModuleConfig } from '..';
 import { ModuleMeta } from '../meta';
-import { ModuleConfig } from '..';
 import { Bot } from './bot';
 
 export const RGB = new (class RGB extends ModuleMeta {

@@ -1,4 +1,4 @@
-import { Client } from '@notionhq/client';
+import type { Client } from '@notionhq/client';
 
 declare type IdRequest = string;
 declare type TextRequest = string;

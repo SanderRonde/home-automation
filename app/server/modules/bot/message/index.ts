@@ -1,17 +1,18 @@
-import {
+import type {
 	MatchResponse,
-	RESPONSE_TYPE,
 	TelegramMessage,
 	TelegramReq,
 	TelegramText,
 } from '../types';
-import { ResponseLike } from '../../../lib/logging/response-logger';
+import type { ResponseLike } from '../../../lib/logging/response-logger';
 import { BotStateBase, Matchable } from '../../../lib/bot-state';
-import { ChatState, StateKeeper } from './state-keeping';
 import { LogObj } from '../../../lib/logging/lob-obj';
 import { TELEGRAM_API } from '../../../lib/constants';
 import { logTag } from '../../../lib/logging/logger';
-import { Database } from '../../../lib/db';
+import type { ChatState } from './state-keeping';
+import type { Database } from '../../../lib/db';
+import { StateKeeper } from './state-keeping';
+import { RESPONSE_TYPE } from '../types';
 import { BOT_NAME } from '../constants';
 import * as https from 'https';
 import chalk from 'chalk';

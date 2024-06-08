@@ -1,6 +1,6 @@
 import express = require('express');
 import { errorHandle, authCookie, upgradeToHTTPS } from '../../lib/decorators';
-import { ResponseLike } from '../../lib/logging/response-logger';
+import type { ResponseLike } from '../../lib/logging/response-logger';
 
 function visualizeHTML(randomNum: number) {
 	return `<!DOCTYPE HTML>

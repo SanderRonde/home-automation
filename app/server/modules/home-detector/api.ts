@@ -4,10 +4,10 @@ import {
 	authAll,
 	auth,
 } from '../../lib/decorators';
-import { ResponseLike } from '../../lib/logging/response-logger';
+import type { ResponseLike } from '../../lib/logging/response-logger';
 import { LogObj } from '../../lib/logging/lob-obj';
-import { Detector } from './classes';
-import { HOME_STATE } from './types';
+import type { Detector } from './classes';
+import type { HOME_STATE } from './types';
 
 export class APIHandler {
 	private readonly _detector: Detector;

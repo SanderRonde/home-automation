@@ -1,6 +1,6 @@
 import { IP_LOG_VERSION } from '../constants';
-import * as express from 'express';
-import * as http from 'http';
+import type * as express from 'express';
+import type * as http from 'http';
 
 // TODO:(sander) move?
 export function getIP(

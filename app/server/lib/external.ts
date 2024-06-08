@@ -1,5 +1,5 @@
 import { ResDummy } from './logging/response-logger';
-import { ModuleMeta } from '../modules/meta';
+import type { ModuleMeta } from '../modules/meta';
 import { LogObj } from './logging/lob-obj';
 
 type QueuedRequestFn<T> = (res: ResDummy, logObj: LogObj) => Promise<T> | T;

@@ -5,7 +5,7 @@ import {
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { TEMPERATURE_DISPLAY_TYPE } from '../temperature-display/temperature-display.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
-import { InfoScreen } from './info-screen';
+import type { InfoScreen } from './info-screen';
 
 export const InfoScreenHTML = new TemplateFn<InfoScreen>(
 	(html, { props }) => {

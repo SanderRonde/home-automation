@@ -1,8 +1,8 @@
+import type { MatchParameters } from '../bot/message';
 import { disable, enable } from './spotify/checking';
 import { BotStateBase } from '../../lib/bot-state';
-import { MatchParameters } from '../bot/message';
+import type { MatchResponse } from '../bot/types';
 import { getSpotifyAPI } from './spotify/api';
-import { MatchResponse } from '../bot/types';
 import { getURL } from './spotify/auth';
 
 export class Bot extends BotStateBase {

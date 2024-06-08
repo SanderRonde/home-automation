@@ -1,4 +1,4 @@
-import { SceneControllerTriggerType } from './r5-scene-controller';
+import type { SceneControllerTriggerType } from './r5-scene-controller';
 import { EwelinkKeyvalButtonBase } from './base-button';
 import { debounce } from '../../../../lib/util';
 

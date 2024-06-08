@@ -1,8 +1,8 @@
 import { errorHandle, authCookie, upgradeToHTTPS } from '../../lib/decorators';
-import { ResponseLike } from '../../lib/logging/response-logger';
+import type { ResponseLike } from '../../lib/logging/response-logger';
 import { LogObj } from '../../lib/logging/lob-obj';
-import { Detector } from './classes';
-import * as express from 'express';
+import type { Detector } from './classes';
+import type * as express from 'express';
 import { HomeDetector } from '.';
 
 async function homeDetectorHTML(

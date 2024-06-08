@@ -5,10 +5,10 @@ import {
 	PROP_TYPE,
 	ComplexType,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
-import { PatternButton } from '../pattern-button/pattern-button.js';
+import type { PatternButton } from '../pattern-button/pattern-button.js';
 import { PatternControlsHTML } from './pattern-controls.html.js';
 import { PatternControlsCSS } from './pattern-controls.css.js';
-import { TransitionTypes } from 'magic-home';
+import type { TransitionTypes } from 'magic-home';
 
 @config({
 	is: 'pattern-controls',

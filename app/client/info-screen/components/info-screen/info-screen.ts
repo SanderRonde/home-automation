@@ -43,10 +43,7 @@ export class InfoScreen extends ServerComm {
 	public connectWebsocket(): void {
 		const connection = new WebSocket(`ws://${location.host}/blanking`);
 		connection.onmessage = (m) => {
-			const data = JSON.parse(m.data) as {
-				blank?: boolean;
-				refresh?: boolean;
-			};
+			const data = JSON.parse(m.data);
 			if ('blank' in data && data.blank !== undefined) {
 				this.props.blank = data.blank;
 			}

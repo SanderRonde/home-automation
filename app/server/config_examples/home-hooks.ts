@@ -1,4 +1,4 @@
-import { HomeHooks } from '../modules/home-detector/types';
+import type { HomeHooks } from '../modules/home-detector/types';
 
 export default {
 	phone: {

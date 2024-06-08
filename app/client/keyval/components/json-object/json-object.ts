@@ -8,7 +8,7 @@ import {
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { MessageToast } from '../../../shared/message-toast/message-toast.js';
 import { JSONObjectHTML, JSONObjectCSS } from './json-object.templates.js';
-import { JSONSwitches } from '../json-switches/json-switches.js';
+import type { JSONSwitches } from '../json-switches/json-switches.js';
 import { PowerSwitch } from '../power-switch/power-switch.js';
 
 @config({

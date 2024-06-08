@@ -4,7 +4,7 @@ import {
 	config,
 	ComplexType,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
-import { ColorButton } from '../color-button/color-button.js';
+import type { ColorButton } from '../color-button/color-button.js';
 import { RgbControlsHTML } from './rgb-controls.html.js';
 import { RgbControlsCSS } from './rgb-controls.css.js';
 

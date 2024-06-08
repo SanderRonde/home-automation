@@ -1,9 +1,9 @@
 import { ExternalHandler } from '../../modules/visualize/external';
 import { createReporter } from '../../modules/visualize/report';
 import { initVisualizerHooks } from '../../config/visualize';
+import type { ModuleConfig } from '../../modules';
 import { ModuleMeta } from '../../modules/meta';
-import { ModuleConfig } from '../../modules';
-import { Schema } from '../../lib/sql-db';
+import type { Schema } from '../../lib/sql-db';
 import { initRouting } from './routing';
 
 export type VisualizeDataType = string | number | boolean;

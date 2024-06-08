@@ -3,8 +3,8 @@ import {
 	Props,
 	PROP_TYPE,
 	config,
-	EventListenerObj,
 } from '../../../../node_modules/wc-lib/build/es/wc-lib.js';
+import type { EventListenerObj } from '../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { MessageToast } from '../message-toast/message-toast.js';
 
 @config({

@@ -1,7 +1,8 @@
 import { createRouter } from '../../lib/api';
-import { ModuleConfig, Visualize } from '..';
 import { WebPageHandler } from './web-page';
+import type { ModuleConfig } from '..';
 import { APIHandler } from './api';
+import { Visualize } from '..';
 
 export function initRouting({
 	app,

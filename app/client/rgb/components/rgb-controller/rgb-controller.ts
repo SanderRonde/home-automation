@@ -14,7 +14,7 @@ import { ColorControls } from '../color-controls/color-controls.js';
 import { ColorDisplay } from '../color-display/color-display.js';
 import { ColorButton } from '../color-button/color-button.js';
 import { PowerButton } from '../power-button/power-button.js';
-import { TransitionTypes } from 'magic-home';
+import type { TransitionTypes } from 'magic-home';
 
 export interface PatternConfig {
 	defaultSpeed: number;

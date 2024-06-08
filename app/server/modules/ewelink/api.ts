@@ -1,16 +1,14 @@
+/* eslint-disable @typescript-eslint/no-base-to-string */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import {
-	EWeLinkSharedConfig,
-	EWeLinkWSConnection,
-	WrappedEWeLinkAPI,
-} from './devices/shared';
+import { EWeLinkWSConnection, WrappedEWeLinkAPI } from './devices/shared';
+import type { EWeLinkSharedConfig } from './devices/shared';
 import eWelink from '../../../../temp/ewelink-api-next';
 import { queueEwelinkTokenRefresh } from './routing';
 import onEWeLinkDevices from '../../config/ewelink';
 import { EWELINK_DEBUG } from '../../lib/constants';
 import { logTag } from '../../lib/logging/logger';
-import { Database } from '../../lib/db';
-import { AllModules } from '..';
+import type { Database } from '../../lib/db';
+import type { AllModules } from '..';
 
 export type LinkEWeLinkDevice = (
 	id: string,
@@ -31,7 +29,7 @@ async function createWebsocketListener(
 	const ws = await wsClient.Connect.create(
 		{
 			appId: connection.appId!,
-			at: connection.at!,
+			at: connection.at,
 			region: connection.region!,
 			userApiKey,
 		},
@@ -73,9 +71,7 @@ async function createWebsocketListener(
 				logTag(
 					'ewelink',
 					'red',
-					`Failed to parse ewelink message: ${
-						msg.data.toString() as string
-					}`
+					`Failed to parse ewelink message: ${msg.data.toString()}`
 				);
 			}
 		}

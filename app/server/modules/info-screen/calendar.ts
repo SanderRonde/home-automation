@@ -1,9 +1,10 @@
 import { SettablePromise, flatten } from '../../lib/util';
+import type { Credentials } from 'google-auth-library';
 import { SECRETS_FOLDER } from '../../lib/constants';
-import { Credentials } from 'google-auth-library';
-import { google, calendar_v3 } from 'googleapis';
+import type { calendar_v3 } from 'googleapis';
 import { getEnv } from '../../lib/io';
 import { SCOPES } from './constants';
+import { google } from 'googleapis';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 

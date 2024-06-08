@@ -9,9 +9,10 @@ import { LogObj } from '../../lib/logging/lob-obj';
 import { attachTimerToReq } from '../../lib/timer';
 import { smarthome } from 'actions-on-google';
 import { createRouter } from '../../lib/api';
-import { ModuleConfig, SmartHome } from '..';
+import type * as express from 'express';
 import { getEnv } from '../../lib/io';
-import * as express from 'express';
+import type { ModuleConfig } from '..';
+import { SmartHome } from '..';
 
 export async function initRouting({
 	app,

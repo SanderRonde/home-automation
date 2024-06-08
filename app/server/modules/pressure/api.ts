@@ -1,7 +1,7 @@
 import { auth, errorHandle, requireParams } from '../../lib/decorators';
-import { ResponseLike } from '../../lib/logging/response-logger';
+import type { ResponseLike } from '../../lib/logging/response-logger';
+import type { PressureValueKeeper } from './values';
 import { LogObj } from '../../lib/logging/lob-obj';
-import { PressureValueKeeper } from './values';
 
 export class APIHandler {
 	public constructor(private readonly _valueKeeper: PressureValueKeeper) {}

@@ -1,7 +1,7 @@
-import { SpotifyTypes } from '../../../../types/spotify';
+import type { SpotifyTypes } from '../../../../types/spotify';
 import { logTag } from '../../../../lib/logging/logger';
+import type { Database } from '../../../../lib/db';
 import { SpotifyAPIEndpoints } from './endpoints';
-import { Database } from '../../../../lib/db';
 import { wait } from '../../../../lib/util';
 import { getEnv } from '../../../../lib/io';
 import chalk from 'chalk';

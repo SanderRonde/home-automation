@@ -1,8 +1,9 @@
 import { LogObj } from '../../lib/logging/lob-obj';
 import { getController } from './temp-controller';
-import { ModuleConfig, Temperature } from '..';
 import { createRouter } from '../../lib/api';
-import { APIHandler } from './api';
+import type { APIHandler } from './api';
+import type { ModuleConfig } from '..';
+import { Temperature } from '..';
 
 export function initRouting(
 	api: APIHandler,

@@ -1,5 +1,6 @@
-import { PressureHooks, PRESSURE_REGISTER } from '../modules/pressure/types';
-import { ModuleHookables } from '../modules';
+import type { PressureHooks } from '../modules/pressure/types';
+import { PRESSURE_REGISTER } from '../modules/pressure/types';
+import type { ModuleHookables } from '../modules';
 
 export default {
 	bed: [

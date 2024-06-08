@@ -1,5 +1,5 @@
+import type { SwitchbotDeviceBase } from './devices/devices';
 import { createExternalClass } from '../../lib/external';
-import { SwitchbotDeviceBase } from './devices/devices';
 
 export class ExternalHandler extends createExternalClass(false) {
 	private static _bots: SwitchbotDeviceBase[] = [];

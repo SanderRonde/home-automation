@@ -1,8 +1,5 @@
-import {
-	ExternalTemperatureResult,
-	ExternalWeatherTimePeriod,
-	WeatherAPIResponse,
-} from '../types';
+import type { ExternalTemperatureResult, WeatherAPIResponse } from '../types';
+import { ExternalWeatherTimePeriod } from '../types';
 import { getEnv } from '../../../lib/io';
 import { XHR } from '../../../lib/util';
 

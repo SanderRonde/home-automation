@@ -1,4 +1,4 @@
-import { VisualizeDataType } from '../../server/modules/visualize';
+import type { VisualizeDataType } from '../../server/modules/visualize';
 
 export interface API {
 	graphs: {

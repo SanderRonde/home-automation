@@ -3,7 +3,7 @@ import {
 	TemplateFn,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
-import { InfoScreen } from './info-screen.js';
+import type { InfoScreen } from './info-screen.js';
 
 export const InfoScreenCSS = new TemplateFn<InfoScreen>(
 	(html) => {

@@ -1,8 +1,8 @@
-import { ModuleHookables } from '../modules/modules';
+import type { ModuleHookables } from '../modules/modules';
+import type { AllModules } from '../modules';
 import { LogObj } from './logging/lob-obj';
 import { warning } from './logging/logger';
 import * as querystring from 'querystring';
-import { AllModules } from '../modules';
 import * as https from 'https';
 import * as http from 'http';
 import * as url from 'url';

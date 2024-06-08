@@ -1,5 +1,5 @@
-import { ModuleConfig, Visualize } from '../modules';
-import { VisualizeDataType } from '.';
+import type { ModuleConfig, Visualize } from '../modules';
+import type { VisualizeDataType } from '.';
 
 export function report(
 	db: ModuleConfig<typeof Visualize>['sqlDB'],

@@ -1,6 +1,6 @@
 import { createExternalClass } from '../../lib/external';
 import { messageHandlerInstance } from './routing';
-import { RESPONSE_TYPE } from './types';
+import type { RESPONSE_TYPE } from './types';
 
 export class ExternalHandler extends createExternalClass(true) {
 	public async sendMessage(

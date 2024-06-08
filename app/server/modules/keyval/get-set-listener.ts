@@ -1,8 +1,8 @@
 import { LogObj } from '../../lib/logging/lob-obj';
 import groups from '../../config/keyval-groups';
 import { KEYVAL_GROUP_EFFECT } from './types';
+import type { Database } from '../../lib/db';
 import { ExternalHandler } from './external';
-import { Database } from '../../lib/db';
 
 const _listeners: Map<
 	number,

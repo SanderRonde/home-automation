@@ -1,11 +1,13 @@
-import {
-	CHANGE_TYPE,
-	TemplateFn,
+import type {
 	Templater,
 	TemplateRenderResult,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
+import {
+	CHANGE_TYPE,
+	TemplateFn,
+} from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
-import { JSONValue } from './json-value.js';
+import type { JSONValue } from './json-value.js';
 
 export function jsonValue(
 	html: Templater<TemplateRenderResult>,

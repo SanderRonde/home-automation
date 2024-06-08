@@ -1,6 +1,6 @@
 import { createExternalClass } from '../../lib/external';
-import { PressureStateKeeper } from './enabled';
-import { PressureValueKeeper } from './values';
+import type { PressureStateKeeper } from './enabled';
+import type { PressureValueKeeper } from './values';
 
 export class ExternalHandler extends createExternalClass(true) {
 	private static _pressureStateKeeper: PressureStateKeeper;

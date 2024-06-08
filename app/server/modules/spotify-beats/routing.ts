@@ -1,6 +1,6 @@
 import { finishManualAuth } from './spotify/auth';
 import { createRouter } from '../../lib/api';
-import { ModuleConfig } from '..';
+import type { ModuleConfig } from '..';
 import { SpotifyBeats } from '.';
 
 export function initRouting({ app }: ModuleConfig<typeof SpotifyBeats>): void {

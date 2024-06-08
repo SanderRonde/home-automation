@@ -8,7 +8,7 @@ import {
 } from '../../../shared/css-util/css-util.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import { jsonValue } from '../json-value/json-value.templates.js';
-import { JSONObject } from './json-object.js';
+import type { JSONObject } from './json-object.js';
 
 function getKeys(value: unknown): (string | number)[] {
 	if (Array.isArray(value)) {

@@ -1,9 +1,9 @@
 import { discoverBridge } from './discover-bridge';
 import { logTag } from '../../lib/logging/logger';
 import { linkHueDevices } from '../../config/hue';
+import type { ModuleConfig } from '..';
 import { getEnv } from '../../lib/io';
 import { ModuleMeta } from '../meta';
-import { ModuleConfig } from '..';
 
 export const Hue = new (class Hue extends ModuleMeta {
 	public name = 'hue';

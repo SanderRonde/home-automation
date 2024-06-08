@@ -13,7 +13,7 @@ import {
 } from '../modules/auth/helpers';
 import { KeyError, AuthError } from './errors';
 import { LogObj } from './logging/lob-obj';
-import * as express from 'express';
+import type * as express from 'express';
 import chalk from 'chalk';
 
 export function requireParams(...keys: string[]) {

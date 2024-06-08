@@ -1,5 +1,5 @@
 import { LogObj } from '../../lib/logging/lob-obj';
-import { Database } from '../../lib/db';
+import type { Database } from '../../lib/db';
 import { Pressure } from '.';
 
 export class PressureStateKeeper {

@@ -4,8 +4,8 @@ import {
 	HOME_PING_INTERVAL,
 	AWAY_PING_INTERVAL,
 } from './constants';
+import type { Database } from '../../lib/db';
 import homeIps from '../../config/home-ips';
-import { Database } from '../../lib/db';
 import { getEnv } from '../../lib/io';
 import { HOME_STATE } from './types';
 import * as ping from 'ping';

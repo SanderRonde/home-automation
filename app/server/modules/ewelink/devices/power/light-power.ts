@@ -1,4 +1,4 @@
-import { EwelinkPowerParams } from './simple-power';
+import type { EwelinkPowerParams } from './simple-power';
 import { EwelinkPowerBase } from './base-power';
 
 type EwelinkLightPowerPowerParams = EwelinkPowerParams & {

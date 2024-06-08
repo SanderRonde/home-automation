@@ -7,17 +7,17 @@ import {
 	bindToClass,
 	Mounting,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
-import {
+import type {
 	PatternConfig,
 	RGBController,
 	ColorOption,
 } from '../rgb-controller/rgb-controller.js';
 import { PatternControls } from '../pattern-controls/pattern-controls.js';
-import { ColorControls } from '../color-controls/color-controls.js';
-import { ColorDisplay } from '../color-display/color-display.js';
+import type { ColorControls } from '../color-controls/color-controls.js';
+import type { ColorDisplay } from '../color-display/color-display.js';
 import { PatternButtonHTML } from './pattern-button.html.js';
 import { PatternButtonCSS } from './pattern-button.css.js';
-import { TransitionTypes } from 'magic-home';
+import type { TransitionTypes } from 'magic-home';
 
 @config({
 	is: 'pattern-button',

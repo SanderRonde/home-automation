@@ -1,4 +1,4 @@
-import {
+import type {
 	AuthorizationCode,
 	AuthorizationCodeModel,
 	Client,
@@ -13,7 +13,7 @@ import oauthUsers from '../../config/oauth-users';
 import { logTag } from '../../lib/logging/logger';
 import { SettablePromise } from '../../lib/util';
 import OAuthServer from 'express-oauth-server';
-import { Database } from '../../lib/db';
+import type { Database } from '../../lib/db';
 
 /**
  * When true, access tokens never expire. This

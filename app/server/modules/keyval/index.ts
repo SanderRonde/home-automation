@@ -1,9 +1,9 @@
 import { initAggregates } from './aggregates';
 import { ExternalHandler } from './external';
 import { initRouting } from './routing';
+import type { ModuleConfig } from '..';
 import { ModuleMeta } from '../meta';
 import { APIHandler } from './api';
-import { ModuleConfig } from '..';
 import { Bot } from './bot';
 
 export const KeyVal = new (class KeyVal extends ModuleMeta {

@@ -1,7 +1,7 @@
 import { ExternalHandler } from './external';
 import { initRouting } from './routing';
+import type { ModuleConfig } from '..';
 import { ModuleMeta } from '../meta';
-import { ModuleConfig } from '..';
 
 export const Webhook = new (class Webhook extends ModuleMeta {
 	public name = 'webhook';

@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import {
-	EWeLinkInitable,
+import type {
 	EWeLinkSharedConfig,
 	EWeLinkUpdateMessage,
 	EWeLinkWebSocketMessage,
@@ -8,6 +7,7 @@ import {
 import { ResDummy } from '../../../../lib/logging/response-logger';
 import { LogObj } from '../../../../lib/logging/lob-obj';
 import { asyncSetInterval } from '../../../../lib/util';
+import { EWeLinkInitable } from '../shared';
 import chalk from 'chalk';
 
 export abstract class EwelinkPowerBase<P> extends EWeLinkInitable {

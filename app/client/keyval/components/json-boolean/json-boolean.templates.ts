@@ -7,7 +7,7 @@ import {
 	clampWidth,
 } from '../../../shared/css-util/css-util.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
-import { JSONBoolean } from './json-boolean.js';
+import type { JSONBoolean } from './json-boolean.js';
 
 export const JSONBooleanHTML = new TemplateFn<JSONBoolean>(
 	function (html, { props }) {

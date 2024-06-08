@@ -4,11 +4,11 @@ import {
 	authAll,
 	auth,
 } from '../../lib/decorators';
-import { ResponseLike } from '../../lib/logging/response-logger';
+import type { ResponseLike } from '../../lib/logging/response-logger';
+import type { ModuleConfig, Temperature } from '..';
 import { LogObj } from '../../lib/logging/lob-obj';
 import { getController } from './temp-controller';
-import { ModuleConfig, Temperature } from '..';
-import { Mode } from './types';
+import type { Mode } from './types';
 
 export class APIHandler {
 	public constructor(

@@ -1,6 +1,9 @@
-import { AsyncExpressApplication, AsyncRequestHandler } from '../types/express';
-import { ModuleMeta } from '../modules/meta';
-import * as express from 'express';
+import type {
+	AsyncExpressApplication,
+	AsyncRequestHandler,
+} from '../types/express';
+import type { ModuleMeta } from '../modules/meta';
+import type * as express from 'express';
 
 export function createAPIHandler<A extends Record<string, unknown>, R>(
 	fn: (res: express.Response, args: A) => Promise<R> | void,

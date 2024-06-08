@@ -2,8 +2,8 @@ import { listenAny, removeListener } from '../get-set-listener';
 import { LogObj } from '../../../lib/logging/lob-obj';
 import { createRouter } from '../../../lib/api';
 import { WebPageHandler } from '../web-page';
+import type { ModuleConfig } from '../..';
 import { sendMessage } from './telnet';
-import { ModuleConfig } from '../..';
 import { APIHandler } from '../api';
 import { RemoteControl } from '..';
 

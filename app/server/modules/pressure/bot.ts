@@ -1,7 +1,7 @@
+import type { MatchParameters } from '../bot/message';
+import type { PressureValueKeeper } from './values';
 import { BotStateBase } from '../../lib/bot-state';
-import { MatchParameters } from '../bot/message';
-import { PressureValueKeeper } from './values';
-import { MatchResponse } from '../bot/types';
+import type { MatchResponse } from '../bot/types';
 import { ExternalHandler } from './external';
 
 export class Bot extends BotStateBase {

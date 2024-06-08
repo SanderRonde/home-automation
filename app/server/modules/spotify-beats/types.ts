@@ -1,4 +1,4 @@
-import { SpotifyTypes } from '../../types/spotify';
+import type { SpotifyTypes } from '../../types/spotify';
 
 export interface BeatChanges {
 	playState?: boolean;

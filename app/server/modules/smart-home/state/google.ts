@@ -1,4 +1,4 @@
-import {
+import type {
 	SmartHomeV1SyncRequest,
 	SmartHomeV1QueryRequest,
 	SmartHomeV1SyncResponse,
@@ -9,8 +9,7 @@ import {
 	SmartHomeV1ExecuteResponse,
 	SmartHomeV1DisconnectRequest,
 } from 'actions-on-google';
-import {
-	GOOGLE_SMART_HOME_DEVICE_TRAITS,
+import type {
 	SmartHomeDeviceUpdate,
 	SMART_HOME_DEVICE_TRAIT,
 	SMART_HOME_COMMAND,
@@ -22,20 +21,21 @@ import {
 	sharedSync,
 	sharedUseradd,
 } from './shared';
+import { GOOGLE_SMART_HOME_DEVICE_TRAITS } from '../../../lib/smart-home/smart-home-types';
 import {
 	flatMap,
 	flatten,
 	fromEntries,
 	flattenObject,
 } from '../../../lib/util';
-import { BuiltinFrameworkMetadata } from 'actions-on-google/dist/framework';
+import type { BuiltinFrameworkMetadata } from 'actions-on-google/dist/framework';
 import { warning } from '../../../lib/logging/logger';
 import { GOOGLE_KEY, homeGraph } from '../home-graph';
 import { currentUsers } from '../home-graph/users';
+import type { homegraph_v1 } from 'googleapis';
 import { getAuth } from '../../oauth/helpers';
 import { smartHomeLogger } from '../shared';
 import { time } from '../../../lib/timer';
-import { homegraph_v1 } from 'googleapis';
 
 export async function googleSync(
 	body: SmartHomeV1SyncRequest,

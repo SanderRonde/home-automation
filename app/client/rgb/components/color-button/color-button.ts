@@ -7,12 +7,12 @@ import {
 	bindToClass,
 	Mounting,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
-import {
+import type {
 	RGBController,
 	ColorOption,
 } from '../rgb-controller/rgb-controller.js';
-import { ColorControls } from '../color-controls/color-controls.js';
-import { ColorDisplay } from '../color-display/color-display.js';
+import type { ColorControls } from '../color-controls/color-controls.js';
+import type { ColorDisplay } from '../color-display/color-display.js';
 import { RgbControls } from '../rgb-controls/rgb-controls.js';
 import { ColorButtonHTML } from './color-button.html.js';
 import { ColorButtonCSS } from './color-button.css.js';

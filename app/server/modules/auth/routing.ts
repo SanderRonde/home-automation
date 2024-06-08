@@ -2,8 +2,8 @@ import { genId, getClientSecret } from './client-secret';
 import { LogObj } from '../../lib/logging/lob-obj';
 import { createRouter } from '../../lib/api';
 import { authenticate } from './secret';
+import type { ModuleConfig } from '..';
 import { genCookie } from './cookie';
-import { ModuleConfig } from '..';
 import chalk from 'chalk';
 import { Auth } from '.';
 

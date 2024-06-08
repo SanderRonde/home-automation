@@ -1,8 +1,9 @@
 import express = require('express');
 import { errorHandle, authCookie, upgradeToHTTPS } from '../../lib/decorators';
-import { ResponseLike } from '../../lib/logging/response-logger';
-import { CustomPattern, patterns } from './patterns';
+import type { ResponseLike } from '../../lib/logging/response-logger';
 import { LogObj } from '../../lib/logging/lob-obj';
+import type { CustomPattern } from './patterns';
+import { patterns } from './patterns';
 import { RGB } from '.';
 
 const patternPreviews = JSON.stringify(

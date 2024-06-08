@@ -1,9 +1,10 @@
 import { LogObj } from '../../lib/logging/lob-obj';
 import { logTag } from '../../lib/logging/logger';
 import { LOG_INTERVAL_SECS } from './constants';
-import { ModuleConfig, Temperature } from '..';
 import { getEnv } from '../../lib/io';
-import { Mode } from './types';
+import type { ModuleConfig } from '..';
+import type { Mode } from './types';
+import { Temperature } from '..';
 import chalk from 'chalk';
 
 class TempControl {

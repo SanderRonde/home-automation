@@ -1,14 +1,14 @@
 import { externalRedact } from '../../modules/auth/helpers';
-import { ResponseLike } from './response-logger';
+import type { ResponseLike } from './response-logger';
 import { generateRandomString } from '../util';
 import { getTime, warning } from './logger';
+import type { WSSimInstance } from '../ws';
 import { getIP } from './request-logger';
 import { gatherTimings } from '../timer';
-import { WSSimInstance } from '../ws';
-import { Config } from '../../app';
-import * as express from 'express';
+import type { Config } from '../../app';
+import type * as express from 'express';
 import * as fs from 'fs/promises';
-import * as http from 'http';
+import type * as http from 'http';
 import chalk from 'chalk';
 
 interface AssociatedMessage {

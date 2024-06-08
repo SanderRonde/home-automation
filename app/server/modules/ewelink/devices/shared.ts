@@ -1,9 +1,9 @@
-import { thingInfo as setThingStatusInfo } from 'ewelink-api-next/dist/web/apis/device/setThingStatus';
-import { thingInfo as getThingStatusInfo } from 'ewelink-api-next/dist/web/apis/device/getThingStatus';
-import eWelink from '../../../../../temp/ewelink-api-next';
+import type { thingInfo as setThingStatusInfo } from 'ewelink-api-next/dist/web/apis/device/setThingStatus';
+import type { thingInfo as getThingStatusInfo } from 'ewelink-api-next/dist/web/apis/device/getThingStatus';
+import type eWelink from '../../../../../temp/ewelink-api-next';
+import type { EwelinkDeviceResponse } from '../api';
 import { AsyncQueue } from '../../../lib/util';
-import { EwelinkDeviceResponse } from '../api';
-import { AllModules } from '../..';
+import type { AllModules } from '../..';
 import EventEmitter from 'events';
 
 export type EWeLinkUpdateMessage<P = Record<string, string | number>> = {

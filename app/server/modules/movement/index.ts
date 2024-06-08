@@ -2,8 +2,8 @@ import { disable, enable, initRegister } from './register';
 import { LogObj } from '../../lib/logging/lob-obj';
 import { ExternalHandler } from './external';
 import { initRouting } from './routing';
+import type { ModuleConfig } from '..';
 import { ModuleMeta } from '../meta';
-import { ModuleConfig } from '..';
 
 export const Movement = new (class Movement extends ModuleMeta {
 	public name = 'movement';

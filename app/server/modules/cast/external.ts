@@ -1,6 +1,6 @@
 import { createExternalClass } from '../../lib/external';
 import { LogObj } from '../../lib/logging/lob-obj';
-import * as castv2 from 'castv2-player';
+import type * as castv2 from 'castv2-player';
 import { APIHandler } from './api';
 import { Cast } from '.';
 

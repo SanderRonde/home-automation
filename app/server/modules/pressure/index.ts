@@ -3,8 +3,8 @@ import { PressureStateKeeper } from './enabled';
 import { PressureValueKeeper } from './values';
 import { ExternalHandler } from './external';
 import { initRouting } from './routing';
+import type { ModuleConfig } from '..';
 import { ModuleMeta } from '../meta';
-import { ModuleConfig } from '..';
 import { Bot } from './bot';
 
 export const Pressure = new (class Pressure extends ModuleMeta {

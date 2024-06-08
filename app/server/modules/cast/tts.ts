@@ -1,4 +1,4 @@
-import { LogObj } from '../../lib/logging/lob-obj';
+import type { LogObj } from '../../lib/logging/lob-obj';
 import { MAX_PART_LEN } from './constants';
 
 function splitTTSParts(text: string) {

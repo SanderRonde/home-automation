@@ -1,7 +1,7 @@
 import { initHomeGraph, requestSync } from './home-graph';
 import { initRouting } from './routing';
+import type { ModuleConfig } from '..';
 import { ModuleMeta } from '../meta';
-import { ModuleConfig } from '..';
 
 export const SmartHome = new (class SmartHome extends ModuleMeta {
 	public name = 'smart-home';

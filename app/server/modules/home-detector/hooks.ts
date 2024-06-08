@@ -1,4 +1,4 @@
-import { LogObj } from '../../lib/logging/lob-obj';
+import type { LogObj } from '../../lib/logging/lob-obj';
 import { createHookables } from '../../lib/util';
 import hooks from '../../config/home-hooks';
 import { HOME_STATE } from './types';

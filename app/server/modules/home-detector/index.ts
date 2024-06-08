@@ -2,12 +2,12 @@ import { LogObj } from '../../lib/logging/lob-obj';
 import { logTag } from '../../lib/logging/logger';
 import { ExternalHandler } from './external';
 import { initRouting } from './routing';
+import type { ModuleConfig } from '..';
 import { handleHooks } from './hooks';
 import { Detector } from './classes';
 import { HOME_STATE } from './types';
 import { ModuleMeta } from '../meta';
 import { APIHandler } from './api';
-import { ModuleConfig } from '..';
 import { Bot } from './bot';
 import chalk from 'chalk';
 

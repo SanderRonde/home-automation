@@ -3,7 +3,7 @@ import {
 	CHANGE_TYPE,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
-import { RgbControls } from './rgb-controls.js';
+import type { RgbControls } from './rgb-controls.js';
 
 export const RgbControlsCSS = new TemplateFn<RgbControls>(
 	(html) => {

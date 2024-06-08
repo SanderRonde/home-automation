@@ -1,8 +1,8 @@
-import { ResponseLike } from '../../lib/logging/response-logger';
+import type { ResponseLike } from '../../lib/logging/response-logger';
 import { errorHandle, authAll } from '../../lib/decorators';
 import { LogObj } from '../../lib/logging/lob-obj';
+import type { ModuleConfig, Visualize } from '..';
 import { getData } from '../../config/visualize';
-import { ModuleConfig, Visualize } from '..';
 
 export class APIHandler {
 	private readonly _db: ModuleConfig<typeof Visualize>['sqlDB'];

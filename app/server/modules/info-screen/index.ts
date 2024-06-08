@@ -1,7 +1,7 @@
 import { initRouting } from './routing';
+import type { ModuleConfig } from '..';
 import { refresh } from './calendar';
 import { ModuleMeta } from '../meta';
-import { ModuleConfig } from '..';
 import { Bot } from './bot';
 
 export const InfoScreen = new (class InfoScreen extends ModuleMeta {

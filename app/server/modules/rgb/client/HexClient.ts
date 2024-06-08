@@ -1,5 +1,5 @@
-import { LED_NAME } from '../../../config/led-config';
-import { BuiltinPatterns } from 'magic-home';
+import type { LED_NAME } from '../../../config/led-config';
+import type { BuiltinPatterns } from 'magic-home';
 import { Color } from '../../../lib/color';
 import { XHR } from '../../../lib/util';
 import { RGBClient } from './RGBClient';

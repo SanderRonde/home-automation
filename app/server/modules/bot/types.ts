@@ -1,4 +1,4 @@
-import * as express from 'express';
+import type * as express from 'express';
 
 export const enum RESPONSE_TYPE {
 	MARKDOWN = 'Markdown',

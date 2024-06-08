@@ -1,7 +1,7 @@
 import { createExternalClass } from '../../lib/external';
 import { authorizationServer } from './authorization';
-import { Token } from 'oauth2-server';
-import * as express from 'express';
+import type { Token } from 'oauth2-server';
+import type * as express from 'express';
 
 export class ExternalHandler extends createExternalClass(true) {
 	public getAuthenticateMiddleware(): Promise<

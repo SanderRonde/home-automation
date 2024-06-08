@@ -1,9 +1,9 @@
 import { errorHandle, requireParams, authAll } from '../../lib/decorators';
-import { ResponseLike } from '../../lib/logging/response-logger';
+import type { ResponseLike } from '../../lib/logging/response-logger';
 import { LogObj } from '../../lib/logging/lob-obj';
 import * as childProcess from 'child_process';
 import { AuthError } from '../../lib/errors';
-import { Config } from '../../app';
+import type { Config } from '../../app';
 import * as path from 'path';
 import chalk from 'chalk';
 

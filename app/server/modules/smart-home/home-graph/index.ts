@@ -5,17 +5,18 @@ import {
 	SMART_HOME_BATCH_MAX_TIMEOUT,
 	SMART_HOME_BATCH_MIN_TIMEOUT,
 } from '../../../lib/constants';
-import {
+import type {
 	SmartHomeDeviceUpdate,
 	SMART_HOME_DEVICE_TRAIT,
 } from '../../../lib/smart-home/smart-home-types';
 import { Batcher, createHookables, SettablePromise } from '../../../lib/util';
-import { homegraph, homegraph_v1 } from '@googleapis/homegraph';
 import { currentUsers, initHomeGraphUsers } from './users';
+import type { homegraph_v1 } from '@googleapis/homegraph';
 import { dispatchSamsungUsers } from '../state/samsung';
 import { LogObj } from '../../../lib/logging/lob-obj';
 import { dispatchGoogleUsers } from '../state/google';
-import { Database } from '../../../lib/db';
+import { homegraph } from '@googleapis/homegraph';
+import type { Database } from '../../../lib/db';
 import { google } from 'googleapis';
 import { SmartHome } from '../';
 import * as fs from 'fs-extra';

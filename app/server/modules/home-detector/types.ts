@@ -1,5 +1,5 @@
-import { PossiblePromise } from '../../lib/types';
-import { ModuleHookables } from '..';
+import type { PossiblePromise } from '../../lib/types';
+import type { ModuleHookables } from '..';
 
 export interface HomeHooks {
 	[key: string]: {

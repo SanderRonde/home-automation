@@ -1,9 +1,9 @@
 import { errorHandle, auth } from './decorators';
 import { Server as WebsocketServer } from 'ws';
 import { LogObj } from './logging/lob-obj';
-import * as express from 'express';
+import type * as express from 'express';
+import type { Socket } from 'net';
 import * as http from 'http';
-import { Socket } from 'net';
 import * as url from 'url';
 import chalk from 'chalk';
 

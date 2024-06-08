@@ -1,9 +1,9 @@
 import { auth, errorHandle, requireParams } from '../../lib/decorators';
-import { ResponseLike } from '../../lib/logging/response-logger';
+import type { ResponseLike } from '../../lib/logging/response-logger';
 import { playURL, playURLs, stop } from './casting';
 import { LogObj } from '../../lib/logging/lob-obj';
+import type * as castv2 from 'castv2-player';
 import { LOCAL_URLS } from './local-urls';
-import * as castv2 from 'castv2-player';
 import { PASTAS } from './pasta';
 import { tts } from './tts';
 

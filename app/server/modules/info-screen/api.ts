@@ -1,9 +1,11 @@
-import { ExternalTemperatureResult, ExternalWeatherTimePeriod } from './types';
+import type { ResponseLike } from '../../lib/logging/response-logger';
 import { errorHandle, requireParams } from '../../lib/decorators';
-import { ResponseLike } from '../../lib/logging/response-logger';
 import { getInternal, getExternal } from './temperature/';
-import { CalendarEvent, getEvents } from './calendar';
+import type { ExternalTemperatureResult } from './types';
+import { ExternalWeatherTimePeriod } from './types';
 import { LogObj } from '../../lib/logging/lob-obj';
+import type { CalendarEvent } from './calendar';
+import { getEvents } from './calendar';
 
 export class APIHandler {
 	@errorHandle

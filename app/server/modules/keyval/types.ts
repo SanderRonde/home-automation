@@ -1,4 +1,4 @@
-import { ModuleHookables } from '..';
+import type { ModuleHookables } from '..';
 
 export interface KeyvalHooks {
 	[key: string]: {

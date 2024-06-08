@@ -1,11 +1,11 @@
 import { LogObj } from '../../lib/logging/lob-obj';
+import type { Schema } from '../../lib/sql-db';
 import { ExternalHandler } from './external';
-import { Schema } from '../../lib/sql-db';
 import { initRouting } from './routing';
+import type { ModuleConfig } from '..';
 import { getEnv } from '../../lib/io';
 import { ModuleMeta } from '../meta';
 import { APIHandler } from './api';
-import { ModuleConfig } from '..';
 import { Bot } from './bot';
 
 export const Temperature = new (class Temperature extends ModuleMeta {

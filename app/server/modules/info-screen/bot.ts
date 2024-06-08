@@ -1,6 +1,6 @@
+import type { MatchParameters } from '../bot/message';
 import { BotStateBase } from '../../lib/bot-state';
-import { MatchParameters } from '../bot/message';
-import { MatchResponse } from '../bot/types';
+import type { MatchResponse } from '../bot/types';
 import { refreshClients } from './routing';
 
 export class Bot extends BotStateBase {

@@ -1,6 +1,6 @@
-import { AllModules, ModuleConfig } from '..';
+import type { AllModules, ModuleConfig } from '..';
+import type { Client } from '@notionhq/client';
 import { ExternalHandler } from './external';
-import { Client } from '@notionhq/client';
 import { startGeocoder } from './geocode';
 import { createClient } from './client';
 import { ModuleMeta } from '../meta';

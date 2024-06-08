@@ -1,4 +1,4 @@
-import { Api } from 'node-hue-api/dist/esm/api/Api';
+import type { Api } from 'node-hue-api/dist/esm/api/Api';
 import { logTag } from '../../lib/logging/logger';
 import * as hue from 'node-hue-api';
 

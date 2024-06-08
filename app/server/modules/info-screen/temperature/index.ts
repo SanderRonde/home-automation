@@ -1,9 +1,9 @@
-import {
+import type {
 	ExternalTemperatureResult,
 	ExternalWeatherTimePeriod,
 	InternalTemperatureResult,
 } from '../types';
-import { LogObj } from '../../../lib/logging/lob-obj';
+import type { LogObj } from '../../../lib/logging/lob-obj';
 import { get as _getInternal } from './internal';
 import { get as _getExternal } from './external';
 

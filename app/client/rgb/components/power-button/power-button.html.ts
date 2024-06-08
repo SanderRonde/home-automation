@@ -3,7 +3,7 @@ import {
 	CHANGE_TYPE,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
-import { PowerButton } from './power-button.js';
+import type { PowerButton } from './power-button.js';
 
 export const PowerButtonHTML = new TemplateFn<PowerButton>(
 	function (html, { props }) {

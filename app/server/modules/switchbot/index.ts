@@ -1,8 +1,8 @@
-import { SwitchbotDeviceBase } from './devices/devices';
+import type { SwitchbotDeviceBase } from './devices/devices';
 import { ExternalHandler } from './external';
 import { scanSwitchbots } from './scanner';
+import type { ModuleConfig } from '..';
 import { ModuleMeta } from '../meta';
-import { ModuleConfig } from '..';
 
 export const SwitchBot = new (class SwitchBot extends ModuleMeta {
 	private _bots: SwitchbotDeviceBase[] = [];

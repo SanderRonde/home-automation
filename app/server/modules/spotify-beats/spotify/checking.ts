@@ -3,10 +3,11 @@ import {
 	PLAYBACK_CLOSE_RANGE,
 	PLAYSTATE_CHECK_INTERVAL,
 } from '../../../lib/constants';
-import { getPlayState, getSongInfo, PlaybackState } from './api';
-import { SpotifyTypes } from '../../../types/spotify';
-import { BeatChanges, FullState } from '../types';
+import type { SpotifyTypes } from '../../../types/spotify';
+import type { BeatChanges, FullState } from '../types';
+import { getPlayState, getSongInfo } from './api';
 import { notifyChanges } from '../transfer';
+import type { PlaybackState } from './api';
 import { wait } from '../../../lib/util';
 
 let active = false;

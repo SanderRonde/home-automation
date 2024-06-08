@@ -1,9 +1,9 @@
+import type { MatchParameters } from '../bot/message';
 import { BotStateBase } from '../../lib/bot-state';
-import { MatchParameters } from '../bot/message';
-import { MatchResponse } from '../bot/types';
+import type { MatchResponse } from '../bot/types';
 import { ExternalHandler } from './external';
 import { getAll } from './temp-controller';
-import { Mode } from './types';
+import type { Mode } from './types';
 
 export class Bot extends BotStateBase {
 	public static readonly commands = {

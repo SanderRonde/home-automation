@@ -11,12 +11,13 @@ import {
 	authAll,
 	auth,
 } from '../../lib/decorators';
-import { ResponseLike } from '../../lib/logging/response-logger';
+import type { ResponseLike } from '../../lib/logging/response-logger';
+import type { LED_NAME } from '../../config/led-config';
 import { LogObj } from '../../lib/logging/lob-obj';
-import { LED_NAME } from '../../config/led-config';
-import { ringEffects, Effects } from './ring-api';
 import { scanRGBControllers } from './scan';
 import { colorList } from '../../lib/data';
+import type { Effects } from './ring-api';
+import { ringEffects } from './ring-api';
 import { Color } from '../../lib/color';
 import { CustomMode } from 'magic-home';
 import { hexEffects } from './hex-api';

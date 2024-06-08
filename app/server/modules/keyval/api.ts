@@ -5,9 +5,9 @@ import {
 	auth,
 } from '../../lib/decorators';
 import { addListener, removeListener, update } from './get-set-listener';
-import { ResponseLike } from '../../lib/logging/response-logger';
+import type { ResponseLike } from '../../lib/logging/response-logger';
 import { LogObj } from '../../lib/logging/lob-obj';
-import { Database } from '../../lib/db';
+import type { Database } from '../../lib/db';
 import { str } from './helpers';
 
 type MultiValueResolver<V> = (values: V[]) => V;

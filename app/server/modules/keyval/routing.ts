@@ -1,11 +1,11 @@
 import { addListener, removeListener, update } from './get-set-listener';
 import { LogObj } from '../../lib/logging/lob-obj';
 import { logTag } from '../../lib/logging/logger';
+import type { WSSimInstance } from '../../lib/ws';
 import { createRouter } from '../../lib/api';
-import { WSSimInstance } from '../../lib/ws';
 import { WebPageHandler } from './web-page';
-import { APIHandler } from './api';
-import { ModuleConfig } from '..';
+import type { APIHandler } from './api';
+import type { ModuleConfig } from '..';
 import { KeyVal } from '.';
 import chalk from 'chalk';
 

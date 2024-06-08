@@ -1,7 +1,7 @@
 import { linkTuyaDevices } from '../../config/tuya';
-import { TuyaDevice } from './devices/device';
+import type { TuyaDevice } from './devices/device';
+import type { ModuleConfig } from '..';
 import { ModuleMeta } from '../meta';
-import { ModuleConfig } from '..';
 
 /**
  * How to add a device

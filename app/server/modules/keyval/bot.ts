@@ -1,8 +1,8 @@
 import { COMMON_SWITCH_MAPPINGS } from '../../config/led-config';
-import { ChatState } from '../bot/message/state-keeping';
+import type { ChatState } from '../bot/message/state-keeping';
+import type { MatchParameters } from '../bot/message';
 import { BotStateBase } from '../../lib/bot-state';
-import { MatchParameters } from '../bot/message';
-import { MatchResponse } from '../bot/types';
+import type { MatchResponse } from '../bot/types';
 import { ExternalHandler } from './external';
 
 export interface State {

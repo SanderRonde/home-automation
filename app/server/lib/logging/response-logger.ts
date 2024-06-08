@@ -1,4 +1,4 @@
-import * as express from 'express';
+import type * as express from 'express';
 
 export interface ResponseLike {
 	status(code: number): this;

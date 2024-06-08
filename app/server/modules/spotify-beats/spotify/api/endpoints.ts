@@ -1,5 +1,5 @@
-import { SpotifyTypes } from '../../../../types/spotify';
-import { API, ExtendedResponse } from '.';
+import type { SpotifyTypes } from '../../../../types/spotify';
+import type { API, ExtendedResponse } from '.';
 
 export class SpotifyAPIEndpoints {
 	public constructor(public api: API) {}

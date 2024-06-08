@@ -1,8 +1,8 @@
 import { createRouter } from '../../lib/api';
 import { WebPageHandler } from './web-page';
-import { Detector } from './classes';
-import { APIHandler } from './api';
-import { ModuleConfig } from '..';
+import type { Detector } from './classes';
+import type { APIHandler } from './api';
+import type { ModuleConfig } from '..';
 import { HomeDetector } from '.';
 
 export function initRouting({

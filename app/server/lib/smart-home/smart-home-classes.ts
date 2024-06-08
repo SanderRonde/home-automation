@@ -1,23 +1,25 @@
 /* eslint-disable @typescript-eslint/ban-types */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
-import {
+import type {
 	SmartHomeAttributes,
 	SmartHomeDeviceSync,
 	SmartHomeDeviceUpdateCallback,
 	SmartHomeParam,
+	SmartHomeGoogleQuery,
+	SmartHomeSamsungQuery,
+} from './smart-home-types';
+import {
 	SMART_HOME_COMMAND,
 	SMART_HOME_DEVICE_TRAIT,
 	GOOGLE_SMART_HOME_DEVICE_TYPE,
 	SAMSUNG_SMART_HOME_DEVICE_TYPE,
-	SmartHomeGoogleQuery,
-	SmartHomeSamsungQuery,
 } from './smart-home-types';
-import { SwitchbotCurtain } from '../../modules/switchbot/devices/curtain';
+import type { SwitchbotCurtain } from '../../modules/switchbot/devices/curtain';
+import type { ResponseLike } from '../logging/response-logger';
 import { TEMPERATURE_REPORT_MAX_TIMEOUT } from '../constants';
-import { ResponseLike } from '../logging/response-logger';
-import { LED_NAME } from '../../config/led-config';
-import { ModuleHookables } from '../../modules';
+import type { LED_NAME } from '../../config/led-config';
+import type { ModuleHookables } from '../../modules';
 import { captureTime, time } from '../timer';
 import { warning } from '../logging/logger';
 import { Batcher, pad } from '../util';

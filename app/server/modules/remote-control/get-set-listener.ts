@@ -1,5 +1,5 @@
-import { LogObj } from '../../lib/logging/lob-obj';
-import { Commands } from './types';
+import type { LogObj } from '../../lib/logging/lob-obj';
+import type { Commands } from './types';
 
 const _listeners: Map<
 	number,

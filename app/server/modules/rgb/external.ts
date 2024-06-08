@@ -1,13 +1,14 @@
-import { MatchHandlerParams } from '../../lib/bot-state';
+import type { MatchHandlerParams } from '../../lib/bot-state';
 import { createExternalClass } from '../../lib/external';
+import type { LED_NAME } from '../../config/led-config';
+import type { RGBClient } from './client/RGBClient';
 import { LogObj } from '../../lib/logging/lob-obj';
-import { LED_NAME } from '../../config/led-config';
-import { APIHandler, ColorTarget } from './api';
-import { RGBClient } from './client/RGBClient';
-import { JoinedConfigs } from './types';
+import type { JoinedConfigs } from './types';
+import type { Effects } from './ring-api';
+import type { ColorTarget } from './api';
 import { play } from './marked-audio';
-import { Effects } from './ring-api';
 import { getLed } from './clients';
+import { APIHandler } from './api';
 import { RGB } from '.';
 
 export class ExternalHandler extends createExternalClass(true) {

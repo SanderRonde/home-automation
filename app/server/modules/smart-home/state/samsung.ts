@@ -1,18 +1,15 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
-import {
-	SchemaConnector,
+import type {
 	DiscoveryResponse,
 	StateRefreshResponse,
 	DevicesReqBody,
 	CommandResponse,
 	DeviceCommand,
 	DeviceState,
-	StateUpdateRequest,
 	UpdateRequestDeviceState,
 } from 'st-schema';
-import {
-	SAMSUNG_SMART_HOME_DEVICE_CAPABILITIES,
+import type {
 	SmartHomeDeviceUpdate,
 	SMART_HOME_COMMAND,
 	SMART_HOME_DEVICE_TRAIT,
@@ -24,13 +21,15 @@ import {
 	sharedSync,
 	sharedUseradd,
 } from './shared';
+import { SAMSUNG_SMART_HOME_DEVICE_CAPABILITIES } from '../../../lib/smart-home/smart-home-types';
+import { SchemaConnector, StateUpdateRequest } from 'st-schema';
 import { warning } from '../../../lib/logging/logger';
 import { currentUsers } from '../home-graph/users';
 import { flatten } from '../../../lib/util';
 import { SAMSUNG_KEY } from '../home-graph';
 import { smartHomeLogger } from '../shared';
 import { getEnv } from '../../../lib/io';
-import * as express from 'express';
+import type * as express from 'express';
 
 function samsungSync(response: DiscoveryResponse, res: express.Response) {
 	const devices = sharedSync(res);

@@ -1,15 +1,16 @@
 import express = require('express');
 import { authCode, authenticated, authenticateURL } from './calendar';
+import type { AsyncExpressApplication } from '../../types/express';
 import { initMiddleware, initPostRoutes } from '../../lib/routes';
-import { AsyncExpressApplication } from '../../types/express';
 import { LogObj } from '../../lib/logging/lob-obj';
-import { WSClient, WSWrapper } from '../../lib/ws';
 import { logTag } from '../../lib/logging/logger';
 import { createAPIHandler } from '../../lib/api';
+import type { WSClient } from '../../lib/ws';
 import { WebPageHandler } from './web-page';
+import { WSWrapper } from '../../lib/ws';
+import type { ModuleConfig } from '..';
 import { getEnv } from '../../lib/io';
 import { APIHandler } from './api';
-import { ModuleConfig } from '..';
 import { InfoScreen } from '.';
 import * as http from 'http';
 

@@ -1,7 +1,7 @@
 import { createExternalClass } from '../../lib/external';
 import { report } from '../../modules/visualize/report';
-import { ModuleConfig } from '../../modules';
-import { Visualize } from '.';
+import type { ModuleConfig } from '../../modules';
+import type { Visualize } from '.';
 
 export class ExternalHandler extends createExternalClass(true) {
 	private static _db: ModuleConfig<typeof Visualize>['sqlDB'];

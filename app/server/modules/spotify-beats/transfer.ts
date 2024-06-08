@@ -1,6 +1,6 @@
-import { BeatChanges, FullState } from './types';
+import type { BeatChanges, FullState } from './types';
+import type { Database } from '../../lib/db';
 import { initSpotify } from './spotify/';
-import { Database } from '../../lib/db';
 
 export async function initTransfer(db: Database): Promise<void> {
 	await initSpotify(db);

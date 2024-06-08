@@ -1,5 +1,5 @@
-import { Token } from 'oauth2-server';
-import * as express from 'express';
+import type { Token } from 'oauth2-server';
+import type * as express from 'express';
 
 export function getAuth(res: express.Response): {
 	token: Omit<Token, 'user'> & {

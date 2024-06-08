@@ -1,7 +1,7 @@
 import aggregates from '../../config/aggregates';
 import { addListener } from './get-set-listener';
 import { createHookables } from '../../lib/util';
-import { Database } from '../../lib/db';
+import type { Database } from '../../lib/db';
 import { KeyVal } from '.';
 import chalk from 'chalk';
 

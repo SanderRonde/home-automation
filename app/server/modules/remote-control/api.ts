@@ -1,5 +1,5 @@
 import { errorHandle, authAll, requireParams } from '../../lib/decorators';
-import { ResponseLike } from '../../lib/logging/response-logger';
+import type { ResponseLike } from '../../lib/logging/response-logger';
 import { LogObj } from '../../lib/logging/lob-obj';
 import { update } from './get-set-listener';
 

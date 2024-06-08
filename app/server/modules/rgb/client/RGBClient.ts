@@ -1,7 +1,9 @@
-import { LED_KEYVAL_MAP, LED_NAME } from '../../../config/led-config';
+import { LED_KEYVAL_MAP } from '../../../config/led-config';
+import type { LED_NAME } from '../../../config/led-config';
 import { LogObj } from '../../../lib/logging/lob-obj';
-import { BuiltinPatterns, Control } from 'magic-home';
-import { Color } from '../../../lib/color';
+import type { BuiltinPatterns } from 'magic-home';
+import type { Color } from '../../../lib/color';
+import { Control } from 'magic-home';
 import { RGB } from '..';
 
 export abstract class RGBClient {

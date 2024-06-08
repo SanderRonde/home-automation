@@ -3,7 +3,7 @@ import {
 	CHANGE_TYPE,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
-import { TemperatureDisplay } from './temperature-display.js';
+import type { TemperatureDisplay } from './temperature-display.js';
 
 export const TemperatureDisplayHTML = new TemplateFn<TemperatureDisplay>(
 	(html, { props }) => {

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
-import { QueryReturnType, SmartHomeDevice } from './smart-home-classes';
+import type { QueryReturnType, SmartHomeDevice } from './smart-home-classes';
 
 /**
  * A subset of the smart home device types

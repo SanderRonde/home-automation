@@ -1,13 +1,13 @@
+import type { ChatState } from '../bot/message/state-keeping';
 import { ResDummy } from '../../lib/logging/response-logger';
-import { ChatState } from '../bot/message/state-keeping';
-import { State as KeyValState } from '../keyval/bot';
+import type { State as KeyValState } from '../keyval/bot';
+import type { MatchParameters } from '../bot/message';
 import { LogObj } from '../../lib/logging/lob-obj';
 import { BotStateBase } from '../../lib/bot-state';
-import { MatchParameters } from '../bot/message';
-import { MatchResponse } from '../bot/types';
-import { Detector } from './classes';
+import type { MatchResponse } from '../bot/types';
+import type { Detector } from './classes';
+import type { APIHandler } from './api';
 import { HOME_STATE } from './types';
-import { APIHandler } from './api';
 import { HomeDetector } from '.';
 import chalk from 'chalk';
 

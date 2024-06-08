@@ -1,8 +1,8 @@
+import type { PressureValueKeeper } from './values';
 import { LogObj } from '../../lib/logging/lob-obj';
-import { PressureValueKeeper } from './values';
 import { createRouter } from '../../lib/api';
+import type { ModuleConfig } from '..';
 import { APIHandler } from './api';
-import { ModuleConfig } from '..';
 import { Pressure } from '.';
 
 export function initRouting(

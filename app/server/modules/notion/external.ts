@@ -1,5 +1,5 @@
 import { createExternalClass } from '../../lib/external';
-import { Client } from '@notionhq/client';
+import type { Client } from '@notionhq/client';
 
 export class ExternalHandler extends createExternalClass(true) {
 	private static _client: Client | null = null;

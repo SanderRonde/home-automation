@@ -1,4 +1,4 @@
-import { Color as MagicHomeColor } from 'magic-home';
+import type { Color as MagicHomeColor } from 'magic-home';
 
 interface IColor {
 	r: number;

@@ -1,8 +1,9 @@
-import telnet_client, * as TelnetClient from 'telnet-client';
-import { LogObj } from '../../../lib/logging/lob-obj';
+import type { LogObj } from '../../../lib/logging/lob-obj';
 import { logTag } from '../../../lib/logging/logger';
+import type telnet_client from 'telnet-client';
+import * as TelnetClient from 'telnet-client';
 import { getEnv } from '../../../lib/io';
-import { Commands } from '../types';
+import type { Commands } from '../types';
 import chalk from 'chalk';
 
 let TELNET_IPS: [string, string, string][] | null;

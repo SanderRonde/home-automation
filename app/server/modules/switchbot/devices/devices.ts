@@ -1,10 +1,10 @@
-import { SwitchbotAdvertisement } from 'node-switchbot';
+import type { SwitchbotAdvertisement } from 'node-switchbot';
 import { LogObj } from '../../../lib/logging/lob-obj';
 import { logTag } from '../../../lib/logging/logger';
+import type { SwitchbotApiDevice } from '../scanner';
 import { debounce, wait } from '../../../lib/util';
-import { SwitchbotApiDevice } from '../scanner';
-import { SwitchbotCurtain } from './curtain';
-import { AllModules } from '../..';
+import type { SwitchbotCurtain } from './curtain';
+import type { AllModules } from '../..';
 
 export type SwitchbotDevice = SwitchbotCurtain;
 

@@ -1,11 +1,11 @@
-import { AsyncExpressApplication } from '../types/express';
-import { BaseModuleConfig } from '../modules';
+import type { AsyncExpressApplication } from '../types/express';
+import type { BaseModuleConfig } from '../modules';
 import { LogObj } from './logging/lob-obj';
 import cookieParser from 'cookie-parser';
 import serveStatic from 'serve-static';
 import * as Sentry from '@sentry/node';
 import bodyParser from 'body-parser';
-import express from 'express';
+import type express from 'express';
 import { getEnv } from './io';
 import * as path from 'path';
 import pm2 from '@pm2/io';

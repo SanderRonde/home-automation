@@ -1,7 +1,7 @@
 import { ExternalHandler } from './external';
 import { initRoutes } from './routing';
+import type { ModuleConfig } from '..';
 import { ModuleMeta } from '../meta';
-import { ModuleConfig } from '..';
 
 export const Auth = new (class Auth extends ModuleMeta {
 	public name = 'auth';

@@ -37,6 +37,13 @@
 		"@typescript-eslint/no-floating-promises": "warn",
 		"@typescript-eslint/no-for-in-array": "warn",
 		"@typescript-eslint/no-implied-eval": ["warn"],
+		"@typescript-eslint/consistent-type-imports": [
+			"error",
+			{
+				"disallowTypeAnnotations": false,
+				"fixStyle": "separate-type-imports"
+			}
+		],
 		"@typescript-eslint/no-misused-promises": [
 			"warn",
 			{

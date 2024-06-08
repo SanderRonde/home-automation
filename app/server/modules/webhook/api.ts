@@ -1,5 +1,5 @@
 import { errorHandle, requireParams, authAll } from '../../lib/decorators';
-import { ResponseLike } from '../../lib/logging/response-logger';
+import type { ResponseLike } from '../../lib/logging/response-logger';
 import { LogObj } from '../../lib/logging/lob-obj';
 import { triggerWebhooks } from './webhooks';
 

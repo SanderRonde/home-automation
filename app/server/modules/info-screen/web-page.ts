@@ -1,4 +1,4 @@
-import { ResponseLike } from '../../lib/logging/response-logger';
+import type { ResponseLike } from '../../lib/logging/response-logger';
 import { errorHandle } from '../../lib/decorators';
 
 function infoScreenHTML(randomNum: number): string {

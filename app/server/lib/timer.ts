@@ -1,6 +1,6 @@
-import { ResponseLike } from './logging/response-logger';
+import type { ResponseLike } from './logging/response-logger';
 import { LogObj } from './logging/lob-obj';
-import * as express from 'express';
+import type * as express from 'express';
 
 interface Timing {
 	label: string;

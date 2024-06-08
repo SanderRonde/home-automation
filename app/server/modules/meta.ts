@@ -1,4 +1,4 @@
-import { ModuleConfig, AllModules } from './modules';
+import type { ModuleConfig, AllModules } from './modules';
 import { HOME_STATE } from './home-detector/types';
 import { LogObj } from '../lib/logging/lob-obj';
 import { BotStateBase } from '../lib/bot-state';

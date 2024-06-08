@@ -1,6 +1,6 @@
 import { createRouter } from '../../lib/api';
+import type { ModuleConfig } from '..';
 import { APIHandler } from './api';
-import { ModuleConfig } from '..';
 import { Movement } from '.';
 
 export function initRouting({ app }: ModuleConfig<typeof Movement>): void {

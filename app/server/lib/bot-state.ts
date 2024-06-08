@@ -1,11 +1,8 @@
-import {
-	MatchResponse,
-	RESPONSE_TYPE,
-	TelegramMessage,
-} from '../modules/bot/types';
-import { MessageHandler, ResWrapper } from '../modules/bot/message';
-import { ChatState } from '../modules/bot/message/state-keeping';
-import { LogObj } from './logging/lob-obj';
+import type { MatchResponse, TelegramMessage } from '../modules/bot/types';
+import type { MessageHandler, ResWrapper } from '../modules/bot/message';
+import type { ChatState } from '../modules/bot/message/state-keeping';
+import { RESPONSE_TYPE } from '../modules/bot/types';
+import type { LogObj } from './logging/lob-obj';
 import { BotUtil } from './bot-util';
 import { wait } from './util';
 import chalk from 'chalk';

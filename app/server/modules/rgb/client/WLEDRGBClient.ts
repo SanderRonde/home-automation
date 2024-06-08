@@ -1,4 +1,4 @@
-import { LED_NAMES_ENUM } from '../../../config/led-config';
+import type { LED_NAMES_ENUM } from '../../../config/led-config';
 import { Color } from '../../../lib/color';
 import { WLEDClient } from 'wled-client';
 import { RGBClient } from './RGBClient';

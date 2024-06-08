@@ -1,5 +1,5 @@
 import express = require('express');
-import { ResponseLike } from '../../lib/logging/response-logger';
+import type { ResponseLike } from '../../lib/logging/response-logger';
 import { authorizationServer } from './authorization';
 import { CLIENT_FOLDER } from '../../lib/constants';
 import { LogObj } from '../../lib/logging/lob-obj';
@@ -7,10 +7,11 @@ import { validateOAUthUsers } from './oauth-users';
 import { debug } from '../../lib/logging/logger';
 import { SettablePromise } from '../../lib/util';
 import { createRouter } from '../../lib/api';
-import { ModuleConfig, OAuth } from '..';
 import { getEnv } from '../../lib/io';
+import type { ModuleConfig } from '..';
 import * as fs from 'fs-extra';
 import * as path from 'path';
+import { OAuth } from '..';
 
 const oauthHTMLFile = new SettablePromise<string>();
 

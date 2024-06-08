@@ -5,15 +5,12 @@ import {
 	MIN_PRESSURE,
 	PRESSURE_SAMPLE_TIME,
 } from '../../lib/constants';
-import {
-	PRESSURE_REGISTER,
-	PRESSURE_CHANGE_DIRECTION,
-	PressureRange,
-} from './types';
+import { PRESSURE_REGISTER, PRESSURE_CHANGE_DIRECTION } from './types';
+import type { LogObj } from '../../lib/logging/lob-obj';
+import type { PressureStateKeeper } from './enabled';
 import pressureConfig from '../../config/pressures';
-import { LogObj } from '../../lib/logging/lob-obj';
 import { createHookables } from '../../lib/util';
-import { PressureStateKeeper } from './enabled';
+import type { PressureRange } from './types';
 import { Pressure } from '..';
 
 export class PressureValueKeeper {

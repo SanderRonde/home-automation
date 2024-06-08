@@ -1,4 +1,4 @@
-import { BuiltinPatterns, Control, State } from 'magic-home';
+import type { BuiltinPatterns, Control, State } from 'magic-home';
 import { MAGIC_LEDS } from '../../../config/led-config';
 import { warning } from '../../../lib/logging/logger';
 import { Color } from '../../../lib/color';

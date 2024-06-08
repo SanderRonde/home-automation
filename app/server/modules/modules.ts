@@ -21,13 +21,13 @@ import { Hue } from './hue/';
 import { Bot } from './bot';
 import { RGB } from './rgb';
 
-import { AsyncExpressApplication } from '../types/express';
-import { SQLDatabaseWithSchema } from '../lib/sql-db';
-import { WSSimulator, WSWrapper } from '../lib/ws';
+import type { AsyncExpressApplication } from '../types/express';
+import type { SQLDatabaseWithSchema } from '../lib/sql-db';
+import type { WSSimulator, WSWrapper } from '../lib/ws';
 import { InfoScreen } from './info-screen';
-import { Database } from '../lib/db';
-import { ModuleMeta } from './meta';
-import { Config } from '../app';
+import type { Database } from '../lib/db';
+import type { ModuleMeta } from './meta';
+import type { Config } from '../app';
 
 export { RemoteControl } from './remote-control';
 export { SpotifyBeats } from './spotify-beats';

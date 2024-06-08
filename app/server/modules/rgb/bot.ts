@@ -1,19 +1,22 @@
 import { ringClients, getLed, magicHomeClients } from './clients';
-import { ArduinoConfig, DIR, JoinedConfigs } from './types';
+import type { ArduinoConfig, JoinedConfigs } from './types';
 import { getLedFromName } from '../../config/led-config';
 import { arrToObj, asyncTimeout } from '../../lib/util';
+import type { MatchParameters } from '../bot/message';
 import { BotStateBase } from '../../lib/bot-state';
 import { logTag } from '../../lib/logging/logger';
-import { ringEffects, Effects } from './ring-api';
-import { MatchParameters } from '../bot/message';
-import { ColorTarget, HEX_REGEX } from './api';
-import { MatchResponse } from '../bot/types';
+import type { MatchResponse } from '../bot/types';
 import { ExternalHandler } from './external';
 import { scanRGBControllers } from './scan';
 import { colorList } from '../../lib/data';
+import type { Effects } from './ring-api';
+import { ringEffects } from './ring-api';
 import { Color } from '../../lib/color';
+import type { ColorTarget } from './api';
 import { hexEffects } from './hex-api';
 import { exec } from 'child_process';
+import { HEX_REGEX } from './api';
+import { DIR } from './types';
 
 function restartSelf() {
 	return new Promise<void>((resolve) => {

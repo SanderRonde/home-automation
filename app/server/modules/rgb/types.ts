@@ -1,5 +1,5 @@
-import { TransitionTypes } from 'magic-home';
-import { Color } from '../../lib/color';
+import type { TransitionTypes } from 'magic-home';
+import type { Color } from '../../lib/color';
 
 export const enum DIR {
 	DIR_FORWARDS = 1,

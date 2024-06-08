@@ -3,7 +3,7 @@ import {
 	TemplateFn,
 } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
-import { PowerSwitch } from './power-switch.js';
+import type { PowerSwitch } from './power-switch.js';
 
 export const PowerSwitchHTML = new TemplateFn<PowerSwitch>(
 	function (html, { props }) {

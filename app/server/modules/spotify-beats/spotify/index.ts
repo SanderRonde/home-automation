@@ -1,5 +1,5 @@
 import { logTag } from '../../../lib/logging/logger';
-import { Database } from '../../../lib/db';
+import type { Database } from '../../../lib/db';
 import { createSpotifyAPI } from './api';
 
 export async function initSpotify(db: Database): Promise<void> {

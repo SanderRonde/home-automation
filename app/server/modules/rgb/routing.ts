@@ -1,8 +1,8 @@
 import { createRouter } from '../../lib/api';
 import { WebPageHandler } from './web-page';
 import { scanRGBControllers } from './scan';
+import type { ModuleConfig } from '..';
 import { APIHandler } from './api';
-import { ModuleConfig } from '..';
 import { RGB } from '.';
 
 export function initRouting({

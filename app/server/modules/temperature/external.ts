@@ -1,10 +1,10 @@
 import { createExternalClass } from '../../lib/external';
 import { LogObj } from '../../lib/logging/lob-obj';
 import { getController } from './temp-controller';
-import { APIHandler } from './api';
-import { ModuleConfig } from '..';
+import type { APIHandler } from './api';
+import type { ModuleConfig } from '..';
+import type { Mode } from './types';
 import { Temperature } from '.';
-import { Mode } from './types';
 
 export class ExternalHandler extends createExternalClass(true) {
 	private static _db: ModuleConfig<typeof Temperature>['sqlDB'];
