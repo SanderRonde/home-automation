@@ -52,7 +52,7 @@ export { Bot } from './bot';
 export { RGB } from './rgb';
 export { Hue } from './hue/';
 
-export type AllModules = typeof moduleObj;
+export type AllModules = ReturnType<typeof getModuleObj>;
 
 export type InstanceOf<T> = T extends {
 	new (...args: unknown[]): infer I;
@@ -78,7 +78,7 @@ export interface ModuleConfig<M extends ModuleMeta> extends BaseModuleConfig {
 	modules: AllModules;
 }
 
-const moduleObj = {
+const getModuleObj = () => ({
 	bot: Bot,
 	RGB: RGB,
 	hue: Hue,
@@ -102,22 +102,22 @@ const moduleObj = {
 	spotifyBeats: SpotifyBeats,
 	homeDetector: HomeDetector,
 	remoteControl: RemoteControl,
-};
-const moduleArr = Object.values(moduleObj);
+});
 
 let notified = false;
 export function notifyAllModules(): void {
 	notified = true;
 
-	for (const mod of moduleArr) {
+	const moduleObj = getModuleObj();
+	for (const mod of Object.values(moduleObj)) {
 		mod.notifyModulesFromExternal(moduleObj);
 	}
 }
 
-export function getAllModules(notify = true): typeof moduleObj {
+export function getAllModules(notify = true): ReturnType<typeof getModuleObj> {
 	if (!notified && notify) {
 		notifyAllModules();
 	}
 
-	return moduleObj;
+	return getModuleObj();
 }

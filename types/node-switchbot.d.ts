@@ -1,4 +1,4 @@
-declare module 'node-switchbot' {
+declare module '*/node-switchbot' {
 	export interface SwitchbotAdvertisement {
 		id: string;
 		address: string;
@@ -50,7 +50,7 @@ declare module 'node-switchbot' {
 
 	export type SwitchBotDevice = SwitchbotWoDeviceCurtain;
 
-	class SwitchBot {
+	export class SwitchBot {
 		public startScan(): Promise<void>;
 		public stopScan(): Promise<void>;
 		public wait(time: number): Promise<void>;
@@ -63,6 +63,4 @@ declare module 'node-switchbot' {
 			quick?: boolean;
 		}): Promise<SwitchBotDevice[]>;
 	}
-
-	export default SwitchBot;
 }

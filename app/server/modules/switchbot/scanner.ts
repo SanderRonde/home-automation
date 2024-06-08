@@ -1,16 +1,19 @@
-import type { SwitchBotDevice, SwitchbotAdvertisement } from 'node-switchbot';
+import type {
+	SwitchBotDevice,
+	SwitchbotAdvertisement,
+} from '../../../../temp/node-switchbot';
 import type { SwitchbotDeviceBase } from './devices/devices';
+import { SwitchBot } from '../../../../temp/node-switchbot';
 import { createSwitchbots } from '../../config/switchbot';
 import { registerExitHandler } from '../../lib/shutdown';
 import { EventEmitter } from '../../lib/event-emitter';
 import { logTag } from '../../lib/logging/logger';
-import Switchbot from 'node-switchbot';
 import type { AllModules } from '..';
 
 export async function scanSwitchbots(
 	modules: AllModules
 ): Promise<SwitchbotDeviceBase[]> {
-	const switchbot = new Switchbot();
+	const switchbot = new SwitchBot();
 	const botMap: Record<string, SwitchbotApiDevice> = {};
 	const bots = await createSwitchbots(async (id: string) => {
 		const [device] = await switchbot.discover({
@@ -19,6 +22,7 @@ export async function scanSwitchbots(
 			quick: true,
 		});
 		if (!device) {
+			logTag('switchbot', 'cyan', 'Failed to find device ' + id);
 			return null;
 		}
 		const apiDevice = new SwitchbotApiDevice(device);

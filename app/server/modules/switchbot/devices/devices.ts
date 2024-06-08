@@ -1,4 +1,4 @@
-import type { SwitchbotAdvertisement } from 'node-switchbot';
+import type { SwitchbotAdvertisement } from '../../../../../temp/node-switchbot';
 import { LogObj } from '../../../lib/logging/lob-obj';
 import { logTag } from '../../../lib/logging/logger';
 import type { SwitchbotApiDevice } from '../scanner';

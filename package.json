@@ -43,7 +43,8 @@
 		"format": "prettier --write '**/*.{ts,json,html}'",
 		"lint": "eslint --fix \"./app/**/*.ts\"",
 		"compile-ewelink": "esbuild --bundle node_modules/ewelink-api-next/dist/index.js --outfile=temp/ewelink-api-next.js --platform=node --format=cjs",
-		"start": "yarn compile-ewelink && node --experimental-modules --enable-source-maps --trace-warnings -r ts-node/register/transpile-only app/server/app.ts --http 1272 --https 1273 -vvvvvv --name 1000 --scripts /home/sander/scripts --color -i"
+		"compile-switchbot": "esbuild --bundle node_modules/node-switchbot/dist/index.js --outfile=temp/node-switchbot.js --platform=node --format=cjs  --external:../build/Release/bluetooth_hci_socket.node && sed -i 's\\../build/Release\\../node_modules/@abandonware/bluetooth-hci-socket/build/Release\\g' temp/node-switchbot.js",
+		"start": "yarn compile-ewelink && yarn compile-switchbot && node --experimental-modules --enable-source-maps --trace-warnings -r ts-node/register/transpile-only app/server/app.ts --http 1272 --https 1273 -vvvvvv --name 1000 --scripts /home/sander/scripts --color -i"
 	},
 	"devDependencies": {
 		"@types/async-lock": "^1",
@@ -109,7 +110,7 @@
 		"magic-home": "^2.6.0",
 		"node-fetch": "^2.6.7",
 		"node-hue-api": "^5.0.0-beta.16",
-		"node-switchbot": "^1.8.1",
+		"node-switchbot": "^2.1.1",
 		"oauth2-server": "^3.1.1",
 		"optional-require": "^1.0.0",
 		"ping": "^0.2.2",

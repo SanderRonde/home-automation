@@ -1,7 +1,7 @@
 import type {
 	SwitchbotAdvertisement,
 	SwitchbotWoDeviceCurtain,
-} from 'node-switchbot';
+} from '../../../../../temp/node-switchbot';
 import { EventEmitter } from '../../../lib/event-emitter';
 import { LogObj } from '../../../lib/logging/lob-obj';
 import type { SwitchbotApiDevice } from '../scanner';
