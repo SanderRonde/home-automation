@@ -2,7 +2,6 @@ import { IP_LOG_VERSION } from '../constants';
 import type * as express from 'express';
 import type * as http from 'http';
 
-// TODO:(sander) move?
 export function getIP(
 	req: express.Request | http.ClientRequest
 ): string | undefined {

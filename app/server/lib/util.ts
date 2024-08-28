@@ -100,8 +100,12 @@ export class XHR {
 		xhrURL: string,
 		name: string,
 		params: Record<string, string> = {},
-		attempts: number = 0
+		options?: {
+			port?: number;
+			headers?: Record<string, string>;
+		}
 	): Promise<string | null> {
+		const port = options?.port ?? 80;
 		return this._enqueue(
 			() =>
 				new Promise<string | null>((resolve) => {
@@ -114,11 +118,12 @@ export class XHR {
 						.request(
 							{
 								hostname: parsedURL.hostname,
-								port: 80,
+								port,
 								path: `${parsedURL.pathname}${parsedURL.search}`,
 								method: 'POST',
 								headers: {
 									'Content-Type': 'application/json',
+									...options?.headers,
 								},
 							},
 							(res) => {
@@ -141,16 +146,7 @@ export class XHR {
 							warning(
 								`Error while sending request "${name}" with URL "${xhrURL}": "${e.message}"`
 							);
-							if (attempts <= 9) {
-								void this.post(
-									xhrURL,
-									name,
-									params,
-									attempts + 1
-								).then(resolve);
-							} else {
-								resolve(null);
-							}
+							resolve(null);
 						});
 					const logObj = LogObj.fromOutgoingReq(req);
 					if (Object.values(params).length) {
