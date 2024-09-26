@@ -105,7 +105,6 @@ export class XHR {
 			headers?: Record<string, string>;
 		}
 	): Promise<string | null> {
-		const port = options?.port ?? 80;
 		return this._enqueue(
 			() =>
 				new Promise<string | null>((resolve) => {
@@ -118,7 +117,7 @@ export class XHR {
 						.request(
 							{
 								hostname: parsedURL.hostname,
-								port,
+								port: options?.port ?? (parsedURL.protocol === 'https:' ? 443 : 80),
 								path: `${parsedURL.pathname}${parsedURL.search}`,
 								method: 'POST',
 								headers: {
@@ -162,7 +161,11 @@ export class XHR {
 		name: string,
 		params: {
 			[key: string]: string;
-		} = {}
+		} = {},
+		options?: {
+			port?: number;
+			headers?: Record<string, string>;
+		}
 	): Promise<string | null> {
 		return new Promise<string | null>((resolve) => {
 			const parsedURL = new url.URL(xhrURL);
@@ -180,21 +183,28 @@ export class XHR {
 				: '';
 			const fullURL = `${xhrURL}${qs}`;
 			const req = basePackage
-				.get(fullURL, (res) => {
-					let data = '';
+				.get(
+					fullURL,
+					{
+						port: options?.port ?? (parsedURL.protocol === 'https:' ? 443 : 80),
+						headers: options?.headers,
+					},
+					(res) => {
+						let data = '';
 
-					res.on('data', (chunk: string | Buffer) => {
-						data += chunk.toString();
-					});
-					res.on('end', () => {
-						logObj.attachMessage(
-							chalk.cyan(`[${name}]`),
-							xhrURL,
-							JSON.stringify(params)
-						);
-						resolve(data);
-					});
-				})
+						res.on('data', (chunk: string | Buffer) => {
+							data += chunk.toString();
+						});
+						res.on('end', () => {
+							logObj.attachMessage(
+								chalk.cyan(`[${name}]`),
+								xhrURL,
+								JSON.stringify(params)
+							);
+							resolve(data);
+						});
+					}
+				)
 				.on('error', (e) => {
 					warning(
 						`Error while sending request "${name}" with URL "${xhrURL}": "${e.message}"`
