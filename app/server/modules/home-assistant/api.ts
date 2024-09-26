@@ -17,6 +17,28 @@ export class HomeAssistantAPI {
 		this._port = credentials.port || 8123;
 	}
 
+	public async getState(
+		res: ResDummy,
+		service: string,
+		entityId: string
+	): Promise<void> {
+		const logObj = LogObj.fromRes(res);
+		logObj.attachMessage(`Calling service ${service} on ${entityId}`);
+
+		const response = await XHR.get(
+			`http://${this._host}/api/states/${entityId}`,
+			'home-assistant-service',
+			{},
+			{
+				port: this._port,
+				headers: {
+					Authorization: `Bearer ${this._token}`,
+				},
+			}
+		);
+		console.log(response);
+	}
+
 	public async setState(
 		res: ResDummy,
 		domain: string,

@@ -30,4 +30,13 @@ export class ExternalHandler extends createExternalClass(true) {
 			);
 		});
 	}
+
+	public async getState(service: string, entityId: string): Promise<void> {
+		return this.runRequest((res) => {
+			if (!ExternalHandler._api) {
+				return;
+			}
+			return ExternalHandler._api.getState(res, service, entityId);
+		});
+	}
 }
