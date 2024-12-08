@@ -10,9 +10,9 @@ export const HomeAssistant = new (class HomeAssistant extends ModuleMeta {
 		return ExternalHandler;
 	}
 
-	public async init() {
+	public init() {
 		if (!getEnv('SECRET_HASS_TOKEN') || !getEnv('SECRET_HASS_HOST')) {
-			await ExternalHandler.init({ api: null });
+			void ExternalHandler.init({ api: null });
 			return;
 		}
 
@@ -22,6 +22,6 @@ export const HomeAssistant = new (class HomeAssistant extends ModuleMeta {
 			token: getEnv('SECRET_HASS_TOKEN', true),
 			port: port ? parseInt(port, 10) : undefined,
 		});
-		await ExternalHandler.init({ api });
+		void ExternalHandler.init({ api });
 	}
 })();
