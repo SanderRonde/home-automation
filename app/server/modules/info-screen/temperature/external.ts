@@ -23,7 +23,7 @@ export async function get(
 	}
 	try {
 		const response = await XHR.get(
-			'http://api.openweathermap.org/data/2.5/onecall',
+			'http://api.openweathermap.org/data/3.0/onecall',
 			'openweathermap-weather',
 			{
 				lat: openweathermapSecrets.lat,
