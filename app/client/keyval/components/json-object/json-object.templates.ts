@@ -117,11 +117,6 @@ export const JSONObjectCSS = new TemplateFn<JSONObject>(
 					text-align: center;
 				}
 
-				${clampWidthSelector('#name')(
-					['font-size', '200%'],
-					['margin-left', '20px']
-				)}
-
 				#groupToggle {
 					margin-left: -10px;
 					position: relative;

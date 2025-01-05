@@ -60,12 +60,9 @@ export const JSONBooleanCSS = new TemplateFn<JSONBoolean>(
 
 				#name {
 					text-align: center;
+					font-size: 200%;
+					margin-left: 20px;
 				}
-
-				${clampWidthSelector('#name')(
-					['font-size', '200%'],
-					['margin-left', '20px']
-				)}
 
 				#switchContainer {
 					margin-left: -10px;
