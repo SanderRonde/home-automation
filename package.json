@@ -24,7 +24,7 @@
 		"compile:client": "tsc -p app/client/tsconfig.json",
 		"compile:ai": "tsc -p ai/tsconfig.json",
 		"_esbuild": "esbuild --format=iife --minify --bundle",
-		"bundle:keyval": "yarn _esbuild app/client/keyval/keyval.ts --outfile=app/client/keyval/keyval.bundle.js  && yarn _esbuild app/client/keyval/serviceworker.ts --outfile=app/client/keyval/serviceworker.js",
+		"bundle:keyval": "bun build app/client/keyval/keyval.tsx --outdir app/client/keyval  && yarn _esbuild app/client/keyval/serviceworker.ts --outfile=app/client/keyval/serviceworker.js && cp node_modules/antd/dist/antd.dark.css app/client/keyval/antd.dark.css",
 		"bundle:visualize": "yarn _esbuild app/client/visualize/index.tsx --outfile=app/client/visualize/visualize.bundle.js",
 		"bundle:home-detector": "yarn _esbuild app/client/home-detector/home-detector.ts --outfile=app/client/home-detector/home-detector.bundle.js && yarn _esbuild app/client/home-detector/serviceworker.ts --outfile=app/client/home-detector/serviceworker.bundle.js",
 		"bundle:rgb": "yarn _esbuild app/client/rgb/rgb.ts --outfile=app/client/rgb/rgb.bundle.js && yarn _esbuild app/client/rgb/serviceworker.ts --outfile=app/client/rgb/serviceworker.js",
@@ -47,6 +47,7 @@
 	},
 	"devDependencies": {
 		"@types/async-lock": "^1",
+		"@types/bun": "^1.1.14",
 		"@types/chalk": "^2.2.0",
 		"@types/cookie-parser": "^1.4.1",
 		"@types/dotenv": "^8.2.0",
@@ -77,8 +78,8 @@
 		"prettier": "^3.2.5",
 		"prettier-plugin-sort-imports": "^1.8.5",
 		"pretty-quick": "^4.0.0",
-		"react": "^18.3.1",
-		"react-dom": "^18.3.1",
+		"react": "^19.0.0",
+		"react-dom": "^19.0.0",
 		"typescript": "^5.4.5"
 	},
 	"dependencies": {

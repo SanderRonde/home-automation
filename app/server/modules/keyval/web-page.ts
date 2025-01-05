@@ -10,20 +10,32 @@ async function keyvalHTML(json: string, randomNum: number, logObj: LogObj) {
 		logObj
 	).getSecretKey();
 	return `<!DOCTYPE HTML>
-			<html lang="en" style="background-color: rgb(70,70,70);">
-				<head>
-					<link rel="icon" href="/keyval/favicon.ico" type="image/x-icon" />
-					<link rel="manifest" href="/keyval/static/manifest.json">
-					<link rel="apple-touch-icon" href="/keyval/static/apple-touch-icon.png">
-					<meta name="description" content="An app for controlling keyval entries">
-					<meta name="viewport" content="width=device-width, initial-scale=1">
-					<title>KeyVal Switch</title>
-				</head>
-				<body style="margin: 0;overflow-x: hidden;">
-					<json-switches json='${json}' key="${key}">Javascript should be enabled</json-switches>
-					<script type="module" src="/keyval/keyval.bundle.js?n=${randomNum}"></script>
-				</body>
-			</html>`;
+			<html lang="en" style="background-color: rgb(70, 70, 70)">
+			<head>
+				<link rel="icon" href="/keyval/favicon.ico" type="image/x-icon" />
+				<link rel="manifest" href="/keyval/static/manifest.json" />
+				<link
+					rel="apple-touch-icon"
+					href="/keyval/static/apple-touch-icon.png"
+				/>
+				<meta
+					name="description"
+					content="An app for controlling keyval entries"
+				/>
+				<meta name="viewport" content="width=device-width, initial-scale=1" />
+				<link rel="stylesheet" href="/keyval/antd.dark.css" />
+				<title>KeyVal Switch</title>
+			</head>
+			<body style="margin: 0; overflow-x: hidden">
+				<div id="root" json="${json.replace(/"/g, '&quot;')}" key="${key.replace(/"/g, '&quot;')}">
+					Javascript should be enabled
+				</div>
+				<script
+					type="module"
+					src="/keyval/keyval.js?n=${randomNum}"
+				></script>
+			</body>
+		</html>`;
 }
 
 export class WebPageHandler {

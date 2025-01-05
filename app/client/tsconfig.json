@@ -24,7 +24,8 @@
 		"strictBindCallApply": true,
 		"jsx": "react",
 		"skipLibCheck": true,
-		"noEmit": true
+		"noEmit": true,
+		"allowSyntheticDefaultImports": true
 	},
 	"compileOnSave": true,
 	"allowJs": true,
