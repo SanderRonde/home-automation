@@ -117,7 +117,11 @@ export class XHR {
 						.request(
 							{
 								hostname: parsedURL.hostname,
-								port: options?.port ?? (parsedURL.protocol === 'https:' ? 443 : 80),
+								port:
+									options?.port ??
+									(parsedURL.protocol === 'https:'
+										? 443
+										: 80),
 								path: `${parsedURL.pathname}${parsedURL.search}`,
 								method: 'POST',
 								headers: {
@@ -186,7 +190,9 @@ export class XHR {
 				.get(
 					fullURL,
 					{
-						port: options?.port ?? (parsedURL.protocol === 'https:' ? 443 : 80),
+						port:
+							options?.port ??
+							(parsedURL.protocol === 'https:' ? 443 : 80),
 						headers: options?.headers,
 					},
 					(res) => {

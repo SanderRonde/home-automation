@@ -10,8 +10,8 @@ import { attachTimerToReq } from '../../lib/timer';
 import { smarthome } from 'actions-on-google';
 import { createRouter } from '../../lib/api';
 import type * as express from 'express';
-import { getEnv } from '../../lib/io';
 import type { ModuleConfig } from '..';
+import { getEnv } from '../../lib/io';
 import { SmartHome } from '..';
 
 export async function initRouting({

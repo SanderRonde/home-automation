@@ -1,25 +1,38 @@
-import type { SwitchbotAdvertisement } from '../../../../../temp/node-switchbot';
+import type {
+	SwitchBotAPI,
+	SwitchBotCommand,
+	SwitchbotAdvertisement,
+} from '../scanner';
+import type { EventEmitter } from '../../../lib/event-emitter';
 import { LogObj } from '../../../lib/logging/lob-obj';
-import { logTag } from '../../../lib/logging/logger';
-import type { SwitchbotApiDevice } from '../scanner';
-import { debounce, wait } from '../../../lib/util';
 import type { SwitchbotCurtain } from './curtain';
 import type { AllModules } from '../..';
 
 export type SwitchbotDevice = SwitchbotCurtain;
 
 export abstract class SwitchbotDeviceBase {
-	public get deviceId(): string {
-		return this._apiDevice.device.id;
+	protected get api(): {
+		onMessage: EventEmitter<SwitchbotAdvertisement>['listen'];
+		sendCommand: (command: Omit<SwitchBotCommand, 'mac'>) => void;
+	} {
+		return {
+			onMessage: (handler: (value: SwitchbotAdvertisement) => void) => {
+				const emitter = this._api.onMessage(this.mac);
+				emitter.listen(handler);
+			},
+			sendCommand: (command: Omit<SwitchBotCommand, 'mac'>) =>
+				this._api.sendCommand({ mac: this.mac, ...command }),
+		};
 	}
 
 	public constructor(
-		private readonly _apiDevice: SwitchbotApiDevice,
+		public readonly mac: string,
 		protected readonly _modules: AllModules,
+		protected readonly _api: SwitchBotAPI,
 		protected readonly _keyval: string
 	) {}
 
-	protected abstract onChange(value: string): Promise<void>;
+	protected abstract onChange(value: string): void;
 	protected abstract onMessage(
 		message: SwitchbotAdvertisement
 	): Promise<void>;
@@ -29,38 +42,13 @@ export abstract class SwitchbotDeviceBase {
 			LogObj.fromEvent('SWITCHBOT.DEVICE.INIT')
 		);
 
-		await keyval.onChange(this._keyval, async (value) => {
-			if (await this.onCommand()) {
-				await this.onChange(value);
-			}
-			await this._apiDevice.device.disconnect();
+		await keyval.onChange(this._keyval, (value) => {
+			this.onChange(value);
 		});
 
-		const listener = debounce((message: SwitchbotAdvertisement) => {
+		this.api.onMessage((message: SwitchbotAdvertisement) => {
 			void this.onMessage(message);
-		}, 250);
-		this._apiDevice.onMessage.listen(listener);
+		});
 		return this;
-	}
-
-	public async onCommand(): Promise<boolean> {
-		for (let i = 0; i < 10; i++) {
-			try {
-				await this._apiDevice.device.connect();
-				if (this._apiDevice.device.connectionState === 'connected') {
-					return true;
-				}
-			} catch (e) {
-				// Ignore
-			} finally {
-				await wait(1000);
-			}
-		}
-
-		const success = this._apiDevice.device.connectionState === 'connected';
-		if (!success) {
-			logTag('switchbot', 'red', 'Failed to connect to device');
-		}
-		return success;
 	}
 }

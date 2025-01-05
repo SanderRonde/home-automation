@@ -1,21 +1,13 @@
 import type { SwitchbotDeviceBase } from '../modules/switchbot/devices/devices';
 import { SwitchbotCurtain } from '../modules/switchbot/devices/curtain';
-import type { SwitchbotApiDevice } from '../modules/switchbot/scanner';
+import type { SwitchBotAPI } from '../modules/switchbot/scanner';
 import type { AllModules } from '../modules';
 
 export async function createSwitchbots(
-	findDevice: (id: string) => Promise<SwitchbotApiDevice | null>,
-	modules: AllModules
+	modules: AllModules,
+	api: SwitchBotAPI
 ): Promise<SwitchbotDeviceBase[]> {
-	const foundDevice = await findDevice('someId');
-	if (foundDevice) {
-		return [
-			await new SwitchbotCurtain(
-				foundDevice,
-				modules,
-				'some.keyval'
-			).init(),
-		];
-	}
-	return [];
+	return [
+		await new SwitchbotCurtain('MAC', modules, api, 'some.keyval').init(),
+	];
 }

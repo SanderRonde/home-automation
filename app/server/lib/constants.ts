@@ -1,6 +1,6 @@
 import * as path from 'path';
 
-const ROOT = path.join(__dirname, '../../../');
+export const ROOT = path.join(__dirname, '../../../');
 export const CLIENT_FOLDER = path.join(ROOT, 'app/client');
 export const DB_FOLDER = path.join(ROOT, 'database');
 const STATIC_FOLDER = path.join(ROOT, 'static');

@@ -228,7 +228,7 @@ export abstract class SmartHomeOutlet extends SmartHomeDevice {
 
 export abstract class SmartHomeCurtain extends SmartHomeDevice {
 	private __switchbot: Promise<SwitchbotCurtain | null> | undefined;
-	public switchbotIds: string[] = [];
+	public switchbotMacs: string[] = [];
 
 	public get googleType() {
 		return GOOGLE_SMART_HOME_DEVICE_TYPE.CURTAIN;
@@ -241,10 +241,10 @@ export abstract class SmartHomeCurtain extends SmartHomeDevice {
 		if (!this.__switchbot) {
 			this.__switchbot = (async () => {
 				const bots = await Promise.all(
-					this.switchbotIds.map(
-						(id) =>
+					this.switchbotMacs.map(
+						(mac) =>
 							hookables.switchbot.getBot(
-								id
+								mac
 							) as Promise<SwitchbotCurtain | null>
 					)
 				);
@@ -448,10 +448,6 @@ export function SmartHomeMixinOpenCloseCurtainKeyval<
 				void hookables.keyval.set(this._queryID, '0');
 			} else if (params.openPercent > 95) {
 				void hookables.keyval.set(this._queryID, '1');
-			} else {
-				if (curtain) {
-					await curtain.runToOpenPercentage(params.openPercent);
-				}
 			}
 
 			return Promise.resolve({

@@ -9,13 +9,9 @@ export class ExternalHandler extends createExternalClass(false) {
 		return Promise.resolve();
 	}
 
-	public async getBot(deviceId: string): Promise<SwitchbotDeviceBase | null> {
+	public async getBot(mac: string): Promise<SwitchbotDeviceBase | null> {
 		return this.runRequest(() => {
-			return (
-				ExternalHandler._bots.find(
-					(bot) => bot.deviceId === deviceId
-				) ?? null
-			);
+			return ExternalHandler._bots.find((bot) => bot.mac === mac) ?? null;
 		});
 	}
 }

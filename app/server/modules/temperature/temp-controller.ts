@@ -1,8 +1,8 @@
 import { LogObj } from '../../lib/logging/lob-obj';
 import { logTag } from '../../lib/logging/logger';
 import { LOG_INTERVAL_SECS } from './constants';
-import { getEnv } from '../../lib/io';
 import type { ModuleConfig } from '..';
+import { getEnv } from '../../lib/io';
 import type { Mode } from './types';
 import { Temperature } from '..';
 import chalk from 'chalk';

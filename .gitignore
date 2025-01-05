@@ -102,3 +102,5 @@ ai/beat-detector/modes/realtime_test/public/files/
 .pnp.*
 
 temp/
+.venv
+switchbot.sock

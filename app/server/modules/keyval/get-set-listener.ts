@@ -100,25 +100,27 @@ export async function update(
 	let updated = 0;
 	const updatedKeyParts = key.split('.');
 
-	for (const [index, { key: listenerKey, listener, once }] of _listeners) {
-		if (listenerKey !== null) {
+	const matchingListeners = Array.from(_listeners).filter(
+		([, { key: listenerKey }]) => {
+			if (listenerKey === null) {
+				return true;
+			}
+
 			const listenerParts = listenerKey.split('.');
-			let next = false;
 			for (
 				let i = 0;
 				i < Math.min(updatedKeyParts.length, listenerParts.length);
 				i++
 			) {
 				if (updatedKeyParts[i] !== listenerParts[i]) {
-					next = true;
-					break;
+					return false;
 				}
 			}
-			if (next) {
-				continue;
-			}
+			return true;
 		}
+	);
 
+	for (const [index, { listener, once }] of matchingListeners) {
 		await listener(value, key, logObj);
 		updated++;
 		if (once) {
