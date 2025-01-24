@@ -3,16 +3,16 @@ import { isValSame } from '../lib/util';
 import { Switch } from 'antd';
 
 interface JSONSwitchesProps {
-	initialJson: Record<string, unknown>;
-	key: string;
+	initialJson?: Record<string, unknown>;
 }
 
 const DELIMITER = ' > ';
 
 export const JSONSwitches: React.FC<JSONSwitchesProps> = (props) => {
 	const [json, setJson] = useState<Record<string, unknown>>(
-		props.initialJson
+		props.initialJson ?? {}
 	);
+	const [loadingKeys, setLoadingKeys] = useState<string[]>([]);
 
 	const sendValChange = async (key: string, value: string) => {
 		try {
@@ -58,17 +58,14 @@ export const JSONSwitches: React.FC<JSONSwitchesProps> = (props) => {
 	};
 
 	const changeValue = async (path: string[], toValue: string) => {
-		const keys =
-			path.length !== 0
-				? [path.join('.')]
-				: Object.getOwnPropertyNames(json);
-
-		for (const key of keys) {
-			if (!(await sendValChange(key, toValue))) {
-				return;
-			}
+		const key = path.join('.');
+		setLoadingKeys((prev) => [...prev, key]);
+		try {
+			await sendValChange(key, toValue);
+			await refreshJSON();
+		} finally {
+			setLoadingKeys((prev) => prev.filter((k) => k !== key));
 		}
-		await refreshJSON();
 	};
 
 	useEffect(() => {
@@ -85,9 +82,12 @@ export const JSONSwitches: React.FC<JSONSwitchesProps> = (props) => {
 	}, []);
 
 	const renderSwitch = (path: string[], value: string) => {
+		const key = path.join('.');
+		const isLoading = loadingKeys.includes(key);
 		return (
 			<Switch
 				checked={value === '1'}
+				loading={isLoading}
 				onChange={(checked) => {
 					void changeValue(path, checked ? '1' : '0');
 				}}
@@ -135,6 +135,13 @@ export const JSONSwitches: React.FC<JSONSwitchesProps> = (props) => {
 						groups['state'] = {};
 					}
 					groups['state'][key] = value;
+				} else if (path.length > 0 && typeof value === 'string') {
+					// Handle top-level values
+					const parentGroup = path.join(DELIMITER);
+					if (!groups[parentGroup]) {
+						groups[parentGroup] = {};
+					}
+					groups[parentGroup][key] = value;
 				}
 			}
 		};

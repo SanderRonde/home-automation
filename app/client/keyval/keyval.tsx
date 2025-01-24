@@ -18,7 +18,6 @@ root.render(
 			initialJson={JSON.parse(
 				document.getElementById('root')!.getAttribute('json')!
 			)}
-			key={document.getElementById('root')!.getAttribute('key')!}
 		/>
 	</React.StrictMode>
 );

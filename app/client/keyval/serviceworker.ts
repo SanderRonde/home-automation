@@ -5,7 +5,7 @@ declare const self: ServiceworkerSelf;
 const CACHE_NAME = 'keyval';
 const CACHE_STATIC = [
 	'/keyval/favicon.ico',
-	'/keyval/keyval.bundle.js',
+	'/keyval/keyval.js',
 	'/keyval/static/manifest.json',
 	'/keyval/static/images/48.png',
 	'/keyval/static/images/72.png',
@@ -41,17 +41,18 @@ function indexPage() {
 	return new Response(
 		`
 		<!DOCTYPE HTML>
-		<html style="background-color: rgb(70,70,70);">
+		<html style="background-color: #000;">
 		<head>
 			<link rel="icon" href="/keyval/favicon.ico" type="image/x-icon" />
 			<link rel="manifest" href="/keyval/static/manifest.json">
 			<link rel="apple-touch-icon" href="/keyval/static/apple-touch-icon.png">
 			<meta name="viewport" content="width=device-width, initial-scale=1">
+			<link rel="stylesheet" href="/keyval/antd.dark.css" />
 			<title>KeyVal Switch</title>
 		</head>
 		<body style="margin: 0;overflow-x: hidden;">
-			<json-switches>Javascript should be enabled</json-switches>
-			<script type="module" src="./keyval.bundle.js"></script>
+			<div id="root">Javascript should be enabled</div>
+			<script type="module" src="/keyval/keyval.js"></script>
 		</body>
 	</html>`,
 		{

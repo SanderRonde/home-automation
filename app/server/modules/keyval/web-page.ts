@@ -1,16 +1,11 @@
 import express = require('express');
 import { errorHandle, authCookie, upgradeToHTTPS } from '../../lib/decorators';
 import type { ResponseLike } from '../../lib/logging/response-logger';
-import { LogObj } from '../../lib/logging/lob-obj';
 import type { Database } from '../../lib/db';
-import { KeyVal } from '.';
 
-async function keyvalHTML(json: string, randomNum: number, logObj: LogObj) {
-	const key = await new (await KeyVal.modules).auth.External(
-		logObj
-	).getSecretKey();
+function keyvalHTML(json: string, randomNum: number) {
 	return `<!DOCTYPE HTML>
-			<html lang="en" style="background-color: rgb(70, 70, 70)">
+			<html lang="en" style="background-color: #000;">
 			<head>
 				<link rel="icon" href="/keyval/favicon.ico" type="image/x-icon" />
 				<link rel="manifest" href="/keyval/static/manifest.json" />
@@ -27,7 +22,7 @@ async function keyvalHTML(json: string, randomNum: number, logObj: LogObj) {
 				<title>KeyVal Switch</title>
 			</head>
 			<body style="margin: 0; overflow-x: hidden">
-				<div id="root" json="${json.replace(/"/g, '&quot;')}" key="${key.replace(/"/g, '&quot;')}">
+				<div id="root" json="${json.replace(/"/g, '&quot;')}">
 					Javascript should be enabled
 				</div>
 				<script
@@ -57,13 +52,7 @@ export class WebPageHandler {
 	): Promise<void> {
 		res.status(200);
 		res.contentType('.html');
-		res.write(
-			await keyvalHTML(
-				await this._db.json(true),
-				this._randomNum,
-				LogObj.fromRes(res)
-			)
-		);
+		res.write(keyvalHTML(await this._db.json(true), this._randomNum));
 		res.end();
 	}
 }
