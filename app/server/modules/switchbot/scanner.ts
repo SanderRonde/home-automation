@@ -30,6 +30,14 @@ export async function scanSwitchbots(
 		SOCKET_PATH,
 	]);
 
+	pythonProcess.stdout.on('data', (data) => {
+		console.log(data.toString());
+	});
+
+	pythonProcess.stderr.on('data', (data) => {
+		console.error(data.toString());
+	});
+
 	// Kill Python process when Node process exits
 	process.on('exit', () => {
 		pythonProcess.kill();
@@ -65,6 +73,7 @@ class SwitchBotAPI {
 	private socket: Socket | null = null;
 	private connected: boolean = false;
 	private reconnectTimeout: number = 1000; // Start with 1 second
+	private reconnecting: boolean = false; // Flag to prevent multiple simultaneous reconnect attempts
 	private messageListeners: Map<
 		string,
 		EventEmitter<SwitchbotAdvertisement>
@@ -82,11 +91,16 @@ class SwitchBotAPI {
 	}
 
 	public connect(): void {
+		if (this.reconnecting) {
+			return; // Prevent multiple connect attempts
+		}
+		this.reconnecting = true;
 		try {
 			this.socket = connect({ path: this.socketPath });
 
 			this.connected = true;
-			this.reconnectTimeout = 1000; // Reset timeout on successful connection
+			this.reconnectTimeout = 10000; // Reset timeout on successful connection
+			this.reconnecting = false; // Reset reconnecting flag
 			logTag('switchbot', 'blue', 'Connected to SwitchBot controller');
 
 			// Set up message handling
