@@ -34,9 +34,9 @@ export async function scanSwitchbots(
 		console.log(data.toString());
 	});
 
-	pythonProcess.stderr.on('data', (data) => {
-		console.error(data.toString());
-	});
+	// pythonProcess.stderr.on('data', (data) => {
+	// 	console.error(data.toString());
+	// });
 
 	// Kill Python process when Node process exits
 	process.on('exit', () => {
