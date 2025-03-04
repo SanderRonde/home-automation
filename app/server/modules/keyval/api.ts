@@ -6,6 +6,7 @@ import {
 } from '../../lib/decorators';
 import { addListener, removeListener, update } from './get-set-listener';
 import type { ResponseLike } from '../../lib/logging/response-logger';
+import transform from '../../config/keyval-transform';
 import { LogObj } from '../../lib/logging/lob-obj';
 import type { Database } from '../../lib/db';
 import { str } from './helpers';
@@ -226,10 +227,36 @@ export class APIHandler {
 			force?: boolean;
 		}
 	): Promise<void> {
-		const data = await this._db.json(force);
-		const msg = LogObj.fromRes(res).attachMessage(data);
+		const json = await this._db.json(force);
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const data = transform(json as any);
+		const msg = LogObj.fromRes(res).attachMessage(JSON.stringify(json));
 		msg.attachMessage(`Force? ${force ? 'true' : 'false'}`);
-		res.status(200).write(data);
+		res.status(200)
+			.contentType('application/json')
+			.write(JSON.stringify(data));
 		res.end();
 	}
 }
+
+export type KeyvalInputShape = {
+	[key: string]: KeyvalInputShape | string;
+};
+
+export type KeyvalLeafNode = {
+	type: 'leaf';
+	fullKey: string;
+	value: string;
+	emoji?: string;
+};
+
+export type KeyvalGroupNode = {
+	type: 'group';
+	/** Lower: higher priority */
+	order?: number;
+	values: KeyvalOutputShape;
+};
+
+export type KeyvalOutputShape = {
+	[key: string]: KeyvalLeafNode | KeyvalGroupNode;
+};

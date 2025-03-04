@@ -52,7 +52,12 @@ export class WebPageHandler {
 	): Promise<void> {
 		res.status(200);
 		res.contentType('.html');
-		res.write(keyvalHTML(await this._db.json(true), this._randomNum));
+		res.write(
+			keyvalHTML(
+				JSON.stringify(await this._db.json(true)),
+				this._randomNum
+			)
+		);
 		res.end();
 	}
 }

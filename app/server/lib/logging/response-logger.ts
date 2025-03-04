@@ -6,8 +6,8 @@ export interface ResponseLike {
 	write(str: string): void;
 	sendFile(path: string): void;
 	end(): void;
-	contentType(type: string): void;
-	cookie(name: string, value: string, options?: express.CookieOptions): void;
+	contentType(type: string): this;
+	cookie(name: string, value: string, options?: express.CookieOptions): this;
 	_headersSent?: boolean;
 }
 
@@ -20,6 +20,10 @@ export class ResDummy implements ResponseLike {
 	public redirect(): void {}
 	public write(): void {}
 	public end(): void {}
-	public contentType(): void {}
-	public cookie(): void {}
+	public contentType(): this {
+		return this;
+	}
+	public cookie(): this {
+		return this;
+	}
 }

@@ -1,15 +1,19 @@
+import type {
+	KeyvalOutputShape,
+	KeyvalLeafNode,
+} from '../../../server/modules/keyval/api';
 import React, { useEffect, useState } from 'react';
 import { isValSame } from '../lib/util';
 import { Switch } from 'antd';
 
 interface JSONSwitchesProps {
-	initialJson?: Record<string, unknown>;
+	initialJson?: KeyvalOutputShape;
 }
 
 const DELIMITER = ' > ';
 
 export const JSONSwitches: React.FC<JSONSwitchesProps> = (props) => {
-	const [json, setJson] = useState<Record<string, unknown>>(
+	const [json, setJson] = useState<KeyvalOutputShape>(
 		props.initialJson ?? {}
 	);
 	const [loadingKeys, setLoadingKeys] = useState<string[]>([]);
@@ -57,8 +61,7 @@ export const JSONSwitches: React.FC<JSONSwitchesProps> = (props) => {
 		}
 	};
 
-	const changeValue = async (path: string[], toValue: string) => {
-		const key = path.join('.');
+	const changeValue = async (key: string, toValue: string) => {
 		setLoadingKeys((prev) => [...prev, key]);
 		try {
 			await sendValChange(key, toValue);
@@ -69,9 +72,7 @@ export const JSONSwitches: React.FC<JSONSwitchesProps> = (props) => {
 	};
 
 	useEffect(() => {
-		if (Object.keys(json).length === 0) {
-			void refreshJSON();
-		}
+		void refreshJSON();
 
 		// Set up refresh interval
 		const interval = setInterval(() => {
@@ -81,30 +82,34 @@ export const JSONSwitches: React.FC<JSONSwitchesProps> = (props) => {
 		return () => clearInterval(interval);
 	}, []);
 
-	const renderSwitch = (path: string[], value: string) => {
-		const key = path.join('.');
+	const renderSwitch = (key: string, value: string) => {
 		const isLoading = loadingKeys.includes(key);
 		return (
 			<Switch
 				checked={value === '1'}
 				loading={isLoading}
 				onChange={(checked) => {
-					void changeValue(path, checked ? '1' : '0');
+					void changeValue(key, checked ? '1' : '0');
 				}}
 			/>
 		);
 	};
 
 	const getGroups = (
-		obj: Record<string, unknown>
-	): Record<string, Record<string, unknown>> => {
-		const groups: Record<string, Record<string, unknown>> = {};
+		obj: KeyvalOutputShape
+	): Record<string, Record<string, KeyvalLeafNode>> => {
+		const groups: Record<string, Record<string, KeyvalLeafNode>> = {};
 
-		const processObject = (
-			obj: Record<string, unknown>,
-			path: string[] = []
-		) => {
-			for (const [key, value] of Object.entries(obj)) {
+		const processObject = (obj: KeyvalOutputShape, path: string[] = []) => {
+			const orderedEntries = Object.entries(obj).sort((a, b) => {
+				const aOrder = a[1].type === 'group' ? a[1].order ?? 0 : 0;
+				const bOrder = b[1].type === 'group' ? b[1].order ?? 0 : 0;
+				if (aOrder === bOrder) {
+					return 0;
+				}
+				return aOrder < bOrder ? -1 : 1;
+			});
+			for (const [key, value] of orderedEntries) {
 				if (key === '___last_updated') {
 					continue;
 				}
@@ -112,30 +117,24 @@ export const JSONSwitches: React.FC<JSONSwitchesProps> = (props) => {
 				const currentPath = [...path, key];
 				const fullPath = currentPath.join(DELIMITER);
 
-				if (typeof value === 'object' && value !== null) {
-					const objValue = value as Record<string, unknown>;
-					const hasOnlyPrimitives = Object.values(objValue).every(
-						(v) => typeof v !== 'object'
+				if (value && value.type === 'group') {
+					const hasOnlyPrimitives = Object.values(value.values).every(
+						(v) => v.type === 'leaf'
 					);
 
 					if (hasOnlyPrimitives) {
 						groups[fullPath] = {};
-						Object.entries(objValue).forEach(
+						Object.entries(value.values).forEach(
 							([subKey, subValue]) => {
-								if (typeof subValue === 'string') {
+								if (subValue.type === 'leaf') {
 									groups[fullPath][subKey] = subValue;
 								}
 							}
 						);
 					} else {
-						processObject(objValue, currentPath);
+						processObject(value.values, currentPath);
 					}
-				} else if (path.length === 0 && typeof value === 'string') {
-					if (!groups['state']) {
-						groups['state'] = {};
-					}
-					groups['state'][key] = value;
-				} else if (path.length > 0 && typeof value === 'string') {
+				} else if (path.length > 0 && value.type === 'leaf') {
 					// Handle top-level values
 					const parentGroup = path.join(DELIMITER);
 					if (!groups[parentGroup]) {
@@ -156,8 +155,9 @@ export const JSONSwitches: React.FC<JSONSwitchesProps> = (props) => {
 		);
 	};
 
-	const renderGroup = (obj: Record<string, unknown>): JSX.Element => {
+	const renderGroup = (obj: KeyvalOutputShape): JSX.Element => {
 		const groups = getGroups(obj);
+		console.log(obj, groups)
 
 		return (
 			<div
@@ -168,94 +168,96 @@ export const JSONSwitches: React.FC<JSONSwitchesProps> = (props) => {
 					padding: '10px',
 				}}
 			>
-				{Object.entries(groups).map(([groupName, values]) => (
-					<div
-						key={groupName}
-						style={{
-							flex: '1 1 300px',
-							backgroundColor: 'rgba(255,255,255,0.1)',
-							borderRadius: '12px',
-							padding: '20px',
-							boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-						}}
-					>
-						<h2
-							style={{
-								margin: '0 0 20px 0',
-								borderBottom: '2px solid rgba(255,255,255,0.2)',
-								paddingBottom: '12px',
-								fontSize: '1.5rem',
-								fontWeight: '600',
-								letterSpacing: '0.5px',
-								textTransform: 'capitalize',
-							}}
-						>
-							{groupName}
-						</h2>
+				{Object.keys(groups).length ? (
+					Object.entries(groups).map(([groupName, values]) => (
 						<div
+							key={groupName}
 							style={{
-								display: 'flex',
-								flexDirection: 'column',
-								gap: '12px',
+								flex: '1 1 300px',
+								backgroundColor: 'rgba(255,255,255,0.1)',
+								borderRadius: '12px',
+								padding: '20px',
+								boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
 							}}
 						>
-							{Object.entries(values).map(([key, value]) => {
-								const isChecked = value === '1';
-								return (
-									<div
-										key={key}
-										style={{
-											display: 'flex',
-											alignItems: 'center',
-											backgroundColor:
-												'rgba(255,255,255,0.05)',
-											padding: '12px 16px',
-											borderRadius: '8px',
-											transition: 'all 0.2s ease',
-											cursor: 'pointer',
-										}}
-										onClick={() => {
-											void changeValue(
-												[...groupName.split(DELIMITER), key],
-												isChecked ? '0' : '1'
-											);
-										}}
-										onMouseEnter={(e) => {
-											e.currentTarget.style.backgroundColor =
-												'rgba(255,255,255,0.08)';
-											e.currentTarget.style.transform =
-												'translateX(4px)';
-										}}
-										onMouseLeave={(e) => {
-											e.currentTarget.style.backgroundColor =
-												'rgba(255,255,255,0.05)';
-											e.currentTarget.style.transform =
-												'translateX(0)';
-										}}
-									>
-										<span
+							<h2
+								style={{
+									margin: '0 0 20px 0',
+									borderBottom:
+										'2px solid rgba(255,255,255,0.2)',
+									paddingBottom: '12px',
+									fontSize: '1.5rem',
+									fontWeight: '600',
+									letterSpacing: '0.5px',
+									textTransform: 'capitalize',
+								}}
+							>
+								{groupName}
+							</h2>
+							<div
+								style={{
+									display: 'flex',
+									flexDirection: 'column',
+									gap: '12px',
+								}}
+							>
+								{Object.entries(values).map(([key, value]) => {
+									const isChecked = value.value === '1';
+									return (
+										<div
+											key={key}
 											style={{
-												marginRight: '16px',
-												flex: 1,
-												whiteSpace: 'nowrap',
-												fontSize: '1.1rem',
-												fontWeight: '500',
-												fontFamily:
-													'-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+												display: 'flex',
+												alignItems: 'center',
+												backgroundColor:
+													'rgba(255,255,255,0.05)',
+												padding: '12px 16px',
+												borderRadius: '8px',
+												transition: 'all 0.2s ease',
+												cursor: 'pointer',
+											}}
+											onClick={() => {
+												void changeValue(
+													value.fullKey,
+													isChecked ? '0' : '1'
+												);
+											}}
+											onMouseEnter={(e) => {
+												e.currentTarget.style.backgroundColor =
+													'rgba(255,255,255,0.08)';
+												e.currentTarget.style.transform =
+													'translateX(4px)';
+											}}
+											onMouseLeave={(e) => {
+												e.currentTarget.style.backgroundColor =
+													'rgba(255,255,255,0.05)';
+												e.currentTarget.style.transform =
+													'translateX(0)';
 											}}
 										>
-											{key}
-										</span>
-										{renderSwitch(
-											[...groupName.split(DELIMITER), key],
-											value as string
-										)}
-									</div>
-								);
-							})}
+											<span
+												style={{
+													marginRight: '16px',
+													flex: 1,
+													whiteSpace: 'nowrap',
+													fontSize: '1.1rem',
+													fontWeight: '500',
+													fontFamily:
+														'-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+												}}
+											>
+												{value.emoji} {key}
+											</span>
+											{renderSwitch(key, value.value)}
+										</div>
+									);
+								})}
+							</div>
 						</div>
-					</div>
-				))}
+					))
+				) : (
+					<div>No groups</div>
+				)}
 			</div>
 		);
 	};

@@ -238,7 +238,7 @@ export class Database {
 		return this._data;
 	}
 
-	public async json(force = false): Promise<string> {
-		return JSON.stringify(await this.data(force));
+	public async json(force = false): Promise<Record<string, unknown>> {
+		return await this.data(force);
 	}
 }
