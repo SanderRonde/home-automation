@@ -110,11 +110,11 @@ export async function initEWeLinkAPI(
 		data: { thingList: devices },
 	} = (await api.device.getAllThings({})) as {
 		data: {
-			thingList: EwelinkDeviceResponse[];
+			thingList: EwelinkDeviceResponse[] | undefined;
 		};
 	};
 	await onEWeLinkDevices(async (id, onDevice) => {
-		const device = devices.find((d) => d.itemData.deviceid === id);
+		const device = devices?.find((d) => d.itemData.deviceid === id);
 		if (device) {
 			await onDevice({
 				device,
@@ -161,12 +161,14 @@ async function getUserApiKey(connection: InstanceType<typeof eWelink.WebAPI>) {
 	// Get family to extract API key
 	const family = (await connection.home.getFamily({})) as {
 		data: {
-			familyList: {
-				apikey: string;
-			}[];
+			familyList:
+				| {
+						apikey: string;
+				  }[]
+				| undefined;
 		};
 	};
-	const apiKey = family.data.familyList.map((user) => user.apikey)[0];
+	const apiKey = family.data.familyList?.map((user) => user.apikey)[0];
 	if (!apiKey) {
 		logTag(
 			'ewelink',
