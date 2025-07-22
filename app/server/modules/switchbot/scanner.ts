@@ -26,7 +26,7 @@ export async function scanSwitchbots(
 
 	// Spawn Python process using venv and ensure it's killed when parent process exits
 	const pythonProcess = spawn(VENV_PYTHON, [
-		path.join('switchbot', 'main.py'),
+		path.join('py', 'switchbot', 'main.py'),
 		SOCKET_PATH,
 	]);
 
