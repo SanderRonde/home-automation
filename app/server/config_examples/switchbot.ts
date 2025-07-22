@@ -3,6 +3,10 @@ import { SwitchbotCurtain } from '../modules/switchbot/devices/curtain';
 import type { SwitchBotAPI } from '../modules/switchbot/scanner';
 import type { AllModules } from '../modules';
 
+export function hasSwitchbots(): boolean {
+	return true;
+}
+
 export async function createSwitchbots(
 	modules: AllModules,
 	api: SwitchBotAPI

@@ -1,5 +1,5 @@
 import type { SwitchbotDeviceBase } from './devices/devices';
-import { createSwitchbots } from '../../config/switchbot';
+import { createSwitchbots, hasSwitchbots } from '../../config/switchbot';
 import { EventEmitter } from '../../lib/event-emitter';
 import { logTag } from '../../lib/logging/logger';
 import { ROOT } from '../../lib/constants';
@@ -17,6 +17,10 @@ const VENV_PYTHON = '.venv/bin/python';
 export async function scanSwitchbots(
 	modules: AllModules
 ): Promise<SwitchbotDeviceBase[]> {
+	if (!hasSwitchbots()) {
+		return [];
+	}
+
 	// Check if virtual env exists
 	if (!existsSync(VENV_PYTHON)) {
 		throw new Error(
