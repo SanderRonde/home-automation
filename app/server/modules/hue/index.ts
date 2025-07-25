@@ -11,7 +11,7 @@ export const Hue = new (class Hue extends ModuleMeta {
 	public init(config: ModuleConfig<Hue>) {
 		// If you don't have a username, uncomment this line and run the server once
 		// Be sure to press the connect button before calling this!
-		// await createUser();
+		// void createUser();
 
 		const hueUsername = getEnv('SECRET_HUE_USERNAME');
 		if (!hueUsername) {
@@ -22,6 +22,7 @@ export const Hue = new (class Hue extends ModuleMeta {
 				try {
 					return await discoverBridge(hueUsername);
 				} catch (e) {
+					logTag('hue', 'red', 'Hue error:', e);
 					return null;
 				}
 			})();
