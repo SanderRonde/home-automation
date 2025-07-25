@@ -1,5 +1,5 @@
+import { EventEmitter } from '../../../../lib/event-emitter';
 import type { model } from '@peter-murray/hue-bridge-model';
-import { EventEmitter } from '../../../lib/event-emitter';
 import type { Api } from 'node-hue-api/dist/esm/api/Api';
 
 export class MotionSensor {
