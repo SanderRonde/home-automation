@@ -1,6 +1,5 @@
 import { HomeDetector } from './home-detector';
 import { Temperature } from './temperature';
-import { SmartHome } from './smart-home';
 import { Visualize } from './visualize/';
 import { SwitchBot } from './switchbot/';
 import { Pressure } from './pressure';
@@ -29,7 +28,6 @@ import type { Config } from '../app';
 
 export { HomeDetector } from './home-detector';
 export { Temperature } from './temperature';
-export { SmartHome } from './smart-home/';
 export { Visualize } from './visualize/';
 export { SwitchBot } from './switchbot/';
 export { Pressure } from './pressure';
@@ -90,7 +88,6 @@ const getModuleObj = () => ({
 	ewelink: EWeLink,
 	pressure: Pressure,
 	movement: Movement,
-	smartHome: SmartHome,
 	visualize: Visualize,
 	switchbot: SwitchBot,
 	infoScreen: InfoScreen,

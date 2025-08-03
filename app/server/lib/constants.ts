@@ -39,11 +39,6 @@ export const PLAYSTATE_CHECK_INTERVAL = 1000;
 export const BEAT_CACHE_CLEAR_INTERVAL = 1000 * 60 * 60;
 export const PLAYBACK_CLOSE_RANGE = 10;
 
-// Smart-home
-export const SMART_HOME_BATCH_MIN_TIMEOUT = 50;
-export const SMART_HOME_BATCH_MAX_TIMEOUT = 5000;
-export const TEMPERATURE_REPORT_MAX_TIMEOUT = 60000 * 5;
-
 // Ewelink
 export const EWELINK_DEBUG = true;
 
