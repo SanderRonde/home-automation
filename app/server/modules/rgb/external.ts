@@ -1,4 +1,3 @@
-import type { MatchHandlerParams } from '../../lib/bot-state';
 import { createExternalClass } from '../../lib/external';
 import type { LED_NAME } from '../../config/led-config';
 import type { RGBClient } from './client/RGBClient';
@@ -6,7 +5,6 @@ import { LogObj } from '../../lib/logging/lob-obj';
 import type { JoinedConfigs } from './types';
 import type { Effects } from './ring-api';
 import type { ColorTarget } from './api';
-import { play } from './marked-audio';
 import { getLed } from './clients';
 import { APIHandler } from './api';
 import { RGB } from '.';
@@ -69,15 +67,6 @@ export class ExternalHandler extends createExternalClass(true) {
 				auth: await this._getKey(LogObj.fromRes(res), RGB),
 				...extra,
 			});
-		});
-	}
-
-	public async markedAudio(
-		file: string,
-		helpers: Pick<MatchHandlerParams, 'ask' | 'sendText' | 'askCancelable'>
-	): ReturnType<typeof play> {
-		return this.runRequest((_res, logObj) => {
-			return play(file, logObj, helpers);
 		});
 	}
 
