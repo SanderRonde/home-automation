@@ -1,4 +1,3 @@
-import { HomeAssistant } from './home-assistant';
 import { SpotifyBeats } from './spotify-beats';
 import { HomeDetector } from './home-detector';
 import { Temperature } from './temperature';
@@ -29,7 +28,6 @@ import type { Database } from '../lib/db';
 import type { ModuleMeta } from './meta';
 import type { Config } from '../app';
 
-export { HomeAssistant } from './home-assistant';
 export { SpotifyBeats } from './spotify-beats';
 export { HomeDetector } from './home-detector';
 export { Temperature } from './temperature';
@@ -101,8 +99,6 @@ const getModuleObj = () => ({
 	temperature: Temperature,
 	spotifyBeats: SpotifyBeats,
 	homeDetector: HomeDetector,
-	remoteControl: RemoteControl,
-	homeAssistant: HomeAssistant,
 });
 
 let notified = false;

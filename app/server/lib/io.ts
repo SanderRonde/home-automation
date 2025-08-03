@@ -114,10 +114,6 @@ export interface EnvShape {
 	SECRET_HUE_USERNAME: string;
 
 	SECRET_SENTRY_DSN: string;
-
-	SECRET_HASS_TOKEN: string;
-	SECRET_HASS_HOST: string;
-	SECRET_HASS_PORT: string;
 }
 
 export function getEnv<S extends EnvShape>(
