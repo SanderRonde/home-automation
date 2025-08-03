@@ -1,4 +1,3 @@
-import { SpotifyBeats } from './spotify-beats';
 import { HomeDetector } from './home-detector';
 import { Temperature } from './temperature';
 import { SmartHome } from './smart-home';
@@ -28,7 +27,6 @@ import type { Database } from '../lib/db';
 import type { ModuleMeta } from './meta';
 import type { Config } from '../app';
 
-export { SpotifyBeats } from './spotify-beats';
 export { HomeDetector } from './home-detector';
 export { Temperature } from './temperature';
 export { SmartHome } from './smart-home/';
@@ -97,7 +95,6 @@ const getModuleObj = () => ({
 	switchbot: SwitchBot,
 	infoScreen: InfoScreen,
 	temperature: Temperature,
-	spotifyBeats: SpotifyBeats,
 	homeDetector: HomeDetector,
 });
 
