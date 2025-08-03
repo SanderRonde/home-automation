@@ -48,6 +48,7 @@ interface PartialConfig {
 	};
 	debug?: boolean;
 	instant?: boolean;
+	logTelegramBotCommands?: boolean;
 }
 
 type DeepRequired<T> = {
@@ -87,6 +88,7 @@ class WebServer {
 			},
 			debug: config.debug || false,
 			instant: config.instant || false,
+			logTelegramBotCommands: config.logTelegramBotCommands || false,
 		};
 	}
 
@@ -214,7 +216,9 @@ class WebServer {
 		initPostRoutes({ app: this.app, config: this._config });
 
 		LogObj.logLevel = this._config.log.level;
-		await printCommands();
+		if (this._config.logTelegramBotCommands) {
+			await printCommands();
+		}
 		this._listen(modules);
 	}
 }
@@ -238,6 +242,7 @@ if (hasArg('help', 'h')) {
 		"-v*, --verbose*			Logs all data (equivalent of adding a lot of v's"
 	);
 	console.log('--ignore-pressure		Ignore pressure report logs');
+	console.log('--log-telegram-bot-commands		Log all telegram bot commands');
 	// eslint-disable-next-line no-process-exit
 	process.exit(0);
 }
@@ -275,4 +280,5 @@ void new WebServer({
 	},
 	debug: hasArg('debug') || !!getArg('IO_DEBUG'),
 	instant: hasArg('instant', 'i'),
+	logTelegramBotCommands: hasArg('log-telegram-bot-commands'),
 }).init();

@@ -9,6 +9,7 @@ interface Args {
 	'log-secrets'?: BoolArg;
 	'ignore-pressure'?: BoolArg;
 	'error-log-path'?: string;
+	'log-telegram-bot-commands'?: BoolArg;
 
 	IO_DEBUG?: string;
 	debug?: BoolArg;
