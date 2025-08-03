@@ -6,9 +6,6 @@ export default {
 			'lights-on': async (modules) => {
 				await modules.keyval.set('room.lights.ceiling', '1');
 			},
-			'pc-on': async (modules) => {
-				await modules.script.script('wake_desktop');
-			},
 		},
 		away: {
 			'lights-off': async (modules) => {

@@ -40,10 +40,6 @@ interface PartialConfig {
 		http?: number | void;
 		https?: number | void;
 	};
-	scripts?: {
-		uid?: number | void;
-		scriptDir?: string | void;
-	};
 	log?: {
 		level?: number;
 		secrets: boolean;
@@ -79,12 +75,6 @@ class WebServer {
 				http: config.ports?.http || 1234,
 				https: config.ports?.https || 1235,
 				info: config.ports?.info || 1337,
-			},
-			scripts: {
-				uid: config.scripts?.uid || 0,
-				scriptDir:
-					config.scripts?.scriptDir ||
-					path.join(__dirname, '../../', 'scripts'),
 			},
 			log: {
 				level: config.log?.level || 1,
@@ -233,15 +223,12 @@ if (hasArg('help', 'h')) {
 	console.log('Usage:');
 	console.log('');
 	console.log('node app/server/app.js 		[-h | --help] [--http {port}] ');
-	console.log('				[--https {port}] [--scripts {dir}]');
-	console.log('				[--uid	{uid}] [-v | --verbose]');
+	console.log('				[--https {port}] [-v | --verbose]');
 	console.log('				[-vv | --veryverbose]');
 	console.log('');
 	console.log('-h, --help			Print this help message');
 	console.log('--http 		{port}		The HTTP port to use');
 	console.log('--https 	{port}		The HTTP port to use');
-	console.log('--uid 		{uid}		The uid to use for scripts');
-	console.log('--scripts 	{dir}		A directory of scripts to use for /script');
 	console.log('-v, --verbose			Log request-related data');
 	console.log('-vv, --veryverbose		Log even more request-related data');
 	console.log(
@@ -279,10 +266,6 @@ void new WebServer({
 		http: getNumberArg('http') || getNumberEnv('IO_PORT_HTTP'),
 		https: getNumberArg('https') || getNumberEnv('IO_PORT_HTTPS'),
 		info: getNumberArg('info-port') || getNumberEnv('IO_PORT_INFO'),
-	},
-	scripts: {
-		scriptDir: getArg('scripts') || getEnv('IO_SCRIPT_DIR'),
-		uid: getNumberArg('uid') || getNumberEnv('IO_UID'),
 	},
 	log: {
 		level: getVerbosity(),

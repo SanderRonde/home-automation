@@ -30,14 +30,6 @@ The home-detector module detects who is home and who isn't. This is useful for t
 
 The cast module allows for the casting of things to cast-enabled devices. Since I only have a google home mini, it can only cast audio tracks and text-to-speech for now.
 
-#### Scripts
-
-The scripts module simply runs specified scripts in a pre-configured directory. This allows for shutting down the PC or booting it up when someone leaves or enters the house.
-
-#### Remote Control
-
-The remote control module allows remote control of media playing on a given computer. This, for example, allows you to tell your smart home device to pause the video playing on your PC (which could be connected to a projector or something). It allows for control of media playing websites (Youtube, Netflix and Plex) and applications (VLC through telnet).
-
 #### Temperature
 
 The temperature module allows for the setting of a target temperature of the house. The server then tells a temperature controller what to do based on the currently measured temperature, eventually reaching the target temperature. It also allows for manual turning on and off of a temperature controller (for example for when you leave home).
@@ -65,25 +57,13 @@ The movement module handles any motion detection and runs the associated actions
 
 ### Controllers
 
-#### Google Home/Assistant
-
-All devices are accessible through the Google Assistant API and can be connected to the Google Home app. This allows them to be controlled through voice or through the Home app.
-
 #### Telegram bot
 
 Everything is connected with a telegram bot that (semi-)intelligently performs the actions you tell it to. It consists of a lot of regex but works surprisingly well.
 
-#### Smart speaker integration
-
-Smart speakers can talk to the service using the web API through IFTTT. If a given sentence is said, IFTTT sends a webrequest to the server, which then performs the action.
-
 #### Web apps
 
 There are two web apps. One allows control of the keyval store for simple control of the lights and speakers from a phone. The second one allows for control of RGB lights through a color wheel.
-
-#### Touch screen
-
-There is a touch screen using a [nextion touch screen](https://nextion.tech/). It communicates through an arduino with the server.
 
 ## How it works
 

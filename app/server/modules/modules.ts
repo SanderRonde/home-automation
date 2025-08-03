@@ -5,14 +5,11 @@ import { Pressure } from './pressure';
 import { Movement } from './movement';
 import { Webhook } from './webhook';
 import { EWeLink } from './ewelink';
-import { Script } from './script/';
 import { Secret } from './secret/';
 import { Notion } from './notion/';
 import { KeyVal } from './keyval';
 import { OAuth } from './oauth/';
-import { Tuya } from './tuya';
 import { Auth } from './auth';
-import { Cast } from './cast';
 import { Hue } from './hue/';
 import { Bot } from './bot';
 import { RGB } from './rgb';
@@ -33,13 +30,10 @@ export { Movement } from './movement';
 export { Webhook } from './webhook';
 export { EWeLink } from './ewelink';
 export { Notion } from './notion/';
-export { Script } from './script/';
 export { KeyVal } from './keyval';
 export { Secret } from './secret/';
 export { OAuth } from './oauth/';
-export { Tuya } from './tuya';
 export { Auth } from './auth';
-export { Cast } from './cast';
 export { Bot } from './bot';
 export { RGB } from './rgb';
 export { Hue } from './hue/';
@@ -74,11 +68,8 @@ const getModuleObj = () => ({
 	bot: Bot,
 	RGB: RGB,
 	hue: Hue,
-	cast: Cast,
 	auth: Auth,
-	tuya: Tuya,
 	oauth: OAuth,
-	script: Script,
 	keyval: KeyVal,
 	secret: Secret,
 	notion: Notion,

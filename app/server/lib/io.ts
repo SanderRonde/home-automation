@@ -6,9 +6,6 @@ interface Args {
 	https?: NumArg;
 	'info-port'?: string;
 
-	scripts?: string;
-	uid?: NumArg;
-
 	'log-secrets'?: BoolArg;
 	'ignore-pressure'?: BoolArg;
 	'error-log-path'?: string;
@@ -62,7 +59,6 @@ export interface EnvShape {
 	IO_PORT_HTTP: NumArg;
 	IO_PORT_HTTPS: NumArg;
 	IO_PORT_INFO: string;
-	IO_SCRIPT_DIR: string;
 	IO_UID: NumArg;
 	IO_DEBUG: BoolArg;
 
