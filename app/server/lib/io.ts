@@ -66,10 +66,6 @@ export interface EnvShape {
 	// LED IPs
 	SELF_IP: string;
 
-	// Heating
-	ENABLE_HEATING: BoolArg;
-	HEATING_KEY: string;
-
 	// Info-screen
 	INFO_SCREEN_KEYVAL: string;
 

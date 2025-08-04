@@ -1,12 +1,13 @@
-import type { ModuleHookables } from '..';
+import type { LogObj } from '../../lib/logging/lob-obj';
+import type { AllModules } from '..';
 
 export interface KeyvalHooks {
 	[key: string]: {
 		on?: {
-			[name: string]: (hookables: ModuleHookables) => unknown;
+			[name: string]: (hookables: AllModules, logObj: LogObj) => unknown;
 		};
 		off?: {
-			[name: string]: (hookables: ModuleHookables) => unknown;
+			[name: string]: (hookables: AllModules, logObj: LogObj) => unknown;
 		};
 	};
 }

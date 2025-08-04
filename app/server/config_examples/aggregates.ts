@@ -3,13 +3,13 @@ import type { KeyvalHooks } from '../modules/keyval/types';
 export default {
 	'key-name': {
 		on: {
-			'lights-on': (modules) => {
-				return modules.keyval.set('room.lights.ceiling', '1');
+			'lights-on': (modules, logObj) => {
+				return modules.keyval.set(logObj, 'room.lights.ceiling', '1');
 			},
 		},
 		off: {
-			'lights-off': (modules) => {
-				return modules.keyval.set('room.lights.ceiling', '0');
+			'lights-off': (modules, logObj) => {
+				return modules.keyval.set(logObj, 'room.lights.ceiling', '0');
 			},
 		},
 	},

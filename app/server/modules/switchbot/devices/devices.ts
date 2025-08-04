@@ -37,14 +37,14 @@ export abstract class SwitchbotDeviceBase {
 		message: SwitchbotAdvertisement
 	): Promise<void>;
 
-	public async init(): Promise<this> {
-		const keyval = new this._modules.keyval.External(
-			LogObj.fromEvent('SWITCHBOT.DEVICE.INIT')
+	public init(): this {
+		this._modules.keyval.onChange(
+			LogObj.fromEvent('SWITCHBOT.DEVICE.INIT'),
+			this._keyval,
+			(value) => {
+				this.onChange(value);
+			}
 		);
-
-		await keyval.onChange(this._keyval, (value) => {
-			this.onChange(value);
-		});
 
 		this.api.onMessage((message: SwitchbotAdvertisement) => {
 			void this.onMessage(message);

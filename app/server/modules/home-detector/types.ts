@@ -1,16 +1,19 @@
+import type { LogObj } from '../../lib/logging/lob-obj';
 import type { PossiblePromise } from '../../lib/types';
-import type { ModuleHookables } from '..';
+import type { AllModules } from '..';
 
 export interface HomeHooks {
 	[key: string]: {
 		home?: {
 			[name: string]: (
-				hookables: ModuleHookables
+				hookables: AllModules,
+				logObj: LogObj
 			) => PossiblePromise<void>;
 		};
 		away?: {
 			[name: string]: (
-				hookables: ModuleHookables
+				hookables: AllModules,
+				logObj: LogObj
 			) => PossiblePromise<void>;
 		};
 	};

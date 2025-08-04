@@ -1,11 +1,12 @@
 import type { ResponseLike } from '../../lib/logging/response-logger';
 import { errorHandle, requireParams } from '../../lib/decorators';
-import { getInternal, getExternal } from './temperature/';
 import type { ExternalTemperatureResult } from './types';
 import { ExternalWeatherTimePeriod } from './types';
 import { LogObj } from '../../lib/logging/lob-obj';
 import type { CalendarEvent } from './calendar';
+import { get } from './temperature/external';
 import { getEvents } from './calendar';
+import { InfoScreen } from '.';
 
 export class APIHandler {
 	@errorHandle
@@ -23,14 +24,18 @@ export class APIHandler {
 		const response = await (async () => {
 			if (type === 'inside') {
 				// Use temperature module
-				const temp = await getInternal(LogObj.fromRes(res));
+				const temp = await (
+					await InfoScreen.modules
+				).temperature.getTemp('room');
 				return { temperature: temp.temp, icon: 'inside.png' };
 			} else if (type === 'server') {
-				const temp = await getInternal(LogObj.fromRes(res), 'server');
+				const temp = await (
+					await InfoScreen.modules
+				).temperature.getTemp('server');
 				return { temperature: temp.temp, icon: 'server.png' };
 			} else {
 				// Use openweathermap
-				const openweathermapResponse = await getExternal(
+				const openweathermapResponse = await get(
 					period === 'current'
 						? ExternalWeatherTimePeriod.CURRENT
 						: ExternalWeatherTimePeriod.DAILY

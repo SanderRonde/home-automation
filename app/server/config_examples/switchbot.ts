@@ -7,11 +7,9 @@ export function hasSwitchbots(): boolean {
 	return true;
 }
 
-export async function createSwitchbots(
+export function createSwitchbots(
 	modules: AllModules,
 	api: SwitchBotAPI
-): Promise<SwitchbotDeviceBase[]> {
-	return [
-		await new SwitchbotCurtain('MAC', modules, api, 'some.keyval').init(),
-	];
+): SwitchbotDeviceBase[] {
+	return [new SwitchbotCurtain('MAC', modules, api, 'some.keyval').init()];
 }

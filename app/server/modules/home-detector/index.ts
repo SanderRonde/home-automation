@@ -1,6 +1,6 @@
 import { LogObj } from '../../lib/logging/lob-obj';
 import { logTag } from '../../lib/logging/logger';
-import { ExternalHandler } from './external';
+import { SettablePromise } from '../../lib/util';
 import { initRouting } from './routing';
 import type { ModuleConfig } from '..';
 import { handleHooks } from './hooks';
@@ -12,11 +12,10 @@ import { Bot } from './bot';
 import chalk from 'chalk';
 
 export const HomeDetector = new (class HomeDetector extends ModuleMeta {
-	public name = 'home-detector';
+	private readonly _detector: SettablePromise<Detector> =
+		new SettablePromise();
 
-	public get External() {
-		return ExternalHandler;
-	}
+	public name = 'home-detector';
 
 	public get Bot() {
 		return Bot;
@@ -41,14 +40,14 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 		});
 	}
 
-	public async init(config: ModuleConfig<HomeDetector>) {
+	public init(config: ModuleConfig<HomeDetector>) {
 		const detector = new Detector({ db: config.db });
 		const apiHandler = new APIHandler({ detector });
 		Bot.init({
 			apiHandler,
 			detector,
 		});
-		await ExternalHandler.init({ detector });
+		this._detector.set(detector);
 
 		this._initListeners();
 		initRouting({
@@ -56,5 +55,11 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 			detector,
 			apiHandler,
 		});
+	}
+
+	public onUpdate(
+		handler: (newState: HOME_STATE, name: string) => void | Promise<void>
+	): void {
+		Detector.addListener(null, handler);
 	}
 })();

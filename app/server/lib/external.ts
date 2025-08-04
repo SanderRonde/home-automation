@@ -47,13 +47,8 @@ export function createExternalClass(requiresInit: boolean, name?: string) {
 			}
 		}
 
-		public async _getKey(
-			logObj: LogObj,
-			module: ModuleMeta
-		): Promise<string> {
-			return await new (await module.modules).auth.External(
-				logObj
-			).getSecretKey();
+		public async _getKey(module: ModuleMeta): Promise<string> {
+			return (await module.modules).auth.getSecretKey();
 		}
 
 		/**

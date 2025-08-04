@@ -45,9 +45,14 @@ export abstract class RGBClient {
 		if (this.id in LED_KEYVAL_MAP) {
 			const keys = LED_KEYVAL_MAP[this.id] ?? [];
 			for (const key of keys) {
-				await new (await RGB.modules).keyval.External(
-					LogObj.fromEvent(`RGB_NAMEMAP.${this.id}`)
-				).set(key, value, false);
+				await (
+					await RGB.modules
+				).keyval.set(
+					LogObj.fromEvent(`RGB_NAMEMAP.${this.id}`),
+					key,
+					value,
+					false
+				);
 			}
 		}
 	}

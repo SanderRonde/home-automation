@@ -1,18 +1,11 @@
 import { errorHandle, authCookie, upgradeToHTTPS } from '../../lib/decorators';
 import type { ResponseLike } from '../../lib/logging/response-logger';
-import { LogObj } from '../../lib/logging/lob-obj';
 import type { Detector } from './classes';
 import type * as express from 'express';
 import { HomeDetector } from '.';
 
-async function homeDetectorHTML(
-	json: string,
-	randomNum: number,
-	logObj: LogObj
-) {
-	const key = await new (await HomeDetector.modules).auth.External(
-		logObj
-	).getSecretKey();
+async function homeDetectorHTML(json: string, randomNum: number) {
+	const key = (await HomeDetector.modules).auth.getSecretKey();
 	return `<html style="background-color: rgb(40, 40, 40);">
 			<head>
 				<link rel="icon" href="/home-detector/favicon.ico" type="image/x-icon" />
@@ -54,8 +47,7 @@ export class WebPageHandler {
 		res.write(
 			await homeDetectorHTML(
 				JSON.stringify(this._detector.getAll(extended)),
-				this._randomNum,
-				LogObj.fromRes(res)
+				this._randomNum
 			)
 		);
 		res.end();

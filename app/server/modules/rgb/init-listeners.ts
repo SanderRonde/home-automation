@@ -25,17 +25,14 @@ async function switchLed(name: LED_NAME, value: string, logObj: LogObj) {
 
 export function initListeners(): void {
 	void (async () => {
-		const external = new (await RGB.modules).keyval.External(
-			LogObj.fromEvent('RGB.INIT')
-		);
-
 		await initRGBListeners(await RGB.modules);
 		await Promise.all(
 			Object.entries(LED_KEYVAL_MAP).map(async ([ledName, keyvals]) => {
 				return Promise.all(
 					// @ts-ignore
 					keyvals.map(async (keyval) => {
-						await external.onChange(
+						(await RGB.modules).keyval.onChange(
+							LogObj.fromEvent('RGB.INIT'),
 							keyval,
 							async (value, _key, logObj) => {
 								await switchLed(

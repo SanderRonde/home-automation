@@ -18,7 +18,7 @@ export default function transform(
 				type: 'leaf',
 				fullKey: fullPath,
 				value,
-				emoji: undefined
+				emoji: undefined,
 			};
 		} else {
 			result[key] = {

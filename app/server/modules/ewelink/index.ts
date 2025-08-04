@@ -19,6 +19,7 @@ export const EWeLink = new (class EWeLink extends ModuleMeta {
 		const region = getEnv('SECRET_EWELINK_REGION', true);
 
 		if (appId && appSecret && region) {
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 			this.__api ??= new eWelink.WebAPI({
 				appId,
 				appSecret,

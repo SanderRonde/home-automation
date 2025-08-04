@@ -1,23 +1,15 @@
-import { LogObj } from '../../lib/logging/lob-obj';
+import { ResDummy } from '../../lib/logging/response-logger';
+import { SettablePromise } from '../../lib/util';
 import type { Schema } from '../../lib/sql-db';
-import { ExternalHandler } from './external';
 import { initRouting } from './routing';
 import type { ModuleConfig } from '..';
-import { getEnv } from '../../lib/io';
 import { ModuleMeta } from '../meta';
 import { APIHandler } from './api';
-import { Bot } from './bot';
 
 export const Temperature = new (class Temperature extends ModuleMeta {
+	private _api: SettablePromise<APIHandler> = new SettablePromise();
+
 	public name = 'temperature';
-
-	public get External() {
-		return ExternalHandler;
-	}
-
-	public get Bot() {
-		return Bot;
-	}
 
 	public get schema() {
 		return {
@@ -64,24 +56,12 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 
 	public init(config: ModuleConfig<Temperature>) {
 		const api = new APIHandler(config.sqlDB);
+		this._api.set(api);
 		initRouting(api, config);
-		void ExternalHandler.init({
-			db: config.sqlDB,
-			api: api,
-		});
+	}
 
-		if (getEnv('HEATING_KEY', false)) {
-			void new config.modules.keyval.External(
-				LogObj.fromEvent('TEMPERATURE.INIT')
-			).onChange(
-				getEnv('HEATING_KEY', true),
-				async (value, _key, logObj) => {
-					return new ExternalHandler(logObj).setMode(
-						'room',
-						value === '1' ? 'on' : 'off'
-					);
-				}
-			);
-		}
+	public async getTemp(name: string) {
+		const api = await this._api.value;
+		return api.getTemp(new ResDummy(), { name });
 	}
 })();

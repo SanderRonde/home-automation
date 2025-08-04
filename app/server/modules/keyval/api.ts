@@ -4,12 +4,12 @@ import {
 	authAll,
 	auth,
 } from '../../lib/decorators';
-import { addListener, removeListener, update } from './get-set-listener';
 import type { ResponseLike } from '../../lib/logging/response-logger';
 import transform from '../../config/keyval-transform';
 import { LogObj } from '../../lib/logging/lob-obj';
 import type { Database } from '../../lib/db';
 import { str } from './helpers';
+import type { KeyVal } from '.';
 
 type MultiValueResolver<V> = (values: V[]) => V;
 
@@ -54,9 +54,17 @@ function ensureString(value: string | ObjValue<string>): string {
 
 export class APIHandler {
 	private readonly _db: Database;
+	private readonly _keyval: typeof KeyVal;
 
-	public constructor({ db }: { db: Database }) {
+	public constructor({
+		db,
+		keyval,
+	}: {
+		db: Database;
+		keyval: typeof KeyVal;
+	}) {
 		this._db = db;
+		this._keyval = keyval;
 	}
 
 	@errorHandle
@@ -101,7 +109,7 @@ export class APIHandler {
 		const nextMessage = msg.attachMessage(
 			`"${str(original)}" -> "${str(value)}"`
 		);
-		const updated = await update(
+		const updated = await this._keyval.update(
 			key,
 			value,
 			nextMessage.attachMessage('Updates'),
@@ -144,7 +152,8 @@ export class APIHandler {
 
 		// Wait for changes to this key
 		let triggered = false;
-		const id = addListener(
+		const id = this._keyval.addListener(
+			LogObj.fromEvent('KEYVAL.WS.LISTEN'),
 			key,
 			(value, _key, logObj) => {
 				triggered = true;
@@ -163,7 +172,7 @@ export class APIHandler {
 		setTimeout(
 			() => {
 				if (!triggered) {
-					removeListener(id);
+					this._keyval.removeListener(id);
 					const value = this._db.get(key, '0');
 					const msg = LogObj.fromRes(res).attachMessage(
 						`Key: "${key}", val: "${str(value)}"`
@@ -203,7 +212,7 @@ export class APIHandler {
 				`"${str(original)}" -> "${str(value)}"`
 			);
 			if (performUpdate) {
-				const updated = await update(
+				const updated = await this._keyval.update(
 					key,
 					value,
 					nextMessage.attachMessage('Updates'),

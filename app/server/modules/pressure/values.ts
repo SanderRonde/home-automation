@@ -9,7 +9,6 @@ import { PRESSURE_REGISTER, PRESSURE_CHANGE_DIRECTION } from './types';
 import type { LogObj } from '../../lib/logging/lob-obj';
 import type { PressureStateKeeper } from './enabled';
 import pressureConfig from '../../config/pressures';
-import { createHookables } from '../../lib/util';
 import type { PressureRange } from './types';
 import { Pressure } from '..';
 
@@ -83,12 +82,8 @@ export class PressureValueKeeper {
 					if (
 						!doUpdate ||
 						(await handler(
-							createHookables(
-								await Pressure.modules,
-								'PRESSURE',
-								key,
-								logObj.attachMessage('Pressure hooks range')
-							)
+							await Pressure.modules,
+							logObj.attachMessage('Pressure hooks range')
 						)) === PRESSURE_REGISTER.REGISTER_CHANGED
 					) {
 						this._currentRanges.set(key, range);
@@ -120,12 +115,8 @@ export class PressureValueKeeper {
 					})
 				) {
 					await handler(
-						createHookables(
-							await Pressure.modules,
-							'PRESSURE',
-							key,
-							logObj.attachMessage('Pressure hooks jump')
-						)
+						await Pressure.modules,
+						logObj.attachMessage('Pressure hooks jump')
 					);
 				}
 			}

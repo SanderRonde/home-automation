@@ -1,6 +1,5 @@
+import { LogObj } from '../../lib/logging/lob-obj';
 import aggregates from '../../config/aggregates';
-import { addListener } from './get-set-listener';
-import { createHookables } from '../../lib/util';
 import type { Database } from '../../lib/db';
 import { KeyVal } from '.';
 import chalk from 'chalk';
@@ -14,47 +13,47 @@ function registerAggregates(db: Database) {
 	}
 }
 
-function registerListeners() {
+function registerListeners(keyval: typeof KeyVal) {
 	for (const key in aggregates) {
 		const config = aggregates[key];
 		const fullName = `aggregates.${key}`;
-		addListener(fullName, async (value, _key, logObj) => {
-			const handlers = (() => {
-				if (value === '1') {
-					return config.on;
-				} else if (value === '0') {
-					return config.off;
+		keyval.addListener(
+			LogObj.fromEvent('KEYVAL.REGISTER_LISTENERS'),
+			fullName,
+			async (value, _key, logObj) => {
+				const handlers = (() => {
+					if (value === '1') {
+						return config.on;
+					} else if (value === '0') {
+						return config.off;
+					}
+					return null;
+				})();
+				if (!handlers) {
+					return;
 				}
-				return null;
-			})();
-			if (!handlers) {
-				return;
-			}
 
-			let index = 0;
-			await Promise.all(
-				Object.keys(handlers).map(async (key) => {
-					const fn = handlers[key];
-					const mod = await KeyVal.modules;
-					const hookables = createHookables(
-						mod,
-						'AGGREGATES',
-						key,
-						logObj.attachMessage(
-							'Aggregate',
-							chalk.bold(`${index++}`),
-							':',
-							chalk.bold(key)
-						)
-					);
-					await fn(hookables);
-				})
-			);
-		});
+				await Promise.all(
+					Object.keys(handlers).map(async (key, index) => {
+						const fn = handlers[key];
+						const mod = await KeyVal.modules;
+						await fn(
+							mod,
+							logObj.attachMessage(
+								'Aggregate',
+								chalk.bold(`${index++}`),
+								':',
+								chalk.bold(key)
+							)
+						);
+					})
+				);
+			}
+		);
 	}
 }
 
-export function initAggregates(db: Database): void {
+export function initAggregates(db: Database, keyval: typeof KeyVal): void {
 	registerAggregates(db);
-	registerListeners();
+	registerListeners(keyval);
 }

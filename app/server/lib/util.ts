@@ -1,5 +1,3 @@
-import type { ModuleHookables } from '../modules/modules';
-import type { AllModules } from '../modules';
 import { LogObj } from './logging/lob-obj';
 import { warning } from './logging/logger';
 import * as querystring from 'querystring';
@@ -265,22 +263,6 @@ export class SettablePromise<V> {
 		this._resolver(value);
 		this._isSet = true;
 	}
-}
-
-export function createHookables(
-	modules: AllModules,
-	sourceName: string,
-	hookName: string,
-	logObj: LogObj
-): ModuleHookables {
-	return arrToObj(
-		Object.keys(modules).map((name: keyof AllModules) => {
-			const moduleMeta = modules[name];
-			const Handler = moduleMeta.External;
-			return [name, new Handler(logObj, `${sourceName}.${hookName}`)];
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		}) as any
-	) as unknown as ModuleHookables;
 }
 
 export function flatMap<I, R>(arr: I[], map: (item: I) => R | R[]): R[] {

@@ -4,9 +4,6 @@ import { LogObj } from '../../../lib/logging/lob-obj';
 import { SwitchbotDeviceBase } from './devices';
 
 export class SwitchbotCurtain extends SwitchbotDeviceBase {
-	private _keyvalHandler = new this._modules.keyval.External(
-		LogObj.fromEvent('SWITCHBOT.DEVICE.CURTAIN')
-	);
 	public progress: number = 0;
 
 	public isOpen: EventEmitter<boolean> = new EventEmitter();
@@ -33,7 +30,8 @@ export class SwitchbotCurtain extends SwitchbotDeviceBase {
 		this.progress = message.position;
 
 		if (this._keyval) {
-			await this._keyvalHandler.set(
+			await this._modules.keyval.set(
+				LogObj.fromEvent('SWITCHBOT.DEVICE.CURTAIN'),
 				this._keyval,
 				this.progress > 50 ? '1' : '0',
 				false

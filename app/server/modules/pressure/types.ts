@@ -1,5 +1,6 @@
+import type { LogObj } from '../../lib/logging/lob-obj';
 import type { PossiblePromise } from '../../lib/types';
-import type { ModuleHookables } from '..';
+import type { AllModules } from '..';
 
 export const enum PRESSURE_CHANGE_DIRECTION {
 	UP,
@@ -32,7 +33,8 @@ export interface PressureRange {
 	 * A handler that is executed when the pressure falls in given range
 	 */
 	handler: (
-		hookables: ModuleHookables
+		hookables: AllModules,
+		logObj: LogObj
 	) => PRESSURE_REGISTER | Promise<PRESSURE_REGISTER>;
 }
 
@@ -54,7 +56,7 @@ export interface PressureChange {
 	/**
 	 * A handler that is executed when the pressure falls in given range
 	 */
-	handler: (hookables: ModuleHookables) => PossiblePromise<void>;
+	handler: (hookables: AllModules, logObj: LogObj) => PossiblePromise<void>;
 }
 
 export interface PressureHooks {

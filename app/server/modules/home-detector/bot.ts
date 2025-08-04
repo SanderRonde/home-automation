@@ -1,6 +1,5 @@
 import type { ChatState } from '../bot/message/state-keeping';
 import { ResDummy } from '../../lib/logging/response-logger';
-import type { State as KeyValState } from '../keyval/bot';
 import type { MatchParameters } from '../bot/message';
 import { LogObj } from '../../lib/logging/lob-obj';
 import { BotStateBase } from '../../lib/bot-state';
@@ -38,9 +37,7 @@ export class Bot extends BotStateBase {
 				async ({ logObj, state, match }) => {
 					const resDummy = new ResDummy();
 					const all = Bot._config!.apiHandler.getAll(resDummy, {
-						auth: await new (
-							await HomeDetector.modules
-						).auth.External(logObj).getSecretKey(),
+						auth: (await HomeDetector.modules).auth.getSecretKey(),
 					});
 					LogObj.fromRes(resDummy).transferTo(logObj);
 
@@ -78,9 +75,7 @@ export class Bot extends BotStateBase {
 
 				const resDummy = new ResDummy();
 				const homeState = Bot._config!.apiHandler.get(resDummy, {
-					auth: await new (await HomeDetector.modules).auth.External(
-						logObj
-					).getSecretKey(),
+					auth: (await HomeDetector.modules).auth.getSecretKey(),
 					name: match[1],
 				});
 				LogObj.fromRes(resDummy).transferTo(logObj);
@@ -241,7 +236,7 @@ export class Bot extends BotStateBase {
 	}
 
 	public static resetState(state: ChatState): void {
-		(state.states.keyval as unknown as KeyValState).lastSubjects = null;
+		(state.states.homeDetector as unknown as State).lastSubjects = null;
 	}
 
 	public toJSON(): State {

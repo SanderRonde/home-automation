@@ -1,6 +1,6 @@
-import { SettablePromise, createHookables } from '../../lib/util';
 import movementConfig from '../../config/movements';
 import { LogObj } from '../../lib/logging/lob-obj';
+import { SettablePromise } from '../../lib/util';
 import type { Database } from '../../lib/db';
 import { Movement } from '.';
 
@@ -16,7 +16,8 @@ export async function enable(): Promise<void> {
 	enabled = true;
 	(await db.value).setVal('enabled', enabled);
 	const modules = await Movement.modules;
-	await new modules.keyval.External(LogObj.fromEvent('MOVEMENT.ON')).set(
+	await modules.keyval.set(
+		LogObj.fromEvent('MOVEMENT.ON'),
 		'state.movement',
 		'1',
 		false
@@ -27,7 +28,8 @@ export async function disable(): Promise<void> {
 	enabled = false;
 	(await db.value).setVal('enabled', enabled);
 	const modules = await Movement.modules;
-	await new modules.keyval.External(LogObj.fromEvent('MOVEMENT.OFF')).set(
+	await modules.keyval.set(
+		LogObj.fromEvent('MOVEMENT.OFF'),
 		'state.movement',
 		'0',
 		false
@@ -42,12 +44,8 @@ async function handleChange(key: string, logObj: LogObj) {
 	const handlers = movementConfig[key];
 	for (const handler of handlers) {
 		await handler(
-			createHookables(
-				await Movement.modules,
-				'MOVEMENT',
-				key,
-				logObj.attachMessage('Movement hook')
-			)
+			await Movement.modules,
+			logObj.attachMessage('Movement hook')
 		);
 	}
 }

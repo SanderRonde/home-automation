@@ -1,6 +1,6 @@
 import type { ModuleConfig, AllModules } from './modules';
+import type { LogObj } from '../lib/logging/lob-obj';
 import { HOME_STATE } from './home-detector/types';
-import { LogObj } from '../lib/logging/lob-obj';
 import { BotStateBase } from '../lib/bot-state';
 import { SettablePromise } from '../lib/util';
 
@@ -64,12 +64,8 @@ export abstract class ModuleMeta {
 
 	public notifyModulesFromExternal(modules: AllModules): void {
 		this._modules.set(modules);
-		const external = new modules.homeDetector.External(
-			LogObj.fromEvent(`META.${this.name}`)
-		);
-
 		let initialSelfChangeDone: boolean = false;
-		void external.onUpdate(async (homeState, name) => {
+		modules.homeDetector.onUpdate(async (homeState, name) => {
 			if (name !== 'self') {
 				return;
 			}

@@ -47,7 +47,7 @@ export type InstanceOf<T> = T extends {
 	: void;
 
 export type ModuleHookables = {
-	[K in keyof AllModules]: InstanceType<AllModules[K]['External']>;
+	[K in keyof AllModules]: AllModules[K];
 };
 
 export interface BaseModuleConfig {

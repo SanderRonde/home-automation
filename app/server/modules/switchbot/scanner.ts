@@ -1,5 +1,5 @@
-import type { SwitchbotDeviceBase } from './devices/devices';
 import { createSwitchbots, hasSwitchbots } from '../../config/switchbot';
+import type { SwitchbotDeviceBase } from './devices/devices';
 import { EventEmitter } from '../../lib/event-emitter';
 import { logTag } from '../../lib/logging/logger';
 import { ROOT } from '../../lib/constants';
@@ -34,7 +34,7 @@ export async function scanSwitchbots(
 		SOCKET_PATH,
 	]);
 
-	pythonProcess.stdout.on('data', (data) => {
+	pythonProcess.stdout.on('data', (data: Buffer) => {
 		console.log(data.toString());
 	});
 
@@ -60,7 +60,7 @@ export async function scanSwitchbots(
 	await wait(500);
 	api.connect();
 
-	return await createSwitchbots(modules, api);
+	return createSwitchbots(modules, api);
 }
 
 interface SwitchBotCommand {

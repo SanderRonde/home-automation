@@ -1,7 +1,7 @@
 import type { EWeLinkSharedConfig, EWeLinkUpdateMessage } from '../shared';
-import type { ExternalHandler } from '../../../keyval/external';
 import { LogObj } from '../../../../lib/logging/lob-obj';
 import { logTag } from '../../../../lib/logging/logger';
+import type { KeyVal } from '../../../keyval';
 import { EWeLinkInitable } from '../shared';
 
 type EWeLinkButtonPressMessage<A extends number> = EWeLinkUpdateMessage<{
@@ -56,7 +56,7 @@ export class EwelinkKeyvalButtonBase<
 	C extends number,
 	A extends number = C,
 > extends EwelinkButtonBase<A> {
-	private _keyvalExternal!: ExternalHandler;
+	private _keyval!: typeof KeyVal;
 
 	public constructor(
 		eWeLinkConfig: EWeLinkSharedConfig,
@@ -75,7 +75,12 @@ export class EwelinkKeyvalButtonBase<
 			return;
 		}
 		await Promise.all(
-			usedKeyval.map((val) => this._keyvalExternal.toggle(val))
+			usedKeyval.map((val) =>
+				this._keyval.toggle(
+					LogObj.fromEvent('EWELINK.BUTTON.PRESS'),
+					val
+				)
+			)
 		);
 	}
 
@@ -85,8 +90,6 @@ export class EwelinkKeyvalButtonBase<
 
 	public async init(): Promise<void> {
 		await super.init();
-		this._keyvalExternal = new this._eWeLinkConfig.modules.keyval.External(
-			LogObj.fromEvent('EWELINK.POWER.INIT')
-		);
+		this._keyval = this._eWeLinkConfig.modules.keyval;
 	}
 }

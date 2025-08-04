@@ -14,9 +14,11 @@ export async function linkHueDevices(
 			const motionSensor = new MotionSensor(sensor, api);
 			motionSensor.onMotion.listen(() => {
 				// TODO: trigger some keyval module
-				void new modules.keyval.External(
-					LogObj.fromEvent('HUE.MOTION')
-				).set('someKey', '1');
+				void modules.keyval.set(
+					LogObj.fromEvent('HUE.MOTION'),
+					'someKey',
+					'1'
+				);
 			});
 		}
 	}

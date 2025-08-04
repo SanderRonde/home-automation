@@ -28,21 +28,21 @@ export abstract class EwelinkPowerBase<P> extends EWeLinkInitable {
 		};
 	}
 
-	private _getKeyval(logObj: LogObj) {
-		const resDummy = new ResDummy();
-		return {
-			resDummy,
-			keyval: new this._eWeLinkConfig.modules.keyval.External(logObj),
-		};
-	}
-
 	private async _setFromRemoteStatus(remoteState: boolean, source: string) {
 		const logObj = LogObj.fromFixture(chalk.magenta('[ewelink]'), source);
-		const { keyval, resDummy } = this._getKeyval(logObj);
-		const localState = await keyval.get(this._keyVal);
+		const resDummy = new ResDummy();
+		const localState = await this._eWeLinkConfig.modules.keyval.get(
+			logObj,
+			this._keyVal
+		);
 
 		if (remoteState !== (localState === '1')) {
-			await keyval.set(this._keyVal, remoteState ? '1' : '0', true);
+			await this._eWeLinkConfig.modules.keyval.set(
+				logObj,
+				this._keyVal,
+				remoteState ? '1' : '0',
+				true
+			);
 			LogObj.fromRes(resDummy).transferTo(logObj);
 			logObj.attachMessage('Set to', remoteState ? 'on' : 'off');
 		}
@@ -85,18 +85,21 @@ export abstract class EwelinkPowerBase<P> extends EWeLinkInitable {
 
 	protected abstract setPower(isOn: boolean): Promise<void>;
 
-	public async init(): Promise<void> {
+	public init(): Promise<void> {
 		if (this._options.enableSync) {
 			this._startTimer();
 		}
-		const { keyval } = this._getKeyval(LogObj.fromEvent('EWELINK.INIT'));
-		await keyval.onChange(this._keyVal, async (value: string) => {
-			if (value === '1') {
-				await this.turnOn();
-			} else {
-				await this.turnOff();
+		this._eWeLinkConfig.modules.keyval.onChange(
+			LogObj.fromEvent('EWELINK.INIT'),
+			this._keyVal,
+			async (value: string) => {
+				if (value === '1') {
+					await this.turnOn();
+				} else {
+					await this.turnOff();
+				}
 			}
-		});
+		);
 
 		this._eWeLinkConfig.wsConnection.on(
 			'data',
@@ -118,6 +121,8 @@ export abstract class EwelinkPowerBase<P> extends EWeLinkInitable {
 				// );
 			}
 		);
+
+		return Promise.resolve();
 	}
 
 	public turnOn(): Promise<void> {

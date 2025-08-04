@@ -1,5 +1,4 @@
 import type { LogObj } from '../../lib/logging/lob-obj';
-import { createHookables } from '../../lib/util';
 import hooks from '../../config/home-hooks';
 import { HOME_STATE } from './types';
 import { HomeDetector } from '.';
@@ -30,16 +29,12 @@ export async function handleHooks(
 	for (const name in changeHooks) {
 		const fn = changeHooks[name];
 		await fn(
-			createHookables(
-				await HomeDetector.modules,
-				'HOMEHOOK',
-				name,
-				logObj.attachMessage(
-					'Hook',
-					chalk.bold(String(index++)),
-					':',
-					chalk.bold(name)
-				)
+			await HomeDetector.modules,
+			logObj.attachMessage(
+				'Hook',
+				chalk.bold(String(index++)),
+				':',
+				chalk.bold(name)
 			)
 		);
 	}

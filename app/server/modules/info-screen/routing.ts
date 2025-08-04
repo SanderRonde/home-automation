@@ -78,11 +78,8 @@ export function initRouting(
 		clients.add(client);
 
 		if (getEnv('INFO_SCREEN_KEYVAL', false)) {
-			const listener = await new (
-				await InfoScreen.modules
-			).keyval.External(
-				LogObj.fromEvent('INFO_SCREEN.BLANKING')
-			).onChange(
+			const listener = (await InfoScreen.modules).keyval.onChange(
+				LogObj.fromEvent('INFO_SCREEN.BLANKING'),
 				getEnv('INFO_SCREEN_KEYVAL', true),
 				(value) => {
 					client.send(
@@ -96,9 +93,12 @@ export function initRouting(
 			client.send(
 				JSON.stringify({
 					blank:
-						(await new (await InfoScreen.modules).keyval.External(
-							LogObj.fromEvent('INFO_SCREEN.BLANKING')
-						).get(getEnv('INFO_SCREEN_KEYVAL', true))) === '0',
+						(await (
+							await InfoScreen.modules
+						).keyval.get(
+							LogObj.fromEvent('INFO_SCREEN.BLANKING'),
+							getEnv('INFO_SCREEN_KEYVAL', true)
+						)) === '0',
 				})
 			);
 			client.onDead(() => {

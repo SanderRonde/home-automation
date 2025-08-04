@@ -1,6 +1,5 @@
 import type { AllModules, ModuleConfig } from '..';
 import type { Client } from '@notionhq/client';
-import { ExternalHandler } from './external';
 import { startGeocoder } from './geocode';
 import { createClient } from './client';
 import { ModuleMeta } from '../meta';
@@ -19,10 +18,6 @@ export const Notion = new (class Notion extends ModuleMeta {
 	private _config: ModuleConfig<Notion> | null = null;
 
 	public name = 'notion';
-
-	public get External() {
-		return ExternalHandler;
-	}
 
 	private async _getSecret(): Promise<Secret | null> {
 		try {
@@ -43,7 +38,6 @@ export const Notion = new (class Notion extends ModuleMeta {
 		if (secret) {
 			await secret.init(config, this._client);
 		}
-		await ExternalHandler.init(this._client);
 		return Promise.resolve();
 	}
 

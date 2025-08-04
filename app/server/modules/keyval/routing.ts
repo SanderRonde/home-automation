@@ -1,4 +1,3 @@
-import { addListener, removeListener, update } from './get-set-listener';
 import { LogObj } from '../../lib/logging/lob-obj';
 import { logTag } from '../../lib/logging/logger';
 import type { WSSimInstance } from '../../lib/ws';
@@ -14,13 +13,16 @@ type WSMessages = {
 	receive: 'auth' | 'listen' | 'button';
 };
 
-export function initRouting({
-	app,
-	db,
-	randomNum,
-	apiHandler,
-	websocketSim,
-}: ModuleConfig<typeof KeyVal> & { apiHandler: APIHandler }): void {
+export function initRouting(
+	keyval: typeof KeyVal,
+	{
+		app,
+		db,
+		randomNum,
+		apiHandler,
+		websocketSim,
+	}: ModuleConfig<typeof KeyVal> & { apiHandler: APIHandler }
+): void {
 	const webpageHandler = new WebPageHandler({ randomNum, db });
 
 	const router = createRouter(KeyVal, apiHandler);
@@ -65,15 +67,17 @@ export function initRouting({
 					for (let i = 0; i < keys.length; i++) {
 						const key = keys[i];
 						listeners.push(
-							addListener(key, (_key, _value, logObj) =>
-								onChange(i, logObj)
+							keyval.addListener(
+								LogObj.fromEvent('KEYVAL.WS.LISTEN'),
+								key,
+								(_key, _value, logObj) => onChange(i, logObj)
 							)
 						);
 						onChange(i, LogObj.fromEvent('KEYVAL.WS.LISTEN'), true);
 					}
 
 					instance.onClose = () => {
-						listeners.forEach((l) => removeListener(l));
+						listeners.forEach((l) => keyval.removeListener(l));
 					};
 				},
 				instance.ip
@@ -84,7 +88,7 @@ export function initRouting({
 					logTag('touch-screen', 'cyan', chalk.bold(data));
 					const [key, value] = data.split(' ');
 					db.setVal(key, value.trim());
-					await update(
+					await keyval.update(
 						key,
 						value.trim(),
 						LogObj.fromEvent('KEYVAL.WS.BUTTON'),

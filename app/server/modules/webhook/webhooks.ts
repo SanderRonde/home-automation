@@ -1,5 +1,4 @@
 import type { LogObj } from '../../lib/logging/lob-obj';
-import { createHookables } from '../../lib/util';
 import webhooks from '../../config/webhook';
 import { Webhook } from '.';
 import chalk from 'chalk';
@@ -16,7 +15,8 @@ export async function triggerWebhooks(
 
 	const webhook = webhooks[name];
 	await webhook(
-		createHookables(await Webhook.modules, 'WEBHOOK', name, logObj),
+		await Webhook.modules,
+		logObj.attachMessage('Webhook'),
 		params
 	);
 }
