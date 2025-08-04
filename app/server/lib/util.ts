@@ -325,8 +325,8 @@ export class Batcher<D> {
 	private readonly _onDispatch: (data: D[]) => void;
 	private _data: D[] = [];
 
-	private _currentBatchMinTimer: NodeJS.Timeout | null = null;
-	private _currentBatchMaxTimer: NodeJS.Timeout | null = null;
+	private _currentBatchMinTimer: Timer | null = null;
+	private _currentBatchMaxTimer: Timer | null = null;
 
 	public constructor({
 		maxWaitTime,
@@ -365,7 +365,7 @@ export class Batcher<D> {
 		);
 	}
 
-	private _clearTimer(timer: NodeJS.Timeout | null) {
+	private _clearTimer(timer: Timer | null) {
 		if (timer) {
 			clearTimeout(timer);
 		}
@@ -409,7 +409,7 @@ export function optionalArrayValue<V>(
 export function asyncSetInterval(
 	callback: () => void | Promise<void>,
 	interval: number
-): NodeJS.Timeout {
+): Timer {
 	return setInterval(() => {
 		void callback();
 	}, interval);
@@ -418,7 +418,7 @@ export function asyncSetInterval(
 export function asyncTimeout(
 	callback: () => void | Promise<void>,
 	interval: number
-): NodeJS.Timer {
+): Timer {
 	return setTimeout(() => {
 		void callback();
 	}, interval);
@@ -428,7 +428,7 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
 	fn: T,
 	wait: number
 ): T {
-	let timeout: NodeJS.Timeout | null = null;
+	let timeout: Timer | null = null;
 	return ((...args: unknown[]) => {
 		if (timeout) {
 			clearTimeout(timeout);

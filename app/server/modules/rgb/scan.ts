@@ -13,7 +13,7 @@ import { Control, Discovery } from 'magic-home';
 import { HexClient } from './client/HexClient';
 import chalk from 'chalk';
 
-let magicHomeTimer: NodeJS.Timeout | null = null;
+let magicHomeTimer: Timer | null = null;
 const RESCAN_TIME = 1000 * 60;
 
 async function scanMagicHomeControllers(first = false): Promise<number> {

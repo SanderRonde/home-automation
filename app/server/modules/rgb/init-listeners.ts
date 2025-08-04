@@ -33,11 +33,13 @@ export function initListeners(): void {
 		await Promise.all(
 			Object.entries(LED_KEYVAL_MAP).map(async ([ledName, keyvals]) => {
 				return Promise.all(
+					// @ts-ignore
 					keyvals.map(async (keyval) => {
 						await external.onChange(
 							keyval,
 							async (value, _key, logObj) => {
 								await switchLed(
+									// @ts-ignore
 									ledName as LED_NAME,
 									value,
 									logObj

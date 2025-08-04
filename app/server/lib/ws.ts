@@ -51,7 +51,7 @@ export class WSSimInstance<
 	];
 	private _ip!: string;
 	private _alive = true;
-	private _listener: NodeJS.Timeout | null = null;
+	private _listener: Timer | null = null;
 
 	public get alive(): boolean {
 		return this._alive;

@@ -59,7 +59,6 @@ export class Bot extends BotStateBase {
 		'/help_rgb': 'Print help comands for RGB',
 		'/reconnect': 'Reconnect to arduino board',
 		'/restart': 'Restart the server',
-		'/marked': 'Play marked audio file',
 		...arrToObj(
 			[...Object.keys(ringEffects), ...Object.keys(hexEffects)].map(
 				(key) => {
@@ -327,24 +326,6 @@ export class Bot extends BotStateBase {
 				}, 50);
 				return 'Restarting...';
 			});
-			mm(
-				/\/marked ([^ ]+)/,
-				async ({ logObj, match, ask, sendText, askCancelable }) => {
-					const file = match[1];
-					const { message, success } = await new ExternalHandler(
-						logObj
-					).markedAudio(file, {
-						ask,
-						sendText,
-						askCancelable,
-					});
-
-					if (success) {
-						return message || 'Playing!';
-					}
-					return message;
-				}
-			);
 		}
 	);
 
