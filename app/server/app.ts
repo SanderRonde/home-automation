@@ -1,12 +1,3 @@
-import * as dotenv from 'dotenv';
-dotenv.config({
-	// eslint-disable-next-line @typescript-eslint/no-var-requires
-	path: (require('path') as typeof import('path')).join(
-		__dirname,
-		'../../',
-		'.env'
-	),
-});
 import {
 	initMiddleware,
 	initAnnotatorRoutes,

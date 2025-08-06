@@ -1,3 +1,5 @@
+import * as dotenv from 'dotenv';
+
 type NumArg = `${number}`;
 type BoolArg = '1' | 'true';
 
@@ -20,6 +22,24 @@ interface Args {
 
 	help?: BoolArg;
 }
+
+const getEnvironmentVariables = (() => {
+	let loaded = false;
+	return () => {
+		if (!loaded) {
+			dotenv.config({
+				// eslint-disable-next-line @typescript-eslint/no-var-requires
+				path: (require('path') as typeof import('path')).join(
+					__dirname,
+					'../../../',
+					'.env'
+				),
+			});
+			loaded = true;
+		}
+		return process.env;
+	};
+})();
 
 export function getArg(name: keyof Args, short?: string): string | void {
 	for (let i = 0; i < process.argv.length; i++) {
@@ -128,7 +148,7 @@ export function getEnv<S extends EnvShape>(
 	name: Extract<keyof S, string>,
 	required = false
 ): string | void {
-	const value = process.env[name];
+	const value = getEnvironmentVariables()[name];
 	if (value === void 0) {
 		if (!required) {
 			return void 0;
