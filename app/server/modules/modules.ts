@@ -8,6 +8,8 @@ import { EWeLink } from './ewelink';
 import { Secret } from './secret/';
 import { Notion } from './notion/';
 import { KeyVal } from './keyval';
+import { Matter } from './matter';
+import { Device } from './device';
 import { OAuth } from './oauth/';
 import { Auth } from './auth';
 import { Hue } from './hue/';
@@ -30,8 +32,9 @@ export { Movement } from './movement';
 export { Webhook } from './webhook';
 export { EWeLink } from './ewelink';
 export { Notion } from './notion/';
-export { KeyVal } from './keyval';
 export { Secret } from './secret/';
+export { KeyVal } from './keyval';
+export { Matter } from './matter';
 export { OAuth } from './oauth/';
 export { Auth } from './auth';
 export { Bot } from './bot';
@@ -70,7 +73,9 @@ const getModuleObj = () => ({
 	hue: Hue,
 	auth: Auth,
 	oauth: OAuth,
+	device: Device,
 	keyval: KeyVal,
+	matter: Matter,
 	secret: Secret,
 	notion: Notion,
 	webhook: Webhook,
