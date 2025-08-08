@@ -492,6 +492,102 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@matter/general@npm:0.15.3":
+  version: 0.15.3
+  resolution: "@matter/general@npm:0.15.3"
+  dependencies:
+    "@noble/curves": "npm:^1.9.5"
+  checksum: 10c0/04515112cc43ae21048fa86699660688a3e3ce890fcbf6f9156f6172b8c20624ed7b1fa87bcd3f7b1143b88ab11c52194b208f4089b17ec11de0323ea13bf142
+  languageName: node
+  linkType: hard
+
+"@matter/main@npm:^0.15.3":
+  version: 0.15.3
+  resolution: "@matter/main@npm:0.15.3"
+  dependencies:
+    "@matter/general": "npm:0.15.3"
+    "@matter/model": "npm:0.15.3"
+    "@matter/node": "npm:0.15.3"
+    "@matter/nodejs": "npm:0.15.3"
+    "@matter/protocol": "npm:0.15.3"
+    "@matter/types": "npm:0.15.3"
+  dependenciesMeta:
+    "@matter/nodejs":
+      optional: true
+  checksum: 10c0/5a2ee46d2169be90f3d2686b90f55412b9035dd01266bebc67aa2fad6061a31a9f483081a38c602126703052ba5d340e0f5c4a04d26576e0ae12eaf3ad53bacf
+  languageName: node
+  linkType: hard
+
+"@matter/model@npm:0.15.3":
+  version: 0.15.3
+  resolution: "@matter/model@npm:0.15.3"
+  dependencies:
+    "@matter/general": "npm:0.15.3"
+  checksum: 10c0/af7a4d78eb04310953efd721a0494b80c6963e80e600c356d0500ca6fadeafaef5b9e6865370b63dfb79e4ba8d9c3a0cf970c693f39afb3f82b73c22a56f867a
+  languageName: node
+  linkType: hard
+
+"@matter/node@npm:0.15.3":
+  version: 0.15.3
+  resolution: "@matter/node@npm:0.15.3"
+  dependencies:
+    "@matter/general": "npm:0.15.3"
+    "@matter/model": "npm:0.15.3"
+    "@matter/protocol": "npm:0.15.3"
+    "@matter/types": "npm:0.15.3"
+  checksum: 10c0/90f9726a282a095027fb48605ccfd901847c70f5a92974d378e1a1f72cdd591e46826b094275d2b9da18b648fe218693dc10d287579be1ed0204b88c871665b3
+  languageName: node
+  linkType: hard
+
+"@matter/nodejs@npm:0.15.3":
+  version: 0.15.3
+  resolution: "@matter/nodejs@npm:0.15.3"
+  dependencies:
+    "@matter/general": "npm:0.15.3"
+    "@matter/node": "npm:0.15.3"
+    "@matter/protocol": "npm:0.15.3"
+    "@matter/types": "npm:0.15.3"
+  checksum: 10c0/3b0c3e2d27b1e02556b37bac6b70826225a99a062a59edae141420e063e22b377caf7b5ae1499da1b257efde4b7951f35430ee07ed787897ce22ede8106dd6e1
+  languageName: node
+  linkType: hard
+
+"@matter/protocol@npm:0.15.3":
+  version: 0.15.3
+  resolution: "@matter/protocol@npm:0.15.3"
+  dependencies:
+    "@matter/general": "npm:0.15.3"
+    "@matter/model": "npm:0.15.3"
+    "@matter/types": "npm:0.15.3"
+  checksum: 10c0/69caeed446dc8bbf5957a679b16e8eb3a685ce18712f6dd394d4c41a84e29c0f5786d2c5ea43ff8968a2f327f577d6dc15a63b7a4ee20ff06b3ff3544da61871
+  languageName: node
+  linkType: hard
+
+"@matter/types@npm:0.15.3, @matter/types@npm:^0.15.3":
+  version: 0.15.3
+  resolution: "@matter/types@npm:0.15.3"
+  dependencies:
+    "@matter/general": "npm:0.15.3"
+    "@matter/model": "npm:0.15.3"
+  checksum: 10c0/43376daa2954dddb316f9cc30249ee0613b6e05ff694cfb18d90727aa028e3845fa3ceceb0b5c2baec78ca919da7c3a5d85a229d070d27e554a5e03926569a12
+  languageName: node
+  linkType: hard
+
+"@noble/curves@npm:^1.9.5":
+  version: 1.9.6
+  resolution: "@noble/curves@npm:1.9.6"
+  dependencies:
+    "@noble/hashes": "npm:1.8.0"
+  checksum: 10c0/e462875ad752d2cdffc3c7b27b6de3adcff5fae0731e94138bd9e452c5f9b7aaf4c01ea6c62d3c0544b4e7419662535bb2ef1103311de48d51885c053206e118
+  languageName: node
+  linkType: hard
+
+"@noble/hashes@npm:1.8.0":
+  version: 1.8.0
+  resolution: "@noble/hashes@npm:1.8.0"
+  checksum: 10c0/06a0b52c81a6fa7f04d67762e08b2c476a00285858150caeaaff4037356dd5e119f45b2a530f638b77a5eeca013168ec1b655db41bae3236cb2e9d511484fc77
+  languageName: node
+  linkType: hard
+
 "@nodelib/fs.scandir@npm:2.1.5":
   version: 2.1.5
   resolution: "@nodelib/fs.scandir@npm:2.1.5"
@@ -627,6 +723,19 @@ __metadata:
     signal-exit: "npm:^3.0.3"
     tslib: "npm:1.9.3"
   checksum: 10c0/a23891f089ff9354f5849270a79e0cf6a79f2654f9309c6af1dfc20ebbaa9d805a39e374733b496fc30c92173a485dbb517a91fab0015d4f2174782eca809a4e
+  languageName: node
+  linkType: hard
+
+"@project-chip/matter.js@npm:^0.15.3":
+  version: 0.15.3
+  resolution: "@project-chip/matter.js@npm:0.15.3"
+  dependencies:
+    "@matter/general": "npm:0.15.3"
+    "@matter/model": "npm:0.15.3"
+    "@matter/node": "npm:0.15.3"
+    "@matter/protocol": "npm:0.15.3"
+    "@matter/types": "npm:0.15.3"
+  checksum: 10c0/0334fe49d3ad7945fae92f356c34a994dc41d9200deb5761e6ff113bf8df77a8e97fae7b5f18693a0173a5662449df71007356b8ad9bc52fdc5219809215c191
   languageName: node
   linkType: hard
 
@@ -4392,8 +4501,11 @@ __metadata:
   dependencies:
     "@abandonware/noble": "npm:^1.9.2-21"
     "@googleapis/homegraph": "npm:^2.0.0"
+    "@matter/main": "npm:^0.15.3"
+    "@matter/types": "npm:^0.15.3"
     "@notionhq/client": "npm:^0.4.6"
     "@pm2/io": "npm:^5.0.0"
+    "@project-chip/matter.js": "npm:^0.15.3"
     "@sanderronde/write-buffer": "npm:1.0.3"
     "@sentry/node": "npm:^7.99.0"
     "@sentry/profiling-node": "npm:^1.3.5"
