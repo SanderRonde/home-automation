@@ -21,42 +21,39 @@ import type {
 	WindowCovering,
 } from '@matter/main/clusters';
 import type { Cluster, Device, DeviceGroupId } from '../../device/device';
+import type { DeviceCluster, DeviceEndpoint } from '../server/server';
 import { MappedAsyncEventEmitter } from '../../../lib/event-emitter';
 import { MatterServerInputMessageType } from '../server/server';
 import { LevelControl } from '@matter/main/clusters';
 import type { MatterClient } from './client';
 
-export class MatterDevice implements Device {
-	#devices: MatterCluster[] = [];
-	readonly #matterClient: MatterClient;
-	readonly #clusterMeta: {
-		name: string;
-		id: ClusterId;
-	}[];
-
-	public clusters: Cluster[];
+export class MatterEndpoint {
+	public endpoints: MatterEndpoint[] = [];
+	public clusters: MatterCluster[] = [];
 
 	public constructor(
-		public nodeId: string,
-		public endpointNumber: string,
-		matterClient: MatterClient,
-		clusterMeta: {
-			name: string;
-			id: ClusterId;
-		}[]
+		protected readonly nodeId: string,
+		public readonly endpointNumber: string,
+		protected readonly clusterMeta: DeviceCluster[],
+		protected readonly matterClient: MatterClient,
+		endpointMeta: DeviceEndpoint[]
 	) {
-		this.#matterClient = matterClient;
-		this.#clusterMeta = clusterMeta;
-		this.clusters = this.#getClusters();
+		this.endpoints = endpointMeta.map(
+			(endpoint) =>
+				new MatterEndpoint(
+					this.nodeId,
+					endpoint.number,
+					endpoint.clusterMeta,
+					this.matterClient,
+					endpoint.endpoints
+				)
+		);
+		this.clusters = this._getClusters();
 	}
 
-	public getUniqueId(): string {
-		return `matter:${this.nodeId}:${this.endpointNumber}`;
-	}
-
-	#getClusters(): Cluster[] {
-		const clusters: Cluster[] = [];
-		for (const clusterMeta of this.#clusterMeta) {
+	protected _getClusters(): MatterCluster[] {
+		const clusters: MatterCluster[] = [];
+		for (const clusterMeta of this.clusterMeta) {
 			const ClusterWithName =
 				clusterMeta.name in CLUSTERS
 					? CLUSTERS[clusterMeta.name as keyof typeof CLUSTERS]
@@ -76,7 +73,7 @@ export class MatterDevice implements Device {
 						this.endpointNumber,
 						clusterMeta.id,
 						clusterMeta.name,
-						this.#matterClient
+						this.matterClient
 					)
 				)
 			);
@@ -88,9 +85,48 @@ export class MatterDevice implements Device {
 		attributePath: string[],
 		newValue: unknown
 	): void {
-		for (const device of this.#devices) {
+		for (const device of this.clusters) {
 			device.proxy.onAttributeChanged(attributePath, newValue);
 		}
+	}
+}
+
+export class MatterDevice extends MatterEndpoint implements Device {
+	public recursiveClusters: MatterCluster[];
+	public recursiveEndpoints: MatterEndpoint[];
+
+	public constructor(
+		public nodeId: string,
+		public rootEndpointNumber: string,
+		public name: string,
+		matterClient: MatterClient,
+		clusterMeta: DeviceCluster[],
+		endpointMeta: DeviceEndpoint[]
+	) {
+		super(
+			nodeId,
+			rootEndpointNumber,
+			clusterMeta,
+			matterClient,
+			endpointMeta
+		);
+
+		this.recursiveClusters = [];
+		this.recursiveEndpoints = [];
+		const walkRecursives = (device: MatterEndpoint): void => {
+			for (const cluster of device.clusters) {
+				this.recursiveClusters.push(cluster);
+			}
+			for (const endpoint of device.endpoints) {
+				this.recursiveEndpoints.push(endpoint);
+				walkRecursives(endpoint);
+			}
+		};
+		walkRecursives(this);
+	}
+
+	public getUniqueId(): string {
+		return `matter:${this.nodeId}:${this.rootEndpointNumber}`;
 	}
 }
 

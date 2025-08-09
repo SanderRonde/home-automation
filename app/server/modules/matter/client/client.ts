@@ -39,8 +39,10 @@ export class MatterClient {
 			devices[deviceInfo.number] = new MatterDevice(
 				deviceInfo.nodeId,
 				deviceInfo.number,
+				deviceInfo.label ?? deviceInfo.name,
 				this,
-				deviceInfo.clusterNames
+				deviceInfo.clusterMeta,
+				deviceInfo.endpoints
 			);
 		}
 		this.devices.emit(devices);
@@ -52,7 +54,7 @@ export class MatterClient {
 			path.join(__dirname, '../server/server.ts'),
 		]);
 		this.#proc.stdout.on('data', (data: Buffer | string) => {
-			console.log(`server:${data.toString()}`);
+			process.stdout.write(data.toString());
 		});
 		this.#proc.stderr.on('data', (data: Buffer | string) => {
 			for (const line of data.toString().split('\n')) {
@@ -63,7 +65,7 @@ export class MatterClient {
 					const message = JSON.parse(line.trim());
 					this.#listeners.forEach((listener) => listener(message));
 				} catch (error) {
-					console.error(`server:error:${line}`);
+					console.error(`server:error:${line.trim()}`);
 				}
 			}
 		});
