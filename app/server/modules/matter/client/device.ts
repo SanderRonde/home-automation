@@ -31,20 +31,29 @@ export class MatterEndpoint {
 	public endpoints: MatterEndpoint[] = [];
 	public clusters: MatterCluster[] = [];
 
+	readonly #nodeId: string;
+	readonly #endpointNumber: string;
+	readonly #matterClient: MatterClient;
+	readonly #clusterMeta: DeviceCluster[];
+
 	public constructor(
-		protected readonly nodeId: string,
-		public readonly endpointNumber: string,
-		protected readonly clusterMeta: DeviceCluster[],
-		protected readonly matterClient: MatterClient,
+		nodeId: string,
+		endpointNumber: string,
+		clusterMeta: DeviceCluster[],
+		matterClient: MatterClient,
 		endpointMeta: DeviceEndpoint[]
 	) {
+		this.#nodeId = nodeId;
+		this.#endpointNumber = endpointNumber;
+		this.#matterClient = matterClient;
+		this.#clusterMeta = clusterMeta;
 		this.endpoints = endpointMeta.map(
 			(endpoint) =>
 				new MatterEndpoint(
-					this.nodeId,
+					this.#nodeId,
 					endpoint.number,
 					endpoint.clusterMeta,
-					this.matterClient,
+					matterClient,
 					endpoint.endpoints
 				)
 		);
@@ -53,7 +62,7 @@ export class MatterEndpoint {
 
 	protected _getClusters(): MatterCluster[] {
 		const clusters: MatterCluster[] = [];
-		for (const clusterMeta of this.clusterMeta) {
+		for (const clusterMeta of this.#clusterMeta) {
 			const ClusterWithName =
 				clusterMeta.name in CLUSTERS
 					? CLUSTERS[clusterMeta.name as keyof typeof CLUSTERS]
@@ -61,7 +70,7 @@ export class MatterEndpoint {
 			if (!ClusterWithName) {
 				if (!IGNORED_CLUSTERS.includes(clusterMeta.name)) {
 					console.error(
-						`${this.nodeId}/${this.endpointNumber}: Cluster ${clusterMeta.name} not found`
+						`${this.#nodeId}/${this.#endpointNumber}: Cluster ${clusterMeta.name} not found`
 					);
 				}
 				continue;
@@ -69,11 +78,11 @@ export class MatterEndpoint {
 			clusters.push(
 				new ClusterWithName(
 					new ClusterProxy(
-						this.nodeId,
-						this.endpointNumber,
+						this.#nodeId,
+						this.#endpointNumber,
 						clusterMeta.id,
 						clusterMeta.name,
-						this.matterClient
+						this.#matterClient
 					)
 				)
 			);
@@ -94,10 +103,12 @@ export class MatterEndpoint {
 export class MatterDevice extends MatterEndpoint implements Device {
 	public recursiveClusters: MatterCluster[];
 	public recursiveEndpoints: MatterEndpoint[];
+	readonly #rootEndpointNumber: string;
+	readonly #nodeId: string;
 
 	public constructor(
-		public nodeId: string,
-		public rootEndpointNumber: string,
+		nodeId: string,
+		rootEndpointNumber: string,
 		public name: string,
 		matterClient: MatterClient,
 		clusterMeta: DeviceCluster[],
@@ -110,7 +121,8 @@ export class MatterDevice extends MatterEndpoint implements Device {
 			matterClient,
 			endpointMeta
 		);
-
+		this.#rootEndpointNumber = rootEndpointNumber;
+		this.#nodeId = nodeId;
 		this.recursiveClusters = [];
 		this.recursiveEndpoints = [];
 		const walkRecursives = (device: MatterEndpoint): void => {
@@ -126,7 +138,7 @@ export class MatterDevice extends MatterEndpoint implements Device {
 	}
 
 	public getUniqueId(): string {
-		return `matter:${this.nodeId}:${this.rootEndpointNumber}`;
+		return `matter:${this.#nodeId}:${this.#rootEndpointNumber}`;
 	}
 }
 
