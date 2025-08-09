@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 /* eslint-disable @typescript-eslint/explicit-member-accessibility */
 
+import {
+	BasicInformationCluster,
+	BridgedDeviceBasicInformationCluster,
+	GeneralCommissioning,
+} from '@matter/main/clusters';
 import type {
 	ClusterId,
 	DeviceTypeId,
@@ -11,7 +16,6 @@ import type { Endpoint, PairedNode } from '@project-chip/matter.js/device';
 import { Diagnostic, Environment, LogLevel, Logger } from '@matter/main';
 import type { NodeCommissioningOptions } from '@project-chip/matter.js';
 import { CommissioningController } from '@project-chip/matter.js';
-import { GeneralCommissioning } from '@matter/main/clusters';
 import { NodeStates } from '@project-chip/matter.js/device';
 import { ManualPairingCodeCodec } from '@matter/main/types';
 import type { NodeId } from '@matter/main/types';
@@ -56,16 +60,28 @@ export type MatterServerOutputMessage =
 			newState: string;
 	  };
 
-export type DeviceInfo = {
-	nodeId: string;
+export interface DeviceCluster {
+	name: string;
+	id: ClusterId;
+}
+
+export interface DeviceEndpoint {
 	number: string;
 	name: string;
 	deviceType: DeviceTypeId;
-	clusterNames: {
-		name: string;
-		id: ClusterId;
-	}[];
-};
+	endpoints: DeviceEndpoint[];
+	clusterMeta: DeviceCluster[];
+}
+
+export interface DeviceInfo {
+	nodeId: string;
+	number: string;
+	name: string;
+	label: string | undefined;
+	deviceType: DeviceTypeId;
+	endpoints: DeviceEndpoint[];
+	clusterMeta: DeviceCluster[];
+}
 
 export enum MatterServerInputMessageType {
 	ListDevices = 'listDevices',
@@ -153,58 +169,187 @@ class MatterServer {
 		this._nodes.push(...nodes.map((node) => new NodeWatcher(node)));
 	}
 
-	private _getRecursiveEndpoints(): {
-		nodeId: NodeId;
-		endpoint: Endpoint;
-	}[] {
-		const getRecursiveEndpoints = (device: Endpoint) => {
-			const endpoints: Endpoint[] = [];
+	private _walkEndpoints(
+		device: Endpoint,
+		callback: (endpoint: Endpoint) => boolean
+	): void {
+		for (const endpoint of device.getChildEndpoints()) {
+			if (callback(endpoint)) {
+				this._walkEndpoints(endpoint, callback);
+			}
+		}
+	}
+
+	private async _getDeviceInfo(
+		device: Endpoint,
+		nodeId: NodeId
+	): Promise<DeviceInfo | null> {
+		if (device.number === undefined) {
+			return null;
+		}
+
+		const nodeLabel =
+			(await device
+				.getClusterClient(BasicInformationCluster)
+				?.attributes.nodeLabel?.get?.()) ??
+			(await device
+				.getClusterClient(BridgedDeviceBasicInformationCluster)
+				?.attributes.nodeLabel?.get?.());
+
+		const collectRecursiveEndpoints = (
+			device: Endpoint
+		): DeviceEndpoint[] => {
+			const endpoints: DeviceEndpoint[] = [];
 			for (const endpoint of device.getChildEndpoints()) {
-				endpoints.push(endpoint);
-				endpoints.push(...getRecursiveEndpoints(endpoint));
+				if (endpoint.number === undefined) {
+					continue;
+				}
+				const endpointInfo = {
+					number: endpoint.number.toString(),
+					name: endpoint.name,
+					deviceType: endpoint.deviceType,
+					clusterMeta: endpoint
+						.getAllClusterClients()
+						.map((clusterClient) => ({
+							name: clusterClient.name,
+							id: clusterClient.id,
+						})),
+				};
+				endpoints.push({
+					...endpointInfo,
+					endpoints: collectRecursiveEndpoints(endpoint),
+				});
 			}
 			return endpoints;
 		};
 
+		return {
+			nodeId: nodeId.toString(),
+			name: device.name,
+			label: nodeLabel,
+			deviceType: device.deviceType,
+			number: device.number.toString(),
+			endpoints: collectRecursiveEndpoints(device),
+			clusterMeta: device.getAllClusterClients().map((clusterClient) => ({
+				name: clusterClient.name,
+				id: clusterClient.id,
+			})),
+		};
+	}
+
+	private _getRecursiveEndpoints(watchedNode: NodeWatcher): {
+		nodeId: NodeId;
+		endpoint: Endpoint;
+	}[] {
 		const devices: {
 			nodeId: NodeId;
 			endpoint: Endpoint;
 		}[] = [];
-		for (const watchedNode of this._nodes) {
-			for (const device of watchedNode.node.getDevices()) {
-				for (const endpoint of getRecursiveEndpoints(device)) {
-					devices.push({
-						nodeId: watchedNode.node.nodeId,
-						endpoint,
-					});
-				}
-			}
+		// Try to get the root device (endpoint 0) directly from the node
+		const rootDevice = watchedNode.node.getRootEndpoint?.();
+		if (rootDevice) {
+			devices.push({
+				nodeId: watchedNode.node.nodeId,
+				endpoint: rootDevice,
+			});
+		}
+
+		for (const device of watchedNode.node.getDevices()) {
+			this._walkEndpoints(device, (endpoint) => {
+				devices.push({
+					nodeId: watchedNode.node.nodeId,
+					endpoint,
+				});
+				return true;
+			});
 		}
 
 		return devices;
 	}
 
-	private _listDevices(): DeviceInfo[] {
-		const devices = this._getRecursiveEndpoints();
-		const result: DeviceInfo[] = [];
-		for (const device of devices) {
-			if (!device.endpoint.number) {
-				continue;
+	private async _listNodeDevices(
+		watchedNode: NodeWatcher
+	): Promise<DeviceInfo[]> {
+		const deviceInfos: Promise<DeviceInfo | null>[] = [];
+		const recursiveEndpoints = this._getRecursiveEndpoints(watchedNode);
+		if (
+			recursiveEndpoints.every(
+				(endpoint) =>
+					!endpoint.endpoint.getClusterClient(
+						BridgedDeviceBasicInformationCluster
+					)
+			)
+		) {
+			const rootEndpoint = watchedNode.node.getRootEndpoint();
+			if (!rootEndpoint) {
+				return [];
 			}
-			result.push({
-				nodeId: device.nodeId.toString(),
-				name: device.endpoint.name,
-				deviceType: device.endpoint.deviceType,
-				number: device.endpoint.number.toString(),
-				clusterNames: device.endpoint
+
+			// This node is a normal device.
+			const deviceInfo = await this._getDeviceInfo(
+				rootEndpoint,
+				watchedNode.node.nodeId
+			);
+			if (deviceInfo) {
+				return [deviceInfo];
+			}
+			return [];
+		}
+
+		// This node is a matter bridge. It itself and all of its
+		// direct children are individual devices.
+		const rootEndpoint = watchedNode.node.getRootEndpoint();
+		if (rootEndpoint?.number === undefined) {
+			return [];
+		}
+
+		const nodeLabel =
+			(await rootEndpoint
+				.getClusterClient(BasicInformationCluster)
+				?.attributes.nodeLabel?.get?.()) ??
+			(await rootEndpoint
+				.getClusterClient(BridgedDeviceBasicInformationCluster)
+				?.attributes.nodeLabel?.get?.());
+
+		deviceInfos.push(
+			Promise.resolve({
+				nodeId: watchedNode.node.nodeId.toString(),
+				name: rootEndpoint.name,
+				label: nodeLabel,
+				deviceType: rootEndpoint.deviceType,
+				number: rootEndpoint.number.toString(),
+				endpoints: [],
+				clusterMeta: rootEndpoint
 					.getAllClusterClients()
 					.map((clusterClient) => ({
 						name: clusterClient.name,
 						id: clusterClient.id,
 					})),
-			});
+			})
+		);
+
+		this._walkEndpoints(rootEndpoint, (endpoint) => {
+			if (
+				endpoint.getClusterClient(BridgedDeviceBasicInformationCluster)
+			) {
+				deviceInfos.push(
+					this._getDeviceInfo(endpoint, watchedNode.node.nodeId)
+				);
+				return false;
+			}
+			return true;
+		});
+		return (await Promise.all(deviceInfos)).filter(
+			(deviceInfo) => deviceInfo !== null
+		);
+	}
+
+	private async _listDevices(): Promise<DeviceInfo[]> {
+		const deviceInfos: DeviceInfo[] = [];
+		for (const watchedNode of this._nodes) {
+			deviceInfos.push(...(await this._listNodeDevices(watchedNode)));
 		}
-		return result;
+		return deviceInfos;
 	}
 
 	private async _getAttribute(
@@ -213,11 +358,13 @@ class MatterServer {
 		clusterId: ClusterId,
 		attributeName: string
 	): Promise<unknown> {
-		const result = this._getRecursiveEndpoints().find(
-			(endpoint) =>
-				endpoint.endpoint.number?.toString() === endpointNumber &&
-				endpoint.nodeId.toString() === nodeId
-		);
+		const result = this._nodes
+			.flatMap(this._getRecursiveEndpoints.bind(this))
+			.find(
+				(endpoint) =>
+					endpoint.endpoint.number?.toString() === endpointNumber &&
+					endpoint.nodeId.toString() === nodeId
+			);
 		if (!result) {
 			throw new Error('Endpoint not found');
 		}
@@ -239,11 +386,13 @@ class MatterServer {
 		commandName: string,
 		args: unknown[]
 	): Promise<unknown> {
-		const result = this._getRecursiveEndpoints().find(
-			(endpoint) =>
-				endpoint.endpoint.number?.toString() === endpointNumber &&
-				endpoint.nodeId.toString() === nodeId
-		);
+		const result = this._nodes
+			.flatMap(this._getRecursiveEndpoints.bind(this))
+			.find(
+				(endpoint) =>
+					endpoint.endpoint.number?.toString() === endpointNumber &&
+					endpoint.nodeId.toString() === nodeId
+			);
 		if (!result) {
 			throw new Error('Endpoint not found');
 		}
