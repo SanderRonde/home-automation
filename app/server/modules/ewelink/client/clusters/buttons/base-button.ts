@@ -1,7 +1,7 @@
 import type { EWeLinkSharedConfig, EWeLinkUpdateMessage } from '../shared';
-import { LogObj } from '../../../../lib/logging/lob-obj';
-import { logTag } from '../../../../lib/logging/logger';
-import type { KeyVal } from '../../../keyval';
+import { LogObj } from '../../../../../lib/logging/lob-obj';
+import { logTag } from '../../../../../lib/logging/logger';
+import type { KeyVal } from '../../../../keyval';
 import { EWeLinkInitable } from '../shared';
 
 type EWeLinkButtonPressMessage<A extends number> = EWeLinkUpdateMessage<{

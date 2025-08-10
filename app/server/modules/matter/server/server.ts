@@ -87,6 +87,7 @@ export enum MatterServerInputMessageType {
 	ListDevices = 'listDevices',
 	PairWithCode = 'pairWithCode',
 	GetAttribute = 'getAttribute',
+	SetAttribute = 'setAttribute',
 	CallCluster = 'callCluster',
 }
 
@@ -98,6 +99,13 @@ export interface MatterServerInputParameters {
 		endpointNumber: string,
 		clusterId: ClusterId,
 		attributeName: string,
+	];
+	[MatterServerInputMessageType.SetAttribute]: [
+		nodeId: string,
+		endpointNumber: string,
+		clusterId: ClusterId,
+		attributeName: string,
+		value: unknown,
 	];
 	[MatterServerInputMessageType.CallCluster]: [
 		nodeId: string,
@@ -122,6 +130,10 @@ export type MatterServerInputMessage =
 			arguments: MatterServerInputParameters[MatterServerInputMessageType.GetAttribute];
 	  }
 	| {
+			type: MatterServerInputMessageType.SetAttribute;
+			arguments: MatterServerInputParameters[MatterServerInputMessageType.SetAttribute];
+	  }
+	| {
 			type: MatterServerInputMessageType.CallCluster;
 			arguments: MatterServerInputParameters[MatterServerInputMessageType.CallCluster];
 	  };
@@ -131,6 +143,7 @@ export interface MatterServerInputReturnValues {
 	[MatterServerInputMessageType.PairWithCode]: void;
 	[MatterServerInputMessageType.GetAttribute]: unknown;
 	[MatterServerInputMessageType.CallCluster]: unknown;
+	[MatterServerInputMessageType.SetAttribute]: void;
 }
 
 class MatterServer {
@@ -379,6 +392,34 @@ class MatterServer {
 		return attribute.get();
 	}
 
+	private async _setAttribute(
+		nodeId: string,
+		endpointNumber: string,
+		clusterId: ClusterId,
+		attributeName: string,
+		value: unknown
+	): Promise<unknown> {
+		const result = this._nodes
+			.flatMap(this._getRecursiveEndpoints.bind(this))
+			.find(
+				(endpoint) =>
+					endpoint.endpoint.number?.toString() === endpointNumber &&
+					endpoint.nodeId.toString() === nodeId
+			);
+		if (!result) {
+			throw new Error('Endpoint not found');
+		}
+		const cluster = result.endpoint.getClusterClientById(clusterId);
+		if (!cluster) {
+			throw new Error('Cluster not found');
+		}
+		const attribute = cluster.attributes[attributeName];
+		if (!attribute) {
+			throw new Error('Attribute not found');
+		}
+		return attribute.set(value);
+	}
+
 	private async _callCluster(
 		nodeId: string,
 		endpointNumber: string,
@@ -456,14 +497,21 @@ class MatterServer {
 			case MatterServerInputMessageType.ListDevices:
 				return this._listDevices();
 			case MatterServerInputMessageType.PairWithCode:
-				await this.commission(message.arguments[0]);
-				break;
+				return this.commission(message.arguments[0]);
 			case MatterServerInputMessageType.GetAttribute:
 				return this._getAttribute(
 					message.arguments[0],
 					message.arguments[1],
 					message.arguments[2],
 					message.arguments[3]
+				);
+			case MatterServerInputMessageType.SetAttribute:
+				return await this._setAttribute(
+					message.arguments[0],
+					message.arguments[1],
+					message.arguments[2],
+					message.arguments[3],
+					message.arguments[4]
 				);
 			case MatterServerInputMessageType.CallCluster:
 				return this._callCluster(
@@ -474,7 +522,6 @@ class MatterServer {
 					message.arguments[4]
 				);
 		}
-		return undefined as unknown as MatterServerInputReturnValues[(typeof message)['type']];
 	}
 }
 

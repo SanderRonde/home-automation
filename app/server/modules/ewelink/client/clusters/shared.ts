@@ -1,9 +1,9 @@
 import type { thingInfo as setThingStatusInfo } from 'ewelink-api-next/dist/web/apis/device/setThingStatus';
 import type { thingInfo as getThingStatusInfo } from 'ewelink-api-next/dist/web/apis/device/getThingStatus';
 import type eWelink from '../../../../../temp/ewelink-api-next';
-import type { EwelinkDeviceResponse } from '../api';
-import { AsyncQueue } from '../../../lib/util';
-import type { AllModules } from '../..';
+import type { EwelinkDeviceResponse } from '../../api';
+import { AsyncQueue } from '../../../../lib/util';
+import type { AllModules } from '../../..';
 import EventEmitter from 'events';
 
 export type EWeLinkUpdateMessage<P = Record<string, string | number>> = {
@@ -53,7 +53,7 @@ export class WrappedEWeLinkAPI {
 		private readonly _connection: InstanceType<typeof eWelink.WebAPI>
 	) {}
 
-	public setThingStatus(info: setThingStatusInfo): Promise<void> {
+	public setThingStatus(info: setThingStatusInfo): Promise<unknown> {
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 		return this._connection.device.setThingStatus(info);
 	}

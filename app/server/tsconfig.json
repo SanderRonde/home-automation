@@ -12,7 +12,7 @@
 		"noFallthroughCasesInSwitch": true,
 		"noImplicitReturns": true,
 		"noUnusedLocals": true,
-		"target": "es6",
+		"target": "es2024",
 		"noUnusedParameters": true,
 		"experimentalDecorators": false,
 		"strictPropertyInitialization": true,

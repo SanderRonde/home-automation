@@ -1,20 +1,12 @@
-<<<<<<< HEAD
-import {
-	OnOffDevice,
-	WindowCoveringDevice,
-	LevelControlDevice,
-	PowerSourceDevice,
-	GroupsDevice,
-	OccupancySensingDevice,
-	DeviceStatus,
-} from '../../device/device';
 import type {
-	Groups,
-	OnOffCluster,
-	OccupancySensing,
-	PowerSource,
-	WindowCovering,
-} from '@matter/main/clusters';
+	Cluster,
+	DeviceGroupId,
+	DeviceOnOffCluster,
+	DeviceWindowCoveringCluster,
+	DeviceLevelControlCluster,
+	DevicePowerSourceCluster,
+	DeviceGroupsCluster,
+} from '../../device/device';
 import {
 	GroupId,
 	Status,
@@ -23,133 +15,39 @@ import {
 	type ClusterId,
 	type Command,
 } from '@matter/types';
-import type { Cluster, Device, DeviceGroupId } from '../../device/device';
-=======
->>>>>>> 57e18e3 (Add some ewelink clusters)
-import type { DeviceCluster, DeviceEndpoint } from '../server/server';
-import { MATTER_CLUSTERS, IGNORED_MATTER_CLUSTERS } from './cluster';
-import { type MatterClusterInterface } from './cluster';
-import type { Device } from '../../device/device';
-import type { MatterCluster } from './cluster';
+import type {
+	Groups,
+	OnOffCluster,
+	PowerSource,
+	WindowCovering,
+} from '@matter/main/clusters';
+import { MappedAsyncEventEmitter } from '../../../lib/event-emitter';
+import { MatterServerInputMessageType } from '../server/server';
+import type { LevelControl } from '@matter/main/clusters';
+import type { WritableAttribute } from '@matter/types';
+import { DeviceStatus } from '../../device/device';
 import type { MatterClient } from './client';
 
-export class MatterEndpoint {
-	public endpoints: MatterEndpoint[] = [];
-	public clusters: MatterCluster<MatterClusterInterface>[] = [];
-
-	readonly #nodeId: string;
-	readonly #endpointNumber: string;
-	readonly #matterClient: MatterClient;
-	readonly #clusterMeta: DeviceCluster[];
+export abstract class MatterCluster<IF extends MatterClusterInterface>
+	implements Cluster
+{
+	public readonly proxy: ClusterProxy<IF>;
 
 	public constructor(
 		nodeId: string,
 		endpointNumber: string,
-		clusterMeta: DeviceCluster[],
-		matterClient: MatterClient,
-		endpointMeta: DeviceEndpoint[]
+		id: ClusterId,
+		name: string,
+		matterClient: MatterClient
 	) {
-		this.#nodeId = nodeId;
-		this.#endpointNumber = endpointNumber;
-		this.#matterClient = matterClient;
-		this.#clusterMeta = clusterMeta;
-		this.endpoints = endpointMeta.map(
-			(endpoint) =>
-				new MatterEndpoint(
-					this.#nodeId,
-					endpoint.number,
-					endpoint.clusterMeta,
-					matterClient,
-					endpoint.endpoints
-				)
-		);
-		this.clusters = this._getClusters();
-	}
-
-	protected _getClusters(): MatterCluster<MatterClusterInterface>[] {
-		const clusters: MatterCluster<MatterClusterInterface>[] = [];
-		for (const clusterMeta of this.#clusterMeta) {
-			const ClusterWithName =
-				clusterMeta.name in MATTER_CLUSTERS
-					? MATTER_CLUSTERS[
-							clusterMeta.name as keyof typeof MATTER_CLUSTERS
-						]
-					: null;
-			if (!ClusterWithName) {
-				if (!IGNORED_MATTER_CLUSTERS.includes(clusterMeta.name)) {
-					console.error(
-						`${this.#nodeId}/${this.#endpointNumber}: Cluster ${clusterMeta.name} not found`
-					);
-				}
-				continue;
-			}
-			clusters.push(
-				new ClusterWithName(
-					this.#nodeId,
-					this.#endpointNumber,
-					clusterMeta.id,
-					clusterMeta.name,
-					this.#matterClient
-				)
-			);
-		}
-		return clusters;
-	}
-
-	public onAttributeChanged(
-		attributePath: string[],
-		newValue: unknown
-	): void {
-		for (const device of this.clusters) {
-			device.proxy.onAttributeChanged(attributePath, newValue);
-		}
-	}
-}
-export class MatterDevice extends MatterEndpoint implements Device {
-	public recursiveClusters: MatterCluster<MatterClusterInterface>[];
-	public recursiveEndpoints: MatterEndpoint[];
-	readonly #rootEndpointNumber: string;
-	readonly #nodeId: string;
-
-	public constructor(
-		nodeId: string,
-		rootEndpointNumber: string,
-		public name: string,
-		matterClient: MatterClient,
-		clusterMeta: DeviceCluster[],
-		endpointMeta: DeviceEndpoint[]
-	) {
-		super(
+		this.proxy = new ClusterProxy(
 			nodeId,
-			rootEndpointNumber,
-			clusterMeta,
-			matterClient,
-			endpointMeta
+			endpointNumber,
+			id,
+			name,
+			matterClient
 		);
-		this.#rootEndpointNumber = rootEndpointNumber;
-		this.#nodeId = nodeId;
-		this.recursiveClusters = [];
-		this.recursiveEndpoints = [];
-		const walkRecursives = (device: MatterEndpoint): void => {
-			for (const cluster of device.clusters) {
-				this.recursiveClusters.push(cluster);
-			}
-			for (const endpoint of device.endpoints) {
-				this.recursiveEndpoints.push(endpoint);
-				walkRecursives(endpoint);
-			}
-		};
-		walkRecursives(this);
 	}
-
-	public getUniqueId(): string {
-		return `matter:${this.#nodeId}:${this.#rootEndpointNumber}`;
-	}
-}
-<<<<<<< HEAD
-
-interface MatterCluster extends Cluster {
-	proxy: ClusterProxy<ClusterInterface>;
 }
 
 type AttributeType<A extends Attribute<unknown, BitSchema>> =
@@ -162,12 +60,20 @@ type CommandTypes<C extends Command<unknown, unknown, BitSchema>> =
 			}
 		: never;
 
-interface ClusterInterface {
+type WritableAttributes<
+	ATTR extends Record<string, Attribute<unknown, BitSchema>>,
+> = {
+	[K in keyof ATTR]: ATTR[K] extends WritableAttribute<unknown, BitSchema>
+		? K
+		: never;
+}[keyof ATTR];
+
+export interface MatterClusterInterface {
 	attributes: Record<string, Attribute<unknown, BitSchema>>;
 	commands: Record<string, Command<unknown, unknown, BitSchema>>;
 }
 
-class ClusterProxy<C extends ClusterInterface> {
+class ClusterProxy<C extends MatterClusterInterface> {
 	#attributes: Record<string, MappedAsyncEventEmitter<unknown>> = {};
 	readonly #matterClient: MatterClient;
 
@@ -188,14 +94,17 @@ class ClusterProxy<C extends ClusterInterface> {
 		const attributePathString = attributePath.join('.');
 
 		const attribute = this.#attributes[attributePathString];
-		attribute.emit(newValue);
+		void attribute.emit(newValue);
 	}
 
-	public attribute<
+	public attributeGetter<
 		A extends Extract<keyof C['attributes'], string>,
 		AT extends AttributeType<C['attributes'][A]>,
 		R = AT,
-	>(attribute: A, mapper?: (value: AT) => R): MappedAsyncEventEmitter<AT, R> {
+	>(
+		attribute: A,
+		mapper?: (value: AT) => R | Promise<R>
+	): MappedAsyncEventEmitter<AT, R> {
 		const eventEmitter = new MappedAsyncEventEmitter<AT, R>(mapper, () =>
 			this.#matterClient.request({
 				type: MatterServerInputMessageType.GetAttribute,
@@ -212,24 +121,57 @@ class ClusterProxy<C extends ClusterInterface> {
 		return eventEmitter;
 	}
 
+	public attributeSetter<
+		A extends Extract<WritableAttributes<C['attributes']>, string>,
+		AT extends AttributeType<C['attributes'][A]>,
+		I,
+	>(
+		attribute: A,
+		mapper: (value: I) => AT | Promise<AT>
+	): (value: I) => Promise<void> {
+		return async (value: I) => {
+			const mapped = await mapper(value);
+			await this.#matterClient.request({
+				type: MatterServerInputMessageType.SetAttribute,
+				arguments: [
+					this.nodeId,
+					this.endpointNumber,
+					this.id,
+					attribute,
+					mapped,
+				],
+			});
+		};
+	}
+
 	public command<M extends Extract<keyof C['commands'], string>, R>(
 		command: M,
 		mappers: {
-			input: () => CommandTypes<C['commands'][M]>['args'];
+			input: () =>
+				| CommandTypes<C['commands'][M]>['args']
+				| Promise<CommandTypes<C['commands'][M]>['args']>;
 			output: (value: CommandTypes<C['commands'][M]>['response']) => R;
 		}
 	): () => Promise<R>;
 	public command<M extends Extract<keyof C['commands'], string>, A, R>(
 		command: M,
 		mappers: {
-			input: (value: A) => CommandTypes<C['commands'][M]>['args'];
+			input: (
+				value: A
+			) =>
+				| CommandTypes<C['commands'][M]>['args']
+				| Promise<CommandTypes<C['commands'][M]>['args']>;
 			output: (value: CommandTypes<C['commands'][M]>['response']) => R;
 		}
 	): (args: A) => Promise<R>;
 	public command<M extends Extract<keyof C['commands'], string>, A = void>(
 		command: M,
 		mappers: {
-			input: (value: A) => CommandTypes<C['commands'][M]>['args'];
+			input: (
+				value: A
+			) =>
+				| CommandTypes<C['commands'][M]>['args']
+				| Promise<CommandTypes<C['commands'][M]>['args']>;
 		}
 	): (args: A) => Promise<CommandTypes<C['commands'][M]>['response']>;
 	public command<M extends Extract<keyof C['commands'], string>, R = void>(
@@ -250,13 +192,17 @@ class ClusterProxy<C extends ClusterInterface> {
 	>(
 		command: M,
 		mappers?: {
-			input?: (value: A) => CommandTypes<C['commands'][M]>['args'];
+			input?: (
+				value: A
+			) =>
+				| CommandTypes<C['commands'][M]>['args']
+				| Promise<CommandTypes<C['commands'][M]>['args']>;
 			output?: (value: CommandTypes<C['commands'][M]>['response']) => R;
 		}
 	): (args: A) => Promise<CommandTypes<C['commands'][M]>['response']> {
 		return async (args: A) => {
 			const mappedInput = mappers?.input
-				? mappers.input(args)
+				? await mappers.input(args)
 				: (args as unknown);
 			const payload: unknown[] =
 				mappedInput === undefined
@@ -283,12 +229,15 @@ class ClusterProxy<C extends ClusterInterface> {
 	}
 }
 
-export class MatterOnOffCluster extends OnOffDevice implements MatterCluster {
-	public constructor(public readonly proxy: ClusterProxy<OnOffCluster>) {
-		super();
+export class MatterOnOffCluster
+	extends MatterCluster<OnOffCluster>
+	implements DeviceOnOffCluster
+{
+	public static get clusterName(): string {
+		return 'OnOff';
 	}
 
-	public isOn = this.proxy.attribute('onOff');
+	public isOn = this.proxy.attributeGetter('onOff');
 
 	public setOn(on: boolean): Promise<void> {
 		if (on) {
@@ -302,24 +251,22 @@ export class MatterOnOffCluster extends OnOffDevice implements MatterCluster {
 }
 
 export class MatterWindowCoveringCluster
-	extends WindowCoveringDevice
-	implements MatterCluster
+	extends MatterCluster<WindowCovering.Complete>
+	implements DeviceWindowCoveringCluster
 {
-	public constructor(
-		public readonly proxy: ClusterProxy<WindowCovering.Complete>
-	) {
-		super();
+	public static get clusterName(): string {
+		return 'WindowCovering';
 	}
 
-	public currentPositionLiftPercentage = this.proxy.attribute(
+	public currentPositionLiftPercentage = this.proxy.attributeGetter(
 		'currentPositionLiftPercentage',
 		(num) => num ?? 0
 	);
-	public targetPositionLiftPercentage = this.proxy.attribute(
+	public targetPositionLiftPercentage = this.proxy.attributeGetter(
 		'targetPositionLiftPercent100ths',
 		(num) => (num ? num / 100 : 0)
 	);
-	public operationalStatus = this.proxy.attribute('operationalStatus');
+	public operationalStatus = this.proxy.attributeGetter('operationalStatus');
 
 	public close = this.proxy.command('downOrClose');
 
@@ -338,61 +285,67 @@ export class MatterWindowCoveringCluster
 }
 
 export class MatterLevelControlCluster
-	extends LevelControlDevice
-	implements MatterCluster
+	extends MatterCluster<LevelControl.Complete>
+	implements DeviceLevelControlCluster
 {
-	public constructor(
-		public readonly proxy: ClusterProxy<LevelControl.Complete>
-	) {
-		super();
+	public static get clusterName(): string {
+		return 'LevelControl';
 	}
 
-	public currentLevel = this.proxy.attribute(
+	private _minLevel = this.proxy.attributeGetter(
 		'currentLevel',
 		(v: number | null | undefined) => v ?? 0
 	);
+	private _maxLevel = this.proxy.attributeGetter(
+		'maxLevel',
+		(v: number | null | undefined) => v ?? 0
+	);
+	private async _valueToFloat(v: number | null | undefined) {
+		const value = v ?? 0;
+		const [minLevel, maxLevel] = await Promise.all([
+			this._minLevel.value,
+			this._maxLevel.value,
+		]);
+		return (value - minLevel) / (maxLevel - minLevel);
+	}
+	private async _floatToValue(f: number) {
+		const [minLevel, maxLevel] = await Promise.all([
+			this._minLevel.value,
+			this._maxLevel.value,
+		]);
+		return minLevel + (maxLevel - minLevel) * f;
+	}
 
-	public moveToLevel = this.proxy.command<
+	/**
+	 * Float from 0 to 1
+	 */
+	public currentLevel = this.proxy.attributeGetter(
+		'currentLevel',
+		this._valueToFloat.bind(this)
+	);
+
+	/**
+	 * Float from 0 to 1
+	 */
+	public startupLevel = this.proxy.attributeGetter(
+		'startUpCurrentLevel',
+		this._valueToFloat.bind(this)
+	);
+
+	/**
+	 * Float from 0 to 1
+	 */
+	public setStartupLevel = this.proxy.attributeSetter(
+		'startUpCurrentLevel',
+		({ level }) => this._floatToValue(level)
+	);
+
+	public setLevel = this.proxy.command<
 		'moveToLevel',
 		{ level: number; transitionTimeDs?: number }
 	>('moveToLevel', {
-		input: ({ level, transitionTimeDs }) => ({
-			level,
-			transitionTime: transitionTimeDs ?? null,
-			optionsMask: {},
-			optionsOverride: {},
-		}),
-	});
-
-	public move = this.proxy.command<
-		'move',
-		{ direction: 'Up' | 'Down'; rate?: number }
-	>('move', {
-		input: ({ direction, rate }) => ({
-			moveMode:
-				direction === 'Up'
-					? LevelControl.MoveMode.Up
-					: LevelControl.MoveMode.Down,
-			rate: rate ?? null,
-			optionsMask: {},
-			optionsOverride: {},
-		}),
-	});
-
-	public step = this.proxy.command<
-		'step',
-		{
-			direction: 'Up' | 'Down';
-			stepSize: number;
-			transitionTimeDs?: number;
-		}
-	>('step', {
-		input: ({ direction, stepSize, transitionTimeDs }) => ({
-			stepMode:
-				direction === 'Up'
-					? LevelControl.StepMode.Up
-					: LevelControl.StepMode.Down,
-			stepSize,
+		input: async ({ level, transitionTimeDs }) => ({
+			level: await this._floatToValue(level),
 			transitionTime: transitionTimeDs ?? null,
 			optionsMask: {},
 			optionsOverride: {},
@@ -408,21 +361,22 @@ export class MatterLevelControlCluster
 }
 
 export class MatterPowerSourceCluster
-	extends PowerSourceDevice
-	implements MatterCluster
+	extends MatterCluster<PowerSource.Complete>
+	implements DevicePowerSourceCluster
 {
-	public constructor(
-		public readonly proxy: ClusterProxy<PowerSource.Complete>
-	) {
-		super();
+	public static get clusterName(): string {
+		return 'PowerSource';
 	}
 
-	public batteryChargeLevel = this.proxy.attribute('batChargeLevel');
+	public batteryChargeLevel = this.proxy.attributeGetter('batChargeLevel');
 }
 
-export class MatterGroupsCluster extends GroupsDevice implements MatterCluster {
-	public constructor(public readonly proxy: ClusterProxy<Groups.Cluster>) {
-		super();
+export class MatterGroupsCluster
+	extends MatterCluster<Groups.Cluster>
+	implements DeviceGroupsCluster
+{
+	public static get clusterName(): string {
+		return 'Groups';
 	}
 
 	public addGroup = this.proxy.command('addGroup', {
@@ -466,22 +420,6 @@ export class MatterGroupsCluster extends GroupsDevice implements MatterCluster {
 	});
 }
 
-export class MatterOccupancySensingCluster
-	extends OccupancySensingDevice
-	implements MatterCluster
-{
-	public constructor(
-		public readonly proxy: ClusterProxy<OccupancySensing.Complete>
-	) {
-		super();
-	}
-
-	public occupancy = this.proxy.attribute(
-		'occupancy',
-		({ occupied }) => occupied ?? false
-	);
-}
-
 function fromMatterStatus(status: Status): DeviceStatus {
 	switch (status) {
 		case Status.Success:
@@ -500,35 +438,24 @@ function toMatterGroupId(groupId: DeviceGroupId): GroupId {
 	return GroupId(groupId);
 }
 
-const CLUSTERS = {
+export const MATTER_CLUSTERS = {
 	[MatterOnOffCluster.clusterName]: MatterOnOffCluster,
 	[MatterWindowCoveringCluster.clusterName]: MatterWindowCoveringCluster,
 	[MatterLevelControlCluster.clusterName]: MatterLevelControlCluster,
 	[MatterPowerSourceCluster.clusterName]: MatterPowerSourceCluster,
 	[MatterGroupsCluster.clusterName]: MatterGroupsCluster,
-	[MatterOccupancySensingCluster.clusterName]: MatterOccupancySensingCluster,
 	// Switch: MatterSwitchCluster,
 	// BooleanState: MatterBooleanStateCluster,
 	// IlluminanceMeasurement: MatterIlluminanceMeasurementCluster,
 	// TemperatureMeasurement: MatterTemperatureMeasurementCluster,
 	// PressureMeasurement: MatterPressureMeasurementCluster,
 	// RelativeHumidityMeasurement: MatterRelativeHumidityMeasurementCluster,
+	// OccupancySensing: MatterOccupancySensingCluster,
 	// ColorControl: MatterColorControlCluster,
 };
 
-const IGNORED_CLUSTERS = [
+export const IGNORED_MATTER_CLUSTERS = [
 	'Descriptor',
 	'Identify',
 	'BridgedDeviceBasicInformation',
-	'AccessControl',
-	'BasicInformation',
-	'GeneralCommissioning',
-	'NetworkCommissioning',
-	'GeneralDiagnostics',
-	'EthernetNetworkDiagnostics',
-	'AdministratorCommissioning',
-	'OperationalCredentials',
-	'GroupKeyManagement',
 ];
-=======
->>>>>>> 57e18e3 (Add some ewelink clusters)

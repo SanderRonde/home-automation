@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/no-base-to-string */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { EWeLinkWSConnection, WrappedEWeLinkAPI } from './devices/shared';
-import type { EWeLinkSharedConfig } from './devices/shared';
+import { EWeLinkWSConnection, WrappedEWeLinkAPI } from './client/clusters/shared';
+import type { EWeLinkSharedConfig } from './client/clusters/shared';
 import eWelink from '../../../../temp/ewelink-api-next';
 import { queueEwelinkTokenRefresh } from './routing';
-import onEWeLinkDevices from '../../config/ewelink';
 import { EWELINK_DEBUG } from '../../lib/constants';
 import { logTag } from '../../lib/logging/logger';
 import type { Database } from '../../lib/db';
 import type { AllModules } from '..';
+import { EwelinkDevice } from './client/device';
 
 export type LinkEWeLinkDevice = (
 	id: string,
@@ -113,17 +113,22 @@ export async function initEWeLinkAPI(
 			thingList: EwelinkDeviceResponse[] | undefined;
 		};
 	};
-	await onEWeLinkDevices(async (id, onDevice) => {
-		const device = devices?.find((d) => d.itemData.deviceid === id);
-		if (device) {
-			await onDevice({
-				device,
-				connection: new WrappedEWeLinkAPI(api),
-				wsConnection: wsConnectionWrapper,
-				modules,
-			});
+
+	const ewelinkDevices = [];
+	for (const device of devices ?? []) {
+		console.log('device', device)
+		const ewelinkDevice = EwelinkDevice.from({
+			device,
+			connection: new WrappedEWeLinkAPI(api),
+			wsConnection: wsConnectionWrapper,
+			modules,
+		})
+		if (ewelinkDevice) {
+			ewelinkDevices.push(ewelinkDevice)
 		}
-	}, modules);
+	}
+	console.log('ewelink devices', ewelinkDevices)
+
 	logTag('ewelink', 'blue', 'API connection established');
 
 	let wsRefresh = undefined;

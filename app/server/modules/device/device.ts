@@ -6,21 +6,17 @@
 // Roughly translates to a Matter endpoint
 export interface Device {
 	getUniqueId(): string;
-	clusters: Cluster[];
+	readonly clusters: Cluster[];
 }
 
 export type DeviceAttribute<T> = {
-	value: Promise<T>;
+	value: Promise<T|null>;
 	listen(handler: (value: T) => void): () => void;
 };
 
 export abstract class Cluster {}
 
-export abstract class OnOffDevice extends Cluster {
-	public static get clusterName(): string {
-		return 'OnOff';
-	}
-
+export abstract class DeviceOnOffCluster extends Cluster {
 	public abstract isOn: DeviceAttribute<boolean>;
 
 	public abstract setOn(on: boolean): Promise<void>;
@@ -28,7 +24,7 @@ export abstract class OnOffDevice extends Cluster {
 	public abstract toggle(): Promise<void>;
 }
 
-export abstract class WindowCoveringDevice extends Cluster {
+export abstract class DeviceWindowCoveringCluster extends Cluster {
 	public static get clusterName(): string {
 		return 'WindowCovering';
 	}
@@ -46,15 +42,35 @@ export abstract class WindowCoveringDevice extends Cluster {
 	}): Promise<void>;
 }
 
-export abstract class LevelControlDevice extends Cluster {
+export abstract class DeviceLevelControlCluster extends Cluster {
 	public static get clusterName(): string {
 		return 'LevelControl';
 	}
 
+	/**
+	 * Float from 0 to 1
+	 */
 	public abstract currentLevel: DeviceAttribute<number>;
+
+	/**
+	 * Float from 0 to 1
+	 */
+	public abstract startupLevel: DeviceAttribute<number>;
+
+	public abstract setLevel(args: {
+		level: number;
+		transitionTimeDs?: number;
+	}): Promise<void>;
+
+	public abstract setStartupLevel(args: {
+		level: number;
+		transitionTimeDs?: number;
+	}): Promise<void>;
+
+	public abstract stop(): Promise<void>;
 }
 
-export abstract class PowerSourceDevice extends Cluster {
+export abstract class DevicePowerSourceCluster extends Cluster {
 	public static get clusterName(): string {
 		return 'PowerSource';
 	}
@@ -62,7 +78,7 @@ export abstract class PowerSourceDevice extends Cluster {
 	public abstract batteryChargeLevel: DeviceAttribute<number>;
 }
 
-export abstract class GroupsDevice extends Cluster {
+export abstract class DeviceGroupsCluster extends Cluster {
 	public static get clusterName(): string {
 		return 'Groups';
 	}

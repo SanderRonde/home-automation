@@ -19,6 +19,7 @@ export abstract class SwitchbotDeviceBase {
 			onMessage: (handler: (value: SwitchbotAdvertisement) => void) => {
 				const emitter = this._api.onMessage(this.mac);
 				emitter.listen(handler);
+				return () => emitter.removeListener(handler);
 			},
 			sendCommand: (command: Omit<SwitchBotCommand, 'mac'>) =>
 				this._api.sendCommand({ mac: this.mac, ...command }),
