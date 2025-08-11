@@ -4,8 +4,16 @@ import {
 	LevelControlDevice,
 	PowerSourceDevice,
 	GroupsDevice,
+	OccupancySensingDevice,
 	DeviceStatus,
 } from '../../device/device';
+import type {
+	Groups,
+	OnOffCluster,
+	OccupancySensing,
+	PowerSource,
+	WindowCovering,
+} from '@matter/main/clusters';
 import {
 	GroupId,
 	Status,
@@ -14,12 +22,6 @@ import {
 	type ClusterId,
 	type Command,
 } from '@matter/types';
-import type {
-	Groups,
-	OnOffCluster,
-	PowerSource,
-	WindowCovering,
-} from '@matter/main/clusters';
 import type { Cluster, Device, DeviceGroupId } from '../../device/device';
 import type { DeviceCluster, DeviceEndpoint } from '../server/server';
 import { MappedAsyncEventEmitter } from '../../../lib/event-emitter';
@@ -460,6 +462,22 @@ export class MatterGroupsCluster extends GroupsDevice implements MatterCluster {
 	});
 }
 
+export class MatterOccupancySensingCluster
+	extends OccupancySensingDevice
+	implements MatterCluster
+{
+	public constructor(
+		public readonly proxy: ClusterProxy<OccupancySensing.Complete>
+	) {
+		super();
+	}
+
+	public occupancy = this.proxy.attribute(
+		'occupancy',
+		({ occupied }) => occupied ?? false
+	);
+}
+
 function fromMatterStatus(status: Status): DeviceStatus {
 	switch (status) {
 		case Status.Success:
@@ -484,13 +502,13 @@ const CLUSTERS = {
 	[MatterLevelControlCluster.clusterName]: MatterLevelControlCluster,
 	[MatterPowerSourceCluster.clusterName]: MatterPowerSourceCluster,
 	[MatterGroupsCluster.clusterName]: MatterGroupsCluster,
+	[MatterOccupancySensingCluster.clusterName]: MatterOccupancySensingCluster,
 	// Switch: MatterSwitchCluster,
 	// BooleanState: MatterBooleanStateCluster,
 	// IlluminanceMeasurement: MatterIlluminanceMeasurementCluster,
 	// TemperatureMeasurement: MatterTemperatureMeasurementCluster,
 	// PressureMeasurement: MatterPressureMeasurementCluster,
 	// RelativeHumidityMeasurement: MatterRelativeHumidityMeasurementCluster,
-	// OccupancySensing: MatterOccupancySensingCluster,
 	// ColorControl: MatterColorControlCluster,
 };
 
@@ -498,4 +516,13 @@ const IGNORED_CLUSTERS = [
 	'Descriptor',
 	'Identify',
 	'BridgedDeviceBasicInformation',
+	'AccessControl',
+	'BasicInformation',
+	'GeneralCommissioning',
+	'NetworkCommissioning',
+	'GeneralDiagnostics',
+	'EthernetNetworkDiagnostics',
+	'AdministratorCommissioning',
+	'OperationalCredentials',
+	'GroupKeyManagement',
 ];

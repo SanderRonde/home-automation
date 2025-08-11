@@ -91,6 +91,14 @@ export abstract class GroupsDevice extends Cluster {
 	}>;
 }
 
+export abstract class OccupancySensingDevice extends Cluster {
+	public static get clusterName(): string {
+		return 'OccupancySensing';
+	}
+
+	public abstract occupancy: DeviceAttribute<boolean>;
+}
+
 export type DeviceGroupId = number & {
 	__brand: 'DeviceGroupId';
 };
