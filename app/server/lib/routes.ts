@@ -8,7 +8,6 @@ import bodyParser from 'body-parser';
 import type express from 'express';
 import { getEnv } from './io';
 import * as path from 'path';
-import pm2 from '@pm2/io';
 import chalk from 'chalk';
 import glob from 'glob';
 
@@ -113,7 +112,6 @@ export function initPostRoutes({
 			}
 			res.status(500).write('Internal server error');
 			LogObj.fromIncomingReq(req, res).reportError(err, config);
-			pm2.expressErrorHandler()(err, req, res, () => {});
 			res.end();
 		}
 	});

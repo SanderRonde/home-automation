@@ -3,11 +3,10 @@ import {
 	initAnnotatorRoutes,
 	initPostRoutes,
 } from './lib/routes';
-import { hasArg, getArg, getNumberArg, getNumberEnv, getEnv } from './lib/io';
-import { logReady, logTag, warning } from './lib/logging/logger';
+import { hasArg, getArg, getNumberArg, getNumberEnv } from './lib/io';
 import { ProgressLogger } from './lib/logging/progress-logger';
-import { ProfilingIntegration } from '@sentry/profiling-node';
 import type { BaseModuleConfig } from './modules/modules';
+import { logReady, logTag } from './lib/logging/logger';
 import { printCommands } from './modules/bot/helpers';
 import { notifyAllModules } from './modules/modules';
 import { WSSimulator, WSWrapper } from './lib/ws';
@@ -15,15 +14,11 @@ import { LogObj } from './lib/logging/lob-obj';
 import type { AllModules } from './modules';
 import { SQLDatabase } from './lib/sql-db';
 import { getAllModules } from './modules';
-import * as Sentry from '@sentry/node';
-import { exec } from 'child_process';
 import { Database } from './lib/db';
 import { wait } from './lib/util';
 import 'express-async-errors';
 import express from 'express';
-import * as path from 'path';
 import * as http from 'http';
-import PM2 from '@pm2/io';
 
 interface PartialConfig {
 	ports?: {
@@ -75,7 +70,7 @@ class WebServer {
 				// In debug mode always log errors to console
 				errorLogPath: config.debug
 					? null
-					: config?.log?.errorLogPath ?? null,
+					: (config?.log?.errorLogPath ?? null),
 			},
 			debug: config.debug || false,
 			instant: config.instant || false,
@@ -156,45 +151,9 @@ class WebServer {
 			'Server start',
 			8 + Object.keys(getAllModules(false)).length
 		);
-		PM2.init({
-			catchExceptions: true,
-			tracing: {
-				enabled: true,
-			},
-		});
 		this._initLogger.increment('IO');
 
 		this.app = express();
-		const sentryEnv = getEnv('SECRET_SENTRY_DSN');
-		if (sentryEnv) {
-			const release = await new Promise<string>((resolve) => {
-				exec(
-					'git rev-parse HEAD',
-					{
-						cwd: path.join(__dirname, '../../'),
-					},
-					(err, stdout) => {
-						if (err) {
-							warning('Failed to get git commit hash');
-							resolve('???');
-						} else {
-							resolve(stdout.trim());
-						}
-					}
-				);
-			});
-			Sentry.init({
-				dsn: sentryEnv,
-				integrations: [
-					new Sentry.Integrations.Http({ tracing: true }),
-					new Sentry.Integrations.Express({ app: this.app }),
-					new ProfilingIntegration(),
-				],
-				release,
-				tracesSampleRate: 1,
-				profilesSampleRate: 1.0,
-			});
-		}
 
 		this._initLogger.increment('express');
 		initMiddleware(this._getModuleConfig().app);
