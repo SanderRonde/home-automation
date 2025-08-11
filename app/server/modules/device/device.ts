@@ -107,7 +107,7 @@ export abstract class DeviceGroupsCluster extends Cluster {
 	}>;
 }
 
-export abstract class OccupancySensingDevice extends Cluster {
+export abstract class DeviceOccupancySensingCluster extends Cluster {
 	public static get clusterName(): string {
 		return 'OccupancySensing';
 	}

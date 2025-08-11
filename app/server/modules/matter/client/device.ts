@@ -5,7 +5,7 @@ import {
 	LevelControlDevice,
 	PowerSourceDevice,
 	GroupsDevice,
-	OccupancySensingDevice,
+	DeviceOccupancySensingCluster,
 	DeviceStatus,
 } from '../../device/device';
 import type {

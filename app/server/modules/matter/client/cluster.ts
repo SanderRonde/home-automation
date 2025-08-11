@@ -6,7 +6,15 @@ import type {
 	DeviceLevelControlCluster,
 	DevicePowerSourceCluster,
 	DeviceGroupsCluster,
+	DeviceOccupancySensingCluster,
 } from '../../device/device';
+import type {
+	Groups,
+	OccupancySensing,
+	OnOffCluster,
+	PowerSource,
+	WindowCovering,
+} from '@matter/main/clusters';
 import {
 	GroupId,
 	Status,
@@ -15,12 +23,6 @@ import {
 	type ClusterId,
 	type Command,
 } from '@matter/types';
-import type {
-	Groups,
-	OnOffCluster,
-	PowerSource,
-	WindowCovering,
-} from '@matter/main/clusters';
 import { MappedAsyncEventEmitter } from '../../../lib/event-emitter';
 import { MatterServerInputMessageType } from '../server/server';
 import type { LevelControl } from '@matter/main/clusters';
@@ -369,6 +371,20 @@ export class MatterPowerSourceCluster
 	}
 
 	public batteryChargeLevel = this.proxy.attributeGetter('batChargeLevel');
+}
+
+export class MatterOccupancySensingCluster
+	extends MatterCluster<OccupancySensing.Complete>
+	implements DeviceOccupancySensingCluster
+{
+	public static get clusterName(): string {
+		return 'OccupancySensing';
+	}
+
+	public occupancy = this.proxy.attributeGetter(
+		'occupancy',
+		(state) => state?.occupied ?? false
+	);
 }
 
 export class MatterGroupsCluster
