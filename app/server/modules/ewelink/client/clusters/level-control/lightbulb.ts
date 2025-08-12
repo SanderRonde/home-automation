@@ -21,7 +21,8 @@ export class EwelinkLevelControlClusterLightbulb extends EwelinkLevelControlClus
 	protected _toState(
 		state: EwelinkLevelControlClusterState
 	): EwelinkLightPowerPowerParams {
-		const currentState = this._eWeLinkConfig.device.itemData.params as EwelinkLightPowerPowerParams;
+		const currentState = this._eWeLinkConfig.device.itemData
+			.params as EwelinkLightPowerPowerParams;
 		if (!currentState.ltype) {
 			return {} as EwelinkLightPowerPowerParams;
 		}

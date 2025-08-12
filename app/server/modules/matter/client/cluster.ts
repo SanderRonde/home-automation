@@ -7,7 +7,7 @@ import type {
 	DevicePowerSourceCluster,
 	DeviceGroupsCluster,
 	DeviceOccupancySensingCluster,
-} from '../../device/device';
+} from '../../device/cluster';
 import type {
 	Groups,
 	OccupancySensing,
@@ -27,7 +27,7 @@ import { MappedAsyncEventEmitter } from '../../../lib/event-emitter';
 import { MatterServerInputMessageType } from '../server/server';
 import type { LevelControl } from '@matter/main/clusters';
 import type { WritableAttribute } from '@matter/types';
-import { DeviceStatus } from '../../device/device';
+import { DeviceStatus } from '../../device/cluster';
 import type { MatterClient } from './client';
 
 export abstract class MatterCluster<IF extends MatterClusterInterface>
@@ -370,7 +370,10 @@ export class MatterPowerSourceCluster
 		return 'PowerSource';
 	}
 
-	public batteryChargeLevel = this.proxy.attributeGetter('batChargeLevel');
+	public batteryChargeLevel = this.proxy.attributeGetter(
+		'batPercentRemaining',
+		(value) => (value ? value / 200 : null)
+	);
 }
 
 export class MatterOccupancySensingCluster
@@ -460,14 +463,6 @@ export const MATTER_CLUSTERS = {
 	[MatterLevelControlCluster.clusterName]: MatterLevelControlCluster,
 	[MatterPowerSourceCluster.clusterName]: MatterPowerSourceCluster,
 	[MatterGroupsCluster.clusterName]: MatterGroupsCluster,
-	// Switch: MatterSwitchCluster,
-	// BooleanState: MatterBooleanStateCluster,
-	// IlluminanceMeasurement: MatterIlluminanceMeasurementCluster,
-	// TemperatureMeasurement: MatterTemperatureMeasurementCluster,
-	// PressureMeasurement: MatterPressureMeasurementCluster,
-	// RelativeHumidityMeasurement: MatterRelativeHumidityMeasurementCluster,
-	// OccupancySensing: MatterOccupancySensingCluster,
-	// ColorControl: MatterColorControlCluster,
 };
 
 export const IGNORED_MATTER_CLUSTERS = [

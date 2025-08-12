@@ -8,29 +8,26 @@ import bodyParser from 'body-parser';
 import type express from 'express';
 import { getEnv } from './io';
 import * as path from 'path';
+import { glob } from 'glob';
 import chalk from 'chalk';
-import glob from 'glob';
 
 export function initAnnotatorRoutes(app: express.Express): void {
 	app.all('/annotator/files', (_req, res) => {
-		glob(
-			path.join(__dirname, '../../../', 'ai/files', '*.wav'),
-			{},
-			(err: Error | null, files: string[]) => {
-				if (err) {
-					res.status(500);
-					res.end();
-				} else {
-					res.status(200);
-					res.write(
-						JSON.stringify({
-							files: files.map((file: string) =>
-								file.split('/').pop()
-							),
-						})
-					);
-					res.end();
-				}
+		glob(path.join(__dirname, '../../../', 'ai/files', '*.wav'), {}).then(
+			(files) => {
+				res.status(200);
+				res.write(
+					JSON.stringify({
+						files: files.map((file: string) =>
+							file.split('/').pop()
+						),
+					})
+				);
+				res.end();
+			},
+			() => {
+				res.status(500);
+				res.end();
 			}
 		);
 	});

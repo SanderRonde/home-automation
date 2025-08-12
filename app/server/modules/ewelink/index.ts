@@ -1,5 +1,5 @@
-import eWelink from '../../../../temp/ewelink-api-next';
 import { initRouting } from './routing';
+import eWelink from 'ewelink-api-next';
 import { initEWeLinkAPI } from './api';
 import type { ModuleConfig } from '..';
 import { getEnv } from '../../lib/io';
@@ -32,10 +32,7 @@ export const EWeLink = new (class EWeLink extends ModuleMeta {
 
 	public init(config: ModuleConfig<EWeLink>) {
 		initRouting(config, this._api);
-		void (async () => {
-			const modules = await this.modules;
-			await initEWeLinkAPI(config.db, modules, this._api);
-		})();
+		void initEWeLinkAPI(config.db, this._api);
 	}
 
 	public async onBackOnline() {

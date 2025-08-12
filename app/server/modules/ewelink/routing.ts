@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import type eWelink from '../../../../temp/ewelink-api-next';
 import type { EWeLink, ModuleConfig } from '..';
 import type { Database } from '../../lib/db';
+import type eWelink from 'ewelink-api-next';
 import { getEnv } from '../../lib/io';
 
 export function initRouting(

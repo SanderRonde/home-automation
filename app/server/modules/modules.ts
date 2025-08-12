@@ -7,14 +7,14 @@ import { Webhook } from './webhook';
 import { EWeLink } from './ewelink';
 import { Secret } from './secret/';
 import { Notion } from './notion/';
-import { KeyVal } from './keyval';
 import { Matter } from './matter';
+import { KeyVal } from './keyval';
 import { Device } from './device';
 import { OAuth } from './oauth/';
 import { Auth } from './auth';
 import { Hue } from './hue/';
-import { Bot } from './bot';
 import { RGB } from './rgb';
+import { Bot } from './bot';
 
 import type { AsyncExpressApplication } from '../types/express';
 import type { SQLDatabaseWithSchema } from '../lib/sql-db';

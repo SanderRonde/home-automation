@@ -1,6 +1,7 @@
 import { SettablePromise } from './util';
+import util from 'util';
 
-export class EventEmitter<V, M = V> {
+export class EventEmitter<V, M = V> implements Disposable {
 	protected _handlers: Set<(value: M) => void> = new Set();
 
 	public constructor() {}
@@ -28,6 +29,14 @@ export class EventEmitter<V, M = V> {
 	public emit(value: V | null | undefined): void {
 		this._emit(value as unknown as M);
 	}
+
+	public [util.inspect.custom](): string {
+		return `${this.constructor.name} { }`;
+	}
+
+	public [Symbol.dispose](): void {
+		this._handlers.clear();
+	}
 }
 
 export class AsyncEventEmitter<V, M = V> extends EventEmitter<V, M> {
@@ -48,30 +57,40 @@ export class AsyncEventEmitter<V, M = V> extends EventEmitter<V, M> {
 				void this.initializer().then((value) => this.emit(value));
 			}
 		}
-		return this._value ? Promise.resolve(this._value) : this._initialValue.value;
+		return this._value
+			? Promise.resolve(this._value)
+			: this._initialValue.value;
 	}
 
 	protected _emit(value: M): void {
-		if (value === this._value) {
+		if (value === this._value || value === undefined) {
 			return;
 		}
 
 		this._initialValue.set(value);
-		this._value = (value);
+		this._value = value;
 
 		super._emit(value);
+	}
+
+	public [util.inspect.custom](): string {
+		return `${this.constructor.name} { value: ${String(this._value)} }`;
 	}
 }
 
 export class MappedAsyncEventEmitter<V, M = V> extends AsyncEventEmitter<V, M> {
 	public constructor(
-		private readonly mapper?: (value: V) => M|Promise<M>,
+		private readonly mapper?: (value: V) => M | Promise<M>,
 		initializer?: () => Promise<V | undefined>
 	) {
 		super(initializer);
 	}
 
 	public async emit(value: V): Promise<void> {
+		if (value === undefined) {
+			return;
+		}
+
 		const mapped = this.mapper
 			? await this.mapper(value)
 			: (value as unknown as M);

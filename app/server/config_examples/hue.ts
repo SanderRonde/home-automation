@@ -1,10 +1,10 @@
 import type { AllModules } from '../../../app/server/modules';
-import type { Api } from 'node-hue-api/dist/esm/api/Api';
 import { MotionSensor } from '../modules/hue/devices';
 import { LogObj } from '../lib/logging/lob-obj';
+import type * as hue from 'node-hue-api';
 
 export async function linkHueDevices(
-	api: Api,
+	api: Awaited<ReturnType<ReturnType<typeof hue.api.createLocal>['connect']>>,
 	modules: AllModules
 ): Promise<void> {
 	const hueSensors = await api.sensors.getAll();

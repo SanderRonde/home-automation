@@ -110,4 +110,5 @@ async function main() {
 	console.log('Server is running on port 3000');
 }
 
+// @ts-expect-error Top-level await
 await main();

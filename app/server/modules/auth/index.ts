@@ -1,4 +1,3 @@
-import { authenticate, getKey } from './secret';
 import { initRoutes } from './routing';
 import type { ModuleConfig } from '..';
 import { ModuleMeta } from '../meta';
@@ -9,5 +8,9 @@ export const Auth = new (class Auth extends ModuleMeta {
 
 	public init(config: ModuleConfig<Auth>) {
 		initRoutes(config);
+	}
+
+	public getSecretKey(): string {
+		return getKey();
 	}
 })();

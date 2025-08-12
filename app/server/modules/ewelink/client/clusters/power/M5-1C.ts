@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 
 import type { EwelinkOnOffClusterState } from '../../cluster';
-import { EwelinkOnOffCluster } from '../../cluster';
 import type { EWeLinkSharedConfig } from '../shared';
+import { EwelinkOnOffCluster } from '../../cluster';
 
 export interface EwelinkOnOffClusterM51CParams {
 	switches: {
@@ -20,13 +20,17 @@ export class EwelinkOnOffClusterM51CSingle extends EwelinkOnOffCluster<EwelinkOn
 		super(eWeLinkConfig);
 	}
 
-	public override _fromState(state: EwelinkOnOffClusterM51CParams): EwelinkOnOffClusterState {
+	public override _fromState(
+		state: EwelinkOnOffClusterM51CParams
+	): EwelinkOnOffClusterState {
 		return {
 			enabled: state.switches[this.outlet].switch === 'on',
 		};
 	}
 
-	public override _toState(state: EwelinkOnOffClusterState): EwelinkOnOffClusterM51CParams {
+	public override _toState(
+		state: EwelinkOnOffClusterState
+	): EwelinkOnOffClusterM51CParams {
 		return {
 			switches: [
 				{

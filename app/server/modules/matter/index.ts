@@ -1,11 +1,10 @@
 import { MatterClient } from './client/client';
-import type { ModuleConfig } from '..';
 import { ModuleMeta } from '../meta';
 
 export const Matter = new (class Matter extends ModuleMeta {
 	public name = 'matter';
 
-	public async init(config: ModuleConfig<Matter>) {
+	public init() {
 		const matterClient = new MatterClient();
 		matterClient.start();
 		console.log('Matter client started');

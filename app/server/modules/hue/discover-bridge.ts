@@ -1,4 +1,3 @@
-import type { Api } from 'node-hue-api/dist/esm/api/Api';
 import { logTag } from '../../lib/logging/logger';
 import * as hue from 'node-hue-api';
 
@@ -18,7 +17,11 @@ export async function createUser(): Promise<void> {
 	);
 }
 
-export async function discoverBridge(username: string): Promise<Api | null> {
+export async function discoverBridge(
+	username: string
+): Promise<ReturnType<
+	ReturnType<typeof hue.api.createLocal>['connect']
+> | null> {
 	const results = await hue.discovery.nupnpSearch();
 	if (!results.length) {
 		return null;

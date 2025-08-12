@@ -328,7 +328,7 @@ export class Batcher<D> {
 		/**
 		 * A function to call with the collected data
 		 */
-		onDispatch(data: D[]): void;
+		onDispatch: (data: D[]) => void;
 	}) {
 		this._minWaitTime = minWaitTime;
 		this._maxWaitTime = maxWaitTime;

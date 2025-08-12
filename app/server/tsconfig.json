@@ -24,5 +24,10 @@
 	},
 	"compileOnSave": true,
 	"allowJs": true,
-	"include": ["./**/*.ts", "../../types/*", "./types"]
+	"include": [
+		"./**/*.ts",
+		"../../types/*",
+		"./types",
+		"../../scripts/**/*.ts"
+	]
 }

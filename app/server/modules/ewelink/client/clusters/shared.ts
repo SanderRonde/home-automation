@@ -1,10 +1,8 @@
-import type { thingInfo as setThingStatusInfo } from 'ewelink-api-next/dist/web/apis/device/setThingStatus';
-import type { thingInfo as getThingStatusInfo } from 'ewelink-api-next/dist/web/apis/device/getThingStatus';
-import type eWelink from '../../../../../temp/ewelink-api-next';
+import { EventEmitter } from '../../../../lib/event-emitter';
 import type { EwelinkDeviceResponse } from '../../api';
 import { AsyncQueue } from '../../../../lib/util';
-import type { AllModules } from '../../..';
-import EventEmitter from 'events';
+import type eWelink from 'ewelink-api-next';
+import util from 'util';
 
 export type EWeLinkUpdateMessage<P = Record<string, string | number>> = {
 	action: 'update';
@@ -26,22 +24,21 @@ export type EWeLinkWebSocketMessage<P = Record<string, string | number>> =
 	  }
 	| 'pong';
 
-export class EWeLinkWSConnection extends EventEmitter {
-	public on(
-		event: 'data',
-		listener: (
-			data: EWeLinkWebSocketMessage<unknown>
-		) => void | Promise<void>
-	): this {
-		return super.on(event, (data) => void listener(data));
-	}
-}
+export class EWeLinkWSConnection extends EventEmitter<
+	EWeLinkWebSocketMessage<unknown>
+> {}
 
-export interface EWeLinkSharedConfig {
-	connection: WrappedEWeLinkAPI;
-	device: EwelinkDeviceResponse;
-	wsConnection: EWeLinkWSConnection;
-	modules: AllModules;
+export class EWeLinkSharedConfig {
+	public constructor(
+		public readonly connection: WrappedEWeLinkAPI,
+		public readonly device: EwelinkDeviceResponse,
+		public readonly wsConnection: EWeLinkWSConnection,
+		public readonly periodicFetcher: EventEmitter<EwelinkDeviceResponse>
+	) {}
+
+	public [util.inspect.custom](): string {
+		return `${this.constructor.name} { }`;
+	}
 }
 
 export class WrappedEWeLinkAPI {
@@ -53,12 +50,19 @@ export class WrappedEWeLinkAPI {
 		private readonly _connection: InstanceType<typeof eWelink.WebAPI>
 	) {}
 
-	public setThingStatus(info: setThingStatusInfo): Promise<unknown> {
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+	public setThingStatus(
+		info: Parameters<
+			InstanceType<typeof eWelink.WebAPI>['device']['setThingStatus']
+		>[0]
+	): Promise<unknown> {
 		return this._connection.device.setThingStatus(info);
 	}
 
-	public getThingStatus<T>(info: getThingStatusInfo): Promise<T | null> {
+	public getThingStatus<T>(
+		info: Parameters<
+			InstanceType<typeof eWelink.WebAPI>['device']['getThingStatus']
+		>[0]
+	): Promise<T | null> {
 		if (!this._queue.isEmpty()) {
 			return Promise.resolve(null);
 		}
@@ -73,7 +77,6 @@ export class WrappedEWeLinkAPI {
 				);
 			}
 			this._lastRequest = Date.now();
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 			return this._connection.device.getThingStatus(info);
 		});
 	}

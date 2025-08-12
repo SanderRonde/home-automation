@@ -12,8 +12,8 @@ import { ServerComm } from '../../../shared/server-comm/server-comm.js';
 import { PatternButton } from '../pattern-button/pattern-button.js';
 import { ColorControls } from '../color-controls/color-controls.js';
 import { ColorDisplay } from '../color-display/color-display.js';
-import { ColorButton } from '../color-button/color-button.js';
 import { PowerButton } from '../power-button/power-button.js';
+import { ColorButton } from '../color-button/color-button.js';
 import type { TransitionTypes } from 'magic-home';
 
 export interface PatternConfig {
