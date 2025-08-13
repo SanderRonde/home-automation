@@ -1,5 +1,5 @@
 import { SettablePromise } from './util';
-import util from 'util';
+import * as util from 'util';
 
 export class EventEmitter<V, M = V> implements Disposable {
 	protected _handlers: Set<(value: M) => void> = new Set();
