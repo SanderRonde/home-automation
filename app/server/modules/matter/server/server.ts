@@ -60,27 +60,27 @@ export type MatterServerOutputMessage =
 			newState: string;
 	  };
 
-export interface DeviceCluster {
+export interface MatterDeviceCluster {
 	name: string;
 	id: ClusterId;
 }
 
-export interface DeviceEndpoint {
+export interface MatterDeviceEndpoint {
 	number: string;
 	name: string;
 	deviceType: DeviceTypeId;
-	endpoints: DeviceEndpoint[];
-	clusterMeta: DeviceCluster[];
+	endpoints: MatterDeviceEndpoint[];
+	clusterMeta: MatterDeviceCluster[];
 }
 
-export interface DeviceInfo {
+export interface MatterDeviceInfo {
 	nodeId: string;
 	number: string;
 	name: string;
 	label: string | undefined;
 	deviceType: DeviceTypeId;
-	endpoints: DeviceEndpoint[];
-	clusterMeta: DeviceCluster[];
+	endpoints: MatterDeviceEndpoint[];
+	clusterMeta: MatterDeviceCluster[];
 }
 
 export enum MatterServerInputMessageType {
@@ -139,7 +139,7 @@ export type MatterServerInputMessage =
 	  };
 
 export interface MatterServerInputReturnValues {
-	[MatterServerInputMessageType.ListDevices]: DeviceInfo[];
+	[MatterServerInputMessageType.ListDevices]: MatterDeviceInfo[];
 	[MatterServerInputMessageType.PairWithCode]: void;
 	[MatterServerInputMessageType.GetAttribute]: unknown;
 	[MatterServerInputMessageType.CallCluster]: unknown;
@@ -196,7 +196,7 @@ class MatterServer {
 	private async _getDeviceInfo(
 		device: Endpoint,
 		nodeId: NodeId
-	): Promise<DeviceInfo | null> {
+	): Promise<MatterDeviceInfo | null> {
 		if (device.number === undefined) {
 			return null;
 		}
@@ -211,8 +211,8 @@ class MatterServer {
 
 		const collectRecursiveEndpoints = (
 			device: Endpoint
-		): DeviceEndpoint[] => {
-			const endpoints: DeviceEndpoint[] = [];
+		): MatterDeviceEndpoint[] => {
+			const endpoints: MatterDeviceEndpoint[] = [];
 			for (const endpoint of device.getChildEndpoints()) {
 				if (endpoint.number === undefined) {
 					continue;
@@ -282,8 +282,8 @@ class MatterServer {
 
 	private async _listNodeDevices(
 		watchedNode: NodeWatcher
-	): Promise<DeviceInfo[]> {
-		const deviceInfos: Promise<DeviceInfo | null>[] = [];
+	): Promise<MatterDeviceInfo[]> {
+		const deviceInfos: Promise<MatterDeviceInfo | null>[] = [];
 		const recursiveEndpoints = this._getRecursiveEndpoints(watchedNode);
 		if (
 			recursiveEndpoints.every(
@@ -357,8 +357,8 @@ class MatterServer {
 		);
 	}
 
-	private async _listDevices(): Promise<DeviceInfo[]> {
-		const deviceInfos: DeviceInfo[] = [];
+	private async _listDevices(): Promise<MatterDeviceInfo[]> {
+		const deviceInfos: MatterDeviceInfo[] = [];
 		for (const watchedNode of this._nodes) {
 			deviceInfos.push(...(await this._listNodeDevices(watchedNode)));
 		}

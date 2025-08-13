@@ -7,7 +7,7 @@ import {
 	type MatterServerOutputMessage,
 } from '../server/server';
 import type {
-	DeviceInfo,
+	MatterDeviceInfo,
 	MatterServerInputMessage,
 	MatterServerInputReturnValues,
 } from '../server/server';
@@ -18,7 +18,7 @@ import { MatterDevice } from './device';
 import { spawn } from 'child_process';
 import * as path from 'path';
 
-export class MatterClient {
+export class MatterClient implements AsyncDisposable {
 	#requestIdentifier = 0;
 	#proc: ChildProcessWithoutNullStreams | null = null;
 	#listeners: Set<(message: MatterServerOutputMessage) => void> = new Set();
@@ -29,7 +29,7 @@ export class MatterClient {
 
 	public constructor() {}
 
-	#updateDevices(deviceInfos: DeviceInfo[]) {
+	#updateDevices(deviceInfos: MatterDeviceInfo[]) {
 		const devices: Record<string, MatterDevice> = {};
 		for (const deviceInfo of deviceInfos) {
 			if (devices[deviceInfo.number]) {
@@ -150,11 +150,19 @@ export class MatterClient {
 			arguments: [code],
 		});
 	}
+
+	public async [Symbol.asyncDispose](): Promise<void> {
+		this.stop();
+		for (const device of Object.values(await this.devices.value)) {
+			device[Symbol.dispose]();
+		}
+	}
 }
 
-const matterClient = new MatterClient();
-matterClient.start();
-
-void matterClient.devices.value.then((devices) => {
-	console.log(devices);
-});
+if (require.main === module) {
+	const matterClient = new MatterClient();
+	matterClient.start();
+	void matterClient.devices.value.then((devices) => {
+		console.log(devices);
+	});
+}

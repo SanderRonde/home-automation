@@ -1,20 +1,29 @@
-import type {
-	Cluster,
-	DeviceGroupId,
+import {
 	DeviceOnOffCluster,
 	DeviceWindowCoveringCluster,
 	DeviceLevelControlCluster,
 	DevicePowerSourceCluster,
 	DeviceGroupsCluster,
 	DeviceOccupancySensingCluster,
+	DeviceIlluminanceMeasurementCluster,
+	DeviceTemperatureMeasurementCluster,
+	DeviceColorControlCluster,
 } from '../../device/cluster';
 import type {
+	ColorControl,
 	Groups,
+	IlluminanceMeasurement,
 	OccupancySensing,
 	OnOffCluster,
 	PowerSource,
+	TemperatureMeasurement,
 	WindowCovering,
 } from '@matter/main/clusters';
+import {
+	AsyncEventEmitter,
+	CombinedAsyncEventEmitter,
+	MappedAsyncEventEmitter,
+} from '../../../lib/event-emitter';
 import {
 	GroupId,
 	Status,
@@ -23,33 +32,19 @@ import {
 	type ClusterId,
 	type Command,
 } from '@matter/types';
-import { MappedAsyncEventEmitter } from '../../../lib/event-emitter';
+import type { Cluster, DeviceGroupId } from '../../device/cluster';
+import { SettablePromise } from '../../../lib/settable-promise';
 import { MatterServerInputMessageType } from '../server/server';
 import type { LevelControl } from '@matter/main/clusters';
 import type { WritableAttribute } from '@matter/types';
 import { DeviceStatus } from '../../device/cluster';
 import type { MatterClient } from './client';
+import { Color } from '../../../lib/color';
 
-export abstract class MatterCluster<IF extends MatterClusterInterface>
-	implements Cluster
-{
-	public readonly proxy: ClusterProxy<IF>;
-
-	public constructor(
-		nodeId: string,
-		endpointNumber: string,
-		id: ClusterId,
-		name: string,
-		matterClient: MatterClient
-	) {
-		this.proxy = new ClusterProxy(
-			nodeId,
-			endpointNumber,
-			id,
-			name,
-			matterClient
-		);
-	}
+export interface MatterCluster<IF extends MatterClusterInterface>
+	extends Cluster,
+		Disposable {
+	getProxy(): ClusterProxy<IF>;
 }
 
 type AttributeType<A extends Attribute<unknown, BitSchema>> =
@@ -75,18 +70,33 @@ export interface MatterClusterInterface {
 	commands: Record<string, Command<unknown, unknown, BitSchema>>;
 }
 
-class ClusterProxy<C extends MatterClusterInterface> {
-	#attributes: Record<string, MappedAsyncEventEmitter<unknown>> = {};
-	readonly #matterClient: MatterClient;
+class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
+	#attributes: Record<string, AsyncEventEmitter<unknown, unknown>> = {};
+	private _dependencies = new SettablePromise<{
+		readonly nodeId: string;
+		readonly endpointNumber: string;
+		readonly id: ClusterId;
+		readonly name: string;
+		matterClient: MatterClient;
+	}>();
 
-	public constructor(
-		public readonly nodeId: string,
-		public readonly endpointNumber: string,
-		public readonly id: ClusterId,
-		public readonly name: string,
-		matterClient: MatterClient
-	) {
-		this.#matterClient = matterClient;
+	private constructor() {}
+
+	public setDependencies(dependencies: {
+		readonly nodeId: string;
+		readonly endpointNumber: string;
+		readonly id: ClusterId;
+		readonly name: string;
+		matterClient: MatterClient;
+	}) {
+		this._dependencies.set(dependencies);
+	}
+
+	public static createGetter<
+		C extends MatterClusterInterface,
+	>(): () => ClusterProxy<C> {
+		const proxy = new ClusterProxy();
+		return () => proxy;
 	}
 
 	public onAttributeChanged(
@@ -106,21 +116,24 @@ class ClusterProxy<C extends MatterClusterInterface> {
 	>(
 		attribute: A,
 		mapper?: (value: AT) => R | Promise<R>
-	): MappedAsyncEventEmitter<AT, R> {
-		const eventEmitter = new MappedAsyncEventEmitter<AT, R>(mapper, () =>
-			this.#matterClient.request({
-				type: MatterServerInputMessageType.GetAttribute,
-				arguments: [
-					this.nodeId,
-					this.endpointNumber,
-					this.id,
-					attribute,
-				],
-			})
-		);
-		this.#attributes[attribute] = eventEmitter;
+	): AsyncEventEmitter<AT, R> {
+		const emitter = (() => {
+			const emitter = new AsyncEventEmitter<AT>(async () => {
+				const { matterClient, nodeId, endpointNumber, id } =
+					await this._dependencies.value;
+				return matterClient.request({
+					type: MatterServerInputMessageType.GetAttribute,
+					arguments: [nodeId, endpointNumber, id, attribute],
+				});
+			});
+			if (mapper) {
+				return new MappedAsyncEventEmitter<AT, R>(emitter, mapper);
+			}
+			return emitter;
+		})();
+		this.#attributes[attribute] = emitter;
 
-		return eventEmitter;
+		return emitter as AsyncEventEmitter<AT, R>;
 	}
 
 	public attributeSetter<
@@ -133,15 +146,11 @@ class ClusterProxy<C extends MatterClusterInterface> {
 	): (value: I) => Promise<void> {
 		return async (value: I) => {
 			const mapped = await mapper(value);
-			await this.#matterClient.request({
+			const { matterClient, nodeId, endpointNumber, id } =
+				await this._dependencies.value;
+			await matterClient.request({
 				type: MatterServerInputMessageType.SetAttribute,
-				arguments: [
-					this.nodeId,
-					this.endpointNumber,
-					this.id,
-					attribute,
-					mapped,
-				],
+				arguments: [nodeId, endpointNumber, id, attribute, mapped],
 			});
 		};
 	}
@@ -212,15 +221,11 @@ class ClusterProxy<C extends MatterClusterInterface> {
 					: Array.isArray(mappedInput)
 						? (mappedInput as unknown[])
 						: [mappedInput];
-			const result = this.#matterClient.request({
+			const { matterClient, nodeId, endpointNumber, id } =
+				await this._dependencies.value;
+			const result = matterClient.request({
 				type: MatterServerInputMessageType.CallCluster,
-				arguments: [
-					this.nodeId,
-					this.endpointNumber,
-					this.id,
-					command,
-					payload,
-				],
+				arguments: [nodeId, endpointNumber, id, command, payload],
 			});
 			const response = await result;
 			const mappedOutput = mappers?.output
@@ -229,76 +234,116 @@ class ClusterProxy<C extends MatterClusterInterface> {
 			return mappedOutput as CommandTypes<C['commands'][M]>['response'];
 		};
 	}
-}
 
-export class MatterOnOffCluster
-	extends MatterCluster<OnOffCluster>
-	implements DeviceOnOffCluster
-{
-	public static get clusterName(): string {
-		return 'OnOff';
+	public eventEmitter<
+		A extends Extract<WritableAttributes<C['attributes']>, string>,
+		AT extends AttributeType<C['attributes'][A]>,
+		I,
+	>(
+		attribute: A,
+		mapper: (value: I) => AT | Promise<AT>
+	): (value: I) => Promise<void> {
+		return async (value: I) => {
+			const mapped = await mapper(value);
+			const { matterClient, nodeId, endpointNumber, id } =
+				await this._dependencies.value;
+			await matterClient.request({
+				type: MatterServerInputMessageType.SetAttribute,
+				arguments: [nodeId, endpointNumber, id, attribute, mapped],
+			});
+		};
 	}
 
-	public isOn = this.proxy.attributeGetter('onOff');
+	public [Symbol.dispose](): void {
+		for (const attribute of Object.values(this.#attributes)) {
+			attribute[Symbol.dispose]();
+		}
+	}
+}
+
+function ConfigurableCluster<T extends MatterClusterInterface>(
+	Base: (abstract new () => Cluster) & { clusterName: string }
+) {
+	return class extends Base {
+		public getProxy = ClusterProxy.createGetter<T>();
+
+		public constructor(
+			nodeId: string,
+			endpointNumber: string,
+			id: ClusterId,
+			name: string,
+			matterClient: MatterClient
+		) {
+			super();
+			this.getProxy().setDependencies({
+				nodeId,
+				endpointNumber,
+				id,
+				name,
+				matterClient,
+			});
+		}
+
+		public [Symbol.dispose](): void {
+			this.getProxy()[Symbol.dispose]();
+		}
+	};
+}
+
+class MatterOnOffCluster extends ConfigurableCluster<OnOffCluster>(
+	DeviceOnOffCluster
+) {
+	public isOn = this.getProxy().attributeGetter('onOff');
 
 	public setOn(on: boolean): Promise<void> {
 		if (on) {
-			return this.proxy.command('on')();
+			return this.getProxy().command('on')();
 		} else {
-			return this.proxy.command('off')();
+			return this.getProxy().command('off')();
 		}
 	}
 
-	public toggle = this.proxy.command('toggle');
+	public toggle = this.getProxy().command('toggle');
 }
 
-export class MatterWindowCoveringCluster
-	extends MatterCluster<WindowCovering.Complete>
-	implements DeviceWindowCoveringCluster
-{
-	public static get clusterName(): string {
-		return 'WindowCovering';
-	}
-
-	public currentPositionLiftPercentage = this.proxy.attributeGetter(
+class MatterWindowCoveringCluster extends ConfigurableCluster<WindowCovering.Complete>(
+	DeviceWindowCoveringCluster
+) {
+	public currentPositionLiftPercentage = this.getProxy().attributeGetter(
 		'currentPositionLiftPercentage',
 		(num) => num ?? 0
 	);
-	public targetPositionLiftPercentage = this.proxy.attributeGetter(
+	public targetPositionLiftPercentage = this.getProxy().attributeGetter(
 		'targetPositionLiftPercent100ths',
 		(num) => (num ? num / 100 : 0)
 	);
-	public operationalStatus = this.proxy.attributeGetter('operationalStatus');
+	public operationalStatus =
+		this.getProxy().attributeGetter('operationalStatus');
 
-	public close = this.proxy.command('downOrClose');
+	public close = this.getProxy().command('downOrClose');
 
-	public open = this.proxy.command('upOrOpen');
+	public open = this.getProxy().command('upOrOpen');
 
-	public goToLiftPercentage = this.proxy.command<
+	public goToLiftPercentage = this.getProxy().command<
 		'goToLiftPercentage',
 		{
 			percentage: number;
 		}
 	>('goToLiftPercentage', {
-		input: ({ percentage }) => ({
+		input: ({ percentage }: { percentage: number }) => ({
 			liftPercent100thsValue: percentage / 100,
 		}),
 	});
 }
 
-export class MatterLevelControlCluster
-	extends MatterCluster<LevelControl.Complete>
-	implements DeviceLevelControlCluster
-{
-	public static get clusterName(): string {
-		return 'LevelControl';
-	}
-
-	private _minLevel = this.proxy.attributeGetter(
+class MatterLevelControlCluster extends ConfigurableCluster<LevelControl.Complete>(
+	DeviceLevelControlCluster
+) {
+	private _minLevel = this.getProxy().attributeGetter(
 		'currentLevel',
 		(v: number | null | undefined) => v ?? 0
 	);
-	private _maxLevel = this.proxy.attributeGetter(
+	private _maxLevel = this.getProxy().attributeGetter(
 		'maxLevel',
 		(v: number | null | undefined) => v ?? 0
 	);
@@ -321,7 +366,7 @@ export class MatterLevelControlCluster
 	/**
 	 * Float from 0 to 1
 	 */
-	public currentLevel = this.proxy.attributeGetter(
+	public currentLevel = this.getProxy().attributeGetter(
 		'currentLevel',
 		this._valueToFloat.bind(this)
 	);
@@ -329,7 +374,7 @@ export class MatterLevelControlCluster
 	/**
 	 * Float from 0 to 1
 	 */
-	public startupLevel = this.proxy.attributeGetter(
+	public startupLevel = this.getProxy().attributeGetter(
 		'startUpCurrentLevel',
 		this._valueToFloat.bind(this)
 	);
@@ -337,12 +382,12 @@ export class MatterLevelControlCluster
 	/**
 	 * Float from 0 to 1
 	 */
-	public setStartupLevel = this.proxy.attributeSetter(
+	public setStartupLevel = this.getProxy().attributeSetter(
 		'startUpCurrentLevel',
 		({ level }) => this._floatToValue(level)
 	);
 
-	public setLevel = this.proxy.command<
+	public setLevel = this.getProxy().command<
 		'moveToLevel',
 		{ level: number; transitionTimeDs?: number }
 	>('moveToLevel', {
@@ -354,7 +399,7 @@ export class MatterLevelControlCluster
 		}),
 	});
 
-	public stop = this.proxy.command<'stop', void>('stop', {
+	public stop = this.getProxy().command<'stop', void>('stop', {
 		input: () => ({
 			optionsMask: {},
 			optionsOverride: {},
@@ -362,61 +407,70 @@ export class MatterLevelControlCluster
 	});
 }
 
-export class MatterPowerSourceCluster
-	extends MatterCluster<PowerSource.Complete>
-	implements DevicePowerSourceCluster
-{
-	public static get clusterName(): string {
-		return 'PowerSource';
-	}
-
-	public batteryChargeLevel = this.proxy.attributeGetter(
+class MatterPowerSourceCluster extends ConfigurableCluster<PowerSource.Complete>(
+	DevicePowerSourceCluster
+) {
+	public batteryChargeLevel = this.getProxy().attributeGetter(
 		'batPercentRemaining',
 		(value) => (value ? value / 200 : null)
 	);
 }
 
-export class MatterOccupancySensingCluster
-	extends MatterCluster<OccupancySensing.Complete>
-	implements DeviceOccupancySensingCluster
-{
-	public static get clusterName(): string {
-		return 'OccupancySensing';
-	}
-
-	public occupancy = this.proxy.attributeGetter(
+class MatterOccupancySensingCluster extends ConfigurableCluster<OccupancySensing.Complete>(
+	DeviceOccupancySensingCluster
+) {
+	public occupancy = this.getProxy().attributeGetter(
 		'occupancy',
 		(state) => state?.occupied ?? false
 	);
 }
 
-export class MatterGroupsCluster
-	extends MatterCluster<Groups.Cluster>
-	implements DeviceGroupsCluster
-{
-	public static get clusterName(): string {
-		return 'Groups';
-	}
+class MatterIlluminanceMeasurementCluster extends ConfigurableCluster<IlluminanceMeasurement.Cluster>(
+	DeviceIlluminanceMeasurementCluster
+) {
+	/**
+	 * MeasuredValue = 10,000 x log10(lux) + 1,
+	 */
+	public illuminance = this.getProxy().attributeGetter(
+		'measuredValue',
+		(value) => value ?? 0
+	);
+}
 
-	public addGroup = this.proxy.command('addGroup', {
+class MatterTemperatureMeasurementCluster extends ConfigurableCluster<TemperatureMeasurement.Cluster>(
+	DeviceTemperatureMeasurementCluster
+) {
+	public temperature = this.getProxy().attributeGetter(
+		'measuredValue',
+		(value) => (value ?? 0) / 100
+	);
+}
+
+class MatterGroupsCluster extends ConfigurableCluster<Groups.Cluster>(
+	DeviceGroupsCluster
+) {
+	public addGroup = this.getProxy().command('addGroup', {
 		output: ({ status, groupId }) => ({
 			status: fromMatterStatus(status),
 			groupId: fromMatterGroupId(groupId),
 		}),
 	});
-	public listGroupMemberships = this.proxy.command('getGroupMembership', {
-		input: () => ({
-			groupList: [],
-		}),
-		output: ({ groupList }) => ({
-			groupList: groupList.map(fromMatterGroupId),
-		}),
-	});
+	public listGroupMemberships = this.getProxy().command(
+		'getGroupMembership',
+		{
+			input: () => ({
+				groupList: [],
+			}),
+			output: ({ groupList }) => ({
+				groupList: groupList.map(fromMatterGroupId),
+			}),
+		}
+	);
 
 	/**
 	 * Given a list of group IDs, returns only those groups this device is a member of.
 	 */
-	public getFilteredGroupMembership = this.proxy.command(
+	public getFilteredGroupMembership = this.getProxy().command(
 		'getGroupMembership',
 		{
 			input: ({ groupList }: { groupList: number[] }) => ({
@@ -428,7 +482,7 @@ export class MatterGroupsCluster
 		}
 	);
 
-	public removeGroup = this.proxy.command('removeGroup', {
+	public removeGroup = this.getProxy().command('removeGroup', {
 		input: ({ groupId }: { groupId: DeviceGroupId }) => ({
 			groupId: toMatterGroupId(groupId),
 		}),
@@ -436,6 +490,48 @@ export class MatterGroupsCluster
 			status: fromMatterStatus(status),
 			groupId: fromMatterGroupId(groupId),
 		}),
+	});
+}
+
+class MatterColorControlCluster extends ConfigurableCluster<ColorControl.Complete>(
+	DeviceColorControlCluster
+) {
+	private static readonly MAX_COLOR_VALUE = 65279;
+
+	private _currentX = this.getProxy().attributeGetter(
+		'currentX',
+		(value) => value / MatterColorControlCluster.MAX_COLOR_VALUE
+	);
+	private _currentY = this.getProxy().attributeGetter(
+		'currentY',
+		(value) => value / MatterColorControlCluster.MAX_COLOR_VALUE
+	);
+	public color = new MappedAsyncEventEmitter(
+		new CombinedAsyncEventEmitter([this._currentX, this._currentY]),
+		([x, y]) => Color.fromCieXy(x, y)
+	);
+
+	public setColor = this.getProxy().command('moveToColor', {
+		input: ({
+			color,
+			overDurationMs,
+		}: {
+			color: Color;
+			overDurationMs?: number;
+		}) => {
+			const { x, y } = color.toCieXy();
+			return {
+				colorX: Math.round(
+					x * MatterColorControlCluster.MAX_COLOR_VALUE
+				),
+				colorY: Math.round(
+					y * MatterColorControlCluster.MAX_COLOR_VALUE
+				),
+				transitionTime: overDurationMs ?? 0,
+				optionsMask: {},
+				optionsOverride: {},
+			};
+		},
 	});
 }
 
@@ -463,10 +559,29 @@ export const MATTER_CLUSTERS = {
 	[MatterLevelControlCluster.clusterName]: MatterLevelControlCluster,
 	[MatterPowerSourceCluster.clusterName]: MatterPowerSourceCluster,
 	[MatterGroupsCluster.clusterName]: MatterGroupsCluster,
+	[MatterOccupancySensingCluster.clusterName]: MatterOccupancySensingCluster,
+	[MatterIlluminanceMeasurementCluster.clusterName]:
+		MatterIlluminanceMeasurementCluster,
+	[MatterTemperatureMeasurementCluster.clusterName]:
+		MatterTemperatureMeasurementCluster,
+	[MatterColorControlCluster.clusterName]: MatterColorControlCluster,
 };
 
 export const IGNORED_MATTER_CLUSTERS = [
 	'Descriptor',
 	'Identify',
 	'BridgedDeviceBasicInformation',
+	'BasicInformation',
+	'GeneralCommissioning',
+	'NetworkCommissioning',
+	'GeneralDiagnostics',
+	'EthernetNetworkDiagnostics',
+	'AdministratorCommissioning',
+	'OperationalCredentials',
+	'GroupKeyManagement',
+	'PowerSourceConfiguration',
+	'AccessControl',
+	// Given that this requires complex timing logic might as well
+	// just keep this under the original framework.
+	'Switch',
 ];

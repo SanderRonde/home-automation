@@ -15,7 +15,7 @@ import type { ResponseLike } from '../../lib/logging/response-logger';
 import type { LED_NAME } from '../../config/led-config';
 import { LogObj } from '../../lib/logging/lob-obj';
 import { scanRGBControllers } from './scan';
-import { colorList } from '../../lib/data';
+import { colorList } from "../../lib/color";
 import type { Effects } from './ring-api';
 import { ringEffects } from './ring-api';
 import { Color } from '../../lib/color';

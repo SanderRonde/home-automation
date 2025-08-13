@@ -4,7 +4,9 @@ import * as util from 'util';
 export class EventEmitter<V, M = V> implements Disposable {
 	protected _handlers: Set<(value: M) => void> = new Set();
 
-	public constructor() {}
+	public constructor(
+		public readonly initializer?: () => Promise<V | undefined>
+	) {}
 
 	public listen(handler: (value: NonNullable<M>) => void): () => void {
 		this._handlers.add(handler);
@@ -44,12 +46,6 @@ export class AsyncEventEmitter<V, M = V> extends EventEmitter<V, M> {
 	private _initialized = false;
 	private _value: M | null = null;
 
-	public constructor(
-		private readonly initializer?: () => Promise<V | undefined>
-	) {
-		super();
-	}
-
 	public get value(): Promise<M> {
 		if (!this._initialized) {
 			this._initialized = true;
@@ -78,22 +74,42 @@ export class AsyncEventEmitter<V, M = V> extends EventEmitter<V, M> {
 	}
 }
 
-export class MappedAsyncEventEmitter<V, M = V> extends AsyncEventEmitter<V, M> {
-	public constructor(
-		private readonly mapper?: (value: V) => M | Promise<M>,
-		initializer?: () => Promise<V | undefined>
-	) {
+export class CombinedAsyncEventEmitter<V> extends AsyncEventEmitter<V[]> {
+	public constructor(eventEmitters: AsyncEventEmitter<V>[]) {
+		const initializer = () => {
+			return Promise.all(eventEmitters.map((emitter) => emitter.value));
+		};
 		super(initializer);
+
+		for (let i = 0; i < eventEmitters.length; i++) {
+			const eventEmitter = eventEmitters[i];
+			eventEmitter.listen(async (value) => {
+				if (value === undefined) {
+					return;
+				}
+				const currentValue = [...(await this.value)];
+				currentValue[i] = value;
+				void this.emit(currentValue);
+			});
+		}
+	}
+}
+
+export class MappedAsyncEventEmitter<V, M> extends AsyncEventEmitter<M> {
+	public constructor(
+		private readonly _eventEmitter: AsyncEventEmitter<V>,
+		private readonly mapper: (value: V) => M | Promise<M>
+	) {
+		super(_eventEmitter.initializer as () => Promise<M | undefined>);
+		this._eventEmitter.listen(async (value) => {
+			if (value === undefined) {
+				return;
+			}
+			void this.emit(await this.mapper(value));
+		});
 	}
 
-	public async emit(value: V): Promise<void> {
-		if (value === undefined) {
-			return;
-		}
-
-		const mapped = this.mapper
-			? await this.mapper(value)
-			: (value as unknown as M);
-		this._emit(mapped);
+	public get value(): Promise<M> {
+		return this._eventEmitter.value.then(this.mapper);
 	}
 }

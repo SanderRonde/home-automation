@@ -6,22 +6,30 @@ import {
 	EwelinkRelativeHumidityMeasurementCluster,
 	EwelinkSwitchCluster,
 	EwelinkTemperatureMeasurementCluster,
-	type EwelinkCluster,
 } from './cluster';
 import { EwelinkBooleanStateDoorSensorCluster } from './clusters/boolean-state/door-sensor';
 import { EwelinkOnOffClusterSimplePower } from './clusters/power/simple-power';
 import type { EwelinkOnOffClusterM51CParams } from './clusters/power/M5-1C';
 import { EwelinkOnOffClusterM51CSingle } from './clusters/power/M5-1C';
+import { DeviceEndpoint, type Device } from '../../device/device';
 import type { EWeLinkSharedConfig } from './clusters/shared';
 import { logTag } from '../../../lib/logging/logger';
-import type { Device } from '../../device/device';
+import type { EwelinkCluster } from './cluster';
 
-export abstract class EwelinkDevice implements Device, Disposable {
+class EwelinkEndpoint extends DeviceEndpoint implements Disposable {
 	public constructor(
 		protected readonly _eWeLinkConfig: EWeLinkSharedConfig,
-		public readonly clusters: EwelinkCluster<object>[]
-	) {}
+		public readonly clusters: EwelinkCluster[],
+		public readonly endpoints: EwelinkEndpoint[] = []
+	) {
+		super();
+	}
+}
 
+export abstract class EwelinkDevice
+	extends EwelinkEndpoint
+	implements Device, Disposable
+{
 	public getUniqueId(): string {
 		return `EWELINK:${this._eWeLinkConfig.device.itemData.deviceid}`;
 	}
@@ -40,12 +48,6 @@ export abstract class EwelinkDevice implements Device, Disposable {
 		}
 		return new device(eWeLinkConfig);
 	}
-
-	public [Symbol.dispose](): void {
-		for (const cluster of this.clusters) {
-			cluster[Symbol.dispose]();
-		}
-	}
 }
 
 class EwelinkM51CDevice extends EwelinkDevice {
@@ -59,12 +61,14 @@ class EwelinkM51CDevice extends EwelinkDevice {
 		).switches.length;
 		const outlets = Array.from(
 			{ length: count },
-			(_, i) => new EwelinkOnOffClusterM51CSingle(eWeLinkConfig, i)
+			(_, i) =>
+				new EwelinkEndpoint(
+					eWeLinkConfig,
+					[new EwelinkOnOffClusterM51CSingle(eWeLinkConfig, i)],
+					[]
+				)
 		);
-		super(eWeLinkConfig, [
-			...outlets,
-			new EwelinkPowerSourceCluster(eWeLinkConfig),
-		]);
+		super(eWeLinkConfig, [], outlets);
 		this.switches = count;
 	}
 }
@@ -128,13 +132,19 @@ class EwelinkR5SceneControllerDevice extends EwelinkDevice {
 	public static readonly modelName = 'NON-OTA-GL(174)';
 
 	public constructor(eWeLinkConfig: EWeLinkSharedConfig) {
-		const outlets = new Array(6)
+		const endpoints = new Array(6)
 			.fill(0)
-			.map((_, i) => new EwelinkOutletSwitchCluster(eWeLinkConfig, i));
-		super(eWeLinkConfig, [
-			...outlets,
-			new EwelinkPowerSourceCluster(eWeLinkConfig),
-		]);
+			.map(
+				(_, i) =>
+					new EwelinkEndpoint(eWeLinkConfig, [
+						new EwelinkOutletSwitchCluster(eWeLinkConfig, i),
+					])
+			);
+		super(
+			eWeLinkConfig,
+			[new EwelinkPowerSourceCluster(eWeLinkConfig)],
+			endpoints
+		);
 	}
 }
 

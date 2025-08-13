@@ -1,5 +1,6 @@
 import type { EventEmitter } from '../../lib/event-emitter';
 import type { DeviceAttribute } from './device';
+import type { Color } from '../../lib/color';
 
 export type DeviceGroupId = number & {
 	__brand: 'DeviceGroupId';
@@ -18,87 +19,127 @@ export enum DeviceStatus {
 	Failure = 1,
 }
 
-export interface Cluster {}
-
-export interface DeviceOnOffCluster extends Cluster {
-	isOn: DeviceAttribute<boolean>;
-	setOn(on: boolean): Promise<void>;
-	toggle(): Promise<void>;
+export abstract class Cluster implements Disposable {
+	public abstract [Symbol.dispose](): void;
 }
 
-export interface DeviceWindowCoveringCluster extends Cluster {
-	currentPositionLiftPercentage: DeviceAttribute<number>;
-	targetPositionLiftPercentage: DeviceAttribute<number>;
-	close(): Promise<void>;
-	open(): Promise<void>;
-	goToLiftPercentage(args: { percentage: number }): Promise<void>;
+export abstract class DeviceOnOffCluster extends Cluster {
+	public static clusterName = 'OnOff';
+
+	public abstract isOn: DeviceAttribute<boolean>;
+	public abstract setOn(on: boolean): Promise<void>;
+	public abstract toggle(): Promise<void>;
 }
 
-export interface DeviceLevelControlCluster extends Cluster {
+export abstract class DeviceWindowCoveringCluster extends Cluster {
+	public static clusterName = 'WindowCovering';
+
+	public abstract currentPositionLiftPercentage: DeviceAttribute<number>;
+	public abstract targetPositionLiftPercentage: DeviceAttribute<number>;
+	public abstract close(): Promise<void>;
+	public abstract open(): Promise<void>;
+	public abstract goToLiftPercentage(args: {
+		percentage: number;
+	}): Promise<void>;
+}
+
+export abstract class DeviceLevelControlCluster extends Cluster {
+	public static clusterName = 'LevelControl';
+
 	/**
 	 * Float from 0 to 1
 	 */
-	currentLevel: DeviceAttribute<number>;
+	public abstract currentLevel: DeviceAttribute<number>;
 	/**
 	 * Float from 0 to 1
 	 */
-	startupLevel: DeviceAttribute<number>;
-	setLevel(args: { level: number; transitionTimeDs?: number }): Promise<void>;
-	setStartupLevel(args: {
+	public abstract startupLevel: DeviceAttribute<number>;
+	public abstract setLevel(args: {
 		level: number;
 		transitionTimeDs?: number;
 	}): Promise<void>;
-	stop(): Promise<void>;
+	public abstract setStartupLevel(args: {
+		level: number;
+		transitionTimeDs?: number;
+	}): Promise<void>;
+	public abstract stop(): Promise<void>;
 }
 
-export interface DevicePowerSourceCluster extends Cluster {
-	batteryChargeLevel: DeviceAttribute<number | null>;
+export abstract class DevicePowerSourceCluster extends Cluster {
+	public static clusterName = 'PowerSource';
+
+	public abstract batteryChargeLevel: DeviceAttribute<number | null>;
 }
 
-export interface DeviceGroupsCluster extends Cluster {
-	addGroup(args: { groupId: number; groupName: string }): Promise<{
+export abstract class DeviceGroupsCluster extends Cluster {
+	public static clusterName = 'Groups';
+
+	public abstract addGroup(args: {
+		groupId: number;
+		groupName: string;
+	}): Promise<{
 		status: DeviceStatus;
 		groupId: DeviceGroupId;
 	}>;
-	listGroupMemberships(): Promise<{
+	public abstract listGroupMemberships(): Promise<{
 		groupList: DeviceGroupId[];
 	}>;
-	getFilteredGroupMembership(args: { groupList: DeviceGroupId[] }): Promise<{
+	public abstract getFilteredGroupMembership(args: {
+		groupList: DeviceGroupId[];
+	}): Promise<{
 		groupList: DeviceGroupId[];
 	}>;
-	removeGroup(args: { groupId: DeviceGroupId }): Promise<{
+	public abstract removeGroup(args: { groupId: DeviceGroupId }): Promise<{
 		status: DeviceStatus;
 		groupId: DeviceGroupId;
 	}>;
 }
 
-export interface DeviceOccupancySensingCluster extends Cluster {
-	occupancy: DeviceAttribute<boolean>;
+export abstract class DeviceOccupancySensingCluster extends Cluster {
+	public static clusterName = 'OccupancySensing';
+
+	public abstract occupancy: DeviceAttribute<boolean>;
 }
 
-export interface DeviceTemperatureMeasurementCluster extends Cluster {
+export abstract class DeviceTemperatureMeasurementCluster extends Cluster {
+	public static clusterName = 'TemperatureMeasurement';
+
 	/**
 	 * Temperature in degrees Celsius
 	 */
-	temperature: DeviceAttribute<number>;
+	public abstract temperature: DeviceAttribute<number>;
 }
 
-export interface DeviceRelativeHumidityMeasurementCluster extends Cluster {
+export abstract class DeviceRelativeHumidityMeasurementCluster extends Cluster {
 	/**
 	 * Relative humidity as a float from 0 to 1
 	 */
-	relativeHumidity: DeviceAttribute<number>;
+	public abstract relativeHumidity: DeviceAttribute<number>;
 }
 
-export interface DeviceBooleanStateCluster<S extends boolean> extends Cluster {
-	state: DeviceAttribute<S>;
+export abstract class DeviceBooleanStateCluster<
+	S extends boolean,
+> extends Cluster {
+	public abstract state: DeviceAttribute<S>;
 }
 
-export interface DeviceSwitchCluster extends Cluster {
-	onPress: EventEmitter<void>;
-	onDoublePress: EventEmitter<void>;
+export abstract class DeviceSwitchCluster extends Cluster {
+	public abstract onPress: EventEmitter<void>;
+	public abstract onDoublePress: EventEmitter<void>;
 }
 
-export interface DeviceIlluminanceMeasurementCluster extends Cluster {
-	illuminance: DeviceAttribute<number>;
+export abstract class DeviceIlluminanceMeasurementCluster extends Cluster {
+	public static clusterName = 'IlluminanceMeasurement';
+
+	public abstract illuminance: DeviceAttribute<number>;
+}
+
+export abstract class DeviceColorControlCluster extends Cluster {
+	public static clusterName = 'ColorControl';
+
+	public abstract color: DeviceAttribute<Color>;
+	public abstract setColor(args: {
+		color: Color;
+		overDurationMs?: number;
+	}): Promise<void>;
 }

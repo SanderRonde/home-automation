@@ -1,5 +1,4 @@
-import type { DeviceBooleanStateCluster } from '../../../../device/cluster';
-import { EwelinkBooleanStateCluster } from '../../cluster';
+import { EwelinkBooleanStateCluster, EwelinkClusterProxy } from '../../cluster';
 
 interface Params {
 	/**
@@ -8,19 +7,13 @@ interface Params {
 	lock: 0 | 1;
 }
 
-export class EwelinkBooleanStateDoorSensorCluster
-	extends EwelinkBooleanStateCluster<Params>
-	implements DeviceBooleanStateCluster<boolean>
-{
-	public override _fromState(state: Params): { state: boolean } {
-		return {
+export class EwelinkBooleanStateDoorSensorCluster extends EwelinkBooleanStateCluster {
+	protected getProxy = EwelinkClusterProxy.createGetter<{ state: boolean }>({
+		fromParams: (state: Params) => ({
 			state: state.lock === 0,
-		};
-	}
-
-	public override _toState(state: { state: boolean }): Params {
-		return {
+		}),
+		toParams: (state): Params => ({
 			lock: state.state ? 0 : 1,
-		};
-	}
+		}),
+	});
 }

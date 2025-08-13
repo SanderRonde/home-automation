@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 
+import { EwelinkClusterProxy, EwelinkOnOffCluster } from '../../cluster';
 import type { EwelinkOnOffClusterState } from '../../cluster';
 import type { EWeLinkSharedConfig } from '../shared';
-import { EwelinkOnOffCluster } from '../../cluster';
 
 export interface EwelinkOnOffClusterM51CParams {
 	switches: {
@@ -11,33 +11,26 @@ export interface EwelinkOnOffClusterM51CParams {
 	}[];
 }
 
-// TODO:(sander) model name etc.
-export class EwelinkOnOffClusterM51CSingle extends EwelinkOnOffCluster<EwelinkOnOffClusterM51CParams> {
+export class EwelinkOnOffClusterM51CSingle extends EwelinkOnOffCluster {
+	protected getProxy =
+		EwelinkClusterProxy.createGetter<EwelinkOnOffClusterState>({
+			fromParams: (state: EwelinkOnOffClusterM51CParams) => ({
+				enabled: state.switches[this.outlet].switch === 'on',
+			}),
+			toParams: (state): EwelinkOnOffClusterM51CParams => ({
+				switches: [
+					{
+						outlet: this.outlet,
+						switch: state.enabled ? 'on' : 'off',
+					},
+				],
+			}),
+		});
+
 	public constructor(
 		eWeLinkConfig: EWeLinkSharedConfig,
 		public readonly outlet: number
 	) {
 		super(eWeLinkConfig);
-	}
-
-	public override _fromState(
-		state: EwelinkOnOffClusterM51CParams
-	): EwelinkOnOffClusterState {
-		return {
-			enabled: state.switches[this.outlet].switch === 'on',
-		};
-	}
-
-	public override _toState(
-		state: EwelinkOnOffClusterState
-	): EwelinkOnOffClusterM51CParams {
-		return {
-			switches: [
-				{
-					outlet: this.outlet,
-					switch: state.enabled ? 'on' : 'off',
-				},
-			],
-		};
 	}
 }
