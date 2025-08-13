@@ -9,6 +9,7 @@ import {
 	type EwelinkCluster,
 } from './cluster';
 import { EwelinkBooleanStateDoorSensorCluster } from './clusters/boolean-state/door-sensor';
+import { EwelinkOnOffClusterSimplePower } from './clusters/power/simple-power';
 import type { EwelinkOnOffClusterM51CParams } from './clusters/power/M5-1C';
 import { EwelinkOnOffClusterM51CSingle } from './clusters/power/M5-1C';
 import type { EWeLinkSharedConfig } from './clusters/shared';
@@ -65,6 +66,16 @@ class EwelinkM51CDevice extends EwelinkDevice {
 			new EwelinkPowerSourceCluster(eWeLinkConfig),
 		]);
 		this.switches = count;
+	}
+}
+
+class EwelinkZBMiniDevice extends EwelinkDevice {
+	public static readonly modelName = 'ZCL_HA_DEVICEID_ON_OFF_LIGHT';
+
+	public constructor(eWeLinkConfig: EWeLinkSharedConfig) {
+		super(eWeLinkConfig, [
+			new EwelinkOnOffClusterSimplePower(eWeLinkConfig),
+		]);
 	}
 }
 
@@ -135,6 +146,7 @@ const DEVICES = [
 	EwelinkOccupancySensordevice,
 	EwelinkOnOffSwitchDevice,
 	EwelinkR5SceneControllerDevice,
+	EwelinkZBMiniDevice,
 ] satisfies {
 	modelName: string;
 }[];

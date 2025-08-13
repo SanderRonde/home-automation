@@ -98,3 +98,7 @@ export interface DeviceSwitchCluster extends Cluster {
 	onPress: EventEmitter<void>;
 	onDoublePress: EventEmitter<void>;
 }
+
+export interface DeviceIlluminanceMeasurementCluster extends Cluster {
+	illuminance: DeviceAttribute<number>;
+}
