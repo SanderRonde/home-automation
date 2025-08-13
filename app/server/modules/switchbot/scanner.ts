@@ -3,7 +3,7 @@ import type { SwitchbotDeviceBase } from './devices/devices';
 import { EventEmitter } from '../../lib/event-emitter';
 import { logTag } from '../../lib/logging/logger';
 import { ROOT } from '../../lib/constants';
-import { wait } from '../../lib/util';
+import { wait } from '../../lib/time';
 import { spawn } from 'child_process';
 import type { AllModules } from '..';
 import type { Socket } from 'net';

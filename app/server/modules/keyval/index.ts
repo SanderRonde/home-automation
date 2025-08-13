@@ -1,6 +1,6 @@
 import { ResDummy } from '../../lib/logging/response-logger';
+import { SettablePromise } from '../../lib/settable-promise';
 import { LogObj } from '../../lib/logging/lob-obj';
-import { SettablePromise } from '../../lib/util';
 import groups from '../../config/keyval-groups';
 import { initAggregates } from './aggregates';
 import { KEYVAL_GROUP_EFFECT } from './types';

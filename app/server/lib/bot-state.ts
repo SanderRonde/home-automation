@@ -4,7 +4,7 @@ import type { ChatState } from '../modules/bot/message/state-keeping';
 import { RESPONSE_TYPE } from '../modules/bot/types';
 import type { LogObj } from './logging/lob-obj';
 import { BotUtil } from './bot-util';
-import { wait } from './util';
+import { wait } from './time';
 import chalk from 'chalk';
 
 type MatchHandlerRet =

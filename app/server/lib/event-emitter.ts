@@ -1,4 +1,4 @@
-import { SettablePromise } from './util';
+import { SettablePromise } from './settable-promise';
 import * as util from 'util';
 
 export class EventEmitter<V, M = V> implements Disposable {

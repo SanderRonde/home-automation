@@ -8,10 +8,10 @@ import type {
 	Token,
 	User,
 } from 'oauth2-server';
+import { SettablePromise } from '../../lib/settable-promise';
 import oAuthClients from '../../config/oauth-clients';
 import { logTag } from '../../lib/logging/logger';
 import oauthUsers from '../../config/oauth-users';
-import { SettablePromise } from '../../lib/util';
 import OAuthServer from 'express-oauth-server';
 import type { Database } from '../../lib/db';
 

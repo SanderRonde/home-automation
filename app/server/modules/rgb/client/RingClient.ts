@@ -1,8 +1,8 @@
 import type { LED_NAME } from '../../../config/led-config';
 import type { LedEffect } from '../effect-config';
 import type { Color } from '../../../lib/color';
-import { XHR } from '../../../lib/util';
 import { RGBClient } from './RGBClient';
+import { XHR } from '../../../lib/xhr';
 
 export class RingClient extends RGBClient {
 	public setWhiteForPower = false;

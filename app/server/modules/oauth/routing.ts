@@ -1,11 +1,11 @@
 import express = require('express');
 import type { ResponseLike } from '../../lib/logging/response-logger';
+import { SettablePromise } from '../../lib/settable-promise';
 import { authorizationServer } from './authorization';
 import { CLIENT_FOLDER } from '../../lib/constants';
 import { LogObj } from '../../lib/logging/lob-obj';
 import { validateOAUthUsers } from './oauth-users';
 import { debug } from '../../lib/logging/logger';
-import { SettablePromise } from '../../lib/util';
 import { createRouter } from '../../lib/api';
 import type { ModuleConfig } from '..';
 import { getEnv } from '../../lib/io';

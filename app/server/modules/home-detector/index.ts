@@ -1,6 +1,6 @@
+import { SettablePromise } from '../../lib/settable-promise';
 import { LogObj } from '../../lib/logging/lob-obj';
 import { logTag } from '../../lib/logging/logger';
-import { SettablePromise } from '../../lib/util';
 import { initRouting } from './routing';
 import type { ModuleConfig } from '..';
 import { handleHooks } from './hooks';

@@ -1,6 +1,6 @@
+import { SettablePromise } from '../../lib/settable-promise';
 import movementConfig from '../../config/movements';
 import { LogObj } from '../../lib/logging/lob-obj';
-import { SettablePromise } from '../../lib/util';
 import type { Database } from '../../lib/db';
 import { Movement } from '.';
 

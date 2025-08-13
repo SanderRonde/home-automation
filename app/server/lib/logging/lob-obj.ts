@@ -1,6 +1,6 @@
 import { externalRedact } from '../../modules/auth/helpers';
 import type { ResponseLike } from './response-logger';
-import { generateRandomString } from '../util';
+import { generateRandomString } from '../random';
 import { getTime, warning } from './logger';
 import type { WSSimInstance } from '../ws';
 import { getIP } from './request-logger';

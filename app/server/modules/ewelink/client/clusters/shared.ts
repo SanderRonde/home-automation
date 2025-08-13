@@ -1,6 +1,6 @@
 import { EventEmitter } from '../../../../lib/event-emitter';
+import { AsyncQueue } from '../../../../lib/async-queue';
 import type { EwelinkDeviceResponse } from '../../api';
-import { AsyncQueue } from '../../../../lib/util';
 import type eWelink from 'ewelink-api-next';
 import util from 'util';
 

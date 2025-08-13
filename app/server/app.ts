@@ -15,7 +15,7 @@ import type { AllModules } from './modules';
 import { SQLDatabase } from './lib/sql-db';
 import { getAllModules } from './modules';
 import { Database } from './lib/db';
-import { wait } from './lib/util';
+import { wait } from './lib/time';
 import 'express-async-errors';
 import express from 'express';
 import * as http from 'http';

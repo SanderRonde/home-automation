@@ -1,5 +1,5 @@
 import { ResDummy } from '../../lib/logging/response-logger';
-import { SettablePromise } from '../../lib/util';
+import { SettablePromise } from '../../lib/settable-promise';
 import type { Schema } from '../../lib/sql-db';
 import { initRouting } from './routing';
 import type { ModuleConfig } from '..';

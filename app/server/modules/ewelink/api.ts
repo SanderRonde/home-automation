@@ -9,7 +9,7 @@ import { EventEmitter } from '../../lib/event-emitter';
 import { queueEwelinkTokenRefresh } from './routing';
 import { EWELINK_DEBUG } from '../../lib/constants';
 import { logTag } from '../../lib/logging/logger';
-import { asyncSetInterval } from '../../lib/util';
+import { asyncSetInterval } from '../../lib/time';
 import { EwelinkDevice } from './client/device';
 import type { Database } from '../../lib/db';
 import eWelink from 'ewelink-api-next';

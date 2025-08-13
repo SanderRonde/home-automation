@@ -1,8 +1,8 @@
+import { SettablePromise } from '../lib/settable-promise';
 import type { ModuleConfig, AllModules } from './modules';
 import type { LogObj } from '../lib/logging/lob-obj';
 import { HOME_STATE } from './home-detector/types';
 import { BotStateBase } from '../lib/bot-state';
-import { SettablePromise } from '../lib/util';
 
 declare class Handler {
 	public constructor(_logObj: LogObj, _source: string);

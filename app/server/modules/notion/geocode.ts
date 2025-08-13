@@ -5,7 +5,7 @@ import type {
 import { NOTION_GEOCODE_UPDATE_INTERVAL } from '../../lib/constants';
 import { getAllForQuery, notionRequest } from './client';
 import { logTag } from '../../lib/logging/logger';
-import { asyncSetInterval } from '../../lib/util';
+import { asyncSetInterval } from '../../lib/time';
 import type { Client } from '@notionhq/client';
 import { captureTime } from '../../lib/timer';
 import type { WithAuth } from './types';
