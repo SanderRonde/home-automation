@@ -10,6 +10,7 @@ import { Notion } from './notion/';
 import { Matter } from './matter';
 import { KeyVal } from './keyval';
 import { Device } from './device';
+import { Config } from './config';
 import { OAuth } from './oauth/';
 import { Auth } from './auth';
 import { RGB } from './rgb';
@@ -21,7 +22,7 @@ import type { WSSimulator, WSWrapper } from '../lib/ws';
 import { InfoScreen } from './info-screen';
 import type { Database } from '../lib/db';
 import type { ModuleMeta } from './meta';
-import type { Config } from '../app';
+import type { AppConfig } from '../app';
 
 export { HomeDetector } from './home-detector';
 export { Temperature } from './temperature';
@@ -34,6 +35,7 @@ export { Notion } from './notion/';
 export { Secret } from './secret/';
 export { KeyVal } from './keyval';
 export { Matter } from './matter';
+export { Config } from './config';
 export { OAuth } from './oauth/';
 export { Auth } from './auth';
 export { Bot } from './bot';
@@ -55,7 +57,7 @@ export interface BaseModuleConfig {
 	app: AsyncExpressApplication;
 	websocketSim: WSSimulator;
 	websocket: WSWrapper;
-	config: Config;
+	config: AppConfig;
 	randomNum: number;
 }
 
@@ -73,6 +75,7 @@ const getModuleObj = () => ({
 	device: Device,
 	keyval: KeyVal,
 	matter: Matter,
+	config: Config,
 	secret: Secret,
 	notion: Notion,
 	webhook: Webhook,

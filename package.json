@@ -23,23 +23,23 @@
 		"compile:server": "tsc -p app/server/tsconfig.json",
 		"compile:client": "tsc -p app/client/tsconfig.json",
 		"compile:ai": "tsc -p ai/tsconfig.json",
-		"_esbuild": "esbuild --format=iife --minify --bundle",
-		"bundle:keyval": "bun build app/client/keyval/keyval.tsx --outdir app/client/keyval  && yarn _esbuild app/client/keyval/serviceworker.ts --outfile=app/client/keyval/serviceworker.js && cp node_modules/antd/dist/antd.dark.css app/client/keyval/antd.dark.css",
-		"bundle:home-detector": "yarn _esbuild app/client/home-detector/home-detector.ts --outfile=app/client/home-detector/home-detector.bundle.js && yarn _esbuild app/client/home-detector/serviceworker.ts --outfile=app/client/home-detector/serviceworker.bundle.js",
-		"bundle:rgb": "yarn _esbuild app/client/rgb/rgb.ts --outfile=app/client/rgb/rgb.bundle.js && yarn _esbuild app/client/rgb/serviceworker.ts --outfile=app/client/rgb/serviceworker.js",
-		"bundle:info-screen": "yarn _esbuild app/client/info-screen/info-screen.ts --outfile=app/client/info-screen/info-screen.bundle.js ",
-		"bundle:oauth": "yarn _esbuild app/client/oauth/oauth.tsx --outfile=app/client/oauth/oauth.bundle.js ",
-		"bundle": "yarn bundle:keyval && yarn bundle:home-detector && yarn bundle:rgb && yarn bundle:info-screen && yarn bundle:oauth",
+		"bundle:keyval": "bun build app/client/keyval/keyval.tsx --outdir app/client/keyval && bun build app/client/keyval/serviceworker.ts --outfile=app/client/keyval/serviceworker.js && cp node_modules/antd/dist/antd.dark.css app/client/keyval/antd.dark.css",
+		"bundle:config": "bun build app/client/config/config.tsx --outdir app/client/config && bun build app/client/config/serviceworker.ts --outfile=app/client/config/serviceworker.js",
+		"bundle:home-detector": "bun build app/client/home-detector/home-detector.ts --outfile=app/client/home-detector/home-detector.bundle.js && bun build app/client/home-detector/serviceworker.ts --outfile=app/client/home-detector/serviceworker.bundle.js",
+		"bundle:rgb": "bun build app/client/rgb/rgb.ts --outfile=app/client/rgb/rgb.bundle.js && bun build app/client/rgb/serviceworker.ts --outfile=app/client/rgb/serviceworker.js",
+		"bundle:info-screen": "bun build app/client/info-screen/info-screen.ts --outfile=app/client/info-screen/info-screen.bundle.js",
+		"bundle:oauth": "bun build app/client/oauth/oauth.tsx --outfile=app/client/oauth/oauth.bundle.js",
+		"bundle": "bun bundle:keyval && bun bundle:config && bun bundle:home-detector && bun bundle:rgb && bun bundle:info-screen && bun bundle:oauth",
 		"watch:server": "tsc -w -p app/server/tsconfig.json",
 		"watch:client": "tsc -w -p app/client/tsconfig.json",
 		"watch:ai": "tsc -w -p ai/tsconfig.json",
-		"compile": "yarn compile:server && yarn compile:client && yarn compile:ai && yarn bundle",
+		"compile": "bun compile:server && bun compile:client && bun compile:ai && bun bundle",
 		"watch": "tsc -w -p app/server/tsconfig.json",
 		"pretty": "pretty-quick",
 		"format-check": "prettier --check '**/*.{ts,json,html}'",
 		"format": "prettier --write '**/*.{ts,json,html}'",
 		"lint": "eslint --fix \"./app/**/*.ts\"",
-		"start": "node --experimental-modules --enable-source-maps --trace-warnings -r ts-node/register/transpile-only app/server/app.ts --http 1272 --https 1273 -vvvvvv --name 1000 --scripts /home/sander/scripts --color -i"
+		"start": "bun app/server/app.ts --http 1272 --https 1273 -vvvvvv --color -i"
 	},
 	"devDependencies": {
 		"@matter/types": "^0.15.3",
@@ -122,5 +122,5 @@
 		"wled-client": "^0.22.1",
 		"ws": "^7.4.6"
 	},
-	"packageManager": "yarn@4.1.0"
+	"packageManager": "bun@4.1.0"
 }

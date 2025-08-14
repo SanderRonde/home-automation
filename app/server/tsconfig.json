@@ -6,7 +6,6 @@
 		"moduleResolution": "node16",
 		"noImplicitAny": true,
 		"noImplicitThis": true,
-		"preserveConstEnums": false,
 		"listFiles": false,
 		"pretty": true,
 		"noFallthroughCasesInSwitch": true,
