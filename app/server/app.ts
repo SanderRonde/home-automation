@@ -41,10 +41,10 @@ type DeepRequired<T> = {
 	[P in keyof T]-?: DeepRequired<T[P]>;
 };
 
-export type Config = DeepRequired<PartialConfig>;
+export type AppConfig = DeepRequired<PartialConfig>;
 
 class WebServer {
-	private readonly _config: Config;
+	private readonly _config: AppConfig;
 	private _server!: http.Server;
 	private _initLogger!: ProgressLogger;
 
@@ -56,7 +56,7 @@ class WebServer {
 		this._config = this._setConfigDefaults(config);
 	}
 
-	private _setConfigDefaults(config: PartialConfig): Config {
+	private _setConfigDefaults(config: PartialConfig): AppConfig {
 		return {
 			ports: {
 				http: config.ports?.http || 1234,

@@ -5,7 +5,7 @@ import { getTime, warning } from './logger';
 import type { WSSimInstance } from '../ws';
 import { getIP } from './request-logger';
 import { gatherTimings } from '../timer';
-import type { Config } from '../../app';
+import type { AppConfig } from '../../app';
 import type * as express from 'express';
 import * as fs from 'fs/promises';
 import type * as http from 'http';
@@ -243,7 +243,7 @@ export class LogObj {
 		return newObj;
 	}
 
-	public reportError(err: Error, config: Config): void {
+	public reportError(err: Error, config: AppConfig): void {
 		const errPath = config.log.errorLogPath;
 		if (errPath) {
 			// Log error to error path and create it
