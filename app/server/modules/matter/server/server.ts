@@ -636,7 +636,7 @@ function writeStdout(message: unknown) {
 type ObservableForObserver<T> =
 	T extends Observable<infer U> ? Observer<U> : never;
 
-void (async () => {
+async function main() {
 	const messageQueue: string[] = [];
 	let isBooting = true;
 
@@ -689,4 +689,8 @@ void (async () => {
 			}
 		}
 	}
-})();
+}
+
+if (require.main === module) {
+	void main();
+}
