@@ -12,7 +12,6 @@ import { KeyVal } from './keyval';
 import { Device } from './device';
 import { OAuth } from './oauth/';
 import { Auth } from './auth';
-import { Hue } from './hue/';
 import { RGB } from './rgb';
 import { Bot } from './bot';
 
@@ -39,7 +38,6 @@ export { OAuth } from './oauth/';
 export { Auth } from './auth';
 export { Bot } from './bot';
 export { RGB } from './rgb';
-export { Hue } from './hue/';
 
 export type AllModules = ReturnType<typeof getModuleObj>;
 
@@ -70,7 +68,6 @@ export interface ModuleConfig<M extends ModuleMeta> extends BaseModuleConfig {
 const getModuleObj = () => ({
 	bot: Bot,
 	RGB: RGB,
-	hue: Hue,
 	auth: Auth,
 	oauth: OAuth,
 	device: Device,
