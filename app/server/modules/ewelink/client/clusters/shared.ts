@@ -28,7 +28,7 @@ export class EWeLinkWSConnection extends EventEmitter<
 	EWeLinkWebSocketMessage<unknown>
 > {}
 
-export class EWeLinkSharedConfig {
+export class EWeLinkConfig {
 	public constructor(
 		public readonly connection: WrappedEWeLinkAPI,
 		public readonly device: EwelinkDeviceResponse,

@@ -2,7 +2,7 @@
 
 import { EwelinkClusterProxy, EwelinkOnOffCluster } from '../../cluster';
 import type { EwelinkOnOffClusterState } from '../../cluster';
-import type { EWeLinkSharedConfig } from '../shared';
+import type { EWeLinkConfig } from '../shared';
 
 export interface EwelinkOnOffClusterM51CParams {
 	switches: {
@@ -28,7 +28,7 @@ export class EwelinkOnOffClusterM51CSingle extends EwelinkOnOffCluster {
 		});
 
 	public constructor(
-		eWeLinkConfig: EWeLinkSharedConfig,
+		eWeLinkConfig: EWeLinkConfig,
 		public readonly outlet: number
 	) {
 		super(eWeLinkConfig);

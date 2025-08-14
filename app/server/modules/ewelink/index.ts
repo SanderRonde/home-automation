@@ -32,7 +32,9 @@ export const EWeLink = new (class EWeLink extends ModuleMeta {
 
 	public init(config: ModuleConfig<EWeLink>) {
 		initRouting(config, this._api);
-		void initEWeLinkAPI(config.db, this._api);
+		void initEWeLinkAPI(config.db, this._api, (devices) => {
+			config.modules.device.setDevices(devices);
+		});
 	}
 
 	public async onBackOnline() {

@@ -16,14 +16,14 @@ import {
 } from '../../../lib/event-emitter';
 import type { EWeLinkWebSocketMessage } from './clusters/shared';
 import { SettablePromise } from '../../../lib/settable-promise';
-import type { EWeLinkSharedConfig } from './clusters/shared';
+import type { EWeLinkConfig } from './clusters/shared';
 import type { Cluster } from '../../device/cluster';
 import type { EwelinkDeviceResponse } from '../api';
 import util from 'util';
 
 export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 	private _disposables: (() => void)[] = [];
-	private _config = new SettablePromise<EWeLinkSharedConfig>();
+	private _config = new SettablePromise<EWeLinkConfig>();
 	private readonly _fromParams: (state: object) => PARAMS = (s) =>
 		s as PARAMS;
 	private readonly _toParams: (state: PARAMS) => object = (s) => s;
@@ -31,6 +31,7 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 	protected readonly _eventEmitters = new Set<
 		EventEmitter<unknown, unknown>
 	>();
+	private _online: SettablePromise<boolean> = new SettablePromise();
 
 	private constructor(mappers?: {
 		fromParams: (state: object) => PARAMS;
@@ -57,14 +58,14 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 		return () => proxy;
 	}
 
-	private _getItemData(device: EWeLinkSharedConfig['device']) {
+	private _getItemData(device: EWeLinkConfig['device']) {
 		const params = device.itemData.params;
 		return this._fromParams(params) as PARAMS & {
 			deviceid: string;
 		};
 	}
 
-	public setConfig(config: EWeLinkSharedConfig): void {
+	public setConfig(config: EWeLinkConfig): void {
 		this._config.set(config);
 
 		this._lastParams = this._getItemData(config.device);
@@ -91,8 +92,18 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 				}
 			)
 		);
+
+		if (config.device.itemData.online) {
+			this._online.set(true);
+		}
+
 		this._disposables.push(
 			config.periodicFetcher.listen((data: EwelinkDeviceResponse) => {
+				if (data.itemData.online) {
+					this._online.set(true);
+				} else {
+					this._online = new SettablePromise();
+				}
 				for (const eventEmitter of this._eventEmitters) {
 					this._lastParams = this._fromParams(data.itemData.params);
 					void eventEmitter.emit(this._lastParams);
@@ -151,6 +162,8 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 		return async (args: A) => {
 			const mappedInput = mapper ? mapper(args) : args;
 
+			await this._online.value;
+
 			const config = await this._config.value;
 			const newParams = {
 				...this._lastParams,
@@ -191,9 +204,7 @@ function ConfigurableCluster<T extends object>(
 	return class extends Base {
 		protected getProxy = EwelinkClusterProxy.createGetter<T>();
 
-		public constructor(
-			protected readonly _eWeLinkConfig: EWeLinkSharedConfig
-		) {
+		public constructor(protected readonly _eWeLinkConfig: EWeLinkConfig) {
 			super();
 			this.getProxy().setConfig(this._eWeLinkConfig);
 		}
@@ -305,7 +316,7 @@ export class EwelinkOutletSwitchCluster extends ConfigurableCluster<{
 	outlet: number;
 }>(DeviceSwitchCluster) {
 	public constructor(
-		protected readonly _eWeLinkConfig: EWeLinkSharedConfig,
+		protected readonly _eWeLinkConfig: EWeLinkConfig,
 		public readonly outlet: number
 	) {
 		super(_eWeLinkConfig);

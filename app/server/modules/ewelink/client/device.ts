@@ -12,13 +12,13 @@ import { EwelinkOnOffClusterSimplePower } from './clusters/power/simple-power';
 import type { EwelinkOnOffClusterM51CParams } from './clusters/power/M5-1C';
 import { EwelinkOnOffClusterM51CSingle } from './clusters/power/M5-1C';
 import { DeviceEndpoint, type Device } from '../../device/device';
-import type { EWeLinkSharedConfig } from './clusters/shared';
+import type { EWeLinkConfig } from './clusters/shared';
 import { logTag } from '../../../lib/logging/logger';
 import type { EwelinkCluster } from './cluster';
 
 class EwelinkEndpoint extends DeviceEndpoint implements Disposable {
 	public constructor(
-		protected readonly _eWeLinkConfig: EWeLinkSharedConfig,
+		protected readonly _eWeLinkConfig: EWeLinkConfig,
 		public readonly clusters: EwelinkCluster[],
 		public readonly endpoints: EwelinkEndpoint[] = []
 	) {
@@ -35,7 +35,7 @@ export abstract class EwelinkDevice
 	}
 
 	public static from(
-		eWeLinkConfig: EWeLinkSharedConfig
+		eWeLinkConfig: EWeLinkConfig
 	): EwelinkDevice | null {
 		const model = eWeLinkConfig.device.itemData.productModel;
 		const device = DEVICES.find((d) => d.modelName === model);
@@ -54,7 +54,7 @@ class EwelinkM51CDevice extends EwelinkDevice {
 	public static readonly modelName = 'M5-1C';
 
 	public switches: number;
-	public constructor(eWeLinkConfig: EWeLinkSharedConfig) {
+	public constructor(eWeLinkConfig: EWeLinkConfig) {
 		const count = (
 			eWeLinkConfig.device.itemData
 				.params as unknown as EwelinkOnOffClusterM51CParams
@@ -76,7 +76,7 @@ class EwelinkM51CDevice extends EwelinkDevice {
 class EwelinkZBMiniDevice extends EwelinkDevice {
 	public static readonly modelName = 'ZCL_HA_DEVICEID_ON_OFF_LIGHT';
 
-	public constructor(eWeLinkConfig: EWeLinkSharedConfig) {
+	public constructor(eWeLinkConfig: EWeLinkConfig) {
 		super(eWeLinkConfig, [
 			new EwelinkOnOffClusterSimplePower(eWeLinkConfig),
 		]);
@@ -86,7 +86,7 @@ class EwelinkZBMiniDevice extends EwelinkDevice {
 class EwelinkTemperatureHumiditySensorDevice extends EwelinkDevice {
 	public static readonly modelName = 'SNZB-02P';
 
-	public constructor(eWeLinkConfig: EWeLinkSharedConfig) {
+	public constructor(eWeLinkConfig: EWeLinkConfig) {
 		super(eWeLinkConfig, [
 			new EwelinkTemperatureMeasurementCluster(eWeLinkConfig),
 			new EwelinkRelativeHumidityMeasurementCluster(eWeLinkConfig),
@@ -98,7 +98,7 @@ class EwelinkTemperatureHumiditySensorDevice extends EwelinkDevice {
 class EwelinkDoorAndWindowSensorDevice extends EwelinkDevice {
 	public static readonly modelName = 'ZIGBEE_DOOR_AND_WINDOW_SENSOR';
 
-	public constructor(eWeLinkConfig: EWeLinkSharedConfig) {
+	public constructor(eWeLinkConfig: EWeLinkConfig) {
 		super(eWeLinkConfig, [
 			new EwelinkBooleanStateDoorSensorCluster(eWeLinkConfig),
 			new EwelinkPowerSourceCluster(eWeLinkConfig),
@@ -109,7 +109,7 @@ class EwelinkDoorAndWindowSensorDevice extends EwelinkDevice {
 class EwelinkOccupancySensordevice extends EwelinkDevice {
 	public static readonly modelName = 'ZIGBEE_MOBILE_SENSOR';
 
-	public constructor(eWeLinkConfig: EWeLinkSharedConfig) {
+	public constructor(eWeLinkConfig: EWeLinkConfig) {
 		super(eWeLinkConfig, [
 			new EwelinkOccupancySensingCluster(eWeLinkConfig),
 			new EwelinkPowerSourceCluster(eWeLinkConfig),
@@ -120,7 +120,7 @@ class EwelinkOccupancySensordevice extends EwelinkDevice {
 class EwelinkOnOffSwitchDevice extends EwelinkDevice {
 	public static readonly modelName = 'zigbee_ON_OFF_SWITCH_1000';
 
-	public constructor(eWeLinkConfig: EWeLinkSharedConfig) {
+	public constructor(eWeLinkConfig: EWeLinkConfig) {
 		super(eWeLinkConfig, [
 			new EwelinkSwitchCluster(eWeLinkConfig),
 			new EwelinkPowerSourceCluster(eWeLinkConfig),
@@ -131,7 +131,7 @@ class EwelinkOnOffSwitchDevice extends EwelinkDevice {
 class EwelinkR5SceneControllerDevice extends EwelinkDevice {
 	public static readonly modelName = 'NON-OTA-GL(174)';
 
-	public constructor(eWeLinkConfig: EWeLinkSharedConfig) {
+	public constructor(eWeLinkConfig: EWeLinkConfig) {
 		const endpoints = new Array(6)
 			.fill(0)
 			.map(

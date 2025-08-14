@@ -69,6 +69,19 @@ export class AsyncEventEmitter<V, M = V> extends EventEmitter<V, M> {
 		super._emit(value);
 	}
 
+	public listen(
+		handler: (value: NonNullable<M>) => void,
+		initial: boolean = false
+	): () => void {
+		this._handlers.add(handler);
+
+		if (initial && this._initialized && this._value) {
+			handler(this._value);
+		}
+
+		return () => this.removeListener(handler);
+	}
+
 	public [util.inspect.custom](): string {
 		return `${this.constructor.name} { value: ${String(this._value)} }`;
 	}

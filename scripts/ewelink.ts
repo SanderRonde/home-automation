@@ -36,7 +36,7 @@ async function main() {
 		region,
 	});
 	api.at = token;
-	await initEWeLinkDevices(api);
+	await initEWeLinkDevices(api, () => {});
 }
 
 // @ts-ignore
