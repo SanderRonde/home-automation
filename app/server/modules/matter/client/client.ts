@@ -14,6 +14,7 @@ import type {
 import type { ChildProcessWithoutNullStreams } from 'child_process';
 import { AsyncEventEmitter } from '../../../lib/event-emitter';
 import type { EndpointNumber } from '@matter/types';
+import { DB_FOLDER } from '../../../lib/constants';
 import { MatterDevice } from './device';
 import { spawn } from 'child_process';
 import * as path from 'path';
@@ -52,6 +53,7 @@ export class MatterClient implements AsyncDisposable {
 		this.#proc = spawn('ts-node', [
 			'-T',
 			path.join(__dirname, '../server/server.ts'),
+			`--storage-path=${path.join(DB_FOLDER, 'matter')}`,
 		]);
 		this.#proc.stdout.on('data', (data: Buffer | string) => {
 			process.stdout.write(data.toString());
