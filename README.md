@@ -1,8 +1,8 @@
 # home-automation
 
-A locally hosted home automation server that automates various things. Currently consists of remote device control (lamps, speakers etc), rgb effects, a script runner, a remote media controller and a detector for who's home. Tightly integrated to, for example, turn off the lights when I leave. Tied together by a web app, touch screen, telegram bot and smart device (Google Home) APIs, allowing for simple control from anywhere in any way.
+A locally hosted home automation server that automates various things. Currently consists of remote device control (lamps, speakers etc), a script runner, a remote media controller and a detector for who's home. Tightly integrated to, for example, turn off the lights when I leave. Tied together by a web app, touch screen, telegram bot and smart device (Google Home) APIs, allowing for simple control from anywhere in any way.
 
-A large part of this project consists of the smart controllers and rgb strips that are to be controlled. This part is done with microcontrollers, consisting of Arduinos (Uno and Due) and various boards with the ESP8266 WiFi chip. These are programmed in C/C++ to interface with the server. See [How it works](#How-it-works) for more info on that.
+A large part of this project consists of the smart controllers that are to be controlled. This part is done with microcontrollers, consisting of Arduinos (Uno and Due) and various boards with the ESP8266 WiFi chip. These are programmed in C/C++ to interface with the server. See [How it works](#How-it-works) for more info on that.
 
 Backend consists of a NodeJS server running express, using the web and the [serialport](https://www.npmjs.com/package/serialport) and [magic-home](https://www.npmjs.com/package/magic-home) packages to interface with microcontrollers and the [castv2-player](https://www.npmjs.com/package/castv2-player) package to interface with cast-enabled devices (google home). The frontend uses [wc-lib](https://github.com/SanderRonde/wc-lib), a webcomponent-based web framework that just so happens to be made by me as well.
 
@@ -18,9 +18,6 @@ The keyval module controls the state of various devices, allowing you to turn on
 
 The invidvidual togglable power sockets consist of a few cheap electrical parts and an ESP8266 board that together allow for remote control of power sockets.
 
-#### RGB
-
-The RGB module controls the state of all RGB strips. Some work through [magic-home](https://www.npmjs.com/package/magic-home) and others work through individually adressable LED strips, interfaced with an arduino running a custom communication protocol. The module allows for the setting of specific colors, patterns and effects.
 
 #### Home-detector
 
@@ -34,9 +31,7 @@ The cast module allows for the casting of things to cast-enabled devices. Since 
 
 The temperature module allows for the setting of a target temperature of the house. The server then tells a temperature controller what to do based on the currently measured temperature, eventually reaching the target temperature. It also allows for manual turning on and off of a temperature controller (for example for when you leave home).
 
-#### Pressure
 
-The pressure module allows for detection of pressure and reponse to change in the pressure. For example someone is going to bed if additional pressure is felt in bed. Someone is sitting on a chair if additional pressure is felt on that chair.
 
 #### Explain
 
@@ -51,9 +46,6 @@ The info-screen module powers a screen containing some basic info like the tempe
 The webhook module is a fairly simple interface with the outside world. When a webhook endpoint is reached, the webhook with that name is ran. Webhooks can be configured in a config file to interface with any other module, allowing you to do anything from a webhook.
 
 
-#### Movement
-
-The movement module handles any motion detection and runs the associated actions. For example lights can trigger using hand gestures and the lights can go on when you enter a room.
 
 ### Controllers
 
@@ -63,7 +55,7 @@ Everything is connected with a telegram bot that (semi-)intelligently performs t
 
 #### Web apps
 
-There are two web apps. One allows control of the keyval store for simple control of the lights and speakers from a phone. The second one allows for control of RGB lights through a color wheel.
+There is a web app that allows control of the keyval store for simple control of the lights and speakers from a phone.
 
 ## How it works
 
@@ -77,11 +69,7 @@ The board runs C/C++ code which can be found over at the [board-power-driver rep
 
 When a keyval value changes, a listener is fired which then sends the changed value to the responsible board over the makeshift websockets. The board then changes the state of the data pin of the relay, after which the power goes on or off.
 
-#### RGB
 
-This module uses two types of led strips. Those powered by magic-home RGB controllers and those powered by an arduino. Controlling the magic-home led strips is actually quite easy since there's a library for it. The other led strips are a bit harder to control. They are individually addressable led strips and as such can do a bit more than regular led strips. Because of this I wrote some code for an arduino that then controls the led strips directly. Since it's not possible to constantly send a constant state to the arduino over serial for every write (this would take too long), a bunch of configurable patterns had to be made. For example the flash pattern, the solid color pattern, the single dot pattern and some more. The server then controls the current mode and its configuration through a serial connection with the arduino.
-
-Check out the arduino driver for the individually addressible LEDs [over here](https://github.com/SanderRonde/arduino-board-led-driver) and check out the ESP8266 driver for the hexagonal individually addressible LEDs [over here](https://github.com/SanderRonde/board-hex-leds).
 
 #### Home-detector
 
@@ -107,11 +95,7 @@ The code for the microcontroller measuring the temperature can be found [over at
 
 The code for the microcontroller driving it can be found [over at this repository](https://github.com/SanderRonde/board-temperature-controller-driver).
 
-#### Pressure
 
-The pressure module works by having microcontrollers report the pressure they measure. They measure this pressure by measuring the resistance between two sides of a sheet of [Velostat](https://en.wikipedia.org/wiki/Velostat). If the pressure changes, so does the resistance of the Velostat. This pressure is reported to the server, which can then act on it based on hooks. For example turn off the light when the pressure in the bed reaches above X for a few seconds and turn it back on when the pressure is lowered again.
-
-The code for the microcontroller driving it can be found [over at this repository](https://github.com/SanderRonde/board-pressure-sensor).
 
 #### Explain
 
@@ -125,9 +109,7 @@ The info-screen module works through some fairly simple REST API's hosted on loc
 
 The webhook module uses a simple config file, in which the webhook with given name is called when its endpoint has been hit.
 
-#### Movement
 
-Most of the movement module's magic is in [the boards](https://github.com/SanderRonde/board-movement-sensor). The boards signal when movement occurs, after which the module simply runs the associated configuration.
 
 #### Telegram bot
 

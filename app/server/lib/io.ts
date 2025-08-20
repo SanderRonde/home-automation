@@ -86,9 +86,6 @@ export interface EnvShape {
 	// LED IPs
 	SELF_IP: string;
 
-	// Info-screen
-	INFO_SCREEN_KEYVAL: string;
-
 	// Secrets
 	SECRET_AUTH: string;
 	SECRET_BOT: string;

@@ -40,7 +40,7 @@ pure_eval==0.2.3
 pycparser==2.22
 Pygments==2.19.0
 pyOpenSSL==24.3.0
-PySwitchbot==0.55.4
+
 python-dateutil==2.9.0.post0
 pyzmq==26.2.0
 six==1.17.0

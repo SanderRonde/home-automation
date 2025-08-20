@@ -39,30 +39,4 @@ export class InfoScreen extends ServerComm {
 		},
 		super.props
 	);
-
-	public connectWebsocket(): void {
-		const connection = new WebSocket(`ws://${location.host}/blanking`);
-		connection.onmessage = (m) => {
-			const data = JSON.parse(m.data);
-			if ('blank' in data && data.blank !== undefined) {
-				this.props.blank = data.blank;
-			}
-			if ('refresh' in data && data.refresh !== undefined) {
-				location.reload();
-			}
-		};
-		connection.onopen = () => {
-			this.props.offline = false;
-		};
-		connection.onclose = () => {
-			this.props.offline = true;
-			setTimeout(() => {
-				this.connectWebsocket();
-			}, 1000 * 5);
-		};
-	}
-
-	public mounted(): void {
-		this.connectWebsocket();
-	}
 }

@@ -34,9 +34,11 @@ export abstract class EwelinkDevice
 		return `EWELINK:${this._eWeLinkConfig.device.itemData.deviceid}`;
 	}
 
-	public static from(
-		eWeLinkConfig: EWeLinkConfig
-	): EwelinkDevice | null {
+	public getDeviceName(): string {
+		return this._eWeLinkConfig.device.itemData.name;
+	}
+
+	public static from(eWeLinkConfig: EWeLinkConfig): EwelinkDevice | null {
 		const model = eWeLinkConfig.device.itemData.productModel;
 		const device = DEVICES.find((d) => d.modelName === model);
 		if (!device) {

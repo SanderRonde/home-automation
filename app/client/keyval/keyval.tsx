@@ -1,4 +1,4 @@
-import { JSONSwitches } from './components/json-switches';
+import { KeyvalSwitches } from './components/keyval-switches';
 import { createRoot } from 'react-dom/client';
 import React from 'react';
 
@@ -14,11 +14,7 @@ async function registerServiceworker() {
 const root = createRoot(document.getElementById('root')!);
 root.render(
 	<React.StrictMode>
-		<JSONSwitches
-			initialJson={JSON.parse(
-				document.getElementById('root')!.getAttribute('json')!
-			)}
-		/>
+		<KeyvalSwitches />
 	</React.StrictMode>
 );
 

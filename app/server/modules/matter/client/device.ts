@@ -108,4 +108,8 @@ export class MatterDevice extends MatterEndpoint implements Device {
 	public getUniqueId(): string {
 		return `matter:${this.#nodeId}:${this.#rootEndpointNumber}`;
 	}
+
+	public getDeviceName(): string {
+		return this.name;
+	}
 }

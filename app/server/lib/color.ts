@@ -299,7 +299,8 @@ function cieXyToRgb(x: number, y: number): { r: number; g: number; b: number } {
 	const b = Math.round(b_srgb * 255);
 
 	return { r, g, b };
-}export const colorList = {
+}
+export const colorList = {
 	aliceblue: '#f0f8ff',
 	antiquewhite: '#faebd7',
 	aqua: '#00ffff',
@@ -449,4 +450,3 @@ function cieXyToRgb(x: number, y: number): { r: number; g: number; b: number } {
 	yellow: '#ffff00',
 	yellowgreen: '#9acd32',
 };
-

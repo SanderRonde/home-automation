@@ -29,7 +29,7 @@ interface PartialConfig {
 	log?: {
 		level?: number;
 		secrets: boolean;
-		ignorePressure?: boolean;
+
 		errorLogPath?: string | null | void;
 	};
 	debug?: boolean;
@@ -66,7 +66,7 @@ class WebServer {
 			log: {
 				level: config.log?.level || 1,
 				secrets: config.log?.secrets || false,
-				ignorePressure: config?.log?.ignorePressure || false,
+
 				// In debug mode always log errors to console
 				errorLogPath: config.debug
 					? null
@@ -191,7 +191,7 @@ if (hasArg('help', 'h')) {
 	console.log(
 		"-v*, --verbose*			Logs all data (equivalent of adding a lot of v's"
 	);
-	console.log('--ignore-pressure		Ignore pressure report logs');
+
 	console.log('--log-telegram-bot-commands		Log all telegram bot commands');
 	// eslint-disable-next-line no-process-exit
 	process.exit(0);
@@ -225,7 +225,7 @@ void new WebServer({
 	log: {
 		level: getVerbosity(),
 		secrets: hasArg('log-secrets') || false,
-		ignorePressure: hasArg('ignore-pressure'),
+
 		errorLogPath: getArg('error-log-path'),
 	},
 	debug: hasArg('debug') || !!getArg('IO_DEBUG'),

@@ -18,7 +18,7 @@ function keyvalHTML(json: string, randomNum: number) {
 					content="An app for controlling keyval entries"
 				/>
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
-				<link rel="stylesheet" href="/keyval/antd.dark.css" />
+
 				<title>KeyVal Switch</title>
 			</head>
 			<body style="margin: 0; overflow-x: hidden">

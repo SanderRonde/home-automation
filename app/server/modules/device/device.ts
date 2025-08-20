@@ -63,8 +63,9 @@ export abstract class DeviceEndpoint implements Disposable {
 	}
 }
 
-export interface Device {
+export interface Device extends DeviceEndpoint {
 	getUniqueId(): string;
+	getDeviceName(): string;
 }
 
 export type DeviceAttribute<T> = {

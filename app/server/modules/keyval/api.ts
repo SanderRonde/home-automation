@@ -1,55 +1,35 @@
-import {
-	errorHandle,
-	requireParams,
-	authAll,
-	auth,
-} from '../../lib/decorators';
+import { errorHandle, requireParams, auth } from '../../lib/decorators';
 import type { ResponseLike } from '../../lib/logging/response-logger';
-import transform from '../../config/keyval-transform';
-import { LogObj } from '../../lib/logging/lob-obj';
+import { DeviceOnOffCluster } from '../device/cluster';
 import type { Database } from '../../lib/db';
-import { str } from './helpers';
 import type { KeyVal } from '.';
 
-type MultiValueResolver<V> = (values: V[]) => V;
-
-function getObjectValue<V>(
-	obj: ObjValue<V>,
-	resolver: MultiValueResolver<V>
-): V {
-	const values: V[] = [];
-	for (const key in obj) {
-		const value = obj[key];
-		if (typeof value === 'object') {
-			values.push(getObjectValue(value as ObjValue<V>, resolver));
-		} else {
-			values.push(value);
-		}
-	}
-	return resolver(values);
+interface KeyvalItem {
+	name: string;
+	icon?: string;
+	deviceIds: string[];
 }
 
-const keyvalMultiValueResolver: MultiValueResolver<'1' | '0'> = (values) => {
-	if (values.length === 0) {
-		return '0';
-	}
-	for (const value of values) {
-		if (value === '0') {
-			return '0';
-		}
-	}
-	return '1';
-};
+interface KeyvalGroup {
+	name: string;
+	icon?: string;
+	items: KeyvalItem[];
+}
 
-type ObjValue<V> = {
-	[key: string]: V | ObjValue<V>;
-};
+export interface KeyvalConfig {
+	groups: KeyvalGroup[];
+}
 
-function ensureString(value: string | ObjValue<string>): string {
-	if (typeof value === 'object') {
-		return getObjectValue(value, keyvalMultiValueResolver);
-	}
-	return value;
+interface KeyvalItemWithValue extends KeyvalItem {
+	value: boolean;
+}
+
+interface KeyvalGroupWithValues extends Omit<KeyvalGroup, 'items'> {
+	items: KeyvalItemWithValue[];
+}
+
+export interface KeyvalConfigWithValues extends Omit<KeyvalConfig, 'groups'> {
+	groups: KeyvalGroupWithValues[];
 }
 
 export class APIHandler {
@@ -67,205 +47,224 @@ export class APIHandler {
 		this._keyval = keyval;
 	}
 
-	@errorHandle
-	@requireParams('key')
-	@auth
-	public get(
-		res: ResponseLike,
-		{
-			key,
-		}: {
-			key: string;
-			auth?: string;
-		}
-	): string {
-		const value = ensureString(this._db.get(key, '0'));
-		LogObj.fromRes(res).attachMessage(
-			`Key: "${key}", val: "${str(value)}"`
-		);
-		res.status(200).write(value === undefined ? '' : value);
-		res.end();
-		return value;
-	}
-
-	@errorHandle
-	@requireParams('key')
-	@auth
-	public async toggle(
-		res: ResponseLike,
-		{
-			key,
-		}: {
-			key: string;
-			auth?: string;
-		}
-	): Promise<string> {
-		const original = ensureString(this._db.get<string>(key, '0'));
-		const value = original === '0' ? '1' : '0';
-		this._db.setVal(key, value);
-		const msg = LogObj.fromRes(res).attachMessage(
-			`Toggling key: "${key}", to val: "${str(value)}"`
-		);
-		const nextMessage = msg.attachMessage(
-			`"${str(original)}" -> "${str(value)}"`
-		);
-		const updated = await this._keyval.update(
-			key,
-			value,
-			nextMessage.attachMessage('Updates'),
-			this._db
-		);
-		nextMessage.attachMessage(`Updated ${updated} listeners`);
-		res.status(200).write(value);
-		res.end();
-		return value;
-	}
-
-	@errorHandle
-	@requireParams('key', 'maxtime', 'expected')
-	@auth
-	public getLongPoll(
-		res: ResponseLike,
-		{
-			key,
-			expected,
-			maxtime,
-		}: {
-			key: string;
-			expected: string;
-			auth: string;
-			maxtime: string;
-		}
-	): void {
-		const value = this._db.get(key, '0');
-		if (value !== expected) {
-			const msg = LogObj.fromRes(res).attachMessage(
-				`Key: "${key}", val: "${str(value)}"`
-			);
-			msg.attachMessage(
-				`(current) "${str(value)}" != (expected) "${expected}"`
-			);
-			res.status(200).write(value === undefined ? '' : value);
-			res.end();
-			return;
-		}
-
-		// Wait for changes to this key
-		let triggered = false;
-		const id = this._keyval.addListener(
-			LogObj.fromEvent('KEYVAL.WS.LISTEN'),
-			key,
-			(value, _key, logObj) => {
-				triggered = true;
-				const msg = logObj.attachMessage(
-					`Key: "${key}", val: "${str(value)}"`
+	private async getDeviceValue(deviceIds: string[]): Promise<boolean> {
+		try {
+			// Return true if ANY device is on
+			for (const deviceId of deviceIds) {
+				const device = (await this._keyval.modules).device.getDevice(
+					deviceId
 				);
-				msg.attachMessage(
-					`Set to "${str(value)}". Expected "${expected}"`
-				);
-				logObj.attachMessage(`Returned longpoll with value "${value}"`);
-				res.status(200).write(value === undefined ? '' : value);
-				res.end();
-			},
-			{ once: true }
-		);
-		setTimeout(
-			() => {
-				if (!triggered) {
-					this._keyval.removeListener(id);
-					const value = this._db.get(key, '0');
-					const msg = LogObj.fromRes(res).attachMessage(
-						`Key: "${key}", val: "${str(value)}"`
-					);
-					msg.attachMessage(`Timeout. Expected "${expected}"`);
-					res.status(200).write(value === undefined ? '' : value);
-					res.end();
+				if (!device) {
+					continue;
 				}
-			},
-			parseInt(maxtime, 10) * 1000
-		);
+
+				// Assuming device implements DeviceEndpoint from device.ts
+				const onOffCluster =
+					device.getClusterByType(DeviceOnOffCluster);
+				if (!onOffCluster) {
+					continue;
+				}
+
+				const value = await onOffCluster.isOn.value;
+				if (value) {
+					return true;
+				}
+			}
+			return false;
+		} catch (error) {
+			console.error(
+				`Failed to get device values for ${deviceIds.join(', ')}:`,
+				error
+			);
+			return false;
+		}
+	}
+
+	private async setDeviceValue(
+		deviceIds: string[],
+		value: boolean
+	): Promise<boolean> {
+		try {
+			let success = false;
+			// Set ALL devices to the same value
+			for (const deviceId of deviceIds) {
+				const device = (await this._keyval.modules).device.getDevice(
+					deviceId
+				);
+				if (!device) {
+					continue;
+				}
+
+				const onOffCluster =
+					device.getClusterByType(DeviceOnOffCluster);
+				if (!onOffCluster) {
+					continue;
+				}
+
+				await onOffCluster.setOn(value);
+				success = true;
+			}
+			return success;
+		} catch (error) {
+			console.error(
+				`Failed to set device values for ${deviceIds.join(', ')}:`,
+				error
+			);
+			return false;
+		}
+	}
+
+	private async addValuesToConfig(
+		config: KeyvalConfig
+	): Promise<KeyvalConfigWithValues> {
+		const groupsWithValues: KeyvalGroupWithValues[] = [];
+
+		for (const group of config.groups) {
+			const itemsWithValues: KeyvalItemWithValue[] = [];
+
+			for (const item of group.items) {
+				const value = await this.getDeviceValue(item.deviceIds);
+				itemsWithValues.push({
+					...item,
+					value,
+				});
+			}
+
+			groupsWithValues.push({
+				...group,
+				items: itemsWithValues,
+			});
+		}
+
+		return {
+			groups: groupsWithValues,
+		};
 	}
 
 	@errorHandle
-	@requireParams('key', 'value')
-	@authAll
-	public async set(
+	@auth
+	public async getConfig(res: ResponseLike): Promise<KeyvalConfigWithValues> {
+		const configJson = this._db.get('keyval_config', '{"groups":[]}');
+		const config: KeyvalConfig = JSON.parse(configJson);
+		const configWithValues = await this.addValuesToConfig(config);
+
+		res.status(200);
+		res.write(JSON.stringify(configWithValues));
+		res.end();
+		return configWithValues;
+	}
+
+	@errorHandle
+	@auth
+	public getConfigRaw(res: ResponseLike): KeyvalConfig {
+		const configJson = this._db.get('keyval_config', '{"groups":[]}');
+		const config: KeyvalConfig = JSON.parse(configJson);
+
+		res.status(200);
+		res.write(JSON.stringify(config));
+		res.end();
+		return config;
+	}
+
+	@errorHandle
+	@auth
+	@requireParams('groups')
+	public setConfig(
 		res: ResponseLike,
 		{
-			key,
-			value,
-			update: performUpdate = true,
+			groups,
 		}: {
-			key: string;
-			value: string;
-			auth?: string;
-			update?: boolean;
+			groups: KeyvalConfig['groups'];
+		}
+	): boolean {
+		try {
+			// Validate the config structure
+			if (!groups || !Array.isArray(groups)) {
+				res.status(400);
+				res.write(
+					JSON.stringify({ error: 'Invalid config structure' })
+				);
+				return false;
+			}
+
+			// Store the config
+			this._db.setVal('keyval_config', JSON.stringify({ groups }));
+
+			res.status(200);
+			res.write(JSON.stringify({ success: true }));
+			return true;
+		} catch (error) {
+			res.status(500);
+			res.write(JSON.stringify({ error: 'Failed to save config' }));
+			return false;
+		}
+	}
+
+	@errorHandle
+	@auth
+	@requireParams('deviceIds')
+	public async toggleDevice(
+		res: ResponseLike,
+		{
+			deviceIds,
+		}: {
+			deviceIds: string[];
 		}
 	): Promise<boolean> {
-		const original = this._db.get(key);
-		if (original !== value) {
-			this._db.setVal(key, value);
-			const msg = LogObj.fromRes(res).attachMessage(
-				`Key: "${key}", val: "${str(value)}"`
-			);
-			const nextMessage = msg.attachMessage(
-				`"${str(original)}" -> "${str(value)}"`
-			);
-			if (performUpdate) {
-				const updated = await this._keyval.update(
-					key,
-					value,
-					nextMessage.attachMessage('Updates'),
-					this._db
+		try {
+			// Get current value
+			const currentValue = await this.getDeviceValue(deviceIds);
+
+			// Toggle it
+			const success = await this.setDeviceValue(deviceIds, !currentValue);
+
+			if (success) {
+				res.status(200);
+				res.write(
+					JSON.stringify({ success: true, newValue: !currentValue })
 				);
-				nextMessage.attachMessage(`Updated ${updated} listeners`);
+			} else {
+				res.status(500);
+				res.write(JSON.stringify({ error: 'Failed to toggle device' }));
 			}
+
+			return success;
+		} catch (error) {
+			res.status(500);
+			res.write(JSON.stringify({ error: 'Failed to toggle device' }));
+			return false;
 		}
-		res.status(200).write(value);
-		res.end();
-		return true;
 	}
 
 	@errorHandle
-	@authAll
-	public async all(
+	@auth
+	@requireParams('deviceIds', 'value')
+	public async setDevice(
 		res: ResponseLike,
 		{
-			force = false,
+			deviceIds,
+			value,
 		}: {
-			force?: boolean;
+			deviceIds: string[];
+			value: boolean;
 		}
-	): Promise<void> {
-		const json = await this._db.json(force);
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const data = transform(json as any);
-		const msg = LogObj.fromRes(res).attachMessage(JSON.stringify(json));
-		msg.attachMessage(`Force? ${force ? 'true' : 'false'}`);
-		res.status(200)
-			.contentType('application/json')
-			.write(JSON.stringify(data));
-		res.end();
+	): Promise<boolean> {
+		try {
+			const success = await this.setDeviceValue(deviceIds, value);
+
+			if (success) {
+				res.status(200);
+				res.write(JSON.stringify({ success: true }));
+			} else {
+				res.status(500);
+				res.write(JSON.stringify({ error: 'Failed to set device' }));
+			}
+
+			return success;
+		} catch (error) {
+			res.status(500);
+			res.write(JSON.stringify({ error: 'Failed to set device' }));
+			return false;
+		}
 	}
 }
-
-export type KeyvalInputShape = {
-	[key: string]: KeyvalInputShape | string;
-};
-
-export type KeyvalLeafNode = {
-	type: 'leaf';
-	fullKey: string;
-	value: string;
-	emoji?: string;
-};
-
-export type KeyvalGroupNode = {
-	type: 'group';
-	/** Lower: higher priority */
-	order?: number;
-	values: KeyvalOutputShape;
-};
-
-export type KeyvalOutputShape = {
-	[key: string]: KeyvalLeafNode | KeyvalGroupNode;
-};

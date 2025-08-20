@@ -27,12 +27,6 @@ export const TELEGRAM_IPS = [
 ];
 export const TELEGRAM_API = 'api.telegram.org';
 
-// Pressure
-export const MIN_PRESSURE = 0;
-export const MAX_PRESSURE = 1024;
-export const DEFAULT_MIN_TIME = 500;
-export const PRESSURE_SAMPLE_TIME = 500;
-export const MAX_PRESSURE_TIME = 10000;
 
 // Spotify
 export const PLAYSTATE_CHECK_INTERVAL = 1000;

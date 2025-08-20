@@ -2,16 +2,13 @@ import express = require('express');
 import { authCode, authenticated, authenticateURL } from './calendar';
 import type { AsyncExpressApplication } from '../../types/express';
 import { initMiddleware, initPostRoutes } from '../../lib/routes';
-import { LogObj } from '../../lib/logging/lob-obj';
 import { logTag } from '../../lib/logging/logger';
 import { createAPIHandler } from '../../lib/api';
 import type { WSClient } from '../../lib/ws';
 import { WebPageHandler } from './web-page';
-import { WSWrapper } from '../../lib/ws';
 import type { ModuleConfig } from '..';
-import { getEnv } from '../../lib/io';
+import type { InfoScreen } from '.';
 import { APIHandler } from './api';
-import { InfoScreen } from '.';
 import * as http from 'http';
 
 const clients: Set<WSClient> = new Set();
@@ -37,7 +34,6 @@ export function initRouting(
 	});
 	const apiHandler = new APIHandler();
 	const server = http.createServer(app as express.Application);
-	const ws = new WSWrapper(server);
 
 	initMiddleware(app);
 
@@ -73,44 +69,6 @@ export function initRouting(
 		'/calendar',
 		createAPIHandler(apiHandler.getEvents.bind(apiHandler))
 	);
-
-	ws.all('/blanking', async (client) => {
-		clients.add(client);
-
-		if (getEnv('INFO_SCREEN_KEYVAL', false)) {
-			const listener = (await InfoScreen.modules).keyval.onChange(
-				LogObj.fromEvent('INFO_SCREEN.BLANKING'),
-				getEnv('INFO_SCREEN_KEYVAL', true),
-				(value) => {
-					client.send(
-						JSON.stringify({
-							blank: value === '0',
-						})
-					);
-				},
-				{ notifyOnInitial: true }
-			);
-			client.send(
-				JSON.stringify({
-					blank:
-						(await (
-							await InfoScreen.modules
-						).keyval.get(
-							LogObj.fromEvent('INFO_SCREEN.BLANKING'),
-							getEnv('INFO_SCREEN_KEYVAL', true)
-						)) === '0',
-				})
-			);
-			client.onDead(() => {
-				listener.remove();
-				clients.delete(client);
-			});
-		} else {
-			client.onDead(() => {
-				clients.delete(client);
-			});
-		}
-	});
 
 	initPostRoutes({ app: app as express.Express, config });
 

@@ -35,11 +35,11 @@ export class WebPageHandler {
 	@errorHandle
 	@authCookie
 	@upgradeToHTTPS
-	public async index(
+	public index(
 		res: ResponseLike,
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		_req: express.Request
-	): Promise<void> {
+	): void {
 		res.status(200);
 		res.contentType('.html');
 		res.write(configHTML(this._randomNum));
