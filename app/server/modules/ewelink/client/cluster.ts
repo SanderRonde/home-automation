@@ -192,14 +192,17 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 	}
 }
 
-export interface EwelinkCluster extends Disposable {}
+export interface EwelinkCluster extends Cluster {}
 
 export interface EwelinkOnOffClusterState {
 	enabled: boolean;
 }
 
 function ConfigurableCluster<T extends object>(
-	Base: abstract new () => Cluster
+	Base: abstract new () => Cluster & {
+		getName: () => string;
+		getEmoji: () => string;
+	}
 ) {
 	return class extends Base {
 		protected getProxy = EwelinkClusterProxy.createGetter<T>();

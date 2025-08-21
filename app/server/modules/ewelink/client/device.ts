@@ -11,7 +11,7 @@ import { EwelinkBooleanStateDoorSensorCluster } from './clusters/boolean-state/d
 import { EwelinkOnOffClusterSimplePower } from './clusters/power/simple-power';
 import type { EwelinkOnOffClusterM51CParams } from './clusters/power/M5-1C';
 import { EwelinkOnOffClusterM51CSingle } from './clusters/power/M5-1C';
-import { DeviceEndpoint, type Device } from '../../device/device';
+import { DeviceEndpoint, DeviceSource, type Device } from '../../device/device';
 import type { EWeLinkConfig } from './clusters/shared';
 import { logTag } from '../../../lib/logging/logger';
 import type { EwelinkCluster } from './cluster';
@@ -31,11 +31,15 @@ export abstract class EwelinkDevice
 	implements Device, Disposable
 {
 	public getUniqueId(): string {
-		return `EWELINK:${this._eWeLinkConfig.device.itemData.deviceid}`;
+		return `ewelink:${this._eWeLinkConfig.device.itemData.deviceid}`;
 	}
 
 	public getDeviceName(): string {
 		return this._eWeLinkConfig.device.itemData.name;
+	}
+
+	public getSource(): DeviceSource {
+		return DeviceSource.EWELINK;
 	}
 
 	public static from(eWeLinkConfig: EWeLinkConfig): EwelinkDevice | null {

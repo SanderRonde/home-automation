@@ -2,8 +2,8 @@ import type {
 	MatterDeviceCluster,
 	MatterDeviceEndpoint,
 } from '../server/server';
+import { DeviceEndpoint, DeviceSource, type Device } from '../../device/device';
 import { MATTER_CLUSTERS, IGNORED_MATTER_CLUSTERS } from './cluster';
-import { DeviceEndpoint, type Device } from '../../device/device';
 import { type MatterClusterInterface } from './cluster';
 import type { MatterCluster } from './cluster';
 import type { MatterClient } from './client';
@@ -107,6 +107,10 @@ export class MatterDevice extends MatterEndpoint implements Device {
 
 	public getUniqueId(): string {
 		return `matter:${this.#nodeId}:${this.#rootEndpointNumber}`;
+	}
+
+	public getSource(): DeviceSource {
+		return DeviceSource.MATTER;
 	}
 
 	public getDeviceName(): string {

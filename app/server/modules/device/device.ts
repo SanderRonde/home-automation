@@ -1,3 +1,4 @@
+import { ClassEnum } from '../../lib/enum';
 import type { Cluster } from './cluster';
 
 /**
@@ -65,7 +66,24 @@ export abstract class DeviceEndpoint implements Disposable {
 
 export interface Device extends DeviceEndpoint {
 	getUniqueId(): string;
+	getSource(): DeviceSource;
 	getDeviceName(): string;
+}
+
+export class DeviceSource extends ClassEnum {
+	public static readonly MATTER = new DeviceSource('matter');
+	public static readonly EWELINK = new DeviceSource('ewelink');
+
+	public toEmoji(): string {
+		switch (this) {
+			case DeviceSource.MATTER:
+				return '⚛️';
+			case DeviceSource.EWELINK:
+				return '🔗';
+			default:
+				throw new Error('Invalid DeviceSource');
+		}
+	}
 }
 
 export type DeviceAttribute<T> = {

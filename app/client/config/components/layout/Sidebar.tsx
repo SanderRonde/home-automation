@@ -6,6 +6,7 @@ import {
 	ListItemText,
 	styled,
 } from '@mui/material';
+import DeviceHubIcon from '@mui/icons-material/DeviceHub';
 import SettingsIcon from '@mui/icons-material/Settings';
 import StorageIcon from '@mui/icons-material/Storage';
 import React from 'react';
@@ -42,14 +43,15 @@ const StyledDrawer = styled(Drawer)(({ theme }) => ({
 
 interface SidebarProps {
 	open: boolean;
-	currentTab: string;
-	onTabChange: (tab: string) => void;
+	currentTab: string | SidebarTab;
+	onTabChange: (tab: SidebarTab) => void;
 }
 
 export const Sidebar = (props: SidebarProps): JSX.Element => {
 	const menuItems = [
-		{ text: 'KeyVal', icon: <StorageIcon />, id: 'keyval' },
-		{ text: 'Settings', icon: <SettingsIcon />, id: 'settings' },
+		{ text: 'KeyVal', icon: <StorageIcon />, id: SidebarTab.KEYVAL },
+		{ text: 'Settings', icon: <SettingsIcon />, id: SidebarTab.SETTINGS },
+		{ text: 'Devices', icon: <DeviceHubIcon />, id: SidebarTab.DEVICES }, // Updated icon for Matter
 	];
 
 	return (
@@ -58,6 +60,7 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 				{menuItems.map((item) => (
 					<ListItemButton
 						key={item.id}
+						// eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
 						selected={props.currentTab === item.id}
 						onClick={() => props.onTabChange(item.id)}
 						sx={{ cursor: 'pointer' }}
@@ -70,3 +73,9 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 		</StyledDrawer>
 	);
 };
+
+export enum SidebarTab {
+	KEYVAL = 'keyval',
+	SETTINGS = 'settings',
+	DEVICES = 'devices',
+}

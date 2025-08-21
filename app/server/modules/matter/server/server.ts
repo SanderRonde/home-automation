@@ -140,7 +140,7 @@ export type MatterServerInputMessage =
 
 export interface MatterServerInputReturnValues {
 	[MatterServerInputMessageType.ListDevices]: MatterDeviceInfo[];
-	[MatterServerInputMessageType.PairWithCode]: void;
+	[MatterServerInputMessageType.PairWithCode]: string[];
 	[MatterServerInputMessageType.GetAttribute]: unknown;
 	[MatterServerInputMessageType.CallCluster]: unknown;
 	[MatterServerInputMessageType.SetAttribute]: void;
@@ -163,7 +163,7 @@ class MatterServer {
 
 	private _nodes: NodeWatcher[] = [];
 
-	private async _watchNodeIds(nodeIds: NodeId[]): Promise<void> {
+	private async _watchNodeIds(nodeIds: NodeId[]): Promise<string[]> {
 		const nodes = await Promise.all(
 			nodeIds.map((nodeId) =>
 				this.commissioningController.getNode(nodeId)
@@ -180,6 +180,10 @@ class MatterServer {
 			)
 		);
 		this._nodes.push(...nodes.map((node) => new NodeWatcher(node)));
+
+		return nodes
+			.flatMap((node) => node.getDevices())
+			.map((endpoint) => endpoint.getNumber().toString());
 	}
 
 	private _walkEndpoints(
@@ -483,7 +487,7 @@ class MatterServer {
 		const nodeId =
 			await this.commissioningController.commissionNode(options);
 
-		await this._watchNodeIds([nodeId]);
+		return await this._watchNodeIds([nodeId]);
 	}
 
 	async stop() {

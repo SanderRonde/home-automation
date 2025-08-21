@@ -1,8 +1,5 @@
 import { HomeDetector } from './home-detector';
 import { Temperature } from './temperature';
-
-
-
 import { Webhook } from './webhook';
 import { EWeLink } from './ewelink';
 import { Secret } from './secret/';
@@ -13,7 +10,6 @@ import { Device } from './device';
 import { Config } from './config';
 import { OAuth } from './oauth/';
 import { Auth } from './auth';
-
 import { Bot } from './bot';
 
 import type { AsyncExpressApplication } from '../types/express';
@@ -26,9 +22,6 @@ import type { AppConfig } from '../app';
 
 export { HomeDetector } from './home-detector';
 export { Temperature } from './temperature';
-
-
-
 export { Webhook } from './webhook';
 export { EWeLink } from './ewelink';
 export { Notion } from './notion/';
@@ -39,7 +32,6 @@ export { Config } from './config';
 export { OAuth } from './oauth/';
 export { Auth } from './auth';
 export { Bot } from './bot';
-
 
 export type AllModules = ReturnType<typeof getModuleObj>;
 
@@ -80,8 +72,6 @@ const getModuleObj = () => ({
 	notion: Notion,
 	webhook: Webhook,
 	ewelink: EWeLink,
-
-
 
 	infoScreen: InfoScreen,
 	temperature: Temperature,

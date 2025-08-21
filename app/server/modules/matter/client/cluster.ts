@@ -32,7 +32,11 @@ import {
 	type ClusterId,
 	type Command,
 } from '@matter/types';
-import type { Cluster, DeviceGroupId } from '../../device/cluster';
+import type {
+	Cluster,
+	DeviceClusterName,
+	DeviceGroupId,
+} from '../../device/cluster';
 import { SettablePromise } from '../../../lib/settable-promise';
 import { MatterServerInputMessageType } from '../server/server';
 import type { LevelControl } from '@matter/main/clusters';
@@ -262,7 +266,9 @@ class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 }
 
 function ConfigurableCluster<T extends MatterClusterInterface>(
-	Base: (abstract new () => Cluster) & { clusterName: string }
+	Base: (abstract new () => Cluster & {
+		getName: () => DeviceClusterName;
+	}) & { clusterName: DeviceClusterName }
 ) {
 	return class extends Base {
 		public getProxy = ClusterProxy.createGetter<T>();
@@ -554,17 +560,19 @@ function toMatterGroupId(groupId: DeviceGroupId): GroupId {
 }
 
 export const MATTER_CLUSTERS = {
-	[MatterOnOffCluster.clusterName]: MatterOnOffCluster,
-	[MatterWindowCoveringCluster.clusterName]: MatterWindowCoveringCluster,
-	[MatterLevelControlCluster.clusterName]: MatterLevelControlCluster,
-	[MatterPowerSourceCluster.clusterName]: MatterPowerSourceCluster,
-	[MatterGroupsCluster.clusterName]: MatterGroupsCluster,
-	[MatterOccupancySensingCluster.clusterName]: MatterOccupancySensingCluster,
-	[MatterIlluminanceMeasurementCluster.clusterName]:
+	[MatterOnOffCluster.clusterName.value]: MatterOnOffCluster,
+	[MatterWindowCoveringCluster.clusterName.value]:
+		MatterWindowCoveringCluster,
+	[MatterLevelControlCluster.clusterName.value]: MatterLevelControlCluster,
+	[MatterPowerSourceCluster.clusterName.value]: MatterPowerSourceCluster,
+	[MatterGroupsCluster.clusterName.value]: MatterGroupsCluster,
+	[MatterOccupancySensingCluster.clusterName.value]:
+		MatterOccupancySensingCluster,
+	[MatterIlluminanceMeasurementCluster.clusterName.value]:
 		MatterIlluminanceMeasurementCluster,
-	[MatterTemperatureMeasurementCluster.clusterName]:
+	[MatterTemperatureMeasurementCluster.clusterName.value]:
 		MatterTemperatureMeasurementCluster,
-	[MatterColorControlCluster.clusterName]: MatterColorControlCluster,
+	[MatterColorControlCluster.clusterName.value]: MatterColorControlCluster,
 };
 
 export const IGNORED_MATTER_CLUSTERS = [

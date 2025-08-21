@@ -1,4 +1,5 @@
 import { Box, CssBaseline, ThemeProvider, createTheme } from '@mui/material';
+import type { SidebarTab } from './Sidebar';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import React from 'react';
@@ -43,8 +44,8 @@ const darkTheme = createTheme({
 
 interface AppLayoutProps {
 	children: React.ReactNode;
-	currentTab: string;
-	onTabChange: (tab: string) => void;
+	currentTab: string | SidebarTab;
+	onTabChange: (tab: SidebarTab) => void;
 }
 
 export const AppLayout = (props: AppLayoutProps): JSX.Element => {

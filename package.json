@@ -26,7 +26,6 @@
 		"bundle:keyval": "bun build app/client/keyval/keyval.tsx --outdir app/client/keyval && bun build app/client/keyval/serviceworker.ts --outfile=app/client/keyval/serviceworker.js",
 		"bundle:config": "bun build app/client/config/config.tsx --outdir app/client/config",
 		"bundle:home-detector": "bun build app/client/home-detector/home-detector.ts --outfile=app/client/home-detector/home-detector.bundle.js && bun build app/client/home-detector/serviceworker.ts --outfile=app/client/home-detector/serviceworker.bundle.js",
-		
 		"bundle:info-screen": "bun build app/client/info-screen/info-screen.ts --outfile=app/client/info-screen/info-screen.bundle.js",
 		"bundle:oauth": "bun build app/client/oauth/oauth.tsx --outfile=app/client/oauth/oauth.bundle.js",
 		"bundle": "bun bundle:keyval && bun bundle:config && bun bundle:home-detector && bun bundle:info-screen && bun bundle:oauth",

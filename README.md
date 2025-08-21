@@ -18,7 +18,6 @@ The keyval module controls the state of various devices, allowing you to turn on
 
 The invidvidual togglable power sockets consist of a few cheap electrical parts and an ESP8266 board that together allow for remote control of power sockets.
 
-
 #### Home-detector
 
 The home-detector module detects who is home and who isn't. This is useful for turning on or off things when someone leaves the house.
@@ -31,8 +30,6 @@ The cast module allows for the casting of things to cast-enabled devices. Since 
 
 The temperature module allows for the setting of a target temperature of the house. The server then tells a temperature controller what to do based on the currently measured temperature, eventually reaching the target temperature. It also allows for manual turning on and off of a temperature controller (for example for when you leave home).
 
-
-
 #### Explain
 
 The explain module records actions and how they occurred on top of the regular logging. This can then be used to later ask the server why it did something. Since there are quite a few input methods to this system, things sometimes occur without knowing the cause. While sifting through logs is possible, it's not a great experience. Simply saying "explain what you did" and hearing a step-by-step summary is a lot better.
@@ -44,8 +41,6 @@ The info-screen module powers a screen containing some basic info like the tempe
 #### Webhook
 
 The webhook module is a fairly simple interface with the outside world. When a webhook endpoint is reached, the webhook with that name is ran. Webhooks can be configured in a config file to interface with any other module, allowing you to do anything from a webhook.
-
-
 
 ### Controllers
 
@@ -68,8 +63,6 @@ The power controlling switches are made out of a couple of components. The first
 The board runs C/C++ code which can be found over at the [board-power-driver repository](https://github.com/SanderRonde/board-power-driver). Since these boards can use neither long polling nor websockets (some of them can but not all), a sort of makeshift websockets protocol was made. It connects to the server and tells it its own IP address. The server then sends messages directly to that IP address. Of course this only works over a local network but it works surprisingly well.
 
 When a keyval value changes, a listener is fired which then sends the changed value to the responsible board over the makeshift websockets. The board then changes the state of the data pin of the relay, after which the power goes on or off.
-
-
 
 #### Home-detector
 
@@ -95,8 +88,6 @@ The code for the microcontroller measuring the temperature can be found [over at
 
 The code for the microcontroller driving it can be found [over at this repository](https://github.com/SanderRonde/board-temperature-controller-driver).
 
-
-
 #### Explain
 
 The explain module works by adding another layer on top of the regular logging layer. When certain actions that are deemed important are performed (for example turning off the lights or LEDs), the source of the command is stored. For example this action could have been performed through the bot, through the app or through the API. This data can later be requested and a summary of what happened in the last X minutes can be sent to telegram or read aloud using the Cast module.
@@ -108,8 +99,6 @@ The info-screen module works through some fairly simple REST API's hosted on loc
 #### Webhook
 
 The webhook module uses a simple config file, in which the webhook with given name is called when its endpoint has been hit.
-
-
 
 #### Telegram bot
 

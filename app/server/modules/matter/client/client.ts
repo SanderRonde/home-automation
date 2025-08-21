@@ -146,7 +146,7 @@ export class MatterClient implements AsyncDisposable {
 		});
 	}
 
-	public pair(code: string): Promise<void> {
+	public pair(code: string): Promise<string[]> {
 		return this.request({
 			type: MatterServerInputMessageType.PairWithCode,
 			arguments: [code],
