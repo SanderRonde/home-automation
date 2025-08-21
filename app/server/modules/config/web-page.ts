@@ -6,6 +6,7 @@ function configHTML(randomNum: number) {
 	return `<!DOCTYPE HTML>
 		<html lang="en" style="background-color: #000;">
 		<head>
+			<link rel="icon" href="/config/favicon.ico" type="image/x-icon" />
 			<meta
 				name="description"
 				content="Configuration page"

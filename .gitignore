@@ -76,7 +76,7 @@ ai/beat-detector/data
 ai/beat-detector/input_files
 **/*.pyc
 
-static/
+./static/
 
 ai/files/
 ai/annotator/**/*.js
