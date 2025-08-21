@@ -13,230 +13,221 @@ import { asyncSetInterval } from '../../lib/time';
 import { EwelinkDevice } from './client/device';
 import type { Database } from '../../lib/db';
 import eWelink from 'ewelink-api-next';
+import type WebSocket from 'ws';
 
-async function createWebsocketListener(
-	connection: InstanceType<typeof eWelink.WebAPI>,
-	userApiKey: string,
-	wsConnection: EWeLinkWSConnection
-) {
-	const wsClient = new eWelink.Ws({
-		appId: connection.appId!,
-		appSecret: connection.appSecret!,
-		region: connection.region!,
-	});
+export class EWeLinkAPI implements Disposable {
+	private _disposables: Set<() => void> = new Set();
 
-	logTag('ewelink', 'blue', 'Creating WS connection');
-	const ws = await wsClient.Connect.create(
-		{
-			appId: connection.appId!,
-			at: connection.at,
-			region: connection.region!,
-			userApiKey,
-		},
-		() => {
-			logTag('ewelink', 'blue', 'WS connection established');
-		},
-		() => {
-			logTag('ewelink', 'yellow', 'WS connection closed');
-			setTimeout(() => {
-				void createWebsocketListener(
-					connection,
-					userApiKey,
-					wsConnection
+	public readonly wsConnectionWrapper = new EWeLinkWSConnection();
+	private _ws: WebSocket | null = null;
+	private _devices: EwelinkDevice[] = [];
+	public get devices(): EwelinkDevice[] {
+		return this._devices;
+	}
+
+	public constructor(
+		private readonly _db: Database,
+		private readonly _webApi: InstanceType<typeof eWelink.WebAPI>,
+		private readonly _onDevices: (devices: EwelinkDevice[]) => void
+	) {}
+
+	public async init(token: string): Promise<this | null> {
+		queueEwelinkTokenRefresh(this._webApi, this._db);
+
+		this._webApi.at = token;
+		await this.initEWeLinkDevices();
+		return this;
+	}
+
+	private async initEWeLinkDevices() {
+		const eventEmitters = new Map<
+			string,
+			EventEmitter<EwelinkDeviceResponse>
+		>();
+		const wrappedApi = new WrappedEWeLinkAPI(this._webApi);
+		const initialDevices = await this.updateDevices(
+			eventEmitters,
+			wrappedApi
+		);
+		this._devices = initialDevices;
+		this._onDevices(initialDevices);
+
+		const interval = asyncSetInterval(
+			async () => {
+				this._onDevices(
+					await this.updateDevices(eventEmitters, wrappedApi)
 				);
-			}, 1000 * 60);
-		},
-		(error) => {
-			logTag('ewelink', 'red', 'WS connection errored', error);
-		},
-		(_ws, msg) => {
-			if (msg.data.toString() === 'pong') {
-				// Just a keep-alive
-				return;
+			},
+			1000 * 60 * 2
+		);
+		this._disposables.add(() => clearInterval(interval));
+
+		logTag('ewelink', 'blue', 'API connection established');
+
+		await this.initWebsocketListener();
+	}
+
+	private async getUserApiKey() {
+		// Get family to extract API key
+		const family = (await this._webApi.home.getFamily({})) as {
+			data: {
+				familyList:
+					| {
+							apikey: string;
+					  }[]
+					| undefined;
+			};
+		};
+		const apiKey = family.data.familyList?.map((user) => user.apikey)[0];
+		if (!apiKey) {
+			logTag(
+				'ewelink',
+				'red',
+				'No API key found any user in home for websocket connection'
+			);
+			return null;
+		}
+		return apiKey;
+	}
+
+	private async initWebsocketListener() {
+		const userApiKey = await this.getUserApiKey();
+		if (!userApiKey) {
+			logTag(
+				'ewelink',
+				'red',
+				'No API key found any user in home, skipping websocket connection'
+			);
+			return undefined;
+		}
+
+		this._ws = await this.createWebsocketListener(userApiKey);
+	}
+
+	private async updateDevices(
+		eventEmitters: Map<string, EventEmitter<EwelinkDeviceResponse>>,
+		wrappedApi: WrappedEWeLinkAPI
+	) {
+		const {
+			data: { thingList: response },
+		} = (await this._webApi.device.getAllThings({})) as {
+			data: {
+				thingList: EwelinkDeviceResponse[] | undefined;
+			};
+		};
+
+		const devices: EwelinkDevice[] = [];
+		for (const deviceResponse of response ?? []) {
+			if (eventEmitters.has(deviceResponse.itemData.deviceid)) {
+				eventEmitters
+					.get(deviceResponse.itemData.deviceid)!
+					.emit(deviceResponse);
+			} else {
+				const eventEmitter = new EventEmitter<EwelinkDeviceResponse>();
+				eventEmitters.set(
+					deviceResponse.itemData.deviceid,
+					eventEmitter
+				);
+				const config = new EWeLinkConfig(
+					wrappedApi,
+					deviceResponse,
+					this.wsConnectionWrapper,
+					eventEmitter
+				);
+				const ewelinkDevice = EwelinkDevice.from(config);
+				if (ewelinkDevice) {
+					devices.push(ewelinkDevice);
+				}
 			}
-			try {
-				const data = JSON.parse(msg.data.toString());
-				if (EWELINK_DEBUG) {
+		}
+		return devices;
+	}
+
+	public async refreshWebsocket(): Promise<void> {
+		const userApiKey = await this.getUserApiKey();
+		if (!userApiKey) {
+			logTag(
+				'ewelink',
+				'red',
+				'No API key found any user in home, skipping websocket connection'
+			);
+			return undefined;
+		}
+		this._ws?.close();
+		this._ws = await this.createWebsocketListener(userApiKey);
+	}
+
+	private async createWebsocketListener(userApiKey: string) {
+		const wsClient = new eWelink.Ws({
+			appId: this._webApi.appId!,
+			appSecret: this._webApi.appSecret!,
+			region: this._webApi.region!,
+		});
+
+		logTag('ewelink', 'blue', 'Creating WS connection');
+		const ws = await wsClient.Connect.create(
+			{
+				appId: this._webApi.appId!,
+				at: this._webApi.at,
+				region: this._webApi.region!,
+				userApiKey,
+			},
+			() => {
+				logTag('ewelink', 'blue', 'WS connection established');
+			},
+			() => {
+				logTag('ewelink', 'yellow', 'WS connection closed');
+				setTimeout(() => {
+					void this.createWebsocketListener(userApiKey);
+				}, 1000 * 60);
+			},
+			(error) => {
+				logTag('ewelink', 'red', 'WS connection errored', error);
+			},
+			(_ws, msg) => {
+				if (msg.data.toString() === 'pong') {
+					// Just a keep-alive
+					return;
+				}
+				try {
+					const data = JSON.parse(msg.data.toString());
+					if (EWELINK_DEBUG) {
+						logTag(
+							'ewelink',
+							'blue',
+							'ws-message',
+							JSON.stringify(data, null, '\t')
+						);
+					}
+					this.wsConnectionWrapper.emit(data);
+				} catch (e) {
 					logTag(
 						'ewelink',
-						'blue',
-						'ws-message',
-						JSON.stringify(data, null, '\t')
+						'red',
+						`Failed to parse ewelink message: ${msg.data.toString()}`
 					);
 				}
-				wsConnection.emit(data);
-			} catch (e) {
-				logTag(
-					'ewelink',
-					'red',
-					`Failed to parse ewelink message: ${msg.data.toString()}`
-				);
 			}
-		}
-	);
-
-	return ws;
-}
-
-export async function initEWeLinkAPI(
-	db: Database,
-	// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-	api: InstanceType<typeof eWelink.WebAPI> | null,
-	onDevices: (devices: EwelinkDevice[]) => void
-): Promise<{
-	refreshWebsocket?(): Promise<void>;
-} | null> {
-	if (!api) {
-		return null;
-	}
-
-	const token = db.get<string>('accessToken');
-	if (!token) {
-		logTag(
-			'ewelink',
-			'yellow',
-			'No token supplied, get one by going to /ewelink/oauth'
 		);
-		return null;
+
+		return ws;
 	}
 
-	queueEwelinkTokenRefresh(api, db);
+	public [Symbol.dispose](): void {
+		this._ws?.close();
+		this._disposables.forEach((disposable) => disposable());
+	}
 
-	api.at = token;
-	return initEWeLinkDevices(api, onDevices);
-}
-
-async function initWebsocketListener(
-	api: InstanceType<typeof eWelink.WebAPI>,
-	wsConnectionWrapper: EWeLinkWSConnection
-) {
-	const userApiKey = await getUserApiKey(api);
-	if (!userApiKey) {
-		logTag(
-			'ewelink',
-			'red',
-			'No API key found any user in home, skipping websocket connection'
+	public async refreshWithToken(token: string): Promise<EWeLinkAPI> {
+		this[Symbol.dispose]();
+		const instance = new EWeLinkAPI(
+			this._db,
+			this._webApi,
+			this._onDevices
 		);
-		return undefined;
+		await instance.init(token);
+		return instance;
 	}
-
-	let ws = await createWebsocketListener(
-		api,
-		userApiKey,
-		wsConnectionWrapper
-	);
-	return async () => {
-		ws?.close();
-		ws = await createWebsocketListener(
-			api,
-			userApiKey,
-			wsConnectionWrapper
-		);
-	};
-}
-
-async function updateDevices(
-	api: InstanceType<typeof eWelink.WebAPI>,
-	eventEmitters: Map<string, EventEmitter<EwelinkDeviceResponse>>,
-	wrappedApi: WrappedEWeLinkAPI,
-	wsConnectionWrapper: EWeLinkWSConnection
-) {
-	const {
-		data: { thingList: response },
-	} = (await api.device.getAllThings({})) as {
-		data: {
-			thingList: EwelinkDeviceResponse[] | undefined;
-		};
-	};
-
-	const devices: EwelinkDevice[] = [];
-	for (const deviceResponse of response ?? []) {
-		if (eventEmitters.has(deviceResponse.itemData.deviceid)) {
-			eventEmitters
-				.get(deviceResponse.itemData.deviceid)!
-				.emit(deviceResponse);
-		} else {
-			const eventEmitter = new EventEmitter<EwelinkDeviceResponse>();
-			eventEmitters.set(deviceResponse.itemData.deviceid, eventEmitter);
-			const config = new EWeLinkConfig(
-				wrappedApi,
-				deviceResponse,
-				wsConnectionWrapper,
-				eventEmitter
-			);
-			const ewelinkDevice = EwelinkDevice.from(config);
-			if (ewelinkDevice) {
-				devices.push(ewelinkDevice);
-			}
-		}
-	}
-	return devices;
-}
-
-export async function initEWeLinkDevices(
-	api: InstanceType<typeof eWelink.WebAPI>,
-	onDevices: (devices: EwelinkDevice[]) => void
-): Promise<{
-	refreshWebsocket?(): Promise<void>;
-	devices: EwelinkDevice[];
-}> {
-	const wsConnectionWrapper = new EWeLinkWSConnection();
-	const eventEmitters = new Map<
-		string,
-		EventEmitter<EwelinkDeviceResponse>
-	>();
-	const wrappedApi = new WrappedEWeLinkAPI(api);
-	const initialDevices = await updateDevices(
-		api,
-		eventEmitters,
-		wrappedApi,
-		wsConnectionWrapper
-	);
-	onDevices(initialDevices);
-
-	asyncSetInterval(
-		async () => {
-			onDevices(
-				await updateDevices(
-					api,
-					eventEmitters,
-					wrappedApi,
-					wsConnectionWrapper
-				)
-			);
-		},
-		1000 * 60 * 2
-	);
-
-	logTag('ewelink', 'blue', 'API connection established');
-
-	return {
-		refreshWebsocket: await initWebsocketListener(api, wsConnectionWrapper),
-		devices: initialDevices,
-	};
-}
-
-async function getUserApiKey(connection: InstanceType<typeof eWelink.WebAPI>) {
-	// Get family to extract API key
-	const family = (await connection.home.getFamily({})) as {
-		data: {
-			familyList:
-				| {
-						apikey: string;
-				  }[]
-				| undefined;
-		};
-	};
-	const apiKey = family.data.familyList?.map((user) => user.apikey)[0];
-	if (!apiKey) {
-		logTag(
-			'ewelink',
-			'red',
-			'No API key found any user in home for websocket connection'
-		);
-		return null;
-	}
-	return apiKey;
 }
 
 export interface EwelinkDeviceResponse {

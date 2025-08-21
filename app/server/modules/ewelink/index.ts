@@ -1,40 +1,56 @@
+import { logTag } from '../../lib/logging/logger';
 import { initRouting } from './routing';
 import eWelink from 'ewelink-api-next';
-import { initEWeLinkAPI } from './api';
 import type { ModuleConfig } from '..';
 import { getEnv } from '../../lib/io';
 import { ModuleMeta } from '../meta';
+import { EWeLinkAPI } from './api';
 
 export const EWeLink = new (class EWeLink extends ModuleMeta {
 	private _ewelinkApiInstance: {
 		refreshWebsocket?(): Promise<void>;
 	} | null = null;
-	// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-	private __api: InstanceType<typeof eWelink.WebAPI> | null = null;
+	public api: EWeLinkAPI | null = null;
 	public name = 'ewelink';
 
-	private get _api() {
+	private getWebApi() {
 		const appId = getEnv('SECRET_EWELINK_APP_ID', true);
 		const appSecret = getEnv('SECRET_EWELINK_APP_SECRET', true);
 		const region = getEnv('SECRET_EWELINK_REGION', true);
 
 		if (appId && appSecret && region) {
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-			this.__api ??= new eWelink.WebAPI({
+			return new eWelink.WebAPI({
 				appId,
 				appSecret,
 				region,
 			});
 		}
 
-		return this.__api;
+		return null;
 	}
 
-	public init(config: ModuleConfig<EWeLink>) {
-		initRouting(config, this._api);
-		void initEWeLinkAPI(config.db, this._api, (devices) => {
-			config.modules.device.setDevices(devices);
-		});
+	public async init(config: ModuleConfig<EWeLink>): Promise<void> {
+		const webApi = this.getWebApi();
+		initRouting(config, webApi);
+		if (webApi) {
+			const token = config.db.get<string>('accessToken');
+			if (!token) {
+				logTag(
+					'ewelink',
+					'yellow',
+					'No token supplied, get one by going to /ewelink/oauth'
+				);
+			} else {
+				this.api = await new EWeLinkAPI(
+					config.db,
+					webApi,
+					(devices) => {
+						config.modules.device.setDevices(devices);
+					}
+				).init(token);
+			}
+		}
 	}
 
 	public async onBackOnline() {
@@ -43,5 +59,12 @@ export const EWeLink = new (class EWeLink extends ModuleMeta {
 		}
 
 		await this._ewelinkApiInstance.refreshWebsocket?.();
+	}
+
+	public async refreshApi(accessToken: string) {
+		if (!this.api) {
+			return;
+		}
+		this.api = await this.api.refreshWithToken(accessToken);
 	}
 })();
