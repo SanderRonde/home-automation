@@ -1,5 +1,5 @@
+import type { Cluster, DeviceClusterName } from './cluster';
 import { ClassEnum } from '../../lib/enum';
-import type { Cluster } from './cluster';
 
 /**
  * Largely borrows from Matter in shape/choices
@@ -28,13 +28,16 @@ export abstract class DeviceEndpoint implements Disposable {
 
 	public getClusterByType<
 		T extends typeof Cluster & {
-			clusterName: string;
+			clusterName: DeviceClusterName;
 		},
 	>(type: T): InstanceType<T> | null {
 		for (const cluster of this.clusters) {
 			if (
-				(cluster.constructor as unknown as { clusterName: string })
-					.clusterName === type.clusterName
+				(
+					cluster.constructor as unknown as {
+						clusterName: DeviceClusterName;
+					}
+				).clusterName === type.clusterName
 			) {
 				return cluster as unknown as InstanceType<T>;
 			}
