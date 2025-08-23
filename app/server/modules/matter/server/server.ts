@@ -41,14 +41,18 @@ export type MatterServerOutputMessage =
 	| {
 			category: MatterServerOutputMessageType.AttributeChanged;
 			nodeId: string;
-			attributePath: string[];
-			newValue: unknown;
+			attributePath: [
+				endpointNumber: number,
+				clusterId: ClusterId,
+				attributeName: string,
+			];
+			newValue: EncodedString<unknown>;
 	  }
 	| {
 			category: MatterServerOutputMessageType.EventTriggered;
 			nodeId: string;
 			eventPath: string[];
-			eventData: unknown;
+			eventData: EncodedString<unknown>;
 	  }
 	| {
 			category: MatterServerOutputMessageType.StructureChanged;

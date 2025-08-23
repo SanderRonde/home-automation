@@ -13,6 +13,7 @@ import type {
 } from '../server/server';
 import type { ChildProcessWithoutNullStreams } from 'child_process';
 import { AsyncEventEmitter } from '../../../lib/event-emitter';
+import { logTag } from '../../../lib/logging/logger';
 import type { EndpointNumber } from '@matter/types';
 import { DB_FOLDER } from '../../../lib/constants';
 import { MatterDevice } from './device';
@@ -63,6 +64,7 @@ export class MatterClient implements AsyncDisposable {
 				if (!line.trim()) {
 					continue;
 				}
+				logTag('matter-client', 'blue', `Received message: ${line}`);
 				try {
 					const message = JSON.parse(line.trim());
 					this.#listeners.forEach((listener) => listener(message));
@@ -137,12 +139,16 @@ export class MatterClient implements AsyncDisposable {
 				console.error('Matter server not started');
 				return;
 			}
-			this.#proc.stdin.write(
-				JSON.stringify({
-					identifier,
-					...message,
-				}) + '\n'
+			const messageString = JSON.stringify({
+				identifier,
+				...message,
+			});
+			logTag(
+				'matter-client',
+				'blue',
+				`Sending message: ${messageString}`
 			);
+			this.#proc.stdin.write(messageString + '\n');
 		});
 	}
 

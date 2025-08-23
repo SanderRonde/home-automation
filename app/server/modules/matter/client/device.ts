@@ -71,15 +71,6 @@ export class MatterEndpoint extends DeviceEndpoint {
 		}
 		return clusters;
 	}
-
-	public onAttributeChanged(
-		attributePath: string[],
-		newValue: unknown
-	): void {
-		for (const device of this.clusters) {
-			device.getProxy().onAttributeChanged(attributePath, newValue);
-		}
-	}
 }
 
 export class MatterDevice extends MatterEndpoint implements Device {

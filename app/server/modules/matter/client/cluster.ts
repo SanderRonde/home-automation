@@ -32,13 +32,16 @@ import {
 	type ClusterId,
 	type Command,
 } from '@matter/types';
+import {
+	MatterServerInputMessageType,
+	MatterServerOutputMessageType,
+} from '../server/server';
 import type {
 	Cluster,
 	DeviceClusterName,
 	DeviceGroupId,
 } from '../../device/cluster';
 import { SettablePromise } from '../../../lib/settable-promise';
-import { MatterServerInputMessageType } from '../server/server';
 import type { LevelControl } from '@matter/main/clusters';
 import type { WritableAttribute } from '@matter/types';
 import { DeviceStatus } from '../../device/cluster';
@@ -94,6 +97,25 @@ class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 		matterClient: MatterClient;
 	}) {
 		this._dependencies.set(dependencies);
+
+		dependencies.matterClient.onMessage((message) => {
+			if (
+				message.category ===
+				MatterServerOutputMessageType.AttributeChanged
+			) {
+				if (
+					message.nodeId === dependencies.nodeId &&
+					message.attributePath[0] ===
+						Number(dependencies.endpointNumber) &&
+					message.attributePath[1] === dependencies.id
+				) {
+					this.onAttributeChanged(
+						message.attributePath[2],
+						JSON.parse(message.newValue)
+					);
+				}
+			}
+		});
 	}
 
 	public static createGetter<
@@ -103,14 +125,11 @@ class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 		return () => proxy;
 	}
 
-	public onAttributeChanged(
-		attributePath: string[],
-		newValue: unknown
-	): void {
-		const attributePathString = attributePath.join('.');
-
-		const attribute = this.#attributes[attributePathString];
-		void attribute.emit(newValue);
+	public onAttributeChanged(attributeName: string, newValue: unknown): void {
+		const attribute = this.#attributes[attributeName];
+		if (attribute) {
+			void attribute.emit(newValue);
+		}
 	}
 
 	public attributeGetter<
@@ -236,25 +255,6 @@ class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 				? mappers.output(response)
 				: response;
 			return mappedOutput as CommandTypes<C['commands'][M]>['response'];
-		};
-	}
-
-	public eventEmitter<
-		A extends Extract<WritableAttributes<C['attributes']>, string>,
-		AT extends AttributeType<C['attributes'][A]>,
-		I,
-	>(
-		attribute: A,
-		mapper: (value: I) => AT | Promise<AT>
-	): (value: I) => Promise<void> {
-		return async (value: I) => {
-			const mapped = await mapper(value);
-			const { matterClient, nodeId, endpointNumber, id } =
-				await this._dependencies.value;
-			await matterClient.request({
-				type: MatterServerInputMessageType.SetAttribute,
-				arguments: [nodeId, endpointNumber, id, attribute, mapped],
-			});
 		};
 	}
 
