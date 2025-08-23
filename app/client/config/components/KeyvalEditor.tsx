@@ -17,19 +17,6 @@ import React from 'react';
 
 type Monaco = typeof monaco;
 
-const PLACEHOLDER_DEVICE_IDS = [
-	'device-living-room-main-light',
-	'device-living-room-ambient',
-	'device-kitchen-ceiling',
-	'device-kitchen-counter',
-	'device-bedroom-main',
-	'device-bedroom-bedside',
-	'device-bathroom-main',
-	'device-hallway-ceiling',
-	'device-office-desk',
-	'device-office-overhead',
-];
-
 const JSON_SCHEMA = {
 	type: 'object',
 	properties: {
@@ -65,7 +52,6 @@ const JSON_SCHEMA = {
 									description: 'Array of device identifiers',
 									items: {
 										type: 'string',
-										enum: PLACEHOLDER_DEVICE_IDS,
 									},
 									minItems: 1,
 								},
