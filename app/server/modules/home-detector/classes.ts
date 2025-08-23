@@ -204,12 +204,12 @@ export class Detector {
 			};
 		};
 		for (const { key, data, extended } of [
-			...(Object.keys(config.base) || []).map((n) => ({
+			...(Object.keys(config.base ?? {}) || []).map((n) => ({
 				key: n,
 				data: config.base[n],
 				extended: false,
 			})),
-			...(Object.keys(config.extended) || []).map((n) => ({
+			...(Object.keys(config.extended ?? {}) || []).map((n) => ({
 				key: n,
 				data: homeIps.extended[n],
 				extended: true,
