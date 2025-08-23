@@ -14,9 +14,9 @@ export const EWeLink = new (class EWeLink extends ModuleMeta {
 	public name = 'ewelink';
 
 	private getWebApi() {
-		const appId = getEnv('SECRET_EWELINK_APP_ID', true);
-		const appSecret = getEnv('SECRET_EWELINK_APP_SECRET', true);
-		const region = getEnv('SECRET_EWELINK_REGION', true);
+		const appId = getEnv('SECRET_EWELINK_APP_ID', false);
+		const appSecret = getEnv('SECRET_EWELINK_APP_SECRET', false);
+		const region = getEnv('SECRET_EWELINK_REGION', false);
 
 		if (appId && appSecret && region) {
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
