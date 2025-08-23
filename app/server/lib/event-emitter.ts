@@ -50,7 +50,21 @@ export class AsyncEventEmitter<V, M = V> extends EventEmitter<V, M> {
 		if (!this._initialized) {
 			this._initialized = true;
 			if (this.initializer) {
-				void this.initializer().then((value) => this.emit(value));
+				const initializePromise = this.initializer();
+				let resolved = false;
+				const originalTrace = new Error().stack;
+				setTimeout(() => {
+					if (!resolved) {
+						console.warn(
+							'Initialization did not resolve within 10 seconds'
+						);
+						console.warn(originalTrace);
+					}
+				}, 10000);
+				void initializePromise.then((value) => {
+					resolved = true;
+					this.emit(value);
+				});
 			}
 		}
 		return this._value
