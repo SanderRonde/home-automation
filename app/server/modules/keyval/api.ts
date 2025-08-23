@@ -117,28 +117,26 @@ export class APIHandler {
 	private async addValuesToConfig(
 		config: KeyvalConfig
 	): Promise<KeyvalConfigWithValues> {
-		const groupsWithValues: KeyvalGroupWithValues[] = [];
+		return Promise.all(
+			config.groups.map(async (group) => {
+				const itemsWithValues = await Promise.all(
+					group.items.map(async (item) => {
+						const value = await this.getDeviceValue(item.deviceIds);
+						return {
+							...item,
+							value,
+						};
+					})
+				);
 
-		for (const group of config.groups) {
-			const itemsWithValues: KeyvalItemWithValue[] = [];
-
-			for (const item of group.items) {
-				const value = await this.getDeviceValue(item.deviceIds);
-				itemsWithValues.push({
-					...item,
-					value,
-				});
-			}
-
-			groupsWithValues.push({
-				...group,
-				items: itemsWithValues,
-			});
-		}
-
-		return {
+				return {
+					...group,
+					items: itemsWithValues,
+				};
+			})
+		).then((groupsWithValues) => ({
 			groups: groupsWithValues,
-		};
+		}));
 	}
 
 	@errorHandle
@@ -146,6 +144,7 @@ export class APIHandler {
 	public async getConfig(res: ResponseLike): Promise<KeyvalConfigWithValues> {
 		const configJson = this._db.get('keyval_config', '{"groups":[]}');
 		const config: KeyvalConfig = JSON.parse(configJson);
+		console.log('config', config);
 		const configWithValues = await this.addValuesToConfig(config);
 
 		res.status(200);
