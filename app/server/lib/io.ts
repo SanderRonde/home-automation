@@ -119,8 +119,6 @@ export interface EnvShape {
 	SECRET_EWELINK_AREA_CODE: string;
 	SECRET_EWELINK_REDIRECT_URL_BASE: string;
 
-	SECRET_NOTION_API_KEY: string;
-
 	SECRET_HUE_USERNAME: string;
 
 	SECRET_SENTRY_DSN: string;

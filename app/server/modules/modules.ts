@@ -3,7 +3,6 @@ import { Temperature } from './temperature';
 import { Webhook } from './webhook';
 import { EWeLink } from './ewelink';
 import { Secret } from './secret/';
-import { Notion } from './notion/';
 import { Matter } from './matter';
 import { KeyVal } from './keyval';
 import { Device } from './device';
@@ -24,7 +23,6 @@ export { HomeDetector } from './home-detector';
 export { Temperature } from './temperature';
 export { Webhook } from './webhook';
 export { EWeLink } from './ewelink';
-export { Notion } from './notion/';
 export { Secret } from './secret/';
 export { KeyVal } from './keyval';
 export { Matter } from './matter';
@@ -69,7 +67,6 @@ const getModuleObj = () => ({
 	matter: Matter,
 	config: Config,
 	secret: Secret,
-	notion: Notion,
 	webhook: Webhook,
 	ewelink: EWeLink,
 

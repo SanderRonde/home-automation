@@ -85,7 +85,6 @@
 		"@abandonware/noble": "^1.9.2-21",
 		"@googleapis/homegraph": "^2.0.0",
 		"@matter/main": "^0.15.3",
-		"@notionhq/client": "^0.4.6",
 		"@pm2/io": "^5.0.0",
 		"@project-chip/matter.js": "^0.15.3",
 		"@sanderronde/write-buffer": "1.0.3",

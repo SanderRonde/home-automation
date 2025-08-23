@@ -8,10 +8,10 @@ import {
 	EwelinkTemperatureMeasurementCluster,
 } from './cluster';
 import { EwelinkBooleanStateDoorSensorCluster } from './clusters/boolean-state/door-sensor';
+import { DeviceEndpoint, DeviceSource, type Device } from '../../device/device';
 import { EwelinkOnOffClusterSimplePower } from './clusters/power/simple-power';
 import type { EwelinkOnOffClusterM51CParams } from './clusters/power/M5-1C';
 import { EwelinkOnOffClusterM51CSingle } from './clusters/power/M5-1C';
-import { DeviceEndpoint, DeviceSource, type Device } from '../../device/device';
 import type { EWeLinkConfig } from './clusters/shared';
 import { logTag } from '../../../lib/logging/logger';
 import type { EwelinkCluster } from './cluster';
