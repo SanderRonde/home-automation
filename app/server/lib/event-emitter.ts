@@ -1,12 +1,48 @@
 import { SettablePromise } from './settable-promise';
+import { promiseTimeout } from './promise';
+import { logTag } from './logging/logger';
 import * as util from 'util';
+
+const noValue = Symbol('noValue');
+
+function promiseHandlers<T>() {
+	const errorPromise = new SettablePromise<Error>();
+
+	return {
+		checkTimeout: (promise: Promise<unknown>) => {
+			const originalTrace = new Error().stack;
+			void promiseTimeout(1000 * 10, promise, () => {
+				logTag(
+					'event-emitter',
+					'red',
+					'Initialization/getter did not resolve within 10 seconds',
+					originalTrace
+				);
+			});
+		},
+		catchError: (error: Error) => {
+			logTag(
+				'event-emitter',
+				'red',
+				'Initialization/getter failed',
+				error
+			);
+			errorPromise.set(error);
+			return undefined;
+		},
+		resolver: (promise: Promise<T>): Promise<T> => {
+			return Promise.race([
+				promise,
+				errorPromise.value.then<T>((error) => {
+					return Promise.reject(error);
+				}),
+			]);
+		},
+	};
+}
 
 export class EventEmitter<V, M = V> implements Disposable {
 	protected _handlers: Set<(value: M) => void> = new Set();
-
-	public constructor(
-		public readonly initializer?: () => Promise<V | undefined>
-	) {}
 
 	public listen(handler: (value: NonNullable<M>) => void): () => void {
 		this._handlers.add(handler);
@@ -41,43 +77,16 @@ export class EventEmitter<V, M = V> implements Disposable {
 	}
 }
 
-export class AsyncEventEmitter<V, M = V> extends EventEmitter<V, M> {
-	protected _initialValue: SettablePromise<M> = new SettablePromise();
-	private _initialized = false;
-	private _value: M | null = null;
+abstract class AsyncEventEmitter<V, M = V> extends EventEmitter<V, M> {
+	protected _value: M | typeof noValue = noValue;
 
-	public get value(): Promise<M> {
-		if (!this._initialized) {
-			this._initialized = true;
-			if (this.initializer) {
-				const initializePromise = this.initializer();
-				let resolved = false;
-				const originalTrace = new Error().stack;
-				setTimeout(() => {
-					if (!resolved) {
-						console.warn(
-							'Initialization did not resolve within 10 seconds'
-						);
-						console.warn(originalTrace);
-					}
-				}, 10000);
-				void initializePromise.then((value) => {
-					resolved = true;
-					this.emit(value);
-				});
-			}
-		}
-		return this._value
-			? Promise.resolve(this._value)
-			: this._initialValue.value;
-	}
+	public abstract get value(): Promise<M>;
 
 	protected _emit(value: M): void {
 		if (value === this._value || value === undefined) {
 			return;
 		}
 
-		this._initialValue.set(value);
 		this._value = value;
 
 		super._emit(value);
@@ -85,15 +94,28 @@ export class AsyncEventEmitter<V, M = V> extends EventEmitter<V, M> {
 
 	public listen(
 		handler: (value: NonNullable<M>) => void,
-		initial: boolean = false
+		options?: { initial?: boolean; once?: boolean }
 	): () => void {
-		this._handlers.add(handler);
-
-		if (initial && this._initialized && this._value) {
+		if (
+			options?.initial &&
+			this._value !== noValue &&
+			this._value !== undefined &&
+			this._value !== null
+		) {
 			handler(this._value);
+			if (options?.once) {
+				return () => {};
+			}
 		}
 
-		return () => this.removeListener(handler);
+		const listener = (value: NonNullable<M>) => {
+			handler(value);
+			if (options?.once) {
+				this.removeListener(listener);
+			}
+		};
+		this._handlers.add(listener);
+		return () => this.removeListener(listener);
 	}
 
 	public [util.inspect.custom](): string {
@@ -101,42 +123,127 @@ export class AsyncEventEmitter<V, M = V> extends EventEmitter<V, M> {
 	}
 }
 
-export class CombinedAsyncEventEmitter<V> extends AsyncEventEmitter<V[]> {
-	public constructor(eventEmitters: AsyncEventEmitter<V>[]) {
-		const initializer = () => {
-			return Promise.all(eventEmitters.map((emitter) => emitter.value));
-		};
-		super(initializer);
+export class LazyAsyncEventEmitter<V, M = V> extends AsyncEventEmitter<V, M> {
+	private _initialized = false;
 
-		for (let i = 0; i < eventEmitters.length; i++) {
-			const eventEmitter = eventEmitters[i];
+	public constructor(
+		private readonly getInitialValue: () => Promise<V | undefined>
+	) {
+		super();
+	}
+
+	public get value(): Promise<M> {
+		const { catchError, resolver, checkTimeout } = promiseHandlers<M>();
+
+		if (!this._initialized) {
+			this._initialized = true;
+			const initialValue = this.getInitialValue().catch(catchError);
+			checkTimeout(initialValue);
+			void initialValue.then((value) => {
+				this.emit(value);
+			});
+		}
+
+		return resolver(
+			new Promise<M>((resolve) => {
+				this.listen(resolve, { initial: true, once: true });
+			})
+		);
+	}
+}
+
+export class GetterAsyncEventEmitter<V, M = V> extends AsyncEventEmitter<V, M> {
+	public constructor(
+		private readonly getValue: () => Promise<V | undefined>
+	) {
+		super();
+	}
+
+	public get value(): Promise<M> {
+		const { catchError, resolver, checkTimeout } = promiseHandlers<M>();
+
+		const listenerPromise = new Promise<M>((resolve) => {
+			this.listen(
+				(listenedValue) => {
+					resolve(listenedValue);
+				},
+				{ once: true }
+			);
+		});
+
+		const valueGetterPromise = this.getValue().catch(catchError);
+		checkTimeout(valueGetterPromise);
+		void valueGetterPromise.then((value) => {
+			this.emit(value);
+		});
+
+		return resolver(listenerPromise);
+	}
+}
+
+export class CombinedAsyncEventEmitter<V> extends AsyncEventEmitter<V[]> {
+	public constructor(
+		private readonly _eventEmitters: AsyncEventEmitter<V>[]
+	) {
+		super();
+
+		for (let i = 0; i < _eventEmitters.length; i++) {
+			const eventEmitter = _eventEmitters[i];
 			eventEmitter.listen(async (value) => {
-				if (value === undefined) {
-					return;
-				}
 				const currentValue = [...(await this.value)];
 				currentValue[i] = value;
 				void this.emit(currentValue);
 			});
 		}
 	}
+
+	public get value(): Promise<V[]> {
+		const initialValue = this._eventEmitters.map(
+			(emitter) => emitter.value
+		);
+		return Promise.all(initialValue);
+	}
 }
 
 export class MappedAsyncEventEmitter<V, M> extends AsyncEventEmitter<M> {
+	private _lastError: SettablePromise<Error> = new SettablePromise();
+
 	public constructor(
 		private readonly _eventEmitter: AsyncEventEmitter<V>,
-		private readonly mapper: (value: V) => M | Promise<M>
+		private readonly mapper: (value: V) => Promise<M>
 	) {
-		super(_eventEmitter.initializer as () => Promise<M | undefined>);
-		this._eventEmitter.listen(async (value) => {
-			if (value === undefined) {
-				return;
+		super();
+		this._eventEmitter.listen(
+			async (value) => {
+				if (value === undefined || value === null) {
+					return;
+				}
+				const mapped = this.mapper(value).catch((error) => {
+					this._lastError.set(error);
+					logTag('event-emitter', 'red', 'Mapper failed', error);
+					return null;
+				});
+				void super.emit(await mapped);
+			},
+			{
+				initial: true,
 			}
-			void this.emit(await this.mapper(value));
-		});
+		);
+	}
+
+	// @ts-expect-error
+	public emit(value: V | null | undefined): void {
+		this._eventEmitter.emit(value);
 	}
 
 	public get value(): Promise<M> {
-		return this._eventEmitter.value.then(this.mapper);
+		const promise = new Promise<M>((resolve) => {
+			this.listen(resolve, { once: true });
+		});
+		void this._eventEmitter.value.then((value) => this.emit(value));
+		return Promise.race([
+			promise,
+			this._lastError.value.then((error) => Promise.reject(error)),
+		]);
 	}
 }

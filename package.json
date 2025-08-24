@@ -38,6 +38,8 @@
 		"format-check": "prettier --check '**/*.{ts,json,html}'",
 		"format": "prettier --write '**/*.{ts,json,html}'",
 		"lint": "eslint --fix \"./app/**/*.ts\"",
+		"test": "bun test",
+		"test:watch": "bun test --watch",
 		"start": "bun app/server/app.ts --http 1272 --https 1273 -vvvvvv --color -i"
 	},
 	"devDependencies": {
@@ -117,7 +119,7 @@
 		"serve-static": "^1.14.1",
 		"sqlite3": "^5.1.7",
 		"telnet-client": "^1.2.5",
-		"ts-node": "^10.0.0",
+		"ts-node": "^10.9.2",
 		"tsconfig-paths": "^4.2.0",
 		"tuyapi": "^7.5.2",
 		"uglify-es": "^3.3.9",
