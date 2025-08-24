@@ -44,7 +44,7 @@ export class APIHandler {
 			auth: string;
 		}
 	): Record<string, HOME_STATE | '?'> {
-		const all = this._detector.getAll(true);
+		const all = this._detector.getAll();
 		const result = JSON.stringify(all);
 		LogObj.fromRes(res).attachMessage(`JSON: ${result}`);
 		res.write(result);

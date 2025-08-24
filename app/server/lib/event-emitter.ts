@@ -77,10 +77,14 @@ export class EventEmitter<V, M = V> implements Disposable {
 	}
 }
 
-abstract class AsyncEventEmitter<V, M = V> extends EventEmitter<V, M> {
+export class AsyncEventEmitter<V, M = V> extends EventEmitter<V, M> {
 	protected _value: M | typeof noValue = noValue;
 
-	public abstract get value(): Promise<M>;
+	public get value(): Promise<M> {
+		return new Promise<M>((resolve) => {
+			this.listen(resolve, { initial: true, once: true });
+		});
+	}
 
 	protected _emit(value: M): void {
 		if (value === this._value || value === undefined) {
@@ -210,7 +214,7 @@ export class MappedAsyncEventEmitter<V, M> extends AsyncEventEmitter<M> {
 
 	public constructor(
 		private readonly _eventEmitter: AsyncEventEmitter<V>,
-		private readonly mapper: (value: V) => Promise<M>
+		private readonly mapper: (value: V) => M | Promise<M>
 	) {
 		super();
 		this._eventEmitter.listen(
@@ -218,7 +222,8 @@ export class MappedAsyncEventEmitter<V, M> extends AsyncEventEmitter<M> {
 				if (value === undefined || value === null) {
 					return;
 				}
-				const mapped = this.mapper(value).catch((error) => {
+				const asyncMapper = async (value: V) => this.mapper(value);
+				const mapped = asyncMapper(value).catch((error) => {
 					this._lastError.set(error);
 					logTag('event-emitter', 'red', 'Mapper failed', error);
 					return null;

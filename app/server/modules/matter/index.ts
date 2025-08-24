@@ -12,8 +12,13 @@ export const Matter = new (class Matter extends ModuleMeta {
 		const matterClient = new MatterClient();
 		this.client.set(matterClient);
 		matterClient.start();
-		matterClient.devices.listen((devices) => {
-			config.modules.device.setDevices(Object.values(devices));
-		}, true);
+		matterClient.devices.listen(
+			(devices) => {
+				config.modules.device.setDevices(Object.values(devices));
+			},
+			{
+				initial: true,
+			}
+		);
 	}
 })();

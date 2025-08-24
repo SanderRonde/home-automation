@@ -37,10 +37,10 @@
 		"pretty": "pretty-quick",
 		"format-check": "prettier --check '**/*.{ts,json,html}'",
 		"format": "prettier --write '**/*.{ts,json,html}'",
-		"lint": "eslint --fix \"./app/**/*.ts\"",
+		"lint": "bun format-check && bun compile:server && eslint --fix \"./app/**/*.ts\" && bun test",
 		"test": "bun test",
 		"test:watch": "bun test --watch",
-		"start": "bun app/server/app.ts --http 1272 --https 1273 -vvvvvv --color -i"
+		"start": "bun app/server/app.ts --http 1275 --https 1276 -vvvvvv --color -i"
 	},
 	"devDependencies": {
 		"@emotion/react": "^11.14.0",

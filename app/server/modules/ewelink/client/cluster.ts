@@ -10,14 +10,15 @@ import {
 	DeviceOnOffCluster,
 } from '../../device/cluster';
 import {
-	AsyncEventEmitter,
 	EventEmitter,
+	LazyAsyncEventEmitter,
 	MappedAsyncEventEmitter,
 } from '../../../lib/event-emitter';
+import type { Cluster, DeviceClusterName } from '../../device/cluster';
+import type { AsyncEventEmitter } from '../../../lib/event-emitter';
 import type { EWeLinkWebSocketMessage } from './clusters/shared';
 import { SettablePromise } from '../../../lib/settable-promise';
 import type { EWeLinkConfig } from './clusters/shared';
-import type { Cluster } from '../../device/cluster';
 import type { EwelinkDeviceResponse } from '../api';
 import util from 'util';
 
@@ -128,10 +129,10 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 	}
 
 	public attributeGetter<R>(
-		mapper: (value: PARAMS) => R
-	): MappedAsyncEventEmitter<PARAMS | null, R | null> {
+		mapper?: (value: PARAMS) => R
+	): AsyncEventEmitter<PARAMS | null, R | null> {
 		const emitter = (() => {
-			const emitter = new AsyncEventEmitter<PARAMS | null>(() =>
+			const emitter = new LazyAsyncEventEmitter<PARAMS | null>(() =>
 				this._config.value.then((config) =>
 					this._getItemData(config.device)
 				)
@@ -145,7 +146,7 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 			return emitter;
 		})();
 		this._eventEmitters.add(emitter);
-		return emitter as MappedAsyncEventEmitter<PARAMS | null, R | null>;
+		return emitter as AsyncEventEmitter<PARAMS | null, R | null>;
 	}
 
 	public attributeSetter<M extends keyof PARAMS, A = void>(
@@ -200,8 +201,7 @@ export interface EwelinkOnOffClusterState {
 
 function ConfigurableCluster<T extends object>(
 	Base: abstract new () => Cluster & {
-		getName: () => string;
-		getEmoji: () => string;
+		getName: () => DeviceClusterName;
 	}
 ) {
 	return class extends Base {

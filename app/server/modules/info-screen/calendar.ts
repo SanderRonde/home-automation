@@ -1,6 +1,7 @@
 import { SettablePromise } from '../../lib/settable-promise';
 import type { Credentials } from 'google-auth-library';
 import { SECRETS_FOLDER } from '../../lib/constants';
+import { logTag } from '../../lib/logging/logger';
 import type { calendar_v3 } from 'googleapis';
 import { flatten } from '../../lib/array';
 import { getEnv } from '../../lib/io';
@@ -25,7 +26,7 @@ export async function refresh(): Promise<void> {
 		);
 		await authTokens(credentials, true);
 	} catch (e) {
-		console.log('Failed to re-use google code', e);
+		logTag('calendar', 'red', 'Failed to re-use google code', e.message);
 	}
 }
 

@@ -20,7 +20,7 @@ import type {
 	WindowCovering,
 } from '@matter/main/clusters';
 import {
-	AsyncEventEmitter,
+	GetterAsyncEventEmitter,
 	CombinedAsyncEventEmitter,
 	MappedAsyncEventEmitter,
 } from '../../../lib/event-emitter';
@@ -41,6 +41,7 @@ import type {
 	DeviceClusterName,
 	DeviceGroupId,
 } from '../../device/cluster';
+import type { AsyncEventEmitter } from '../../../lib/event-emitter';
 import { SettablePromise } from '../../../lib/settable-promise';
 import type { LevelControl } from '@matter/main/clusters';
 import type { WritableAttribute } from '@matter/types';
@@ -141,7 +142,7 @@ class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 		mapper?: (value: AT) => R | Promise<R>
 	): AsyncEventEmitter<AT, R> {
 		const emitter = (() => {
-			const emitter = new AsyncEventEmitter<AT>(async () => {
+			const emitter = new GetterAsyncEventEmitter<AT>(async () => {
 				const { matterClient, nodeId, endpointNumber, id } =
 					await this._dependencies.value;
 				return matterClient.request({

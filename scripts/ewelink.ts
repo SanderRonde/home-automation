@@ -1,8 +1,10 @@
-import { initEWeLinkDevices } from '../app/server/modules/ewelink/api';
+import { EWeLinkAPI } from '../app/server/modules/ewelink/api';
 import { logReady } from '../app/server/lib/logging/logger';
+import { EWeLink } from '../app/server/modules';
+import { Database } from '../app/server/lib/db';
 import eWelink from 'ewelink-api-next';
 
-async function main() {
+function main() {
 	let appId: string | undefined;
 	let appSecret: string | undefined;
 	let region: string | undefined;
@@ -36,8 +38,9 @@ async function main() {
 		region,
 	});
 	api.at = token;
-	await initEWeLinkDevices(api, () => {});
+
+	const db = new Database(EWeLink.dbName);
+	new EWeLinkAPI(db, api, () => {});
 }
 
-// @ts-ignore
-await main();
+main();

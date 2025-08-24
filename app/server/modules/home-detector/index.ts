@@ -1,7 +1,6 @@
 import { SettablePromise } from '../../lib/settable-promise';
 import { LogObj } from '../../lib/logging/lob-obj';
 import { logTag } from '../../lib/logging/logger';
-import { initRouting } from './routing';
 import type { ModuleConfig } from '..';
 import { handleHooks } from './hooks';
 import { Detector } from './classes';
@@ -50,11 +49,6 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 		this._detector.set(detector);
 
 		this._initListeners();
-		initRouting({
-			...config,
-			detector,
-			apiHandler,
-		});
 	}
 
 	public onUpdate(

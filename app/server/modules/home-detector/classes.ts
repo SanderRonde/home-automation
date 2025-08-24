@@ -162,8 +162,7 @@ export class Detector {
 		callback: (newState: HOME_STATE, name: string) => void | Promise<void>;
 	}[] = [];
 	private readonly _db: Database;
-	private _basePingers: Map<string, Pinger> = new Map();
-	private _extendedPingers: Map<string, Pinger> = new Map();
+	private _pingers: Map<string, Pinger> = new Map();
 
 	public constructor({ db }: { db: Database }) {
 		this._db = db;
@@ -199,23 +198,14 @@ export class Detector {
 			base: {
 				[key: string]: string[];
 			};
-			extended: {
-				[key: string]: string[];
-			};
 		};
-		for (const { key, data, extended } of [
-			...(Object.keys(config.base ?? {}) || []).map((n) => ({
+		for (const { key, data } of (Object.keys(config.base ?? {}) || []).map(
+			(n) => ({
 				key: n,
 				data: config.base[n],
-				extended: false,
-			})),
-			...(Object.keys(config.extended ?? {}) || []).map((n) => ({
-				key: n,
-				data: homeIps.extended[n],
-				extended: true,
-			})),
-		]) {
-			this._extendedPingers.set(
+			})
+		)) {
+			this._pingers.set(
 				key,
 				new Pinger(
 					{
@@ -228,34 +218,25 @@ export class Detector {
 					}
 				)
 			);
-			if (!extended) {
-				this._basePingers.set(key, this._extendedPingers.get(key)!);
-			}
 		}
 	}
 
-	public getAll(extended = false): Record<string, HOME_STATE> {
+	public getAll(): Record<string, HOME_STATE> {
 		const obj: {
 			[key: string]: HOME_STATE;
 		} = {};
-		if (extended) {
-			this._extendedPingers.forEach((pinger, key) => {
-				obj[key] = pinger.state;
-			});
-		} else {
-			this._basePingers.forEach((pinger, key) => {
-				obj[key] = pinger.state;
-			});
-		}
+		this._pingers.forEach((pinger, key) => {
+			obj[key] = pinger.state;
+		});
 		return obj;
 	}
 
 	public getPinger(name: string): Pinger | undefined {
-		return this._extendedPingers.get(name);
+		return this._pingers.get(name);
 	}
 
 	public get(name: string): HOME_STATE | '?' {
-		const pinger = this._extendedPingers.get(name);
+		const pinger = this._pingers.get(name);
 		if (!pinger) {
 			return '?';
 		}
