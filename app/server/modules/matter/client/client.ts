@@ -13,9 +13,9 @@ import type {
 } from '../server/server';
 import type { ChildProcessWithoutNullStreams } from 'child_process';
 import { AsyncEventEmitter } from '../../../lib/event-emitter';
+import { DB_FOLDER, ROOT } from '../../../lib/constants';
 import { logTag } from '../../../lib/logging/logger';
 import type { EndpointNumber } from '@matter/types';
-import { DB_FOLDER } from '../../../lib/constants';
 import { MatterDevice } from './device';
 import { spawn } from 'child_process';
 import * as path from 'path';
@@ -51,28 +51,51 @@ export class MatterClient implements AsyncDisposable {
 	}
 
 	public start(): void {
-		this.#proc = spawn('ts-node', [
+		this.#proc = spawn(path.join(ROOT, 'node_modules', '.bin', 'ts-node'), [
 			'-T',
 			path.join(__dirname, '../server/server.ts'),
 			`--storage-path=${path.join(DB_FOLDER, 'matter')}`,
 		]);
+
+		this.#proc.on('error', (error) => {
+			logTag(
+				'matter-client',
+				'red',
+				`Failed to start process: ${error.message}`
+			);
+		});
+
 		this.#proc.stdout.on('data', (data: Buffer | string) => {
 			process.stdout.write(data.toString());
 		});
+
 		this.#proc.stderr.on('data', (data: Buffer | string) => {
-			for (const line of data.toString().split('\n')) {
+			const dataStr = data.toString();
+			for (const line of dataStr.split('\n')) {
 				if (!line.trim()) {
 					continue;
 				}
-				logTag('matter-client', 'blue', `Received message: ${line}`);
+
+				// Try to parse as JSON message first
 				try {
 					const message = JSON.parse(line.trim());
+					logTag(
+						'matter-client',
+						'blue',
+						`Received message: ${line}`
+					);
 					this.#listeners.forEach((listener) => listener(message));
 				} catch (error) {
-					console.error(`server:error:${line.trim()}`);
+					// If it's not JSON, it might be an error message from the process startup
+					logTag(
+						'matter-client',
+						'red',
+						`Process error: ${line.trim()}`
+					);
 				}
 			}
 		});
+
 		process.on('exit', () => {
 			this.#proc!.kill();
 		});
@@ -85,10 +108,23 @@ export class MatterClient implements AsyncDisposable {
 			});
 		});
 
+		let responded = false;
 		void this.request({
 			type: MatterServerInputMessageType.ListDevices,
 			arguments: [],
-		}).then(this.#updateDevices.bind(this));
+		}).then((devices) => {
+			responded = true;
+			this.#updateDevices(devices);
+		});
+		setTimeout(() => {
+			if (!responded) {
+				logTag(
+					'matter-client',
+					'red',
+					'No response from matter server'
+				);
+			}
+		}, 5000);
 		this.onMessage((message) => {
 			if (
 				message.category ===
@@ -170,7 +206,10 @@ export class MatterClient implements AsyncDisposable {
 if (require.main === module) {
 	const matterClient = new MatterClient();
 	matterClient.start();
+	void matterClient.pair('10306615778').then((devices) => {
+		console.log('pair', devices);
+	});
 	void matterClient.devices.value.then((devices) => {
-		console.log(devices);
+		console.log('devices', devices);
 	});
 }
