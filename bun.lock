@@ -46,6 +46,7 @@
         "wc-lib": "^1.1.36",
         "wled-client": "^0.22.1",
         "ws": "^7.4.6",
+        "zod": "^4.1.1",
       },
       "devDependencies": {
         "@emotion/react": "^11.14.0",
@@ -1627,6 +1628,8 @@
     "yn": ["yn@3.1.1", "", {}, "sha512-Ux4ygGWsu2c7isFWe8Yu1YluJmqVhxqK2cLXNQA5AcC3QfbGNpM7fu0Y8b/z16pXLnFxZYvWhd3fhBY9DLmC6Q=="],
 
     "yocto-queue": ["yocto-queue@0.1.0", "", {}, "sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q=="],
+
+    "zod": ["zod@4.1.1", "", {}, "sha512-SgMZK/h8Tigt9nnKkfJMvB/mKjiJXaX26xegP4sa+0wHIFVFWVlsQGdhklDmuargBD3Hsi3rsQRIzwJIhTPJHA=="],
 
     "@abandonware/bluetooth-hci-socket/node-gyp": ["node-gyp@10.3.1", "", { "dependencies": { "env-paths": "^2.2.0", "exponential-backoff": "^3.1.1", "glob": "^10.3.10", "graceful-fs": "^4.2.6", "make-fetch-happen": "^13.0.0", "nopt": "^7.0.0", "proc-log": "^4.1.0", "semver": "^7.3.5", "tar": "^6.2.1", "which": "^4.0.0" }, "bin": { "node-gyp": "bin/node-gyp.js" } }, "sha512-Pp3nFHBThHzVtNY7U6JfPjvT/DTE8+o/4xKsLQtBoU+j2HLsGlhcfzflAoUreaJbNmYnX+LlLi0qjV8kpyO6xQ=="],
 

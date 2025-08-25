@@ -125,7 +125,8 @@
 		"uglify-es": "^3.3.9",
 		"wc-lib": "^1.1.36",
 		"wled-client": "^0.22.1",
-		"ws": "^7.4.6"
+		"ws": "^7.4.6",
+		"zod": "^4.1.1"
 	},
 	"packageManager": "bun@4.1.0"
 }

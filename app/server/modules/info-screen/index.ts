@@ -14,7 +14,7 @@ export const InfoScreen = new (class InfoScreen extends ModuleMeta {
 	}
 
 	public async init(config: ModuleConfig<InfoScreen>) {
-		initRouting(config);
+		await initRouting(config);
 		await refresh();
 	}
 })();
