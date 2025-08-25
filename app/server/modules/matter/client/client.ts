@@ -157,8 +157,8 @@ export class MatterClient implements AsyncDisposable {
 	public async request<
 		M extends MatterServerInputMessage,
 		R extends MatterServerInputReturnValues[M['type']],
-	>(message: M): Promise<R> {
-		return new Promise((resolve) => {
+	>(message: M): Promise<MatterServerInputReturnValues[M['type']]> {
+		return new Promise((resolve, reject) => {
 			const identifier = this.#requestIdentifier++;
 			const listener = (message: MatterServerOutputMessage) => {
 				if (
@@ -173,6 +173,7 @@ export class MatterClient implements AsyncDisposable {
 			this.onMessage(listener);
 			if (!this.#proc) {
 				console.error('Matter server not started');
+				reject(new Error('Matter server not started'));
 				return;
 			}
 			const messageString = JSON.stringify({
