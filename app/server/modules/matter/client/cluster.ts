@@ -145,10 +145,10 @@ class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 			const emitter = new GetterAsyncEventEmitter<AT>(async () => {
 				const { matterClient, nodeId, endpointNumber, id } =
 					await this._dependencies.value;
-				return matterClient.request({
+				return (await matterClient.request({
 					type: MatterServerInputMessageType.GetAttribute,
 					arguments: [nodeId, endpointNumber, id, attribute],
-				});
+				})) as AT;
 			});
 			if (mapper) {
 				return new MappedAsyncEventEmitter<AT, R>(emitter, mapper);
