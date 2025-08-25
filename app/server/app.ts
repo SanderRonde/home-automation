@@ -1,6 +1,5 @@
 import {
 	initMiddleware,
-	initAnnotatorRoutes,
 	initPostRoutes,
 } from './lib/routes';
 import { hasArg, getArg, getNumberArg, getNumberEnv } from './lib/io';
@@ -9,11 +8,11 @@ import type { BaseModuleConfig } from './modules/modules';
 import { logReady, logTag } from './lib/logging/logger';
 import { printCommands } from './modules/bot/helpers';
 import { notifyAllModules } from './modules/modules';
-import { WSSimulator, WSWrapper } from './lib/ws';
 import { LogObj } from './lib/logging/lob-obj';
 import type { AllModules } from './modules';
 import { SQLDatabase } from './lib/sql-db';
 import { getAllModules } from './modules';
+import { WSWrapper } from './lib/ws';
 import { Database } from './lib/db';
 import { wait } from './lib/time';
 import 'express-async-errors';
@@ -49,7 +48,6 @@ class WebServer {
 	private _initLogger!: ProgressLogger;
 
 	public app!: express.Express;
-	public websocketSim!: WSSimulator;
 	public ws!: WSWrapper;
 
 	public constructor(config: PartialConfig = {}) {
@@ -81,7 +79,6 @@ class WebServer {
 	private _getModuleConfig(): BaseModuleConfig {
 		return {
 			app: this.app,
-			websocketSim: this.websocketSim,
 			config: this._config,
 			randomNum: Math.round(Math.random() * 1000000),
 			websocket: this.ws,
@@ -114,10 +111,6 @@ class WebServer {
 	}
 
 	private _initServers() {
-		this.websocketSim = new WSSimulator();
-		this.app.use(async (req, res, next) => {
-			await this.websocketSim.handler(req, res, next);
-		});
 		this._server = http.createServer(this.app);
 		this.ws = new WSWrapper(this._server);
 		this._initLogger.increment('HTTP server');
@@ -157,7 +150,6 @@ class WebServer {
 
 		this._initLogger.increment('express');
 		initMiddleware(this._getModuleConfig().app);
-		initAnnotatorRoutes(this.app);
 		this._initLogger.increment('middleware');
 		this._initServers();
 		this._initLogger.increment('servers');

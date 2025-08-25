@@ -8,30 +8,7 @@ import bodyParser from 'body-parser';
 import type express from 'express';
 import { getEnv } from './io';
 import * as path from 'path';
-import { glob } from 'glob';
 import chalk from 'chalk';
-
-export function initAnnotatorRoutes(app: express.Express): void {
-	app.all('/annotator/files', (_req, res) => {
-		glob(path.join(__dirname, '../../../', 'ai/files', '*.wav'), {}).then(
-			(files) => {
-				res.status(200);
-				res.write(
-					JSON.stringify({
-						files: files.map((file: string) =>
-							file.split('/').pop()
-						),
-					})
-				);
-				res.end();
-			},
-			() => {
-				res.status(500);
-				res.end();
-			}
-		);
-	});
-}
 
 export function initMiddleware(app: AsyncExpressApplication): void {
 	if (getEnv('SECRET_SENTRY_DSN')) {
@@ -45,6 +22,7 @@ export function initMiddleware(app: AsyncExpressApplication): void {
 		);
 		app.use(Sentry.Handlers.tracingHandler());
 	}
+
 	app.use((req, res, next) => {
 		LogObj.fromIncomingReq(req, res);
 		next();

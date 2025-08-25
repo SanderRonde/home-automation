@@ -13,7 +13,7 @@ import { Bot } from './bot';
 
 import type { AsyncExpressApplication } from '../types/express';
 import type { SQLDatabaseWithSchema } from '../lib/sql-db';
-import type { WSSimulator, WSWrapper } from '../lib/ws';
+import type { WSWrapper } from '../lib/ws';
 import { InfoScreen } from './info-screen';
 import type { Database } from '../lib/db';
 import type { ModuleMeta } from './meta';
@@ -45,7 +45,6 @@ export type ModuleHookables = {
 
 export interface BaseModuleConfig {
 	app: AsyncExpressApplication;
-	websocketSim: WSSimulator;
 	websocket: WSWrapper;
 	config: AppConfig;
 	randomNum: number;
