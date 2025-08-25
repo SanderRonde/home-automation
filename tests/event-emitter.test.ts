@@ -219,6 +219,18 @@ test('GetterAsyncEventEmitter - gets value on demand', async () => {
 	expect(getCount).toBe(2);
 });
 
+test('GetterAsyncEventEmitter - works if values are the same twice in a row', async () => {
+	const emitter = new GetterAsyncEventEmitter(async () => {
+		return 'value'
+	});
+
+	const value1 = await emitter.value;
+	expect(value1).toBe('value');
+
+	const value2 = await emitter.value;
+	expect(value2).toBe('value');
+});
+
 test('GetterAsyncEventEmitter - multiple simultaneous calls', async () => {
 	let getCount = 0;
 	const emitter = new GetterAsyncEventEmitter(async () => {

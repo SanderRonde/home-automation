@@ -42,11 +42,10 @@ function promiseHandlers<T>() {
 }
 
 export class EventEmitter<V, M = V> implements Disposable {
-	protected _handlers: Set<(value: M) => void> = new Set();
+	protected _handlers = new Map<(value: M) => void, boolean>();
 
 	public listen(handler: (value: NonNullable<M>) => void): () => void {
-		this._handlers.add(handler);
-
+		this._handlers.set(handler, true);
 		return () => this.removeListener(handler);
 	}
 
@@ -59,7 +58,7 @@ export class EventEmitter<V, M = V> implements Disposable {
 			return;
 		}
 
-		for (const handler of this._handlers) {
+		for (const handler of this._handlers.keys()) {
 			handler(value);
 		}
 	}
@@ -87,17 +86,23 @@ export class AsyncEventEmitter<V, M = V> extends EventEmitter<V, M> {
 	}
 
 	protected _emit(value: M): void {
-		if (value === this._value || value === undefined) {
+		if (value === null || value === undefined) {
 			return;
 		}
 
+		const wasSame = value === this._value;
 		this._value = value;
 
-		super._emit(value);
+		for (const [handler, dedup] of this._handlers.entries()) {
+			if (!dedup || !wasSame) {
+				handler(value);
+			}
+		}
 	}
 
-	public listen(
+	protected _listen(
 		handler: (value: NonNullable<M>) => void,
+		dedup: boolean,
 		options?: { initial?: boolean; once?: boolean }
 	): () => void {
 		if (
@@ -118,8 +123,15 @@ export class AsyncEventEmitter<V, M = V> extends EventEmitter<V, M> {
 				this.removeListener(listener);
 			}
 		};
-		this._handlers.add(listener);
+		this._handlers.set(listener, dedup);
 		return () => this.removeListener(listener);
+	}
+
+	public listen(
+		handler: (value: NonNullable<M>) => void,
+		options?: { initial?: boolean; once?: boolean }
+	): () => void {
+		return this._listen(handler, true, options);
 	}
 
 	public [util.inspect.custom](): string {
@@ -150,7 +162,7 @@ export class LazyAsyncEventEmitter<V, M = V> extends AsyncEventEmitter<V, M> {
 
 		return resolver(
 			new Promise<M>((resolve) => {
-				this.listen(resolve, { initial: true, once: true });
+				this._listen(resolve, false, { initial: true, once: true });
 			})
 		);
 	}
@@ -167,10 +179,11 @@ export class GetterAsyncEventEmitter<V, M = V> extends AsyncEventEmitter<V, M> {
 		const { catchError, resolver, checkTimeout } = promiseHandlers<M>();
 
 		const listenerPromise = new Promise<M>((resolve) => {
-			this.listen(
+			this._listen(
 				(listenedValue) => {
 					resolve(listenedValue);
 				},
+				false,
 				{ once: true }
 			);
 		});
@@ -243,7 +256,7 @@ export class MappedAsyncEventEmitter<V, M> extends AsyncEventEmitter<M> {
 
 	public get value(): Promise<M> {
 		const promise = new Promise<M>((resolve) => {
-			this.listen(resolve, { once: true });
+			this._listen(resolve, false, { once: true });
 		});
 		void this._eventEmitter.value.then((value) => this.emit(value));
 		return Promise.race([
