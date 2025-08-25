@@ -185,7 +185,7 @@ export const JSONSwitches: React.FC<JSONSwitchesProps> = (props) => {
 						</Box>
 					))
 				) : (
-					<Typography color="text.secondary">No groups</Typography>
+					<Typography color="text.primary">No groups</Typography>
 				)}
 			</Box>
 		);
