@@ -3,6 +3,7 @@ import type { ModuleConfig, AllModules } from './modules';
 import type { LogObj } from '../lib/logging/lob-obj';
 import { HOME_STATE } from './home-detector/types';
 import { BotStateBase } from '../lib/bot-state';
+import type { Routes } from '../lib/routes';
 
 declare class Handler {
 	public constructor(_logObj: LogObj, _source: string);
@@ -56,7 +57,11 @@ export abstract class ModuleMeta {
 		return this._loggerName || `/${this.name}`;
 	}
 
-	public abstract init(config: ModuleConfig<this>): Promise<void> | void;
+	public abstract init(config: ModuleConfig<this>):
+		| {
+				routes: Routes;
+		  }
+		| Promise<{ routes: Routes }>;
 
 	public postInit(): Promise<void> {
 		return Promise.resolve(void 0);

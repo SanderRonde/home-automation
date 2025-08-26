@@ -1,7 +1,4 @@
-import {
-	initMiddleware,
-	initPostRoutes,
-} from './lib/routes';
+import { initMiddleware, initPostRoutes, Routes } from './lib/routes';
 import { hasArg, getArg, getNumberArg, getNumberEnv } from './lib/io';
 import { ProgressLogger } from './lib/logging/progress-logger';
 import type { BaseModuleConfig } from './modules/modules';
@@ -91,9 +88,9 @@ class WebServer {
 		const modules = getAllModules();
 
 		const config: BaseModuleConfig = this._getModuleConfig();
-		await Promise.all(
+		const initValues = await Promise.all(
 			Object.values(modules).map(async (meta) => {
-				await meta.init({
+				const result = await meta.init({
 					...config,
 					db: await new Database(`${meta.dbName}.json`).init(),
 					sqlDB: (await new SQLDatabase(
@@ -102,12 +99,27 @@ class WebServer {
 					).applySchema(meta.schema)) as any,
 					modules,
 				});
+				const routes = result?.routes;
 				this._initLogger.increment(meta.loggerName);
+
+				const mappedRoutes: Routes = {};
+				for (const key in routes) {
+					mappedRoutes[`/${meta.name.toLowerCase()}${key}`] =
+						routes[key];
+				}
+				return { routes: mappedRoutes };
 			})
 		);
 
+		const allRoutes: Routes = {};
+		for (const { routes } of initValues) {
+			for (const key in routes) {
+				allRoutes[key] = routes[key];
+			}
+		}
+
 		this._initLogger.increment('post-init');
-		return modules;
+		return { modules, routes: allRoutes };
 	}
 
 	private _initServers() {
@@ -116,27 +128,30 @@ class WebServer {
 		this._initLogger.increment('HTTP server');
 	}
 
-	private _listen(modules: AllModules) {
-		// HTTPS is unused for now
-		this._server.listen(this._config.ports.http, async () => {
-			this._initLogger.increment('listening');
-			this._initLogger.done();
-			await wait(100);
-			logReady();
-
-			logTag(
-				'HTTP server',
-				'magenta',
-				`listening on port ${this._config.ports.http}`
-			);
-
-			// Run post-inits
-			void Promise.all(
-				Object.values(modules).map(async (meta) => {
-					await meta.postInit();
-				})
-			);
+	private async _listen(modules: AllModules, routes: Routes) {
+		Bun.serve({
+			routes,
+			// HTTPS is unused for now
+			port: this._config.ports.http,
 		});
+
+		this._initLogger.increment('listening');
+		this._initLogger.done();
+		await wait(100);
+		logReady();
+
+		logTag(
+			'HTTP server',
+			'magenta',
+			`listening on port ${this._config.ports.http}`
+		);
+
+		// Run post-inits
+		void Promise.all(
+			Object.values(modules).map(async (meta) => {
+				await meta.postInit();
+			})
+		);
 	}
 
 	public async init() {
@@ -153,7 +168,7 @@ class WebServer {
 		this._initLogger.increment('middleware');
 		this._initServers();
 		this._initLogger.increment('servers');
-		const modules = await this._initModules();
+		const { modules, routes } = await this._initModules();
 		this._initLogger.increment('modules');
 		initPostRoutes({ app: this.app, config: this._config });
 
@@ -161,7 +176,7 @@ class WebServer {
 		if (this._config.logTelegramBotCommands) {
 			await printCommands();
 		}
-		this._listen(modules);
+		await this._listen(modules, routes);
 	}
 }
 
