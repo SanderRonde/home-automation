@@ -1,12 +1,9 @@
 import { externalRedact } from '../../modules/auth/helpers';
-import type { ResponseLike } from './response-logger';
 import { generateRandomString } from '../random';
 import { getTime, warning } from './logger';
 import type { AppConfig } from '../../app';
 import type { WSSimInstance } from '../ws';
 import { getIP } from './request-logger';
-import { gatherTimings } from '../timer';
-import type * as express from 'express';
 import type { BunRequest } from 'bun';
 import * as fs from 'fs/promises';
 import type * as http from 'http';
@@ -19,13 +16,10 @@ interface AssociatedMessage {
 
 export class LogObj {
 	private static _objMap: WeakMap<
-		| ResponseLike
-		| BunRequest
-		| WSSimInstance
-		| express.Request
-		| http.ClientRequest,
+		BunRequest | WSSimInstance | http.ClientRequest,
 		LogObj
 	> = new WeakMap();
+	private static _requestTimingMap: Map<BunRequest, number> = new Map();
 	public static logLevel: number = 1;
 
 	private _messages: AssociatedMessage[] = [];
@@ -99,10 +93,7 @@ export class LogObj {
 		return obj;
 	}
 
-	public static fromReqRes(
-		reqRes: ResponseLike | BunRequest,
-		timeout?: number
-	): LogObj {
+	public static fromReqRes(reqRes: BunRequest, timeout?: number): LogObj {
 		if (!LogObj._objMap.has(reqRes)) {
 			const obj = new LogObj();
 			obj._timeout = timeout ?? obj._timeout;
@@ -190,48 +181,46 @@ export class LogObj {
 		}
 	}
 
-	public static fromIncomingReq(
-		req: express.Request,
-		res: express.Response
-	): LogObj {
+	public static fromIncomingReq(req: BunRequest): LogObj {
 		if (LogObj._objMap.has(req)) {
 			return LogObj._objMap.get(req)!;
 		}
 		const obj = new LogObj();
+		LogObj._requestTimingMap.set(req, Date.now());
 		LogObj._objMap.set(req, obj);
-		LogObj._objMap.set(res, obj);
-
-		const start = Date.now();
-		const ip = getIP(req);
-		res.on('finish', () => {
-			if (LogObj.logLevel < 1 || obj.ignore) {
-				return;
-			}
-			const end = Date.now();
-			gatherTimings(res);
-
-			const [statusColor, ipBg] = (() => {
-				if (res.statusCode === 200) {
-					return [chalk.green, chalk.bgGreen];
-				} else if (res.statusCode === 500) {
-					return [chalk.red, chalk.bgRed];
-				} else {
-					return [chalk.yellow, chalk.bgYellow];
-				}
-			})();
-			this._log(
-				getTime(),
-				statusColor(`[${res.statusCode}]`),
-				`[${req.method.toUpperCase()}]`,
-				ipBg(chalk.black(externalRedact(req.url))),
-				'<-',
-				chalk.bold(ip ?? '?'),
-				`(${end - start} ms)`
-			);
-			obj._logMessages();
-		});
-
 		return obj;
+	}
+
+	public static logOutgoingResponse(req: BunRequest, res: Response): void {
+		const obj = LogObj._objMap.get(req);
+		const start = LogObj._requestTimingMap.get(req)!;
+		const ip = getIP(req);
+
+		if (LogObj.logLevel < 1 || obj?.ignore) {
+			return;
+		}
+
+		const end = Date.now();
+
+		const [statusColor, ipBg] = (() => {
+			if (res.status === 200) {
+				return [chalk.green, chalk.bgGreen];
+			} else if (res.status === 500) {
+				return [chalk.red, chalk.bgRed];
+			} else {
+				return [chalk.yellow, chalk.bgYellow];
+			}
+		})();
+		this._log(
+			getTime(),
+			statusColor(`[${res.status}]`),
+			`[${req.method.toUpperCase()}]`,
+			ipBg(chalk.black(externalRedact(req.url))),
+			'<-',
+			chalk.bold(ip ?? '?'),
+			`(${end - start} ms)`
+		);
+		obj?._logMessages();
 	}
 
 	public attachMessage(...messages: string[]): LogObj {

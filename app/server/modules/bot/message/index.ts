@@ -1,5 +1,4 @@
 import type { MatchResponse, TelegramMessage, TelegramText } from '../types';
-import type { ResponseLike } from '../../../lib/logging/response-logger';
 import { BotStateBase, Matchable } from '../../../lib/bot-state';
 import { LogObj } from '../../../lib/logging/lob-obj';
 import { TELEGRAM_API } from '../../../lib/constants';
@@ -19,12 +18,6 @@ export interface MatchParameters {
 	message: TelegramMessage;
 	state: ChatState;
 	bot: MessageHandler;
-}
-
-export class ResWrapper {
-	public sent = false;
-
-	public constructor(public res: ResponseLike) {}
 }
 
 export class MessageHandler extends BotStateBase {

@@ -1,5 +1,3 @@
-import type * as express from 'express';
-
 export const enum RESPONSE_TYPE {
 	MARKDOWN = 'Markdown',
 	HTML = 'HTML',
@@ -67,15 +65,6 @@ export type TelegramMessage<
 	};
 	date: number;
 } & C;
-
-interface TelegramReqBody {
-	message: TelegramMessage;
-	edited_message: TelegramMessage;
-}
-
-export interface TelegramReq extends express.Request {
-	body: TelegramReqBody;
-}
 
 export interface MatchResponse {
 	end: number;

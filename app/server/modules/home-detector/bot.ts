@@ -1,7 +1,5 @@
 import type { ChatState } from '../bot/message/state-keeping';
-import { ResDummy } from '../../lib/logging/response-logger';
 import type { MatchParameters } from '../bot/message';
-import { LogObj } from '../../lib/logging/lob-obj';
 import { BotStateBase } from '../../lib/bot-state';
 import type { MatchResponse } from '../bot/types';
 import type { Detector } from './classes';
@@ -28,49 +26,40 @@ export class Bot extends BotStateBase {
 
 	public static readonly matches = Bot.createMatchMaker(
 		({ matchMaker: mm, fallbackSetter: fallback, conditional }) => {
-			mm(
-				'/whoshome',
-				/who (is|are) (home|away)/,
-				({ logObj, state, match }) => {
-					const resDummy = new ResDummy();
-					const all = Bot._config!.detector.getAll();
-					LogObj.fromReqRes(resDummy).transferTo(logObj);
+			mm('/whoshome', /who (is|are) (home|away)/, ({ state, match }) => {
+				const all = Bot._config!.detector.getAll();
 
-					const matches: string[] = [];
-					for (const name in all) {
-						if (
-							(match[2] === 'home') ===
-							(all[name] === HOME_STATE.HOME)
-						) {
-							matches.push(Bot.capitalize(name));
-						}
+				const matches: string[] = [];
+				for (const name in all) {
+					if (
+						(match[2] === 'home') ===
+						(all[name] === HOME_STATE.HOME)
+					) {
+						matches.push(Bot.capitalize(name));
 					}
-
-					const nameText = (() => {
-						if (matches.length === 0) {
-							return 'Noone is';
-						} else if (matches.length === 1) {
-							return `${matches[0]} is`;
-						} else {
-							return `${matches.slice(0, -1).join(', ')} and ${
-								matches[matches.length - 1]
-							} are`;
-						}
-					})();
-
-					(
-						state.states.homeDetector as unknown as State
-					).lastSubjects = matches.length === 0 ? null : matches;
-
-					return `${nameText}`;
 				}
-			);
-			mm(/is (.*) (home|away)(\??)/, ({ logObj, state, match }) => {
+
+				const nameText = (() => {
+					if (matches.length === 0) {
+						return 'Noone is';
+					} else if (matches.length === 1) {
+						return `${matches[0]} is`;
+					} else {
+						return `${matches.slice(0, -1).join(', ')} and ${
+							matches[matches.length - 1]
+						} are`;
+					}
+				})();
+
+				(state.states.homeDetector as unknown as State).lastSubjects =
+					matches.length === 0 ? null : matches;
+
+				return `${nameText}`;
+			});
+			mm(/is (.*) (home|away)(\??)/, ({ state, match }) => {
 				const checkTarget = match[2];
 
-				const resDummy = new ResDummy();
 				const homeState = Bot._config!.detector.get(match[1]);
-				LogObj.fromReqRes(resDummy).transferTo(logObj);
 
 				(state.states.homeDetector as unknown as State).lastSubjects = [
 					match[1],

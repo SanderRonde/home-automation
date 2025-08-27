@@ -1,21 +1,19 @@
 import { hasArg, getArg, getNumberArg, getNumberEnv } from './lib/io';
 import { ProgressLogger } from './lib/logging/progress-logger';
-import { initMiddleware, initPostRoutes } from './lib/routes';
 import type { BaseModuleConfig } from './modules/modules';
 import { logReady, logTag } from './lib/logging/logger';
 import { printCommands } from './modules/bot/helpers';
+import { CLIENT_FOLDER, ROOT } from './lib/constants';
 import { notifyAllModules } from './modules/modules';
+import { serveStatic } from './lib/serve-static';
 import { LogObj } from './lib/logging/lob-obj';
 import type { AllModules } from './modules';
 import { SQLDatabase } from './lib/sql-db';
 import type { Routes } from './lib/routes';
 import { getAllModules } from './modules';
-import { WSWrapper } from './lib/ws';
 import { Database } from './lib/db';
 import { wait } from './lib/time';
-import 'express-async-errors';
-import express from 'express';
-import * as http from 'http';
+import path from 'path';
 
 interface PartialConfig {
 	ports?: {
@@ -42,11 +40,7 @@ export type AppConfig = DeepRequired<PartialConfig>;
 
 class WebServer {
 	private readonly _config: AppConfig;
-	private _server!: http.Server;
 	private _initLogger!: ProgressLogger;
-
-	public app!: express.Express;
-	public ws!: WSWrapper;
 
 	public constructor(config: PartialConfig = {}) {
 		this._config = this._setConfigDefaults(config);
@@ -76,10 +70,8 @@ class WebServer {
 
 	private _getModuleConfig(): BaseModuleConfig {
 		return {
-			app: this.app,
 			config: this._config,
 			randomNum: Math.round(Math.random() * 1000000),
-			websocket: this.ws,
 		};
 	}
 
@@ -123,17 +115,13 @@ class WebServer {
 		return { modules, routes: allRoutes };
 	}
 
-	private _initServers() {
-		this._server = http.createServer(this.app);
-		this.ws = new WSWrapper(this._server);
-		this._initLogger.increment('HTTP server');
-	}
-
 	private async _listen(modules: AllModules, routes: Routes) {
 		Bun.serve({
 			routes,
 			// HTTPS is unused for now
 			port: this._config.ports.http,
+			...(await serveStatic(CLIENT_FOLDER)),
+			...(await serveStatic(path.join(ROOT, 'static'))),
 		});
 
 		this._initLogger.increment('listening');
@@ -158,20 +146,10 @@ class WebServer {
 	public async init() {
 		this._initLogger = new ProgressLogger(
 			'Server start',
-			8 + Object.keys(getAllModules(false)).length
+			3 + Object.keys(getAllModules(false)).length
 		);
-		this._initLogger.increment('IO');
-
-		this.app = express();
-
-		this._initLogger.increment('express');
-		initMiddleware(this._getModuleConfig().app);
-		this._initLogger.increment('middleware');
-		this._initServers();
-		this._initLogger.increment('servers');
 		const { modules, routes } = await this._initModules();
 		this._initLogger.increment('modules');
-		initPostRoutes({ app: this.app, config: this._config });
 
 		LogObj.logLevel = this._config.log.level;
 		if (this._config.logTelegramBotCommands) {

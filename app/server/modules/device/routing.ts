@@ -67,7 +67,7 @@ export function initRouting({ db }: ModuleConfig, api: DeviceAPI): Routes {
 					deviceId: z.string(),
 					name: z.string(),
 				})
-				.parse(req.body);
+				.parse(req.json());
 
 			if (api.updateDeviceName(deviceId, name)) {
 				return Response.json({ success: true });

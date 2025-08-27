@@ -10,10 +10,8 @@ import { Config } from './config';
 import { Auth } from './auth';
 import { Bot } from './bot';
 
-import type { AsyncExpressApplication } from '../types/express';
 import type { SQLDatabase } from '../lib/sql-db';
 import { InfoScreen } from './info-screen';
-import type { WSWrapper } from '../lib/ws';
 import type { Database } from '../lib/db';
 import type { AppConfig } from '../app';
 
@@ -41,8 +39,6 @@ export type ModuleHookables = {
 };
 
 export interface BaseModuleConfig {
-	app: AsyncExpressApplication;
-	websocket: WSWrapper;
 	config: AppConfig;
 	randomNum: number;
 }
