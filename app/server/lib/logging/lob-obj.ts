@@ -1,10 +1,9 @@
-import { externalRedact } from '../../modules/auth/helpers';
+import { redact } from '../../modules/auth/secret';
 import { generateRandomString } from '../random';
+import type { BunRequest, Server } from 'bun';
 import { getTime, warning } from './logger';
 import type { AppConfig } from '../../app';
-import type { WSSimInstance } from '../ws';
 import { getIP } from './request-logger';
-import type { BunRequest } from 'bun';
 import * as fs from 'fs/promises';
 import type * as http from 'http';
 import chalk from 'chalk';
@@ -15,10 +14,8 @@ interface AssociatedMessage {
 }
 
 export class LogObj {
-	private static _objMap: WeakMap<
-		BunRequest | WSSimInstance | http.ClientRequest,
-		LogObj
-	> = new WeakMap();
+	private static _objMap: WeakMap<BunRequest | http.ClientRequest, LogObj> =
+		new WeakMap();
 	private static _requestTimingMap: Map<BunRequest, number> = new Map();
 	public static logLevel: number = 1;
 
@@ -136,7 +133,7 @@ export class LogObj {
 					getTime(),
 					statusColor(`[${res.statusCode}]`),
 					`[${req.method.toUpperCase()}]`,
-					ipBg(chalk.black(externalRedact(`${req.host}${req.path}`))),
+					ipBg(chalk.black(redact(`${req.host}${req.path}`))),
 					'->',
 					`(${end - start} ms)`
 				);
@@ -191,10 +188,14 @@ export class LogObj {
 		return obj;
 	}
 
-	public static logOutgoingResponse(req: BunRequest, res: Response): void {
+	public static logOutgoingResponse(
+		req: BunRequest,
+		res: Response,
+		server: Server
+	): void {
 		const obj = LogObj._objMap.get(req);
 		const start = LogObj._requestTimingMap.get(req)!;
-		const ip = getIP(req);
+		const ip = getIP(req) ?? server.requestIP(req)?.address;
 
 		if (LogObj.logLevel < 1 || obj?.ignore) {
 			return;
@@ -215,7 +216,7 @@ export class LogObj {
 			getTime(),
 			statusColor(`[${res.status}]`),
 			`[${req.method.toUpperCase()}]`,
-			ipBg(chalk.black(externalRedact(req.url))),
+			ipBg(chalk.black(redact(new URL(req.url).pathname))),
 			'<-',
 			chalk.bold(ip ?? '?'),
 			`(${end - start} ms)`

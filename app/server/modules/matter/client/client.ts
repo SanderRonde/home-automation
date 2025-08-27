@@ -11,9 +11,9 @@ import type {
 	MatterServerInputMessage,
 	MatterServerInputReturnValues,
 } from '../server/server';
+import { DB_FOLDER, MATTER_DEBUG, ROOT } from '../../../lib/constants';
 import type { ChildProcessWithoutNullStreams } from 'child_process';
 import { AsyncEventEmitter } from '../../../lib/event-emitter';
-import { DB_FOLDER, ROOT } from '../../../lib/constants';
 import { logTag } from '../../../lib/logging/logger';
 import type { EndpointNumber } from '@matter/types';
 import { MatterDevice } from './device';
@@ -79,11 +79,13 @@ export class MatterClient implements AsyncDisposable {
 				// Try to parse as JSON message first
 				try {
 					const message = JSON.parse(line.trim());
-					logTag(
-						'matter-client',
-						'blue',
-						`Received message: ${line}`
-					);
+					if (MATTER_DEBUG) {
+						logTag(
+							'matter-client',
+							'blue',
+							`Received message: ${line}`
+						);
+					}
 					this.#listeners.forEach((listener) => listener(message));
 				} catch (error) {
 					// If it's not JSON, it might be an error message from the process startup
@@ -180,11 +182,13 @@ export class MatterClient implements AsyncDisposable {
 				identifier,
 				...message,
 			});
-			logTag(
-				'matter-client',
-				'blue',
-				`Sending message: ${messageString}`
-			);
+			if (MATTER_DEBUG) {
+				logTag(
+					'matter-client',
+					'blue',
+					`Sending message: ${messageString}`
+				);
+			}
 			this.#proc.stdin.write(messageString + '\n');
 		});
 	}

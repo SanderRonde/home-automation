@@ -1,6 +1,7 @@
 import { hasArg, getArg, getNumberArg, getNumberEnv } from './lib/io';
 import { ProgressLogger } from './lib/logging/progress-logger';
 import type { BaseModuleConfig } from './modules/modules';
+import { createRoutes, type Routes } from './lib/routes';
 import { logReady, logTag } from './lib/logging/logger';
 import { printCommands } from './modules/bot/helpers';
 import { CLIENT_FOLDER, ROOT } from './lib/constants';
@@ -9,7 +10,6 @@ import { serveStatic } from './lib/serve-static';
 import { LogObj } from './lib/logging/lob-obj';
 import type { AllModules } from './modules';
 import { SQLDatabase } from './lib/sql-db';
-import type { Routes } from './lib/routes';
 import { getAllModules } from './modules';
 import { Database } from './lib/db';
 import { wait } from './lib/time';
@@ -117,11 +117,15 @@ class WebServer {
 
 	private async _listen(modules: AllModules, routes: Routes) {
 		Bun.serve({
-			routes,
+			routes: {
+				...routes,
+				...createRoutes({
+					...(await serveStatic(CLIENT_FOLDER)),
+					...(await serveStatic(path.join(ROOT, 'static'))),
+				}),
+			},
 			// HTTPS is unused for now
 			port: this._config.ports.http,
-			...(await serveStatic(CLIENT_FOLDER)),
-			...(await serveStatic(path.join(ROOT, 'static'))),
 		});
 
 		this._initLogger.increment('listening');

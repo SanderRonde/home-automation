@@ -44,7 +44,7 @@ export function initRouting({ modules }: ModuleConfig): Routes {
 		),
 		'/getDevices': async (req) => {
 			if (!auth(req)) {
-				return new Response(null, { status: 401 });
+				return new Response('Unauthorized', { status: 401 });
 			}
 			const devices = (await modules.device.api.value).getDevices();
 			const responseDevices: ConfigDeviceResponse[] = [];
@@ -91,7 +91,7 @@ export function initRouting({ modules }: ModuleConfig): Routes {
 		},
 		'/pair/:code': async (req) => {
 			if (!auth(req)) {
-				return new Response(null, { status: 401 });
+				return new Response('Unauthorized', { status: 401 });
 			}
 			const matterClient = await modules.matter.client.value;
 			const pairedDevices = await matterClient.pair(req.params.code);

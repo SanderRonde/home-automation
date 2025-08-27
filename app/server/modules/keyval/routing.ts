@@ -130,7 +130,7 @@ export function initRouting({ db, randomNum, modules }: ModuleConfig): Routes {
 	return createRoutes({
 		'/': async (req) => {
 			if (!auth(req)) {
-				return new Response(null, { status: 401 });
+				return new Response('Unauthorized', { status: 401 });
 			}
 
 			return new Response(
@@ -160,14 +160,13 @@ export function initRouting({ db, randomNum, modules }: ModuleConfig): Routes {
 					src="/keyval/keyval.js?n=${randomNum}"
 				></script>
 			</body>
-		</html>`,
-				{ status: 200 }
+		</html>`
 			);
 		},
 		'/config': {
 			GET: async (req) => {
 				if (!auth(req)) {
-					return new Response(null, { status: 401 });
+					return new Response('Unauthorized', { status: 401 });
 				}
 
 				const configJson = db.get('keyval_config', '{"groups":[]}');
@@ -206,7 +205,7 @@ export function initRouting({ db, randomNum, modules }: ModuleConfig): Routes {
 		},
 		'/config/raw': (req) => {
 			if (!auth(req)) {
-				return new Response(null, { status: 401 });
+				return new Response('Unauthorized', { status: 401 });
 			}
 			const configJson = db.get('keyval_config', '{"groups":[]}');
 			const config: KeyvalConfig = JSON.parse(configJson);
@@ -250,7 +249,7 @@ export function initRouting({ db, randomNum, modules }: ModuleConfig): Routes {
 		},
 		'/device/set': async (req) => {
 			if (!auth(req)) {
-				return new Response(null, { status: 401 });
+				return new Response('Unauthorized', { status: 401 });
 			}
 			const { deviceIds, value } = z
 				.object({

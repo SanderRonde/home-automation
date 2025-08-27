@@ -16,7 +16,9 @@ export function createRoutes<
 		return async (req: BunRequest, server: Server) => {
 			LogObj.fromIncomingReq(req);
 			const res = await routeHandler(req, server);
-			LogObj.logOutgoingResponse(req, res!);
+			if (res) {
+				LogObj.logOutgoingResponse(req, res, server);
+			}
 			return res;
 		};
 	};
@@ -27,6 +29,9 @@ export function createRoutes<
 		if (typeof route === 'function') {
 			// All HTTP methods
 			loggedRoutes[key] = middleware(route);
+		} else if (route instanceof Response) {
+			// Sucks that we're not logging these...
+			loggedRoutes[key] = route;
 		} else {
 			loggedRoutes[key] = Object.fromEntries(
 				Object.entries(route).map(([httpMethod, handler]) => [
@@ -34,6 +39,11 @@ export function createRoutes<
 					middleware(handler),
 				])
 			);
+		}
+
+		if (key.endsWith('/')) {
+			// Don't force-require trailing slashes
+			loggedRoutes[key.slice(0, -1)] = loggedRoutes[key];
 		}
 	}
 	return loggedRoutes as Routes;

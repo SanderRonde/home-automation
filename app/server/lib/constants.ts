@@ -26,4 +26,7 @@ export const TELEGRAM_IPS = [
 export const TELEGRAM_API = 'api.telegram.org';
 
 // Ewelink
-export const EWELINK_DEBUG = true;
+export const EWELINK_DEBUG = false;
+
+// Matter
+export const MATTER_DEBUG = false;

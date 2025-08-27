@@ -3,6 +3,7 @@ import { getController } from './temp-controller';
 import { createRoutes } from '../../lib/routes';
 import type { Routes } from '../../lib/routes';
 import type { ModuleConfig } from '..';
+import { auth } from '../../lib/auth';
 import * as z from 'zod';
 
 export function initRouting({ sqlDB }: ModuleConfig): Routes {
@@ -29,6 +30,9 @@ export function initRouting({ sqlDB }: ModuleConfig): Routes {
 			);
 		},
 		'/getTemp': async (req) => {
+			if (!auth(req)) {
+				return new Response('Unauthorized', { status: 401 });
+			}
 			const body = z
 				.object({
 					name: z.string(),

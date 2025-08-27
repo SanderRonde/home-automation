@@ -8,8 +8,8 @@ import { serveStatic } from '../../lib/serve-static';
 import { CLIENT_FOLDER } from '../../lib/constants';
 import { ExternalWeatherTimePeriod } from './types';
 import { logTag } from '../../lib/logging/logger';
+import { createRoutes } from '../../lib/routes';
 import { get } from './temperature/external';
-import type { WSClient } from '../../lib/ws';
 import { infoScreenHTML } from './web-page';
 import type { ModuleConfig } from '..';
 import type { BunRequest } from 'bun';
@@ -17,24 +17,11 @@ import { InfoScreen } from '.';
 import * as path from 'path';
 import * as z from 'zod';
 
-const clients: Set<WSClient> = new Set();
-
-export function refreshClients(): number {
-	clients.forEach((client) => {
-		client.send(
-			JSON.stringify({
-				refresh: true,
-			})
-		);
-	});
-	return clients.size;
-}
-
 export async function initRouting(moduleConfig: ModuleConfig): Promise<void> {
 	const { config } = moduleConfig;
 
 	Bun.serve({
-		routes: {
+		routes: createRoutes({
 			'/': async () => {
 				if (!authenticated) {
 					const url = await authenticateURL();
@@ -118,7 +105,7 @@ export async function initRouting(moduleConfig: ModuleConfig): Promise<void> {
 					);
 				}
 			},
-		},
+		}),
 		port: config.ports.info,
 	});
 
