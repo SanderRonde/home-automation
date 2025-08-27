@@ -30,7 +30,7 @@ interface KeyvalGroupWithValues
 	items: KeyvalItemWithValue[];
 }
 
-export interface KeyvalConfigWithValues extends Omit<KeyvalConfig, 'groups'> {
+interface KeyvalConfigWithValues extends Omit<KeyvalConfig, 'groups'> {
 	groups: KeyvalGroupWithValues[];
 }
 

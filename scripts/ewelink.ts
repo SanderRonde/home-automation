@@ -1,6 +1,6 @@
 import { EWeLinkAPI } from '../app/server/modules/ewelink/api';
 import { logReady } from '../app/server/lib/logging/logger';
-import { EWeLink } from '../app/server/modules';
+import { EWeLink } from '../app/server/modules/ewelink';
 import { Database } from '../app/server/lib/db';
 import eWelink from 'ewelink-api-next';
 

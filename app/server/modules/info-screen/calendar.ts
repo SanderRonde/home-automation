@@ -102,7 +102,7 @@ function getDay(dayOffset: number) {
 	return date;
 }
 
-export type CalendarEvent = calendar_v3.Schema$Event & {
+type CalendarEvent = calendar_v3.Schema$Event & {
 	color: calendar_v3.Schema$ColorDefinition;
 };
 

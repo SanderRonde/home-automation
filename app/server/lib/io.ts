@@ -75,7 +75,7 @@ export function getNumberArg(name: keyof Args): number | void {
 	return ~~arg;
 }
 
-export interface EnvShape {
+interface EnvShape {
 	// IO
 	IO_PORT_HTTP: NumArg;
 	IO_PORT_HTTPS: NumArg;

@@ -35,7 +35,7 @@ function isFromTelegram(req: BunRequest) {
 	return TELEGRAM_IPS.some((r) => isInIPRange(ipBlocks, r));
 }
 
-export const messageHandlerInstance = new SettablePromise<MessageHandler>();
+const messageHandlerInstance = new SettablePromise<MessageHandler>();
 export async function initRouting({ db }: ModuleConfig): Promise<Routes> {
 	const secret = getEnv('SECRET_BOT', true);
 	messageHandlerInstance.set(await new MessageHandler(secret, db).init());

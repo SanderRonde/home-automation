@@ -15,28 +15,7 @@ import { InfoScreen } from './info-screen';
 import type { Database } from '../lib/db';
 import type { AppConfig } from '../app';
 
-export { HomeDetector } from './home-detector';
-export { Temperature } from './temperature';
-export { Webhook } from './webhook';
-export { EWeLink } from './ewelink';
-export { Secret } from './secret/';
-export { KeyVal } from './keyval';
-export { Matter } from './matter';
-export { Config } from './config';
-export { Auth } from './auth';
-export { Bot } from './bot';
-
 export type AllModules = ReturnType<typeof getModuleObj>;
-
-export type InstanceOf<T> = T extends {
-	new (...args: unknown[]): infer I;
-}
-	? I
-	: void;
-
-export type ModuleHookables = {
-	[K in keyof AllModules]: AllModules[K];
-};
 
 export interface BaseModuleConfig {
 	config: AppConfig;

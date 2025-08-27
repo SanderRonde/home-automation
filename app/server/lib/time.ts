@@ -64,27 +64,3 @@ export function asyncSetInterval(
 		void callback();
 	}, interval);
 }
-
-export function asyncTimeout(
-	callback: () => void | Promise<void>,
-	interval: number
-): Timer {
-	return setTimeout(() => {
-		void callback();
-	}, interval);
-}
-export function debounce<T extends (...args: unknown[]) => unknown>(
-	fn: T,
-	wait: number
-): T {
-	let timeout: Timer | null = null;
-	return ((...args: unknown[]) => {
-		if (timeout) {
-			clearTimeout(timeout);
-		}
-		timeout = setTimeout(() => {
-			timeout = null;
-			fn(...args);
-		}, wait);
-	}) as unknown as T;
-}

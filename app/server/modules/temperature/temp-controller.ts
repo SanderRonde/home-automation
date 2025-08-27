@@ -129,7 +129,3 @@ export async function getController(
 
 	return controllers.get(name)!;
 }
-
-export function getAll(): TempControl[] {
-	return Array.from(controllers.values());
-}

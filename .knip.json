@@ -1,0 +1,8 @@
+{
+	"entry": [
+		"app/client/config/config.tsx",
+		"app/client/info-screen/info-screen.ts",
+		"app/client/keyval/keyval.tsx"
+	],
+	"project": ["app/server/**/*.{js,ts}", "app/client/**/*.{js,ts}"]
+}

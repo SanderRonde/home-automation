@@ -95,7 +95,7 @@ export enum MatterServerInputMessageType {
 	CallCluster = 'callCluster',
 }
 
-export interface MatterServerInputParameters {
+interface MatterServerInputParameters {
 	[MatterServerInputMessageType.ListDevices]: [];
 	[MatterServerInputMessageType.PairWithCode]: [code: string];
 	[MatterServerInputMessageType.GetAttribute]: [

@@ -23,7 +23,7 @@ type MatchHandlerRet =
 			  }
 	  >;
 
-export interface MatchHandlerParams {
+interface MatchHandlerParams {
 	text: string;
 	message: TelegramMessage;
 	state: ChatState;

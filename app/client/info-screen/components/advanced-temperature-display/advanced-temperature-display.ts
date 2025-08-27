@@ -7,7 +7,7 @@ import {
 import { AdvancedTemperatureDisplayHTML } from './advanced-temperature-display.html.js';
 import { AdvancedTemperatureDisplayCSS } from './advanced-temperature-display.css.js';
 
-export const enum TEMPERATURE_DISPLAY_TYPE {
+const enum TEMPERATURE_DISPLAY_TYPE {
 	INSIDE = 'inside',
 	OUTSIDE = 'outside',
 	SERVER = 'server',

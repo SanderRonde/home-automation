@@ -4,7 +4,7 @@ import type { EwelinkDeviceResponse } from '../../api';
 import type eWelink from 'ewelink-api-next';
 import util from 'util';
 
-export type EWeLinkUpdateMessage<P = Record<string, string | number>> = {
+type EWeLinkUpdateMessage<P = Record<string, string | number>> = {
 	action: 'update';
 	deviceid: string;
 	apikey: string;
@@ -80,8 +80,4 @@ export class WrappedEWeLinkAPI {
 			return this._connection.device.getThingStatus(info);
 		});
 	}
-}
-
-export abstract class EWeLinkInitable {
-	public abstract init(): Promise<void>;
 }

@@ -1,4 +1,4 @@
-export interface QueueItem {
+interface QueueItem {
 	next: null | QueueItem;
 	start: () => unknown;
 }
