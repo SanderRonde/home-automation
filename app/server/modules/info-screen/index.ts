@@ -13,8 +13,12 @@ export const InfoScreen = new (class InfoScreen extends ModuleMeta {
 		return Bot;
 	}
 
-	public async init(config: ModuleConfig<InfoScreen>) {
+	public async init(config: ModuleConfig) {
 		await initRouting(config);
 		await refresh();
+
+		return {
+			routes: {},
+		};
 	}
 })();

@@ -142,12 +142,8 @@ export const Devices: React.FC = () => {
 		setPairingMessage(null);
 
 		try {
-			const response = await fetch('/config/pairDevice', {
+			const response = await fetch(`/config/pair/${pairingCode}`, {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({ code: pairingCode }),
 			});
 
 			if (!response.ok) {

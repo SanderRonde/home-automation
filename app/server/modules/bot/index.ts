@@ -5,7 +5,9 @@ import { ModuleMeta } from '../meta';
 export const Bot = new (class Bot extends ModuleMeta {
 	public name = 'bot';
 
-	public async init(config: ModuleConfig<Bot>) {
-		await initRouting(config);
+	public async init(config: ModuleConfig) {
+		return {
+			routes: await initRouting(config),
+		};
 	}
 })();

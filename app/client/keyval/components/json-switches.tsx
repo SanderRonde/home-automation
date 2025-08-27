@@ -1,4 +1,4 @@
-import type { KeyvalConfigWithValues } from '../../../server/modules/keyval/api';
+import type { KeyvalConfigWithValues } from '../../../server/modules/keyval/routing';
 import { Box, CircularProgress, Switch, Typography } from '@mui/material';
 import React, { useEffect, useState } from 'react';
 import { isValSame } from '../lib/util';

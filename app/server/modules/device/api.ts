@@ -1,32 +1,53 @@
-import type { ResponseLike } from '../../lib/logging/response-logger';
-import { errorHandle, auth } from '../../lib/decorators';
+import type { Device as DeviceInterface } from './device';
 import type { Database } from '../../lib/db';
-import type { Device } from '.';
+import type { DeviceInfo } from './routing';
 
-interface DeviceInfo {
-	id: string;
-	status: 'online' | 'offline' | 'unknown';
-	lastSeen: number; // timestamp
-	name?: string;
-}
+export class DeviceAPI {
+	public constructor(private readonly _db: Database) {}
 
-interface DeviceListResponse {
-	devices: DeviceInfo[];
-}
+	private _devices: Map<string, DeviceInterface> = new Map();
 
-export class APIHandler {
-	private readonly _db: Database;
-	private readonly _device: typeof Device;
+	public setDevices(devices: DeviceInterface[]): void {
+		const currentDeviceIds = new Set(Array.from(this._devices.keys()));
+		const newDeviceIds = new Set<string>();
 
-	public constructor({
-		db,
-		device,
-	}: {
-		db: Database;
-		device: typeof Device;
-	}) {
-		this._db = db;
-		this._device = device;
+		for (const device of devices) {
+			const deviceId = device.getUniqueId();
+			const deviceName = device.getDeviceName();
+			this._devices.set(deviceId, device);
+			newDeviceIds.add(deviceId);
+
+			// Update device name in registry if it has changed
+			this.updateDeviceName(deviceId, deviceName);
+		}
+
+		// Update database with current device status
+		this.updateDeviceStatus(
+			Array.from(newDeviceIds),
+			Array.from(currentDeviceIds)
+		);
+	}
+
+	public updateDeviceName(deviceId: string, name: string): boolean {
+		const knownDevices = this.getStoredDevices();
+
+		if (knownDevices[deviceId]) {
+			knownDevices[deviceId].name = name;
+			this._db.setVal('device_registry', JSON.stringify(knownDevices));
+			return true;
+		}
+
+		return false;
+	}
+
+	public getStoredDevices(): Record<string, DeviceInfo> {
+		const devicesJson = this._db.get('device_registry', '{}');
+		try {
+			return JSON.parse(devicesJson);
+		} catch (error) {
+			console.error('Error parsing device registry:', error);
+			return {};
+		}
 	}
 
 	public updateDeviceStatus(
@@ -38,7 +59,7 @@ export class APIHandler {
 
 		// Mark currently online devices
 		for (const deviceId of onlineDeviceIds) {
-			const device = this._device.getDevice(deviceId);
+			const device = this.getDevice(deviceId);
 			const name = device?.getDeviceName();
 
 			knownDevices[deviceId] = {
@@ -60,109 +81,15 @@ export class APIHandler {
 		this._db.setVal('device_registry', JSON.stringify(knownDevices));
 	}
 
-	public getDeviceStatus(deviceId: string): 'online' | 'offline' | 'unknown' {
-		const knownDevices = this.getStoredDevices();
-		const device = knownDevices[deviceId];
-
-		if (!device) {
-			return 'unknown';
-		}
-
-		return device.status;
+	public getDevice(uniqueId: string): DeviceInterface | undefined {
+		return this._devices.get(uniqueId);
 	}
 
-	public getAllKnownDeviceIds(): string[] {
-		const knownDevices = this.getStoredDevices();
-		return Object.keys(knownDevices);
+	public getDevices(): DeviceInterface[] {
+		return Array.from(this._devices.values());
 	}
 
-	private getStoredDevices(): Record<string, DeviceInfo> {
-		const devicesJson = this._db.get('device_registry', '{}');
-		try {
-			return JSON.parse(devicesJson);
-		} catch (error) {
-			console.error('Error parsing device registry:', error);
-			return {};
-		}
-	}
-
-	@errorHandle
-	@auth
-	public getDeviceList(res: ResponseLike): DeviceListResponse {
-		const currentDeviceIds = this._device.getDeviceIds();
-		const knownDevices = this.getStoredDevices();
-		const now = Date.now();
-
-		// Update current devices status
-		for (const deviceId of currentDeviceIds) {
-			knownDevices[deviceId] = {
-				id: deviceId,
-				status: 'online',
-				lastSeen: now,
-				name: knownDevices[deviceId]?.name,
-			};
-		}
-
-		// Create response with all known devices
-		const devices: DeviceInfo[] = Object.values(knownDevices).map(
-			(device) => ({
-				...device,
-				status: currentDeviceIds.includes(device.id)
-					? 'online'
-					: 'offline',
-			})
-		);
-
-		// Sort by status (online first) then by ID
-		devices.sort((a, b) => {
-			if (a.status !== b.status) {
-				return a.status === 'online' ? -1 : 1;
-			}
-			return a.id.localeCompare(b.id);
-		});
-
-		// Update the database with current status
-		const updatedDevices: Record<string, DeviceInfo> = {};
-		for (const device of devices) {
-			updatedDevices[device.id] = device;
-		}
-		this._db.setVal('device_registry', JSON.stringify(updatedDevices));
-
-		const response: DeviceListResponse = { devices };
-
-		res.status(200);
-		res.write(JSON.stringify(response));
-		res.end();
-		return response;
-	}
-
-	@errorHandle
-	@auth
-	public updateDeviceName(
-		res: ResponseLike,
-		{
-			deviceId,
-			name,
-		}: {
-			deviceId: string;
-			name: string;
-		}
-	): boolean {
-		const knownDevices = this.getStoredDevices();
-
-		if (knownDevices[deviceId]) {
-			knownDevices[deviceId].name = name;
-			this._db.setVal('device_registry', JSON.stringify(knownDevices));
-
-			res.status(200);
-			res.write(JSON.stringify({ success: true }));
-			res.end();
-			return true;
-		}
-
-		res.status(404);
-		res.write(JSON.stringify({ error: 'Device not found' }));
-		res.end();
-		return false;
+	public getDeviceIds(): string[] {
+		return Array.from(this._devices.keys());
 	}
 }

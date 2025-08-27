@@ -37,6 +37,7 @@ export class InfoScreen extends ServerComm {
 				},
 			},
 		},
+		// @ts-ignore
 		super.props
 	);
 }

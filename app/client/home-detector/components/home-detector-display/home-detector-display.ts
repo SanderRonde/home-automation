@@ -23,6 +23,7 @@ export class HomeDetectorDisplay extends ServerComm {
 				},
 			},
 		},
+		// @ts-ignore
 		super.props
 	);
 

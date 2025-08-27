@@ -8,17 +8,22 @@ export const Matter = new (class Matter extends ModuleMeta {
 
 	public client = new SettablePromise<MatterClient>();
 
-	public init(config: ModuleConfig<Matter>) {
+	public init(config: ModuleConfig) {
 		const matterClient = new MatterClient();
 		this.client.set(matterClient);
 		matterClient.start();
 		matterClient.devices.listen(
-			(devices) => {
-				config.modules.device.setDevices(Object.values(devices));
+			async (devices) => {
+				const api = await config.modules.device.api.value;
+				api.setDevices(Object.values(devices));
 			},
 			{
 				initial: true,
 			}
 		);
+
+		return {
+			routes: {},
+		};
 	}
 })();

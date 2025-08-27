@@ -1,4 +1,5 @@
 import type { AsyncExpressApplication } from '../types/express';
+import type { ServeFunctionOptions, RouterTypes } from 'bun';
 import type { BaseModuleConfig } from '../modules';
 import { LogObj } from './logging/lob-obj';
 import cookieParser from 'cookie-parser';
@@ -91,3 +92,13 @@ export function initPostRoutes({
 		}
 	});
 }
+
+// Simply a type-helper
+export function createRoutes<
+	T,
+	R extends { [K in keyof R]: RouterTypes.RouteValue<K & string> },
+>(options: ServeFunctionOptions<T, R>['routes']): Routes {
+	return options as Routes;
+}
+
+export type Routes = Record<string, RouterTypes.RouteValue<string>>;

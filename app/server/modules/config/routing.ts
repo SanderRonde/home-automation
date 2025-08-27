@@ -1,26 +1,103 @@
+import type { DeviceEndpoint } from '../device/device';
 import { CLIENT_FOLDER } from '../../lib/constants';
-import { createRouter } from '../../lib/api';
-import { WebPageHandler } from './web-page';
-import type { APIHandler } from './api';
+import { createRoutes } from '../../lib/routes';
+import type { Routes } from '../../lib/routes';
+import { configHTML } from './web-page';
 import type { ModuleConfig } from '..';
-import { Config } from '.';
+import { auth } from '../../lib/auth';
 import path from 'path';
 
-export function initRouting({
-	app,
-	randomNum,
-	apiHandler,
-}: ModuleConfig<typeof Config> & { apiHandler: APIHandler }): void {
-	const webpageHandler = new WebPageHandler({ randomNum });
+export interface ConfigDeviceEndpointResponse {
+	clusters: {
+		name: string;
+		emoji: string;
+	}[];
+	endpoints: ConfigDeviceEndpointResponse[];
+}
 
-	const router = createRouter(Config, apiHandler);
-	router.all('/', (req, res) => {
-		webpageHandler.index(res, req);
+interface ConfigDeviceResponse extends ConfigDeviceEndpointResponse {
+	uniqueId: string;
+	name: string;
+	source: {
+		name: string;
+		emoji: string;
+	};
+	allClusters: {
+		name: string;
+		emoji: string;
+	}[];
+}
+
+export interface ConfigGetDevicesResponse {
+	devices: ConfigDeviceResponse[];
+}
+
+export interface ConfigPairDeviceResponse {
+	devices: string[];
+}
+
+export function initRouting({ modules }: ModuleConfig): Routes {
+	return createRoutes({
+		'/': new Response(configHTML()),
+		'/favicon.ico': new Response(
+			Bun.file(path.join(CLIENT_FOLDER, 'config/static', 'favicon.ico'))
+		),
+		'/getDevices': async (req) => {
+			if (!auth(req)) {
+				return new Response(null, { status: 401 });
+			}
+			const devices = (await modules.device.api.value).getDevices();
+			const responseDevices: ConfigDeviceResponse[] = [];
+
+			const getResponseForEndpoint = (
+				endpoint: DeviceEndpoint
+			): ConfigDeviceEndpointResponse => {
+				const endpoints = [];
+				const clusters = [];
+				for (const cluster of endpoint.clusters) {
+					clusters.push({
+						name: cluster.getName().value,
+						emoji: cluster.getName().toEmoji(),
+					});
+				}
+				for (const subEndpoint of endpoint.endpoints) {
+					endpoints.push(getResponseForEndpoint(subEndpoint));
+				}
+				return {
+					clusters,
+					endpoints,
+				};
+			};
+
+			for (const device of devices) {
+				const responseDevice: ConfigDeviceResponse = {
+					uniqueId: device.getUniqueId(),
+					name: device.getDeviceName(),
+					source: {
+						name: device.getSource().value,
+						emoji: device.getSource().toEmoji(),
+					},
+					allClusters: device.allClusters.map((cluster) => ({
+						name: cluster.getName().value,
+						emoji: cluster.getName().toEmoji(),
+					})),
+					...getResponseForEndpoint(device),
+				};
+				responseDevices.push(responseDevice);
+			}
+			return Response.json({
+				devices: responseDevices,
+			});
+		},
+		'/pair/:code': async (req) => {
+			if (!auth(req)) {
+				return new Response(null, { status: 401 });
+			}
+			const matterClient = await modules.matter.client.value;
+			const pairedDevices = await matterClient.pair(req.params.code);
+			return Response.json({
+				devices: pairedDevices,
+			} satisfies ConfigPairDeviceResponse);
+		},
 	});
-	router.get('/favicon.ico', (_, res) => {
-		res.sendFile(path.join(CLIENT_FOLDER, 'config/static', 'favicon.ico'));
-	});
-	router.get('/getDevices', 'getDevices');
-	router.post('/pairDevice', 'pairDevice');
-	router.use(app);
 }

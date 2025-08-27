@@ -7,6 +7,7 @@ import type { WSSimInstance } from '../ws';
 import { getIP } from './request-logger';
 import { gatherTimings } from '../timer';
 import type * as express from 'express';
+import type { BunRequest } from 'bun';
 import * as fs from 'fs/promises';
 import type * as http from 'http';
 import chalk from 'chalk';
@@ -18,7 +19,11 @@ interface AssociatedMessage {
 
 export class LogObj {
 	private static _objMap: WeakMap<
-		ResponseLike | WSSimInstance | express.Request | http.ClientRequest,
+		| ResponseLike
+		| BunRequest
+		| WSSimInstance
+		| express.Request
+		| http.ClientRequest,
 		LogObj
 	> = new WeakMap();
 	public static logLevel: number = 1;
@@ -94,13 +99,16 @@ export class LogObj {
 		return obj;
 	}
 
-	public static fromRes(res: ResponseLike, timeout?: number): LogObj {
-		if (!LogObj._objMap.has(res)) {
+	public static fromReqRes(
+		reqRes: ResponseLike | BunRequest,
+		timeout?: number
+	): LogObj {
+		if (!LogObj._objMap.has(reqRes)) {
 			const obj = new LogObj();
 			obj._timeout = timeout ?? obj._timeout;
-			LogObj._objMap.set(res, obj);
+			LogObj._objMap.set(reqRes, obj);
 		}
-		return LogObj._objMap.get(res)!;
+		return LogObj._objMap.get(reqRes)!;
 	}
 
 	public static fromOutgoingReq(

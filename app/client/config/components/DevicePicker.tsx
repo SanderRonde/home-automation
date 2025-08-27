@@ -14,14 +14,11 @@ import {
 	Chip,
 	CircularProgress,
 } from '@mui/material';
+import type {
+	DeviceInfo,
+	DeviceListResponse,
+} from '../../../server/modules/device/routing';
 import React from 'react';
-
-interface DeviceInfo {
-	id: string;
-	status: 'online' | 'offline';
-	lastSeen: number;
-	name?: string;
-}
 
 interface DevicePickerProps {
 	open: boolean;
@@ -42,7 +39,7 @@ export const DevicePicker: React.FC<DevicePickerProps> = (props) => {
 	React.useEffect(() => {
 		setSelectedDevices(props.currentSelection);
 		if (props.open) {
-			loadDevices();
+			void loadDevices();
 		}
 	}, [props.currentSelection, props.open]);
 
@@ -55,9 +52,9 @@ export const DevicePicker: React.FC<DevicePickerProps> = (props) => {
 					'Content-Type': 'application/json',
 				},
 			});
-			
+
 			if (response.ok) {
-				const data = await response.json();
+				const data = (await response.json()) as DeviceListResponse;
 				setDevices(data.devices || []);
 			} else {
 				console.error('Failed to load devices');
@@ -71,9 +68,10 @@ export const DevicePicker: React.FC<DevicePickerProps> = (props) => {
 		}
 	};
 
-	const filteredDevices = devices.filter((device) =>
-		device.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-		(device.name && device.name.toLowerCase().includes(searchTerm.toLowerCase()))
+	const filteredDevices = devices.filter(
+		(device) =>
+			device.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+			device.name?.toLowerCase().includes(searchTerm.toLowerCase())
 	);
 
 	const handleToggleDevice = (deviceId: string) => {
@@ -120,18 +118,26 @@ export const DevicePicker: React.FC<DevicePickerProps> = (props) => {
 						size="small"
 						sx={{ mb: 2 }}
 					/>
-					
+
 					{selectedDevices.length > 0 && (
 						<Box sx={{ mb: 2 }}>
 							<Typography variant="subtitle2" sx={{ mb: 1 }}>
 								Selected Devices ({selectedDevices.length}):
 							</Typography>
-							<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+							<Box
+								sx={{
+									display: 'flex',
+									flexWrap: 'wrap',
+									gap: 1,
+								}}
+							>
 								{selectedDevices.map((deviceId) => (
 									<Chip
 										key={deviceId}
 										label={deviceId}
-										onDelete={() => handleRemoveChip(deviceId)}
+										onDelete={() =>
+											handleRemoveChip(deviceId)
+										}
 										color="primary"
 										variant="outlined"
 										size="small"
@@ -146,7 +152,9 @@ export const DevicePicker: React.FC<DevicePickerProps> = (props) => {
 					Available Devices:
 				</Typography>
 				{loading ? (
-					<Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+					<Box
+						sx={{ display: 'flex', justifyContent: 'center', p: 3 }}
+					>
 						<CircularProgress />
 					</Box>
 				) : (
@@ -174,23 +182,38 @@ export const DevicePicker: React.FC<DevicePickerProps> = (props) => {
 							filteredDevices.map((device) => (
 								<ListItem
 									key={device.id}
-									button
-									onClick={() => handleToggleDevice(device.id)}
+									component="button"
+									onClick={() =>
+										handleToggleDevice(device.id)
+									}
 									sx={{
 										'&:hover': {
 											bgcolor: 'action.hover',
 										},
-										opacity: device.status === 'offline' ? 0.6 : 1,
+										opacity:
+											device.status === 'offline'
+												? 0.6
+												: 1,
 									}}
 								>
 									<Checkbox
-										checked={selectedDevices.includes(device.id)}
-										onChange={() => handleToggleDevice(device.id)}
+										checked={selectedDevices.includes(
+											device.id
+										)}
+										onChange={() =>
+											handleToggleDevice(device.id)
+										}
 										color="primary"
 									/>
 									<ListItemText
 										primary={
-											<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+											<Box
+												sx={{
+													display: 'flex',
+													alignItems: 'center',
+													gap: 1,
+												}}
+											>
 												<Typography
 													sx={{
 														fontFamily: 'monospace',
@@ -202,9 +225,17 @@ export const DevicePicker: React.FC<DevicePickerProps> = (props) => {
 												<Chip
 													label={device.status}
 													size="small"
-													color={device.status === 'online' ? 'success' : 'default'}
+													color={
+														device.status ===
+														'online'
+															? 'success'
+															: 'default'
+													}
 													variant="outlined"
-													sx={{ fontSize: '0.7rem', height: '20px' }}
+													sx={{
+														fontSize: '0.7rem',
+														height: '20px',
+													}}
 												/>
 											</Box>
 										}

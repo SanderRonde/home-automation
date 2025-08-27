@@ -5,9 +5,7 @@ import { LogObj } from '../../lib/logging/lob-obj';
 import { BotStateBase } from '../../lib/bot-state';
 import type { MatchResponse } from '../bot/types';
 import type { Detector } from './classes';
-import type { APIHandler } from './api';
 import { HOME_STATE } from './types';
-import { HomeDetector } from '.';
 import chalk from 'chalk';
 
 interface State {
@@ -15,7 +13,6 @@ interface State {
 }
 
 interface HomeDetectorBotConfig {
-	apiHandler: APIHandler;
 	detector: Detector;
 }
 
@@ -34,12 +31,10 @@ export class Bot extends BotStateBase {
 			mm(
 				'/whoshome',
 				/who (is|are) (home|away)/,
-				async ({ logObj, state, match }) => {
+				({ logObj, state, match }) => {
 					const resDummy = new ResDummy();
-					const all = Bot._config!.apiHandler.getAll(resDummy, {
-						auth: (await HomeDetector.modules).auth.getSecretKey(),
-					});
-					LogObj.fromRes(resDummy).transferTo(logObj);
+					const all = Bot._config!.detector.getAll();
+					LogObj.fromReqRes(resDummy).transferTo(logObj);
 
 					const matches: string[] = [];
 					for (const name in all) {
@@ -70,15 +65,12 @@ export class Bot extends BotStateBase {
 					return `${nameText}`;
 				}
 			);
-			mm(/is (.*) (home|away)(\??)/, async ({ logObj, state, match }) => {
+			mm(/is (.*) (home|away)(\??)/, ({ logObj, state, match }) => {
 				const checkTarget = match[2];
 
 				const resDummy = new ResDummy();
-				const homeState = Bot._config!.apiHandler.get(resDummy, {
-					auth: (await HomeDetector.modules).auth.getSecretKey(),
-					name: match[1],
-				});
-				LogObj.fromRes(resDummy).transferTo(logObj);
+				const homeState = Bot._config!.detector.get(match[1]);
+				LogObj.fromReqRes(resDummy).transferTo(logObj);
 
 				(state.states.homeDetector as unknown as State).lastSubjects = [
 					match[1],

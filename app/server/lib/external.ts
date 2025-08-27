@@ -34,7 +34,7 @@ export function createExternalClass(requiresInit: boolean, name?: string) {
 			const { _logObj: logObj } = instance;
 			const resDummy = new ResDummy();
 			const value = await fn(resDummy, logObj);
-			LogObj.fromRes(resDummy).transferTo(logObj);
+			LogObj.fromReqRes(resDummy).transferTo(logObj);
 			return value;
 		}
 

@@ -1,11 +1,14 @@
 import { SettablePromise } from '../../lib/settable-promise';
+import { LogObj } from '../../lib/logging/lob-obj';
 import { TELEGRAM_IPS } from '../../lib/constants';
-import { createRouter } from '../../lib/api';
+import { createRoutes } from '../../lib/routes';
+import type { Routes } from '../../lib/routes';
 import { MessageHandler } from './message';
-import type { TelegramReq } from './types';
 import type { ModuleConfig } from '..';
 import { getEnv } from '../../lib/io';
-import { Bot } from '.';
+import type { BunRequest } from 'bun';
+import chalk from 'chalk';
+import * as z from 'zod';
 
 function isInIPRange(
 	ip: number[],
@@ -25,29 +28,36 @@ function isInIPRange(
 	return ip[blockIndex] >= range.lower[0] && ip[blockIndex] <= range.upper[0];
 }
 
-function isFromTelegram(req: TelegramReq) {
-	const fwd = req.headers['x-forwarded-for'] as string;
+function isFromTelegram(req: BunRequest) {
+	const fwd = req.headers.get('x-forwarded-for') as string;
 	const [ipv4] = fwd.split(',');
 	const ipBlocks = ipv4.split('.').map((p) => parseInt(p));
 	return TELEGRAM_IPS.some((r) => isInIPRange(ipBlocks, r));
 }
 
 export const messageHandlerInstance = new SettablePromise<MessageHandler>();
-export async function initRouting({
-	app,
-	db,
-}: ModuleConfig<typeof Bot>): Promise<void> {
+export async function initRouting({ db }: ModuleConfig): Promise<Routes> {
 	const secret = getEnv('SECRET_BOT', true);
 	messageHandlerInstance.set(await new MessageHandler(secret, db).init());
 
-	const router = createRouter(Bot, {});
-	router.all('/msg', async (req, res) => {
-		if (isFromTelegram(req)) {
-			await (await messageHandlerInstance.value).handleMessage(req, res);
-		} else {
-			res.write('Error: auth problem');
-			res.end();
-		}
+	return createRoutes({
+		'/msg': async (req) => {
+			if (isFromTelegram(req)) {
+				const { message, edited_message } = z
+					.object({
+						message: z.any(),
+						edited_message: z.any().optional(),
+					})
+					.parse(await req.json());
+				const logObj = LogObj.fromReqRes(req).attachMessage(
+					chalk.bold(chalk.cyan('[bot]'))
+				);
+				return await (
+					await messageHandlerInstance.value
+				).handleMessage(message, edited_message, logObj);
+			} else {
+				return new Response('auth problem', { status: 500 });
+			}
+		},
 	});
-	router.use(app);
 }

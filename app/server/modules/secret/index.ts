@@ -5,8 +5,11 @@ import { ModuleMeta } from '../meta';
 export const Secret = new (class Secret extends ModuleMeta {
 	public name = 'secret';
 
-	public async init(config: ModuleConfig<Secret>) {
+	public async init(config: ModuleConfig) {
 		await initSecretModule(config);
 		void notifySecretModules(config.modules);
+		return {
+			routes: {},
+		};
 	}
 })();

@@ -3,6 +3,8 @@ import type { ModuleConfig, AllModules } from './modules';
 import type { LogObj } from '../lib/logging/lob-obj';
 import { HOME_STATE } from './home-detector/types';
 import { BotStateBase } from '../lib/bot-state';
+import type { SQLDatabase } from '../lib/sql-db';
+import type { Routes } from '../lib/routes';
 
 declare class Handler {
 	public constructor(_logObj: LogObj, _source: string);
@@ -27,6 +29,7 @@ export class BotBase extends BotStateBase {
 export abstract class ModuleMeta {
 	public abstract name: string;
 	public _modules = new SettablePromise<AllModules>();
+	public _sqlDB = new SettablePromise<SQLDatabase>();
 
 	public _dbName: string | null = null;
 	public _loggerName: string | null = null;
@@ -37,11 +40,6 @@ export abstract class ModuleMeta {
 
 	public get Bot(): typeof BotBase {
 		return BotBase;
-	}
-
-	// eslint-disable-next-line @typescript-eslint/ban-types
-	public get schema(): {} {
-		return {} as const;
 	}
 
 	public get modules(): Promise<AllModules> {
@@ -56,7 +54,11 @@ export abstract class ModuleMeta {
 		return this._loggerName || `/${this.name}`;
 	}
 
-	public abstract init(config: ModuleConfig<this>): Promise<void> | void;
+	public abstract init(config: ModuleConfig):
+		| {
+				routes: Routes;
+		  }
+		| Promise<{ routes: Routes }>;
 
 	public postInit(): Promise<void> {
 		return Promise.resolve(void 0);

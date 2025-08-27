@@ -29,7 +29,7 @@ export function gatherTimings(res: express.Response): void {
 		time: Date.now(),
 	});
 
-	const timingsLog = LogObj.fromRes(res).attachMessage('Timings:');
+	const timingsLog = LogObj.fromReqRes(res).attachMessage('Timings:');
 	const startTime = timings[0].time;
 
 	for (const { label, time } of timings) {

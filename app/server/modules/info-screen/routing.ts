@@ -30,9 +30,7 @@ export function refreshClients(): number {
 	return clients.size;
 }
 
-export async function initRouting(
-	moduleConfig: ModuleConfig<typeof InfoScreen>
-): Promise<void> {
+export async function initRouting(moduleConfig: ModuleConfig): Promise<void> {
 	const { config } = moduleConfig;
 
 	Bun.serve({
@@ -77,12 +75,12 @@ export async function initRouting(
 						const temp = await (
 							await InfoScreen.modules
 						).temperature.getTemp('room');
-						return { temperature: temp.temp, icon: 'inside.png' };
+						return { temperature: temp, icon: 'inside.png' };
 					} else if (type === 'server') {
 						const temp = await (
 							await InfoScreen.modules
 						).temperature.getTemp('server');
-						return { temperature: temp.temp, icon: 'server.png' };
+						return { temperature: temp, icon: 'server.png' };
 					} else {
 						// Use openweathermap
 						const openweathermapResponse = await get(

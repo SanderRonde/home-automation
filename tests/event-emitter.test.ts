@@ -221,7 +221,7 @@ test('GetterAsyncEventEmitter - gets value on demand', async () => {
 
 test('GetterAsyncEventEmitter - works if values are the same twice in a row', async () => {
 	const emitter = new GetterAsyncEventEmitter(async () => {
-		return 'value'
+		return 'value';
 	});
 
 	const value1 = await emitter.value;

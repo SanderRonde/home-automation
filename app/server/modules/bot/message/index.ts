@@ -1,9 +1,4 @@
-import type {
-	MatchResponse,
-	TelegramMessage,
-	TelegramReq,
-	TelegramText,
-} from '../types';
+import type { MatchResponse, TelegramMessage, TelegramText } from '../types';
 import type { ResponseLike } from '../../../lib/logging/response-logger';
 import { BotStateBase, Matchable } from '../../../lib/bot-state';
 import { LogObj } from '../../../lib/logging/lob-obj';
@@ -24,7 +19,6 @@ export interface MatchParameters {
 	message: TelegramMessage;
 	state: ChatState;
 	bot: MessageHandler;
-	res: ResWrapper;
 }
 
 export class ResWrapper {
@@ -141,7 +135,6 @@ export class MessageHandler extends BotStateBase {
 		text,
 		message,
 		state,
-		res,
 		bot,
 	}: MatchParameters): Promise<
 		| {
@@ -163,7 +156,6 @@ export class MessageHandler extends BotStateBase {
 				text,
 				message,
 				state,
-				res,
 				bot,
 			}))
 		) {
@@ -223,15 +215,6 @@ export class MessageHandler extends BotStateBase {
 			text = text.slice(4096);
 		}
 		return parts;
-	}
-
-	private _finishRes(wrapped: ResWrapper) {
-		if (wrapped.sent) {
-			return;
-		}
-		wrapped.res.write('ok');
-		wrapped.res.end();
-		wrapped.sent = true;
 	}
 
 	public async init(): Promise<this> {
@@ -297,8 +280,7 @@ export class MessageHandler extends BotStateBase {
 
 	public async handleTextMessage(
 		logObj: LogObj,
-		message: TelegramMessage<TelegramText>,
-		res: ResWrapper
+		message: TelegramMessage<TelegramText>
 	): Promise<
 		{
 			type: RESPONSE_TYPE;
@@ -315,7 +297,6 @@ export class MessageHandler extends BotStateBase {
 				text: message.text,
 				message,
 				state: this._stateKeeper.getState(message.chat.id),
-				res,
 				bot: this,
 			})) ||
 			(matchMsg.attachMessage('None') && [
@@ -329,12 +310,8 @@ export class MessageHandler extends BotStateBase {
 
 	public async askQuestion(
 		question: string,
-		message: TelegramMessage,
-		res: ResWrapper
+		message: TelegramMessage
 	): Promise<string | undefined> {
-		// Send early
-		this._finishRes(res);
-
 		const chatId = message?.chat.id;
 		if (chatId === undefined) {
 			return undefined;
@@ -353,12 +330,8 @@ export class MessageHandler extends BotStateBase {
 	public async askCancelable(
 		question: string,
 		message: TelegramMessage,
-		res: ResWrapper,
 		setCancelable: (cancel: () => void) => void
 	): Promise<string | undefined> {
-		// Send early
-		this._finishRes(res);
-
 		const chatId = message?.chat.id;
 		if (chatId === undefined) {
 			return undefined;
@@ -382,12 +355,8 @@ export class MessageHandler extends BotStateBase {
 
 	public async sendText(
 		text: string,
-		message: TelegramMessage,
-		res: ResWrapper
+		message: TelegramMessage
 	): Promise<boolean> {
-		// Send early
-		this._finishRes(res);
-
 		const chatId = message?.chat.id;
 		if (chatId === undefined) {
 			return false;
@@ -407,15 +376,10 @@ export class MessageHandler extends BotStateBase {
 	}
 
 	public async handleMessage(
-		req: TelegramReq,
-		res: ResponseLike
-	): Promise<void> {
-		const { message, edited_message } = req.body;
-		const logObj = LogObj.fromRes(res).attachMessage(
-			chalk.bold(chalk.cyan('[bot]'))
-		);
-
-		const resWrapped = new ResWrapper(res);
+		message: TelegramMessage,
+		edited_message: TelegramMessage | undefined,
+		logObj: LogObj
+	): Promise<Response> {
 		const responses = await (() => {
 			if (edited_message) {
 				return [
@@ -430,10 +394,10 @@ export class MessageHandler extends BotStateBase {
 				return [];
 			}
 			if ('reply_to_message' in message) {
-				return this.handleTextMessage(logObj, message, resWrapped);
+				return this.handleTextMessage(logObj, message);
 			}
 			if ('text' in message) {
-				return this.handleTextMessage(logObj, message, resWrapped);
+				return this.handleTextMessage(logObj, message);
 			}
 			return [
 				{
@@ -473,13 +437,10 @@ export class MessageHandler extends BotStateBase {
 			)
 		).every((v) => v);
 
-		if (!resWrapped.sent) {
-			if (sendSuccesful) {
-				resWrapped.res.write('ok');
-			} else {
-				resWrapped.res.write('Error : failed to respond');
-			}
-			resWrapped.res.end();
+		if (sendSuccesful) {
+			return new Response('ok', { status: 200 });
+		} else {
+			return new Response('Error : failed to respond', { status: 500 });
 		}
 	}
 

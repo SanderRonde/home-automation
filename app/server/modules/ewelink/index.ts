@@ -30,9 +30,8 @@ export const EWeLink = new (class EWeLink extends ModuleMeta {
 		return null;
 	}
 
-	public async init(config: ModuleConfig<EWeLink>): Promise<void> {
+	public async init(config: ModuleConfig) {
 		const webApi = this.getWebApi();
-		initRouting(config, webApi);
 		if (webApi) {
 			const token = config.db.get<string>('accessToken');
 			if (!token) {
@@ -45,12 +44,18 @@ export const EWeLink = new (class EWeLink extends ModuleMeta {
 				this.api = await new EWeLinkAPI(
 					config.db,
 					webApi,
-					(devices) => {
-						config.modules.device.setDevices(devices);
+					async (devices) => {
+						(await config.modules.device.api.value).setDevices(
+							devices
+						);
 					}
 				).init(token);
 			}
 		}
+
+		return {
+			routes: initRouting(config, webApi),
+		};
 	}
 
 	public async onBackOnline() {

@@ -185,7 +185,7 @@ export class WSSimInstance<
 		const msgData = msgDataParts.join(' ');
 		for (const { type, handler } of this._listeners) {
 			if (type === msgType) {
-				LogObj.fromRes(res).attachMessage(
+				LogObj.fromReqRes(res).attachMessage(
 					'Type:',
 					chalk.bold(msgType),
 					'data:',

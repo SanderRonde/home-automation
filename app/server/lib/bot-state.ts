@@ -1,6 +1,6 @@
 import type { MatchResponse, TelegramMessage } from '../modules/bot/types';
-import type { MessageHandler, ResWrapper } from '../modules/bot/message';
 import type { ChatState } from '../modules/bot/message/state-keeping';
+import type { MessageHandler } from '../modules/bot/message';
 import { RESPONSE_TYPE } from '../modules/bot/types';
 import type { LogObj } from './logging/lob-obj';
 import { BotUtil } from './bot-util';
@@ -48,7 +48,6 @@ interface MatchBaseParams {
 	message: TelegramMessage;
 	state: ChatState;
 	bot: MessageHandler;
-	res: ResWrapper;
 }
 
 interface MatchParams extends MatchBaseParams {
@@ -175,8 +174,7 @@ export abstract class Matchable extends BotUtil {
 								ask(question: string) {
 									return config.bot.askQuestion(
 										question,
-										config.message,
-										config.res
+										config.message
 									);
 								},
 								askCancelable(question: string) {
@@ -185,7 +183,6 @@ export abstract class Matchable extends BotUtil {
 										prom: config.bot.askCancelable(
 											question,
 											config.message,
-											config.res,
 											(cancel) => {
 												_cancel = cancel;
 											}
@@ -198,8 +195,7 @@ export abstract class Matchable extends BotUtil {
 								sendText(text: string) {
 									return config.bot.sendText(
 										text,
-										config.message,
-										config.res
+										config.message
 									);
 								},
 							})

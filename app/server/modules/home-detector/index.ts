@@ -6,7 +6,6 @@ import { handleHooks } from './hooks';
 import { Detector } from './classes';
 import { HOME_STATE } from './types';
 import { ModuleMeta } from '../meta';
-import { APIHandler } from './api';
 import { Bot } from './bot';
 import chalk from 'chalk';
 
@@ -39,16 +38,18 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 		});
 	}
 
-	public init(config: ModuleConfig<HomeDetector>) {
+	public init(config: ModuleConfig) {
 		const detector = new Detector({ db: config.db });
-		const apiHandler = new APIHandler({ detector });
 		Bot.init({
-			apiHandler,
 			detector,
 		});
 		this._detector.set(detector);
 
 		this._initListeners();
+
+		return {
+			routes: {},
+		};
 	}
 
 	public onUpdate(
