@@ -1,52 +1,7 @@
-import type {
-	Schema,
-	SQLDatabase,
-	SQLDatabaseWithSchema,
-} from '../../lib/sql-db';
 import { logTag } from '../../lib/logging/logger';
 import { LOG_INTERVAL_SECS } from './constants';
+import type { SQL } from 'bun';
 import chalk from 'chalk';
-
-const schema = {
-	modes: {
-		location: {
-			type: 'TEXT',
-			nullable: false,
-			primaryKey: true,
-		},
-		mode: {
-			type: 'TEXT',
-			nullable: false,
-			enum: ['on', 'off', 'auto'],
-		},
-	},
-	targets: {
-		location: {
-			type: 'TEXT',
-			nullable: false,
-			primaryKey: true,
-		},
-		target: {
-			type: 'INTEGER',
-			nullable: false,
-		},
-	},
-	temperatures: {
-		time: {
-			type: 'INTEGER',
-			nullable: false,
-			primaryKey: true,
-		},
-		location: {
-			type: 'TEXT',
-			nullable: false,
-		},
-		temperature: {
-			type: 'INTEGER',
-			nullable: false,
-		},
-	},
-} as const satisfies Schema;
 
 class TempControl {
 	private _listeners: ((temperature: number) => void | Promise<void>)[] = [];
@@ -54,13 +9,13 @@ class TempControl {
 	public lastTemp = -1;
 	public lastLogTime = 0;
 	public lastLoggedTemp = -1;
-	public readonly db: Promise<SQLDatabaseWithSchema<typeof schema>>;
+	public readonly db: SQL;
 
 	public constructor(
-		db: SQLDatabase,
+		db: SQL,
 		public readonly name: string
 	) {
-		this.db = db.applySchema(schema);
+		this.db = db;
 	}
 
 	public async setLastTemp(temp: number, store = true, doLog = true) {
@@ -68,13 +23,8 @@ class TempControl {
 
 		// Write temp to database
 		if (store) {
-			await (
-				await this.db
-			).temperatures.insert({
-				time: Date.now(),
-				location: this.name,
-				temperature: temp,
-			});
+			await this
+				.db`INSERT INTO temperatures (time, location, temperature) VALUES (${Date.now()}, ${this.name}, ${temp})`;
 		}
 
 		if (
@@ -106,9 +56,9 @@ class TempControl {
 	public async init() {
 		const temp =
 			(
-				await (
-					await this.db
-				).temperatures.querySingle({ location: this.name }, 'last')
+				await this.db<{
+					temperature: number;
+				}>`SELECT temperature FROM temperatures WHERE location = ${this.name} ORDER BY time DESC LIMIT 1`
 			)?.temperature ?? 20.0;
 
 		await this.setLastTemp(temp, false, false);
@@ -120,7 +70,7 @@ class TempControl {
 const controllers: Map<string, TempControl> = new Map();
 
 export async function getController(
-	db: SQLDatabase,
+	db: SQL,
 	name = 'default'
 ): Promise<TempControl> {
 	if (!controllers.has(name)) {

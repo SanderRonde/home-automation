@@ -1,9 +1,9 @@
 import { SettablePromise } from '../lib/settable-promise';
 import type { ModuleConfig, AllModules } from './modules';
 import { HOME_STATE } from './home-detector/types';
-import type { SQLDatabase } from '../lib/sql-db';
 import { BotStateBase } from '../lib/bot-state';
 import type { Routes } from '../lib/routes';
+import type { SQL } from 'bun';
 
 export class BotBase extends BotStateBase {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -20,7 +20,7 @@ export class BotBase extends BotStateBase {
 export abstract class ModuleMeta {
 	public abstract name: string;
 	public _modules = new SettablePromise<AllModules>();
-	public _sqlDB = new SettablePromise<SQLDatabase>();
+	public _sqlDB = new SettablePromise<SQL>();
 
 	public _dbName: string | null = null;
 	public _loggerName: string | null = null;

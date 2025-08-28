@@ -10,7 +10,7 @@ import { Config } from './config';
 import { Auth } from './auth';
 import { Bot } from './bot';
 
-import type { SQLDatabase } from '../lib/sql-db';
+import type { SQL } from 'bun';
 import { InfoScreen } from './info-screen';
 import type { Database } from '../lib/db';
 import type { AppConfig } from '../app';
@@ -23,7 +23,7 @@ export interface BaseModuleConfig {
 
 export interface ModuleConfig extends BaseModuleConfig {
 	db: Database;
-	sqlDB: SQLDatabase;
+	sqlDB: SQL;
 	modules: AllModules;
 }
 

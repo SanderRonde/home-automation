@@ -4,16 +4,16 @@ import type { BaseModuleConfig } from './modules/modules';
 import { createRoutes, type Routes } from './lib/routes';
 import { logReady, logTag } from './lib/logging/logger';
 import { printCommands } from './modules/bot/helpers';
-import { CLIENT_FOLDER, ROOT } from './lib/constants';
+import { CLIENT_FOLDER, DB_FOLDER, ROOT } from './lib/constants';
 import { notifyAllModules } from './modules/modules';
 import { serveStatic } from './lib/serve-static';
 import { LogObj } from './lib/logging/lob-obj';
 import type { AllModules } from './modules';
-import { SQLDatabase } from './lib/sql-db';
 import { getAllModules } from './modules';
 import { Database } from './lib/db';
 import { wait } from './lib/time';
 import path from 'path';
+import { SQL } from 'bun';
 
 interface PartialConfig {
 	ports?: {
@@ -82,7 +82,7 @@ class WebServer {
 		const config: BaseModuleConfig = this._getModuleConfig();
 		const initValues = await Promise.all(
 			Object.values(modules).map(async (meta) => {
-				const sqlDB = new SQLDatabase(`${meta.dbName}.sqlite`);
+				const sqlDB = new SQL(`sqlite://${path.join(DB_FOLDER, meta.dbName)}.db`);
 				const initConfig = {
 					...config,
 					db: await new Database(`${meta.dbName}.json`).init(),
