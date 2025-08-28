@@ -71,7 +71,6 @@ class WebServer {
 	private _getModuleConfig(): BaseModuleConfig {
 		return {
 			config: this._config,
-			randomNum: Math.round(Math.random() * 1000000),
 		};
 	}
 
@@ -126,6 +125,11 @@ class WebServer {
 			},
 			// HTTPS is unused for now
 			port: this._config.ports.http,
+			development: this._config.debug ? {
+				hmr: true,
+				console: true,
+				chromeDevToolsAutomaticWorkspaceFolders: true,
+			} : undefined
 		});
 
 		this._initLogger.increment('listening');

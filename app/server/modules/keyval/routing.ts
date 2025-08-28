@@ -1,3 +1,4 @@
+import keyvalHtml from '../../../client/keyval/index.html';
 import { DeviceOnOffCluster } from '../device/cluster';
 import { createRoutes } from '../../lib/routes';
 import type { Routes } from '../../lib/routes';
@@ -36,7 +37,7 @@ interface KeyvalConfigWithValues extends Omit<KeyvalConfig, 'groups'> {
 
 export type KeyvalConfig = z.infer<typeof KeyvalConfig>;
 
-export function initRouting({ db, randomNum, modules }: ModuleConfig): Routes {
+export function initRouting({ db, modules }: ModuleConfig): Routes {
 	const getDeviceValue = async (deviceIds: string[]): Promise<boolean> => {
 		const api = await modules.device.api.value;
 		try {
@@ -128,41 +129,7 @@ export function initRouting({ db, randomNum, modules }: ModuleConfig): Routes {
 	};
 
 	return createRoutes({
-		'/': async (req) => {
-			if (!auth(req)) {
-				return new Response('Unauthorized', { status: 401 });
-			}
-
-			return new Response(
-				`<!DOCTYPE HTML>
-			<html lang="en" style="background-color: #000;">
-			<head>
-				<link rel="icon" href="/keyval/favicon.ico" type="image/x-icon" />
-				<link rel="manifest" href="/keyval/static/manifest.json" />
-				<link
-					rel="apple-touch-icon"
-					href="/keyval/static/apple-touch-icon.png"
-				/>
-				<meta
-					name="description"
-					content="An app for controlling keyval entries"
-				/>
-				<meta name="viewport" content="width=device-width, initial-scale=1" />
-
-				<title>KeyVal Switch</title>
-			</head>
-			<body style="margin: 0; overflow-x: hidden">
-				<div id="root" json="${JSON.stringify(await db.json(true)).replace(/"/g, '&quot;')}">
-					Javascript should be enabled
-				</div>
-				<script
-					type="module"
-					src="/keyval/keyval.js?n=${randomNum}"
-				></script>
-			</body>
-		</html>`
-			);
-		},
+		'/': keyvalHtml,
 		'/config': {
 			GET: async (req) => {
 				if (!auth(req)) {

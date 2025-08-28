@@ -19,7 +19,6 @@ export type AllModules = ReturnType<typeof getModuleObj>;
 
 export interface BaseModuleConfig {
 	config: AppConfig;
-	randomNum: number;
 }
 
 export interface ModuleConfig extends BaseModuleConfig {

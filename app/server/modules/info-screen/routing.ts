@@ -1,16 +1,11 @@
-import {
-	authCode,
-	authenticated,
-	authenticateURL,
-	getEvents,
-} from './calendar';
+import infoScreenHtml from '../../../client/info-screen/index.html';
 import { serveStatic } from '../../lib/serve-static';
 import { CLIENT_FOLDER } from '../../lib/constants';
+import { authCode, getEvents } from './calendar';
 import { ExternalWeatherTimePeriod } from './types';
 import { logTag } from '../../lib/logging/logger';
 import { createRoutes } from '../../lib/routes';
 import { get } from './temperature/external';
-import { infoScreenHTML } from './web-page';
 import type { ModuleConfig } from '..';
 import type { BunRequest } from 'bun';
 import { InfoScreen } from '.';
@@ -22,20 +17,7 @@ export async function initRouting(moduleConfig: ModuleConfig): Promise<void> {
 
 	Bun.serve({
 		routes: createRoutes({
-			'/': async () => {
-				if (!authenticated) {
-					const url = await authenticateURL();
-					if (url) {
-						return Response.redirect(url);
-					}
-				}
-
-				return new Response(infoScreenHTML(), {
-					headers: {
-						'Content-Type': 'text/html',
-					},
-				});
-			},
+			'/': infoScreenHtml,
 			...(await serveStatic(
 				path.join(CLIENT_FOLDER, 'info-screen'),
 				'info-screen'
