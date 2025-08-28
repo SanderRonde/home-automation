@@ -23,9 +23,8 @@
 		"pretty": "pretty-quick",
 		"format-check": "prettier --check '**/*.{ts,json,html}'",
 		"format": "prettier --write '**/*.{ts,json,html}'",
-		"lint": "bun format-check && bun compile:server && eslint --fix \"./app/**/*.ts\" && bun test",
+		"lint": "bun format-check && bun compile && eslint --fix \"./app/**/*.ts\" && bun test",
 		"test": "bun test",
-		"lint-suite": "bun format-check && bun compile && bun lint && bun test",
 		"test:watch": "bun test --watch",
 		"start": "bun app/server/app.ts --http 1272 --https 1273 -vvvvvv --color -i",
 		"knip": "knip"
