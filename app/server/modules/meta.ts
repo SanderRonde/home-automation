@@ -1,18 +1,9 @@
 import { SettablePromise } from '../lib/settable-promise';
 import type { ModuleConfig, AllModules } from './modules';
-import type { LogObj } from '../lib/logging/lob-obj';
 import { HOME_STATE } from './home-detector/types';
-import { BotStateBase } from '../lib/bot-state';
 import type { SQLDatabase } from '../lib/sql-db';
+import { BotStateBase } from '../lib/bot-state';
 import type { Routes } from '../lib/routes';
-
-declare class Handler {
-	public constructor(_logObj: LogObj, _source: string);
-}
-
-class HandlerDefault implements Handler {
-	public constructor() {}
-}
 
 export class BotBase extends BotStateBase {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -33,10 +24,6 @@ export abstract class ModuleMeta {
 
 	public _dbName: string | null = null;
 	public _loggerName: string | null = null;
-
-	public get External(): typeof Handler {
-		return HandlerDefault;
-	}
 
 	public get Bot(): typeof BotBase {
 		return BotBase;

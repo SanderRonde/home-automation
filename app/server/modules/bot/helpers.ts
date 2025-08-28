@@ -15,7 +15,7 @@ export async function printCommands(): Promise<void> {
 						return `${chalk.bold(cmd.slice(1))} - ${
 							bot.commands[
 								cmd as keyof typeof bot.commands
-							] as string
+							]
 						}`;
 					})
 					.join('\n')}`;
