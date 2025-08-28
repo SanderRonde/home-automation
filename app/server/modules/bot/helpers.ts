@@ -13,9 +13,7 @@ export async function printCommands(): Promise<void> {
 				return `${Object.keys(bot.commands)
 					.map((cmd) => {
 						return `${chalk.bold(cmd.slice(1))} - ${
-							bot.commands[
-								cmd as keyof typeof bot.commands
-							]
+							bot.commands[cmd as keyof typeof bot.commands]
 						}`;
 					})
 					.join('\n')}`;
