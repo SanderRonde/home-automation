@@ -4,5 +4,5 @@
 [x] Remove unused env
 [x] Remove dead/unreachable code
 [x] Consider axing logObj
-[ ] Use bun bundling of .html files to bundle frontend code into 1 mega-bundle from backend (don't wrap request in logging. See lib/routes.ts)
+[x] Use bun bundling of .html files to bundle frontend code into 1 mega-bundle from backend (don't wrap request in logging. See lib/routes.ts)
 [x] Update README.md

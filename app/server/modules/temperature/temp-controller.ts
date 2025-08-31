@@ -18,13 +18,17 @@ class TempControl {
 		this.db = db;
 	}
 
+	private get 'sql'() {
+		return this.db;
+	}
+
 	public async setLastTemp(temp: number, store = true, doLog = true) {
 		this.lastTemp = temp;
 
 		// Write temp to database
 		if (store) {
 			await this
-				.db`INSERT INTO temperatures (time, location, temperature) VALUES (${Date.now()}, ${this.name}, ${temp})`;
+				.sql`INSERT INTO temperatures (time, location, temperature) VALUES (${Date.now()}, ${this.name}, ${temp})`;
 		}
 
 		if (
@@ -54,9 +58,23 @@ class TempControl {
 	}
 
 	public async init() {
+		const tableExists = await this.sql`
+			SELECT name FROM sqlite_master WHERE type='table' AND name='temperatures'
+		`;
+
+		if (!tableExists.length) {
+			await this.sql`
+				CREATE TABLE temperatures (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					time INTEGER NOT NULL,
+					location TEXT NOT NULL,
+					temperature REAL NOT NULL
+				)
+			`;
+		}
 		const temp =
 			(
-				await this.db<{
+				await this.sql<{
 					temperature: number;
 				}>`SELECT temperature FROM temperatures WHERE location = ${this.name} ORDER BY time DESC LIMIT 1`
 			)?.temperature ?? 20.0;

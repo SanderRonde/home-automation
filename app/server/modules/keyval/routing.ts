@@ -138,7 +138,6 @@ export function initRouting({ db, modules }: ModuleConfig): Routes {
 
 				const configJson = db.get('keyval_config', '{"groups":[]}');
 				const config: KeyvalConfig = JSON.parse(configJson);
-				console.log('config', config);
 				const configWithValues = await addValuesToConfig(config);
 
 				return Response.json(configWithValues);

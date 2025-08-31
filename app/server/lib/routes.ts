@@ -2,6 +2,16 @@ import type { ServeFunctionOptions, RouterTypes, BunRequest } from 'bun';
 import { LogObj } from './logging/lob-obj';
 import type { Server } from 'bun';
 
+const HTTP_METHODS = [
+	'GET',
+	'POST',
+	'PUT',
+	'DELETE',
+	'PATCH',
+	'OPTIONS',
+	'HEAD',
+];
+
 export function createRoutes<
 	T,
 	R extends { [K in keyof R]: RouterTypes.RouteValue<K & string> },
@@ -27,18 +37,21 @@ export function createRoutes<
 	for (const key in routes) {
 		const route = routes[key];
 		if (typeof route === 'function') {
-			// All HTTP methods
 			loggedRoutes[key] = middleware(route);
-		} else if (route instanceof Response) {
-			// Sucks that we're not logging these...
-			loggedRoutes[key] = route;
-		} else {
+		} else if (
+			typeof route === 'object' &&
+			HTTP_METHODS.some((method) => method in route)
+		) {
+			// All HTTP methods
 			loggedRoutes[key] = Object.fromEntries(
 				Object.entries(route).map(([httpMethod, handler]) => [
 					httpMethod,
 					middleware(handler),
 				])
 			);
+		} else {
+			// Sucks that we're not logging these...
+			loggedRoutes[key] = route;
 		}
 
 		if (key.endsWith('/')) {

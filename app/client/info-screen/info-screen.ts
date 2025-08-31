@@ -8,8 +8,8 @@ import {
 	isDirective,
 	noChange,
 	directive,
-} from '../../../node_modules/lit-html/lit-html.js';
-import { WebComponent } from '../../../node_modules/wc-lib/build/es/wc-lib.js';
+} from 'lit-html';
+import { WebComponent } from 'wc-lib';
 import { InfoScreen } from './components/info-screen/info-screen.js';
 
 function registerElements() {
