@@ -48,7 +48,7 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 		this._initListeners();
 
 		return {
-			routes: {},
+			serve: {},
 		};
 	}
 

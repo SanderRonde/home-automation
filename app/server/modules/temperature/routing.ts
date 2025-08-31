@@ -1,13 +1,13 @@
+import { createServeOptions } from '../../lib/routes';
+import type { ServeOptions } from '../../lib/routes';
 import { LogObj } from '../../lib/logging/lob-obj';
 import { getController } from './temp-controller';
-import { createRoutes } from '../../lib/routes';
-import type { Routes } from '../../lib/routes';
 import type { ModuleConfig } from '..';
 import { auth } from '../../lib/auth';
 import * as z from 'zod';
 
-export function initRouting({ sqlDB }: ModuleConfig): Routes {
-	return createRoutes({
+export function initRouting({ sqlDB }: ModuleConfig): ServeOptions {
+	return createServeOptions({
 		'/report/:name/:temp': async (req) => {
 			const temp = parseFloat(req.params.temp);
 			if (Number.isNaN(temp) || temp === 0) {

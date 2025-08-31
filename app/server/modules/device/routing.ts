@@ -1,5 +1,5 @@
-import { createRoutes } from '../../lib/routes';
-import type { Routes } from '../../lib/routes';
+import { createServeOptions } from '../../lib/routes';
+import type { ServeOptions } from '../../lib/routes';
 import type { DeviceAPI } from './api';
 import type { ModuleConfig } from '..';
 import * as z from 'zod';
@@ -15,8 +15,11 @@ export interface DeviceListResponse {
 	devices: DeviceInfo[];
 }
 
-export function initRouting({ db }: ModuleConfig, api: DeviceAPI): Routes {
-	return createRoutes({
+export function initRouting(
+	{ db }: ModuleConfig,
+	api: DeviceAPI
+): ServeOptions {
+	return createServeOptions({
 		'/list': () => {
 			const currentDeviceIds = api.getDeviceIds();
 			const knownDevices = api.getStoredDevices();

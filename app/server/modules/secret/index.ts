@@ -9,7 +9,7 @@ export const Secret = new (class Secret extends ModuleMeta {
 		await initSecretModule(config);
 		void notifySecretModules(config.modules);
 		return {
-			routes: {},
+			serve: {},
 		};
 	}
 })();

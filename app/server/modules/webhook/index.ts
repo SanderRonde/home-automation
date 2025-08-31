@@ -6,7 +6,7 @@ export const Webhook = new (class Webhook extends ModuleMeta {
 
 	public init() {
 		return {
-			routes: initRouting(),
+			serve: initRouting(),
 		};
 	}
 })();

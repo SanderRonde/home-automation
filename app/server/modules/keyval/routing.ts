@@ -1,7 +1,7 @@
 import keyvalHtml from '../../../client/keyval/index.html';
 import { DeviceOnOffCluster } from '../device/cluster';
-import { createRoutes } from '../../lib/routes';
-import type { Routes } from '../../lib/routes';
+import { createServeOptions } from '../../lib/routes';
+import type { ServeOptions } from '../../lib/routes';
 import type { ModuleConfig } from '..';
 import { auth } from '../../lib/auth';
 import * as z from 'zod';
@@ -37,7 +37,7 @@ interface KeyvalConfigWithValues extends Omit<KeyvalConfig, 'groups'> {
 
 export type KeyvalConfig = z.infer<typeof KeyvalConfig>;
 
-export function initRouting({ db, modules }: ModuleConfig): Routes {
+export function initRouting({ db, modules }: ModuleConfig): ServeOptions {
 	const getDeviceValue = async (deviceIds: string[]): Promise<boolean> => {
 		const api = await modules.device.api.value;
 		try {
@@ -128,7 +128,7 @@ export function initRouting({ db, modules }: ModuleConfig): Routes {
 		}));
 	};
 
-	return createRoutes({
+	return createServeOptions({
 		'/': keyvalHtml,
 		'/config': {
 			GET: async (req) => {

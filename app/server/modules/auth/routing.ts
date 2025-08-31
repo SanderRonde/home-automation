@@ -1,10 +1,10 @@
-import { createRoutes } from '../../lib/routes';
-import type { Routes } from '../../lib/routes';
+import { createServeOptions } from '../../lib/routes';
+import type { ServeOptions } from '../../lib/routes';
 import { authenticate } from './secret';
 import { genCookie } from './cookie';
 
-export function getRoutes(): Routes {
-	return createRoutes({
+export function getRoutes(): ServeOptions {
+	return createServeOptions({
 		'/key/:key': (req) => {
 			if (authenticate(req.params.key)) {
 				req.cookies.set('key', genCookie(), {

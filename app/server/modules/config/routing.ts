@@ -1,8 +1,8 @@
 import configHtml from '../../../client/config/index.html';
 import type { DeviceEndpoint } from '../device/device';
+import { createServeOptions } from '../../lib/routes';
+import type { ServeOptions } from '../../lib/routes';
 import { CLIENT_FOLDER } from '../../lib/constants';
-import { createRoutes } from '../../lib/routes';
-import type { Routes } from '../../lib/routes';
 import type { ModuleConfig } from '..';
 import { auth } from '../../lib/auth';
 import path from 'path';
@@ -36,8 +36,8 @@ export interface ConfigPairDeviceResponse {
 	devices: string[];
 }
 
-export function initRouting({ modules }: ModuleConfig): Routes {
-	return createRoutes({
+export function initRouting({ modules }: ModuleConfig): ServeOptions {
+	return createServeOptions({
 		'/': configHtml,
 		'/favicon.ico': new Response(
 			Bun.file(path.join(CLIENT_FOLDER, 'config/static', 'favicon.ico'))

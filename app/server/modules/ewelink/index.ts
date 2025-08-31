@@ -54,7 +54,7 @@ export const EWeLink = new (class EWeLink extends ModuleMeta {
 		}
 
 		return {
-			routes: initRouting(config, webApi),
+			serve: initRouting(config, webApi),
 		};
 	}
 

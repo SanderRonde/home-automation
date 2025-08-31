@@ -23,7 +23,7 @@ export const Matter = new (class Matter extends ModuleMeta {
 		);
 
 		return {
-			routes: {},
+			serve: {},
 		};
 	}
 })();

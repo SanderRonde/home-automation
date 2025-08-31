@@ -16,7 +16,7 @@ export const Device = new (class Device extends ModuleMeta {
 		const api = new DeviceAPI(config.db);
 		this.api.set(api);
 		return {
-			routes: initRouting(config, api),
+			serve: initRouting(config, api),
 		};
 	}
 })();

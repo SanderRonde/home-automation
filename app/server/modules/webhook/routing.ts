@@ -1,10 +1,10 @@
+import { createServeOptions } from '../../lib/routes';
+import type { ServeOptions } from '../../lib/routes';
 import { LogObj } from '../../lib/logging/lob-obj';
-import { createRoutes } from '../../lib/routes';
-import type { Routes } from '../../lib/routes';
 import { triggerWebhooks } from './webhooks';
 
-export function initRouting(): Routes {
-	return createRoutes({
+export function initRouting(): ServeOptions {
+	return createServeOptions({
 		'/:name': async (req) => {
 			const name = req.params.name;
 			const params = await req.json();

@@ -7,7 +7,7 @@ export const Bot = new (class Bot extends ModuleMeta {
 
 	public async init(config: ModuleConfig) {
 		return {
-			routes: await initRouting(config),
+			serve: await initRouting(config),
 		};
 	}
 })();

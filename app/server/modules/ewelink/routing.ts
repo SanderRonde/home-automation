@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { createRoutes } from '../../lib/routes';
-import type { Routes } from '../../lib/routes';
+import { createServeOptions } from '../../lib/routes';
+import type { ServeOptions } from '../../lib/routes';
 import type { Database } from '../../lib/db';
 import type eWelink from 'ewelink-api-next';
 import type { ModuleConfig } from '..';
@@ -9,8 +9,8 @@ import { getEnv } from '../../lib/io';
 export function initRouting(
 	{ db }: ModuleConfig,
 	api: InstanceType<typeof eWelink.WebAPI> | null
-): Routes {
-	return createRoutes({
+): ServeOptions {
+	return createServeOptions({
 		'/oauth': () => {
 			if (!api) {
 				return new Response(null, { status: 500 });

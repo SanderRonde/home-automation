@@ -1,8 +1,8 @@
 import { SettablePromise } from '../../lib/settable-promise';
+import { createServeOptions } from '../../lib/routes';
+import type { ServeOptions } from '../../lib/routes';
 import { LogObj } from '../../lib/logging/lob-obj';
 import { TELEGRAM_IPS } from '../../lib/constants';
-import { createRoutes } from '../../lib/routes';
-import type { Routes } from '../../lib/routes';
 import { MessageHandler } from './message';
 import type { ModuleConfig } from '..';
 import { getEnv } from '../../lib/io';
@@ -36,11 +36,11 @@ function isFromTelegram(req: BunRequest) {
 }
 
 const messageHandlerInstance = new SettablePromise<MessageHandler>();
-export async function initRouting({ db }: ModuleConfig): Promise<Routes> {
+export async function initRouting({ db }: ModuleConfig): Promise<ServeOptions> {
 	const secret = getEnv('SECRET_BOT', true);
 	messageHandlerInstance.set(await new MessageHandler(secret, db).init());
 
-	return createRoutes({
+	return createServeOptions({
 		'/msg': async (req) => {
 			if (isFromTelegram(req)) {
 				const { message, edited_message } = z

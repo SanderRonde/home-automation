@@ -1,10 +1,10 @@
 import { hasArg, getArg, getNumberArg, getNumberEnv } from './lib/io';
+import { createServeOptions, type ServeOptions } from './lib/routes';
+import { CLIENT_FOLDER, DB_FOLDER, ROOT } from './lib/constants';
 import { ProgressLogger } from './lib/logging/progress-logger';
-import type { BaseModuleConfig } from './modules/modules';
-import { createRoutes, type Routes } from './lib/routes';
+import { SettablePromise } from './lib/settable-promise';
 import { logReady, logTag } from './lib/logging/logger';
 import { printCommands } from './modules/bot/helpers';
-import { CLIENT_FOLDER, DB_FOLDER, ROOT } from './lib/constants';
 import { notifyAllModules } from './modules/modules';
 import { serveStatic } from './lib/serve-static';
 import { LogObj } from './lib/logging/lob-obj';
@@ -12,8 +12,8 @@ import type { AllModules } from './modules';
 import { getAllModules } from './modules';
 import { Database } from './lib/db';
 import { wait } from './lib/time';
-import path from 'path';
 import { SQL } from 'bun';
+import path from 'path';
 
 interface PartialConfig {
 	ports?: {
@@ -40,6 +40,7 @@ export type AppConfig = DeepRequired<PartialConfig>;
 
 class WebServer {
 	private readonly _config: AppConfig;
+	private readonly _server = new SettablePromise<Bun.Server>();
 	private _initLogger!: ProgressLogger;
 
 	public constructor(config: PartialConfig = {}) {
@@ -68,69 +69,118 @@ class WebServer {
 		};
 	}
 
-	private _getModuleConfig(): BaseModuleConfig {
-		return {
-			config: this._config,
-		};
-	}
-
 	private async _initModules() {
 		notifyAllModules();
 
 		const modules = getAllModules();
 
-		const config: BaseModuleConfig = this._getModuleConfig();
 		const initValues = await Promise.all(
 			Object.values(modules).map(async (meta) => {
-				const sqlDB = new SQL(`sqlite://${path.join(DB_FOLDER, meta.dbName)}.db`);
+				const sqlDB = new SQL(
+					`sqlite://${path.join(DB_FOLDER, meta.dbName)}.db`
+				);
 				const initConfig = {
-					...config,
+					config: this._config,
+					server: this._server,
 					db: await new Database(`${meta.dbName}.json`).init(),
 					sqlDB: sqlDB,
 					modules,
 				};
 				meta._sqlDB.set(sqlDB);
 				const result = await meta.init(initConfig);
-				const routes = result?.routes as Routes;
+				const serveOptions = (result?.serve as ServeOptions) ?? {};
 				this._initLogger.increment(meta.loggerName);
 
-				const mappedRoutes: Routes = {};
-				for (const key in routes) {
+				const mappedRoutes: NonNullable<ServeOptions['routes']> = {};
+				for (const key in serveOptions.routes) {
 					mappedRoutes[`/${meta.name.toLowerCase()}${key}`] =
-						routes[key];
+						serveOptions.routes[key];
 				}
-				return { routes: mappedRoutes };
+				return {
+					routes: mappedRoutes,
+					moduleName: meta.name.toLowerCase(),
+					websocket: serveOptions.websocket,
+				};
 			})
 		);
 
-		const allRoutes: Routes = {};
+		const allRoutes: ServeOptions['routes'] = {};
 		for (const { routes } of initValues) {
 			for (const key in routes) {
 				allRoutes[key] = routes[key];
 			}
 		}
 
+		const websocketsByRoute: Record<
+			string,
+			ServeOptions['websocket'] | undefined
+		> = {};
+		for (const { moduleName, websocket } of initValues) {
+			websocketsByRoute[`/${moduleName}/ws`] = websocket;
+		}
+
 		this._initLogger.increment('post-init');
-		return { modules, routes: allRoutes };
+		return {
+			modules,
+			routes: allRoutes,
+			websocketsByRoute: websocketsByRoute,
+		};
 	}
 
-	private async _listen(modules: AllModules, routes: Routes) {
-		Bun.serve({
+	private async _listen(
+		modules: AllModules,
+		routes: ServeOptions['routes'],
+		websocketsByRoute: Record<string, ServeOptions['websocket'] | undefined>
+	) {
+		const server: Bun.Server = Bun.serve<{ route: string }, {}>({
+			fetch: (req, server) => {
+				const url = new URL(req.url);
+				const websocket = websocketsByRoute[url.pathname];
+				if (websocket) {
+					server.upgrade(req, {
+						data: {
+							route: url.pathname,
+						},
+					});
+					return undefined;
+				}
+				return new Response('Not found', { status: 404 });
+			},
 			routes: {
 				...routes,
-				...createRoutes({
+				...createServeOptions({
 					...(await serveStatic(CLIENT_FOLDER)),
 					...(await serveStatic(path.join(ROOT, 'static'))),
-				}),
+				}).routes,
 			},
 			// HTTPS is unused for now
 			port: this._config.ports.http,
-			development: this._config.debug ? {
-				hmr: true,
-				console: true,
-				chromeDevToolsAutomaticWorkspaceFolders: true,
-			} : undefined
+			development: this._config.debug
+				? {
+						hmr: true,
+						console: true,
+						chromeDevToolsAutomaticWorkspaceFolders: true,
+					}
+				: undefined,
+			websocket: {
+				open: (ws) =>
+					websocketsByRoute[ws.data.route]?.open?.(ws, server),
+				message: (ws, message) =>
+					websocketsByRoute[ws.data.route]?.message?.(
+						ws,
+						message,
+						server
+					),
+				close: (ws, code, reason) =>
+					websocketsByRoute[ws.data.route]?.close?.(
+						ws,
+						code,
+						reason,
+						server
+					),
+			},
 		});
+		this._server.set(server);
 
 		this._initLogger.increment('listening');
 		this._initLogger.done();
@@ -156,14 +206,15 @@ class WebServer {
 			'Server start',
 			3 + Object.keys(getAllModules(false)).length
 		);
-		const { modules, routes } = await this._initModules();
+		const { modules, routes, websocketsByRoute } =
+			await this._initModules();
 		this._initLogger.increment('modules');
 
 		LogObj.logLevel = this._config.log.level;
 		if (this._config.logTelegramBotCommands) {
 			await printCommands();
 		}
-		await this._listen(modules, routes);
+		await this._listen(modules, routes, websocketsByRoute);
 	}
 }
 
@@ -187,7 +238,7 @@ if (hasArg('help', 'h')) {
 	);
 
 	console.log('--log-telegram-bot-commands		Log all telegram bot commands');
-	// eslint-disable-next-line no-process-exit
+	// eslint-disable-next-line n/no-process-exit
 	process.exit(0);
 }
 function getVerbosity() {

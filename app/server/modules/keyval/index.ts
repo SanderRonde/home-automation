@@ -7,7 +7,7 @@ export const KeyVal = new (class KeyVal extends ModuleMeta {
 
 	public init(config: ModuleConfig) {
 		return {
-			routes: initRouting(config),
+			serve: initRouting(config),
 		};
 	}
 })();

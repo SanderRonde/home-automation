@@ -1,5 +1,6 @@
 import { HomeDetector } from './home-detector';
 import { Temperature } from './temperature';
+import { InfoScreen } from './info-screen';
 import { Webhook } from './webhook';
 import { EWeLink } from './ewelink';
 import { Secret } from './secret/';
@@ -10,18 +11,16 @@ import { Config } from './config';
 import { Auth } from './auth';
 import { Bot } from './bot';
 
-import type { SQL } from 'bun';
-import { InfoScreen } from './info-screen';
+import type { SettablePromise } from '../lib/settable-promise';
 import type { Database } from '../lib/db';
 import type { AppConfig } from '../app';
+import type { SQL } from 'bun';
 
 export type AllModules = ReturnType<typeof getModuleObj>;
 
-export interface BaseModuleConfig {
+export interface ModuleConfig {
 	config: AppConfig;
-}
-
-export interface ModuleConfig extends BaseModuleConfig {
+	server: SettablePromise<Bun.Server>;
 	db: Database;
 	sqlDB: SQL;
 	modules: AllModules;

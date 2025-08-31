@@ -7,7 +7,7 @@ export const Auth = new (class Auth extends ModuleMeta {
 
 	public init() {
 		return {
-			routes: getRoutes(),
+			serve: getRoutes(),
 		};
 	}
 

@@ -1,8 +1,8 @@
 import { SettablePromise } from '../lib/settable-promise';
 import type { ModuleConfig, AllModules } from './modules';
 import { HOME_STATE } from './home-detector/types';
+import type { ServeOptions } from '../lib/routes';
 import { BotStateBase } from '../lib/bot-state';
-import type { Routes } from '../lib/routes';
 import type { SQL } from 'bun';
 
 export class BotBase extends BotStateBase {
@@ -43,9 +43,9 @@ export abstract class ModuleMeta {
 
 	public abstract init(config: ModuleConfig):
 		| {
-				routes: Routes;
+				serve: ServeOptions;
 		  }
-		| Promise<{ routes: Routes }>;
+		| Promise<{ serve: ServeOptions }>;
 
 	public postInit(): Promise<void> {
 		return Promise.resolve(void 0);

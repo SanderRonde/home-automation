@@ -1,10 +1,10 @@
 import infoScreenHtml from '../../../client/info-screen/index.html';
+import { createServeOptions } from '../../lib/routes';
 import { serveStatic } from '../../lib/serve-static';
 import { CLIENT_FOLDER } from '../../lib/constants';
-import { authCode, getEvents } from './calendar';
 import { ExternalWeatherTimePeriod } from './types';
 import { logTag } from '../../lib/logging/logger';
-import { createRoutes } from '../../lib/routes';
+import { authCode, getEvents } from './calendar';
 import { get } from './temperature/external';
 import type { ModuleConfig } from '..';
 import type { BunRequest } from 'bun';
@@ -16,7 +16,7 @@ export async function initRouting(moduleConfig: ModuleConfig): Promise<void> {
 	const { config } = moduleConfig;
 
 	Bun.serve({
-		routes: createRoutes({
+		routes: createServeOptions({
 			'/': infoScreenHtml,
 			...(await serveStatic(
 				path.join(CLIENT_FOLDER, 'info-screen'),
@@ -87,7 +87,7 @@ export async function initRouting(moduleConfig: ModuleConfig): Promise<void> {
 					);
 				}
 			},
-		}),
+		}).routes,
 		port: config.ports.info,
 	});
 

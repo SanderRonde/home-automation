@@ -13,7 +13,7 @@ export const InfoScreen = new (class InfoScreen extends ModuleMeta {
 		await refresh();
 
 		return {
-			routes: {},
+			serve: {},
 		};
 	}
 })();

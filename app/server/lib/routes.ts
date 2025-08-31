@@ -1,4 +1,10 @@
-import type { ServeFunctionOptions, RouterTypes, BunRequest } from 'bun';
+import type {
+	ServeFunctionOptions,
+	RouterTypes,
+	BunRequest,
+	WebSocketServeOptions,
+	ServerWebSocket,
+} from 'bun';
 import { LogObj } from './logging/lob-obj';
 import type { Server } from 'bun';
 
@@ -12,10 +18,15 @@ const HTTP_METHODS = [
 	'HEAD',
 ];
 
-export function createRoutes<
+export function createServeOptions<
 	T,
 	R extends { [K in keyof R]: RouterTypes.RouteValue<K & string> },
->(routes: ServeFunctionOptions<T, R>['routes']): Routes {
+>(
+	routes: ServeFunctionOptions<T, R>['routes'],
+	websocket?: WebSocketServeOptions<{
+		route: string;
+	}>['websocket']
+): ServeOptions {
 	const middleware = (
 		routeHandler:
 			| RouterTypes.RouteHandler<string>
@@ -59,7 +70,29 @@ export function createRoutes<
 			loggedRoutes[key.slice(0, -1)] = loggedRoutes[key];
 		}
 	}
-	return loggedRoutes as Routes;
+	return {
+		routes: loggedRoutes as ServeOptions['routes'],
+		websocket,
+	};
 }
 
-export type Routes = Record<string, RouterTypes.RouteValue<string>>;
+export type ServeOptions = {
+	routes?: Record<string, RouterTypes.RouteValue<string>>;
+	websocket?: {
+		open?: (
+			ws: ServerWebSocket<{ route: string }>,
+			server: Server
+		) => void | Promise<void>;
+		message?: (
+			ws: ServerWebSocket<{ route: string }>,
+			message: string | Buffer,
+			server: Server
+		) => void | Promise<void>;
+		close?: (
+			ws: ServerWebSocket<{ route: string }>,
+			code: number,
+			reason: string,
+			server: Server
+		) => void | Promise<void>;
+	};
+};
