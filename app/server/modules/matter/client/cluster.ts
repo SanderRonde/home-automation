@@ -36,7 +36,6 @@ import type {
 	DeviceClusterName,
 	DeviceGroupId,
 } from '../../device/cluster';
-import { SettablePromise } from '../../../lib/settable-promise';
 import type { LevelControl } from '@matter/main/clusters';
 import type { WritableAttribute } from '@matter/types';
 import { DeviceStatus } from '../../device/cluster';
@@ -49,7 +48,7 @@ import { Data } from '../../../lib/data';
 export interface MatterCluster<IF extends MatterClusterInterface>
 	extends Cluster,
 		Disposable {
-	getProxy(): ClusterProxy<IF>;
+	_proxy: ClusterProxy<IF>;
 }
 
 type AttributeType<A extends Attribute<unknown, BitSchema>> =
@@ -77,35 +76,22 @@ export interface MatterClusterInterface {
 
 class ClusterProxy<C extends MatterClusterInterface> {
 	#attributes: Record<string, Data<unknown>> = {};
-	private _dependencies = new SettablePromise<{
-		readonly nodeId: string;
-		readonly endpointNumber: string;
-		readonly id: ClusterId;
-		readonly name: string;
-		matterClient: MatterClient;
-	}>();
 
-	private constructor() {}
-
-	public setDependencies(dependencies: {
-		readonly nodeId: string;
-		readonly endpointNumber: string;
-		readonly id: ClusterId;
-		readonly name: string;
-		matterClient: MatterClient;
-	}) {
-		this._dependencies.set(dependencies);
-
-		dependencies.matterClient.onMessage((message) => {
+	public constructor(
+		private readonly nodeId: string,
+		private readonly endpointNumber: string,
+		private readonly id: ClusterId,
+		private readonly matterClient: MatterClient
+	) {
+		matterClient.onMessage((message) => {
 			if (
 				message.category ===
 				MatterServerOutputMessageType.AttributeChanged
 			) {
 				if (
-					message.nodeId === dependencies.nodeId &&
-					message.attributePath[0] ===
-						Number(dependencies.endpointNumber) &&
-					message.attributePath[1] === dependencies.id
+					message.nodeId === nodeId &&
+					message.attributePath[0] === Number(endpointNumber) &&
+					message.attributePath[1] === id
 				) {
 					this.onAttributeChanged(
 						message.attributePath[2],
@@ -114,13 +100,6 @@ class ClusterProxy<C extends MatterClusterInterface> {
 				}
 			}
 		});
-	}
-
-	public static createGetter<
-		C extends MatterClusterInterface,
-	>(): () => ClusterProxy<C> {
-		const proxy = new ClusterProxy();
-		return () => proxy;
 	}
 
 	public onAttributeChanged(attributeName: string, newValue: unknown): void {
@@ -139,11 +118,9 @@ class ClusterProxy<C extends MatterClusterInterface> {
 		mapper?: (value: AT | undefined) => R
 	): Data<R | undefined> {
 		const emitter = (() => {
-			const dependencies = this._dependencies;
+			const { matterClient, nodeId, endpointNumber, id } = this;
 			class cls extends Data<AT | undefined> {
 				public override async get(): Promise<Exclude<AT, undefined>> {
-					const { matterClient, nodeId, endpointNumber, id } =
-						await dependencies.value;
 					return (await matterClient.request({
 						type: MatterServerInputMessageType.GetAttribute,
 						arguments: [nodeId, endpointNumber, id, attribute],
@@ -172,11 +149,15 @@ class ClusterProxy<C extends MatterClusterInterface> {
 	): (value: I) => Promise<void> {
 		return async (value: I) => {
 			const mapped = await mapper(value);
-			const { matterClient, nodeId, endpointNumber, id } =
-				await this._dependencies.value;
-			await matterClient.request({
+			await this.matterClient.request({
 				type: MatterServerInputMessageType.SetAttribute,
-				arguments: [nodeId, endpointNumber, id, attribute, mapped],
+				arguments: [
+					this.nodeId,
+					this.endpointNumber,
+					this.id,
+					attribute,
+					mapped,
+				],
 			});
 		};
 	}
@@ -247,11 +228,15 @@ class ClusterProxy<C extends MatterClusterInterface> {
 					: Array.isArray(mappedInput)
 						? (mappedInput as unknown[])
 						: [mappedInput];
-			const { matterClient, nodeId, endpointNumber, id } =
-				await this._dependencies.value;
-			const result = matterClient.request({
+			const result = this.matterClient.request({
 				type: MatterServerInputMessageType.CallCluster,
-				arguments: [nodeId, endpointNumber, id, command, payload],
+				arguments: [
+					this.nodeId,
+					this.endpointNumber,
+					this.id,
+					command,
+					payload,
+				],
 			});
 			const response = await result;
 			const mappedOutput = mappers?.output
@@ -268,23 +253,21 @@ function ConfigurableCluster<T extends MatterClusterInterface>(
 	}) & { clusterName: DeviceClusterName }
 ) {
 	return class extends Base {
-		public getProxy = ClusterProxy.createGetter<T>();
+		public _proxy: ClusterProxy<T>;
 
 		public constructor(
 			nodeId: string,
 			endpointNumber: string,
 			id: ClusterId,
-			name: string,
 			matterClient: MatterClient
 		) {
 			super();
-			this.getProxy().setDependencies({
+			this._proxy = new ClusterProxy(
 				nodeId,
 				endpointNumber,
 				id,
-				name,
-				matterClient,
-			});
+				matterClient
+			);
 		}
 
 		public [Symbol.dispose](): void {
@@ -296,38 +279,37 @@ function ConfigurableCluster<T extends MatterClusterInterface>(
 class MatterOnOffCluster extends ConfigurableCluster<OnOffCluster>(
 	DeviceOnOffCluster
 ) {
-	public isOn = this.getProxy().attributeGetter('onOff');
+	public isOn = this._proxy.attributeGetter('onOff');
 
 	public setOn(on: boolean): Promise<void> {
 		if (on) {
-			return this.getProxy().command('on')();
+			return this._proxy.command('on')();
 		} else {
-			return this.getProxy().command('off')();
+			return this._proxy.command('off')();
 		}
 	}
 
-	public toggle = this.getProxy().command('toggle');
+	public toggle = this._proxy.command('toggle');
 }
 
 class MatterWindowCoveringCluster extends ConfigurableCluster<WindowCovering.Complete>(
 	DeviceWindowCoveringCluster
 ) {
-	public currentPositionLiftPercentage = this.getProxy().attributeGetter(
+	public currentPositionLiftPercentage = this._proxy.attributeGetter(
 		'currentPositionLiftPercentage',
 		(num) => num ?? 0
 	);
-	public targetPositionLiftPercentage = this.getProxy().attributeGetter(
+	public targetPositionLiftPercentage = this._proxy.attributeGetter(
 		'targetPositionLiftPercent100ths',
 		(num) => (num ? num / 100 : 0)
 	);
-	public operationalStatus =
-		this.getProxy().attributeGetter('operationalStatus');
+	public operationalStatus = this._proxy.attributeGetter('operationalStatus');
 
-	public close = this.getProxy().command('downOrClose');
+	public close = this._proxy.command('downOrClose');
 
-	public open = this.getProxy().command('upOrOpen');
+	public open = this._proxy.command('upOrOpen');
 
-	public goToLiftPercentage = this.getProxy().command<
+	public goToLiftPercentage = this._proxy.command<
 		'goToLiftPercentage',
 		{
 			percentage: number;
@@ -342,11 +324,11 @@ class MatterWindowCoveringCluster extends ConfigurableCluster<WindowCovering.Com
 class MatterLevelControlCluster extends ConfigurableCluster<LevelControl.Complete>(
 	DeviceLevelControlCluster
 ) {
-	private _minLevel = this.getProxy().attributeGetter(
+	private _minLevel = this._proxy.attributeGetter(
 		'currentLevel',
 		(v: number | null | undefined) => v ?? 0
 	);
-	private _maxLevel = this.getProxy().attributeGetter(
+	private _maxLevel = this._proxy.attributeGetter(
 		'maxLevel',
 		(v: number | null | undefined) => v ?? 0
 	);
@@ -369,7 +351,7 @@ class MatterLevelControlCluster extends ConfigurableCluster<LevelControl.Complet
 	/**
 	 * Float from 0 to 1
 	 */
-	public currentLevel = this.getProxy().attributeGetter(
+	public currentLevel = this._proxy.attributeGetter(
 		'currentLevel',
 		this._valueToFloat.bind(this)
 	);
@@ -377,7 +359,7 @@ class MatterLevelControlCluster extends ConfigurableCluster<LevelControl.Complet
 	/**
 	 * Float from 0 to 1
 	 */
-	public startupLevel = this.getProxy().attributeGetter(
+	public startupLevel = this._proxy.attributeGetter(
 		'startUpCurrentLevel',
 		this._valueToFloat.bind(this)
 	);
@@ -385,12 +367,12 @@ class MatterLevelControlCluster extends ConfigurableCluster<LevelControl.Complet
 	/**
 	 * Float from 0 to 1
 	 */
-	public setStartupLevel = this.getProxy().attributeSetter(
+	public setStartupLevel = this._proxy.attributeSetter(
 		'startUpCurrentLevel',
 		({ level }) => this._floatToValue(level)
 	);
 
-	public setLevel = this.getProxy().command<
+	public setLevel = this._proxy.command<
 		'moveToLevel',
 		{ level: number; transitionTimeDs?: number }
 	>('moveToLevel', {
@@ -402,7 +384,7 @@ class MatterLevelControlCluster extends ConfigurableCluster<LevelControl.Complet
 		}),
 	});
 
-	public stop = this.getProxy().command<'stop', void>('stop', {
+	public stop = this._proxy.command<'stop', void>('stop', {
 		input: () => ({
 			optionsMask: {},
 			optionsOverride: {},
@@ -413,7 +395,7 @@ class MatterLevelControlCluster extends ConfigurableCluster<LevelControl.Complet
 class MatterPowerSourceCluster extends ConfigurableCluster<PowerSource.Complete>(
 	DevicePowerSourceCluster
 ) {
-	public batteryChargeLevel = this.getProxy().attributeGetter(
+	public batteryChargeLevel = this._proxy.attributeGetter(
 		'batPercentRemaining',
 		(value) => (value ? value / 200 : null)
 	);
@@ -422,7 +404,7 @@ class MatterPowerSourceCluster extends ConfigurableCluster<PowerSource.Complete>
 class MatterOccupancySensingCluster extends ConfigurableCluster<OccupancySensing.Complete>(
 	DeviceOccupancySensingCluster
 ) {
-	public occupancy = this.getProxy().attributeGetter(
+	public occupancy = this._proxy.attributeGetter(
 		'occupancy',
 		(state) => state?.occupied ?? false
 	);
@@ -434,7 +416,7 @@ class MatterIlluminanceMeasurementCluster extends ConfigurableCluster<Illuminanc
 	/**
 	 * MeasuredValue = 10,000 x log10(lux) + 1,
 	 */
-	public illuminance = this.getProxy().attributeGetter(
+	public illuminance = this._proxy.attributeGetter(
 		'measuredValue',
 		(value) => value ?? 0
 	);
@@ -443,7 +425,7 @@ class MatterIlluminanceMeasurementCluster extends ConfigurableCluster<Illuminanc
 class MatterTemperatureMeasurementCluster extends ConfigurableCluster<TemperatureMeasurement.Cluster>(
 	DeviceTemperatureMeasurementCluster
 ) {
-	public temperature = this.getProxy().attributeGetter(
+	public temperature = this._proxy.attributeGetter(
 		'measuredValue',
 		(value) => (value ?? 0) / 100
 	);
@@ -452,28 +434,25 @@ class MatterTemperatureMeasurementCluster extends ConfigurableCluster<Temperatur
 class MatterGroupsCluster extends ConfigurableCluster<Groups.Cluster>(
 	DeviceGroupsCluster
 ) {
-	public addGroup = this.getProxy().command('addGroup', {
+	public addGroup = this._proxy.command('addGroup', {
 		output: ({ status, groupId }) => ({
 			status: fromMatterStatus(status),
 			groupId: fromMatterGroupId(groupId),
 		}),
 	});
-	public listGroupMemberships = this.getProxy().command(
-		'getGroupMembership',
-		{
-			input: () => ({
-				groupList: [],
-			}),
-			output: ({ groupList }) => ({
-				groupList: groupList.map(fromMatterGroupId),
-			}),
-		}
-	);
+	public listGroupMemberships = this._proxy.command('getGroupMembership', {
+		input: () => ({
+			groupList: [],
+		}),
+		output: ({ groupList }) => ({
+			groupList: groupList.map(fromMatterGroupId),
+		}),
+	});
 
 	/**
 	 * Given a list of group IDs, returns only those groups this device is a member of.
 	 */
-	public getFilteredGroupMembership = this.getProxy().command(
+	public getFilteredGroupMembership = this._proxy.command(
 		'getGroupMembership',
 		{
 			input: ({ groupList }: { groupList: number[] }) => ({
@@ -485,7 +464,7 @@ class MatterGroupsCluster extends ConfigurableCluster<Groups.Cluster>(
 		}
 	);
 
-	public removeGroup = this.getProxy().command('removeGroup', {
+	public removeGroup = this._proxy.command('removeGroup', {
 		input: ({ groupId }: { groupId: DeviceGroupId }) => ({
 			groupId: toMatterGroupId(groupId),
 		}),
@@ -501,10 +480,10 @@ class MatterColorControlCluster extends ConfigurableCluster<ColorControl.Complet
 ) {
 	private static readonly MAX_COLOR_VALUE = 65279;
 
-	private _currentX = this.getProxy().attributeGetter('currentX', (value) =>
+	private _currentX = this._proxy.attributeGetter('currentX', (value) =>
 		value ? value / MatterColorControlCluster.MAX_COLOR_VALUE : undefined
 	);
-	private _currentY = this.getProxy().attributeGetter('currentY', (value) =>
+	private _currentY = this._proxy.attributeGetter('currentY', (value) =>
 		value ? value / MatterColorControlCluster.MAX_COLOR_VALUE : undefined
 	);
 	public color = new MappedData(
@@ -515,7 +494,7 @@ class MatterColorControlCluster extends ConfigurableCluster<ColorControl.Complet
 				: Color.fromCieXy(x, y)
 	);
 
-	public setColor = this.getProxy().command('moveToColor', {
+	public setColor = this._proxy.command('moveToColor', {
 		input: ({
 			color,
 			overDurationMs,

@@ -64,7 +64,6 @@ export class MatterEndpoint extends DeviceEndpoint {
 					this.#nodeId,
 					this.#endpointNumber,
 					clusterMeta.id,
-					clusterMeta.name,
 					this.#matterClient
 				)
 			);

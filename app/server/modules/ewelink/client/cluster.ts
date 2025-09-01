@@ -20,7 +20,6 @@ import util from 'util';
 
 export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 	private _disposables: (() => void)[] = [];
-	private _config = new SettablePromise<EWeLinkConfig>();
 	private readonly _fromParams: (state: object) => PARAMS = (s) =>
 		s as PARAMS;
 	private readonly _toParams: (state: PARAMS) => object = (s) => s;
@@ -28,51 +27,28 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 	protected readonly _eventEmitters = new Set<Data<unknown>>();
 	private _online: SettablePromise<boolean> = new SettablePromise();
 
-	private constructor(mappers?: {
-		fromParams: (state: object) => PARAMS;
-		toParams: (state: PARAMS) => object;
-	}) {
+	public constructor(
+		private readonly _config: EWeLinkConfig,
+		mappers?: {
+			fromParams: (state: object) => PARAMS;
+			toParams: (state: PARAMS) => object;
+		}
+	) {
 		if (mappers) {
 			this._fromParams = mappers.fromParams;
 			this._toParams = mappers.toParams;
 		}
-	}
 
-	public static createGetter<PARAMS extends object>(mappers?: {
-		fromParams: (state: object) => PARAMS;
-		toParams: (state: PARAMS) => object;
-	}): () => EwelinkClusterProxy<PARAMS> {
-		const proxy = new EwelinkClusterProxy<PARAMS>(
-			mappers
-				? {
-						fromParams: mappers.fromParams,
-						toParams: mappers.toParams,
-					}
-				: undefined
-		);
-		return () => proxy;
-	}
-
-	private _getItemData(device: EWeLinkConfig['device']) {
-		const params = device.itemData.params;
-		return this._fromParams(params) as PARAMS & {
-			deviceid: string;
-		};
-	}
-
-	public setConfig(config: EWeLinkConfig): void {
-		this._config.set(config);
-
-		this._lastParams = this._getItemData(config.device);
+		this._lastParams = this._getItemData(_config.device);
 		this._disposables.push(
-			config.wsConnection.listen(
+			_config.wsConnection.listen(
 				(data: EWeLinkWebSocketMessage<PARAMS>) => {
 					if (
 						typeof data === 'string' ||
 						!('action' in data) ||
 						data.action !== 'update' ||
 						data.deviceid !==
-							this._getItemData(config.device).deviceid
+							this._getItemData(_config.device).deviceid
 					) {
 						return;
 					}
@@ -88,12 +64,12 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 			)
 		);
 
-		if (config.device.itemData.online) {
+		if (_config.device.itemData.online) {
 			this._online.set(true);
 		}
 
 		this._disposables.push(
-			config.periodicFetcher.subscribe((data) => {
+			_config.periodicFetcher.subscribe((data) => {
 				if (!data) {
 					return;
 				}
@@ -108,6 +84,13 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 				}
 			})
 		);
+	}
+
+	private _getItemData(device: EWeLinkConfig['device']) {
+		const params = device.itemData.params;
+		return this._fromParams(params) as PARAMS & {
+			deviceid: string;
+		};
 	}
 
 	public eventListener(
@@ -133,9 +116,7 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 				private _initialized = false;
 
 				public constructor(
-					private readonly getInitialValue: () => Promise<
-						PARAMS | undefined
-					>
+					private readonly getInitialValue: () => PARAMS | undefined
 				) {
 					super(undefined);
 				}
@@ -143,17 +124,13 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 				protected override create(): void {
 					if (!this._initialized) {
 						this._initialized = true;
-						void this.getInitialValue().then((value) =>
-							this.set(value)
-						);
+						this.set(this.getInitialValue());
 					}
 				}
 			}
 
 			const emitter = new cls(() =>
-				this._config.value.then((config) =>
-					this._getItemData(config.device)
-				)
+				this._getItemData(this._config.device)
 			);
 			if (mapper) {
 				return new MappedData<R | null, PARAMS | undefined>(
@@ -183,14 +160,13 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 
 			await this._online.value;
 
-			const config = await this._config.value;
 			const newParams = {
 				...this._lastParams,
 				[attribute]: mappedInput,
 			} as PARAMS;
 			this._lastParams = newParams;
-			await config.connection.setThingStatus({
-				id: config.device.itemData.deviceid,
+			await this._config.connection.setThingStatus({
+				id: this._config.device.itemData.deviceid,
 				type: 1,
 				params: this._toParams(newParams),
 			});
@@ -220,15 +196,15 @@ function ConfigurableCluster<T extends object>(
 	}
 ) {
 	return class extends Base {
-		protected getProxy = EwelinkClusterProxy.createGetter<T>();
+		protected _proxy: EwelinkClusterProxy<T>;
 
 		public constructor(protected readonly _eWeLinkConfig: EWeLinkConfig) {
 			super();
-			this.getProxy().setConfig(this._eWeLinkConfig);
+			this._proxy = new EwelinkClusterProxy(this._eWeLinkConfig);
 		}
 
 		public [Symbol.dispose](): void {
-			this.getProxy()[Symbol.dispose]();
+			this._proxy[Symbol.dispose]();
 		}
 	};
 }
@@ -236,9 +212,9 @@ function ConfigurableCluster<T extends object>(
 export abstract class EwelinkOnOffCluster extends ConfigurableCluster<EwelinkOnOffClusterState>(
 	DeviceOnOffCluster
 ) {
-	public isOn = this.getProxy().attributeGetter((value) => value.enabled);
+	public isOn = this._proxy.attributeGetter((value) => value.enabled);
 
-	public setOn = this.getProxy().attributeSetter(
+	public setOn = this._proxy.attributeSetter(
 		'enabled',
 		(enabled: boolean) => enabled
 	);
@@ -259,17 +235,15 @@ export interface EwelinkLevelControlClusterState {
 export abstract class EwelinkLevelControlCluster extends ConfigurableCluster<EwelinkLevelControlClusterState>(
 	DeviceLevelControlCluster
 ) {
-	public currentLevel = this.getProxy().attributeGetter(
-		(value) => value.level
-	);
+	public currentLevel = this._proxy.attributeGetter((value) => value.level);
 
 	// Does not exist, noop
-	public startupLevel = this.getProxy().attributeGetter(() => 1.0);
+	public startupLevel = this._proxy.attributeGetter(() => 1.0);
 
 	// Does not exist, noop
 	public setStartupLevel = (): Promise<void> => Promise.resolve();
 
-	public setLevel = this.getProxy().attributeSetter(
+	public setLevel = this._proxy.attributeSetter(
 		'level',
 		(args: { level: number; transitionTimeDs?: number }) => args.level
 	);
@@ -281,7 +255,7 @@ export abstract class EwelinkLevelControlCluster extends ConfigurableCluster<Ewe
 export class EwelinkTemperatureMeasurementCluster extends ConfigurableCluster<{
 	temperature: string;
 }>(DeviceTemperatureMeasurementCluster) {
-	public temperature = this.getProxy().attributeGetter((value) =>
+	public temperature = this._proxy.attributeGetter((value) =>
 		value.temperature ? Number(value.temperature) / 100 : null
 	);
 }
@@ -289,7 +263,7 @@ export class EwelinkTemperatureMeasurementCluster extends ConfigurableCluster<{
 export class EwelinkRelativeHumidityMeasurementCluster extends ConfigurableCluster<{
 	humidity: string;
 }>(DeviceRelativeHumidityMeasurementCluster) {
-	public relativeHumidity = this.getProxy().attributeGetter((value) =>
+	public relativeHumidity = this._proxy.attributeGetter((value) =>
 		value.humidity ? Number(value.humidity) / 10000 : null
 	);
 }
@@ -297,7 +271,7 @@ export class EwelinkRelativeHumidityMeasurementCluster extends ConfigurableClust
 export class EwelinkPowerSourceCluster extends ConfigurableCluster<{
 	battery: number;
 }>(DevicePowerSourceCluster) {
-	public batteryChargeLevel = this.getProxy().attributeGetter((value) =>
+	public batteryChargeLevel = this._proxy.attributeGetter((value) =>
 		value.battery ? Number(value.battery) / 100 : null
 	);
 }
@@ -305,17 +279,13 @@ export class EwelinkPowerSourceCluster extends ConfigurableCluster<{
 export abstract class EwelinkBooleanStateCluster extends ConfigurableCluster<{
 	state: boolean;
 }>(DeviceBooleanStateCluster) {
-	public state = this.getProxy().attributeGetter((value) => value.state);
-
-	public override [Symbol.dispose](): void {
-		this.getProxy()[Symbol.dispose]();
-	}
+	public state = this._proxy.attributeGetter((value) => value.state);
 }
 
 export class EwelinkOccupancySensingCluster extends ConfigurableCluster<{
 	motion: 0 | 1;
 }>(DeviceOccupancySensingCluster) {
-	public occupancy = this.getProxy().attributeGetter(
+	public occupancy = this._proxy.attributeGetter(
 		(value) => value.motion === 1
 	);
 }
@@ -323,8 +293,8 @@ export class EwelinkOccupancySensingCluster extends ConfigurableCluster<{
 export class EwelinkSwitchCluster extends ConfigurableCluster<{
 	key: 0 | 1;
 }>(DeviceSwitchCluster) {
-	public onPress = this.getProxy().eventListener((value) => value.key === 0);
-	public onDoublePress = this.getProxy().eventListener(
+	public onPress = this._proxy.eventListener((value) => value.key === 0);
+	public onDoublePress = this._proxy.eventListener(
 		(value) => value.key === 1
 	);
 }
@@ -340,11 +310,11 @@ export class EwelinkOutletSwitchCluster extends ConfigurableCluster<{
 		super(_eWeLinkConfig);
 	}
 
-	public onPress = this.getProxy().eventListener(
+	public onPress = this._proxy.eventListener(
 		(value) => value.key === 0 && value.outlet === this.outlet
 	);
 
-	public onDoublePress = this.getProxy().eventListener(
+	public onDoublePress = this._proxy.eventListener(
 		(value) => value.key === 1 && value.outlet === this.outlet
 	);
 }
