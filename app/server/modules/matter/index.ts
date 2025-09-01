@@ -12,15 +12,10 @@ export const Matter = new (class Matter extends ModuleMeta {
 		const matterClient = new MatterClient();
 		this.client.set(matterClient);
 		matterClient.start();
-		matterClient.devices.listen(
-			async (devices) => {
-				const api = await config.modules.device.api.value;
-				api.setDevices(Object.values(devices));
-			},
-			{
-				initial: true,
-			}
-		);
+		matterClient.devices.subscribe(async (devices) => {
+			const api = await config.modules.device.api.value;
+			api.setDevices(Object.values(devices));
+		});
 
 		return {
 			serve: {},

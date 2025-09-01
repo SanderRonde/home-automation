@@ -23,7 +23,7 @@ export interface MatchParameters {
 export class MessageHandler extends BotStateBase {
 	private static _bootedAt = new Date();
 
-	public static readonly matches = MessageHandler.createMatchMaker(
+	public static override readonly matches = MessageHandler.createMatchMaker(
 		({ matchMaker: mm, sameWordMaker: wm }) => {
 			mm('hi', 'hello', () => 'Hi!');
 			mm('thanks', () => "You're welcome");
@@ -111,7 +111,7 @@ export class MessageHandler extends BotStateBase {
 		return value;
 	}
 
-	public static async match(
+	public static override async match(
 		config: MatchParameters
 	): Promise<MatchResponse | undefined> {
 		return this._matchMatchables(

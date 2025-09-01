@@ -15,7 +15,7 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 
 	public name = 'home-detector';
 
-	public get Bot() {
+	public override get Bot() {
 		return Bot;
 	}
 

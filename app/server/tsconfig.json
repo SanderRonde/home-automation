@@ -19,6 +19,7 @@
 		"strictBindCallApply": true,
 		"skipLibCheck": true,
 		"esModuleInterop": true,
+		"noImplicitOverride": true,
 		"noEmit": true
 	},
 	"compileOnSave": true,

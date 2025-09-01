@@ -9,7 +9,7 @@ interface Params {
 }
 
 export class EwelinkOnOffClusterSimplePower extends EwelinkOnOffCluster {
-	protected getProxy =
+	protected override getProxy =
 		EwelinkClusterProxy.createGetter<EwelinkOnOffClusterState>({
 			fromParams: (state: Params) => ({
 				enabled: state.switch === 'on',

@@ -13,21 +13,19 @@ import type {
 } from '../server/server';
 import { DB_FOLDER, MATTER_DEBUG, ROOT } from '../../../lib/constants';
 import type { ChildProcessWithoutNullStreams } from 'child_process';
-import { AsyncEventEmitter } from '../../../lib/event-emitter';
 import { logTag } from '../../../lib/logging/logger';
 import type { EndpointNumber } from '@matter/types';
+import { Data } from '../../../lib/event-emitter';
 import { MatterDevice } from './device';
 import { spawn } from 'child_process';
 import * as path from 'path';
 
-export class MatterClient implements AsyncDisposable {
+export class MatterClient implements Disposable {
 	#requestIdentifier = 0;
 	#proc: ChildProcessWithoutNullStreams | null = null;
 	#listeners: Set<(message: MatterServerOutputMessage) => void> = new Set();
 
-	public devices = new AsyncEventEmitter<
-		Record<EndpointNumber, MatterDevice>
-	>();
+	public devices = new Data<Record<EndpointNumber, MatterDevice>>({});
 
 	public constructor() {}
 
@@ -47,7 +45,7 @@ export class MatterClient implements AsyncDisposable {
 				deviceInfo.endpoints
 			);
 		}
-		this.devices.emit(devices);
+		this.devices.set(devices);
 	}
 
 	public start(): void {
@@ -200,11 +198,8 @@ export class MatterClient implements AsyncDisposable {
 		});
 	}
 
-	public async [Symbol.asyncDispose](): Promise<void> {
+	public [Symbol.dispose](): void {
 		this.stop();
-		for (const device of Object.values(await this.devices.value)) {
-			device[Symbol.dispose]();
-		}
 	}
 }
 
@@ -214,7 +209,7 @@ if (require.main === module) {
 	void matterClient.pair('10306615778').then((devices) => {
 		console.log('pair', devices);
 	});
-	void matterClient.devices.value.then((devices) => {
+	void matterClient.devices.get().then((devices) => {
 		console.log('devices', devices);
 	});
 }

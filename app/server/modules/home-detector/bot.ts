@@ -17,14 +17,14 @@ interface HomeDetectorBotConfig {
 export class Bot extends BotStateBase {
 	private static _config: HomeDetectorBotConfig | null = null;
 
-	public static readonly commands = {
+	public static override readonly commands = {
 		'/whoshome': 'Check who is home',
 		'/help_homedetector': 'Print help comands for home-detector',
 	};
 
-	public static readonly botName = 'Home-Detector';
+	public static override readonly botName = 'Home-Detector';
 
-	public static readonly matches = Bot.createMatchMaker(
+	public static override readonly matches = Bot.createMatchMaker(
 		({ matchMaker: mm, fallbackSetter: fallback, conditional }) => {
 			mm('/whoshome', /who (is|are) (home|away)/, ({ state, match }) => {
 				const all = Bot._config!.detector.getAll();
@@ -207,7 +207,7 @@ export class Bot extends BotStateBase {
 		this._config = config;
 	}
 
-	public static async match(
+	public static override async match(
 		config: MatchParameters
 	): Promise<MatchResponse | undefined> {
 		return await this.matchLines({
@@ -216,7 +216,7 @@ export class Bot extends BotStateBase {
 		});
 	}
 
-	public static resetState(state: ChatState): void {
+	public static override resetState(state: ChatState): void {
 		(state.states.homeDetector as unknown as State).lastSubjects = null;
 	}
 

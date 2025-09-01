@@ -1,59 +1,195 @@
-import { SettablePromise } from './settable-promise';
-import { promiseTimeout } from './promise';
-import { logTag } from './logging/logger';
-import * as util from 'util';
+export type DataCallback<T> = {
+	bivarianceHack(value: T, isInitial?: boolean): void;
+}['bivarianceHack'];
 
-const noValue = Symbol('noValue');
+export class Data<T> {
+	protected readonly _subscribers: Set<DataCallback<T>> = new Set();
+	protected _setN: number = 0;
 
-function promiseHandlers<T>() {
-	const errorPromise = new SettablePromise<Error>();
+	public constructor(protected _value: T) {}
 
-	return {
-		checkTimeout: (promise: Promise<unknown>) => {
-			const originalTrace = new Error().stack;
-			void promiseTimeout(1000 * 10, promise, () => {
-				logTag(
-					'event-emitter',
-					'red',
-					'Initialization/getter did not resolve within 10 seconds',
-					originalTrace
-				);
-			});
-		},
-		catchError: (error: Error) => {
-			logTag(
-				'event-emitter',
-				'red',
-				'Initialization/getter failed',
-				error
-			);
-			errorPromise.set(error);
-			return undefined;
-		},
-		resolver: (promise: Promise<T>): Promise<T> => {
-			return Promise.race([
-				promise,
-				errorPromise.value.then<T>((error) => {
-					return Promise.reject(error);
-				}),
-			]);
-		},
-	};
+	protected create(): void {}
+	protected destroy(): void {}
+
+	public subscribe(callback: DataCallback<T>): () => void {
+		if (!this._subscribers.size) {
+			this.create();
+		}
+		this._subscribers.add(callback);
+		callback(this._value, true);
+		return () => this.unsubscribe(callback);
+	}
+
+	public unsubscribe(callback: DataCallback<T>): void {
+		const exists = this._subscribers.delete(callback);
+		if (exists && this._subscribers.size === 0) {
+			this.destroy();
+		}
+	}
+
+	public get(): Promise<Exclude<T, undefined>> {
+		return new Promise((resolve) => {
+			const callback = (value: T) => {
+				if (value !== undefined) {
+					this.unsubscribe(callback);
+					resolve(value as Exclude<T, undefined>);
+				}
+			};
+			this.subscribe(callback);
+		});
+	}
+
+	public current(): T {
+		return this._value;
+	}
+
+	public set(value: T): void {
+		if (this._value === value) {
+			return;
+		}
+
+		this._value = value;
+		const n = ++this._setN;
+
+		// Make copy, as this.subscribers might change when running callbacks
+		const callbacks = this._subscribers.values();
+		for (const callback of callbacks) {
+			if (this._setN !== n) {
+				break;
+			}
+
+			if (!this._subscribers.has(callback)) {
+				continue;
+			}
+
+			callback(value, false);
+		}
+	}
+
+	public update(change: (oldValue: T) => T): void {
+		this.set(change(this._value));
+	}
 }
 
-export class EventEmitter<V, M = V> implements Disposable {
-	protected _handlers = new Map<(value: M) => void, boolean>();
+type Mapper<InputType = unknown, OutputType = unknown> = {
+	bivarianceHack(
+		input: InputType,
+		prevOutput: OutputType | undefined
+	): OutputType;
+}['bivarianceHack'];
 
-	public listen(handler: (value: NonNullable<M>) => void): () => void {
+// Subset of `Data` that allows us to also map on data object that don't
+// expose the full Data interface.
+export class MappedData<Type, UpstreamType> extends Data<Type> {
+	private readonly upstream: Data<UpstreamType>;
+	private readonly mapper: Mapper<UpstreamType, Type>;
+
+	public constructor(
+		upstream: Data<UpstreamType>,
+		mapper: Mapper<UpstreamType, Type>,
+		alwaysTrack?: boolean
+	) {
+		// @ts-ignore Technically, _value is undefined which is not part of Type, but for visible consumers it is.
+		super(undefined);
+		this.upstream = upstream;
+		this.mapper = mapper;
+		if (alwaysTrack) {
+			// When set, always track upstream changes and execute mapper. Otherwise, we
+			// only do so when we have subscribers ourselves.
+			this.subscribe(() => {});
+		}
+	}
+
+	private readonly sub: DataCallback<UpstreamType> = (
+		upstreamValue: UpstreamType
+	) => {
+		this.set(this.mapper(upstreamValue, this._value as Type | undefined));
+	};
+
+	public override create(): void {
+		this.upstream.subscribe(this.sub);
+	}
+
+	public override destroy(): void {
+		this.upstream.unsubscribe(this.sub);
+	}
+
+	public override current(): Type {
+		if (!this._subscribers.size) {
+			// Assign to this._value, so if subscribe() is called soon we can use this as
+			// prevValue and do things immutably.
+			const upstreamValue = this.upstream.current();
+			this._value = this.mapper(upstreamValue, undefined);
+		}
+		return this._value;
+	}
+}
+
+
+type CombinedDataUpstreams<T, U> = [Data<T>, Data<U>];
+
+export class CombinedData<T, U> extends Data<[T, U]> {
+	private readonly upstreams: CombinedDataUpstreams<T, U>;
+	private readonly subs: [DataCallback<T>, DataCallback<U>];
+
+	public constructor(upstreams: CombinedDataUpstreams<T, U>) {
+		super([upstreams[0].current(), upstreams[1].current()]);
+		this.upstreams = upstreams;
+
+		this.subs = [
+			(value) => this.setSingle(0, value),
+			(value) => this.setSingle(1, value),
+		];
+	}
+
+	private setSingle(key: 0, value: T): void;
+	private setSingle(key: 1, value: U): void;
+	private setSingle(key: number, value: T | U): void {
+		const newArray: [T, U] = [...this.current()];
+		newArray[key] = value;
+		this.set(newArray);
+	}
+
+	protected override create(): void {
+		this.upstreams[0].subscribe(this.subs[0]);
+		this.upstreams[1].subscribe(this.subs[1]);
+	}
+
+	protected override destroy(): void {
+		this.upstreams[0].unsubscribe(this.subs[0]);
+		this.upstreams[1].unsubscribe(this.subs[1]);
+	}
+}
+
+export class PromiseData<T> extends Data<T | undefined> {
+	private getData: null | (() => Promise<T>);
+
+	public constructor(getData: () => Promise<T>) {
+		super(undefined);
+		this.getData = getData;
+	}
+
+	public override create(): void {
+		if (this.getData) {
+			void this.getData().then((value) => this.set(value));
+			this.getData = null;
+		}
+	}
+}
+
+export class EventEmitter<V> implements Disposable {
+	protected _handlers = new Map<(value: V) => void, boolean>();
+
+	public listen(handler: (value: NonNullable<V>) => void): () => void {
 		this._handlers.set(handler, true);
 		return () => this.removeListener(handler);
 	}
 
-	public removeListener(handler: (value: M) => void): void {
+	public removeListener(handler: (value: V) => void): void {
 		this._handlers.delete(handler);
 	}
 
-	protected _emit(value: M | null | undefined): void {
+	public emit(value: V | null | undefined): void {
 		if (value === null || value === undefined) {
 			return;
 		}
@@ -63,205 +199,7 @@ export class EventEmitter<V, M = V> implements Disposable {
 		}
 	}
 
-	public emit(value: V | null | undefined): void {
-		this._emit(value as unknown as M);
-	}
-
-	public [util.inspect.custom](): string {
-		return `${this.constructor.name} { }`;
-	}
-
 	public [Symbol.dispose](): void {
 		this._handlers.clear();
-	}
-}
-
-export class AsyncEventEmitter<V, M = V> extends EventEmitter<V, M> {
-	protected _value: M | typeof noValue = noValue;
-
-	public get value(): Promise<M> {
-		return new Promise<M>((resolve) => {
-			this.listen(resolve, { initial: true, once: true });
-		});
-	}
-
-	protected _emit(value: M): void {
-		if (value === null || value === undefined) {
-			return;
-		}
-
-		const wasSame = value === this._value;
-		this._value = value;
-
-		for (const [handler, dedup] of this._handlers.entries()) {
-			if (!dedup || !wasSame) {
-				handler(value);
-			}
-		}
-	}
-
-	protected _listen(
-		handler: (value: NonNullable<M>) => void,
-		dedup: boolean,
-		options?: { initial?: boolean; once?: boolean }
-	): () => void {
-		if (
-			options?.initial &&
-			this._value !== noValue &&
-			this._value !== undefined &&
-			this._value !== null
-		) {
-			handler(this._value);
-			if (options?.once) {
-				return () => {};
-			}
-		}
-
-		const listener = (value: NonNullable<M>) => {
-			handler(value);
-			if (options?.once) {
-				this.removeListener(listener);
-			}
-		};
-		this._handlers.set(listener, dedup);
-		return () => this.removeListener(listener);
-	}
-
-	public listen(
-		handler: (value: NonNullable<M>) => void,
-		options?: { initial?: boolean; once?: boolean }
-	): () => void {
-		return this._listen(handler, true, options);
-	}
-
-	public [util.inspect.custom](): string {
-		return `${this.constructor.name} { value: ${String(this._value)} }`;
-	}
-}
-
-export class LazyAsyncEventEmitter<V, M = V> extends AsyncEventEmitter<V, M> {
-	private _initialized = false;
-
-	public constructor(
-		private readonly getInitialValue: () => Promise<V | undefined>
-	) {
-		super();
-	}
-
-	public get value(): Promise<M> {
-		const { catchError, resolver, checkTimeout } = promiseHandlers<M>();
-
-		if (!this._initialized) {
-			this._initialized = true;
-			const initialValue = this.getInitialValue().catch(catchError);
-			checkTimeout(initialValue);
-			void initialValue.then((value) => {
-				this.emit(value);
-			});
-		}
-
-		return resolver(
-			new Promise<M>((resolve) => {
-				this._listen(resolve, false, { initial: true, once: true });
-			})
-		);
-	}
-}
-
-export class GetterAsyncEventEmitter<V, M = V> extends AsyncEventEmitter<V, M> {
-	public constructor(
-		private readonly getValue: () => Promise<V | undefined>
-	) {
-		super();
-	}
-
-	public get value(): Promise<M> {
-		const { catchError, resolver, checkTimeout } = promiseHandlers<M>();
-
-		const listenerPromise = new Promise<M>((resolve) => {
-			this._listen(
-				(listenedValue) => {
-					resolve(listenedValue);
-				},
-				false,
-				{ once: true }
-			);
-		});
-
-		const valueGetterPromise = this.getValue().catch(catchError);
-		checkTimeout(valueGetterPromise);
-		void valueGetterPromise.then((value) => {
-			this.emit(value);
-		});
-
-		return resolver(listenerPromise);
-	}
-}
-
-export class CombinedAsyncEventEmitter<V> extends AsyncEventEmitter<V[]> {
-	public constructor(
-		private readonly _eventEmitters: AsyncEventEmitter<V>[]
-	) {
-		super();
-
-		for (let i = 0; i < _eventEmitters.length; i++) {
-			const eventEmitter = _eventEmitters[i];
-			eventEmitter.listen(async (value) => {
-				const currentValue = [...(await this.value)];
-				currentValue[i] = value;
-				void this.emit(currentValue);
-			});
-		}
-	}
-
-	public get value(): Promise<V[]> {
-		const initialValue = this._eventEmitters.map(
-			(emitter) => emitter.value
-		);
-		return Promise.all(initialValue);
-	}
-}
-
-export class MappedAsyncEventEmitter<V, M> extends AsyncEventEmitter<M> {
-	private _lastError: SettablePromise<Error> = new SettablePromise();
-
-	public constructor(
-		private readonly _eventEmitter: AsyncEventEmitter<V>,
-		private readonly mapper: (value: V) => M | Promise<M>
-	) {
-		super();
-		this._eventEmitter.listen(
-			async (value) => {
-				if (value === undefined || value === null) {
-					return;
-				}
-				const asyncMapper = async (value: V) => this.mapper(value);
-				const mapped = asyncMapper(value).catch((error) => {
-					this._lastError.set(error);
-					logTag('event-emitter', 'red', 'Mapper failed', error);
-					return null;
-				});
-				void super.emit(await mapped);
-			},
-			{
-				initial: true,
-			}
-		);
-	}
-
-	// @ts-expect-error
-	public emit(value: V | null | undefined): void {
-		this._eventEmitter.emit(value);
-	}
-
-	public get value(): Promise<M> {
-		const promise = new Promise<M>((resolve) => {
-			this._listen(resolve, false, { once: true });
-		});
-		void this._eventEmitter.value.then((value) => this.emit(value));
-		return Promise.race([
-			promise,
-			this._lastError.value.then((error) => Promise.reject(error)),
-		]);
 	}
 }

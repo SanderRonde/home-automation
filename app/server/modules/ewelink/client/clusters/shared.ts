@@ -1,4 +1,5 @@
 import { EventEmitter } from '../../../../lib/event-emitter';
+import type { Data } from '../../../../lib/event-emitter';
 import { AsyncQueue } from '../../../../lib/async-queue';
 import type { EwelinkDeviceResponse } from '../../api';
 import type eWelink from 'ewelink-api-next';
@@ -33,7 +34,7 @@ export class EWeLinkConfig {
 		public readonly connection: WrappedEWeLinkAPI,
 		public readonly device: EwelinkDeviceResponse,
 		public readonly wsConnection: EWeLinkWSConnection,
-		public readonly periodicFetcher: EventEmitter<EwelinkDeviceResponse>
+		public readonly periodicFetcher: Data<EwelinkDeviceResponse | undefined>
 	) {}
 
 	public [util.inspect.custom](): string {

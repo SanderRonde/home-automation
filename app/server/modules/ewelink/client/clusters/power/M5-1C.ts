@@ -12,7 +12,7 @@ export interface EwelinkOnOffClusterM51CParams {
 }
 
 export class EwelinkOnOffClusterM51CSingle extends EwelinkOnOffCluster {
-	protected getProxy =
+	protected override getProxy =
 		EwelinkClusterProxy.createGetter<EwelinkOnOffClusterState>({
 			fromParams: (state: EwelinkOnOffClusterM51CParams) => ({
 				enabled: state.switches[this.outlet].switch === 'on',

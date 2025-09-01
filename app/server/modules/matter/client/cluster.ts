@@ -20,11 +20,6 @@ import type {
 	WindowCovering,
 } from '@matter/main/clusters';
 import {
-	GetterAsyncEventEmitter,
-	CombinedAsyncEventEmitter,
-	MappedAsyncEventEmitter,
-} from '../../../lib/event-emitter';
-import {
 	GroupId,
 	Status,
 	type Attribute,
@@ -41,11 +36,12 @@ import type {
 	DeviceClusterName,
 	DeviceGroupId,
 } from '../../device/cluster';
-import type { AsyncEventEmitter } from '../../../lib/event-emitter';
+import { CombinedData, MappedData } from '../../../lib/event-emitter';
 import { SettablePromise } from '../../../lib/settable-promise';
 import type { LevelControl } from '@matter/main/clusters';
 import type { WritableAttribute } from '@matter/types';
 import { DeviceStatus } from '../../device/cluster';
+import { Data } from '../../../lib/event-emitter';
 import type { MatterClient } from './client';
 import { Color } from '../../../lib/color';
 
@@ -78,8 +74,8 @@ export interface MatterClusterInterface {
 	commands: Record<string, Command<unknown, unknown, BitSchema>>;
 }
 
-class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
-	#attributes: Record<string, AsyncEventEmitter<unknown, unknown>> = {};
+class ClusterProxy<C extends MatterClusterInterface> {
+	#attributes: Record<string, Data<unknown>> = {};
 	private _dependencies = new SettablePromise<{
 		readonly nodeId: string;
 		readonly endpointNumber: string;
@@ -129,7 +125,7 @@ class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 	public onAttributeChanged(attributeName: string, newValue: unknown): void {
 		const attribute = this.#attributes[attributeName];
 		if (attribute) {
-			void attribute.emit(newValue);
+			void attribute.set(newValue);
 		}
 	}
 
@@ -139,25 +135,30 @@ class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 		R = AT,
 	>(
 		attribute: A,
-		mapper?: (value: AT) => R | Promise<R>
-	): AsyncEventEmitter<AT, R> {
+		mapper?: (value: AT | undefined) => R
+	): Data<R | undefined> {
 		const emitter = (() => {
-			const emitter = new GetterAsyncEventEmitter<AT>(async () => {
-				const { matterClient, nodeId, endpointNumber, id } =
-					await this._dependencies.value;
-				return (await matterClient.request({
-					type: MatterServerInputMessageType.GetAttribute,
-					arguments: [nodeId, endpointNumber, id, attribute],
-				})) as AT;
-			});
+			const dependencies = this._dependencies;
+			class cls extends Data<AT | undefined> {
+				public override async get(): Promise<Exclude<AT, undefined>> {
+					const { matterClient, nodeId, endpointNumber, id } =
+						await dependencies.value;
+					return (await matterClient.request({
+						type: MatterServerInputMessageType.GetAttribute,
+						arguments: [nodeId, endpointNumber, id, attribute],
+					})) as Exclude<AT, undefined>;
+				}
+			}
+
+			const emitter = new cls(undefined);
 			if (mapper) {
-				return new MappedAsyncEventEmitter<AT, R>(emitter, mapper);
+				return new MappedData<R, AT | undefined>(emitter, mapper);
 			}
 			return emitter;
 		})();
 		this.#attributes[attribute] = emitter;
 
-		return emitter as AsyncEventEmitter<AT, R>;
+		return emitter as Data<R | undefined>;
 	}
 
 	public attributeSetter<
@@ -258,12 +259,6 @@ class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 			return mappedOutput as CommandTypes<C['commands'][M]>['response'];
 		};
 	}
-
-	public [Symbol.dispose](): void {
-		for (const attribute of Object.values(this.#attributes)) {
-			attribute[Symbol.dispose]();
-		}
-	}
 }
 
 function ConfigurableCluster<T extends MatterClusterInterface>(
@@ -292,7 +287,7 @@ function ConfigurableCluster<T extends MatterClusterInterface>(
 		}
 
 		public [Symbol.dispose](): void {
-			this.getProxy()[Symbol.dispose]();
+			// ...
 		}
 	};
 }
@@ -357,15 +352,15 @@ class MatterLevelControlCluster extends ConfigurableCluster<LevelControl.Complet
 	private async _valueToFloat(v: number | null | undefined) {
 		const value = v ?? 0;
 		const [minLevel, maxLevel] = await Promise.all([
-			this._minLevel.value,
-			this._maxLevel.value,
+			this._minLevel.get(),
+			this._maxLevel.get(),
 		]);
 		return (value - minLevel) / (maxLevel - minLevel);
 	}
 	private async _floatToValue(f: number) {
 		const [minLevel, maxLevel] = await Promise.all([
-			this._minLevel.value,
-			this._maxLevel.value,
+			this._minLevel.get(),
+			this._maxLevel.get(),
 		]);
 		return minLevel + (maxLevel - minLevel) * f;
 	}
@@ -505,17 +500,18 @@ class MatterColorControlCluster extends ConfigurableCluster<ColorControl.Complet
 ) {
 	private static readonly MAX_COLOR_VALUE = 65279;
 
-	private _currentX = this.getProxy().attributeGetter(
-		'currentX',
-		(value) => value / MatterColorControlCluster.MAX_COLOR_VALUE
+	private _currentX = this.getProxy().attributeGetter('currentX', (value) =>
+		value ? value / MatterColorControlCluster.MAX_COLOR_VALUE : undefined
 	);
-	private _currentY = this.getProxy().attributeGetter(
-		'currentY',
-		(value) => value / MatterColorControlCluster.MAX_COLOR_VALUE
+	private _currentY = this.getProxy().attributeGetter('currentY', (value) =>
+		value ? value / MatterColorControlCluster.MAX_COLOR_VALUE : undefined
 	);
-	public color = new MappedAsyncEventEmitter(
-		new CombinedAsyncEventEmitter([this._currentX, this._currentY]),
-		([x, y]) => Color.fromCieXy(x, y)
+	public color = new MappedData(
+		new CombinedData([this._currentX, this._currentY]),
+		([x, y]) =>
+			x === undefined || y === undefined
+				? undefined
+				: Color.fromCieXy(x, y)
 	);
 
 	public setColor = this.getProxy().command('moveToColor', {

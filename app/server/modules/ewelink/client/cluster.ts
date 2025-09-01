@@ -9,17 +9,12 @@ import {
 	DeviceSwitchCluster,
 	DeviceOnOffCluster,
 } from '../../device/cluster';
-import {
-	EventEmitter,
-	LazyAsyncEventEmitter,
-	MappedAsyncEventEmitter,
-} from '../../../lib/event-emitter';
 import type { Cluster, DeviceClusterName } from '../../device/cluster';
-import type { AsyncEventEmitter } from '../../../lib/event-emitter';
+import { EventEmitter, MappedData } from '../../../lib/event-emitter';
 import type { EWeLinkWebSocketMessage } from './clusters/shared';
 import { SettablePromise } from '../../../lib/settable-promise';
 import type { EWeLinkConfig } from './clusters/shared';
-import type { EwelinkDeviceResponse } from '../api';
+import { Data } from '../../../lib/event-emitter';
 import util from 'util';
 
 export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
@@ -29,9 +24,7 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 		s as PARAMS;
 	private readonly _toParams: (state: PARAMS) => object = (s) => s;
 	private _lastParams: PARAMS | null = null;
-	protected readonly _eventEmitters = new Set<
-		EventEmitter<unknown, unknown>
-	>();
+	protected readonly _eventEmitters = new Set<Data<unknown>>();
 	private _online: SettablePromise<boolean> = new SettablePromise();
 
 	private constructor(mappers?: {
@@ -88,7 +81,7 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 						...data.params,
 					};
 					for (const eventEmitter of this._eventEmitters) {
-						void eventEmitter.emit(this._lastParams);
+						void eventEmitter.set(this._lastParams);
 					}
 				}
 			)
@@ -99,7 +92,10 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 		}
 
 		this._disposables.push(
-			config.periodicFetcher.listen((data: EwelinkDeviceResponse) => {
+			config.periodicFetcher.subscribe((data) => {
+				if (!data) {
+					return;
+				}
 				if (data.itemData.online) {
 					this._online.set(true);
 				} else {
@@ -107,7 +103,7 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 				}
 				for (const eventEmitter of this._eventEmitters) {
 					this._lastParams = this._fromParams(data.itemData.params);
-					void eventEmitter.emit(this._lastParams);
+					void eventEmitter.set(this._lastParams);
 				}
 			})
 		);
@@ -118,9 +114,9 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 	): EventEmitter<void> {
 		const eventEmitter = new EventEmitter<void>();
 
-		const wsListener = new EventEmitter<PARAMS>();
-		wsListener.listen((value) => {
-			if (shouldTrigger(value)) {
+		const wsListener = new Data<PARAMS | undefined>(undefined);
+		wsListener.subscribe((value) => {
+			if (value !== undefined && shouldTrigger(value)) {
 				eventEmitter.emit(undefined);
 			}
 		});
@@ -130,15 +126,36 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 
 	public attributeGetter<R>(
 		mapper?: (value: PARAMS) => R
-	): AsyncEventEmitter<PARAMS | null, R | null> {
+	): Data<R | undefined> {
 		const emitter = (() => {
-			const emitter = new LazyAsyncEventEmitter<PARAMS | null>(() =>
+			class cls extends Data<PARAMS | undefined> {
+				private _initialized = false;
+
+				public constructor(
+					private readonly getInitialValue: () => Promise<
+						PARAMS | undefined
+					>
+				) {
+					super(undefined);
+				}
+
+				protected override create(): void {
+					if (!this._initialized) {
+						this._initialized = true;
+						void this.getInitialValue().then((value) =>
+							this.set(value)
+						);
+					}
+				}
+			}
+
+			const emitter = new cls(() =>
 				this._config.value.then((config) =>
 					this._getItemData(config.device)
 				)
 			);
 			if (mapper) {
-				return new MappedAsyncEventEmitter<PARAMS | null, R | null>(
+				return new MappedData<R | null, PARAMS | undefined>(
 					emitter,
 					mapper
 				);
@@ -146,7 +163,7 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 			return emitter;
 		})();
 		this._eventEmitters.add(emitter);
-		return emitter as AsyncEventEmitter<PARAMS | null, R | null>;
+		return emitter as Data<R | undefined>;
 	}
 
 	public attributeSetter<M extends keyof PARAMS, A = void>(
@@ -182,9 +199,6 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 	public [Symbol.dispose](): void {
 		for (const disposable of this._disposables) {
 			disposable();
-		}
-		for (const eventEmitter of this._eventEmitters) {
-			eventEmitter[Symbol.dispose]();
 		}
 	}
 
@@ -229,7 +243,7 @@ export abstract class EwelinkOnOffCluster extends ConfigurableCluster<EwelinkOnO
 	);
 
 	public toggle = async (): Promise<void> => {
-		const current = await this.isOn.value;
+		const current = await this.isOn.get();
 		if (current === null) {
 			throw new Error('Toggle failed: could not get current state');
 		}
@@ -292,7 +306,7 @@ export abstract class EwelinkBooleanStateCluster extends ConfigurableCluster<{
 }>(DeviceBooleanStateCluster) {
 	public state = this.getProxy().attributeGetter((value) => value.state);
 
-	public [Symbol.dispose](): void {
+	public override [Symbol.dispose](): void {
 		this.getProxy()[Symbol.dispose]();
 	}
 }
@@ -319,7 +333,7 @@ export class EwelinkOutletSwitchCluster extends ConfigurableCluster<{
 	outlet: number;
 }>(DeviceSwitchCluster) {
 	public constructor(
-		protected readonly _eWeLinkConfig: EWeLinkConfig,
+		protected override readonly _eWeLinkConfig: EWeLinkConfig,
 		public readonly outlet: number
 	) {
 		super(_eWeLinkConfig);

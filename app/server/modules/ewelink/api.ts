@@ -5,12 +5,12 @@ import {
 	EWeLinkWSConnection,
 	WrappedEWeLinkAPI,
 } from './client/clusters/shared';
-import { EventEmitter } from '../../lib/event-emitter';
 import { queueEwelinkTokenRefresh } from './routing';
 import { EWELINK_DEBUG } from '../../lib/constants';
 import { logTag } from '../../lib/logging/logger';
 import { asyncSetInterval } from '../../lib/time';
 import { EwelinkDevice } from './client/device';
+import { Data } from '../../lib/event-emitter';
 import type { Database } from '../../lib/db';
 import eWelink from 'ewelink-api-next';
 import type WebSocket from 'ws';
@@ -42,7 +42,7 @@ export class EWeLinkAPI implements Disposable {
 	private async initEWeLinkDevices() {
 		const eventEmitters = new Map<
 			string,
-			EventEmitter<EwelinkDeviceResponse>
+			Data<EwelinkDeviceResponse | undefined>
 		>();
 		const wrappedApi = new WrappedEWeLinkAPI(this._webApi);
 		const initialDevices = await this.updateDevices(
@@ -105,7 +105,7 @@ export class EWeLinkAPI implements Disposable {
 	}
 
 	private async updateDevices(
-		eventEmitters: Map<string, EventEmitter<EwelinkDeviceResponse>>,
+		eventEmitters: Map<string, Data<EwelinkDeviceResponse | undefined>>,
 		wrappedApi: WrappedEWeLinkAPI
 	) {
 		const {
@@ -121,9 +121,11 @@ export class EWeLinkAPI implements Disposable {
 			if (eventEmitters.has(deviceResponse.itemData.deviceid)) {
 				eventEmitters
 					.get(deviceResponse.itemData.deviceid)!
-					.emit(deviceResponse);
+					.set(deviceResponse);
 			} else {
-				const eventEmitter = new EventEmitter<EwelinkDeviceResponse>();
+				const eventEmitter = new Data<
+					EwelinkDeviceResponse | undefined
+				>(undefined);
 				eventEmitters.set(
 					deviceResponse.itemData.deviceid,
 					eventEmitter

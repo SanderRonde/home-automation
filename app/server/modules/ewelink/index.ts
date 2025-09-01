@@ -58,7 +58,7 @@ export const EWeLink = new (class EWeLink extends ModuleMeta {
 		};
 	}
 
-	public async onBackOnline() {
+	public override async onBackOnline() {
 		if (!this._ewelinkApiInstance) {
 			return;
 		}
