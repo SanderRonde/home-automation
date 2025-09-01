@@ -95,7 +95,7 @@ class ResilientSocket<OUT = unknown, IN = unknown> {
 		}
 	};
 
-	readonly #onClose = (...args: unknown[]) => {
+	readonly #onClose = () => {
 		this.#close();
 
 		// Schedule reconnect
