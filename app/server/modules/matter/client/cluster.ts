@@ -36,14 +36,15 @@ import type {
 	DeviceClusterName,
 	DeviceGroupId,
 } from '../../device/cluster';
-import { CombinedData, MappedData } from '../../../lib/event-emitter';
 import { SettablePromise } from '../../../lib/settable-promise';
 import type { LevelControl } from '@matter/main/clusters';
 import type { WritableAttribute } from '@matter/types';
 import { DeviceStatus } from '../../device/cluster';
-import { Data } from '../../../lib/event-emitter';
+import { CombinedData } from '../../../lib/data';
+import { MappedData } from '../../../lib/data';
 import type { MatterClient } from './client';
 import { Color } from '../../../lib/color';
+import { Data } from '../../../lib/data';
 
 export interface MatterCluster<IF extends MatterClusterInterface>
 	extends Cluster,

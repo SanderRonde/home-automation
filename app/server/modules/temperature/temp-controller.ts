@@ -18,7 +18,7 @@ class TempControl {
 		this.db = db;
 	}
 
-	private get 'sql'() {
+	private get sql() {
 		return this.db;
 	}
 

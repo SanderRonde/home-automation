@@ -10,11 +10,12 @@ import {
 	DeviceOnOffCluster,
 } from '../../device/cluster';
 import type { Cluster, DeviceClusterName } from '../../device/cluster';
-import { EventEmitter, MappedData } from '../../../lib/event-emitter';
 import type { EWeLinkWebSocketMessage } from './clusters/shared';
 import { SettablePromise } from '../../../lib/settable-promise';
+import { EventEmitter } from '../../../lib/event-emitter';
 import type { EWeLinkConfig } from './clusters/shared';
-import { Data } from '../../../lib/event-emitter';
+import { MappedData } from '../../../lib/data';
+import { Data } from '../../../lib/data';
 import util from 'util';
 
 export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {

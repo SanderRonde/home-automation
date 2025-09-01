@@ -10,9 +10,9 @@ import { EWELINK_DEBUG } from '../../lib/constants';
 import { logTag } from '../../lib/logging/logger';
 import { asyncSetInterval } from '../../lib/time';
 import { EwelinkDevice } from './client/device';
-import { Data } from '../../lib/event-emitter';
 import type { Database } from '../../lib/db';
 import eWelink from 'ewelink-api-next';
+import { Data } from '../../lib/data';
 import type WebSocket from 'ws';
 
 export class EWeLinkAPI implements Disposable {

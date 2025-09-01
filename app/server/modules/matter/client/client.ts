@@ -15,7 +15,7 @@ import { DB_FOLDER, MATTER_DEBUG, ROOT } from '../../../lib/constants';
 import type { ChildProcessWithoutNullStreams } from 'child_process';
 import { logTag } from '../../../lib/logging/logger';
 import type { EndpointNumber } from '@matter/types';
-import { Data } from '../../../lib/event-emitter';
+import { Data } from '../../../lib/data';
 import { MatterDevice } from './device';
 import { spawn } from 'child_process';
 import * as path from 'path';
