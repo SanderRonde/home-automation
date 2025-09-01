@@ -42,16 +42,17 @@ const getEnvironmentVariables = (() => {
 })();
 
 export function getArg(name: keyof Args, short?: string): string | void {
+	let result: string | void = void 0;
 	for (let i = 0; i < process.argv.length; i++) {
 		if (process.argv[i] === `--${name}`) {
-			return process.argv[i + 1];
+			result = process.argv[i + 1];
 		} else if (short && process.argv[i] === `--${short}`) {
-			return process.argv[i + 1];
+			result = process.argv[i + 1];
 		} else if (process.argv[i].startsWith(`--${name}=`)) {
-			return process.argv[i].slice(3 + name.length);
+			result = process.argv[i].slice(3 + name.length);
 		}
 	}
-	return void 0;
+	return result;
 }
 
 export function hasArg(name: keyof Args, short?: string): boolean | undefined {

@@ -11,7 +11,6 @@ import { Config } from './config';
 import { Auth } from './auth';
 import { Bot } from './bot';
 
-import type { SettablePromise } from '../lib/settable-promise';
 import type { Database } from '../lib/db';
 import type { AppConfig } from '../app';
 import type { SQL } from 'bun';
@@ -20,7 +19,7 @@ export type AllModules = ReturnType<typeof getModuleObj>;
 
 export interface ModuleConfig {
 	config: AppConfig;
-	server: SettablePromise<Bun.Server>;
+	wsPublish: (data: string) => Promise<Bun.ServerWebSocketSendStatus>;
 	db: Database;
 	sqlDB: SQL;
 	modules: AllModules;

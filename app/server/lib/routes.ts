@@ -2,7 +2,6 @@ import type {
 	ServeFunctionOptions,
 	RouterTypes,
 	BunRequest,
-	WebSocketServeOptions,
 	ServerWebSocket,
 } from 'bun';
 import { LogObj } from './logging/lob-obj';
@@ -23,9 +22,7 @@ export function createServeOptions<
 	R extends { [K in keyof R]: RouterTypes.RouteValue<K & string> },
 >(
 	routes: ServeFunctionOptions<T, R>['routes'],
-	websocket?: WebSocketServeOptions<{
-		route: string;
-	}>['websocket']
+	websocket?: ServeOptions['websocket']
 ): ServeOptions {
 	const middleware = (
 		routeHandler:
@@ -80,16 +77,16 @@ export type ServeOptions = {
 	routes?: Record<string, RouterTypes.RouteValue<string>>;
 	websocket?: {
 		open?: (
-			ws: ServerWebSocket<{ route: string }>,
+			ws: ServerWebSocket<{ route: string; moduleName: string }>,
 			server: Server
 		) => void | Promise<void>;
 		message?: (
-			ws: ServerWebSocket<{ route: string }>,
+			ws: ServerWebSocket<{ route: string; moduleName: string }>,
 			message: string | Buffer,
 			server: Server
 		) => void | Promise<void>;
 		close?: (
-			ws: ServerWebSocket<{ route: string }>,
+			ws: ServerWebSocket<{ route: string; moduleName: string }>,
 			code: number,
 			reason: string,
 			server: Server

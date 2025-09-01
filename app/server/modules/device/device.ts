@@ -88,8 +88,3 @@ export class DeviceSource extends ClassEnum {
 		}
 	}
 }
-
-export type DeviceAttribute<T> = {
-	value: Promise<T | null>;
-	listen(handler: (value: T) => void): () => void;
-};

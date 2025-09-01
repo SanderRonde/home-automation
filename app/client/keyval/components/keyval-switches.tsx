@@ -1,29 +1,24 @@
-import { Box, CircularProgress, Switch, Typography } from '@mui/material';
+import type {
+	KeyvalConfigWithValues,
+	KeyvalItemWithValue,
+} from '../../../server/modules/keyval/routing';
+import {
+	Box,
+	CircularProgress,
+	Switch,
+	Tooltip,
+	Typography,
+} from '@mui/material';
+import useWebsocket from '../../shared/lib/resilient-socket';
+import WarningIcon from '@mui/icons-material/Warning';
 import React, { useEffect, useState } from 'react';
 
-interface KeyvalItem {
-	name: string;
-	icon?: string;
-	deviceIds: string[];
-	value?: boolean; // Will be fetched from device
-}
-
-interface KeyvalGroup {
-	name: string;
-	icon?: string;
-	items: KeyvalItem[];
-}
-
-interface KeyvalConfig {
-	groups: KeyvalGroup[];
-}
-
 interface KeyvalSwitchesProps {
-	initialConfig?: KeyvalConfig;
+	initialConfig?: KeyvalConfigWithValues;
 }
 
 export const KeyvalSwitches: React.FC<KeyvalSwitchesProps> = (props) => {
-	const [config, setConfig] = useState<KeyvalConfig>(
+	const [config, setConfig] = useState<KeyvalConfigWithValues>(
 		props.initialConfig ?? { groups: [] }
 	);
 	const [loadingItems, setLoadingItems] = useState<string[]>([]);
@@ -49,6 +44,13 @@ export const KeyvalSwitches: React.FC<KeyvalSwitchesProps> = (props) => {
 		}
 	};
 
+	const onWsMessage = React.useCallback((message: KeyvalConfigWithValues) => {
+		setConfig(message);
+	}, []);
+	useWebsocket<never, KeyvalConfigWithValues>('/keyval/ws', {
+		onMessage: onWsMessage,
+	});
+
 	const refreshConfig = async () => {
 		try {
 			const response = await fetch('/keyval/config', {
@@ -68,26 +70,43 @@ export const KeyvalSwitches: React.FC<KeyvalSwitchesProps> = (props) => {
 
 	useEffect(() => {
 		void refreshConfig();
-
-		// Set up refresh interval
-		const interval = setInterval(() => {
-			void refreshConfig();
-		}, 1000 * 10); // Refresh every 10 seconds
-
-		return () => clearInterval(interval);
 	}, []);
 
-	const renderSwitch = (item: KeyvalItem) => {
+	const renderSwitch = (item: KeyvalItemWithValue) => {
 		const itemKey = item.deviceIds.join(',');
 		const isLoading = loadingItems.includes(itemKey);
 		return (
 			<Box sx={{ display: 'flex', alignItems: 'center' }}>
 				{isLoading && <CircularProgress size={16} sx={{ mr: 1 }} />}
-				<Switch
-					checked={item.value ?? false}
-					disabled={isLoading}
-					onChange={() => toggleDevice(item.deviceIds)}
-				/>
+				{item.value === null ? (
+					<Box
+						sx={{
+							display: 'flex',
+							alignItems: 'center',
+							bgcolor: 'rgba(255, 193, 7, 0.12)',
+							px: 1,
+							py: 0.5,
+							borderRadius: 1,
+						}}
+					>
+						<Tooltip title="Value is unavailable">
+							<Box sx={{ display: 'flex', alignItems: 'center' }}>
+								<WarningIcon
+									fontSize="small"
+									sx={{ color: 'warning.main', mr: 0.5 }}
+								/>
+								<Typography
+									variant="body2"
+									sx={{ color: 'warning.main' }}
+								>
+									Unavailable
+								</Typography>
+							</Box>
+						</Tooltip>
+					</Box>
+				) : (
+					<Switch checked={item.value} disabled={isLoading} />
+				)}
 			</Box>
 		);
 	};

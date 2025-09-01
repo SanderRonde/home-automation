@@ -1,4 +1,5 @@
 import { logTag } from '../../lib/logging/logger';
+import { DeviceSource } from '../device/device';
 import { initRouting } from './routing';
 import eWelink from 'ewelink-api-next';
 import type { ModuleConfig } from '..';
@@ -46,7 +47,8 @@ export const EWeLink = new (class EWeLink extends ModuleMeta {
 					webApi,
 					async (devices) => {
 						(await config.modules.device.api.value).setDevices(
-							devices
+							devices,
+							DeviceSource.EWELINK
 						);
 					}
 				).init(token);

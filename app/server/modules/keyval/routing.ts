@@ -22,8 +22,8 @@ const KeyvalConfig = z.object({
 	groups: z.array(KeyvalGroup),
 });
 
-interface KeyvalItemWithValue extends z.infer<typeof KeyvalItem> {
-	value: boolean;
+export interface KeyvalItemWithValue extends z.infer<typeof KeyvalItem> {
+	value: boolean | null;
 }
 
 interface KeyvalGroupWithValues
@@ -31,31 +31,37 @@ interface KeyvalGroupWithValues
 	items: KeyvalItemWithValue[];
 }
 
-interface KeyvalConfigWithValues extends Omit<KeyvalConfig, 'groups'> {
+export interface KeyvalConfigWithValues extends Omit<KeyvalConfig, 'groups'> {
 	groups: KeyvalGroupWithValues[];
 }
 
 export type KeyvalConfig = z.infer<typeof KeyvalConfig>;
 
-export function initRouting({ db, modules }: ModuleConfig): ServeOptions {
-	const getDeviceValue = async (deviceIds: string[]): Promise<boolean> => {
+export function initRouting({
+	db,
+	modules,
+	wsPublish,
+}: ModuleConfig): ServeOptions {
+	const getDeviceValue = async (
+		deviceIds: string[]
+	): Promise<boolean | null> => {
 		const api = await modules.device.api.value;
+		const devices = await api.devices.get();
 		try {
 			// Return true if ANY device is on
 			for (const deviceId of deviceIds) {
-				const device = api.getDevice(deviceId);
+				const device = devices.get(deviceId);
 				if (!device) {
 					continue;
 				}
 
-				// Assuming device implements DeviceEndpoint from device.ts
 				const onOffCluster =
 					device.getClusterByType(DeviceOnOffCluster);
 				if (!onOffCluster) {
 					continue;
 				}
 
-				const value = await onOffCluster.isOn.value;
+				const value = await onOffCluster.isOn.get();
 				if (value) {
 					return true;
 				}
@@ -75,11 +81,12 @@ export function initRouting({ db, modules }: ModuleConfig): ServeOptions {
 		value: boolean
 	): Promise<boolean> => {
 		const api = await modules.device.api.value;
+		const devices = await api.devices.get();
 		try {
 			let success = false;
 			// Set ALL devices to the same value
 			for (const deviceId of deviceIds) {
-				const device = api.getDevice(deviceId);
+				const device = devices.get(deviceId);
 				if (!device) {
 					continue;
 				}
@@ -103,9 +110,10 @@ export function initRouting({ db, modules }: ModuleConfig): ServeOptions {
 		}
 	};
 
-	const addValuesToConfig = async (
-		config: KeyvalConfig
-	): Promise<KeyvalConfigWithValues> => {
+	const getConfigWithValues = async (): Promise<KeyvalConfigWithValues> => {
+		const configJson = db.get('keyval_config', '{"groups":[]}');
+		const config: KeyvalConfig = JSON.parse(configJson);
+
 		return Promise.all(
 			config.groups.map(async (group) => {
 				const itemsWithValues = await Promise.all(
@@ -128,119 +136,162 @@ export function initRouting({ db, modules }: ModuleConfig): ServeOptions {
 		}));
 	};
 
-	return createServeOptions({
-		'/': keyvalHtml,
-		'/config': {
-			GET: async (req) => {
+	const listenedDevices = new Set<string>();
+	void modules.device.api.value.then((api) => {
+		api.devices.subscribe((devices) => {
+			const configJson = db.get('keyval_config', '{"groups":[]}');
+			const config: KeyvalConfig = JSON.parse(configJson);
+			const listenToIds = new Set<string>();
+			for (const group of config.groups) {
+				for (const item of group.items) {
+					for (const deviceId of item.deviceIds) {
+						listenToIds.add(deviceId);
+					}
+				}
+			}
+
+			for (const device of devices.values()) {
+				if (
+					listenedDevices.has(device.getUniqueId()) ||
+					!listenToIds.has(device.getUniqueId())
+				) {
+					continue;
+				}
+				listenedDevices.add(device.getUniqueId());
+
+				const onOffCluster =
+					device.getClusterByType(DeviceOnOffCluster);
+				if (!onOffCluster) {
+					continue;
+				}
+
+				onOffCluster.isOn.subscribe(async () => {
+					await wsPublish(
+						JSON.stringify(await getConfigWithValues())
+					);
+				});
+			}
+		});
+	});
+
+	return createServeOptions(
+		{
+			'/': keyvalHtml,
+			'/config': {
+				GET: async (req) => {
+					if (!auth(req)) {
+						return new Response('Unauthorized', { status: 401 });
+					}
+					return Response.json(await getConfigWithValues());
+				},
+				POST: async (req) => {
+					if (!auth(req)) {
+						return new Response(null, { status: 401 });
+					}
+
+					const groups = KeyvalConfig.parse(await req.json());
+					try {
+						// Validate the config structure
+						if (!groups || !Array.isArray(groups)) {
+							return Response.json(
+								{ error: 'Invalid config structure' },
+								{ status: 400 }
+							);
+						}
+
+						// Store the config
+						db.setVal('keyval_config', JSON.stringify({ groups }));
+
+						return Response.json({ success: true });
+					} catch (error) {
+						return Response.json(
+							{ error: 'Failed to save config' },
+							{ status: 500 }
+						);
+					}
+				},
+			},
+			'/config/raw': (req) => {
 				if (!auth(req)) {
 					return new Response('Unauthorized', { status: 401 });
 				}
-
 				const configJson = db.get('keyval_config', '{"groups":[]}');
 				const config: KeyvalConfig = JSON.parse(configJson);
-				const configWithValues = await addValuesToConfig(config);
 
-				return Response.json(configWithValues);
+				return Response.json(config);
 			},
-			POST: async (req) => {
+			'/device/toggle': async (req) => {
 				if (!auth(req)) {
 					return new Response(null, { status: 401 });
 				}
+				const { deviceIds } = z
+					.object({
+						deviceIds: z.array(z.string()),
+					})
+					.parse(await req.json());
 
-				const groups = KeyvalConfig.parse(await req.json());
 				try {
-					// Validate the config structure
-					if (!groups || !Array.isArray(groups)) {
+					// Get current value
+					const currentValue = await getDeviceValue(deviceIds);
+
+					// Toggle it
+					const success = await setDeviceValue(
+						deviceIds,
+						!currentValue
+					);
+
+					if (success) {
+						return Response.json({
+							success: true,
+							newValue: !currentValue,
+						});
+					} else {
 						return Response.json(
-							{ error: 'Invalid config structure' },
-							{ status: 400 }
+							{ error: 'Failed to toggle device' },
+							{ status: 500 }
 						);
 					}
-
-					// Store the config
-					db.setVal('keyval_config', JSON.stringify({ groups }));
-
-					return Response.json({ success: true });
 				} catch (error) {
-					return Response.json(
-						{ error: 'Failed to save config' },
-						{ status: 500 }
-					);
-				}
-			},
-		},
-		'/config/raw': (req) => {
-			if (!auth(req)) {
-				return new Response('Unauthorized', { status: 401 });
-			}
-			const configJson = db.get('keyval_config', '{"groups":[]}');
-			const config: KeyvalConfig = JSON.parse(configJson);
-
-			return Response.json(config);
-		},
-		'/device/toggle': async (req) => {
-			if (!auth(req)) {
-				return new Response(null, { status: 401 });
-			}
-			const { deviceIds } = z
-				.object({
-					deviceIds: z.array(z.string()),
-				})
-				.parse(await req.json());
-
-			try {
-				// Get current value
-				const currentValue = await getDeviceValue(deviceIds);
-
-				// Toggle it
-				const success = await setDeviceValue(deviceIds, !currentValue);
-
-				if (success) {
-					return Response.json({
-						success: true,
-						newValue: !currentValue,
-					});
-				} else {
 					return Response.json(
 						{ error: 'Failed to toggle device' },
 						{ status: 500 }
 					);
 				}
-			} catch (error) {
-				return Response.json(
-					{ error: 'Failed to toggle device' },
-					{ status: 500 }
-				);
-			}
-		},
-		'/device/set': async (req) => {
-			if (!auth(req)) {
-				return new Response('Unauthorized', { status: 401 });
-			}
-			const { deviceIds, value } = z
-				.object({
-					deviceIds: z.array(z.string()),
-					value: z.boolean(),
-				})
-				.parse(await req.json());
+			},
+			'/device/set': async (req) => {
+				if (!auth(req)) {
+					return new Response('Unauthorized', { status: 401 });
+				}
+				const { deviceIds, value } = z
+					.object({
+						deviceIds: z.array(z.string()),
+						value: z.boolean(),
+					})
+					.parse(await req.json());
 
-			try {
-				const success = await setDeviceValue(deviceIds, value);
+				try {
+					const success = await setDeviceValue(deviceIds, value);
 
-				if (success) {
-					return Response.json({ success: true });
-				} else {
+					if (success) {
+						return Response.json({ success: true });
+					} else {
+						return Response.json(
+							{ error: 'Failed to set device' },
+							{ status: 500 }
+						);
+					}
+				} catch (error) {
 					return Response.json(
 						{ error: 'Failed to set device' },
 						{ status: 500 }
 					);
 				}
-			} catch (error) {
-				return Response.json(
-					{ error: 'Failed to set device' },
-					{ status: 500 }
-				);
-			}
+			},
 		},
-	});
+		{
+			open: async (ws) => {
+				ws.send(JSON.stringify(await getConfigWithValues()));
+			},
+		}
+	);
 }

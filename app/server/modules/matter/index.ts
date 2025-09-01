@@ -1,4 +1,5 @@
 import { SettablePromise } from '../../lib/settable-promise';
+import { DeviceSource } from '../device/device';
 import { MatterClient } from './client/client';
 import type { ModuleConfig } from '../modules';
 import { ModuleMeta } from '../meta';
@@ -14,7 +15,7 @@ export const Matter = new (class Matter extends ModuleMeta {
 		matterClient.start();
 		matterClient.devices.subscribe(async (devices) => {
 			const api = await config.modules.device.api.value;
-			api.setDevices(Object.values(devices));
+			api.setDevices(Object.values(devices), DeviceSource.MATTER);
 		});
 
 		return {

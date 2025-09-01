@@ -46,7 +46,11 @@ export function initRouting({ modules }: ModuleConfig): ServeOptions {
 			if (!auth(req)) {
 				return new Response('Unauthorized', { status: 401 });
 			}
-			const devices = (await modules.device.api.value).getDevices();
+			const devices = [
+				...(
+					await (await modules.device.api.value).devices.get()
+				).values(),
+			];
 			const responseDevices: ConfigDeviceResponse[] = [];
 
 			const getResponseForEndpoint = (

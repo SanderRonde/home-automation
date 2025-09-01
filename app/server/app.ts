@@ -2,13 +2,13 @@ import { hasArg, getArg, getNumberArg, getNumberEnv } from './lib/io';
 import { createServeOptions, type ServeOptions } from './lib/routes';
 import { CLIENT_FOLDER, DB_FOLDER, ROOT } from './lib/constants';
 import { ProgressLogger } from './lib/logging/progress-logger';
+import type { AllModules, ModuleConfig } from './modules';
 import { SettablePromise } from './lib/settable-promise';
 import { logReady, logTag } from './lib/logging/logger';
 import { printCommands } from './modules/bot/helpers';
 import { notifyAllModules } from './modules/modules';
 import { serveStatic } from './lib/serve-static';
 import { LogObj } from './lib/logging/lob-obj';
-import type { AllModules } from './modules';
 import { getAllModules } from './modules';
 import { Database } from './lib/db';
 import { wait } from './lib/time';
@@ -79,9 +79,15 @@ class WebServer {
 				const sqlDB = new SQL(
 					`sqlite://${path.join(DB_FOLDER, meta.dbName)}.db`
 				);
-				const initConfig = {
+				const moduleName = meta.name.toLowerCase();
+				const initConfig: ModuleConfig = {
 					config: this._config,
-					server: this._server,
+					wsPublish: async (data: string) => {
+						return (await this._server.value).publish(
+							moduleName,
+							data
+						);
+					},
 					db: await new Database(`${meta.dbName}.json`).init(),
 					sqlDB: sqlDB,
 					modules,
@@ -93,12 +99,12 @@ class WebServer {
 
 				const mappedRoutes: NonNullable<ServeOptions['routes']> = {};
 				for (const key in serveOptions.routes) {
-					mappedRoutes[`/${meta.name.toLowerCase()}${key}`] =
+					mappedRoutes[`/${moduleName}${key}`] =
 						serveOptions.routes[key];
 				}
 				return {
 					routes: mappedRoutes,
-					moduleName: meta.name.toLowerCase(),
+					moduleName,
 					websocket: serveOptions.websocket,
 				};
 			})
@@ -113,10 +119,16 @@ class WebServer {
 
 		const websocketsByRoute: Record<
 			string,
-			ServeOptions['websocket'] | undefined
+			| { websocket: ServeOptions['websocket']; moduleName: string }
+			| undefined
 		> = {};
 		for (const { moduleName, websocket } of initValues) {
-			websocketsByRoute[`/${moduleName}/ws`] = websocket;
+			if (websocket) {
+				websocketsByRoute[`/${moduleName}/ws`] = {
+					websocket,
+					moduleName,
+				};
+			}
 		}
 
 		this._initLogger.increment('post-init');
@@ -130,9 +142,17 @@ class WebServer {
 	private async _listen(
 		modules: AllModules,
 		routes: ServeOptions['routes'],
-		websocketsByRoute: Record<string, ServeOptions['websocket'] | undefined>
+		websocketsByRoute: Record<
+			string,
+			| { websocket: ServeOptions['websocket']; moduleName: string }
+			| undefined
+		>
 	) {
-		const server: Bun.Server = Bun.serve<{ route: string }, {}>({
+		const server: Bun.Server = Bun.serve<
+			{ route: string; moduleName: string },
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			any
+		>({
 			fetch: (req, server) => {
 				const url = new URL(req.url);
 				const websocket = websocketsByRoute[url.pathname];
@@ -140,6 +160,7 @@ class WebServer {
 					server.upgrade(req, {
 						data: {
 							route: url.pathname,
+							moduleName: websocket.moduleName,
 						},
 					});
 					return undefined;
@@ -162,22 +183,33 @@ class WebServer {
 						chromeDevToolsAutomaticWorkspaceFolders: true,
 					}
 				: undefined,
+			error: (error) => {
+				// TODO:(sander) toggle doe snot work (500)
+				console.error('Error', error);
+			},
 			websocket: {
-				open: (ws) =>
-					websocketsByRoute[ws.data.route]?.open?.(ws, server),
+				open: (ws) => {
+					ws.subscribe(ws.data.moduleName);
+					return websocketsByRoute[ws.data.route]?.websocket?.open?.(
+						ws,
+						server
+					);
+				},
 				message: (ws, message) =>
-					websocketsByRoute[ws.data.route]?.message?.(
+					websocketsByRoute[ws.data.route]?.websocket?.message?.(
 						ws,
 						message,
 						server
 					),
-				close: (ws, code, reason) =>
-					websocketsByRoute[ws.data.route]?.close?.(
+				close: (ws, code, reason) => {
+					ws.unsubscribe(ws.data.moduleName);
+					return websocketsByRoute[ws.data.route]?.websocket?.close?.(
 						ws,
 						code,
 						reason,
 						server
-					),
+					);
+				},
 			},
 		});
 		this._server.set(server);

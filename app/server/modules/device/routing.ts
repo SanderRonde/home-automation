@@ -20,8 +20,8 @@ export function initRouting(
 	api: DeviceAPI
 ): ServeOptions {
 	return createServeOptions({
-		'/list': () => {
-			const currentDeviceIds = api.getDeviceIds();
+		'/list': async () => {
+			const currentDeviceIds = [...(await api.devices.get()).keys()];
 			const knownDevices = api.getStoredDevices();
 			const now = Date.now();
 

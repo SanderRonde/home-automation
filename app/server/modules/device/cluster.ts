@@ -1,7 +1,7 @@
 import type { EventEmitter } from '../../lib/event-emitter';
-import type { DeviceAttribute } from './device';
 import type { Color } from '../../lib/color';
 import { ClassEnum } from '../../lib/enum';
+import type { Data } from '../../lib/data';
 
 export type DeviceGroupId = number & {
 	__brand: 'DeviceGroupId';
@@ -93,7 +93,7 @@ export abstract class DeviceOnOffCluster extends Cluster {
 		return DeviceOnOffCluster.clusterName;
 	}
 
-	public abstract isOn: DeviceAttribute<boolean>;
+	public abstract isOn: Data<boolean>;
 	public abstract setOn(on: boolean): Promise<void>;
 	public abstract toggle(): Promise<void>;
 }
@@ -105,8 +105,8 @@ export abstract class DeviceWindowCoveringCluster extends Cluster {
 		return DeviceWindowCoveringCluster.clusterName;
 	}
 
-	public abstract currentPositionLiftPercentage: DeviceAttribute<number>;
-	public abstract targetPositionLiftPercentage: DeviceAttribute<number>;
+	public abstract currentPositionLiftPercentage: Data<number>;
+	public abstract targetPositionLiftPercentage: Data<number>;
 	public abstract close(): Promise<void>;
 	public abstract open(): Promise<void>;
 	public abstract goToLiftPercentage(args: {
@@ -124,11 +124,11 @@ export abstract class DeviceLevelControlCluster extends Cluster {
 	/**
 	 * Float from 0 to 1
 	 */
-	public abstract currentLevel: DeviceAttribute<number>;
+	public abstract currentLevel: Data<number>;
 	/**
 	 * Float from 0 to 1
 	 */
-	public abstract startupLevel: DeviceAttribute<number>;
+	public abstract startupLevel: Data<number>;
 	public abstract setLevel(args: {
 		level: number;
 		transitionTimeDs?: number;
@@ -147,7 +147,7 @@ export abstract class DevicePowerSourceCluster extends Cluster {
 		return DevicePowerSourceCluster.clusterName;
 	}
 
-	public abstract batteryChargeLevel: DeviceAttribute<number | null>;
+	public abstract batteryChargeLevel: Data<number | null>;
 }
 
 export abstract class DeviceGroupsCluster extends Cluster {
@@ -185,7 +185,7 @@ export abstract class DeviceOccupancySensingCluster extends Cluster {
 		return DeviceOccupancySensingCluster.clusterName;
 	}
 
-	public abstract occupancy: DeviceAttribute<boolean>;
+	public abstract occupancy: Data<boolean>;
 }
 
 export abstract class DeviceTemperatureMeasurementCluster extends Cluster {
@@ -198,7 +198,7 @@ export abstract class DeviceTemperatureMeasurementCluster extends Cluster {
 	/**
 	 * Temperature in degrees Celsius
 	 */
-	public abstract temperature: DeviceAttribute<number>;
+	public abstract temperature: Data<number>;
 }
 
 export abstract class DeviceRelativeHumidityMeasurementCluster extends Cluster {
@@ -211,7 +211,7 @@ export abstract class DeviceRelativeHumidityMeasurementCluster extends Cluster {
 	/**
 	 * Relative humidity as a float from 0 to 1
 	 */
-	public abstract relativeHumidity: DeviceAttribute<number>;
+	public abstract relativeHumidity: Data<number>;
 }
 
 export abstract class DeviceBooleanStateCluster<
@@ -223,7 +223,7 @@ export abstract class DeviceBooleanStateCluster<
 		return DeviceBooleanStateCluster.clusterName;
 	}
 
-	public abstract state: DeviceAttribute<S>;
+	public abstract state: Data<S>;
 }
 
 export abstract class DeviceSwitchCluster extends Cluster {
@@ -244,7 +244,7 @@ export abstract class DeviceIlluminanceMeasurementCluster extends Cluster {
 		return DeviceIlluminanceMeasurementCluster.clusterName;
 	}
 
-	public abstract illuminance: DeviceAttribute<number>;
+	public abstract illuminance: Data<number>;
 }
 
 export abstract class DeviceColorControlCluster extends Cluster {
@@ -254,7 +254,7 @@ export abstract class DeviceColorControlCluster extends Cluster {
 		return DeviceColorControlCluster.clusterName;
 	}
 
-	public abstract color: DeviceAttribute<Color>;
+	public abstract color: Data<Color>;
 	public abstract setColor(args: {
 		color: Color;
 		overDurationMs?: number;
