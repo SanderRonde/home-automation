@@ -30,13 +30,16 @@ export class MatterClient implements Disposable {
 	public constructor() {}
 
 	#updateDevices(deviceInfos: MatterDeviceInfo[]) {
-		const devices: Record<string, MatterDevice> = {};
+		const devices: Record<string, MatterDevice> = {
+			...this.devices.current(),
+		};
 		for (const deviceInfo of deviceInfos) {
-			if (devices[deviceInfo.number]) {
+			const id = `${deviceInfo.nodeId}:${deviceInfo.number}`;
+			if (devices[id]) {
 				continue;
 			}
 
-			devices[deviceInfo.number] = new MatterDevice(
+			devices[id] = new MatterDevice(
 				deviceInfo.nodeId,
 				deviceInfo.number,
 				deviceInfo.label ?? deviceInfo.name,
@@ -206,10 +209,7 @@ export class MatterClient implements Disposable {
 if (require.main === module) {
 	const matterClient = new MatterClient();
 	matterClient.start();
-	void matterClient.pair('10306615778').then((devices) => {
-		console.log('pair', devices);
-	});
-	void matterClient.devices.get().then((devices) => {
+	void matterClient.devices.subscribe((devices) => {
 		console.log('devices', devices);
 	});
 }
