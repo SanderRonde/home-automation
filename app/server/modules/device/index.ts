@@ -1,12 +1,17 @@
 import { SettablePromise } from '../../lib/settable-promise';
 import type { Database } from '../../lib/db';
+import type { DeviceInfo } from './routing';
 import { initRouting } from './routing';
 import type { ModuleConfig } from '..';
 import { ModuleMeta } from '../meta';
 import { DeviceAPI } from './api';
 
+export interface DeviceDB {
+	device_registry: Record<string, DeviceInfo>;
+}
+
 export const Device = new (class Device extends ModuleMeta {
-	private _db = new SettablePromise<Database>();
+	private _db = new SettablePromise<Database<DeviceDB>>();
 	public api = new SettablePromise<DeviceAPI>();
 	public name = 'device';
 

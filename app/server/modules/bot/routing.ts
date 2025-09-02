@@ -36,9 +36,9 @@ function isFromTelegram(req: BunRequest) {
 }
 
 const messageHandlerInstance = new SettablePromise<MessageHandler>();
-export async function initRouting({ db }: ModuleConfig): Promise<ServeOptions> {
+export function initRouting({ db }: ModuleConfig): ServeOptions {
 	const secret = getEnv('SECRET_BOT', true);
-	messageHandlerInstance.set(await new MessageHandler(secret, db).init());
+	messageHandlerInstance.set(new MessageHandler(secret, db));
 
 	return createServeOptions({
 		'/msg': async (req) => {

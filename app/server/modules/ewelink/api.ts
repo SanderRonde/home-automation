@@ -13,6 +13,7 @@ import { EwelinkDevice } from './client/device';
 import type { Database } from '../../lib/db';
 import eWelink from 'ewelink-api-next';
 import { Data } from '../../lib/data';
+import type { EWelinkDB } from '.';
 import type WebSocket from 'ws';
 
 export class EWeLinkAPI implements Disposable {
@@ -26,7 +27,7 @@ export class EWeLinkAPI implements Disposable {
 	}
 
 	public constructor(
-		private readonly _db: Database,
+		private readonly _db: Database<EWelinkDB>,
 		private readonly _webApi: InstanceType<typeof eWelink.WebAPI>,
 		private readonly _onDevices: (devices: EwelinkDevice[]) => void
 	) {}

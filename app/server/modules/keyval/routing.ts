@@ -2,8 +2,10 @@ import keyvalHtml from '../../../client/keyval/index.html';
 import { DeviceOnOffCluster } from '../device/cluster';
 import { createServeOptions } from '../../lib/routes';
 import type { ServeOptions } from '../../lib/routes';
+import type { Database } from '../../lib/db';
 import type { ModuleConfig } from '..';
 import { auth } from '../../lib/auth';
+import type { KeyvalDB } from '.';
 import * as z from 'zod';
 
 const KeyvalItem = z.object({
@@ -37,11 +39,10 @@ export interface KeyvalConfigWithValues extends Omit<KeyvalConfig, 'groups'> {
 
 export type KeyvalConfig = z.infer<typeof KeyvalConfig>;
 
-export function initRouting({
-	db,
-	modules,
-	wsPublish,
-}: ModuleConfig): ServeOptions {
+export function initRouting(
+	{ modules, wsPublish }: ModuleConfig,
+	db: Database<KeyvalDB>
+): ServeOptions {
 	const getDeviceValue = async (
 		deviceIds: string[]
 	): Promise<boolean | null> => {
@@ -50,7 +51,7 @@ export function initRouting({
 		try {
 			// Return true if ANY device is on
 			for (const deviceId of deviceIds) {
-				const device = devices.get(deviceId);
+				const device = devices[deviceId];
 				if (!device) {
 					continue;
 				}
@@ -86,7 +87,7 @@ export function initRouting({
 			let success = false;
 			// Set ALL devices to the same value
 			for (const deviceId of deviceIds) {
-				const device = devices.get(deviceId);
+				const device = devices[deviceId];
 				if (!device) {
 					continue;
 				}
@@ -111,11 +112,10 @@ export function initRouting({
 	};
 
 	const getConfigWithValues = async (): Promise<KeyvalConfigWithValues> => {
-		const configJson = db.get('keyval_config', '{"groups":[]}');
-		const config: KeyvalConfig = JSON.parse(configJson);
+		const configJson = db.current().groups;
 
 		return Promise.all(
-			config.groups.map(async (group) => {
+			(configJson ?? []).map(async (group) => {
 				const itemsWithValues = await Promise.all(
 					group.items.map(async (item) => {
 						const value = await getDeviceValue(item.deviceIds);
@@ -139,10 +139,9 @@ export function initRouting({
 	const listenedDevices = new Set<string>();
 	void modules.device.api.value.then((api) => {
 		api.devices.subscribe((devices) => {
-			const configJson = db.get('keyval_config', '{"groups":[]}');
-			const config: KeyvalConfig = JSON.parse(configJson);
+			const configJson = db.current().groups ?? [];
 			const listenToIds = new Set<string>();
-			for (const group of config.groups) {
+			for (const group of configJson) {
 				for (const item of group.items) {
 					for (const deviceId of item.deviceIds) {
 						listenToIds.add(deviceId);
@@ -150,7 +149,7 @@ export function initRouting({
 				}
 			}
 
-			for (const device of devices.values()) {
+			for (const device of Object.values(devices)) {
 				if (
 					listenedDevices.has(device.getUniqueId()) ||
 					!listenToIds.has(device.getUniqueId())
@@ -200,7 +199,7 @@ export function initRouting({
 						}
 
 						// Store the config
-						db.setVal('keyval_config', JSON.stringify({ groups }));
+						db.update((old) => ({ ...old, groups }));
 
 						return Response.json({ success: true });
 					} catch (error) {
@@ -215,10 +214,8 @@ export function initRouting({
 				if (!auth(req)) {
 					return new Response('Unauthorized', { status: 401 });
 				}
-				const configJson = db.get('keyval_config', '{"groups":[]}');
-				const config: KeyvalConfig = JSON.parse(configJson);
-
-				return Response.json(config);
+				const configJson = db.current().groups ?? [];
+				return Response.json({ groups: configJson });
 			},
 			'/device/toggle': async (req) => {
 				if (!auth(req)) {

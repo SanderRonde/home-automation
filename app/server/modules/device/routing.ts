@@ -21,7 +21,7 @@ export function initRouting(
 ): ServeOptions {
 	return createServeOptions({
 		'/list': async () => {
-			const currentDeviceIds = [...(await api.devices.get()).keys()];
+			const currentDeviceIds = Object.keys(await api.devices.get());
 			const knownDevices = api.getStoredDevices();
 			const now = Date.now();
 
@@ -58,7 +58,7 @@ export function initRouting(
 			for (const device of devices) {
 				updatedDevices[device.id] = device;
 			}
-			db.setVal('device_registry', JSON.stringify(updatedDevices));
+			db.update((old) => ({ ...old, device_registry: updatedDevices }));
 
 			const response: DeviceListResponse = { devices };
 

@@ -1,6 +1,7 @@
 import { SettablePromise } from '../../lib/settable-promise';
 import { LogObj } from '../../lib/logging/lob-obj';
 import { logTag } from '../../lib/logging/logger';
+import type { Database } from '../../lib/db';
 import type { ModuleConfig } from '..';
 import { handleHooks } from './hooks';
 import { Detector } from './classes';
@@ -8,6 +9,8 @@ import { HOME_STATE } from './types';
 import { ModuleMeta } from '../meta';
 import { Bot } from './bot';
 import chalk from 'chalk';
+
+export type HomeDetectorDB = Record<string, HOME_STATE>;
 
 export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 	private readonly _detector: SettablePromise<Detector> =
@@ -39,7 +42,9 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 	}
 
 	public init(config: ModuleConfig) {
-		const detector = new Detector({ db: config.db });
+		const detector = new Detector({
+			db: config.db as Database<HomeDetectorDB>,
+		});
 		Bot.init({
 			detector,
 		});

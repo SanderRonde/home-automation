@@ -88,7 +88,7 @@ class WebServer {
 							data
 						);
 					},
-					db: await new Database(`${meta.dbName}.json`).init(),
+					db: new Database(`${meta.dbName}.json`),
 					sqlDB: sqlDB,
 					modules,
 				};

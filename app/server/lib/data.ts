@@ -74,8 +74,8 @@ type DataCallback<T> = {
 // expose the full Data interface.
 
 export class MappedData<Type, UpstreamType> extends Data<Type> {
-	private readonly upstream: Data<UpstreamType>;
-	private readonly mapper: Mapper<UpstreamType, Type>;
+	protected readonly upstream: Data<UpstreamType>;
+	protected readonly mapper: Mapper<UpstreamType, Type>;
 
 	public constructor(
 		upstream: Data<UpstreamType>,
@@ -118,7 +118,7 @@ export class MappedData<Type, UpstreamType> extends Data<Type> {
 	}
 }
 
-type Mapper<InputType = unknown, OutputType = unknown> = {
+export type Mapper<InputType = unknown, OutputType = unknown> = {
 	bivarianceHack(
 		input: InputType,
 		prevOutput: OutputType | undefined

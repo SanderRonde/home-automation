@@ -8,9 +8,9 @@ import type { Database } from '../../../lib/db';
 import { StateKeeper } from './state-keeping';
 import { RESPONSE_TYPE } from '../types';
 import { BOT_NAME } from '../constants';
+import { Bot, type BotDB } from '..';
 import * as https from 'https';
 import chalk from 'chalk';
-import { Bot } from '..';
 
 export interface MatchParameters {
 	logObj: LogObj;
@@ -76,15 +76,16 @@ export class MessageHandler extends BotStateBase {
 		}
 	);
 
-	private _stateKeeper!: StateKeeper;
+	private readonly _stateKeeper: StateKeeper;
 	private _openQuestions: ((response: string) => void)[] = [];
 	private _lastChatID = 0;
 
 	public constructor(
 		private readonly _secret: string,
-		private readonly _db: Database
+		private readonly _db: Database<BotDB>
 	) {
 		super();
+		this._stateKeeper = new StateKeeper(this._db);
 	}
 
 	private static async _matchSelf(
@@ -208,11 +209,6 @@ export class MessageHandler extends BotStateBase {
 			text = text.slice(4096);
 		}
 		return parts;
-	}
-
-	public async init(): Promise<this> {
-		this._stateKeeper = await new StateKeeper(this._db).init();
-		return this;
 	}
 
 	public async sendMessage(

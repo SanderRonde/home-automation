@@ -5,6 +5,7 @@ import type { Database } from '../../lib/db';
 import type eWelink from 'ewelink-api-next';
 import type { ModuleConfig } from '..';
 import { getEnv } from '../../lib/io';
+import type { EWelinkDB } from '.';
 
 export function initRouting(
 	{ db }: ModuleConfig,
@@ -48,12 +49,12 @@ export function initRouting(
 				);
 			}
 
-			db.setVal('accessToken', token.data.accessToken);
-			db.setVal('refreshToken', token.data.refreshToken);
-			db.setVal(
-				'expiresAt',
-				new Date().getTime() + 1000 * 60 * 60 * 24 * 29
-			);
+			db.update((old) => ({
+				...old,
+				accessToken: token.data.accessToken,
+				refreshToken: token.data.refreshToken,
+				expiresAt: new Date().getTime() + 1000 * 60 * 60 * 24 * 29,
+			}));
 			api.at = token.data.accessToken;
 			queueEwelinkTokenRefresh(api, db);
 
@@ -67,14 +68,14 @@ export function initRouting(
 export function queueEwelinkTokenRefresh(
 	// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 	api: InstanceType<typeof eWelink.WebAPI> | null,
-	db: Database
+	db: Database<EWelinkDB>
 ): void {
 	if (!api) {
 		return;
 	}
 
-	const refreshToken = db.get<string>('refreshToken');
-	const expiresAt = db.get<number>('expiresAt');
+	const refreshToken = db.current().refreshToken;
+	const expiresAt = db.current().expiresAt;
 	if (!refreshToken || !expiresAt) {
 		return;
 	}
@@ -89,9 +90,11 @@ export function queueEwelinkTokenRefresh(
 		};
 		api.at = data.at;
 
-		db.setVal('accessToken', data.at);
-		db.setVal('refreshToken', data.rt);
-		db.setVal('expiresAt', new Date().getTime() + 1000 * 60 * 60 * 24 * 29);
+		db.set({
+			accessToken: data.at,
+			refreshToken: data.rt,
+			expiresAt: new Date().getTime() + 1000 * 60 * 60 * 24 * 29,
+		});
 
 		queueEwelinkTokenRefresh(api, db);
 	};

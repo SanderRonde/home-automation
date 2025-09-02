@@ -1,11 +1,18 @@
 import { logTag } from '../../lib/logging/logger';
 import { DeviceSource } from '../device/device';
+import type { Database } from '../../lib/db';
 import { initRouting } from './routing';
 import eWelink from 'ewelink-api-next';
 import type { ModuleConfig } from '..';
 import { getEnv } from '../../lib/io';
 import { ModuleMeta } from '../meta';
 import { EWeLinkAPI } from './api';
+
+export interface EWelinkDB {
+	accessToken: string;
+	refreshToken: string;
+	expiresAt: number;
+}
 
 export const EWeLink = new (class EWeLink extends ModuleMeta {
 	private _ewelinkApiInstance: {
@@ -33,8 +40,9 @@ export const EWeLink = new (class EWeLink extends ModuleMeta {
 
 	public async init(config: ModuleConfig) {
 		const webApi = this.getWebApi();
+		const db = config.db as Database<EWelinkDB>;
 		if (webApi) {
-			const token = config.db.get<string>('accessToken');
+			const token = db.current()?.accessToken;
 			if (!token) {
 				logTag(
 					'ewelink',
@@ -42,16 +50,12 @@ export const EWeLink = new (class EWeLink extends ModuleMeta {
 					'No token supplied, get one by going to /ewelink/oauth'
 				);
 			} else {
-				this.api = await new EWeLinkAPI(
-					config.db,
-					webApi,
-					async (devices) => {
-						(await config.modules.device.api.value).setDevices(
-							devices,
-							DeviceSource.EWELINK
-						);
-					}
-				).init(token);
+				this.api = await new EWeLinkAPI(db, webApi, async (devices) => {
+					(await config.modules.device.api.value).setDevices(
+						devices,
+						DeviceSource.EWELINK
+					);
+				}).init(token);
 			}
 		}
 

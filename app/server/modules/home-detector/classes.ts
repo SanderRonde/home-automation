@@ -6,6 +6,7 @@ import {
 } from './constants';
 import type { Database } from '../../lib/db';
 import homeIps from '../../config/home-ips';
+import type { HomeDetectorDB } from '.';
 import { getEnv } from '../../lib/io';
 import { HOME_STATE } from './types';
 import * as ping from 'ping';
@@ -30,7 +31,7 @@ class Pinger {
 			name: string;
 			ips: string[];
 		},
-		private readonly _db: Database,
+		private readonly _db: Database<HomeDetectorDB>,
 		private readonly _onChange: (
 			newState: HOME_STATE
 		) => void | Promise<void>
@@ -105,6 +106,10 @@ class Pinger {
 					state: HOME_STATE.AWAY;
 			  }
 	) {
+		this._db.update((old) => ({
+			...old,
+			[this._config.name]: newState.state,
+		}));
 		if (newState.state === HOME_STATE.HOME) {
 			return this._fastPing(newState.ip);
 		} else {
@@ -151,7 +156,7 @@ class Pinger {
 	}
 
 	private async _init() {
-		this._state = this._db.get(this._config.name, HOME_STATE.AWAY);
+		this._state = this._db.current()[this._config.name] ?? HOME_STATE.AWAY;
 		await this._pingLoop();
 	}
 }
@@ -161,10 +166,10 @@ export class Detector {
 		name: string | null;
 		callback: (newState: HOME_STATE, name: string) => void | Promise<void>;
 	}[] = [];
-	private readonly _db: Database;
+	private readonly _db: Database<HomeDetectorDB>;
 	private _pingers: Map<string, Pinger> = new Map();
 
-	public constructor({ db }: { db: Database }) {
+	public constructor({ db }: { db: Database<HomeDetectorDB> }) {
 		this._db = db;
 		this._initPingers();
 	}
