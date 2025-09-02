@@ -93,7 +93,7 @@ export abstract class DeviceOnOffCluster extends Cluster {
 		return DeviceOnOffCluster.clusterName;
 	}
 
-	public abstract isOn: Data<boolean>;
+	public abstract isOn: Data<boolean | undefined>;
 	public abstract setOn(on: boolean): Promise<void>;
 	public abstract toggle(): Promise<void>;
 }
@@ -105,8 +105,8 @@ export abstract class DeviceWindowCoveringCluster extends Cluster {
 		return DeviceWindowCoveringCluster.clusterName;
 	}
 
-	public abstract currentPositionLiftPercentage: Data<number>;
-	public abstract targetPositionLiftPercentage: Data<number>;
+	public abstract currentPositionLiftPercentage: Data<number | undefined>;
+	public abstract targetPositionLiftPercentage: Data<number | undefined>;
 	public abstract close(): Promise<void>;
 	public abstract open(): Promise<void>;
 	public abstract goToLiftPercentage(args: {
@@ -124,11 +124,11 @@ export abstract class DeviceLevelControlCluster extends Cluster {
 	/**
 	 * Float from 0 to 1
 	 */
-	public abstract currentLevel: Data<number>;
+	public abstract currentLevel: Data<number | undefined>;
 	/**
 	 * Float from 0 to 1
 	 */
-	public abstract startupLevel: Data<number>;
+	public abstract startupLevel: Data<number | undefined>;
 	public abstract setLevel(args: {
 		level: number;
 		transitionTimeDs?: number;
@@ -147,7 +147,7 @@ export abstract class DevicePowerSourceCluster extends Cluster {
 		return DevicePowerSourceCluster.clusterName;
 	}
 
-	public abstract batteryChargeLevel: Data<number | null>;
+	public abstract batteryChargeLevel: Data<number | undefined>;
 }
 
 export abstract class DeviceGroupsCluster extends Cluster {
@@ -185,7 +185,7 @@ export abstract class DeviceOccupancySensingCluster extends Cluster {
 		return DeviceOccupancySensingCluster.clusterName;
 	}
 
-	public abstract occupancy: Data<boolean>;
+	public abstract occupancy: Data<boolean | undefined>;
 }
 
 export abstract class DeviceTemperatureMeasurementCluster extends Cluster {
@@ -198,7 +198,7 @@ export abstract class DeviceTemperatureMeasurementCluster extends Cluster {
 	/**
 	 * Temperature in degrees Celsius
 	 */
-	public abstract temperature: Data<number>;
+	public abstract temperature: Data<number | undefined>;
 }
 
 export abstract class DeviceRelativeHumidityMeasurementCluster extends Cluster {
@@ -211,7 +211,7 @@ export abstract class DeviceRelativeHumidityMeasurementCluster extends Cluster {
 	/**
 	 * Relative humidity as a float from 0 to 1
 	 */
-	public abstract relativeHumidity: Data<number>;
+	public abstract relativeHumidity: Data<number | undefined>;
 }
 
 export abstract class DeviceBooleanStateCluster<
@@ -223,7 +223,7 @@ export abstract class DeviceBooleanStateCluster<
 		return DeviceBooleanStateCluster.clusterName;
 	}
 
-	public abstract state: Data<S>;
+	public abstract state: Data<S | undefined>;
 }
 
 export abstract class DeviceSwitchCluster extends Cluster {
@@ -244,7 +244,7 @@ export abstract class DeviceIlluminanceMeasurementCluster extends Cluster {
 		return DeviceIlluminanceMeasurementCluster.clusterName;
 	}
 
-	public abstract illuminance: Data<number>;
+	public abstract illuminance: Data<number | undefined>;
 }
 
 export abstract class DeviceColorControlCluster extends Cluster {
@@ -254,7 +254,7 @@ export abstract class DeviceColorControlCluster extends Cluster {
 		return DeviceColorControlCluster.clusterName;
 	}
 
-	public abstract color: Data<Color>;
+	public abstract color: Data<Color | undefined>;
 	public abstract setColor(args: {
 		color: Color;
 		overDurationMs?: number;

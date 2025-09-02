@@ -26,7 +26,12 @@ export async function refresh(): Promise<void> {
 		);
 		await authTokens(credentials, true);
 	} catch (e) {
-		logTag('calendar', 'red', 'Failed to re-use google code', e.message);
+		logTag(
+			'calendar',
+			'red',
+			'Failed to re-use google code',
+			(e as Error).message
+		);
 	}
 }
 

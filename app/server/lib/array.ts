@@ -11,3 +11,16 @@ export function flatten<V>(arr: V[][] | V[]): V[] {
 	}
 	return flattened;
 }
+
+export function diff<T>(
+	previous: T[],
+	next: T[]
+): {
+	added: T[];
+	removed: T[];
+} {
+	return {
+		added: next.filter((x) => !previous.includes(x)),
+		removed: previous.filter((x) => !next.includes(x)),
+	};
+}

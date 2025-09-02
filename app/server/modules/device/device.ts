@@ -76,6 +76,7 @@ export interface Device extends DeviceEndpoint {
 export class DeviceSource extends ClassEnum {
 	public static readonly MATTER = new DeviceSource('matter');
 	public static readonly EWELINK = new DeviceSource('ewelink');
+	public static readonly WLED = new DeviceSource('wled');
 
 	public toEmoji(): string {
 		switch (this) {
@@ -83,6 +84,8 @@ export class DeviceSource extends ClassEnum {
 				return '⚛️';
 			case DeviceSource.EWELINK:
 				return '🔗';
+			case DeviceSource.WLED:
+				return '💡';
 			default:
 				throw new Error('Invalid DeviceSource');
 		}

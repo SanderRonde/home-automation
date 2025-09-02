@@ -688,6 +688,17 @@ async function main() {
 	const controller = new MatterServer();
 	await controller.start();
 
+	if (process.argv.includes('--list-devices')) {
+		void controller
+			.onMessage({
+				type: MatterServerInputMessageType.ListDevices,
+				arguments: [],
+			})
+			.then((devices) => {
+				console.log('devices:', devices);
+			});
+	}
+
 	isBooting = false;
 	while (messageQueue.length > 0) {
 		const queuedMessage = messageQueue.shift();

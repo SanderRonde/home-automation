@@ -1,11 +1,12 @@
+import { EweLinkConfig } from './components/EweLinkConfig';
 import { AppLayout } from './components/layout/AppLayout';
 import { SidebarTab } from './components/layout/Sidebar';
 import { NotFoundPage } from './components/NotFoundPage';
 import { KeyValEditor } from './components/KeyvalEditor';
 import { WelcomePage } from './components/WelcomePage';
+import { WLEDConfig } from './components/WLEDConfig';
 import React, { useState, useEffect } from 'react';
 import { Devices } from './components/Devices';
-import { EweLinkConfig } from './components/EweLinkConfig';
 import { createRoot } from 'react-dom/client';
 
 function ConfigApp() {
@@ -51,6 +52,9 @@ function ConfigApp() {
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
 			case SidebarTab.EWELINK:
 				return <EweLinkConfig />;
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
+			case SidebarTab.WLED:
+				return <WLEDConfig />;
 			default:
 				return (
 					<NotFoundPage onReturnToSettings={handleReturnToSettings} />

@@ -10,6 +10,7 @@ import DeviceHubIcon from '@mui/icons-material/DeviceHub';
 import SettingsIcon from '@mui/icons-material/Settings';
 import StorageIcon from '@mui/icons-material/Storage';
 import CloudIcon from '@mui/icons-material/Cloud';
+import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import React from 'react';
 
 const DRAWER_WIDTH = 240;
@@ -54,6 +55,7 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 		{ text: 'Settings', icon: <SettingsIcon />, id: SidebarTab.SETTINGS },
 		{ text: 'Devices', icon: <DeviceHubIcon />, id: SidebarTab.DEVICES }, // Updated icon for Matter
 		{ text: 'eWeLink', icon: <CloudIcon />, id: SidebarTab.EWELINK },
+		{ text: 'WLED', icon: <LightbulbIcon />, id: SidebarTab.WLED },
 	];
 
 	return (
@@ -81,4 +83,5 @@ export enum SidebarTab {
 	SETTINGS = 'settings',
 	DEVICES = 'devices',
 	EWELINK = 'ewelink',
+	WLED = 'wled',
 }

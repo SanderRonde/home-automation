@@ -58,7 +58,7 @@ class TempControl {
 	}
 
 	public async init() {
-		const tableExists = await this.sql`
+		const tableExists = await this.sql<{ name: string }[]>`
 			SELECT name FROM sqlite_master WHERE type='table' AND name='temperatures'
 		`;
 

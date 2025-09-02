@@ -68,6 +68,7 @@ export class Database<T> extends Data<Partial<T>> {
 
 	public override set(value: T): void {
 		super.set(value);
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		void DBFileManager.write(this._fileName, value as any);
 	}
 }

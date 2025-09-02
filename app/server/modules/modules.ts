@@ -8,6 +8,7 @@ import { Matter } from './matter';
 import { KeyVal } from './keyval';
 import { Device } from './device';
 import { Config } from './config';
+import { WLed } from './wled';
 import { Auth } from './auth';
 import { Bot } from './bot';
 
@@ -20,7 +21,7 @@ export type AllModules = ReturnType<typeof getModuleObj>;
 export interface ModuleConfig {
 	config: AppConfig;
 	wsPublish: (data: string) => Promise<Bun.ServerWebSocketSendStatus>;
-	db: Database;
+	db: Database<unknown>;
 	sqlDB: SQL;
 	modules: AllModules;
 }
@@ -28,6 +29,7 @@ export interface ModuleConfig {
 const getModuleObj = () => ({
 	bot: Bot,
 	auth: Auth,
+	wled: WLed,
 	device: Device,
 	keyval: KeyVal,
 	matter: Matter,
@@ -35,7 +37,6 @@ const getModuleObj = () => ({
 	secret: Secret,
 	webhook: Webhook,
 	ewelink: EWeLink,
-
 	infoScreen: InfoScreen,
 	temperature: Temperature,
 	homeDetector: HomeDetector,
