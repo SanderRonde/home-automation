@@ -31,7 +31,7 @@ export abstract class EwelinkDevice
 	implements Device, Disposable
 {
 	public getUniqueId(): string {
-		return `ewelink:${this._eWeLinkConfig.device.itemData.deviceid}`;
+		return `${this.getSource().value}:${this._eWeLinkConfig.device.itemData.deviceid}`;
 	}
 
 	public getDeviceName(): string {
