@@ -97,7 +97,7 @@ export function initRouting({ modules }: ModuleConfig): ServeOptions {
 			if (!auth(req)) {
 				return new Response('Unauthorized', { status: 401 });
 			}
-			const matterClient = await modules.matter.client.value;
+			const matterClient = await modules.matter.server.value;
 			const pairedDevices = await matterClient.pair(req.params.code);
 			return Response.json({
 				devices: pairedDevices,
