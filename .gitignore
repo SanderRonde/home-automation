@@ -105,4 +105,4 @@ temp/
 .venv
 switchbot.sock
 
-app/client/keyval/antd.dark.css
+app/client/switch/antd.dark.css

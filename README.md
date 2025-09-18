@@ -12,9 +12,9 @@ Backend consists of a NodeJS server running express, using the web and the [seri
 
 ### Modules
 
-#### KeyVal
+#### Switch
 
-The keyval module controls the state of various devices, allowing you to turn on or off devices. It also supports some other features like toggling and listening for changes over websockets, which is mainly used to interface with the microcontrollers.
+The switch module controls the state of various devices, allowing you to turn on or off devices. It also supports some other features like toggling and listening for changes over websockets, which is mainly used to interface with the microcontrollers.
 
 The invidvidual togglable power sockets consist of a few cheap electrical parts and an ESP8266 board that together allow for remote control of power sockets.
 
@@ -42,11 +42,11 @@ Everything is connected with a telegram bot that (semi-)intelligently performs t
 
 #### Web apps
 
-There is a web app that allows control of the keyval store for simple control of the lights and speakers from a phone.
+There is a web app that allows control of the switch store for simple control of the lights and speakers from a phone.
 
 ## How it works
 
-#### KeyVal
+#### Switch
 
 Consists of a simple JSON file that serves as a mini key-value database. It stores the state of all keys. States can be set through any of the controllers. State changes can be listened for through internal modules, allowing for changes to be handled in a number of ways. The most used one is the communicating with power controlling switches through a sort of makeshift websockets implementation.
 
@@ -54,7 +54,7 @@ The power controlling switches are made out of a couple of components. The first
 
 The board runs C/C++ code which can be found over at the [board-power-driver repository](https://github.com/SanderRonde/board-power-driver). Since these boards can use neither long polling nor websockets (some of them can but not all), a sort of makeshift websockets protocol was made. It connects to the server and tells it its own IP address. The server then sends messages directly to that IP address. Of course this only works over a local network but it works surprisingly well.
 
-When a keyval value changes, a listener is fired which then sends the changed value to the responsible board over the makeshift websockets. The board then changes the state of the data pin of the relay, after which the power goes on or off.
+When a switch value changes, a listener is fired which then sends the changed value to the responsible board over the makeshift websockets. The board then changes the state of the data pin of the relay, after which the power goes on or off.
 
 #### Home-detector
 
@@ -102,7 +102,7 @@ The web apps use the [wc-lib](https://github.com/SanderRonde/wc-lib) webcomponen
 
 #### Touch screen
 
-The touch screen is based on a nextion touch screen and a controlling arduino. The arduino listens for any touch events from the touch screen and passes those on to the server, which then sets the keyval store's values.
+The touch screen is based on a nextion touch screen and a controlling arduino. The arduino listens for any touch events from the touch screen and passes those on to the server, which then sets the switch store's values.
 
 Check out the arduino driver for the board [over here](https://github.com/SanderRonde/arduino-board-screen-driver).
 

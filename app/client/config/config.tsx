@@ -2,7 +2,7 @@ import { EweLinkConfig } from './components/EweLinkConfig';
 import { AppLayout } from './components/layout/AppLayout';
 import { SidebarTab } from './components/layout/Sidebar';
 import { NotFoundPage } from './components/NotFoundPage';
-import { KeyValEditor } from './components/KeyvalEditor';
+import { SwitchEditor } from './components/SwitchEditor';
 import { WelcomePage } from './components/WelcomePage';
 import { WLEDConfig } from './components/WLEDConfig';
 import React, { useState, useEffect } from 'react';
@@ -47,8 +47,8 @@ function ConfigApp() {
 			case SidebarTab.DEVICES:
 				return <Devices />;
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
-			case SidebarTab.KEYVAL:
-				return <KeyValEditor />;
+			case SidebarTab.SWITCH:
+				return <SwitchEditor />;
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
 			case SidebarTab.EWELINK:
 				return <EweLinkConfig />;

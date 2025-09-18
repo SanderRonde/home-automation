@@ -1,7 +1,7 @@
 import type {
-	KeyvalConfigWithValues,
-	KeyvalItemWithValue,
-} from '../../../server/modules/keyval/routing';
+	SwitchConfigWithValues,
+	SwitchItemWithValue,
+} from '../../../server/modules/switch/routing';
 import {
 	Box,
 	CircularProgress,
@@ -13,12 +13,12 @@ import useWebsocket from '../../shared/lib/resilient-socket';
 import WarningIcon from '@mui/icons-material/Warning';
 import React, { useEffect, useState } from 'react';
 
-interface KeyvalSwitchesProps {
-	initialConfig?: KeyvalConfigWithValues;
+interface SwitchSwitchesProps {
+	initialConfig?: SwitchConfigWithValues;
 }
 
-export const KeyvalSwitches: React.FC<KeyvalSwitchesProps> = (props) => {
-	const [config, setConfig] = useState<KeyvalConfigWithValues>(
+export const SwitchSwitches: React.FC<SwitchSwitchesProps> = (props) => {
+	const [config, setConfig] = useState<SwitchConfigWithValues>(
 		props.initialConfig ?? { groups: [] }
 	);
 	const [loadingItems, setLoadingItems] = useState<string[]>([]);
@@ -27,7 +27,7 @@ export const KeyvalSwitches: React.FC<KeyvalSwitchesProps> = (props) => {
 		const itemKey = deviceIds.join(',');
 		setLoadingItems((prev) => [...prev, itemKey]);
 		try {
-			const response = await fetch('/keyval/device/toggle', {
+			const response = await fetch('/switch/device/toggle', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -44,16 +44,16 @@ export const KeyvalSwitches: React.FC<KeyvalSwitchesProps> = (props) => {
 		}
 	};
 
-	const onWsMessage = React.useCallback((message: KeyvalConfigWithValues) => {
+	const onWsMessage = React.useCallback((message: SwitchConfigWithValues) => {
 		setConfig(message);
 	}, []);
-	useWebsocket<never, KeyvalConfigWithValues>('/keyval/ws', {
+	useWebsocket<never, SwitchConfigWithValues>('/switch/ws', {
 		onMessage: onWsMessage,
 	});
 
 	const refreshConfig = async () => {
 		try {
-			const response = await fetch('/keyval/config', {
+			const response = await fetch('/switch/config', {
 				method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
@@ -72,7 +72,7 @@ export const KeyvalSwitches: React.FC<KeyvalSwitchesProps> = (props) => {
 		void refreshConfig();
 	}, []);
 
-	const renderSwitch = (item: KeyvalItemWithValue) => {
+	const renderSwitch = (item: SwitchItemWithValue) => {
 		const itemKey = item.deviceIds.join(',');
 		const isLoading = loadingItems.includes(itemKey);
 		return (

@@ -1,47 +1,47 @@
-import keyvalHtml from '../../../client/keyval/index.html';
+import switchHtml from '../../../client/switch/index.html';
 import { DeviceOnOffCluster } from '../device/cluster';
 import { createServeOptions } from '../../lib/routes';
 import type { ServeOptions } from '../../lib/routes';
 import type { Database } from '../../lib/db';
 import type { ModuleConfig } from '..';
 import { auth } from '../../lib/auth';
-import type { KeyvalDB } from '.';
+import type { SwitchDB } from '.';
 import * as z from 'zod';
 
-const KeyvalItem = z.object({
+const SwitchItem = z.object({
 	name: z.string(),
 	icon: z.string().optional(),
 	deviceIds: z.array(z.string()),
 });
 
-const KeyvalGroup = z.object({
+const SwitchGroup = z.object({
 	name: z.string(),
 	icon: z.string().optional(),
-	items: z.array(KeyvalItem),
+	items: z.array(SwitchItem),
 });
 
-const KeyvalConfig = z.object({
-	groups: z.array(KeyvalGroup),
+const SwitchConfig = z.object({
+	groups: z.array(SwitchGroup),
 });
 
-export interface KeyvalItemWithValue extends z.infer<typeof KeyvalItem> {
+export interface SwitchItemWithValue extends z.infer<typeof SwitchItem> {
 	value: boolean | null;
 }
 
-interface KeyvalGroupWithValues
-	extends Omit<z.infer<typeof KeyvalGroup>, 'items'> {
-	items: KeyvalItemWithValue[];
+interface SwitchGroupWithValues
+	extends Omit<z.infer<typeof SwitchGroup>, 'items'> {
+	items: SwitchItemWithValue[];
 }
 
-export interface KeyvalConfigWithValues extends Omit<KeyvalConfig, 'groups'> {
-	groups: KeyvalGroupWithValues[];
+export interface SwitchConfigWithValues extends Omit<SwitchConfig, 'groups'> {
+	groups: SwitchGroupWithValues[];
 }
 
-export type KeyvalConfig = z.infer<typeof KeyvalConfig>;
+export type SwitchConfig = z.infer<typeof SwitchConfig>;
 
 export function initRouting(
 	{ modules, wsPublish }: ModuleConfig,
-	db: Database<KeyvalDB>
+	db: Database<SwitchDB>
 ): ServeOptions {
 	const getDeviceValue = async (
 		deviceIds: string[]
@@ -111,7 +111,7 @@ export function initRouting(
 		}
 	};
 
-	const getConfigWithValues = async (): Promise<KeyvalConfigWithValues> => {
+	const getConfigWithValues = async (): Promise<SwitchConfigWithValues> => {
 		const configJson = db.current().groups;
 
 		return Promise.all(
@@ -175,7 +175,7 @@ export function initRouting(
 
 	return createServeOptions(
 		{
-			'/': keyvalHtml,
+			'/': switchHtml,
 			'/config': {
 				GET: async (req) => {
 					if (!auth(req)) {
@@ -188,7 +188,7 @@ export function initRouting(
 						return new Response(null, { status: 401 });
 					}
 
-					const groups = KeyvalConfig.parse(await req.json());
+					const groups = SwitchConfig.parse(await req.json());
 					try {
 						// Validate the config structure
 						if (!groups || !Array.isArray(groups)) {

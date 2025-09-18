@@ -8,7 +8,7 @@ import {
 	Snackbar,
 	Alert,
 } from '@mui/material';
-import type { KeyvalConfig } from '../../../server/modules/keyval/api';
+import type { SwitchConfig } from '../../../server/modules/switch/routing';
 import type * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import { DevicePicker } from './DevicePicker';
 import type { editor } from 'monaco-editor';
@@ -91,7 +91,7 @@ function TabPanel(props: TabPanelProps) {
 	);
 }
 
-export const KeyValEditor = (): JSX.Element => {
+export const SwitchEditor = (): JSX.Element => {
 	const [value, setValue] = React.useState(0);
 	const [editorContent, setEditorContent] = React.useState('');
 	const [originalContent, setOriginalContent] = React.useState('');
@@ -111,7 +111,7 @@ export const KeyValEditor = (): JSX.Element => {
 
 	const loadConfig = async () => {
 		try {
-			const response = await fetch('/keyval/config/raw', {
+			const response = await fetch('/switch/config/raw', {
 				method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
@@ -136,7 +136,7 @@ export const KeyValEditor = (): JSX.Element => {
 		jsonString: string
 	): { valid: boolean; error?: string } => {
 		try {
-			const parsed = JSON.parse(jsonString) as KeyvalConfig;
+			const parsed = JSON.parse(jsonString) as SwitchConfig;
 
 			// Basic structure validation
 			if (!parsed.groups || !Array.isArray(parsed.groups)) {
@@ -202,7 +202,7 @@ export const KeyValEditor = (): JSX.Element => {
 
 		try {
 			const config = JSON.parse(editorContent);
-			const response = await fetch('/keyval/config', {
+			const response = await fetch('/switch/config', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -346,7 +346,7 @@ export const KeyValEditor = (): JSX.Element => {
 			validate: true,
 			schemas: [
 				{
-					uri: 'http://keyval-config-schema.json',
+					uri: 'http://switch-config-schema.json',
 					fileMatch: ['*'],
 					schema: JSON_SCHEMA,
 				},
@@ -530,7 +530,7 @@ export const KeyValEditor = (): JSX.Element => {
 						letterSpacing: '0.2rem',
 					}}
 				>
-					KeyVal Editor
+					Switch Editor
 				</Typography>
 				<Button
 					variant="contained"

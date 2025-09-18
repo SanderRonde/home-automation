@@ -6,44 +6,30 @@ import {
 	ListItemText,
 	styled,
 } from '@mui/material';
-import DeviceHubIcon from '@mui/icons-material/DeviceHub';
-import SettingsIcon from '@mui/icons-material/Settings';
-import StorageIcon from '@mui/icons-material/Storage';
-import CloudIcon from '@mui/icons-material/Cloud';
-import LightbulbIcon from '@mui/icons-material/Lightbulb';
-import React from 'react';
-
-const DRAWER_WIDTH = 240;
+import {
+	DeviceHub as DeviceHubIcon,
+	Settings as SettingsIcon,
+	Storage as StorageIcon,
+	Cloud as CloudIcon,
+	Lightbulb as LightbulbIcon,
+} from '@mui/icons-material';
 
 const StyledDrawer = styled(Drawer)(({ theme }) => ({
-	width: DRAWER_WIDTH,
-	flexShrink: 0,
 	'& .MuiDrawer-paper': {
-		width: DRAWER_WIDTH,
+		position: 'relative',
+		whiteSpace: 'nowrap',
+		width: 240,
+		transition: theme.transitions.create('width', {
+			easing: theme.transitions.easing.sharp,
+			duration: theme.transitions.duration.enteringScreen,
+		}),
 		boxSizing: 'border-box',
-		marginTop: '64px',
-	},
-	'& .MuiListItem-root': {
-		marginBottom: theme.spacing(0.5),
-		marginLeft: theme.spacing(1),
-		marginRight: theme.spacing(1),
-		borderRadius: theme.shape.borderRadius,
-		'&.Mui-selected': {
-			backgroundColor: 'rgba(255, 23, 68, 0.15)',
-			'&:hover': {
-				backgroundColor: 'rgba(255, 23, 68, 0.25)',
-			},
-			'& .MuiListItemIcon-root': {
-				color: theme.palette.primary.light,
-			},
-		},
-		'&:hover': {
-			backgroundColor: 'rgba(255, 255, 255, 0.05)',
-		},
+		backgroundColor: theme.palette.background.paper,
+		borderRight: `1px solid ${theme.palette.divider}`,
 	},
 }));
 
-interface SidebarProps {
+export interface SidebarProps {
 	open: boolean;
 	currentTab: string | SidebarTab;
 	onTabChange: (tab: SidebarTab) => void;
@@ -51,7 +37,7 @@ interface SidebarProps {
 
 export const Sidebar = (props: SidebarProps): JSX.Element => {
 	const menuItems = [
-		{ text: 'KeyVal', icon: <StorageIcon />, id: SidebarTab.KEYVAL },
+		{ text: 'Switch', icon: <StorageIcon />, id: SidebarTab.SWITCH },
 		{ text: 'Settings', icon: <SettingsIcon />, id: SidebarTab.SETTINGS },
 		{ text: 'Devices', icon: <DeviceHubIcon />, id: SidebarTab.DEVICES }, // Updated icon for Matter
 		{ text: 'eWeLink', icon: <CloudIcon />, id: SidebarTab.EWELINK },
@@ -79,7 +65,7 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 };
 
 export enum SidebarTab {
-	KEYVAL = 'keyval',
+	SWITCH = 'switch',
 	SETTINGS = 'settings',
 	DEVICES = 'devices',
 	EWELINK = 'ewelink',

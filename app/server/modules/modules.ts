@@ -5,7 +5,7 @@ import { Webhook } from './webhook';
 import { EWeLink } from './ewelink';
 import { Secret } from './secret/';
 import { Matter } from './matter';
-import { KeyVal } from './keyval';
+import { Switch } from './switch';
 import { Device } from './device';
 import { Config } from './config';
 import { WLed } from './wled';
@@ -31,7 +31,7 @@ const getModuleObj = () => ({
 	auth: Auth,
 	wled: WLed,
 	device: Device,
-	keyval: KeyVal,
+	switch: Switch,
 	matter: Matter,
 	config: Config,
 	secret: Secret,

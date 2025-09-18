@@ -2,18 +2,18 @@ import type { ServiceworkerSelf } from '../../../types/serviceworker';
 
 declare const self: ServiceworkerSelf;
 
-const CACHE_NAME = 'keyval';
+const CACHE_NAME = 'switch';
 const CACHE_STATIC = [
-	'/keyval/favicon.ico',
-	'/keyval/keyval.js',
-	'/keyval/static/manifest.json',
-	'/keyval/static/images/48.png',
-	'/keyval/static/images/72.png',
-	'/keyval/static/images/96.png',
-	'/keyval/static/images/128.png',
-	'/keyval/static/images/144.png',
-	'/keyval/static/images/168.png',
-	'/keyval/static/images/192.png',
+	'/switch/favicon.ico',
+	'/switch/switch.js',
+	'/switch/static/manifest.json',
+	'/switch/static/images/48.png',
+	'/switch/static/images/72.png',
+	'/switch/static/images/96.png',
+	'/switch/static/images/128.png',
+	'/switch/static/images/144.png',
+	'/switch/static/images/168.png',
+	'/switch/static/images/192.png',
 ];
 
 self.addEventListener('install', (event) => {
@@ -43,16 +43,16 @@ function indexPage() {
 		<!DOCTYPE HTML>
 		<html style="background-color: #000;">
 		<head>
-			<link rel="icon" href="/keyval/favicon.ico" type="image/x-icon" />
-			<link rel="manifest" href="/keyval/static/manifest.json">
-			<link rel="apple-touch-icon" href="/keyval/static/apple-touch-icon.png">
+			<link rel="icon" href="/switch/favicon.ico" type="image/x-icon" />
+			<link rel="manifest" href="/switch/static/manifest.json">
+			<link rel="apple-touch-icon" href="/switch/static/apple-touch-icon.png">
 			<meta name="viewport" content="width=device-width, initial-scale=1">
-			<link rel="stylesheet" href="/keyval/antd.dark.css" />
-			<title>KeyVal Switch</title>
+			<link rel="stylesheet" href="/switch/antd.dark.css" />
+			<title>Switch Control</title>
 		</head>
 		<body style="margin: 0;overflow-x: hidden;">
 			<div id="root">Javascript should be enabled</div>
-			<script type="module" src="/keyval/keyval.js"></script>
+			<script type="module" src="/switch/switch.js"></script>
 		</body>
 	</html>`,
 		{
@@ -117,8 +117,8 @@ self.addEventListener('fetch', (event) => {
 	}
 
 	switch (pathname) {
-		case '/keyval':
-		case '/keyval/':
+		case '/switch':
+		case '/switch/':
 			event.respondWith(indexPage());
 			break;
 		default:
