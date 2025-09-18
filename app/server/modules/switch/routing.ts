@@ -7,6 +7,7 @@ import type { ModuleConfig } from '..';
 import { auth } from '../../lib/auth';
 import type { SwitchDB } from '.';
 import * as z from 'zod';
+import { jsonResponse } from '../../lib/typed-routes';
 
 const SwitchItem = z.object({
 	name: z.string(),
@@ -38,6 +39,13 @@ export interface SwitchConfigWithValues extends Omit<SwitchConfig, 'groups'> {
 }
 
 export type SwitchConfig = z.infer<typeof SwitchConfig>;
+
+export interface SwitchRoutes {
+	'/config': {
+		GET: () => Promise<SwitchConfigWithValues>
+		POST: () => Promise<{success: true}|{error: string}>
+	}
+}
 
 export function initRouting(
 	{ modules, wsPublish }: ModuleConfig,
@@ -192,7 +200,7 @@ export function initRouting(
 					try {
 						// Validate the config structure
 						if (!groups || !Array.isArray(groups)) {
-							return Response.json(
+							return jsonResponse(
 								{ error: 'Invalid config structure' },
 								{ status: 400 }
 							);
@@ -201,9 +209,9 @@ export function initRouting(
 						// Store the config
 						db.update((old) => ({ ...old, groups }));
 
-						return Response.json({ success: true });
+						return jsonResponse({ success: true });
 					} catch (error) {
-						return Response.json(
+						return jsonResponse(
 							{ error: 'Failed to save config' },
 							{ status: 500 }
 						);
@@ -215,7 +223,7 @@ export function initRouting(
 					return new Response('Unauthorized', { status: 401 });
 				}
 				const configJson = db.current().groups ?? [];
-				return Response.json({ groups: configJson });
+				return jsonResponse({ groups: configJson });
 			},
 			'/device/toggle': async (req) => {
 				if (!auth(req)) {
@@ -238,18 +246,18 @@ export function initRouting(
 					);
 
 					if (success) {
-						return Response.json({
+						return jsonResponse({
 							success: true,
 							newValue: !currentValue,
 						});
 					} else {
-						return Response.json(
+						return jsonResponse(
 							{ error: 'Failed to toggle device' },
 							{ status: 500 }
 						);
 					}
 				} catch (error) {
-					return Response.json(
+					return jsonResponse(
 						{ error: 'Failed to toggle device' },
 						{ status: 500 }
 					);
@@ -270,15 +278,15 @@ export function initRouting(
 					const success = await setDeviceValue(deviceIds, value);
 
 					if (success) {
-						return Response.json({ success: true });
+						return jsonResponse({ success: true });
 					} else {
-						return Response.json(
+						return jsonResponse(
 							{ error: 'Failed to set device' },
 							{ status: 500 }
 						);
 					}
 				} catch (error) {
-					return Response.json(
+					return jsonResponse(
 						{ error: 'Failed to set device' },
 						{ status: 500 }
 					);

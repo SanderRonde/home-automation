@@ -6,6 +6,7 @@ import type {
 } from 'bun';
 import { LogObj } from './logging/lob-obj';
 import type { Server } from 'bun';
+import { TypedJsonResponse } from './typed-routes';
 
 const HTTP_METHODS = [
 	'GET',
@@ -19,7 +20,7 @@ const HTTP_METHODS = [
 
 export function createServeOptions<
 	T,
-	R extends { [K in keyof R]: RouterTypes.RouteValue<K & string> },
+	R extends { [K in keyof R]: Exclude<RouterTypes.RouteValue<K & string>, Response> | TypedJsonResponse<unknown> },
 >(
 	routes: ServeFunctionOptions<T, R>['routes'],
 	websocket?: ServeOptions['websocket']
