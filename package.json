@@ -59,6 +59,7 @@
 	},
 	"dependencies": {
 		"@matter/main": "^0.15.3",
+		"@modelcontextprotocol/sdk": "^1.18.2",
 		"@project-chip/matter.js": "^0.15.3",
 		"chalk": "^2.4.2",
 		"dotenv": "^17.2.1",
