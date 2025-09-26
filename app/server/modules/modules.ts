@@ -4,12 +4,13 @@ import { InfoScreen } from './info-screen';
 import { Webhook } from './webhook';
 import { EWeLink } from './ewelink';
 import { Secret } from './secret/';
-import { Matter } from './matter';
 import { Switch } from './switch';
+import { Matter } from './matter';
 import { Device } from './device';
 import { Config } from './config';
 import { WLed } from './wled';
 import { Auth } from './auth';
+import { MCP } from './mcp';
 import { Bot } from './bot';
 
 import type { Database } from '../lib/db';
@@ -40,6 +41,7 @@ const getModuleObj = () => ({
 	infoScreen: InfoScreen,
 	temperature: Temperature,
 	homeDetector: HomeDetector,
+	mcp: MCP,
 });
 
 let notified = false;
