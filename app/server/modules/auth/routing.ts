@@ -6,6 +6,7 @@ import { genCookie } from './cookie';
 export function getRoutes(): ServeOptions {
 	return createServeOptions({
 		'/key/:key': (req) => {
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 			if (authenticate(req.params.key)) {
 				req.cookies.set('key', genCookie(), {
 					// Expires in quite a few years

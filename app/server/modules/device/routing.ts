@@ -70,6 +70,7 @@ export function initRouting(
 					deviceId: z.string(),
 					name: z.string(),
 				})
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 				.parse(req.json());
 
 			if (api.updateDeviceName(deviceId, name)) {

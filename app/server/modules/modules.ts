@@ -10,6 +10,7 @@ import { Device } from './device';
 import { Config } from './config';
 import { WLed } from './wled';
 import { Auth } from './auth';
+import { MCP } from './mcp';
 import { Bot } from './bot';
 
 import type { Database } from '../lib/db';
@@ -40,6 +41,7 @@ const getModuleObj = () => ({
 	infoScreen: InfoScreen,
 	temperature: Temperature,
 	homeDetector: HomeDetector,
+	mcp: MCP,
 });
 
 let notified = false;
