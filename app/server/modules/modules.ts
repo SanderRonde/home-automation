@@ -4,14 +4,14 @@ import { InfoScreen } from './info-screen';
 import { Webhook } from './webhook';
 import { EWeLink } from './ewelink';
 import { Secret } from './secret/';
-import { Matter } from './matter';
 import { Switch } from './switch';
+import { Matter } from './matter';
 import { Device } from './device';
 import { Config } from './config';
 import { WLed } from './wled';
 import { Auth } from './auth';
-import { Bot } from './bot';
 import { MCP } from './mcp';
+import { Bot } from './bot';
 
 import type { Database } from '../lib/db';
 import type { AppConfig } from '../app';
