@@ -1,4 +1,3 @@
-import React from 'react';
 import {
 	Box,
 	Card,
@@ -8,8 +7,9 @@ import {
 	Alert,
 	Stack,
 } from '@mui/material';
-import CloudIcon from '@mui/icons-material/Cloud';
 import LaunchIcon from '@mui/icons-material/Launch';
+import CloudIcon from '@mui/icons-material/Cloud';
+import React from 'react';
 
 export const EweLinkConfig = (): JSX.Element => {
 	const handleUpdateCredentials = () => {
@@ -28,8 +28,8 @@ export const EweLinkConfig = (): JSX.Element => {
 				</Box>
 
 				<Alert severity="info">
-					eWeLink integration allows you to connect and control your eWeLink smart devices
-					through this home automation system.
+					eWeLink integration allows you to connect and control your
+					eWeLink smart devices through this home automation system.
 				</Alert>
 
 				<Card>
@@ -39,8 +39,9 @@ export const EweLinkConfig = (): JSX.Element => {
 								Credentials Management
 							</Typography>
 							<Typography variant="body2" color="text.secondary">
-								To connect your eWeLink devices, you need to authenticate with your eWeLink account.
-								Click the button below to update your credentials.
+								To connect your eWeLink devices, you need to
+								authenticate with your eWeLink account. Click
+								the button below to update your credentials.
 							</Typography>
 							<Box>
 								<Button
@@ -53,12 +54,6 @@ export const EweLinkConfig = (): JSX.Element => {
 									Update eWeLink Credentials
 								</Button>
 							</Box>
-							<Alert severity="warning" sx={{ mt: 2 }}>
-								<Typography variant="body2">
-									<strong>Note:</strong> This will open a new window to authenticate with eWeLink.
-									Make sure to allow popups if prompted by your browser.
-								</Typography>
-							</Alert>
 						</Stack>
 					</CardContent>
 				</Card>
