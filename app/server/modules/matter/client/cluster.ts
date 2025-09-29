@@ -564,6 +564,7 @@ export const IGNORED_MATTER_CLUSTERS = [
 	'AdministratorCommissioning',
 	'OperationalCredentials',
 	'GroupKeyManagement',
+	'DiagnosticLogs',
 	'PowerSourceConfiguration',
 	'AccessControl',
 	// Given that this requires complex timing logic might as well
