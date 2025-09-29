@@ -43,9 +43,9 @@ export abstract class ModuleMeta {
 
 	public abstract init(config: ModuleConfig):
 		| {
-				serve: ServeOptions;
+				serve: ServeOptions<unknown>;
 		  }
-		| Promise<{ serve: ServeOptions }>;
+		| Promise<{ serve: ServeOptions<unknown> }>;
 
 	public postInit(): Promise<void> {
 		return Promise.resolve(void 0);

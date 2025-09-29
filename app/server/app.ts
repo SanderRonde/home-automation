@@ -94,10 +94,13 @@ class WebServer {
 				};
 				meta._sqlDB.set(sqlDB);
 				const result = await meta.init(initConfig);
-				const serveOptions = (result?.serve as ServeOptions) ?? {};
+				const serveOptions =
+					(result?.serve as ServeOptions<unknown>) ?? {};
 				this._initLogger.increment(meta.loggerName);
 
-				const mappedRoutes: NonNullable<ServeOptions['routes']> = {};
+				const mappedRoutes: NonNullable<
+					ServeOptions<unknown>['routes']
+				> = {};
 				for (const key in serveOptions.routes) {
 					mappedRoutes[`/${moduleName}${key}`] =
 						serveOptions.routes[key];
@@ -110,7 +113,7 @@ class WebServer {
 			})
 		);
 
-		const allRoutes: ServeOptions['routes'] = {};
+		const allRoutes: ServeOptions<unknown>['routes'] = {};
 		for (const { routes } of initValues) {
 			for (const key in routes) {
 				allRoutes[key] = routes[key];
@@ -119,7 +122,10 @@ class WebServer {
 
 		const websocketsByRoute: Record<
 			string,
-			| { websocket: ServeOptions['websocket']; moduleName: string }
+			| {
+					websocket: ServeOptions<unknown>['websocket'];
+					moduleName: string;
+			  }
 			| undefined
 		> = {};
 		for (const { moduleName, websocket } of initValues) {
@@ -141,10 +147,13 @@ class WebServer {
 
 	private async _listen(
 		modules: AllModules,
-		routes: ServeOptions['routes'],
+		routes: ServeOptions<unknown>['routes'],
 		websocketsByRoute: Record<
 			string,
-			| { websocket: ServeOptions['websocket']; moduleName: string }
+			| {
+					websocket: ServeOptions<unknown>['websocket'];
+					moduleName: string;
+			  }
 			| undefined
 		>
 	) {

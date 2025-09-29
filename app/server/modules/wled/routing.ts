@@ -18,19 +18,19 @@ const WLEDConfig = z.object({
 
 export type WLEDConfig = z.infer<typeof WLEDConfig>;
 
-export function initRouting(db: Database<WLEDDB>): ServeOptions {
+function _initRouting(db: Database<WLEDDB>) {
 	return createServeOptions({
 		'/config': {
-			GET: (req) => {
+			GET: (req, _server, { error, json }) => {
 				if (!auth(req)) {
-					return new Response('Unauthorized', { status: 401 });
+					return error('Unauthorized', 401);
 				}
 				const configJson = db.current().devices ?? [];
-				return Response.json({ devices: configJson });
+				return json({ devices: configJson });
 			},
-			POST: async (req) => {
+			POST: async (req, _server, { error, json }) => {
 				if (!auth(req)) {
-					return new Response('Unauthorized', { status: 401 });
+					return error('Unauthorized', 401);
 				}
 
 				try {
@@ -39,14 +39,18 @@ export function initRouting(db: Database<WLEDDB>): ServeOptions {
 					// Store the config
 					db.update((old) => ({ ...old, devices: config.devices }));
 
-					return Response.json({ success: true });
-				} catch (error) {
-					return Response.json(
-						{ error: 'Invalid config structure' },
-						{ status: 400 }
-					);
+					return json({ success: true });
+				} catch (e) {
+					return error({ error: 'Invalid config structure' }, 400);
 				}
 			},
 		},
 	});
 }
+
+export const initRouting = _initRouting as (
+	db: Database<WLEDDB>
+) => ServeOptions<unknown>;
+
+export type WledRoutes =
+	ReturnType<typeof _initRouting> extends ServeOptions<infer R> ? R : never;

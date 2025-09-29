@@ -3,9 +3,9 @@ import type { ServeOptions } from '../../lib/routes';
 import { LogObj } from '../../lib/logging/lob-obj';
 import { triggerWebhooks } from './webhooks';
 
-export function initRouting(): ServeOptions {
+function _initRouting() {
 	return createServeOptions({
-		'/:name': async (req) => {
+		'/:name': async (req, _server, { text }) => {
 			const name = req.params.name;
 			const params = await req.json();
 			await triggerWebhooks(
@@ -13,7 +13,12 @@ export function initRouting(): ServeOptions {
 				params,
 				LogObj.fromReqRes(req).attachMessage(`Webhook ${name}`)
 			);
-			return new Response('OK', { status: 200 });
+			return text('OK', 200);
 		},
 	});
 }
+
+export const initRouting = _initRouting as () => ServeOptions<unknown>;
+
+export type WebhookRoutes =
+	ReturnType<typeof _initRouting> extends ServeOptions<infer R> ? R : never;

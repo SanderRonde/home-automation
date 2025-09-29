@@ -1,23 +1,21 @@
-import { createServeOptions } from '../../lib/routes';
+import { createServeOptions, staticResponse } from '../../lib/routes';
 import type { ServeOptions } from '../../lib/routes';
 import { MCPNodeServer } from './server';
 import type { ModuleConfig } from '..';
 
 let mcpNodeServer: MCPNodeServer | null = null;
 
-export async function initRouting(config: ModuleConfig): Promise<ServeOptions> {
+async function _initRouting(config: ModuleConfig) {
 	// Create and start Node.js server for MCP
 	mcpNodeServer = new MCPNodeServer(config);
 	const port = await mcpNodeServer.start();
 
 	return createServeOptions({
-		'/mcp': async (req: Request) => {
+		'/mcp': async (req, _server, { error }) => {
 			// Proxy request to Node.js server
 			const nodeServer = mcpNodeServer?.getServer();
 			if (!nodeServer) {
-				return new Response('MCP server not available', {
-					status: 503,
-				});
+				return error('MCP server not available', 503);
 			}
 
 			// Forward the request to the Node.js server
@@ -29,15 +27,20 @@ export async function initRouting(config: ModuleConfig): Promise<ServeOptions> {
 			});
 
 			try {
+				// eslint-disable-next-line no-restricted-globals
 				const response = await fetch(forwardedReq);
-				return response;
-			} catch (error) {
+				return staticResponse(response);
+			} catch (e) {
 				console.error(
 					'Error forwarding request to MCP Node.js server:',
 					error
 				);
-				return new Response('Internal server error', { status: 500 });
+				return error('Internal server error', 500);
 			}
 		},
 	});
 }
+
+export const initRouting = _initRouting as (
+	config: ModuleConfig
+) => ServeOptions<unknown>;

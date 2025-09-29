@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import type { SwitchConfig } from '../../../server/modules/switch/routing';
 import type * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
+import { apiGet, apiPost } from '../../lib/fetch';
 import { DevicePicker } from './DevicePicker';
 import type { editor } from 'monaco-editor';
 import Editor from '@monaco-editor/react';
@@ -111,12 +112,7 @@ export const SwitchEditor = (): JSX.Element => {
 
 	const loadConfig = async () => {
 		try {
-			const response = await fetch('/switch/config/raw', {
-				method: 'GET',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-			});
+			const response = await apiGet('switch', '/config/raw', {});
 
 			if (response.ok) {
 				const config = await response.json();
@@ -202,13 +198,14 @@ export const SwitchEditor = (): JSX.Element => {
 
 		try {
 			const config = JSON.parse(editorContent);
-			const response = await fetch('/switch/config', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify(config),
-			});
+			const response = await apiPost(
+				'switch',
+				'/config',
+				{},
+				{
+					body: JSON.stringify(config),
+				}
+			);
 
 			if (response.ok) {
 				setOriginalContent(editorContent);

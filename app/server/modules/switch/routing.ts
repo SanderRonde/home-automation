@@ -39,10 +39,10 @@ export interface SwitchConfigWithValues extends Omit<SwitchConfig, 'groups'> {
 
 export type SwitchConfig = z.infer<typeof SwitchConfig>;
 
-export function initRouting(
+function _initRouting(
 	{ modules, wsPublish }: ModuleConfig,
 	db: Database<SwitchDB>
-): ServeOptions {
+) {
 	const getDeviceValue = async (
 		deviceIds: string[]
 	): Promise<boolean | null> => {
@@ -173,53 +173,50 @@ export function initRouting(
 		});
 	});
 
-	return createServeOptions(
+	const res = createServeOptions(
 		{
 			'/': switchHtml,
 			'/config': {
-				GET: async (req) => {
+				GET: async (req, _server, { json, error }) => {
 					if (!auth(req)) {
-						return new Response('Unauthorized', { status: 401 });
+						return error('Unauthorized', 401);
 					}
-					return Response.json(await getConfigWithValues());
+					return json(await getConfigWithValues());
 				},
-				POST: async (req) => {
+				POST: async (req, _server, { json, error }) => {
 					if (!auth(req)) {
-						return new Response(null, { status: 401 });
+						return error('Unauthorized', 401);
 					}
 
 					const groups = SwitchConfig.parse(await req.json());
 					try {
 						// Validate the config structure
 						if (!groups || !Array.isArray(groups)) {
-							return Response.json(
+							return error(
 								{ error: 'Invalid config structure' },
-								{ status: 400 }
+								400
 							);
 						}
 
 						// Store the config
 						db.update((old) => ({ ...old, groups }));
 
-						return Response.json({ success: true });
-					} catch (error) {
-						return Response.json(
-							{ error: 'Failed to save config' },
-							{ status: 500 }
-						);
+						return json({ success: true });
+					} catch (e) {
+						return error({ error: 'Failed to save config' }, 500);
 					}
 				},
 			},
-			'/config/raw': (req) => {
+			'/config/raw': (req, _server, { json, error }) => {
 				if (!auth(req)) {
-					return new Response('Unauthorized', { status: 401 });
+					return error('Unauthorized', 401);
 				}
 				const configJson = db.current().groups ?? [];
-				return Response.json({ groups: configJson });
+				return json({ groups: configJson });
 			},
-			'/device/toggle': async (req) => {
+			'/device/toggle': async (req, _server, { json, error }) => {
 				if (!auth(req)) {
-					return new Response(null, { status: 401 });
+					return error('Unauthorized', 401);
 				}
 				const { deviceIds } = z
 					.object({
@@ -238,26 +235,26 @@ export function initRouting(
 					);
 
 					if (success) {
-						return Response.json({
+						return json({
 							success: true,
 							newValue: !currentValue,
 						});
 					} else {
-						return Response.json(
+						return json(
 							{ error: 'Failed to toggle device' },
 							{ status: 500 }
 						);
 					}
 				} catch (error) {
-					return Response.json(
+					return json(
 						{ error: 'Failed to toggle device' },
 						{ status: 500 }
 					);
 				}
 			},
-			'/device/set': async (req) => {
+			'/device/set': async (req, _server, { json, error }) => {
 				if (!auth(req)) {
-					return new Response('Unauthorized', { status: 401 });
+					return error('Unauthorized', 401);
 				}
 				const { deviceIds, value } = z
 					.object({
@@ -270,15 +267,15 @@ export function initRouting(
 					const success = await setDeviceValue(deviceIds, value);
 
 					if (success) {
-						return Response.json({ success: true });
+						return json({ success: true });
 					} else {
-						return Response.json(
+						return json(
 							{ error: 'Failed to set device' },
 							{ status: 500 }
 						);
 					}
 				} catch (error) {
-					return Response.json(
+					return json(
 						{ error: 'Failed to set device' },
 						{ status: 500 }
 					);
@@ -291,4 +288,13 @@ export function initRouting(
 			},
 		}
 	);
+	return res;
 }
+
+export const initRouting = _initRouting as (
+	config: ModuleConfig,
+	db: Database<SwitchDB>
+) => ServeOptions<unknown>;
+
+export type SwitchRoutes =
+	ReturnType<typeof _initRouting> extends ServeOptions<infer R> ? R : never;

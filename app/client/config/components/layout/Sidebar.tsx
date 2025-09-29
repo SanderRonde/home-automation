@@ -1,4 +1,11 @@
 import {
+	DeviceHub as DeviceHubIcon,
+	Settings as SettingsIcon,
+	Storage as StorageIcon,
+	Cloud as CloudIcon,
+	Lightbulb as LightbulbIcon,
+} from '@mui/icons-material';
+import {
 	Drawer,
 	List,
 	ListItemButton,
@@ -6,13 +13,7 @@ import {
 	ListItemText,
 	styled,
 } from '@mui/material';
-import {
-	DeviceHub as DeviceHubIcon,
-	Settings as SettingsIcon,
-	Storage as StorageIcon,
-	Cloud as CloudIcon,
-	Lightbulb as LightbulbIcon,
-} from '@mui/icons-material';
+import * as React from 'react';
 
 const StyledDrawer = styled(Drawer)(({ theme }) => ({
 	'& .MuiDrawer-paper': {

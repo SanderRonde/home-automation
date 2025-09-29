@@ -14,10 +14,7 @@ import {
 	Chip,
 	CircularProgress,
 } from '@mui/material';
-import type {
-	DeviceInfo,
-	DeviceListResponse,
-} from '../../../server/modules/device/routing';
+import { apiGet, ReturnTypeForApi } from '../../lib/fetch';
 import React from 'react';
 
 interface DevicePickerProps {
@@ -33,7 +30,9 @@ export const DevicePicker: React.FC<DevicePickerProps> = (props) => {
 		props.currentSelection
 	);
 	const [searchTerm, setSearchTerm] = React.useState('');
-	const [devices, setDevices] = React.useState<DeviceInfo[]>([]);
+	const [devices, setDevices] = React.useState<
+		ReturnTypeForApi<'device', '/list', 'GET'>['ok']['devices']
+	>([]);
 	const [loading, setLoading] = React.useState(false);
 
 	React.useEffect(() => {
@@ -46,15 +45,10 @@ export const DevicePicker: React.FC<DevicePickerProps> = (props) => {
 	const loadDevices = async () => {
 		setLoading(true);
 		try {
-			const response = await fetch('/device/list', {
-				method: 'GET',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-			});
+			const response = await apiGet('device', '/list', {});
 
 			if (response.ok) {
-				const data = (await response.json()) as DeviceListResponse;
+				const data = await response.json();
 				setDevices(data.devices || []);
 			} else {
 				console.error('Failed to load devices');

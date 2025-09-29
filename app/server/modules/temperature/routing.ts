@@ -6,15 +6,12 @@ import type { ModuleConfig } from '..';
 import { auth } from '../../lib/auth';
 import * as z from 'zod';
 
-export function initRouting({ sqlDB }: ModuleConfig): ServeOptions {
+function _initRouting({ sqlDB }: ModuleConfig) {
 	return createServeOptions({
-		'/report/:name/:temp': async (req) => {
+		'/report/:name/:temp': async (req, _server, { error, text }) => {
 			const temp = parseFloat(req.params.temp);
 			if (Number.isNaN(temp) || temp === 0) {
-				return new Response(
-					`Invalid temperature "${req.params.temp}"`,
-					{ status: 400 }
-				);
+				return error(`Invalid temperature "${req.params.temp}"`, 400);
 			}
 
 			// Set last temp
@@ -24,14 +21,14 @@ export function initRouting({ sqlDB }: ModuleConfig): ServeOptions {
 			LogObj.fromReqRes(req).attachMessage(
 				`Reported temperature: "${controller.getLastTemp()}`
 			);
-			return new Response(
+			return text(
 				`Reported temperature: "${controller.getLastTemp()}"`,
-				{ status: 200 }
+				200
 			);
 		},
-		'/getTemp': async (req) => {
+		'/getTemp': async (req, _server, { error, json }) => {
 			if (!auth(req)) {
-				return new Response('Unauthorized', { status: 401 });
+				return error('Unauthorized', 401);
 			}
 			const body = z
 				.object({
@@ -42,11 +39,16 @@ export function initRouting({ sqlDB }: ModuleConfig): ServeOptions {
 			LogObj.fromReqRes(req).attachMessage(
 				`Getting temp. Returning ${controller.getLastTemp()}`
 			);
-			return new Response(
-				JSON.stringify({
-					temp: controller.getLastTemp(),
-				})
-			);
+			return json({
+				temp: controller.getLastTemp(),
+			});
 		},
 	});
 }
+
+export const initRouting = _initRouting as (
+	config: ModuleConfig
+) => ServeOptions<unknown>;
+
+export type TemperatureRoutes =
+	ReturnType<typeof _initRouting> extends ServeOptions<infer R> ? R : never;

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { createServeOptions } from '../../lib/routes';
+import { createServeOptions, staticResponse } from '../../lib/routes';
 import type { ServeOptions } from '../../lib/routes';
 import type { Database } from '../../lib/db';
 import type eWelink from 'ewelink-api-next';
@@ -7,31 +7,33 @@ import type { ModuleConfig } from '..';
 import { getEnv } from '../../lib/io';
 import type { EWelinkDB } from '.';
 
-export function initRouting(
+function _initRouting(
 	{ db }: ModuleConfig,
 	api: InstanceType<typeof eWelink.WebAPI> | null
-): ServeOptions {
+) {
 	return createServeOptions({
-		'/oauth': () => {
+		'/oauth': (_req, _server, { error }) => {
 			if (!api) {
-				return new Response(null, { status: 500 });
+				return error('No API', 500);
 			}
 
-			return Response.redirect(
-				api.oauth.createLoginUrl({
-					redirectUrl: `${getEnv(
-						'SECRET_EWELINK_REDIRECT_URL_BASE',
-						true
-					)}/ewelink/redirect_url`,
-					state: 'XXX',
-				})
+			return staticResponse(
+				Response.redirect(
+					api.oauth.createLoginUrl({
+						redirectUrl: `${getEnv(
+							'SECRET_EWELINK_REDIRECT_URL_BASE',
+							true
+						)}/ewelink/redirect_url`,
+						state: 'XXX',
+					})
+				)
 			);
 		},
-		'/redirect_url': async (req) => {
+		'/redirect_url': async (req, _server, { error, text }) => {
 			const queryParams = new URL(req.url).searchParams;
 			const code = queryParams.get('code');
 			if (!api) {
-				return new Response(null, { status: 500 });
+				return error('No API', 500);
 			}
 
 			const token = await api.oauth.getToken({
@@ -43,9 +45,9 @@ export function initRouting(
 				region: getEnv('SECRET_EWELINK_REGION', true),
 			});
 			if (!token.data) {
-				return new Response(
+				return error(
 					'Failed to get token! ' + (token.msg as string),
-					{ status: 500 }
+					500
 				);
 			}
 
@@ -58,12 +60,15 @@ export function initRouting(
 			api.at = token.data.accessToken;
 			queueEwelinkTokenRefresh(api, db);
 
-			return new Response(`Success!\nResponse:${JSON.stringify(token)}`, {
-				status: 200,
-			});
+			return text(`Success!\nResponse:${JSON.stringify(token)}`, 200);
 		},
 	});
 }
+
+export const initRouting = _initRouting as (
+	config: ModuleConfig,
+	api: InstanceType<typeof eWelink.WebAPI> | null
+) => ServeOptions<unknown>;
 
 export function queueEwelinkTokenRefresh(
 	// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
@@ -105,3 +110,6 @@ export function queueEwelinkTokenRefresh(
 		setTimeout(refresh, timeToRefresh);
 	}
 }
+
+export type EwelinkRoutes =
+	ReturnType<typeof _initRouting> extends ServeOptions<infer R> ? R : never;

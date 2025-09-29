@@ -96,6 +96,7 @@ function race<T>(...promises: Promise<T | undefined>[]): Promise<T> {
 async function fastest(req: Request) {
 	return race(
 		caches.match(req),
+		// eslint-disable-next-line no-restricted-globals
 		fetch(req, {
 			credentials: 'include',
 		})
@@ -109,6 +110,7 @@ self.addEventListener('fetch', (event) => {
 		pathname.indexOf('serviceworker.js') > -1
 	) {
 		event.respondWith(
+			// eslint-disable-next-line no-restricted-globals
 			fetch(event.request, {
 				credentials: 'include',
 			})

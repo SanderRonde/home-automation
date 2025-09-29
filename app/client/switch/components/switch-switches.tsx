@@ -12,6 +12,7 @@ import {
 import useWebsocket from '../../shared/lib/resilient-socket';
 import WarningIcon from '@mui/icons-material/Warning';
 import React, { useEffect, useState } from 'react';
+import { apiGet, apiPost } from '../../lib/fetch';
 
 interface SwitchSwitchesProps {
 	initialConfig?: SwitchConfigWithValues;
@@ -27,13 +28,14 @@ export const SwitchSwitches: React.FC<SwitchSwitchesProps> = (props) => {
 		const itemKey = deviceIds.join(',');
 		setLoadingItems((prev) => [...prev, itemKey]);
 		try {
-			const response = await fetch('/switch/device/toggle', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({ deviceIds }),
-			});
+			const response = await apiPost(
+				'switch',
+				'/device/toggle',
+				{},
+				{
+					deviceIds,
+				}
+			);
 			if (response.ok) {
 				await refreshConfig();
 			}
@@ -53,12 +55,7 @@ export const SwitchSwitches: React.FC<SwitchSwitchesProps> = (props) => {
 
 	const refreshConfig = async () => {
 		try {
-			const response = await fetch('/switch/config', {
-				method: 'GET',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-			});
+			const response = await apiGet('switch', '/config', {});
 			if (response.ok) {
 				const newConfig = await response.json();
 				setConfig(newConfig);

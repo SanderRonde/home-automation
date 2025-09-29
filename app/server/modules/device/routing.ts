@@ -11,16 +11,9 @@ export interface DeviceInfo {
 	name?: string;
 }
 
-export interface DeviceListResponse {
-	devices: DeviceInfo[];
-}
-
-export function initRouting(
-	{ db }: ModuleConfig,
-	api: DeviceAPI
-): ServeOptions {
+function _initRouting({ db }: ModuleConfig, api: DeviceAPI) {
 	return createServeOptions({
-		'/list': async () => {
+		'/list': async (_req, _server, { json }) => {
 			const currentDeviceIds = Object.keys(await api.devices.get());
 			const knownDevices = api.getStoredDevices();
 			const now = Date.now();
@@ -60,11 +53,9 @@ export function initRouting(
 			}
 			db.update((old) => ({ ...old, device_registry: updatedDevices }));
 
-			const response: DeviceListResponse = { devices };
-
-			return Response.json(response);
+			return json({ devices });
 		},
-		'/update-name': (req) => {
+		'/update-name': (req, _server, { json }) => {
 			const { deviceId, name } = z
 				.object({
 					deviceId: z.string(),
@@ -74,13 +65,18 @@ export function initRouting(
 				.parse(req.json());
 
 			if (api.updateDeviceName(deviceId, name)) {
-				return Response.json({ success: true });
+				return json({ success: true });
 			}
 
-			return Response.json(
-				{ error: 'Device not found' },
-				{ status: 404 }
-			);
+			return json({ error: 'Device not found' }, { status: 404 });
 		},
 	});
 }
+
+export const initRouting = _initRouting as (
+	config: ModuleConfig,
+	api: DeviceAPI
+) => ServeOptions<unknown>;
+
+export type DeviceRoutes =
+	ReturnType<typeof _initRouting> extends ServeOptions<infer R> ? R : never;

@@ -1,6 +1,6 @@
+import { createServeOptions, staticResponse } from '../../lib/routes';
 import configHtml from '../../../client/config/index.html';
 import type { DeviceEndpoint } from '../device/device';
-import { createServeOptions } from '../../lib/routes';
 import type { ServeOptions } from '../../lib/routes';
 import { CLIENT_FOLDER } from '../../lib/constants';
 import type { ModuleConfig } from '..';
@@ -36,15 +36,20 @@ export interface ConfigPairDeviceResponse {
 	devices: string[];
 }
 
-export function initRouting({ modules }: ModuleConfig): ServeOptions {
+function _initRouting({ modules }: ModuleConfig) {
 	return createServeOptions({
 		'/': configHtml,
-		'/favicon.ico': new Response(
-			Bun.file(path.join(CLIENT_FOLDER, 'config/static', 'favicon.ico'))
+		// TODO:(sander)
+		'/favicon.ico': staticResponse(
+			new Response(
+				Bun.file(
+					path.join(CLIENT_FOLDER, 'config/static', 'favicon.ico')
+				)
+			)
 		),
-		'/getDevices': async (req) => {
+		'/getDevices': async (req, _server, { json, error }) => {
 			if (!auth(req)) {
-				return new Response('Unauthorized', { status: 401 });
+				return error('Unauthorized', 401);
 			}
 			const devices = [
 				...Object.values(
@@ -89,21 +94,28 @@ export function initRouting({ modules }: ModuleConfig): ServeOptions {
 				};
 				responseDevices.push(responseDevice);
 			}
-			return Response.json({
+			return json({
 				devices: responseDevices,
 			});
 		},
-		'/pair/:code': async (req) => {
+		'/pair/:code': async (req, _server, { json, error }) => {
 			if (!auth(req)) {
-				return new Response('Unauthorized', { status: 401 });
+				return error('Unauthorized', 401);
 			}
 			const matterClient = await modules.matter.server.value;
 			const pairedDevices = await matterClient.commission(
 				req.params.code
 			);
-			return Response.json({
+			return json({
 				devices: pairedDevices,
 			} satisfies ConfigPairDeviceResponse);
 		},
 	});
 }
+
+export type ConfigRoutes =
+	ReturnType<typeof _initRouting> extends ServeOptions<infer R> ? R : never;
+
+export const initRouting = _initRouting as (
+	config: ModuleConfig
+) => ServeOptions<unknown>;

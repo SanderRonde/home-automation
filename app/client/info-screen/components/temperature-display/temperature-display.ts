@@ -52,6 +52,7 @@ export class TemperatureDisplay extends ConfigurableWebComponent<{
 		}
 	): Promise<Response | null> {
 		try {
+			// eslint-disable-next-line no-restricted-globals
 			const response = await fetch(url, {
 				method: 'POST',
 				headers: {

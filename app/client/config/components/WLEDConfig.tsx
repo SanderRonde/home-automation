@@ -1,4 +1,3 @@
-import React, { useState, useEffect } from 'react';
 import {
 	Box,
 	Card,
@@ -16,15 +15,16 @@ import {
 	Chip,
 } from '@mui/material';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
-import AddIcon from '@mui/icons-material/Add';
+import type { ReturnTypeForApi } from '../../lib/fetch';
 import DeleteIcon from '@mui/icons-material/Delete';
-
-interface WLEDConfig {
-	devices: string[];
-}
+import React, { useState, useEffect } from 'react';
+import { apiGet, apiPost } from '../../lib/fetch';
+import AddIcon from '@mui/icons-material/Add';
 
 export const WLEDConfig = (): JSX.Element => {
-	const [config, setConfig] = useState<WLEDConfig>({ devices: [] });
+	const [config, setConfig] = useState<
+		ReturnTypeForApi<'wled', '/config', 'GET'>['ok']
+	>({ devices: [] });
 	const [newIP, setNewIP] = useState('');
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -32,34 +32,36 @@ export const WLEDConfig = (): JSX.Element => {
 
 	// Load config on component mount
 	useEffect(() => {
-		loadConfig();
+		void loadConfig();
 	}, []);
 
 	const loadConfig = async () => {
 		try {
-			const response = await fetch('/wled/config');
+			const response = await apiGet('wled', '/config', {});
 			if (response.ok) {
-				const data = await response.json();
-				setConfig(data);
+				setConfig(await response.json());
 			}
 		} catch (err) {
 			console.error('Failed to load WLED config:', err);
 		}
 	};
 
-	const saveConfig = async (newConfig: WLEDConfig) => {
+	const saveConfig = async (
+		newConfig: ReturnTypeForApi<'wled', '/config', 'GET'>['ok']
+	) => {
 		setLoading(true);
 		setError(null);
 		setSuccess(false);
 
 		try {
-			const response = await fetch('/wled/config', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify(newConfig),
-			});
+			const response = await apiPost(
+				'wled',
+				'/config',
+				{},
+				{
+					body: newConfig,
+				}
+			);
 
 			if (response.ok) {
 				setConfig(newConfig);
@@ -76,11 +78,14 @@ export const WLEDConfig = (): JSX.Element => {
 		}
 	};
 
-	const addDevice = () => {
-		if (!newIP.trim()) return;
-		
+	const addDevice = async () => {
+		if (!newIP.trim()) {
+			return;
+		}
+
 		// Basic IP validation
-		const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+		const ipRegex =
+			/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
 		if (!ipRegex.test(newIP.trim())) {
 			setError('Please enter a valid IP address');
 			return;
@@ -95,22 +100,22 @@ export const WLEDConfig = (): JSX.Element => {
 			...config,
 			devices: [...config.devices, newIP.trim()],
 		};
-		
-		saveConfig(newConfig);
+
+		await saveConfig(newConfig);
 		setNewIP('');
 	};
 
-	const removeDevice = (ip: string) => {
+	const removeDevice = async (ip: string) => {
 		const newConfig = {
 			...config,
-			devices: config.devices.filter(device => device !== ip),
+			devices: config.devices.filter((device) => device !== ip),
 		};
-		saveConfig(newConfig);
+		await saveConfig(newConfig);
 	};
 
 	const handleKeyPress = (event: React.KeyboardEvent) => {
 		if (event.key === 'Enter') {
-			addDevice();
+			void addDevice();
 		}
 	};
 
@@ -125,8 +130,9 @@ export const WLEDConfig = (): JSX.Element => {
 				</Box>
 
 				<Alert severity="info">
-					Configure WLED devices by adding their IP addresses. These devices will be automatically
-					discovered and made available for control in your home automation system.
+					Configure WLED devices by adding their IP addresses. These
+					devices will be automatically discovered and made available
+					for control in your home automation system.
 				</Alert>
 
 				{error && (
@@ -171,7 +177,8 @@ export const WLEDConfig = (): JSX.Element => {
 
 							{config.devices.length === 0 ? (
 								<Alert severity="info">
-									No WLED devices configured. Add IP addresses above to get started.
+									No WLED devices configured. Add IP addresses
+									above to get started.
 								</Alert>
 							) : (
 								<List>
@@ -190,7 +197,9 @@ export const WLEDConfig = (): JSX.Element => {
 												/>
 												<IconButton
 													edge="end"
-													onClick={() => removeDevice(ip)}
+													onClick={() =>
+														removeDevice(ip)
+													}
 													disabled={loading}
 													color="error"
 												>
@@ -203,9 +212,11 @@ export const WLEDConfig = (): JSX.Element => {
 							)}
 
 							<Typography variant="body2" color="text.secondary">
-								<strong>Note:</strong> Make sure your WLED devices are connected to the same network
-								and accessible via HTTP. The system will automatically detect and configure them
-								when they come online.
+								<strong>Note:</strong> Make sure your WLED
+								devices are connected to the same network and
+								accessible via HTTP. The system will
+								automatically detect and configure them when
+								they come online.
 							</Typography>
 						</Stack>
 					</CardContent>

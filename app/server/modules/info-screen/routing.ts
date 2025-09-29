@@ -1,5 +1,5 @@
+import { createServeOptions, staticResponse } from '../../lib/routes';
 import infoScreenHtml from '../../../client/info-screen/index.html';
-import { createServeOptions } from '../../lib/routes';
 import { serveStatic } from '../../lib/serve-static';
 import { CLIENT_FOLDER } from '../../lib/constants';
 import { ExternalWeatherTimePeriod } from './types';
@@ -29,9 +29,9 @@ export async function initRouting(moduleConfig: ModuleConfig): Promise<void> {
 					await authCode(code);
 				}
 
-				return Response.redirect('/');
+				return staticResponse(Response.redirect('/'));
 			},
-			'/weather': async (req) => {
+			'/weather': async (req, _server, { json }) => {
 				const { type, period } = z
 					.object({
 						type: z.enum(['inside', 'outside', 'server']),
@@ -71,17 +71,17 @@ export async function initRouting(moduleConfig: ModuleConfig): Promise<void> {
 				})();
 				const { temperature } = response;
 
-				return Response.json({
+				return json({
 					...response,
 					temperature: `${Math.round(temperature * 10) / 10}°`,
 				});
 			},
-			'/calendar': async () => {
+			'/calendar': async (_req, _server, { json }) => {
 				try {
 					const events = await getEvents(7);
-					return Response.json({ events });
+					return json({ events });
 				} catch (e) {
-					return Response.json(
+					return json(
 						{ error: 'calendar API not authenticated' },
 						{ status: 500 }
 					);

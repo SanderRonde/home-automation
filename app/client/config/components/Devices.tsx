@@ -16,16 +16,17 @@ import {
 	CardActionArea,
 	CircularProgress,
 } from '@mui/material';
-import type {
-	ConfigDeviceEndpointResponse,
-	ConfigGetDevicesResponse,
-	ConfigPairDeviceResponse,
-} from '../../../server/modules/config/api';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import type { ReturnTypeForApi } from '../../lib/fetch';
 import React, { useState, useEffect } from 'react';
+import { apiGet, apiPost } from '../../lib/fetch';
 
 interface EndpointVisualizationProps {
-	endpoint: ConfigDeviceEndpointResponse;
+	endpoint: ReturnTypeForApi<
+		'config',
+		'/getDevices',
+		'GET'
+	>['ok']['devices'][number]['endpoints'][number];
 	level: number;
 	title?: string;
 }
@@ -93,9 +94,9 @@ const EndpointVisualization: React.FC<EndpointVisualizationProps> = (props) => {
 };
 
 export const Devices: React.FC = () => {
-	const [devices, setDevices] = useState<ConfigGetDevicesResponse['devices']>(
-		[]
-	);
+	const [devices, setDevices] = useState<
+		ReturnTypeForApi<'config', '/getDevices', 'GET'>['ok']['devices']
+	>([]);
 	const [pairingCode, setPairingCode] = useState('');
 	const [pairingLoading, setPairingLoading] = useState(false);
 	const [pairingMessage, setPairingMessage] = useState<{
@@ -112,8 +113,14 @@ export const Devices: React.FC = () => {
 			if (showLoading) {
 				setLoadingDevices(true);
 			}
-			const response = await fetch('/config/getDevices');
-			const data = (await response.json()) as ConfigGetDevicesResponse;
+			const response = await apiGet('config', '/getDevices', {});
+			const data = await response.json();
+
+			if (!response.ok) {
+				throw new Error(
+					`Failed to fetch devices: ${await response.text()}`
+				);
+			}
 
 			// Sort devices first by source, then alphabetically by name
 			const sortedDevices = data.devices.sort((a, b) => {
@@ -142,18 +149,17 @@ export const Devices: React.FC = () => {
 		setPairingMessage(null);
 
 		try {
-			const response = await fetch(`/config/pair/${pairingCode}`, {
-				method: 'POST',
+			const response = await apiPost('config', '/pair/:code', {
+				code: pairingCode,
 			});
 
 			if (!response.ok) {
 				throw new Error(
-					`Failed to pair device: ${response.statusText}`
+					`Failed to pair device: ${await response.text()}`
 				);
 			}
 
-			const pairedDevices =
-				(await response.json()) as ConfigPairDeviceResponse;
+			const pairedDevices = await response.json();
 			setPairingMessage({
 				type: 'success',
 				text: `Device pairing initiated successfully. ${pairedDevices.devices.length} device${pairedDevices.devices.length !== 1 ? 's' : ''} paired.`,

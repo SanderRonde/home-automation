@@ -1,5 +1,5 @@
+import { createServeOptions, staticResponse } from '../../lib/routes';
 import { SettablePromise } from '../../lib/settable-promise';
-import { createServeOptions } from '../../lib/routes';
 import type { ServeOptions } from '../../lib/routes';
 import { LogObj } from '../../lib/logging/lob-obj';
 import { TELEGRAM_IPS } from '../../lib/constants';
@@ -36,12 +36,13 @@ function isFromTelegram(req: BunRequest) {
 }
 
 const messageHandlerInstance = new SettablePromise<MessageHandler>();
-export function initRouting({ db }: ModuleConfig): ServeOptions {
+
+function _initRouting({ db }: ModuleConfig) {
 	const secret = getEnv('SECRET_BOT', true);
 	messageHandlerInstance.set(new MessageHandler(secret, db));
 
 	return createServeOptions({
-		'/msg': async (req) => {
+		'/msg': async (req, _server, { json }) => {
 			if (isFromTelegram(req)) {
 				const { message, edited_message } = z
 					.object({
@@ -52,12 +53,21 @@ export function initRouting({ db }: ModuleConfig): ServeOptions {
 				const logObj = LogObj.fromReqRes(req).attachMessage(
 					chalk.bold(chalk.cyan('[bot]'))
 				);
-				return await (
-					await messageHandlerInstance.value
-				).handleMessage(message, edited_message, logObj);
+				return staticResponse(
+					await (
+						await messageHandlerInstance.value
+					).handleMessage(message, edited_message, logObj)
+				);
 			} else {
-				return new Response('auth problem', { status: 500 });
+				return json('auth problem', { status: 500 });
 			}
 		},
 	});
 }
+
+export const initRouting = _initRouting as (
+	config: ModuleConfig
+) => ServeOptions<unknown>;
+
+export type BotRoutes =
+	ReturnType<typeof _initRouting> extends ServeOptions<infer R> ? R : never;
