@@ -7,39 +7,160 @@ import {
 	GeneralCommissioning,
 } from '@matter/main/clusters';
 import type {
+	ClusterId,
 	DeviceTypeId,
 	EndpointNumber,
 	Observable,
 	Observer,
 } from '@matter/main';
 import type { Endpoint, PairedNode } from '@project-chip/matter.js/device';
+import { Diagnostic, Environment, LogLevel, Logger } from '@matter/main';
 import type { NodeCommissioningOptions } from '@project-chip/matter.js';
 import { CommissioningController } from '@project-chip/matter.js';
-import { Environment, LogLevel, Logger } from '@matter/main';
+import { NodeStates } from '@project-chip/matter.js/device';
 import { ManualPairingCodeCodec } from '@matter/main/types';
 import type { NodeId } from '@matter/main/types';
-import { MatterDevice } from '../client/device';
 import { Data } from '../../../lib/data';
+import { MatterDevice } from '../client/device';
 
 Logger.level = LogLevel.ERROR;
 
 const environment = Environment.default;
 
-interface MatterDeviceInfo {
-	node: PairedNode;
-	rootEndpoint: Endpoint;
+export enum MatterServerOutputMessageType {
+	Response = 'response',
+	AttributeChanged = 'attributeChanged',
+	EventTriggered = 'eventTriggered',
+	StructureChanged = 'structureChanged',
+	StateChanged = 'stateChanged',
+}
+
+export type MatterServerOutputMessage =
+	| {
+			category: MatterServerOutputMessageType.Response;
+			identifier: number;
+			response: unknown;
+	  }
+	| {
+			category: MatterServerOutputMessageType.AttributeChanged;
+			nodeId: string;
+			attributePath: [
+				endpointNumber: number,
+				clusterId: ClusterId,
+				attributeName: string,
+			];
+			newValue: EncodedString<unknown>;
+	  }
+	| {
+			category: MatterServerOutputMessageType.EventTriggered;
+			nodeId: string;
+			eventPath: string[];
+			eventData: EncodedString<unknown>;
+	  }
+	| {
+			category: MatterServerOutputMessageType.StructureChanged;
+			nodeId: string;
+	  }
+	| {
+			category: MatterServerOutputMessageType.StateChanged;
+			nodeId: string;
+			newState: string;
+	  };
+
+export interface MatterDeviceCluster {
+	name: string;
+	id: ClusterId;
+}
+
+export interface MatterDeviceEndpoint {
+	number: string;
+	name: string;
+	deviceType: DeviceTypeId;
+	endpoints: MatterDeviceEndpoint[];
+	clusterMeta: MatterDeviceCluster[];
+}
+
+export interface MatterDeviceInfo {
+	node: PairedNode
+	number: string;
 	name: string;
 	label: string | undefined;
 	deviceType: DeviceTypeId;
-	endpoints: Endpoint[];
-	clusters: ClusterClientObj[];
+	endpoints: MatterDeviceEndpoint[];
+	clusterMeta: MatterDeviceCluster[];
 }
 
-export class MatterServer implements AsyncDisposable {
+export enum MatterServerInputMessageType {
+	ListDevices = 'listDevices',
+	PairWithCode = 'pairWithCode',
+	GetAttribute = 'getAttribute',
+	SetAttribute = 'setAttribute',
+	CallCluster = 'callCluster',
+}
+
+interface MatterServerInputParameters {
+	[MatterServerInputMessageType.ListDevices]: [];
+	[MatterServerInputMessageType.PairWithCode]: [code: string];
+	[MatterServerInputMessageType.GetAttribute]: [
+		nodeId: string,
+		endpointNumber: string,
+		clusterId: ClusterId,
+		attributeName: string,
+	];
+	[MatterServerInputMessageType.SetAttribute]: [
+		nodeId: string,
+		endpointNumber: string,
+		clusterId: ClusterId,
+		attributeName: string,
+		value: unknown,
+	];
+	[MatterServerInputMessageType.CallCluster]: [
+		nodeId: string,
+		endpointNumber: string,
+		clusterId: ClusterId,
+		commandName: string,
+		args: unknown[],
+	];
+}
+
+export type MatterServerInputMessage =
+	| {
+			type: MatterServerInputMessageType.ListDevices;
+			arguments: MatterServerInputParameters[MatterServerInputMessageType.ListDevices];
+	  }
+	| {
+			type: MatterServerInputMessageType.PairWithCode;
+			arguments: MatterServerInputParameters[MatterServerInputMessageType.PairWithCode];
+	  }
+	| {
+			type: MatterServerInputMessageType.GetAttribute;
+			arguments: MatterServerInputParameters[MatterServerInputMessageType.GetAttribute];
+	  }
+	| {
+			type: MatterServerInputMessageType.SetAttribute;
+			arguments: MatterServerInputParameters[MatterServerInputMessageType.SetAttribute];
+	  }
+	| {
+			type: MatterServerInputMessageType.CallCluster;
+			arguments: MatterServerInputParameters[MatterServerInputMessageType.CallCluster];
+	  };
+
+export interface MatterServerInputReturnValues {
+	[MatterServerInputMessageType.ListDevices]: MatterDeviceInfo[];
+	[MatterServerInputMessageType.PairWithCode]: string[];
+	[MatterServerInputMessageType.GetAttribute]: unknown;
+	[MatterServerInputMessageType.CallCluster]: unknown;
+	[MatterServerInputMessageType.SetAttribute]: void;
+}
+
+export class MatterServer implements AsyncDisposable{
 	readonly #commissioningController: CommissioningController;
+	#listeners: Set<(message: MatterServerOutputMessage) => void> = new Set();
 
 	public devices = new Data<Record<EndpointNumber, MatterDevice>>({});
 
+	// TODO:(sander) move NodeWatcher to be diretly called and be removed
+	// so call that from the mappers.
 	public constructor() {
 		/** Create Matter Controller Node and bind it to the Environment. */
 		this.#commissioningController = new CommissioningController({
@@ -52,7 +173,7 @@ export class MatterServer implements AsyncDisposable {
 		});
 	}
 
-	private _nodes: PairedNode[] = [];
+	private _nodes: NodeWatcher[] = [];
 
 	private async _watchNodeIds(nodeIds: NodeId[]): Promise<string[]> {
 		const nodes = await Promise.all(
@@ -70,7 +191,7 @@ export class MatterServer implements AsyncDisposable {
 				node.initialized ? Promise.resolve() : node.events.initialized
 			)
 		);
-		this._nodes.push(...nodes);
+		this._nodes.push(...nodes.map((node) => new NodeWatcher(node)));
 
 		return nodes
 			.flatMap((node) => node.getDevices())
@@ -104,20 +225,48 @@ export class MatterServer implements AsyncDisposable {
 				.getClusterClient(BridgedDeviceBasicInformationCluster)
 				?.attributes.nodeLabel?.get?.());
 
+		const collectRecursiveEndpoints = (
+			device: Endpoint
+		): MatterDeviceEndpoint[] => {
+			const endpoints: MatterDeviceEndpoint[] = [];
+			for (const endpoint of device.getChildEndpoints()) {
+				if (endpoint.number === undefined) {
+					continue;
+				}
+				const endpointInfo = {
+					number: endpoint.number.toString(),
+					name: endpoint.name,
+					deviceType: endpoint.deviceType,
+					clusterMeta: endpoint
+						.getAllClusterClients()
+						.map((clusterClient) => ({
+							name: clusterClient.name,
+							id: clusterClient.id,
+						})),
+				};
+				endpoints.push({
+					...endpointInfo,
+					endpoints: collectRecursiveEndpoints(endpoint),
+				});
+			}
+			return endpoints;
+		};
+
 		return {
 			node,
 			name: device.name,
 			label: nodeLabel,
 			deviceType: device.deviceType,
-			rootEndpoint: device,
-			endpoints: device
-				.getChildEndpoints()
-				.filter((e) => e.number !== undefined),
-			clusters: device.getAllClusterClients(),
+			number: device.number.toString(),
+			endpoints: collectRecursiveEndpoints(device),
+			clusterMeta: device.getAllClusterClients().map((clusterClient) => ({
+				name: clusterClient.name,
+				id: clusterClient.id,
+			})),
 		};
 	}
 
-	private _getRecursiveEndpoints(node: PairedNode): {
+	private _getRecursiveEndpoints(watchedNode: NodeWatcher): {
 		nodeId: NodeId;
 		endpoint: Endpoint;
 	}[] {
@@ -126,18 +275,18 @@ export class MatterServer implements AsyncDisposable {
 			endpoint: Endpoint;
 		}[] = [];
 		// Try to get the root device (endpoint 0) directly from the node
-		const rootDevice = node.getRootEndpoint?.();
+		const rootDevice = watchedNode.node.getRootEndpoint?.();
 		if (rootDevice) {
 			devices.push({
-				nodeId: node.nodeId,
+				nodeId: watchedNode.node.nodeId,
 				endpoint: rootDevice,
 			});
 		}
 
-		for (const device of node.getDevices()) {
+		for (const device of watchedNode.node.getDevices()) {
 			this._walkEndpoints(device, (endpoint) => {
 				devices.push({
-					nodeId: node.nodeId,
+					nodeId: watchedNode.node.nodeId,
 					endpoint,
 				});
 				return true;
@@ -148,10 +297,10 @@ export class MatterServer implements AsyncDisposable {
 	}
 
 	private async _listNodeDevices(
-		node: PairedNode
+		watchedNode: NodeWatcher
 	): Promise<MatterDeviceInfo[]> {
 		const deviceInfos: Promise<MatterDeviceInfo | null>[] = [];
-		const recursiveEndpoints = this._getRecursiveEndpoints(node);
+		const recursiveEndpoints = this._getRecursiveEndpoints(watchedNode);
 		if (
 			recursiveEndpoints.every(
 				(endpoint) =>
@@ -160,13 +309,16 @@ export class MatterServer implements AsyncDisposable {
 					)
 			)
 		) {
-			const rootEndpoint = node.getRootEndpoint();
+			const rootEndpoint = watchedNode.node.getRootEndpoint();
 			if (!rootEndpoint) {
 				return [];
 			}
 
 			// This node is a normal device.
-			const deviceInfo = await this._getDeviceInfo(rootEndpoint, node);
+			const deviceInfo = await this._getDeviceInfo(
+				rootEndpoint,
+				watchedNode.node
+			);
 			if (deviceInfo) {
 				return [deviceInfo];
 			}
@@ -175,7 +327,7 @@ export class MatterServer implements AsyncDisposable {
 
 		// This node is a matter bridge. It itself and all of its
 		// direct children are individual devices.
-		const rootEndpoint = node.getRootEndpoint();
+		const rootEndpoint = watchedNode.node.getRootEndpoint();
 		if (rootEndpoint?.number === undefined) {
 			return [];
 		}
@@ -190,13 +342,18 @@ export class MatterServer implements AsyncDisposable {
 
 		deviceInfos.push(
 			Promise.resolve({
-				node: node,
+				node: watchedNode.node,
 				name: rootEndpoint.name,
 				label: nodeLabel,
 				deviceType: rootEndpoint.deviceType,
-				rootEndpoint,
+				number: rootEndpoint.number.toString(),
 				endpoints: [],
-				clusters: rootEndpoint.getAllClusterClients(),
+				clusterMeta: rootEndpoint
+					.getAllClusterClients()
+					.map((clusterClient) => ({
+						name: clusterClient.name,
+						id: clusterClient.id,
+					})),
 			})
 		);
 
@@ -204,7 +361,9 @@ export class MatterServer implements AsyncDisposable {
 			if (
 				endpoint.getClusterClient(BridgedDeviceBasicInformationCluster)
 			) {
-				deviceInfos.push(this._getDeviceInfo(endpoint, node));
+				deviceInfos.push(
+					this._getDeviceInfo(endpoint, watchedNode.node)
+				);
 				return false;
 			}
 			return true;
@@ -222,6 +381,89 @@ export class MatterServer implements AsyncDisposable {
 		return deviceInfos;
 	}
 
+	public async getAttribute(
+		nodeId: string,
+		endpointNumber: string,
+		clusterId: ClusterId,
+		attributeName: string
+	): Promise<unknown> {
+		const result = this._nodes
+			.flatMap(this._getRecursiveEndpoints.bind(this))
+			.find(
+				(endpoint) =>
+					endpoint.endpoint.number?.toString() === endpointNumber &&
+					endpoint.nodeId.toString() === nodeId
+			);
+		if (!result) {
+			throw new Error('Endpoint not found');
+		}
+		const cluster = result.endpoint.getClusterClientById(clusterId);
+		if (!cluster) {
+			throw new Error('Cluster not found');
+		}
+		const attribute = cluster.attributes[attributeName];
+		if (!attribute) {
+			throw new Error('Attribute not found');
+		}
+		return attribute.get();
+	}
+
+	public async setAttribute(
+		nodeId: NodeId,
+		endpointNumber: EndpointNumber,
+		clusterId: ClusterId,
+		attributeName: string,
+		value: unknown
+	): Promise<unknown> {
+		const result = this._nodes
+			.flatMap(this._getRecursiveEndpoints.bind(this))
+			.find(
+				(endpoint) =>
+					endpoint.endpoint.number === endpointNumber &&
+					endpoint.nodeId === nodeId
+			);
+		if (!result) {
+			throw new Error('Endpoint not found');
+		}
+		const cluster = result.endpoint.getClusterClientById(clusterId);
+		if (!cluster) {
+			throw new Error('Cluster not found');
+		}
+		const attribute = cluster.attributes[attributeName];
+		if (!attribute) {
+			throw new Error('Attribute not found');
+		}
+		return attribute.set(value);
+	}
+
+	public async callCluster(
+		nodeId: NodeId,
+		endpointNumber: EndpointNumber,
+		clusterId: ClusterId,
+		commandName: string,
+		args: unknown[]
+	): Promise<unknown> {
+		const result = this._nodes
+			.flatMap(this._getRecursiveEndpoints.bind(this))
+			.find(
+				(endpoint) =>
+					endpoint.endpoint.number === endpointNumber &&
+					endpoint.nodeId === nodeId
+			);
+		if (!result) {
+			throw new Error('Endpoint not found');
+		}
+		const cluster = result.endpoint.getClusterClientById(clusterId);
+		if (!cluster) {
+			throw new Error('Cluster not found');
+		}
+		const command = cluster.commands[commandName];
+		if (!command) {
+			throw new Error('Command not found');
+		}
+		return (command as (...args: unknown[]) => Promise<unknown>)(...args);
+	}
+
 	public async start(): Promise<void> {
 		await this.#commissioningController.start();
 
@@ -229,9 +471,7 @@ export class MatterServer implements AsyncDisposable {
 			this.#commissioningController.getCommissionedNodes()
 		);
 
-		await this.listDevices().then((devices) =>
-			this.#updateDevices(devices)
-		);
+		await this.listDevices().then((devices) => this.#updateDevices(devices))
 	}
 
 	public async commission(pairingCode: string): Promise<string[]> {
@@ -273,20 +513,33 @@ export class MatterServer implements AsyncDisposable {
 			...this.devices.current(),
 		};
 		for (const deviceInfo of deviceInfos) {
-			const id = `${deviceInfo.node.nodeId}:${deviceInfo.rootEndpoint.number}`;
+			const id = `${deviceInfo.node.nodeId}:${deviceInfo.number}`;
 			if (devices[id]) {
 				continue;
 			}
 
 			devices[id] = new MatterDevice(
 				deviceInfo.node,
-				deviceInfo.rootEndpoint,
+				deviceInfo.number,
 				deviceInfo.label ?? deviceInfo.name,
-				deviceInfo.clusters,
+				this,
+				deviceInfo.clusterMeta,
 				deviceInfo.endpoints
 			);
 		}
 		this.devices.set(devices);
+	}
+
+	public addListener(
+		listener: (message: MatterServerOutputMessage) => void
+	): void {
+		this.#listeners.add(listener);
+	}
+
+	public removeListener(
+		listener: (message: MatterServerOutputMessage) => void
+	): void {
+		this.#listeners.delete(listener);
 	}
 
 	public [Symbol.asyncDispose](): Promise<void> {
@@ -294,22 +547,129 @@ export class MatterServer implements AsyncDisposable {
 	}
 }
 
-export type ObservableForObserver<T> =
-	T extends Observable<infer U> ? Observer<U> : never;
+class Disposable {
+	private _disposables: (() => void)[] = [];
 
-export type ClusterClientObj = NonNullable<
-	ReturnType<InstanceType<typeof Endpoint>['getClusterClientById']>
->;
+	public dispose() {
+		this._disposables.forEach((dispose) => dispose());
+		this._disposables.length = 0;
+	}
+
+	public pushDisposable(dispose: () => void) {
+		this._disposables.push(dispose);
+	}
+}
+
+class NodeWatcher extends Disposable {
+	public constructor(public readonly node: PairedNode) {
+		super();
+		this._listen();
+	}
+
+	private _listen() {
+		// Subscribe to events of the node
+		this.node.events.attributeChanged.on(this.attributeChanged);
+		this.node.events.eventTriggered.on(this.eventTriggered);
+		this.node.events.stateChanged.on(this.stateChanged);
+		this.node.events.structureChanged.on(this.structureChanged);
+
+		this.pushDisposable(() => {
+			this.node.events.attributeChanged.off(this.attributeChanged);
+			this.node.events.eventTriggered.off(this.eventTriggered);
+			this.node.events.stateChanged.off(this.stateChanged);
+			this.node.events.structureChanged.off(this.structureChanged);
+		});
+	}
+
+	private readonly attributeChanged: ObservableForObserver<
+		InstanceType<typeof PairedNode>['events']['attributeChanged']
+	> = (attribute) => {
+		writeStdout({
+			category: MatterServerOutputMessageType.AttributeChanged,
+			nodeId: this.node.nodeId,
+			attributePath: [
+				attribute.path.endpointId,
+				attribute.path.clusterId,
+				attribute.path.attributeName,
+			],
+			newValue: Diagnostic.json(attribute.value),
+		});
+	};
+
+	private readonly eventTriggered: ObservableForObserver<
+		InstanceType<typeof PairedNode>['events']['eventTriggered']
+	> = (event) => {
+		writeStdout({
+			category: MatterServerOutputMessageType.EventTriggered,
+			nodeId: this.node.nodeId,
+			eventPath: [
+				event.path.endpointId,
+				event.path.clusterId,
+				event.path.eventName,
+			],
+			eventData: Diagnostic.json(event.events),
+		});
+	};
+
+	private readonly structureChanged: ObservableForObserver<
+		InstanceType<typeof PairedNode>['events']['structureChanged']
+	> = () => {
+		writeStdout({
+			category: MatterServerOutputMessageType.StructureChanged,
+			nodeId: this.node.nodeId,
+		});
+		this._listen();
+	};
+
+	private readonly stateChanged: ObservableForObserver<
+		InstanceType<typeof PairedNode>['events']['stateChanged']
+	> = (info) => {
+		let stateMessage = '';
+		switch (info) {
+			case NodeStates.Connected:
+				stateMessage = 'connected';
+				break;
+			case NodeStates.Disconnected:
+				stateMessage = 'disconnected';
+				break;
+			case NodeStates.Reconnecting:
+				stateMessage = 'reconnecting';
+				break;
+			case NodeStates.WaitingForDeviceDiscovery:
+				stateMessage = 'waiting for device discovery';
+				break;
+		}
+		writeStdout({
+			category: MatterServerOutputMessageType.StateChanged,
+			nodeId: this.node.nodeId,
+			newState: stateMessage,
+		});
+	};
+}
+
+function writeStdout(message: unknown) {
+	process.stderr.write(
+		JSON.stringify(message, (_, value) =>
+			typeof value === 'bigint' ? value.toString() : value
+		) + '\n'
+	);
+}
+
+type ObservableForObserver<T> =
+	T extends Observable<infer U> ? Observer<U> : never;
 
 async function main() {
 	const controller = new MatterServer();
 	await controller.start();
 
 	if (process.argv.includes('--list-devices')) {
-		void controller.listDevices().then((devices) => {
-			console.log('devices:', devices);
-		});
+		void controller
+			.listDevices()
+			.then((devices) => {
+				console.log('devices:', devices);
+			});
 	}
+
 }
 
 if (require.main === module) {
