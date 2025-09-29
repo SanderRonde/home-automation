@@ -197,6 +197,7 @@ class WebServer {
 				: false,
 			error: (error) => {
 				console.error('Error', error);
+				return new Response('Error', { status: 500 });
 			},
 			websocket: {
 				open: (ws) => {

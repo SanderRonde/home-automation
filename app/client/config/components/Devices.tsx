@@ -15,11 +15,15 @@ import {
 	Grid,
 	CardActionArea,
 	CircularProgress,
+	Tooltip,
 } from '@mui/material';
+import { RoomPreferences as RoomIcon } from '@mui/icons-material';
+import { RoomAssignmentDialog } from './RoomAssignmentDialog';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import type { ReturnTypeForApi } from '../../lib/fetch';
 import React, { useState, useEffect } from 'react';
 import { apiGet, apiPost } from '../../lib/fetch';
+import * as Icons from '@mui/icons-material';
 
 interface EndpointVisualizationProps {
 	endpoint: ReturnTypeForApi<
@@ -107,6 +111,12 @@ export const Devices: React.FC = () => {
 		new Set()
 	);
 	const [loadingDevices, setLoadingDevices] = useState(false);
+	const [roomDialogOpen, setRoomDialogOpen] = useState(false);
+	const [selectedDevice, setSelectedDevice] = useState<{
+		id: string;
+		name: string;
+		room?: string;
+	} | null>(null);
 
 	const fetchDevices = async (showLoading = false) => {
 		try {
@@ -198,6 +208,31 @@ export const Devices: React.FC = () => {
 		});
 	};
 
+	const handleOpenRoomDialog = (
+		deviceId: string,
+		deviceName: string,
+		room?: string
+	) => {
+		setSelectedDevice({ id: deviceId, name: deviceName, room });
+		setRoomDialogOpen(true);
+	};
+
+	const handleCloseRoomDialog = () => {
+		setRoomDialogOpen(false);
+		setSelectedDevice(null);
+	};
+
+	const handleRoomAssigned = () => {
+		void fetchDevices();
+	};
+
+	const getIconComponent = (iconName: string) => {
+		const IconComponent = (Icons as Record<string, React.ComponentType>)[
+			iconName
+		];
+		return IconComponent ? <IconComponent /> : null;
+	};
+
 	useEffect(() => {
 		void fetchDevices();
 		// Poll for updates every 30 seconds
@@ -216,7 +251,7 @@ export const Devices: React.FC = () => {
 				<Grid size={8}>
 					<Box
 						sx={{
-							maxHeight: 'calc(100vh - 200px)',
+							maxHeight: '100%',
 							overflow: 'auto',
 							pr: 1,
 							'&::-webkit-scrollbar': {
@@ -257,62 +292,148 @@ export const Devices: React.FC = () => {
 
 								return (
 									<Card key={device.uniqueId} elevation={1}>
-										<CardActionArea
-											onClick={() =>
-												toggleDeviceExpansion(
-													device.uniqueId
-												)
-											}
+										<Box
+											sx={{
+												display: 'flex',
+												alignItems: 'stretch',
+											}}
 										>
-											<CardContent sx={{ py: 2 }}>
-												<Box
-													sx={{
-														display: 'flex',
-														alignItems: 'center',
-														gap: 2,
-													}}
-												>
-													<Typography
-														variant="h6"
+											<CardActionArea
+												onClick={() =>
+													toggleDeviceExpansion(
+														device.uniqueId
+													)
+												}
+												sx={{ flex: 1 }}
+											>
+												<CardContent sx={{ py: 2 }}>
+													<Box
 														sx={{
-															fontWeight: 'bold',
-															flex: 1,
+															display: 'flex',
+															alignItems:
+																'center',
+															gap: 2,
 														}}
 													>
-														{device.name}
-													</Typography>
-													{allEmojis && (
 														<Typography
 															variant="h6"
 															sx={{
-																fontSize:
-																	'1.2rem',
+																fontWeight:
+																	'bold',
+																flex: 1,
 															}}
 														>
-															{allEmojis}
+															{device.name}
+														</Typography>
+														{allEmojis && (
+															<Typography
+																variant="h6"
+																sx={{
+																	fontSize:
+																		'1.2rem',
+																}}
+															>
+																{allEmojis}
+															</Typography>
+														)}
+														<ExpandMoreIcon
+															sx={{
+																transform:
+																	isExpanded
+																		? 'rotate(180deg)'
+																		: 'rotate(0deg)',
+																transition:
+																	'transform 0.2s',
+															}}
+														/>
+													</Box>
+													<Typography
+														color="text.secondary"
+														variant="body2"
+														sx={{ mt: 1 }}
+													>
+														{device.source.emoji}{' '}
+														Device ID:{' '}
+														{device.uniqueId}
+													</Typography>
+												</CardContent>
+											</CardActionArea>
+											<Tooltip
+												title={
+													device.room
+														? 'Change room'
+														: 'Assign to room'
+												}
+											>
+												<Box
+													onClick={() => {
+														handleOpenRoomDialog(
+															device.uniqueId,
+															device.name,
+															device.room
+														);
+													}}
+													sx={{
+														display: 'flex',
+														alignItems: 'center',
+														gap: 1,
+														pr: 2,
+														pl: 2,
+														minWidth: 180,
+														borderLeft: '1px solid',
+														borderColor: 'divider',
+														backgroundColor:
+															device.room
+																? device.roomColor
+																: 'transparent',
+														cursor: 'pointer',
+														transition:
+															'filter 0.2s',
+														justifyContent:
+															'center',
+														'&:hover': {
+															filter: device.room
+																? 'brightness(0.9)'
+																: 'brightness(0.95)',
+															backgroundColor:
+																device.room
+																	? device.roomColor
+																	: 'action.hover',
+														},
+													}}
+												>
+													<Box
+														sx={{
+															color: device.room
+																? '#000'
+																: 'text.secondary',
+															display: 'flex',
+															alignItems:
+																'center',
+														}}
+													>
+														{device.roomIcon ? (
+															getIconComponent(
+																device.roomIcon
+															) || <RoomIcon />
+														) : (
+															<RoomIcon />
+														)}
+													</Box>
+													{device.room && (
+														<Typography
+															variant="body2"
+															sx={{
+																color: '#000',
+																fontWeight: 500,
+															}}
+														>
+															{device.room}
 														</Typography>
 													)}
-													<ExpandMoreIcon
-														sx={{
-															transform:
-																isExpanded
-																	? 'rotate(180deg)'
-																	: 'rotate(0deg)',
-															transition:
-																'transform 0.2s',
-														}}
-													/>
 												</Box>
-												<Typography
-													color="text.secondary"
-													variant="body2"
-													sx={{ mt: 0.5 }}
-												>
-													{device.source.emoji} Device
-													ID: {device.uniqueId}
-												</Typography>
-											</CardContent>
-										</CardActionArea>
+											</Tooltip>
+										</Box>
 
 										{isExpanded && (
 											<CardContent
@@ -461,6 +582,17 @@ export const Devices: React.FC = () => {
 					</Card>
 				</Grid>
 			</Grid>
+
+			{selectedDevice && (
+				<RoomAssignmentDialog
+					open={roomDialogOpen}
+					onClose={handleCloseRoomDialog}
+					deviceId={selectedDevice.id}
+					deviceName={selectedDevice.name}
+					currentRoom={selectedDevice.room}
+					onRoomAssigned={handleRoomAssigned}
+				/>
+			)}
 		</Box>
 	);
 };

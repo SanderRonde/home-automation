@@ -25,6 +25,9 @@ interface ConfigDeviceResponse extends ConfigDeviceEndpointResponse {
 		name: string;
 		emoji: string;
 	}[];
+	room?: string;
+	roomColor?: string;
+	roomIcon?: string;
 }
 
 export interface ConfigGetDevicesResponse {
@@ -53,6 +56,9 @@ function _initRouting({ modules }: ModuleConfig) {
 						await (await modules.device.api.value).devices.get()
 					),
 				];
+				const deviceApi = await modules.device.api.value;
+				const storedDevices = deviceApi.getStoredDevices();
+				const rooms = deviceApi.getRooms();
 				const responseDevices: ConfigDeviceResponse[] = [];
 
 				const getResponseForEndpoint = (
@@ -76,8 +82,13 @@ function _initRouting({ modules }: ModuleConfig) {
 				};
 
 				for (const device of devices) {
+					const deviceId = device.getUniqueId();
+					const storedDevice = storedDevices[deviceId];
+					const room = storedDevice?.room;
+					const roomInfo = room ? rooms[room] : undefined;
+
 					const responseDevice: ConfigDeviceResponse = {
-						uniqueId: device.getUniqueId(),
+						uniqueId: deviceId,
 						name: device.getDeviceName(),
 						source: {
 							name: device.getSource().value,
@@ -87,6 +98,9 @@ function _initRouting({ modules }: ModuleConfig) {
 							name: cluster.getName().value,
 							emoji: cluster.getName().toEmoji(),
 						})),
+						room: room,
+						roomColor: roomInfo?.color,
+						roomIcon: roomInfo?.icon,
 						...getResponseForEndpoint(device),
 					};
 					responseDevices.push(responseDevice);

@@ -62,52 +62,75 @@ export function createServeOptions<
 		return async (req: BunRequest, server: Server) => {
 			LogObj.fromIncomingReq(req);
 
-			// Check authentication if required
-			if (auth) {
-				const isAuthenticated = await checkAuth(req);
-				if (!isAuthenticated) {
-					// Check if this is an API request or a page request
-					const url = new URL(req.url);
-					const acceptHeader = req.headers.get('accept') || '';
-					const isApiRequest =
-						acceptHeader.includes('application/json') ||
-						url.pathname.startsWith('/api/') ||
-						req.method !== 'GET';
+			try {
+				// Check authentication if required
+				if (auth) {
+					const isAuthenticated = await checkAuth(req);
+					if (!isAuthenticated) {
+						// Check if this is an API request or a page request
+						const url = new URL(req.url);
+						const acceptHeader = req.headers.get('accept') || '';
+						const isApiRequest =
+							acceptHeader.includes('application/json') ||
+							url.pathname.startsWith('/api/') ||
+							req.method !== 'GET';
 
-					if (isApiRequest) {
-						// Return 401 for API requests
-						const unauthorizedRes = errorResponse(
-							'Unauthorized',
-							401
-						);
-						LogObj.logOutgoingResponse(
-							req,
-							unauthorizedRes,
-							server
-						);
-						return unauthorizedRes;
-					} else {
-						// Redirect to login page for regular page requests
-						const loginUrl = `/auth/login-page?redirect=${encodeURIComponent(url.pathname + url.search)}`;
-						const redirectRes = Response.redirect(
-							loginUrl,
-							302
-						) as BrandedResponse<unknown, false>;
-						LogObj.logOutgoingResponse(req, redirectRes, server);
-						return redirectRes;
+						if (isApiRequest) {
+							// Return 401 for API requests
+							const unauthorizedRes = errorResponse(
+								'Unauthorized',
+								401
+							);
+							LogObj.logOutgoingResponse(
+								req,
+								unauthorizedRes,
+								server
+							);
+							return unauthorizedRes;
+						} else {
+							// Redirect to login page for regular page requests
+							const loginUrl = `/auth/login-page?redirect=${encodeURIComponent(url.pathname + url.search)}`;
+							const redirectRes = Response.redirect(
+								loginUrl,
+								302
+							) as BrandedResponse<unknown, false>;
+							LogObj.logOutgoingResponse(
+								req,
+								redirectRes,
+								server
+							);
+							return redirectRes;
+						}
 					}
 				}
-			}
 
-			const res = await routeHandler(req, server, {
-				json: jsonResponse,
-				error: errorResponse,
-				text: textResponse,
-			});
-			if (res) {
-				LogObj.logOutgoingResponse(req, res, server);
+				const res = await routeHandler(req, server, {
+					json: jsonResponse,
+					error: errorResponse,
+					text: textResponse,
+				});
+				if (res) {
+					LogObj.logOutgoingResponse(req, res, server);
+				}
+				return res;
+			} catch (error) {
+				// Log the error
+				console.error('Error handling request:', error);
+
+				// Return a 500 error response
+				const errorRes = errorResponse(
+					{
+						error: 'Internal Server Error',
+						message:
+							error instanceof Error
+								? error.message
+								: 'Unknown error',
+					},
+					500
+				);
+				LogObj.logOutgoingResponse(req, errorRes, server);
+				return errorRes;
 			}
-			return res;
 		};
 	};
 

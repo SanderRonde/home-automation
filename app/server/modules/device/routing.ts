@@ -9,6 +9,17 @@ export interface DeviceInfo {
 	status: 'online' | 'offline' | 'unknown';
 	lastSeen: number; // timestamp
 	name?: string;
+	room?: string;
+}
+
+export interface RoomInfo {
+	name: string;
+	color: string; // Pastel color based on name hash
+	icon?: string; // Material Icon name
+}
+
+export interface RoomAssignments {
+	rooms: Record<string, RoomInfo>;
 }
 
 function _initRouting({ db }: ModuleConfig, api: DeviceAPI) {
@@ -59,20 +70,40 @@ function _initRouting({ db }: ModuleConfig, api: DeviceAPI) {
 
 				return json({ devices });
 			},
-			'/update-name': (req, _server, { json }) => {
+			'/update-name': async (req, _server, { json }) => {
 				const { deviceId, name } = z
 					.object({
 						deviceId: z.string(),
 						name: z.string(),
 					})
 					// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-					.parse(req.json());
+					.parse(await req.json());
 
 				if (api.updateDeviceName(deviceId, name)) {
 					return json({ success: true });
 				}
 
 				return json({ error: 'Device not found' }, { status: 404 });
+			},
+			'/update-room': async (req, _server, { json }) => {
+				const { deviceId, room, icon } = z
+					.object({
+						deviceId: z.string(),
+						room: z.string().optional(),
+						icon: z.string().optional(),
+					})
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+					.parse(await req.json());
+
+				if (api.updateDeviceRoom(deviceId, room, icon)) {
+					return json({ success: true });
+				}
+
+				return json({ error: 'Device not found' }, { status: 404 });
+			},
+			'/rooms': (_req, _server, { json }) => {
+				const rooms = api.getRooms();
+				return json({ rooms });
 			},
 		},
 		true

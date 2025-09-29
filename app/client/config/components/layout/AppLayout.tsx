@@ -73,7 +73,7 @@ export const AppLayout = (props: AppLayoutProps): JSX.Element => {
 						flexGrow: 1,
 						p: 3,
 						width: '100%',
-						height: '100vh',
+						height: 'calc(100vh - 64px)',
 						overflow: 'auto',
 						bgcolor: 'background.default',
 						marginTop: '64px',

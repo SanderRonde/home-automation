@@ -8,6 +8,7 @@ import { DeviceAPI } from './api';
 
 export interface DeviceDB {
 	device_registry: Record<string, DeviceInfo>;
+	room_icons?: Record<string, string>; // room name -> icon name
 }
 
 export const Device = new (class Device extends ModuleMeta {

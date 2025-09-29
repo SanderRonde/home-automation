@@ -6,13 +6,6 @@ import { SQL } from 'bun';
 
 const DB_PATH = path.join(__dirname, '../database/auth.db');
 
-interface User {
-	id: number;
-	username: string;
-	password_hash: string;
-	created_at: number;
-}
-
 class UserManager {
 	private readonly _db: SQL;
 

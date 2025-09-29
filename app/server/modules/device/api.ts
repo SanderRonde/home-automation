@@ -1,6 +1,6 @@
 import type { Device as DeviceInterface, DeviceSource } from './device';
+import type { DeviceInfo, RoomInfo } from './routing';
 import type { Database } from '../../lib/db';
-import type { DeviceInfo } from './routing';
 import { Data } from '../../lib/data';
 import type { DeviceDB } from '.';
 
@@ -52,6 +52,78 @@ export class DeviceAPI {
 		}
 
 		return false;
+	}
+
+	public updateDeviceRoom(
+		deviceId: string,
+		room?: string,
+		icon?: string
+	): boolean {
+		const knownDevices = this.getStoredDevices();
+
+		if (knownDevices[deviceId]) {
+			knownDevices[deviceId].room = room;
+
+			// Update room icon if provided and room exists
+			if (room && icon !== undefined) {
+				const db = this._db.current();
+				const roomIcons = db.room_icons || {};
+				if (icon) {
+					roomIcons[room] = icon;
+				} else {
+					delete roomIcons[room];
+				}
+				this._db.update((old) => ({
+					...old,
+					device_registry: knownDevices,
+					room_icons: roomIcons,
+				}));
+				return true;
+			}
+
+			this._db.update((old) => ({
+				...old,
+				device_registry: knownDevices,
+			}));
+			return true;
+		}
+
+		return false;
+	}
+
+	public getRooms(): Record<string, RoomInfo> {
+		const knownDevices = this.getStoredDevices();
+		const rooms: Record<string, RoomInfo> = {};
+		const roomIcons = this._db.current().room_icons || {};
+
+		for (const device of Object.values(knownDevices)) {
+			if (device.room) {
+				if (!rooms[device.room]) {
+					rooms[device.room] = {
+						name: device.room,
+						color: this.generatePastelColor(device.room),
+						icon: roomIcons[device.room],
+					};
+				}
+			}
+		}
+
+		return rooms;
+	}
+
+	private generatePastelColor(name: string): string {
+		// Simple hash function
+		let hash = 0;
+		for (let i = 0; i < name.length; i++) {
+			hash = name.charCodeAt(i) + ((hash << 5) - hash);
+		}
+
+		// Generate pastel colors (high lightness, medium saturation)
+		const hue = Math.abs(hash % 360);
+		const saturation = 45 + (Math.abs(hash >> 8) % 25); // 45-70%
+		const lightness = 75 + (Math.abs(hash >> 16) % 15); // 75-90%
+
+		return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 	}
 
 	public getStoredDevices(): Record<string, DeviceInfo> {
