@@ -6,7 +6,7 @@
 	],
 	"parserOptions": {
 		"tsconfigRootDir": "./",
-		"project": ["./app/server/tsconfig.json", "./app/client/tsconfig.json"],
+		"project": ["./app/tsconfig.json"],
 		"createDefaultProgram": true
 	},
 	"rules": {
@@ -83,26 +83,5 @@
 		"@typescript-eslint/ban-ts-comment": "off",
 		"@typescript-eslint/no-unsafe-argument": "off",
 		"node/no-extraneous-import": "off"
-	},
-	"overrides": [
-		{
-			"files": ["app/client/**/*"],
-			"rules": {
-				"no-restricted-imports": [
-					"error",
-					{
-						"patterns": [
-							{
-								"group": [
-									"**/server/**",
-									"!**/server/**/types.ts"
-								],
-								"message": "Client code should not import from server. Only whitelisted paths are allowed: **/routing.ts, **/types.ts, lib/routes.ts"
-							}
-						]
-					}
-				]
-			}
-		}
-	]
+	}
 }

@@ -14,7 +14,8 @@ import {
 	Chip,
 	CircularProgress,
 } from '@mui/material';
-import { apiGet, ReturnTypeForApi } from '../../lib/fetch';
+import type { ReturnTypeForApi } from '../../lib/fetch';
+import { apiGet } from '../../lib/fetch';
 import React from 'react';
 
 interface DevicePickerProps {

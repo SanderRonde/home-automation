@@ -1,5 +1,5 @@
-import type { Database } from '../../lib/db';
 import type { SwitchConfig } from './routing';
+import type { Database } from '../../lib/db';
 import { initRouting } from './routing';
 import type { ModuleConfig } from '..';
 import { ModuleMeta } from '../meta';

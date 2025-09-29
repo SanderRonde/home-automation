@@ -43,4 +43,4 @@ async function _initRouting(config: ModuleConfig) {
 
 export const initRouting = _initRouting as (
 	config: ModuleConfig
-) => ServeOptions<unknown>;
+) => Promise<ServeOptions<unknown>>;
