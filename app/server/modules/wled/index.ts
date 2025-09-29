@@ -27,7 +27,6 @@ export const WLed = new (class WLed extends ModuleMeta {
 				Object.keys(currentDevices),
 				data.devices ?? []
 			);
-			console.log(currentDevices, data.devices, added, removed);
 			for (const ip of added) {
 				const client = new WLEDClient(ip);
 				await client.init();

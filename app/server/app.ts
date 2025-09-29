@@ -191,9 +191,8 @@ class WebServer {
 						console: true,
 						chromeDevToolsAutomaticWorkspaceFolders: true,
 					}
-				: undefined,
+				: false,
 			error: (error) => {
-				// TODO:(sander) toggle doe snot work (500)
 				console.error('Error', error);
 			},
 			websocket: {
