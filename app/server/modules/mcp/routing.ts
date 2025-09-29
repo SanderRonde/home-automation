@@ -10,35 +10,38 @@ async function _initRouting(config: ModuleConfig) {
 	mcpNodeServer = new MCPNodeServer(config);
 	const port = await mcpNodeServer.start();
 
-	return createServeOptions({
-		'/mcp': async (req, _server, { error }) => {
-			// Proxy request to Node.js server
-			const nodeServer = mcpNodeServer?.getServer();
-			if (!nodeServer) {
-				return error('MCP server not available', 503);
-			}
+	return createServeOptions(
+		{
+			'/mcp': async (req, _server, { error }) => {
+				// Proxy request to Node.js server
+				const nodeServer = mcpNodeServer?.getServer();
+				if (!nodeServer) {
+					return error('MCP server not available', 503);
+				}
 
-			// Forward the request to the Node.js server
-			const nodeUrl = `http://localhost:${port}/mcp`;
-			const forwardedReq = new Request(nodeUrl, {
-				method: req.method,
-				headers: req.headers,
-				body: req.body,
-			});
+				// Forward the request to the Node.js server
+				const nodeUrl = `http://localhost:${port}/mcp`;
+				const forwardedReq = new Request(nodeUrl, {
+					method: req.method,
+					headers: req.headers,
+					body: req.body,
+				});
 
-			try {
-				// eslint-disable-next-line no-restricted-globals
-				const response = await fetch(forwardedReq);
-				return staticResponse(response);
-			} catch (e) {
-				console.error(
-					'Error forwarding request to MCP Node.js server:',
-					error
-				);
-				return error('Internal server error', 500);
-			}
+				try {
+					// eslint-disable-next-line no-restricted-globals
+					const response = await fetch(forwardedReq);
+					return staticResponse(response);
+				} catch (e) {
+					console.error(
+						'Error forwarding request to MCP Node.js server:',
+						error
+					);
+					return error('Internal server error', 500);
+				}
+			},
 		},
-	});
+		true
+	);
 }
 
 export const initRouting = _initRouting as (

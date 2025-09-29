@@ -41,28 +41,31 @@ function _initRouting({ db }: ModuleConfig) {
 	const secret = getEnv('SECRET_BOT', true);
 	messageHandlerInstance.set(new MessageHandler(secret, db));
 
-	return createServeOptions({
-		'/msg': async (req, _server, { json }) => {
-			if (isFromTelegram(req)) {
-				const { message, edited_message } = z
-					.object({
-						message: z.any(),
-						edited_message: z.any().optional(),
-					})
-					.parse(await req.json());
-				const logObj = LogObj.fromReqRes(req).attachMessage(
-					chalk.bold(chalk.cyan('[bot]'))
-				);
-				return staticResponse(
-					await (
-						await messageHandlerInstance.value
-					).handleMessage(message, edited_message, logObj)
-				);
-			} else {
-				return json('auth problem', { status: 500 });
-			}
+	return createServeOptions(
+		{
+			'/msg': async (req, _server, { json }) => {
+				if (isFromTelegram(req)) {
+					const { message, edited_message } = z
+						.object({
+							message: z.any(),
+							edited_message: z.any().optional(),
+						})
+						.parse(await req.json());
+					const logObj = LogObj.fromReqRes(req).attachMessage(
+						chalk.bold(chalk.cyan('[bot]'))
+					);
+					return staticResponse(
+						await (
+							await messageHandlerInstance.value
+						).handleMessage(message, edited_message, logObj)
+					);
+				} else {
+					return json('auth problem', { status: 500 });
+				}
+			},
 		},
-	});
+		false
+	);
 }
 
 export const initRouting = _initRouting as (

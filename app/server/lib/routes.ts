@@ -7,6 +7,7 @@ import type {
 	WebSocketServeOptions,
 } from 'bun';
 import { LogObj } from './logging/lob-obj';
+import { checkAuth } from './auth';
 import type { Server } from 'bun';
 
 const HTTP_METHODS = [
@@ -48,6 +49,7 @@ export function createServeOptions<
 			server: Server
 		) => Response | Promise<Response>;
 	})['routes'],
+	auth: boolean,
 	websocket?: ServeOptions<R>['websocket']
 ): ServeOptions<R> {
 	const middleware = (
@@ -59,6 +61,44 @@ export function createServeOptions<
 		| RouterTypes.RouteHandlerWithWebSocketUpgrade<string> => {
 		return async (req: BunRequest, server: Server) => {
 			LogObj.fromIncomingReq(req);
+
+			// Check authentication if required
+			if (auth) {
+				const isAuthenticated = await checkAuth(req);
+				if (!isAuthenticated) {
+					// Check if this is an API request or a page request
+					const url = new URL(req.url);
+					const acceptHeader = req.headers.get('accept') || '';
+					const isApiRequest =
+						acceptHeader.includes('application/json') ||
+						url.pathname.startsWith('/api/') ||
+						req.method !== 'GET';
+
+					if (isApiRequest) {
+						// Return 401 for API requests
+						const unauthorizedRes = errorResponse(
+							'Unauthorized',
+							401
+						);
+						LogObj.logOutgoingResponse(
+							req,
+							unauthorizedRes,
+							server
+						);
+						return unauthorizedRes;
+					} else {
+						// Redirect to login page for regular page requests
+						const loginUrl = `/auth/login-page?redirect=${encodeURIComponent(url.pathname + url.search)}`;
+						const redirectRes = Response.redirect(
+							loginUrl,
+							302
+						) as BrandedResponse<unknown, false>;
+						LogObj.logOutgoingResponse(req, redirectRes, server);
+						return redirectRes;
+					}
+				}
+			}
+
 			const res = await routeHandler(req, server, {
 				json: jsonResponse,
 				error: errorResponse,

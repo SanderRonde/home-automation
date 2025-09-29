@@ -178,10 +178,13 @@ class WebServer {
 			},
 			routes: {
 				...routes,
-				...createServeOptions({
-					...(await serveStatic(CLIENT_FOLDER)),
-					...(await serveStatic(path.join(ROOT, 'static'))),
-				}).routes,
+				...createServeOptions(
+					{
+						...(await serveStatic(CLIENT_FOLDER)),
+						...(await serveStatic(path.join(ROOT, 'static'))),
+					},
+					false
+				).routes,
 			},
 			// HTTPS is unused for now
 			port: this._config.ports.http,

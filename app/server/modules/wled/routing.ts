@@ -1,7 +1,6 @@
 import { createServeOptions } from '../../lib/routes';
 import type { ServeOptions } from '../../lib/routes';
 import type { Database } from '../../lib/db';
-import { auth } from '../../lib/auth';
 import type { WLEDDB } from '.';
 import * as z from 'zod';
 
@@ -19,33 +18,35 @@ const WLEDConfig = z.object({
 export type WLEDConfig = z.infer<typeof WLEDConfig>;
 
 function _initRouting(db: Database<WLEDDB>) {
-	return createServeOptions({
-		'/config': {
-			GET: (req, _server, { error, json }) => {
-				if (!auth(req)) {
-					return error('Unauthorized', 401);
-				}
-				const configJson = db.current().devices ?? [];
-				return json({ devices: configJson });
-			},
-			POST: async (req, _server, { error, json }) => {
-				if (!auth(req)) {
-					return error('Unauthorized', 401);
-				}
+	return createServeOptions(
+		{
+			'/config': {
+				GET: (_req, _server, { json }) => {
+					const configJson = db.current().devices ?? [];
+					return json({ devices: configJson });
+				},
+				POST: async (req, _server, { error, json }) => {
+					try {
+						const config = WLEDConfig.parse(await req.json());
 
-				try {
-					const config = WLEDConfig.parse(await req.json());
+						// Store the config
+						db.update((old) => ({
+							...old,
+							devices: config.devices,
+						}));
 
-					// Store the config
-					db.update((old) => ({ ...old, devices: config.devices }));
-
-					return json({ success: true });
-				} catch (e) {
-					return error({ error: 'Invalid config structure' }, 400);
-				}
+						return json({ success: true });
+					} catch (e) {
+						return error(
+							{ error: 'Invalid config structure' },
+							400
+						);
+					}
+				},
 			},
 		},
-	});
+		true
+	);
 }
 
 export const initRouting = _initRouting as (

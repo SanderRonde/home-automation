@@ -177,17 +177,10 @@ function _initRouting(
 		{
 			'/': switchHtml,
 			'/config': {
-				GET: async (req, _server, { json, error }) => {
-					if (!auth(req)) {
-						return error('Unauthorized', 401);
-					}
+				GET: async (_req, _server, { json }) => {
 					return json(await getConfigWithValues());
 				},
 				POST: async (req, _server, { json, error }) => {
-					if (!auth(req)) {
-						return error('Unauthorized', 401);
-					}
-
 					const groups = SwitchConfig.parse(await req.json());
 					try {
 						// Validate the config structure
@@ -282,6 +275,7 @@ function _initRouting(
 				}
 			},
 		},
+		true,
 		{
 			open: async (ws) => {
 				ws.send(JSON.stringify(await getConfigWithValues()));

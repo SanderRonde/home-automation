@@ -11,58 +11,61 @@ function _initRouting(
 	{ db }: ModuleConfig,
 	api: InstanceType<typeof eWelink.WebAPI> | null
 ) {
-	return createServeOptions({
-		'/oauth': (_req, _server, { error }) => {
-			if (!api) {
-				return error('No API', 500);
-			}
+	return createServeOptions(
+		{
+			'/oauth': (_req, _server, { error }) => {
+				if (!api) {
+					return error('No API', 500);
+				}
 
-			return staticResponse(
-				Response.redirect(
-					api.oauth.createLoginUrl({
-						redirectUrl: `${getEnv(
-							'SECRET_EWELINK_REDIRECT_URL_BASE',
-							true
-						)}/ewelink/redirect_url`,
-						state: 'XXX',
-					})
-				)
-			);
-		},
-		'/redirect_url': async (req, _server, { error, text }) => {
-			const queryParams = new URL(req.url).searchParams;
-			const code = queryParams.get('code');
-			if (!api) {
-				return error('No API', 500);
-			}
-
-			const token = await api.oauth.getToken({
-				code: code as string,
-				redirectUrl: `${getEnv(
-					'SECRET_EWELINK_REDIRECT_URL_BASE',
-					true
-				)}/ewelink/redirect_url`,
-				region: getEnv('SECRET_EWELINK_REGION', true),
-			});
-			if (!token.data) {
-				return error(
-					'Failed to get token! ' + (token.msg as string),
-					500
+				return staticResponse(
+					Response.redirect(
+						api.oauth.createLoginUrl({
+							redirectUrl: `${getEnv(
+								'SECRET_EWELINK_REDIRECT_URL_BASE',
+								true
+							)}/ewelink/redirect_url`,
+							state: 'XXX',
+						})
+					)
 				);
-			}
+			},
+			'/redirect_url': async (req, _server, { error, text }) => {
+				const queryParams = new URL(req.url).searchParams;
+				const code = queryParams.get('code');
+				if (!api) {
+					return error('No API', 500);
+				}
 
-			db.update((old) => ({
-				...old,
-				accessToken: token.data.accessToken,
-				refreshToken: token.data.refreshToken,
-				expiresAt: new Date().getTime() + 1000 * 60 * 60 * 24 * 29,
-			}));
-			api.at = token.data.accessToken;
-			queueEwelinkTokenRefresh(api, db);
+				const token = await api.oauth.getToken({
+					code: code as string,
+					redirectUrl: `${getEnv(
+						'SECRET_EWELINK_REDIRECT_URL_BASE',
+						true
+					)}/ewelink/redirect_url`,
+					region: getEnv('SECRET_EWELINK_REGION', true),
+				});
+				if (!token.data) {
+					return error(
+						'Failed to get token! ' + (token.msg as string),
+						500
+					);
+				}
 
-			return text(`Success!\nResponse:${JSON.stringify(token)}`, 200);
+				db.update((old) => ({
+					...old,
+					accessToken: token.data.accessToken,
+					refreshToken: token.data.refreshToken,
+					expiresAt: new Date().getTime() + 1000 * 60 * 60 * 24 * 29,
+				}));
+				api.at = token.data.accessToken;
+				queueEwelinkTokenRefresh(api, db);
+
+				return text(`Success!\nResponse:${JSON.stringify(token)}`, 200);
+			},
 		},
-	});
+		true
+	);
 }
 
 export const initRouting = _initRouting as (

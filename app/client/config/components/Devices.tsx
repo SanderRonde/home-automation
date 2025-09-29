@@ -114,7 +114,6 @@ export const Devices: React.FC = () => {
 				setLoadingDevices(true);
 			}
 			const response = await apiGet('config', '/getDevices', {});
-			const data = await response.json();
 
 			if (!response.ok) {
 				throw new Error(
@@ -122,6 +121,7 @@ export const Devices: React.FC = () => {
 				);
 			}
 
+			const data = await response.json();
 			// Sort devices first by source, then alphabetically by name
 			const sortedDevices = data.devices.sort((a, b) => {
 				if (a.source.name !== b.source.name) {

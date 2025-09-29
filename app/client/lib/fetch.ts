@@ -29,24 +29,27 @@ export async function apiGet<
 	endpoint: Extract<E, string>,
 	pathParams: RouterTypes.ExtractRouteParams<Extract<E, string>>
 ): Promise<
-	| (Omit<Response, 'json' | 'ok'> & {
-			ok: true;
-			json: () => Promise<
-				Exclude<ReturnTypeForApi<M, E, 'GET'>['ok'], string>
-			>;
-			text: () => Promise<
-				Extract<ReturnTypeForApi<M, E, 'GET'>['ok'], string>
-			>;
-	  })
-	| {
-			ok: false;
-			json: () => Promise<
-				Exclude<ReturnTypeForApi<M, E, 'GET'>['error'], string>
-			>;
-			text: () => Promise<
-				Extract<ReturnTypeForApi<M, E, 'GET'>['error'], string>
-			>;
-	  }
+	Omit<Response, 'json' | 'ok'> &
+		(
+			| {
+					ok: true;
+					json: () => Promise<
+						Exclude<ReturnTypeForApi<M, E, 'GET'>['ok'], string>
+					>;
+					text: () => Promise<
+						Extract<ReturnTypeForApi<M, E, 'GET'>['ok'], string>
+					>;
+			  }
+			| {
+					ok: false;
+					json: () => Promise<
+						Exclude<ReturnTypeForApi<M, E, 'GET'>['error'], string>
+					>;
+					text: () => Promise<
+						Extract<ReturnTypeForApi<M, E, 'GET'>['error'], string>
+					>;
+			  }
+		)
 > {
 	// eslint-disable-next-line no-restricted-globals
 	return (await fetch(
@@ -70,24 +73,27 @@ export async function apiPost<
 	pathParams: RouterTypes.ExtractRouteParams<Extract<E, string>>,
 	body?: unknown
 ): Promise<
-	| (Omit<Response, 'json' | 'ok'> & {
-			ok: true;
-			json: () => Promise<
-				Exclude<ReturnTypeForApi<M, E, 'POST'>['ok'], string>
-			>;
-			text: () => Promise<
-				Extract<ReturnTypeForApi<M, E, 'POST'>['ok'], string>
-			>;
-	  })
-	| {
-			ok: false;
-			json: () => Promise<
-				Exclude<ReturnTypeForApi<M, E, 'POST'>['error'], string>
-			>;
-			text: () => Promise<
-				Extract<ReturnTypeForApi<M, E, 'POST'>['error'], string>
-			>;
-	  }
+	Omit<Response, 'json' | 'ok'> &
+		(
+			| {
+					ok: true;
+					json: () => Promise<
+						Exclude<ReturnTypeForApi<M, E, 'POST'>['ok'], string>
+					>;
+					text: () => Promise<
+						Extract<ReturnTypeForApi<M, E, 'POST'>['ok'], string>
+					>;
+			  }
+			| {
+					ok: false;
+					json: () => Promise<
+						Exclude<ReturnTypeForApi<M, E, 'POST'>['error'], string>
+					>;
+					text: () => Promise<
+						Extract<ReturnTypeForApi<M, E, 'POST'>['error'], string>
+					>;
+			  }
+		)
 > {
 	// eslint-disable-next-line no-restricted-globals
 	return (await fetch(

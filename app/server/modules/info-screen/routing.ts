@@ -16,78 +16,81 @@ export async function initRouting(moduleConfig: ModuleConfig): Promise<void> {
 	const { config } = moduleConfig;
 
 	Bun.serve({
-		routes: createServeOptions({
-			'/': infoScreenHtml,
-			...(await serveStatic(
-				path.join(CLIENT_FOLDER, 'info-screen'),
-				'info-screen'
-			)),
-			'/authorize': async (req: BunRequest) => {
-				const getParams = new URL(req.url).searchParams;
-				const code = getParams.get('code');
-				if (code) {
-					await authCode(code);
-				}
+		routes: createServeOptions(
+			{
+				'/': infoScreenHtml,
+				...(await serveStatic(
+					path.join(CLIENT_FOLDER, 'info-screen'),
+					'info-screen'
+				)),
+				'/authorize': async (req: BunRequest) => {
+					const getParams = new URL(req.url).searchParams;
+					const code = getParams.get('code');
+					if (code) {
+						await authCode(code);
+					}
 
-				return staticResponse(Response.redirect('/'));
-			},
-			'/weather': async (req, _server, { json }) => {
-				const { type, period } = z
-					.object({
-						type: z.enum(['inside', 'outside', 'server']),
-						period: z.enum(['current', 'daily']).optional(),
-					})
-					.parse(await req.json());
-				const response = await (async () => {
-					if (type === 'inside') {
-						// Use temperature module
-						const temp = await (
-							await InfoScreen.modules
-						).temperature.getTemp('room');
-						return { temperature: temp, icon: 'inside.png' };
-					} else if (type === 'server') {
-						const temp = await (
-							await InfoScreen.modules
-						).temperature.getTemp('server');
-						return { temperature: temp, icon: 'server.png' };
-					} else {
-						// Use openweathermap
-						const openweathermapResponse = await get(
-							period === 'current'
-								? ExternalWeatherTimePeriod.CURRENT
-								: ExternalWeatherTimePeriod.DAILY
-						);
-						if (openweathermapResponse === null) {
+					return staticResponse(Response.redirect('/'));
+				},
+				'/weather': async (req, _server, { json }) => {
+					const { type, period } = z
+						.object({
+							type: z.enum(['inside', 'outside', 'server']),
+							period: z.enum(['current', 'daily']).optional(),
+						})
+						.parse(await req.json());
+					const response = await (async () => {
+						if (type === 'inside') {
+							// Use temperature module
+							const temp = await (
+								await InfoScreen.modules
+							).temperature.getTemp('room');
+							return { temperature: temp, icon: 'inside.png' };
+						} else if (type === 'server') {
+							const temp = await (
+								await InfoScreen.modules
+							).temperature.getTemp('server');
+							return { temperature: temp, icon: 'server.png' };
+						} else {
+							// Use openweathermap
+							const openweathermapResponse = await get(
+								period === 'current'
+									? ExternalWeatherTimePeriod.CURRENT
+									: ExternalWeatherTimePeriod.DAILY
+							);
+							if (openweathermapResponse === null) {
+								return {
+									temperature: 0,
+									icon: 'questionmark.svg',
+								};
+							}
 							return {
-								temperature: 0,
-								icon: 'questionmark.svg',
+								...openweathermapResponse,
+								temperature: openweathermapResponse.temp,
 							};
 						}
-						return {
-							...openweathermapResponse,
-							temperature: openweathermapResponse.temp,
-						};
-					}
-				})();
-				const { temperature } = response;
+					})();
+					const { temperature } = response;
 
-				return json({
-					...response,
-					temperature: `${Math.round(temperature * 10) / 10}°`,
-				});
+					return json({
+						...response,
+						temperature: `${Math.round(temperature * 10) / 10}°`,
+					});
+				},
+				'/calendar': async (_req, _server, { json }) => {
+					try {
+						const events = await getEvents(7);
+						return json({ events });
+					} catch (e) {
+						return json(
+							{ error: 'calendar API not authenticated' },
+							{ status: 500 }
+						);
+					}
+				},
 			},
-			'/calendar': async (_req, _server, { json }) => {
-				try {
-					const events = await getEvents(7);
-					return json({ events });
-				} catch (e) {
-					return json(
-						{ error: 'calendar API not authenticated' },
-						{ status: 500 }
-					);
-				}
-			},
-		}).routes,
+			false
+		).routes,
 		port: config.ports.info,
 	});
 
