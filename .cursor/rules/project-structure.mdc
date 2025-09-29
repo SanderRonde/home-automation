@@ -1,0 +1,53 @@
+---
+alwaysApply: true
+---
+# Home Automation Project Structure
+
+This is a TypeScript home automation system using Bun runtime with a modular architecture.
+
+## Project Layout
+
+- `app/` - Main application code
+  - `server/` - Backend server code
+    - [app.ts](mdc:app/server/app.ts) - Entry point, initializes WebServer and all modules
+    - `modules/` - Feature modules (bot, auth, wled, device, switch, matter, mcp, etc.)
+    - `lib/` - Shared server utilities
+    - `config/` - Server configuration files
+  - `client/` - Frontend React code with TypeScript
+    - `config/` - Configuration UI components
+    - `switch/` - Switch control UI
+    - `info-screen/` - Info display UI
+    - `lib/` - Shared client utilities
+  - [tsconfig.json](mdc:app/tsconfig.json) - TypeScript configuration
+- `types/` - Shared TypeScript type definitions
+- `database/` - Database storage files
+- `scripts/` - Utility scripts (e.g., MCP key generation)
+- `static/` - Static assets served by the web server
+- [package.json](mdc:package.json) - Project dependencies and scripts
+
+## Key Technologies
+
+- **Runtime**: Bun (not Node.js) - use Bun APIs where possible
+- **Language**: TypeScript (strict mode enabled)
+- **Frontend**: React 19 with Material-UI (MUI)
+- **Backend**: Express-style routing with Bun.serve
+- **Database**: SQLite via Bun.SQL + JSON file storage
+- **Smart Home**: Matter.js for device communication
+- **AI Integration**: Model Context Protocol (MCP) support
+- **Communication**: WebSockets for real-time updates
+- **Linting**: ESLint with Google TypeScript Style (gts)
+- **Formatting**: Prettier with import sorting
+
+## Running the Project
+
+- `bun start` - Start the server with default settings
+- `bun compile` - Compile TypeScript
+- `bun watch` - Watch mode for development
+- `bun lint` - Run linters and type checking
+- `bun format` - Format code with Prettier
+
+## Important Paths
+
+- Main entry: [app/server/app.ts](mdc:app/server/app.ts)
+- Module definitions: `app/server/modules/`
+- Client entry points: `app/client/{config,switch,info-screen}/`

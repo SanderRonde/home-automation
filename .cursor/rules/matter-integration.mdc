@@ -1,0 +1,60 @@
+---
+description: Working with Matter.js for smart home device integration
+---
+# Matter.js Integration
+
+This project uses Matter.js (`@project-chip/matter.js`) for smart home device communication.
+
+## Matter Module Location
+
+- Main module: `app/server/modules/matter/`
+- Client code: [app/server/modules/matter/client/](mdc:app/server/modules/matter/client/)
+  - [cluster.ts](mdc:app/server/modules/matter/client/cluster.ts) - Cluster interactions
+  - [device.ts](mdc:app/server/modules/matter/client/device.ts) - Device management
+
+## Key Concepts
+
+- **Clusters**: Matter uses clusters for device capabilities (OnOff, LevelControl, ColorControl, etc.)
+- **Devices**: Physical or virtual devices that implement one or more clusters
+- **Commissioning**: Process of adding new Matter devices to the network
+- **Endpoints**: Devices can have multiple endpoints, each with different capabilities
+
+## Working with Matter Devices
+
+```typescript
+// Get device reference
+const device = await matterClient.getDevice(deviceId);
+
+// Interact with clusters
+const onOffCluster = device.getClusterClient(OnOff.Cluster);
+await onOffCluster.on();
+await onOffCluster.off();
+
+// Read attributes
+const isOn = await onOffCluster.getOnOffAttribute();
+```
+
+## Device Types
+
+Matter defines standard device types:
+- On/Off Light
+- Dimmable Light
+- Color Temperature Light
+- Extended Color Light
+- Switches
+- Sensors (temperature, humidity, etc.)
+
+## Type Definitions
+
+Matter types are available from `@matter/types` and `@project-chip/matter.js`:
+
+```typescript
+import type { OnOff, LevelControl, ColorControl } from '@project-chip/matter.js/cluster';
+```
+
+## Integration Points
+
+- Matter devices can be controlled via:
+  - The `/matter` API endpoints
+  - Other modules accessing the Matter module
+  - MCP (Model Context Protocol) for AI control

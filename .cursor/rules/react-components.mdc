@@ -1,0 +1,95 @@
+---
+globs: app/client/**/*.tsx
+---
+# React Component Guidelines
+
+React components in the `app/client/` directory follow these conventions:
+
+## Component Style
+
+- **Functional components**: Use function components with hooks
+- **TypeScript**: Always type props interfaces
+  ```typescript
+  interface MyComponentProps {
+      value: string;
+      onChange: (val: string) => void;
+  }
+  
+  export const MyComponent = (props: MyComponentProps): JSX.Element => {
+      // ...
+  };
+  ```
+- **Return type**: Explicitly return `JSX.Element`
+
+## Material-UI (MUI)
+
+This project uses Material-UI v7 for UI components:
+
+```typescript
+import {
+    Box,
+    Paper,
+    Typography,
+    Button,
+    TextField,
+    // ... other components
+} from '@mui/material';
+import { Icon } from '@mui/icons-material';
+```
+
+- Use MUI components consistently
+- Use `sx` prop for styling
+- Prefer `Box` for layout containers
+
+## State Management
+
+- **useState**: For local component state
+  ```typescript
+  const [value, setValue] = React.useState<string>('');
+  ```
+- **useEffect**: For side effects (API calls, subscriptions)
+  ```typescript
+  React.useEffect(() => {
+      // effect
+      return () => { /* cleanup */ };
+  }, [dependencies]);
+  ```
+
+## API Communication
+
+Use the project's API utilities from `app/client/lib/fetch.ts`:
+
+```typescript
+import { apiGet, apiPost } from '../../lib/fetch';
+
+// GET request
+const data = await apiGet<ResponseType>('/module/endpoint');
+
+// POST request
+await apiPost('/module/endpoint', { payload: data });
+```
+
+## Monaco Editor Integration
+
+For code editors, use `@monaco-editor/react`:
+
+```typescript
+import Editor from '@monaco-editor/react';
+import type * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
+import type { editor } from 'monaco-editor';
+
+type Monaco = typeof monaco;
+```
+
+## Component Organization
+
+- **Config UI**: Components in `app/client/config/components/`
+- **Switch UI**: Components in `app/client/switch/`
+- **Info Screen**: Components in `app/client/info-screen/`
+- **Shared utilities**: `app/client/lib/` and `app/client/shared/`
+
+## Examples
+
+See existing components for reference:
+- [SwitchEditor.tsx](mdc:app/client/config/components/SwitchEditor.tsx) - Editor with tabs and Monaco
+- [DevicePicker.tsx](mdc:app/client/config/components/DevicePicker.tsx) - Device selection component
