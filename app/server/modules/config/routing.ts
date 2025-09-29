@@ -102,10 +102,8 @@ function _initRouting({ modules }: ModuleConfig) {
 			if (!auth(req)) {
 				return error('Unauthorized', 401);
 			}
-			const matterClient = await modules.matter.server.value;
-			const pairedDevices = await matterClient.commission(
-				req.params.code
-			);
+			const matterClient = await modules.matter.client.value;
+			const pairedDevices = await matterClient.pair(req.params.code);
 			return json({
 				devices: pairedDevices,
 			} satisfies ConfigPairDeviceResponse);

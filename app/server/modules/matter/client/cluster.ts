@@ -28,7 +28,6 @@ import {
 	type Command,
 } from '@matter/types';
 import {
-	MatterServer,
 	MatterServerInputMessageType,
 	MatterServerOutputMessageType,
 } from '../server/server';
@@ -37,9 +36,8 @@ import type {
 	DeviceClusterName,
 	DeviceGroupId,
 } from '../../device/cluster';
-import { PairedNode } from '@project-chip/matter.js/device';
 import type { LevelControl } from '@matter/main/clusters';
-import type { EndpointNumber, WritableAttribute } from '@matter/types';
+import type { WritableAttribute } from '@matter/types';
 import { DeviceStatus } from '../../device/cluster';
 import { CombinedData } from '../../../lib/data';
 import { MappedData } from '../../../lib/data';
@@ -80,12 +78,12 @@ class ClusterProxy<C extends MatterClusterInterface> {
 	#attributes: Record<string, Data<unknown>> = {};
 
 	public constructor(
-		private readonly node: PairedNode,
-		private readonly endpointNumber: EndpointNumber,
+		private readonly nodeId: string,
+		private readonly endpointNumber: string,
 		private readonly id: ClusterId,
-		private readonly matterServer: MatterServer
+		private readonly matterClient: MatterClient
 	) {
-		matterServer.addListener((message) => {
+		matterClient.onMessage((message) => {
 			if (
 				message.category ===
 				MatterServerOutputMessageType.AttributeChanged
@@ -120,12 +118,7 @@ class ClusterProxy<C extends MatterClusterInterface> {
 		mapper?: (value: AT | undefined) => R
 	): Data<R | undefined> {
 		const emitter = (() => {
-			const {
-				matterServer: matterClient,
-				nodeId,
-				endpointNumber,
-				id,
-			} = this;
+			const { matterClient, nodeId, endpointNumber, id } = this;
 			class cls extends Data<AT | undefined> {
 				public override async get(): Promise<Exclude<AT, undefined>> {
 					return (await matterClient.request({
@@ -156,7 +149,16 @@ class ClusterProxy<C extends MatterClusterInterface> {
 	): (value: I) => Promise<void> {
 		return async (value: I) => {
 			const mapped = await mapper(value);
-			await this.matterServer.setAttribute(this.node.nodeId, this.endpointNumber, this.id, attribute, mapped)
+			await this.matterClient.request({
+				type: MatterServerInputMessageType.SetAttribute,
+				arguments: [
+					this.nodeId,
+					this.endpointNumber,
+					this.id,
+					attribute,
+					mapped,
+				],
+			});
 		};
 	}
 
@@ -226,13 +228,16 @@ class ClusterProxy<C extends MatterClusterInterface> {
 					: Array.isArray(mappedInput)
 						? (mappedInput as unknown[])
 						: [mappedInput];
-			const result = this.matterServer.callCluster(
-				this.node.nodeId,
-				this.endpointNumber,
-				this.id,
-				command,
-				payload
-			);
+			const result = this.matterClient.request({
+				type: MatterServerInputMessageType.CallCluster,
+				arguments: [
+					this.nodeId,
+					this.endpointNumber,
+					this.id,
+					command,
+					payload,
+				],
+			});
 			const response = await result;
 			const mappedOutput = mappers?.output
 				? mappers.output(response)
@@ -251,17 +256,17 @@ function ConfigurableCluster<T extends MatterClusterInterface>(
 		public _proxy: ClusterProxy<T>;
 
 		public constructor(
-			node: PairedNode,
-			endpoint: Endpoint,
+			nodeId: string,
+			endpointNumber: string,
 			id: ClusterId,
-			matterServer: MatterServer
+			matterClient: MatterClient
 		) {
 			super();
 			this._proxy = new ClusterProxy(
-				node,
-				endpoint,
+				nodeId,
+				endpointNumber,
 				id,
-				matterServer
+				matterClient
 			);
 		}
 

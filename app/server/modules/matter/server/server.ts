@@ -9,7 +9,6 @@ import {
 import type {
 	ClusterId,
 	DeviceTypeId,
-	EndpointNumber,
 	Observable,
 	Observer,
 } from '@matter/main';
@@ -20,8 +19,6 @@ import { CommissioningController } from '@project-chip/matter.js';
 import { NodeStates } from '@project-chip/matter.js/device';
 import { ManualPairingCodeCodec } from '@matter/main/types';
 import type { NodeId } from '@matter/main/types';
-import { Data } from '../../../lib/data';
-import { MatterDevice } from '../client/device';
 
 Logger.level = LogLevel.ERROR;
 
@@ -81,7 +78,7 @@ export interface MatterDeviceEndpoint {
 }
 
 export interface MatterDeviceInfo {
-	node: PairedNode
+	nodeId: string;
 	number: string;
 	name: string;
 	label: string | undefined;
@@ -153,17 +150,12 @@ export interface MatterServerInputReturnValues {
 	[MatterServerInputMessageType.SetAttribute]: void;
 }
 
-export class MatterServer implements AsyncDisposable{
-	readonly #commissioningController: CommissioningController;
-	#listeners: Set<(message: MatterServerOutputMessage) => void> = new Set();
+class MatterServer {
+	private readonly commissioningController: CommissioningController;
 
-	public devices = new Data<Record<EndpointNumber, MatterDevice>>({});
-
-	// TODO:(sander) move NodeWatcher to be diretly called and be removed
-	// so call that from the mappers.
 	public constructor() {
 		/** Create Matter Controller Node and bind it to the Environment. */
-		this.#commissioningController = new CommissioningController({
+		this.commissioningController = new CommissioningController({
 			environment: {
 				environment,
 				id: 'home-automation',
@@ -178,7 +170,7 @@ export class MatterServer implements AsyncDisposable{
 	private async _watchNodeIds(nodeIds: NodeId[]): Promise<string[]> {
 		const nodes = await Promise.all(
 			nodeIds.map((nodeId) =>
-				this.#commissioningController.getNode(nodeId)
+				this.commissioningController.getNode(nodeId)
 			)
 		);
 		nodes.forEach((node) => {
@@ -211,7 +203,7 @@ export class MatterServer implements AsyncDisposable{
 
 	private async _getDeviceInfo(
 		device: Endpoint,
-		node: PairedNode
+		nodeId: NodeId
 	): Promise<MatterDeviceInfo | null> {
 		if (device.number === undefined) {
 			return null;
@@ -253,7 +245,7 @@ export class MatterServer implements AsyncDisposable{
 		};
 
 		return {
-			node,
+			nodeId: nodeId.toString(),
 			name: device.name,
 			label: nodeLabel,
 			deviceType: device.deviceType,
@@ -317,7 +309,7 @@ export class MatterServer implements AsyncDisposable{
 			// This node is a normal device.
 			const deviceInfo = await this._getDeviceInfo(
 				rootEndpoint,
-				watchedNode.node
+				watchedNode.node.nodeId
 			);
 			if (deviceInfo) {
 				return [deviceInfo];
@@ -342,7 +334,7 @@ export class MatterServer implements AsyncDisposable{
 
 		deviceInfos.push(
 			Promise.resolve({
-				node: watchedNode.node,
+				nodeId: watchedNode.node.nodeId.toString(),
 				name: rootEndpoint.name,
 				label: nodeLabel,
 				deviceType: rootEndpoint.deviceType,
@@ -362,7 +354,7 @@ export class MatterServer implements AsyncDisposable{
 				endpoint.getClusterClient(BridgedDeviceBasicInformationCluster)
 			) {
 				deviceInfos.push(
-					this._getDeviceInfo(endpoint, watchedNode.node)
+					this._getDeviceInfo(endpoint, watchedNode.node.nodeId)
 				);
 				return false;
 			}
@@ -373,7 +365,7 @@ export class MatterServer implements AsyncDisposable{
 		);
 	}
 
-	public async listDevices(): Promise<MatterDeviceInfo[]> {
+	private async _listDevices(): Promise<MatterDeviceInfo[]> {
 		const deviceInfos: MatterDeviceInfo[] = [];
 		for (const watchedNode of this._nodes) {
 			deviceInfos.push(...(await this._listNodeDevices(watchedNode)));
@@ -381,7 +373,7 @@ export class MatterServer implements AsyncDisposable{
 		return deviceInfos;
 	}
 
-	public async getAttribute(
+	private async _getAttribute(
 		nodeId: string,
 		endpointNumber: string,
 		clusterId: ClusterId,
@@ -408,9 +400,9 @@ export class MatterServer implements AsyncDisposable{
 		return attribute.get();
 	}
 
-	public async setAttribute(
-		nodeId: NodeId,
-		endpointNumber: EndpointNumber,
+	private async _setAttribute(
+		nodeId: string,
+		endpointNumber: string,
 		clusterId: ClusterId,
 		attributeName: string,
 		value: unknown
@@ -419,8 +411,8 @@ export class MatterServer implements AsyncDisposable{
 			.flatMap(this._getRecursiveEndpoints.bind(this))
 			.find(
 				(endpoint) =>
-					endpoint.endpoint.number === endpointNumber &&
-					endpoint.nodeId === nodeId
+					endpoint.endpoint.number?.toString() === endpointNumber &&
+					endpoint.nodeId.toString() === nodeId
 			);
 		if (!result) {
 			throw new Error('Endpoint not found');
@@ -436,9 +428,9 @@ export class MatterServer implements AsyncDisposable{
 		return attribute.set(value);
 	}
 
-	public async callCluster(
-		nodeId: NodeId,
-		endpointNumber: EndpointNumber,
+	private async _callCluster(
+		nodeId: string,
+		endpointNumber: string,
 		clusterId: ClusterId,
 		commandName: string,
 		args: unknown[]
@@ -447,8 +439,8 @@ export class MatterServer implements AsyncDisposable{
 			.flatMap(this._getRecursiveEndpoints.bind(this))
 			.find(
 				(endpoint) =>
-					endpoint.endpoint.number === endpointNumber &&
-					endpoint.nodeId === nodeId
+					endpoint.endpoint.number?.toString() === endpointNumber &&
+					endpoint.nodeId.toString() === nodeId
 			);
 		if (!result) {
 			throw new Error('Endpoint not found');
@@ -464,17 +456,15 @@ export class MatterServer implements AsyncDisposable{
 		return (command as (...args: unknown[]) => Promise<unknown>)(...args);
 	}
 
-	public async start(): Promise<void> {
-		await this.#commissioningController.start();
+	async start() {
+		await this.commissioningController.start();
 
 		await this._watchNodeIds(
-			this.#commissioningController.getCommissionedNodes()
+			this.commissioningController.getCommissionedNodes()
 		);
-
-		await this.listDevices().then((devices) => this.#updateDevices(devices))
 	}
 
-	public async commission(pairingCode: string): Promise<string[]> {
+	async commission(pairingCode: string) {
 		const pairingCodeCodec = ManualPairingCodeCodec.decode(pairingCode);
 		const shortDiscriminator = pairingCodeCodec.shortDiscriminator;
 		const setupPin = pairingCodeCodec.passcode;
@@ -499,51 +489,47 @@ export class MatterServer implements AsyncDisposable{
 		};
 
 		const nodeId =
-			await this.#commissioningController.commissionNode(options);
+			await this.commissioningController.commissionNode(options);
 
 		return await this._watchNodeIds([nodeId]);
 	}
 
-	public async stop(): Promise<void> {
-		await this.#commissioningController.close();
+	async stop() {
+		await this.commissioningController.close();
 	}
 
-	#updateDevices(deviceInfos: MatterDeviceInfo[]) {
-		const devices: Record<string, MatterDevice> = {
-			...this.devices.current(),
-		};
-		for (const deviceInfo of deviceInfos) {
-			const id = `${deviceInfo.node.nodeId}:${deviceInfo.number}`;
-			if (devices[id]) {
-				continue;
-			}
-
-			devices[id] = new MatterDevice(
-				deviceInfo.node,
-				deviceInfo.number,
-				deviceInfo.label ?? deviceInfo.name,
-				this,
-				deviceInfo.clusterMeta,
-				deviceInfo.endpoints
-			);
+	async onMessage(
+		message: MatterServerInputMessage
+	): Promise<MatterServerInputReturnValues[(typeof message)['type']]> {
+		switch (message.type) {
+			case MatterServerInputMessageType.ListDevices:
+				return this._listDevices();
+			case MatterServerInputMessageType.PairWithCode:
+				return this.commission(message.arguments[0]);
+			case MatterServerInputMessageType.GetAttribute:
+				return this._getAttribute(
+					message.arguments[0],
+					message.arguments[1],
+					message.arguments[2],
+					message.arguments[3]
+				);
+			case MatterServerInputMessageType.SetAttribute:
+				return await this._setAttribute(
+					message.arguments[0],
+					message.arguments[1],
+					message.arguments[2],
+					message.arguments[3],
+					message.arguments[4]
+				);
+			case MatterServerInputMessageType.CallCluster:
+				return this._callCluster(
+					message.arguments[0],
+					message.arguments[1],
+					message.arguments[2],
+					message.arguments[3],
+					message.arguments[4]
+				);
 		}
-		this.devices.set(devices);
-	}
-
-	public addListener(
-		listener: (message: MatterServerOutputMessage) => void
-	): void {
-		this.#listeners.add(listener);
-	}
-
-	public removeListener(
-		listener: (message: MatterServerOutputMessage) => void
-	): void {
-		this.#listeners.delete(listener);
-	}
-
-	public [Symbol.asyncDispose](): Promise<void> {
-		return this.stop();
 	}
 }
 
@@ -659,17 +645,69 @@ type ObservableForObserver<T> =
 	T extends Observable<infer U> ? Observer<U> : never;
 
 async function main() {
+	const messageQueue: string[] = [];
+	let isBooting = true;
+
+	function tryJsonParse(
+		message: string
+	): (MatterServerInputMessage & { identifier: number }) | null {
+		try {
+			return JSON.parse(message) as MatterServerInputMessage & {
+				identifier: number;
+			};
+		} catch (error) {
+			return null;
+		}
+	}
+
+	async function handleMessage(messageText: string) {
+		const message = tryJsonParse(messageText);
+		if (!message) {
+			console.error(`Invalid message "${messageText}"`);
+			return;
+		}
+		const response = await controller.onMessage(message);
+		writeStdout({
+			category: MatterServerOutputMessageType.Response,
+			identifier: message.identifier,
+			response,
+		});
+	}
+
+	process.stdin.on('data', async (data) => {
+		const messageText = data.toString().trim();
+		if (isBooting) {
+			messageQueue.push(messageText);
+		} else {
+			for (const messagePart of messageText.split('\n')) {
+				await handleMessage(messagePart);
+			}
+		}
+	});
+
 	const controller = new MatterServer();
 	await controller.start();
 
 	if (process.argv.includes('--list-devices')) {
 		void controller
-			.listDevices()
+			.onMessage({
+				type: MatterServerInputMessageType.ListDevices,
+				arguments: [],
+			})
 			.then((devices) => {
 				console.log('devices:', devices);
 			});
 	}
 
+	isBooting = false;
+	while (messageQueue.length > 0) {
+		const queuedMessage = messageQueue.shift();
+		if (queuedMessage) {
+			for (const messagePart of queuedMessage.split('\n')) {
+				await handleMessage(messagePart);
+			}
+		}
+	}
 }
 
 if (require.main === module) {
