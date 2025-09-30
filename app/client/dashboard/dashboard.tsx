@@ -7,12 +7,13 @@ import { WLEDConfig } from './components/WLEDConfig';
 import React, { useState, useEffect } from 'react';
 import { Devices } from './components/Devices';
 import { createRoot } from 'react-dom/client';
+import { Home } from './components/Home';
 
 function DashboardApp() {
-	// Get initial tab from URL hash or default to settings
+	// Get initial tab from URL hash or default to home
 	const [currentTab, setCurrentTab] = useState<string | SidebarTab>(() => {
 		const hash = window.location.hash.slice(1); // Remove the # symbol
-		return hash || SidebarTab.SETTINGS;
+		return hash || SidebarTab.HOME;
 	});
 
 	// Update URL when tab changes
@@ -39,6 +40,9 @@ function DashboardApp() {
 
 	const renderContent = () => {
 		switch (currentTab) {
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
+			case SidebarTab.HOME:
+				return <Home />;
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
 			case SidebarTab.SETTINGS:
 				return <WelcomePage />;
