@@ -1,4 +1,4 @@
-import { createServeOptions } from '../../lib/routes';
+import { createServeOptions, withRequestBody } from '../../lib/routes';
 import type { ServeOptions } from '../../lib/routes';
 import { LogObj } from '../../lib/logging/lob-obj';
 import { getController } from './temp-controller';
@@ -29,20 +29,18 @@ function _initRouting({ sqlDB }: ModuleConfig) {
 					200
 				);
 			},
-			'/getTemp': async (req, _server, { json }) => {
-				const body = z
-					.object({
-						name: z.string(),
-					})
-					.parse(await req.json());
-				const controller = await getController(sqlDB, body.name);
-				LogObj.fromReqRes(req).attachMessage(
-					`Getting temp. Returning ${controller.getLastTemp()}`
-				);
-				return json({
-					temp: controller.getLastTemp(),
-				});
-			},
+			'/getTemp': withRequestBody(
+				z.object({ name: z.string() }),
+				async (body, req, _server, { json }) => {
+					const controller = await getController(sqlDB, body.name);
+					LogObj.fromReqRes(req).attachMessage(
+						`Getting temp. Returning ${controller.getLastTemp()}`
+					);
+					return json({
+						temp: controller.getLastTemp(),
+					});
+				}
+			),
 		},
 		true
 	);

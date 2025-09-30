@@ -7,6 +7,7 @@ import type {
 	WebSocketServeOptions,
 } from 'bun';
 import { LogObj } from './logging/lob-obj';
+import type { z, ZodTypeAny } from 'zod';
 import { checkAuth } from './auth';
 import type { Server } from 'bun';
 
@@ -166,29 +167,72 @@ export function createServeOptions<
 	};
 }
 
+export function withRequestBody<
+	const S extends ZodTypeAny,
+	const T,
+	const R extends
+		| BrandedResponse<unknown, boolean>
+		| Promise<BrandedResponse<unknown, boolean>>,
+>(
+	shape: S,
+	handler: (
+		body: z.output<S>,
+		req: Omit<BunRequest<Extract<T, string>>, 'json'>,
+		server: Server,
+		response: BrandedRouteHandlerResponse
+	) => R
+): (
+	req: BunRequest<Extract<T, string>>,
+	server: Server,
+	response: BrandedRouteHandlerResponse
+) => R {
+	return (async (req, server, response) => {
+		const body = shape.safeParse(await req.json());
+		if (!body.success) {
+			return response.error(body.error.message, 400);
+		}
+		return handler(body.data, req, server, response);
+	}) as (
+		req: BunRequest<Extract<T, string>>,
+		server: Server,
+		response: BrandedRouteHandlerResponse
+	) => R;
+}
+
 export type BrandedResponse<T, E extends boolean> = Response & {
 	__json: T;
 	__isError: E;
 };
 
-export type BrandedRouteHandler<T, R> = (
+export type BrandedRouteHandlerWithJson<T, R> = (
 	req: BunRequest<Extract<T, string>>,
 	server: Server,
-	response: {
-		json: <const T>(
-			data: T,
-			init?: ResponseInit
-		) => BrandedResponse<T, false>;
-		error: <const T extends string | object>(
-			message: T,
-			statusCode: number
-		) => BrandedResponse<T, true>;
-		text: (
-			message: string,
-			statusCode: number
-		) => BrandedResponse<string, false>;
-	}
+	response: BrandedRouteHandlerResponse
 ) => BrandedResponse<R, boolean> | Promise<BrandedResponse<R, boolean>>;
+
+export type BrandedRouteHandler<T, R> = (
+	req: Omit<BunRequest<Extract<T, string>>, 'json'>,
+	server: Server,
+	response: BrandedRouteHandlerResponse
+) => BrandedResponse<R, boolean> | Promise<BrandedResponse<R, boolean>>;
+
+type BrandedRouteHandlerResponse = {
+	json: <const T>(data: T, init?: ResponseInit) => BrandedResponse<T, false>;
+	error: <const T extends string | object>(
+		message: T,
+		statusCode: number
+	) => BrandedResponse<T, true>;
+	text: (
+		message: string,
+		statusCode: number
+	) => BrandedResponse<string, false>;
+};
+
+export function untypedRequestJson(
+	request: Omit<BunRequest<Extract<string, string>>, 'json'>
+): Promise<unknown> {
+	return (request as BunRequest).json();
+}
 
 export function staticResponse(
 	response: Response

@@ -1,4 +1,8 @@
-import { createServeOptions, staticResponse } from '../../lib/routes';
+import {
+	createServeOptions,
+	staticResponse,
+	withRequestBody,
+} from '../../lib/routes';
 import infoScreenHtml from '../../../client/info-screen/index.html';
 import { serveStatic } from '../../lib/serve-static';
 import { CLIENT_FOLDER } from '../../lib/constants';
@@ -32,51 +36,58 @@ export async function initRouting(moduleConfig: ModuleConfig): Promise<void> {
 
 					return staticResponse(Response.redirect('/'));
 				},
-				'/weather': async (req, _server, { json }) => {
-					const { type, period } = z
-						.object({
-							type: z.enum(['inside', 'outside', 'server']),
-							period: z.enum(['current', 'daily']).optional(),
-						})
-						.parse(await req.json());
-					const response = await (async () => {
-						if (type === 'inside') {
-							// Use temperature module
-							const temp = await (
-								await InfoScreen.modules
-							).temperature.getTemp('room');
-							return { temperature: temp, icon: 'inside.png' };
-						} else if (type === 'server') {
-							const temp = await (
-								await InfoScreen.modules
-							).temperature.getTemp('server');
-							return { temperature: temp, icon: 'server.png' };
-						} else {
-							// Use openweathermap
-							const openweathermapResponse = await get(
-								period === 'current'
-									? ExternalWeatherTimePeriod.CURRENT
-									: ExternalWeatherTimePeriod.DAILY
-							);
-							if (openweathermapResponse === null) {
+				'/weather': withRequestBody(
+					z.object({
+						type: z.enum(['inside', 'outside', 'server']),
+						period: z.enum(['current', 'daily']).optional(),
+					}),
+					async (body, _req, _server, { json }) => {
+						const { type, period } = body;
+						const response = await (async () => {
+							if (type === 'inside') {
+								// Use temperature module
+								const temp = await (
+									await InfoScreen.modules
+								).temperature.getTemp('room');
 								return {
-									temperature: 0,
-									icon: 'questionmark.svg',
+									temperature: temp,
+									icon: 'inside.png',
+								};
+							} else if (type === 'server') {
+								const temp = await (
+									await InfoScreen.modules
+								).temperature.getTemp('server');
+								return {
+									temperature: temp,
+									icon: 'server.png',
+								};
+							} else {
+								// Use openweathermap
+								const openweathermapResponse = await get(
+									period === 'current'
+										? ExternalWeatherTimePeriod.CURRENT
+										: ExternalWeatherTimePeriod.DAILY
+								);
+								if (openweathermapResponse === null) {
+									return {
+										temperature: 0,
+										icon: 'questionmark.svg',
+									};
+								}
+								return {
+									...openweathermapResponse,
+									temperature: openweathermapResponse.temp,
 								};
 							}
-							return {
-								...openweathermapResponse,
-								temperature: openweathermapResponse.temp,
-							};
-						}
-					})();
-					const { temperature } = response;
+						})();
+						const { temperature } = response;
 
-					return json({
-						...response,
-						temperature: `${Math.round(temperature * 10) / 10}°`,
-					});
-				},
+						return json({
+							...response,
+							temperature: `${Math.round(temperature * 10) / 10}°`,
+						});
+					}
+				),
 				'/calendar': async (_req, _server, { json }) => {
 					try {
 						const events = await getEvents(7);

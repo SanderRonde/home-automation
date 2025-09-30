@@ -1,4 +1,4 @@
-import { createServeOptions } from '../../lib/routes';
+import { createServeOptions, untypedRequestJson } from '../../lib/routes';
 import type { ServeOptions } from '../../lib/routes';
 import type { Database } from '../../lib/db';
 import type { WLEDDB } from '.';
@@ -27,7 +27,9 @@ function _initRouting(db: Database<WLEDDB>) {
 				},
 				POST: async (req, _server, { error, json }) => {
 					try {
-						const config = WLEDConfig.parse(await req.json());
+						const config = WLEDConfig.parse(
+							await untypedRequestJson(req)
+						);
 
 						// Store the config
 						db.update((old) => ({

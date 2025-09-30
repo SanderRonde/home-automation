@@ -1,6 +1,6 @@
+import { createServeOptions, withRequestBody } from '../../lib/routes';
 import loginHtml from '../../../client/login/index.html';
 import type { UserManagement } from './user-management';
-import { createServeOptions } from '../../lib/routes';
 import { serveStatic } from '../../lib/serve-static';
 import type { ServeOptions } from '../../lib/routes';
 import { CLIENT_FOLDER } from '../../lib/constants';
@@ -8,11 +8,6 @@ import { authenticate } from './secret';
 import { genCookie } from './cookie';
 import * as path from 'path';
 import * as z from 'zod';
-
-const LoginSchema = z.object({
-	username: z.string().min(1),
-	password: z.string().min(1),
-});
 
 async function _getRoutes(userManagement: UserManagement) {
 	return createServeOptions(
@@ -33,44 +28,51 @@ async function _getRoutes(userManagement: UserManagement) {
 				}
 			},
 			'/login': {
-				POST: async (req, _server, { json, error }) => {
-					try {
-						const body = LoginSchema.parse(await req.json());
-						const user = await userManagement.verifyCredentials(
-							body.username,
-							body.password
-						);
+				POST: withRequestBody(
+					z.object({
+						username: z.string().min(1),
+						password: z.string().min(1),
+					}),
+					async (body, req, _server, { json, error }) => {
+						try {
+							const user = await userManagement.verifyCredentials(
+								body.username,
+								body.password
+							);
 
-						if (!user) {
-							return error('Invalid username or password', 401);
+							if (!user) {
+								return error(
+									'Invalid username or password',
+									401
+								);
+							}
+
+							// Create session
+							const sessionId =
+								await userManagement.createSession(user.id);
+
+							// Set session cookie
+							req.cookies.set('session', sessionId, {
+								httpOnly: true,
+								secure: false, // Set to true if using HTTPS
+								sameSite: 'lax',
+								expires: new Date(
+									Date.now() + 30 * 24 * 60 * 60 * 1000
+								),
+							});
+
+							return json({
+								success: true,
+								username: user.username,
+							});
+						} catch (e) {
+							if (e instanceof z.ZodError) {
+								return error('Invalid request body', 400);
+							}
+							return error('Internal server error', 500);
 						}
-
-						// Create session
-						const sessionId = await userManagement.createSession(
-							user.id
-						);
-
-						// Set session cookie
-						req.cookies.set('session', sessionId, {
-							httpOnly: true,
-							secure: false, // Set to true if using HTTPS
-							sameSite: 'lax',
-							expires: new Date(
-								Date.now() + 30 * 24 * 60 * 60 * 1000
-							),
-						});
-
-						return json({
-							success: true,
-							username: user.username,
-						});
-					} catch (e) {
-						if (e instanceof z.ZodError) {
-							return error('Invalid request body', 400);
-						}
-						return error('Internal server error', 500);
 					}
-				},
+				),
 			},
 			'/logout': {
 				POST: async (req, _server, { json }) => {

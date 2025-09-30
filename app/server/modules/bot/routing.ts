@@ -1,4 +1,8 @@
-import { createServeOptions, staticResponse } from '../../lib/routes';
+import {
+	createServeOptions,
+	staticResponse,
+	withRequestBody,
+} from '../../lib/routes';
 import { SettablePromise } from '../../lib/settable-promise';
 import type { ServeOptions } from '../../lib/routes';
 import { LogObj } from '../../lib/logging/lob-obj';
@@ -6,7 +10,6 @@ import { TELEGRAM_IPS } from '../../lib/constants';
 import { MessageHandler } from './message';
 import type { ModuleConfig } from '..';
 import { getEnv } from '../../lib/io';
-import type { BunRequest } from 'bun';
 import chalk from 'chalk';
 import * as z from 'zod';
 
@@ -28,8 +31,8 @@ function isInIPRange(
 	return ip[blockIndex] >= range.lower[0] && ip[blockIndex] <= range.upper[0];
 }
 
-function isFromTelegram(req: BunRequest) {
-	const fwd = req.headers.get('x-forwarded-for') as string;
+function isFromTelegram(headers: Headers) {
+	const fwd = headers.get('x-forwarded-for') as string;
 	const [ipv4] = fwd.split(',');
 	const ipBlocks = ipv4.split('.').map((p) => parseInt(p));
 	return TELEGRAM_IPS.some((r) => isInIPRange(ipBlocks, r));
@@ -43,26 +46,27 @@ function _initRouting({ db }: ModuleConfig) {
 
 	return createServeOptions(
 		{
-			'/msg': async (req, _server, { json }) => {
-				if (isFromTelegram(req)) {
-					const { message, edited_message } = z
-						.object({
-							message: z.any(),
-							edited_message: z.any().optional(),
-						})
-						.parse(await req.json());
-					const logObj = LogObj.fromReqRes(req).attachMessage(
-						chalk.bold(chalk.cyan('[bot]'))
-					);
-					return staticResponse(
-						await (
-							await messageHandlerInstance.value
-						).handleMessage(message, edited_message, logObj)
-					);
-				} else {
-					return json('auth problem', { status: 500 });
+			'/msg': withRequestBody(
+				z.object({
+					message: z.any(),
+					edited_message: z.any().optional(),
+				}),
+				async (body, req, _server, { json }) => {
+					if (isFromTelegram(req.headers)) {
+						const { message, edited_message } = body;
+						const logObj = LogObj.fromReqRes(req).attachMessage(
+							chalk.bold(chalk.cyan('[bot]'))
+						);
+						return staticResponse(
+							await (
+								await messageHandlerInstance.value
+							).handleMessage(message, edited_message, logObj)
+						);
+					} else {
+						return json('auth problem', { status: 500 });
+					}
 				}
-			},
+			),
 		},
 		false
 	);

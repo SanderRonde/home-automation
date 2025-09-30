@@ -1,4 +1,4 @@
-import { createServeOptions } from '../../lib/routes';
+import { createServeOptions, withRequestBody } from '../../lib/routes';
 import type { ServeOptions } from '../../lib/routes';
 import type { DeviceAPI } from './api';
 import type { ModuleConfig } from '..';
@@ -70,37 +70,37 @@ function _initRouting({ db }: ModuleConfig, api: DeviceAPI) {
 
 				return json({ devices });
 			},
-			'/updateName': async (req, _server, { json }) => {
-				const { deviceId, name } = z
-					.object({
-						deviceId: z.string(),
-						name: z.string(),
-					})
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-					.parse(await req.json());
+			'/updateName': withRequestBody(
+				z.object({
+					deviceId: z.string(),
+					name: z.string(),
+				}),
+				(body, _req, _server, { json }) => {
+					const { deviceId, name } = body;
 
-				if (api.updateDeviceName(deviceId, name)) {
-					return json({ success: true });
+					if (api.updateDeviceName(deviceId, name)) {
+						return json({ success: true });
+					}
+
+					return json({ error: 'Device not found' }, { status: 404 });
 				}
+			),
+			'/updateRoom': withRequestBody(
+				z.object({
+					deviceId: z.string(),
+					room: z.string().optional(),
+					icon: z.string().optional(),
+				}),
+				(body, _req, _server, { json }) => {
+					const { deviceId, room, icon } = body;
 
-				return json({ error: 'Device not found' }, { status: 404 });
-			},
-			'/updateRoom': async (req, _server, { json }) => {
-				const { deviceId, room, icon } = z
-					.object({
-						deviceId: z.string(),
-						room: z.string().optional(),
-						icon: z.string().optional(),
-					})
-					// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-					.parse(await req.json());
+					if (api.updateDeviceRoom(deviceId, room, icon)) {
+						return json({ success: true });
+					}
 
-				if (api.updateDeviceRoom(deviceId, room, icon)) {
-					return json({ success: true });
+					return json({ error: 'Device not found' }, { status: 404 });
 				}
-
-				return json({ error: 'Device not found' }, { status: 404 });
-			},
+			),
 			'/rooms': (_req, _server, { json }) => {
 				const rooms = api.getRooms();
 				return json({ rooms });
