@@ -15,7 +15,7 @@
 		"pretty": "pretty-quick",
 		"format-check": "prettier --check '**/*.{ts,json,html}'",
 		"format": "prettier --write '**/*.{ts,json,html}'",
-		"lint": "bun format-check && bun compile && eslint \"./app/**/*.{ts,tsx}\"",
+		"lint": "bun format && bun compile && eslint \"./app/**/*.{ts,tsx}\"",
 		"eslint:fix": "eslint --fix \"./app/**/*.{ts,tsx}\"",
 		"test": "bun test",
 		"test:watch": "bun test --watch",

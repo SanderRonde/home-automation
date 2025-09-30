@@ -34,7 +34,7 @@ import type { SxProps } from '@mui/material';
 
 interface EndpointVisualizationProps {
 	endpoint: ReturnTypeForApi<
-		'config',
+		'dashboard',
 		'/getDevices',
 		'GET'
 	>['ok']['devices'][number]['endpoints'][number];
@@ -106,7 +106,7 @@ const EndpointVisualization: React.FC<EndpointVisualizationProps> = (props) => {
 
 export const Devices: React.FC = () => {
 	const [devices, setDevices] = useState<
-		ReturnTypeForApi<'config', '/getDevices', 'GET'>['ok']['devices']
+		ReturnTypeForApi<'dashboard', '/getDevices', 'GET'>['ok']['devices']
 	>([]);
 	const [pairingCode, setPairingCode] = useState('');
 	const [pairingLoading, setPairingLoading] = useState(false);
@@ -132,7 +132,7 @@ export const Devices: React.FC = () => {
 			if (showLoading) {
 				setLoadingDevices(true);
 			}
-			const response = await apiGet('config', '/getDevices', {});
+			const response = await apiGet('dashboard', '/getDevices', {});
 
 			if (!response.ok) {
 				throw new Error(
@@ -168,7 +168,7 @@ export const Devices: React.FC = () => {
 		setPairingMessage(null);
 
 		try {
-			const response = await apiPost('config', '/pair/:code', {
+			const response = await apiPost('dashboard', '/pair/:code', {
 				code: pairingCode,
 			});
 
@@ -356,7 +356,16 @@ export const Devices: React.FC = () => {
 											}}
 										>
 											{isEditing ? (
-												<Box sx={{ py: 2, px: 2, display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>
+												<Box
+													sx={{
+														py: 2,
+														px: 2,
+														display: 'flex',
+														alignItems: 'center',
+														gap: 1,
+														flexGrow: 1,
+													}}
+												>
 													<TextField
 														value={editedName}
 														onChange={(e) =>
@@ -405,7 +414,17 @@ export const Devices: React.FC = () => {
 												</Box>
 											) : (
 												<>
-													<Box sx={{py: 2, px: 2, display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1}}>
+													<Box
+														sx={{
+															py: 2,
+															px: 2,
+															display: 'flex',
+															alignItems:
+																'center',
+															gap: 1,
+															flexGrow: 1,
+														}}
+													>
 														<Typography
 															variant="h6"
 															sx={{
@@ -458,8 +477,10 @@ export const Devices: React.FC = () => {
 																gap: 1,
 																px: 2,
 																minWidth: 180,
-																borderLeft: '1px solid',
-																borderColor: 'divider',
+																borderLeft:
+																	'1px solid',
+																borderColor:
+																	'divider',
 																backgroundColor:
 																	device.room
 																		? device.roomColor

@@ -1,7 +1,6 @@
 import {
 	DeviceHub as DeviceHubIcon,
 	Settings as SettingsIcon,
-	Storage as StorageIcon,
 	Cloud as CloudIcon,
 	Lightbulb as LightbulbIcon,
 } from '@mui/icons-material';
@@ -38,7 +37,6 @@ export interface SidebarProps {
 
 export const Sidebar = (props: SidebarProps): JSX.Element => {
 	const menuItems = [
-		{ text: 'Switch', icon: <StorageIcon />, id: SidebarTab.SWITCH },
 		{ text: 'Settings', icon: <SettingsIcon />, id: SidebarTab.SETTINGS },
 		{ text: 'Devices', icon: <DeviceHubIcon />, id: SidebarTab.DEVICES }, // Updated icon for Matter
 		{ text: 'eWeLink', icon: <CloudIcon />, id: SidebarTab.EWELINK },
@@ -66,7 +64,6 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 };
 
 export enum SidebarTab {
-	SWITCH = 'switch',
 	SETTINGS = 'settings',
 	DEVICES = 'devices',
 	EWELINK = 'ewelink',

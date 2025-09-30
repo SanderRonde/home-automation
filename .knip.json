@@ -1,6 +1,6 @@
 {
 	"entry": [
-		"app/client/config/config.tsx",
+		"app/client/dashboard/dashboard.tsx",
 		"app/client/info-screen/info-screen.ts",
 		"app/client/switch/switch.tsx"
 	],

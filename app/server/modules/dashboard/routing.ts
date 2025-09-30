@@ -1,20 +1,20 @@
 import { createServeOptions, staticResponse } from '../../lib/routes';
-import configHtml from '../../../client/config/index.html';
+import dashboardHtml from '../../../client/dashboard/index.html';
 import type { DeviceEndpoint } from '../device/device';
 import type { ServeOptions } from '../../lib/routes';
 import { CLIENT_FOLDER } from '../../lib/constants';
 import type { ModuleConfig } from '..';
 import path from 'path';
 
-export interface ConfigDeviceEndpointResponse {
+export interface DashboardDeviceEndpointResponse {
 	clusters: {
 		name: string;
 		emoji: string;
 	}[];
-	endpoints: ConfigDeviceEndpointResponse[];
+	endpoints: DashboardDeviceEndpointResponse[];
 }
 
-interface ConfigDeviceResponse extends ConfigDeviceEndpointResponse {
+interface DashboardDeviceResponse extends DashboardDeviceEndpointResponse {
 	uniqueId: string;
 	name: string;
 	source: {
@@ -30,22 +30,26 @@ interface ConfigDeviceResponse extends ConfigDeviceEndpointResponse {
 	roomIcon?: string;
 }
 
-export interface ConfigGetDevicesResponse {
-	devices: ConfigDeviceResponse[];
+export interface DashboardGetDevicesResponse {
+	devices: DashboardDeviceResponse[];
 }
 
-export interface ConfigPairDeviceResponse {
+export interface DashboardPairDeviceResponse {
 	devices: string[];
 }
 
 function _initRouting({ modules }: ModuleConfig) {
 	return createServeOptions(
 		{
-			'/': configHtml,
+			'/': dashboardHtml,
 			'/favicon.ico': staticResponse(
 				new Response(
 					Bun.file(
-						path.join(CLIENT_FOLDER, 'config/static', 'favicon.ico')
+						path.join(
+							CLIENT_FOLDER,
+							'dashboard/static',
+							'favicon.ico'
+						)
 					)
 				)
 			),
@@ -58,11 +62,11 @@ function _initRouting({ modules }: ModuleConfig) {
 				const deviceApi = await modules.device.api.value;
 				const storedDevices = deviceApi.getStoredDevices();
 				const rooms = deviceApi.getRooms();
-				const responseDevices: ConfigDeviceResponse[] = [];
+				const responseDevices: DashboardDeviceResponse[] = [];
 
 				const getResponseForEndpoint = (
 					endpoint: DeviceEndpoint
-				): ConfigDeviceEndpointResponse => {
+				): DashboardDeviceEndpointResponse => {
 					const endpoints = [];
 					const clusters = [];
 					for (const cluster of endpoint.clusters) {
@@ -86,7 +90,7 @@ function _initRouting({ modules }: ModuleConfig) {
 					const room = storedDevice?.room;
 					const roomInfo = room ? rooms[room] : undefined;
 
-					const responseDevice: ConfigDeviceResponse = {
+					const responseDevice: DashboardDeviceResponse = {
 						uniqueId: deviceId,
 						name: storedDevice?.name ?? device.getDeviceName(),
 						source: {
@@ -113,14 +117,14 @@ function _initRouting({ modules }: ModuleConfig) {
 				const pairedDevices = await matterClient.pair(req.params.code);
 				return json({
 					devices: pairedDevices,
-				} satisfies ConfigPairDeviceResponse);
+				} satisfies DashboardPairDeviceResponse);
 			},
 		},
 		true
 	);
 }
 
-export type ConfigRoutes =
+export type DashboardRoutes =
 	ReturnType<typeof _initRouting> extends ServeOptions<infer R> ? R : never;
 
 export const initRouting = _initRouting as (

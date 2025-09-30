@@ -1,13 +1,12 @@
 import { HomeDetector } from './home-detector';
 import { Temperature } from './temperature';
 import { InfoScreen } from './info-screen';
+import { Dashboard } from './dashboard';
 import { Webhook } from './webhook';
 import { EWeLink } from './ewelink';
 import { Secret } from './secret/';
-import { Switch } from './switch';
 import { Matter } from './matter';
 import { Device } from './device';
-import { Config } from './config';
 import { WLed } from './wled';
 import { Auth } from './auth';
 import { MCP } from './mcp';
@@ -32,9 +31,8 @@ const getModuleObj = () => ({
 	auth: Auth,
 	wled: WLed,
 	device: Device,
-	switch: Switch,
 	matter: Matter,
-	config: Config,
+	dashboard: Dashboard,
 	secret: Secret,
 	webhook: Webhook,
 	ewelink: EWeLink,

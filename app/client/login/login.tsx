@@ -53,10 +53,10 @@ function LoginPage(): JSX.Element {
 
 			const data = await response.json();
 			if (data.success) {
-				// Redirect to the page they were trying to access or home
-				const params = new URLSearchParams(window.location.search);
-				const redirect = params.get('redirect') || '/config';
-				window.location.href = redirect;
+			// Redirect to the page they were trying to access or home
+			const params = new URLSearchParams(window.location.search);
+			const redirect = params.get('redirect') || '/dashboard';
+			window.location.href = redirect;
 			} else {
 				setError('Login failed. Please try again.');
 				setLoading(false);

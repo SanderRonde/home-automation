@@ -2,14 +2,13 @@ import { EweLinkConfig } from './components/EweLinkConfig';
 import { AppLayout } from './components/layout/AppLayout';
 import { SidebarTab } from './components/layout/Sidebar';
 import { NotFoundPage } from './components/NotFoundPage';
-import { SwitchEditor } from './components/SwitchEditor';
 import { WelcomePage } from './components/WelcomePage';
 import { WLEDConfig } from './components/WLEDConfig';
 import React, { useState, useEffect } from 'react';
 import { Devices } from './components/Devices';
 import { createRoot } from 'react-dom/client';
 
-function ConfigApp() {
+function DashboardApp() {
 	// Get initial tab from URL hash or default to settings
 	const [currentTab, setCurrentTab] = useState<string | SidebarTab>(() => {
 		const hash = window.location.hash.slice(1); // Remove the # symbol
@@ -47,9 +46,6 @@ function ConfigApp() {
 			case SidebarTab.DEVICES:
 				return <Devices />;
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
-			case SidebarTab.SWITCH:
-				return <SwitchEditor />;
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
 			case SidebarTab.EWELINK:
 				return <EweLinkConfig />;
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
@@ -72,6 +68,6 @@ function ConfigApp() {
 const root = createRoot(document.getElementById('root')!);
 root.render(
 	<React.StrictMode>
-		<ConfigApp />
+		<DashboardApp />
 	</React.StrictMode>
 );

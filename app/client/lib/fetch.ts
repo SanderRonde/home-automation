@@ -1,9 +1,8 @@
 import type { TemperatureRoutes } from '../../server/modules/temperature/routing';
+import type { DashboardRoutes } from '../../server/modules/dashboard/routing';
 import type { WebhookRoutes } from '../../server/modules/webhook/routing';
 import type { EwelinkRoutes } from '../../server/modules/ewelink/routing';
-import type { SwitchRoutes } from '../../server/modules/switch/routing';
 import type { DeviceRoutes } from '../../server/modules/device/routing';
-import type { ConfigRoutes } from '../../server/modules/config/routing';
 import type { WledRoutes } from '../../server/modules/wled/routing';
 import type { AuthRoutes } from '../../server/modules/auth/routing';
 import type { BotRoutes } from '../../server/modules/bot/routing';
@@ -112,10 +111,9 @@ export async function apiPost<
 type RoutesForModules = {
 	auth: AuthRoutes;
 	bot: BotRoutes;
-	config: ConfigRoutes;
+	dashboard: DashboardRoutes;
 	device: DeviceRoutes;
 	ewelink: EwelinkRoutes;
-	switch: SwitchRoutes;
 	temperature: TemperatureRoutes;
 	webhook: WebhookRoutes;
 	wled: WledRoutes;
