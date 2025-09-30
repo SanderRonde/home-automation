@@ -42,7 +42,6 @@ function _initRouting({ modules }: ModuleConfig) {
 	return createServeOptions(
 		{
 			'/': configHtml,
-			// TODO:(sander)
 			'/favicon.ico': staticResponse(
 				new Response(
 					Bun.file(
