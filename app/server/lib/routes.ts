@@ -181,23 +181,33 @@ export function withRequestBody<
 		server: Server,
 		response: BrandedRouteHandlerResponse
 	) => R
-): (
-	req: BunRequest<Extract<T, string>>,
-	server: Server,
-	response: BrandedRouteHandlerResponse
-) => R {
+): RouteBodyBrand<
+	(
+		req: BunRequest<Extract<T, string>>,
+		server: Server,
+		response: BrandedRouteHandlerResponse
+	) => R,
+	S
+> {
 	return (async (req, server, response) => {
 		const body = shape.safeParse(await req.json());
 		if (!body.success) {
 			return response.error(body.error.message, 400);
 		}
 		return handler(body.data, req, server, response);
-	}) as (
-		req: BunRequest<Extract<T, string>>,
-		server: Server,
-		response: BrandedRouteHandlerResponse
-	) => R;
+	}) as RouteBodyBrand<
+		(
+			req: BunRequest<Extract<T, string>>,
+			server: Server,
+			response: BrandedRouteHandlerResponse
+		) => R,
+		S
+	>;
 }
+
+export type RouteBodyBrand<T, B> = T & {
+	__body: B;
+};
 
 export type BrandedResponse<T, E extends boolean> = Response & {
 	__json: T;

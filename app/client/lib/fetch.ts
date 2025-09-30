@@ -1,4 +1,5 @@
 import type { TemperatureRoutes } from '../../server/modules/temperature/routing';
+import type { BrandedResponse, RouteBodyBrand } from '../../server/lib/routes';
 import type { DashboardRoutes } from '../../server/modules/dashboard/routing';
 import type { WebhookRoutes } from '../../server/modules/webhook/routing';
 import type { EwelinkRoutes } from '../../server/modules/ewelink/routing';
@@ -6,8 +7,8 @@ import type { DeviceRoutes } from '../../server/modules/device/routing';
 import type { WledRoutes } from '../../server/modules/wled/routing';
 import type { AuthRoutes } from '../../server/modules/auth/routing';
 import type { BotRoutes } from '../../server/modules/bot/routing';
-import type { BrandedResponse } from '../../server/lib/routes';
 import type { RouterTypes } from 'bun';
+import type z from 'zod';
 
 function replacePathParams(
 	endpoint: string,
@@ -70,7 +71,7 @@ export async function apiPost<
 	module: M,
 	endpoint: Extract<E, string>,
 	pathParams: RouterTypes.ExtractRouteParams<Extract<E, string>>,
-	body?: unknown
+	body?: BodyTypeForApi<M, E, 'POST'>
 ): Promise<
 	Omit<Response, 'json' | 'ok'> &
 		(
@@ -127,6 +128,25 @@ export type ReturnTypeForApi<
 	ok: _ReturnTypeForApi<RoutesForModules[M], endpoint, method, false>;
 	error: _ReturnTypeForApi<RoutesForModules[M], endpoint, method, true>;
 };
+
+export type BodyTypeForApi<
+	M extends keyof RoutesForModules,
+	endpoint extends keyof RoutesForModules[M],
+	method extends 'GET' | 'POST',
+> =
+	RoutesForModules[M][endpoint] extends RouteBodyBrand<
+		unknown,
+		infer B extends z.ZodTypeAny
+	>
+		? z.input<B>
+		: RoutesForModules[M][endpoint] extends {
+					[K in method]?: RouteBodyBrand<
+						unknown,
+						infer B extends z.ZodTypeAny
+					>;
+			  }
+			? z.input<B>
+			: never;
 
 type _ReturnTypeForApi<
 	R extends Record<string, unknown>,

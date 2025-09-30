@@ -54,14 +54,7 @@ export const WLEDConfig = (): JSX.Element => {
 		setSuccess(false);
 
 		try {
-			const response = await apiPost(
-				'wled',
-				'/config',
-				{},
-				{
-					body: newConfig,
-				}
-			);
+			const response = await apiPost('wled', '/config', {}, newConfig);
 
 			if (response.ok) {
 				setConfig(newConfig);

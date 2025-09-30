@@ -1,4 +1,4 @@
-import { createServeOptions, untypedRequestJson } from '../../lib/routes';
+import { createServeOptions, withRequestBody } from '../../lib/routes';
 import type { ServeOptions } from '../../lib/routes';
 import type { Database } from '../../lib/db';
 import type { WLEDDB } from '.';
@@ -25,26 +25,25 @@ function _initRouting(db: Database<WLEDDB>) {
 					const configJson = db.current().devices ?? [];
 					return json({ devices: configJson });
 				},
-				POST: async (req, _server, { error, json }) => {
-					try {
-						const config = WLEDConfig.parse(
-							await untypedRequestJson(req)
-						);
+				POST: withRequestBody(
+					WLEDConfig,
+					(body, _req, _server, { error, json }) => {
+						try {
+							// Store the config
+							db.update((old) => ({
+								...old,
+								devices: body.devices,
+							}));
 
-						// Store the config
-						db.update((old) => ({
-							...old,
-							devices: config.devices,
-						}));
-
-						return json({ success: true });
-					} catch (e) {
-						return error(
-							{ error: 'Invalid config structure' },
-							400
-						);
+							return json({ success: true });
+						} catch (e) {
+							return error(
+								{ error: 'Invalid config structure' },
+								400
+							);
+						}
 					}
-				},
+				),
 			},
 		},
 		true
