@@ -1,4 +1,4 @@
-import { Box, CssBaseline, ThemeProvider, createTheme } from '@mui/material';
+import { Box, CssBaseline, ThemeProvider, createTheme, useMediaQuery, useTheme } from '@mui/material';
 import type { SidebarTab } from './Sidebar';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
@@ -50,7 +50,16 @@ interface AppLayoutProps {
 }
 
 export const AppLayout = (props: AppLayoutProps): JSX.Element => {
-	const [open, setOpen] = React.useState(true);
+	const theme = useTheme();
+	const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+	
+	// Start with sidebar closed on mobile, open on desktop
+	const [open, setOpen] = React.useState(!isMobile);
+	
+	// Update sidebar state when screen size changes
+	React.useEffect(() => {
+		setOpen(!isMobile);
+	}, [isMobile]);
 
 	return (
 		<ThemeProvider theme={darkTheme}>
@@ -65,6 +74,8 @@ export const AppLayout = (props: AppLayoutProps): JSX.Element => {
 				<TopBar open={open} setOpen={setOpen} />
 				<Sidebar
 					open={open}
+					isMobile={isMobile}
+					onClose={() => setOpen(false)}
 					currentTab={props.currentTab}
 					onTabChange={props.onTabChange}
 				/>
@@ -72,12 +83,19 @@ export const AppLayout = (props: AppLayoutProps): JSX.Element => {
 					component="main"
 					sx={{
 						flexGrow: 1,
-						p: 3,
+						p: { xs: 2, sm: 3 }, // Less padding on mobile
 						width: '100%',
 						height: 'calc(100vh - 64px)',
 						overflow: 'auto',
 						bgcolor: 'background.default',
 						marginTop: '64px',
+						transition: (theme) =>
+							theme.transitions.create('margin', {
+								easing: theme.transitions.easing.sharp,
+								duration: theme.transitions.duration.leavingScreen,
+							}),
+						// Only shift content on desktop when sidebar is open
+						marginLeft: !isMobile && open ? '240px' : 0,
 					}}
 				>
 					{props.children}

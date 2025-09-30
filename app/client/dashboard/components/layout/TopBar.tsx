@@ -18,9 +18,10 @@ export const TopBar = (props: TopBarProps): JSX.Element => {
 			<Toolbar>
 				<IconButton
 					color="inherit"
-					aria-label="open drawer"
+					aria-label="toggle drawer"
 					onClick={() => props.setOpen(!props.open)}
 					edge="start"
+					sx={{ mr: 2 }}
 				>
 					<MenuIcon />
 				</IconButton>

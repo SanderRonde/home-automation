@@ -12,14 +12,16 @@ import {
 	ListItemIcon,
 	ListItemText,
 	styled,
+	Toolbar,
 } from '@mui/material';
 import * as React from 'react';
 
+const drawerWidth = 240;
+
 const StyledDrawer = styled(Drawer)(({ theme }) => ({
 	'& .MuiDrawer-paper': {
-		position: 'relative',
 		whiteSpace: 'nowrap',
-		width: 240,
+		width: drawerWidth,
 		transition: theme.transitions.create('width', {
 			easing: theme.transitions.easing.sharp,
 			duration: theme.transitions.duration.enteringScreen,
@@ -32,6 +34,8 @@ const StyledDrawer = styled(Drawer)(({ theme }) => ({
 
 export interface SidebarProps {
 	open: boolean;
+	isMobile: boolean;
+	onClose: () => void;
 	currentTab: string | SidebarTab;
 	onTabChange: (tab: SidebarTab) => void;
 }
@@ -45,15 +49,32 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 		{ text: 'WLED', icon: <LightbulbIcon />, id: SidebarTab.WLED },
 	];
 
+	const handleTabChange = (tab: SidebarTab) => {
+		props.onTabChange(tab);
+		// Close sidebar on mobile when item is selected
+		if (props.isMobile) {
+			props.onClose();
+		}
+	};
+
 	return (
-		<StyledDrawer variant="persistent" anchor="left" open={props.open}>
+		<StyledDrawer
+			variant={props.isMobile ? 'temporary' : 'persistent'}
+			anchor="left"
+			open={props.open}
+			onClose={props.onClose}
+			ModalProps={{
+				keepMounted: true, // Better mobile performance
+			}}
+		>
+			<Toolbar /> {/* Spacer for TopBar */}
 			<List>
 				{menuItems.map((item) => (
 					<ListItemButton
 						key={item.id}
 						// eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
 						selected={props.currentTab === item.id}
-						onClick={() => props.onTabChange(item.id)}
+						onClick={() => handleTabChange(item.id)}
 						sx={{ cursor: 'pointer' }}
 					>
 						<ListItemIcon>{item.icon}</ListItemIcon>
