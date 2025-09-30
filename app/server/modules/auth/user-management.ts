@@ -1,13 +1,13 @@
 import type { SQL } from 'bun';
 
-export interface User {
+interface User {
 	id: number;
 	username: string;
 	password_hash: string;
 	created_at: number;
 }
 
-export interface Session {
+interface Session {
 	id: string;
 	user_id: number;
 	created_at: number;

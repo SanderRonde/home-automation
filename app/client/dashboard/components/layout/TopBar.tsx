@@ -31,4 +31,4 @@ export const TopBar = (props: TopBarProps): JSX.Element => {
 			</Toolbar>
 		</StyledAppBar>
 	);
-}
+};

@@ -14,9 +14,12 @@ interface AssociatedMessage {
 }
 
 export class LogObj {
-	private static _objMap: WeakMap<Omit<BunRequest, 'json'> | http.ClientRequest, LogObj> =
-		new WeakMap();
-	private static _requestTimingMap: Map<Omit<BunRequest, 'json'>, number> = new Map();
+	private static _objMap: WeakMap<
+		Omit<BunRequest, 'json'> | http.ClientRequest,
+		LogObj
+	> = new WeakMap();
+	private static _requestTimingMap: Map<Omit<BunRequest, 'json'>, number> =
+		new Map();
 	public static logLevel: number = 1;
 
 	private _messages: AssociatedMessage[] = [];
@@ -90,7 +93,10 @@ export class LogObj {
 		return obj;
 	}
 
-	public static fromReqRes(reqRes: Omit<BunRequest, 'json'>, timeout?: number): LogObj {
+	public static fromReqRes(
+		reqRes: Omit<BunRequest, 'json'>,
+		timeout?: number
+	): LogObj {
 		if (!LogObj._objMap.has(reqRes)) {
 			const obj = new LogObj();
 			obj._timeout = timeout ?? obj._timeout;

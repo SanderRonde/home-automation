@@ -18,10 +18,6 @@ export interface RoomInfo {
 	icon?: string; // Material Icon name
 }
 
-export interface RoomAssignments {
-	rooms: Record<string, RoomInfo>;
-}
-
 function _initRouting({ db }: ModuleConfig, api: DeviceAPI) {
 	return createServeOptions(
 		{

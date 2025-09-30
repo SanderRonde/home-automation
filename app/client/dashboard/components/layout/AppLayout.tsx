@@ -1,4 +1,11 @@
-import { Box, CssBaseline, ThemeProvider, createTheme, useMediaQuery, useTheme } from '@mui/material';
+import {
+	Box,
+	CssBaseline,
+	ThemeProvider,
+	createTheme,
+	useMediaQuery,
+	useTheme,
+} from '@mui/material';
 import type { SidebarTab } from './Sidebar';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
@@ -52,10 +59,10 @@ interface AppLayoutProps {
 export const AppLayout = (props: AppLayoutProps): JSX.Element => {
 	const theme = useTheme();
 	const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-	
+
 	// Start with sidebar closed on mobile, open on desktop
 	const [open, setOpen] = React.useState(!isMobile);
-	
+
 	// Update sidebar state when screen size changes
 	React.useEffect(() => {
 		setOpen(!isMobile);
@@ -92,7 +99,8 @@ export const AppLayout = (props: AppLayoutProps): JSX.Element => {
 						transition: (theme) =>
 							theme.transitions.create('margin', {
 								easing: theme.transitions.easing.sharp,
-								duration: theme.transitions.duration.leavingScreen,
+								duration:
+									theme.transitions.duration.leavingScreen,
 							}),
 						// Only shift content on desktop when sidebar is open
 						marginLeft: !isMobile && open ? '240px' : 0,

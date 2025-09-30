@@ -14,6 +14,7 @@ import type { Database } from '../../lib/db';
 import eWelink from 'ewelink-api-next';
 import { Data } from '../../lib/data';
 import type { EWelinkDB } from '.';
+// eslint-disable-next-line n/no-extraneous-import
 import type WebSocket from 'ws';
 
 export class EWeLinkAPI implements Disposable {

@@ -2,7 +2,7 @@
 	"entry": [
 		"app/client/dashboard/dashboard.tsx",
 		"app/client/info-screen/info-screen.ts",
-		"app/client/switch/switch.tsx"
+		"app/client/login/login.tsx"
 	],
 	"project": ["app/server/**/*.{js,ts}", "app/client/**/*.{js,ts}"]
 }

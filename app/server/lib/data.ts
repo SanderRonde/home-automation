@@ -157,19 +157,4 @@ export class CombinedData<T, U> extends Data<[T, U]> {
 	}
 }
 
-export type CombinedDataUpstreams<T, U> = [Data<T>, Data<U>];
-export class PromiseData<T> extends Data<T | undefined> {
-	private getData: null | (() => Promise<T>);
-
-	public constructor(getData: () => Promise<T>) {
-		super(undefined);
-		this.getData = getData;
-	}
-
-	public override create(): void {
-		if (this.getData) {
-			void this.getData().then((value) => this.set(value));
-			this.getData = null;
-		}
-	}
-}
+type CombinedDataUpstreams<T, U> = [Data<T>, Data<U>];

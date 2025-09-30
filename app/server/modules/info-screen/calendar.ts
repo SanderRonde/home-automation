@@ -5,7 +5,6 @@ import { logTag } from '../../lib/logging/logger';
 import type { calendar_v3 } from 'googleapis';
 import { flatten } from '../../lib/array';
 import { getEnv } from '../../lib/io';
-import { SCOPES } from './constants';
 import { google } from 'googleapis';
 import * as fs from 'fs-extra';
 import * as path from 'path';
@@ -14,8 +13,6 @@ import * as path from 'path';
 const optionalRequire = require('optional-require')(require) as (
 	requirePath: string
 ) => unknown;
-
-export let authenticated = false;
 
 export async function refresh(): Promise<void> {
 	try {
@@ -55,18 +52,6 @@ function createClient(): void {
 
 const client = new SettablePromise<InstanceType<typeof google.auth.OAuth2>>();
 let calendar: calendar_v3.Calendar | null = null;
-export async function authenticateURL(): Promise<string | null> {
-	createClient();
-
-	if (client) {
-		const url = (await client.value).generateAuthUrl({
-			access_type: 'offline',
-			scope: SCOPES,
-		});
-		return url;
-	}
-	return null;
-}
 
 async function authTokens(tokens: Credentials, reAuth: boolean) {
 	createClient();
@@ -90,8 +75,6 @@ async function authTokens(tokens: Credentials, reAuth: boolean) {
 		version: 'v3',
 		auth: await client.value,
 	});
-
-	authenticated = true;
 }
 
 export async function authCode(code: string): Promise<void> {

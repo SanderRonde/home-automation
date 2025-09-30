@@ -47,10 +47,6 @@ export function logTag(
 	log(getTime(), chalk[color](`[${tag}]`), ...messages);
 }
 
-export function debug(...messages: unknown[]): void {
-	log(getTime(), chalk.bgHex('fc8803')('[DEBUG]'), ...messages);
-}
-
 export function warning(...messages: unknown[]): void {
 	log(getTime(), chalk.bgRed('[WARNING]'), ...messages);
 }

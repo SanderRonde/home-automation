@@ -214,12 +214,6 @@ export type BrandedResponse<T, E extends boolean> = Response & {
 	__isError: E;
 };
 
-export type BrandedRouteHandlerWithJson<T, R> = (
-	req: BunRequest<Extract<T, string>>,
-	server: Server,
-	response: BrandedRouteHandlerResponse
-) => BrandedResponse<R, boolean> | Promise<BrandedResponse<R, boolean>>;
-
 export type BrandedRouteHandler<T, R> = (
 	req: Omit<BunRequest<Extract<T, string>>, 'json'>,
 	server: Server,

@@ -6,7 +6,7 @@ import { CLIENT_FOLDER } from '../../lib/constants';
 import type { ModuleConfig } from '..';
 import path from 'path';
 
-export interface DashboardDeviceEndpointResponse {
+interface DashboardDeviceEndpointResponse {
 	clusters: {
 		name: string;
 		emoji: string;
@@ -30,11 +30,7 @@ interface DashboardDeviceResponse extends DashboardDeviceEndpointResponse {
 	roomIcon?: string;
 }
 
-export interface DashboardGetDevicesResponse {
-	devices: DashboardDeviceResponse[];
-}
-
-export interface DashboardPairDeviceResponse {
+interface DashboardPairDeviceResponse {
 	devices: string[];
 }
 
