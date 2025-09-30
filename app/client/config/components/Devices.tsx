@@ -16,14 +16,21 @@ import {
 	CardActionArea,
 	CircularProgress,
 	Tooltip,
+	IconButton,
 } from '@mui/material';
-import { RoomPreferences as RoomIcon } from '@mui/icons-material';
+import {
+	RoomPreferences as RoomIcon,
+	Edit as EditIcon,
+	Check as CheckIcon,
+	Close as CloseIcon,
+} from '@mui/icons-material';
 import { RoomAssignmentDialog } from './RoomAssignmentDialog';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import type { ReturnTypeForApi } from '../../lib/fetch';
 import React, { useState, useEffect } from 'react';
 import { apiGet, apiPost } from '../../lib/fetch';
 import * as Icons from '@mui/icons-material';
+import type { SxProps } from '@mui/material';
 
 interface EndpointVisualizationProps {
 	endpoint: ReturnTypeForApi<
@@ -117,6 +124,8 @@ export const Devices: React.FC = () => {
 		name: string;
 		room?: string;
 	} | null>(null);
+	const [editingDeviceId, setEditingDeviceId] = useState<string | null>(null);
+	const [editedName, setEditedName] = useState('');
 
 	const fetchDevices = async (showLoading = false) => {
 		try {
@@ -227,10 +236,53 @@ export const Devices: React.FC = () => {
 	};
 
 	const getIconComponent = (iconName: string) => {
-		const IconComponent = (Icons as Record<string, React.ComponentType>)[
-			iconName
-		];
-		return IconComponent ? <IconComponent /> : null;
+		const IconComponent = (
+			Icons as Record<string, React.ComponentType<{ sx?: SxProps }>>
+		)[iconName];
+		return IconComponent ? (
+			<IconComponent sx={{ fill: '#2f2f2f' }} />
+		) : null;
+	};
+
+	const handleStartEdit = (deviceId: string, currentName: string) => {
+		setEditingDeviceId(deviceId);
+		setEditedName(currentName);
+	};
+
+	const handleCancelEdit = () => {
+		setEditingDeviceId(null);
+		setEditedName('');
+	};
+
+	const handleSaveEdit = async (deviceId: string) => {
+		if (
+			!editedName.trim() ||
+			editedName === devices.find((d) => d.uniqueId === deviceId)?.name
+		) {
+			handleCancelEdit();
+			return;
+		}
+
+		try {
+			const response = await apiPost(
+				'device',
+				'/updateName',
+				{},
+				{
+					deviceId,
+					name: editedName.trim(),
+				}
+			);
+
+			if (response.ok) {
+				await fetchDevices();
+				handleCancelEdit();
+			} else {
+				console.error('Failed to update device name');
+			}
+		} catch (error) {
+			console.error('Failed to update device name:', error);
+		}
 	};
 
 	useEffect(() => {
@@ -289,32 +341,71 @@ export const Devices: React.FC = () => {
 								const allEmojis = device.allClusters
 									.map((c) => c.emoji)
 									.join(' ');
+								const isEditing =
+									editingDeviceId === device.uniqueId;
 
 								return (
 									<Card key={device.uniqueId} elevation={1}>
+										{/* Header with name, edit controls, and room */}
 										<Box
 											sx={{
 												display: 'flex',
 												alignItems: 'stretch',
+												borderBottom: '1px solid',
+												borderColor: 'divider',
 											}}
 										>
-											<CardActionArea
-												onClick={() =>
-													toggleDeviceExpansion(
-														device.uniqueId
-													)
-												}
-												sx={{ flex: 1 }}
-											>
-												<CardContent sx={{ py: 2 }}>
-													<Box
-														sx={{
-															display: 'flex',
-															alignItems:
-																'center',
-															gap: 2,
+											{isEditing ? (
+												<Box sx={{ py: 2, px: 2, display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>
+													<TextField
+														value={editedName}
+														onChange={(e) =>
+															setEditedName(
+																e.target.value
+															)
+														}
+														onKeyDown={(e) => {
+															if (
+																e.key ===
+																'Enter'
+															) {
+																void handleSaveEdit(
+																	device.uniqueId
+																);
+															} else if (
+																e.key ===
+																'Escape'
+															) {
+																handleCancelEdit();
+															}
 														}}
+														size="small"
+														autoFocus
+														sx={{ flex: 1 }}
+													/>
+													<IconButton
+														size="small"
+														onClick={() => {
+															void handleSaveEdit(
+																device.uniqueId
+															);
+														}}
+														color="primary"
 													>
+														<CheckIcon fontSize="small" />
+													</IconButton>
+													<IconButton
+														size="small"
+														onClick={
+															handleCancelEdit
+														}
+													>
+														<CloseIcon fontSize="small" />
+													</IconButton>
+												</Box>
+											) : (
+												<>
+													<Box sx={{py: 2, px: 2, display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1}}>
 														<Typography
 															variant="h6"
 															sx={{
@@ -325,115 +416,157 @@ export const Devices: React.FC = () => {
 														>
 															{device.name}
 														</Typography>
-														{allEmojis && (
-															<Typography
-																variant="h6"
+														<Tooltip title="Edit name">
+															<IconButton
+																size="small"
+																onClick={() => {
+																	handleStartEdit(
+																		device.uniqueId,
+																		device.name
+																	);
+																}}
 																sx={{
-																	fontSize:
-																		'1.2rem',
+																	opacity: 0.6,
+																	'&:hover': {
+																		opacity: 1,
+																	},
 																}}
 															>
-																{allEmojis}
-															</Typography>
-														)}
-														<ExpandMoreIcon
-															sx={{
-																transform:
-																	isExpanded
-																		? 'rotate(180deg)'
-																		: 'rotate(0deg)',
-																transition:
-																	'transform 0.2s',
-															}}
-														/>
+																<EditIcon fontSize="small" />
+															</IconButton>
+														</Tooltip>
 													</Box>
+													<Tooltip
+														title={
+															device.room
+																? 'Change room'
+																: 'Assign to room'
+														}
+													>
+														<Box
+															onClick={() => {
+																handleOpenRoomDialog(
+																	device.uniqueId,
+																	device.name,
+																	device.room
+																);
+															}}
+															sx={{
+																display: 'flex',
+																alignItems:
+																	'center',
+																gap: 1,
+																px: 2,
+																minWidth: 180,
+																borderLeft: '1px solid',
+																borderColor: 'divider',
+																backgroundColor:
+																	device.room
+																		? device.roomColor
+																		: 'transparent',
+																cursor: 'pointer',
+																transition:
+																	'filter 0.2s, background-color 0.2s',
+																justifyContent:
+																	'center',
+																'&:hover': {
+																	filter: device.room
+																		? 'brightness(0.9)'
+																		: 'brightness(0.95)',
+																	backgroundColor:
+																		device.room
+																			? device.roomColor
+																			: 'action.hover',
+																},
+															}}
+														>
+															<Box
+																sx={{
+																	display:
+																		'flex',
+																	alignItems:
+																		'center',
+																}}
+															>
+																{device.roomIcon ? (
+																	getIconComponent(
+																		device.roomIcon
+																	) || (
+																		<RoomIcon />
+																	)
+																) : (
+																	<RoomIcon />
+																)}
+															</Box>
+															{device.room && (
+																<Typography
+																	variant="body2"
+																	sx={{
+																		color: '#2f2f2f',
+																		fontWeight: 500,
+																	}}
+																>
+																	{
+																		device.room
+																	}
+																</Typography>
+															)}
+														</Box>
+													</Tooltip>
+												</>
+											)}
+										</Box>
+
+										{/* Bottom bar with device info and expand */}
+										<CardActionArea
+											onClick={() =>
+												toggleDeviceExpansion(
+													device.uniqueId
+												)
+											}
+											disabled={isEditing}
+										>
+											<CardContent sx={{ py: 1.5 }}>
+												<Box
+													sx={{
+														display: 'flex',
+														alignItems: 'center',
+														gap: 2,
+													}}
+												>
 													<Typography
 														color="text.secondary"
 														variant="body2"
-														sx={{ mt: 1 }}
+														sx={{ flex: 1 }}
 													>
 														{device.source.emoji}{' '}
 														Device ID:{' '}
 														{device.uniqueId}
 													</Typography>
-												</CardContent>
-											</CardActionArea>
-											<Tooltip
-												title={
-													device.room
-														? 'Change room'
-														: 'Assign to room'
-												}
-											>
-												<Box
-													onClick={() => {
-														handleOpenRoomDialog(
-															device.uniqueId,
-															device.name,
-															device.room
-														);
-													}}
-													sx={{
-														display: 'flex',
-														alignItems: 'center',
-														gap: 1,
-														pr: 2,
-														pl: 2,
-														minWidth: 180,
-														borderLeft: '1px solid',
-														borderColor: 'divider',
-														backgroundColor:
-															device.room
-																? device.roomColor
-																: 'transparent',
-														cursor: 'pointer',
-														transition:
-															'filter 0.2s',
-														justifyContent:
-															'center',
-														'&:hover': {
-															filter: device.room
-																? 'brightness(0.9)'
-																: 'brightness(0.95)',
-															backgroundColor:
-																device.room
-																	? device.roomColor
-																	: 'action.hover',
-														},
-													}}
-												>
-													<Box
-														sx={{
-															color: device.room
-																? '#000'
-																: 'text.secondary',
-															display: 'flex',
-															alignItems:
-																'center',
-														}}
-													>
-														{device.roomIcon ? (
-															getIconComponent(
-																device.roomIcon
-															) || <RoomIcon />
-														) : (
-															<RoomIcon />
-														)}
-													</Box>
-													{device.room && (
+													{allEmojis && (
 														<Typography
 															variant="body2"
 															sx={{
-																color: '#000',
-																fontWeight: 500,
+																fontSize:
+																	'1rem',
 															}}
 														>
-															{device.room}
+															{allEmojis}
 														</Typography>
 													)}
+													<ExpandMoreIcon
+														sx={{
+															transform:
+																isExpanded
+																	? 'rotate(180deg)'
+																	: 'rotate(0deg)',
+															transition:
+																'transform 0.2s',
+														}}
+													/>
 												</Box>
-											</Tooltip>
-										</Box>
+											</CardContent>
+										</CardActionArea>
 
 										{isExpanded && (
 											<CardContent

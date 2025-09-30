@@ -33,10 +33,10 @@ function _initRouting({ db }: ModuleConfig, api: DeviceAPI) {
 				// Update current devices status
 				for (const deviceId of currentDeviceIds) {
 					knownDevices[deviceId] = {
+						...knownDevices[deviceId],
 						id: deviceId,
 						status: 'online',
 						lastSeen: now,
-						name: knownDevices[deviceId]?.name,
 					};
 				}
 
@@ -70,7 +70,7 @@ function _initRouting({ db }: ModuleConfig, api: DeviceAPI) {
 
 				return json({ devices });
 			},
-			'/update-name': async (req, _server, { json }) => {
+			'/updateName': async (req, _server, { json }) => {
 				const { deviceId, name } = z
 					.object({
 						deviceId: z.string(),
@@ -85,7 +85,7 @@ function _initRouting({ db }: ModuleConfig, api: DeviceAPI) {
 
 				return json({ error: 'Device not found' }, { status: 404 });
 			},
-			'/update-room': async (req, _server, { json }) => {
+			'/updateRoom': async (req, _server, { json }) => {
 				const { deviceId, room, icon } = z
 					.object({
 						deviceId: z.string(),

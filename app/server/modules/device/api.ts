@@ -22,12 +22,8 @@ export class DeviceAPI {
 		}
 		for (const device of devices) {
 			const deviceId = device.getUniqueId();
-			const deviceName = device.getDeviceName();
 			newDevices[deviceId] = device;
 			newDeviceIds.add(deviceId);
-
-			// Update device name in registry if it has changed
-			this.updateDeviceName(deviceId, deviceName);
 		}
 
 		this.devices.set(newDevices);
@@ -139,14 +135,11 @@ export class DeviceAPI {
 
 		// Mark currently online devices
 		for (const deviceId of onlineDeviceIds) {
-			const device = this.devices.current()[deviceId];
-			const name = device?.getDeviceName();
-
 			knownDevices[deviceId] = {
+				...knownDevices[deviceId],
 				id: deviceId,
 				status: 'online',
 				lastSeen: now,
-				name: name || knownDevices[deviceId]?.name,
 			};
 		}
 

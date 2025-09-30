@@ -89,7 +89,7 @@ function _initRouting({ modules }: ModuleConfig) {
 
 					const responseDevice: ConfigDeviceResponse = {
 						uniqueId: deviceId,
-						name: device.getDeviceName(),
+						name: storedDevice?.name ?? device.getDeviceName(),
 						source: {
 							name: device.getSource().value,
 							emoji: device.getSource().toEmoji(),

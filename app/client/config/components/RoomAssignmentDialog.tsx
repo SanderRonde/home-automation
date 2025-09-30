@@ -116,7 +116,7 @@ export const RoomAssignmentDialog: React.FC<RoomAssignmentDialogProps> = (
 
 			const response = await apiPost(
 				'device',
-				'/update-room',
+				'/updateRoom',
 				{},
 				{
 					deviceId: props.deviceId,
@@ -143,7 +143,7 @@ export const RoomAssignmentDialog: React.FC<RoomAssignmentDialogProps> = (
 		try {
 			const response = await apiPost(
 				'device',
-				'/update-room',
+				'/updateRoom',
 				{},
 				{
 					deviceId: props.deviceId,
