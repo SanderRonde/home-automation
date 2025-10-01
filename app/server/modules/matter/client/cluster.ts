@@ -31,7 +31,7 @@ import {
 	MatterServerInputMessageType,
 	MatterServerOutputMessageType,
 } from '../server/server';
-import type {
+import {
 	Cluster,
 	DeviceClusterName,
 	DeviceGroupId,
@@ -533,19 +533,17 @@ function toMatterGroupId(groupId: DeviceGroupId): GroupId {
 }
 
 export const MATTER_CLUSTERS = {
-	[MatterOnOffCluster.clusterName.value]: MatterOnOffCluster,
-	[MatterWindowCoveringCluster.clusterName.value]:
-		MatterWindowCoveringCluster,
-	[MatterLevelControlCluster.clusterName.value]: MatterLevelControlCluster,
-	[MatterPowerSourceCluster.clusterName.value]: MatterPowerSourceCluster,
-	[MatterGroupsCluster.clusterName.value]: MatterGroupsCluster,
-	[MatterOccupancySensingCluster.clusterName.value]:
-		MatterOccupancySensingCluster,
-	[MatterIlluminanceMeasurementCluster.clusterName.value]:
+	[DeviceClusterName.ON_OFF]: MatterOnOffCluster,
+	[DeviceClusterName.WINDOW_COVERING]: MatterWindowCoveringCluster,
+	[DeviceClusterName.LEVEL_CONTROL]: MatterLevelControlCluster,
+	[DeviceClusterName.POWER_SOURCE]: MatterPowerSourceCluster,
+	[DeviceClusterName.GROUPS]: MatterGroupsCluster,
+	[DeviceClusterName.OCCUPANCY_SENSING]: MatterOccupancySensingCluster,
+	[DeviceClusterName.ILLUMINANCE_MEASUREMENT]:
 		MatterIlluminanceMeasurementCluster,
-	[MatterTemperatureMeasurementCluster.clusterName.value]:
+	[DeviceClusterName.TEMPERATURE_MEASUREMENT]:
 		MatterTemperatureMeasurementCluster,
-	[MatterColorControlCluster.clusterName.value]: MatterColorControlCluster,
+	[DeviceClusterName.COLOR_CONTROL]: MatterColorControlCluster,
 };
 
 export const IGNORED_MATTER_CLUSTERS = [

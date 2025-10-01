@@ -182,8 +182,8 @@ const DEVICE_CLUSTER_CARDS: Record<
 	EnumValue,
 	React.ComponentType<DeviceClusterCardBaseProps>
 > = {
-	[DeviceClusterName.WINDOW_COVERING.value]: WindowCoveringCard,
-	[DeviceClusterName.ON_OFF.value]: OnOffCard,
+	[DeviceClusterName.WINDOW_COVERING]: WindowCoveringCard,
+	[DeviceClusterName.ON_OFF]: OnOffCard,
 };
 
 export const DeviceClusterCard = (

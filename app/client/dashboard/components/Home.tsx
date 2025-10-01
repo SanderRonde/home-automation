@@ -179,11 +179,7 @@ const RoomDetail = (props: RoomDetailProps) => {
 
 		for (const device of props.devices) {
 			for (const cluster of device.allClusters) {
-				if (
-					CLUSTER_GROUPS.includes(
-						DeviceClusterName.fromValue(cluster.name)
-					)
-				) {
+				if (CLUSTER_GROUPS.includes(cluster.name)) {
 					entries.push({
 						device,
 						cluster,
@@ -267,14 +263,10 @@ interface RoomDeviceProps {
 
 const RoomDevice = (props: RoomDeviceProps) => {
 	// Find which clusters are represented in this room
-	const representedClusters = new Set<string>();
+	const representedClusters = new Set<DeviceClusterName>();
 	for (const device of props.room.devices) {
 		for (const cluster of device.allClusters) {
-			if (
-				CLUSTER_GROUPS.includes(
-					DeviceClusterName.fromValue(cluster.name)
-				)
-			) {
+			if (CLUSTER_GROUPS.includes(cluster.name)) {
 				representedClusters.add(cluster.name);
 			}
 		}

@@ -4,6 +4,7 @@ import type {
 } from '../server/server';
 import { DeviceEndpoint, DeviceSource, type Device } from '../../device/device';
 import { MATTER_CLUSTERS, IGNORED_MATTER_CLUSTERS } from './cluster';
+import type { DeviceClusterName } from '../../device/cluster';
 import { type MatterClusterInterface } from './cluster';
 import type { MatterCluster } from './cluster';
 import type { MatterClient } from './client';
@@ -45,10 +46,11 @@ export class MatterEndpoint extends DeviceEndpoint {
 	protected _getClusters(): MatterCluster<MatterClusterInterface>[] {
 		const clusters: MatterCluster<MatterClusterInterface>[] = [];
 		for (const clusterMeta of this.#clusterMeta) {
+			const clusterName = clusterMeta.name as DeviceClusterName;
 			const ClusterWithName =
-				clusterMeta.name in MATTER_CLUSTERS
+				clusterName in MATTER_CLUSTERS
 					? MATTER_CLUSTERS[
-							clusterMeta.name as keyof typeof MATTER_CLUSTERS
+							clusterName as keyof typeof MATTER_CLUSTERS
 						]
 					: null;
 			if (!ClusterWithName) {

@@ -10,9 +10,9 @@ import type {
 	ServeOptions,
 } from '../../lib/routes';
 import { createServeOptions, withRequestBody } from '../../lib/routes';
-import type { Cluster, ClusterNameLiteral } from './cluster';
 import type * as Icons from '@mui/icons-material';
 import type { DeviceEndpoint } from './device';
+import type { Cluster } from './cluster';
 import type { DeviceAPI } from './api';
 import type { ModuleConfig } from '..';
 import { wait } from '../../lib/time';
@@ -40,7 +40,7 @@ export type DashboardDeviceClusterExtra = {
 };
 
 export type DashboardDeviceClusterWithState = {
-	name: ClusterNameLiteral;
+	name: DeviceClusterName;
 	icon?: keyof typeof Icons;
 } & DashboardDeviceClusterExtra[keyof DashboardDeviceClusterExtra];
 
@@ -68,7 +68,7 @@ function _initRouting({ db, modules }: ModuleConfig, api: DeviceAPI) {
 	): Promise<DashboardDeviceClusterWithState> => {
 		const clusterName = cluster.getName();
 		const base = {
-			name: clusterName.value,
+			name: clusterName,
 			icon: getClusterIconName(clusterName),
 		};
 		if (cluster instanceof DeviceOnOffCluster) {
@@ -384,7 +384,7 @@ async function performActionForDeviceCluster<
 	return res.json({ success: true });
 }
 
-function validateClusterRoute<T extends `/cluster/${ClusterNameLiteral}`>(
+function validateClusterRoute<T extends `/cluster/${DeviceClusterName}`>(
 	route: T
 ): T {
 	return route;

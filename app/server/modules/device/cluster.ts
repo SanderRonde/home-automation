@@ -1,7 +1,5 @@
 import type { EventEmitter } from '../../lib/event-emitter';
-import type { EnumValue } from '../../lib/enum';
 import type { Color } from '../../lib/color';
-import { ClassEnum } from '../../lib/enum';
 import type { Data } from '../../lib/data';
 
 export type DeviceGroupId = number & {
@@ -23,101 +21,28 @@ export enum DeviceStatus {
 
 export abstract class Cluster implements Disposable {
 	public abstract [Symbol.dispose](): void;
-	public abstract getName(): DeviceClusterName<ClusterNameLiteral>;
+	public abstract getName(): DeviceClusterName;
 }
 
-export class DeviceClusterName<
-	V extends EnumValue = EnumValue,
-> extends ClassEnum<V> {
-	public static readonly ON_OFF = new DeviceClusterName('OnOff');
-	public static readonly WINDOW_COVERING = new DeviceClusterName(
-		'WindowCovering'
-	);
-	public static readonly LEVEL_CONTROL = new DeviceClusterName(
-		'LevelControl'
-	);
-	public static readonly POWER_SOURCE = new DeviceClusterName('PowerSource');
-	public static readonly GROUPS = new DeviceClusterName('Groups');
-	public static readonly OCCUPANCY_SENSING = new DeviceClusterName(
-		'OccupancySensing'
-	);
-	public static readonly TEMPERATURE_MEASUREMENT = new DeviceClusterName(
-		'TemperatureMeasurement'
-	);
-	public static readonly RELATIVE_HUMIDITY_MEASUREMENT =
-		new DeviceClusterName('RelativeHumidityMeasurement');
-	public static readonly BOOLEAN_STATE = new DeviceClusterName(
-		'BooleanState'
-	);
-	public static readonly SWITCH = new DeviceClusterName('Switch');
-	public static readonly ILLUMINANCE_MEASUREMENT = new DeviceClusterName(
-		'IlluminanceMeasurement'
-	);
-	public static readonly COLOR_CONTROL = new DeviceClusterName(
-		'ColorControl'
-	);
-
-	public static values(): Extract<
-		(typeof DeviceClusterName)[keyof typeof DeviceClusterName],
-		DeviceClusterName
-	>[] {
-		return super.values() as Extract<
-			(typeof DeviceClusterName)[keyof typeof DeviceClusterName],
-			DeviceClusterName
-		>[];
-	}
-
-	public static fromValue<V extends EnumValue>(
-		value: V
-	): DeviceClusterName<V> {
-		return super.fromValue(value) as DeviceClusterName<V>;
-	}
-
-	public toEmoji(): string {
-		switch (this) {
-			case DeviceClusterName.ON_OFF:
-				return '💡';
-			case DeviceClusterName.WINDOW_COVERING:
-				return '🪟';
-			case DeviceClusterName.LEVEL_CONTROL:
-				return '🔘';
-			case DeviceClusterName.POWER_SOURCE:
-				return '🔋';
-			case DeviceClusterName.GROUPS:
-				return '👥';
-			case DeviceClusterName.OCCUPANCY_SENSING:
-				return '🚶';
-			case DeviceClusterName.TEMPERATURE_MEASUREMENT:
-				return '🌡️';
-			case DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT:
-				return '💧';
-			case DeviceClusterName.BOOLEAN_STATE:
-				return '🔘';
-			case DeviceClusterName.SWITCH:
-				return '🔀';
-			case DeviceClusterName.ILLUMINANCE_MEASUREMENT:
-				return '💡';
-			case DeviceClusterName.COLOR_CONTROL:
-				return '🎨';
-			default:
-				throw new Error('Invalid DeviceClusterName');
-		}
-	}
+export enum DeviceClusterName {
+	ON_OFF = 'OnOff',
+	WINDOW_COVERING = 'WindowCovering',
+	LEVEL_CONTROL = 'LevelControl',
+	POWER_SOURCE = 'PowerSource',
+	GROUPS = 'Groups',
+	OCCUPANCY_SENSING = 'OccupancySensing',
+	TEMPERATURE_MEASUREMENT = 'TemperatureMeasurement',
+	RELATIVE_HUMIDITY_MEASUREMENT = 'RelativeHumidityMeasurement',
+	BOOLEAN_STATE = 'BooleanState',
+	SWITCH = 'Switch',
+	ILLUMINANCE_MEASUREMENT = 'IlluminanceMeasurement',
+	COLOR_CONTROL = 'ColorControl',
 }
-
-export type ClusterNameLiteral = Extract<
-	Exclude<
-		(typeof DeviceClusterName)[keyof typeof DeviceClusterName],
-		// @ts-expect-error Filter out the DeviceClusterName<any>
-		DeviceClusterName<1>
-	>,
-	DeviceClusterName
->['value'];
 
 export abstract class DeviceOnOffCluster extends Cluster {
 	public static clusterName = DeviceClusterName.ON_OFF;
 
-	public getName(): DeviceClusterName<'OnOff'> {
+	public getName(): DeviceClusterName {
 		return DeviceOnOffCluster.clusterName;
 	}
 
@@ -129,7 +54,7 @@ export abstract class DeviceOnOffCluster extends Cluster {
 export abstract class DeviceWindowCoveringCluster extends Cluster {
 	public static clusterName = DeviceClusterName.WINDOW_COVERING;
 
-	public getName(): DeviceClusterName<'WindowCovering'> {
+	public getName(): DeviceClusterName {
 		return DeviceWindowCoveringCluster.clusterName;
 	}
 
@@ -145,7 +70,7 @@ export abstract class DeviceWindowCoveringCluster extends Cluster {
 export abstract class DeviceLevelControlCluster extends Cluster {
 	public static clusterName = DeviceClusterName.LEVEL_CONTROL;
 
-	public getName(): DeviceClusterName<'LevelControl'> {
+	public getName(): DeviceClusterName {
 		return DeviceLevelControlCluster.clusterName;
 	}
 
@@ -171,7 +96,7 @@ export abstract class DeviceLevelControlCluster extends Cluster {
 export abstract class DevicePowerSourceCluster extends Cluster {
 	public static clusterName = DeviceClusterName.POWER_SOURCE;
 
-	public getName(): DeviceClusterName<'PowerSource'> {
+	public getName(): DeviceClusterName {
 		return DevicePowerSourceCluster.clusterName;
 	}
 
@@ -181,7 +106,7 @@ export abstract class DevicePowerSourceCluster extends Cluster {
 export abstract class DeviceGroupsCluster extends Cluster {
 	public static clusterName = DeviceClusterName.GROUPS;
 
-	public getName(): DeviceClusterName<'Groups'> {
+	public getName(): DeviceClusterName {
 		return DeviceGroupsCluster.clusterName;
 	}
 
@@ -209,7 +134,7 @@ export abstract class DeviceGroupsCluster extends Cluster {
 export abstract class DeviceOccupancySensingCluster extends Cluster {
 	public static clusterName = DeviceClusterName.OCCUPANCY_SENSING;
 
-	public getName(): DeviceClusterName<'OccupancySensing'> {
+	public getName(): DeviceClusterName {
 		return DeviceOccupancySensingCluster.clusterName;
 	}
 
@@ -219,7 +144,7 @@ export abstract class DeviceOccupancySensingCluster extends Cluster {
 export abstract class DeviceTemperatureMeasurementCluster extends Cluster {
 	public static clusterName = DeviceClusterName.TEMPERATURE_MEASUREMENT;
 
-	public getName(): DeviceClusterName<'TemperatureMeasurement'> {
+	public getName(): DeviceClusterName {
 		return DeviceTemperatureMeasurementCluster.clusterName;
 	}
 
@@ -232,7 +157,7 @@ export abstract class DeviceTemperatureMeasurementCluster extends Cluster {
 export abstract class DeviceRelativeHumidityMeasurementCluster extends Cluster {
 	public static clusterName = DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT;
 
-	public getName(): DeviceClusterName<'RelativeHumidityMeasurement'> {
+	public getName(): DeviceClusterName {
 		return DeviceRelativeHumidityMeasurementCluster.clusterName;
 	}
 
@@ -247,7 +172,7 @@ export abstract class DeviceBooleanStateCluster<
 > extends Cluster {
 	public static clusterName = DeviceClusterName.BOOLEAN_STATE;
 
-	public getName(): DeviceClusterName<'BooleanState'> {
+	public getName(): DeviceClusterName {
 		return DeviceBooleanStateCluster.clusterName;
 	}
 
@@ -257,7 +182,7 @@ export abstract class DeviceBooleanStateCluster<
 export abstract class DeviceSwitchCluster extends Cluster {
 	public static clusterName = DeviceClusterName.SWITCH;
 
-	public getName(): DeviceClusterName<'Switch'> {
+	public getName(): DeviceClusterName {
 		return DeviceSwitchCluster.clusterName;
 	}
 
@@ -268,7 +193,7 @@ export abstract class DeviceSwitchCluster extends Cluster {
 export abstract class DeviceIlluminanceMeasurementCluster extends Cluster {
 	public static clusterName = DeviceClusterName.ILLUMINANCE_MEASUREMENT;
 
-	public getName(): DeviceClusterName<'IlluminanceMeasurement'> {
+	public getName(): DeviceClusterName {
 		return DeviceIlluminanceMeasurementCluster.clusterName;
 	}
 
@@ -278,7 +203,7 @@ export abstract class DeviceIlluminanceMeasurementCluster extends Cluster {
 export abstract class DeviceColorControlCluster extends Cluster {
 	public static clusterName = DeviceClusterName.COLOR_CONTROL;
 
-	public getName(): DeviceClusterName<'ColorControl'> {
+	public getName(): DeviceClusterName {
 		return DeviceColorControlCluster.clusterName;
 	}
 
