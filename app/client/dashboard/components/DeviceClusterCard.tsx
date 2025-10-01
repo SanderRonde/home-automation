@@ -1,5 +1,6 @@
 import type {
-	DashboardDeviceClusterExtra,
+	DashboardDeviceClusterOnOff,
+	DashboardDeviceClusterWindowCovering,
 	DashboardDeviceClusterWithState,
 } from '../../../server/modules/device/routing';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
@@ -15,13 +16,16 @@ type DeviceType = ReturnTypeForApi<
 	'GET'
 >['ok']['devices'][number];
 
-interface DeviceClusterCardBaseProps {
+interface DeviceClusterCardBaseProps<
+	C extends DashboardDeviceClusterWithState,
+> {
 	device: DeviceType;
-	cluster: DashboardDeviceClusterWithState;
+	cluster: C;
 	invalidate: () => void;
 }
 
-interface DeviceClusterCardProps extends DeviceClusterCardBaseProps {
+interface DeviceClusterCardProps
+	extends DeviceClusterCardBaseProps<DashboardDeviceClusterWithState> {
 	onPress?: () => void;
 	cardBackground?: string;
 	cardRef?: React.RefObject<HTMLDivElement>;
@@ -91,9 +95,9 @@ const DeviceClusterCardSkeleton = (props: DeviceClusterCardProps) => {
 	);
 };
 
-const WindowCoveringCard = (props: DeviceClusterCardBaseProps) => {
-	const extra =
-		props.cluster as DashboardDeviceClusterExtra['WindowCovering'];
+const WindowCoveringCard = (
+	props: DeviceClusterCardBaseProps<DashboardDeviceClusterWindowCovering>
+): JSX.Element => {
 	const [dragPosition, setDragPosition] = React.useState<number | null>(null);
 	const [isDragging, setIsDragging] = React.useState(false);
 	const cardRef = React.useRef<HTMLDivElement>(null);
@@ -103,13 +107,13 @@ const WindowCoveringCard = (props: DeviceClusterCardBaseProps) => {
 	const currentPosition =
 		dragPosition !== null
 			? dragPosition
-			: extra.targetPositionLiftPercentage;
+			: props.cluster.targetPositionLiftPercentage;
 
 	const handlePointerDown = (e: React.PointerEvent) => {
 		setIsDragging(true);
 		e.currentTarget.setPointerCapture(e.pointerId);
 		dragStartX.current = e.clientX;
-		dragStartPosition.current = extra.targetPositionLiftPercentage;
+		dragStartPosition.current = props.cluster.targetPositionLiftPercentage;
 	};
 
 	const handlePointerMove = (e: React.PointerEvent) => {
@@ -138,7 +142,7 @@ const WindowCoveringCard = (props: DeviceClusterCardBaseProps) => {
 				'/cluster/WindowCovering',
 				{},
 				{
-					deviceId: props.device.uniqueId,
+					deviceIds: [props.device.uniqueId],
 					targetPositionLiftPercentage: dragPosition,
 				}
 			);
@@ -159,18 +163,22 @@ const WindowCoveringCard = (props: DeviceClusterCardBaseProps) => {
 	);
 };
 
-const OnOffCard = (props: DeviceClusterCardBaseProps) => {
-	const extra = props.cluster as DashboardDeviceClusterExtra['OnOff'];
+const OnOffCard = (
+	props: DeviceClusterCardBaseProps<DashboardDeviceClusterOnOff>
+): JSX.Element => {
 	return (
 		<DeviceClusterCardSkeleton
 			{...props}
-			cardBackground={extra.isOn ? '#976c00' : '#422d00'}
+			cardBackground={props.cluster.isOn ? '#976c00' : '#422d00'}
 			onPress={async () => {
 				await apiPost(
 					'device',
 					'/cluster/OnOff',
 					{},
-					{ deviceId: props.device.uniqueId, isOn: !extra.isOn }
+					{
+						deviceIds: [props.device.uniqueId],
+						isOn: !props.cluster.isOn,
+					}
 				);
 				props.invalidate();
 			}}
@@ -178,17 +186,24 @@ const OnOffCard = (props: DeviceClusterCardBaseProps) => {
 	);
 };
 
-const DEVICE_CLUSTER_CARDS: Record<
+export const DEVICE_CLUSTER_CARDS: Record<
 	EnumValue,
-	React.ComponentType<DeviceClusterCardBaseProps>
+	React.ComponentType<
+		DeviceClusterCardBaseProps<DashboardDeviceClusterWithState>
+	>
 > = {
 	[DeviceClusterName.WINDOW_COVERING]: WindowCoveringCard,
 	[DeviceClusterName.ON_OFF]: OnOffCard,
 };
 
 export const DeviceClusterCard = (
-	props: DeviceClusterCardBaseProps
-): JSX.Element => {
-	const CardComponent = DEVICE_CLUSTER_CARDS[props.cluster.name];
-	return <CardComponent {...props} />;
+	props: DeviceClusterCardBaseProps<DashboardDeviceClusterWithState>
+): JSX.Element | null => {
+	if (props.cluster.name === DeviceClusterName.ON_OFF) {
+		return <OnOffCard {...props} cluster={props.cluster} />;
+	}
+	if (props.cluster.name === DeviceClusterName.WINDOW_COVERING) {
+		return <WindowCoveringCard {...props} cluster={props.cluster} />;
+	}
+	return null;
 };

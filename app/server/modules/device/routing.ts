@@ -32,17 +32,24 @@ export interface RoomInfo {
 	icon?: keyof typeof Icons;
 }
 
-export type DashboardDeviceClusterExtra = {
-	OnOff: { isOn: boolean };
-	WindowCovering: {
-		targetPositionLiftPercentage: number;
-	};
-};
-
-export type DashboardDeviceClusterWithState = {
+type DashboardDeviceClusterBase = {
 	name: DeviceClusterName;
 	icon?: keyof typeof Icons;
-} & DashboardDeviceClusterExtra[keyof DashboardDeviceClusterExtra];
+};
+
+export type DashboardDeviceClusterOnOff = DashboardDeviceClusterBase & {
+	name: DeviceClusterName.ON_OFF;
+	isOn: boolean;
+};
+
+export type DashboardDeviceClusterWindowCovering =
+	DashboardDeviceClusterBase & {
+		name: DeviceClusterName.WINDOW_COVERING;
+		targetPositionLiftPercentage: number;
+	};
+
+export type DashboardDeviceClusterWithState = DashboardDeviceClusterBase &
+	(DashboardDeviceClusterOnOff | DashboardDeviceClusterWindowCovering);
 
 interface DashboardDeviceEndpointResponse {
 	clusters: DashboardDeviceClusterWithState[];
@@ -67,24 +74,31 @@ function _initRouting({ db, modules }: ModuleConfig, api: DeviceAPI) {
 		cluster: Cluster
 	): Promise<DashboardDeviceClusterWithState> => {
 		const clusterName = cluster.getName();
-		const base = {
-			name: clusterName,
-			icon: getClusterIconName(clusterName),
-		};
-		if (cluster instanceof DeviceOnOffCluster) {
+		if (
+			cluster instanceof DeviceOnOffCluster &&
+			clusterName === DeviceClusterName.ON_OFF
+		) {
 			return {
-				...base,
+				name: clusterName,
+				icon: getClusterIconName(clusterName),
 				isOn: await cluster.isOn.get(),
 			};
 		}
-		if (cluster instanceof DeviceWindowCoveringCluster) {
+		if (
+			cluster instanceof DeviceWindowCoveringCluster &&
+			clusterName === DeviceClusterName.WINDOW_COVERING
+		) {
 			return {
-				...base,
+				name: clusterName,
+				icon: getClusterIconName(clusterName),
 				targetPositionLiftPercentage:
 					await cluster.targetPositionLiftPercentage.get(),
 			};
 		}
-		return base as DashboardDeviceClusterWithState;
+		return {
+			name: clusterName,
+			icon: getClusterIconName(clusterName),
+		} as DashboardDeviceClusterWithState;
 	};
 
 	return createServeOptions(
@@ -257,14 +271,14 @@ function _initRouting({ db, modules }: ModuleConfig, api: DeviceAPI) {
 			},
 			[validateClusterRoute('/cluster/OnOff')]: withRequestBody(
 				z.object({
-					deviceId: z.string(),
+					deviceIds: z.array(z.string()),
 					isOn: z.boolean(),
 				}),
 				async (body, _req, _server, res) =>
 					performActionForDeviceCluster(
 						api,
 						res,
-						body.deviceId,
+						body.deviceIds,
 						DeviceOnOffCluster,
 						async (cluster) => {
 							await Promise.all([
@@ -283,14 +297,14 @@ function _initRouting({ db, modules }: ModuleConfig, api: DeviceAPI) {
 			),
 			[validateClusterRoute('/cluster/WindowCovering')]: withRequestBody(
 				z.object({
-					deviceId: z.string(),
+					deviceIds: z.array(z.string()),
 					targetPositionLiftPercentage: z.number(),
 				}),
 				async (body, _req, _server, res) =>
 					performActionForDeviceCluster(
 						api,
 						res,
-						body.deviceId,
+						body.deviceIds,
 						DeviceWindowCoveringCluster,
 						async (cluster) => {
 							await Promise.all([
@@ -362,20 +376,22 @@ async function performActionForDeviceCluster<
 >(
 	api: DeviceAPI,
 	res: BrandedRouteHandlerResponse,
-	deviceId: string,
+	deviceIds: string[],
 	clusterType: C,
 	callback: (cluster: InstanceType<C>) => Promise<void>
 ) {
-	const device = api.devices.current()[deviceId];
-	if (!device) {
+	const devices = deviceIds.map((id) => api.devices.current()[id]);
+	if (devices.some((d) => !d)) {
 		return res.error({ error: 'Device not found' }, 404);
 	}
-	const cluster = device.getClusterByType(clusterType);
-	if (!cluster) {
+	const clusters = devices.map((d) => d.getClusterByType(clusterType));
+	if (clusters.some((c) => !c)) {
 		return res.error({ error: 'Cluster not found' }, 404);
 	}
 	const success = await Promise.race([
-		callback(cluster).then(() => true),
+		Promise.all(
+			(clusters as InstanceType<C>[]).map((c) => callback(c))
+		).then(() => true),
 		wait(10000).then(() => false),
 	]);
 	if (!success) {

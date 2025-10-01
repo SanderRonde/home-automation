@@ -31,12 +31,9 @@ import {
 	MatterServerInputMessageType,
 	MatterServerOutputMessageType,
 } from '../server/server';
-import {
-	Cluster,
-	DeviceClusterName,
-	DeviceGroupId,
-} from '../../device/cluster';
+import type { Cluster, DeviceGroupId } from '../../device/cluster';
 import type { LevelControl } from '@matter/main/clusters';
+import { DeviceClusterName } from '../../device/cluster';
 import type { WritableAttribute } from '@matter/types';
 import { DeviceStatus } from '../../device/cluster';
 import { CombinedData } from '../../../lib/data';

@@ -6,12 +6,12 @@ import {
 	CircularProgress,
 	IconButton,
 } from '@mui/material';
-import { DeviceClusterName } from '../../../server/modules/device/cluster';
+import type { DeviceClusterName } from '../../../server/modules/device/cluster';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { DeviceClusterCard } from './DeviceClusterCard';
+import { ClusterIconButton } from './ClusterIconButton';
 import type { ReturnTypeForApi } from '../../lib/fetch';
 import React, { useState, useEffect } from 'react';
-import { getClusterIcon } from './clusterIcons';
 import * as Icons from '@mui/icons-material';
 import type { SxProps } from '@mui/material';
 import { apiGet } from '../../lib/fetch';
@@ -22,14 +22,8 @@ type DeviceType = ReturnTypeForApi<
 	'GET'
 >['ok']['devices'][number];
 
-// Clusters to group by in room cards
-const CLUSTER_GROUPS: DeviceClusterName[] = [
-	DeviceClusterName.WINDOW_COVERING,
-	DeviceClusterName.ON_OFF,
-];
-
 interface RoomDevices {
-	roomName: string;
+	room: string;
 	roomColor?: string;
 	roomIcon?: string;
 	devices: DeviceType[];
@@ -46,7 +40,10 @@ export const Home = (): JSX.Element => {
 	const [devices, setDevices] = useState<DeviceType[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
-	const [room, setRoom] = useState<string | null>(null);
+	const [detailView, setDetailView] = useState<{
+		roomName: string;
+		clusterName?: DeviceClusterName;
+	} | null>(null);
 
 	useEffect(() => {
 		void fetchDevices(true);
@@ -83,7 +80,7 @@ export const Home = (): JSX.Element => {
 
 			if (!roomMap.has(device.room)) {
 				roomMap.set(device.room, {
-					roomName: device.room,
+					room: device.room,
 					roomColor: device.roomColor,
 					roomIcon: device.roomIcon,
 					devices: [],
@@ -94,7 +91,7 @@ export const Home = (): JSX.Element => {
 		}
 
 		return Array.from(roomMap.values()).sort((a, b) =>
-			a.roomName.localeCompare(b.roomName)
+			a.room.localeCompare(b.room)
 		);
 	}, [devices]);
 
@@ -121,12 +118,20 @@ export const Home = (): JSX.Element => {
 		);
 	}
 
-	if (room) {
+	if (detailView) {
 		return (
 			<RoomDetail
-				room={roomDevices.find((r) => r.roomName === room)!}
-				setRoom={setRoom}
-				devices={devices.filter((d) => d.room === room)}
+				room={roomDevices.find((r) => r.room === detailView.roomName)!}
+				onExit={() => setDetailView(null)}
+				devices={devices
+					.filter((d) => d.room === detailView.roomName)
+					.filter(
+						(d) =>
+							!detailView.clusterName ||
+							d.allClusters.some(
+								(c) => c.name === detailView.clusterName
+							)
+					)}
 				invalidate={() => fetchDevices(false)}
 			/>
 		);
@@ -144,9 +149,18 @@ export const Home = (): JSX.Element => {
 				{roomDevices.map((room) => {
 					return (
 						<RoomDevice
-							room={room}
-							key={room.roomName}
-							setRoom={setRoom}
+							roomDevices={room}
+							key={room.room}
+							setRoom={() =>
+								setDetailView({ roomName: room.room })
+							}
+							setDetailView={(clusterName) =>
+								setDetailView({
+									roomName: room.room,
+									clusterName,
+								})
+							}
+							invalidate={() => fetchDevices(false)}
 						/>
 					);
 				})}
@@ -167,7 +181,7 @@ export const Home = (): JSX.Element => {
 
 interface RoomDetailProps {
 	room: RoomDevices;
-	setRoom: (room: string | null) => void;
+	onExit: () => void;
 	devices: DeviceType[];
 	invalidate: () => void;
 }
@@ -179,12 +193,10 @@ const RoomDetail = (props: RoomDetailProps) => {
 
 		for (const device of props.devices) {
 			for (const cluster of device.allClusters) {
-				if (CLUSTER_GROUPS.includes(cluster.name)) {
-					entries.push({
-						device,
-						cluster,
-					});
-				}
+				entries.push({
+					device,
+					cluster,
+				});
 			}
 		}
 
@@ -211,7 +223,7 @@ const RoomDetail = (props: RoomDetailProps) => {
 			>
 				<IconButton
 					style={{ position: 'absolute', left: 0 }}
-					onClick={() => props.setRoom(null)}
+					onClick={() => props.onExit()}
 				>
 					<ArrowBackIcon style={{ fill: 'black' }} />
 				</IconButton>
@@ -227,7 +239,7 @@ const RoomDetail = (props: RoomDetailProps) => {
 						style={{ color: 'black', fontWeight: 'bold' }}
 						variant="h6"
 					>
-						{props.room.roomName}
+						{props.room.room}
 					</Typography>
 				</Box>
 			</Box>
@@ -257,34 +269,38 @@ const RoomDetail = (props: RoomDetailProps) => {
 };
 
 interface RoomDeviceProps {
-	room: RoomDevices;
-	setRoom: (room: string) => void;
+	roomDevices: RoomDevices;
+	invalidate: () => void;
+	setRoom: () => void;
+	setDetailView: (clusterName: DeviceClusterName) => void;
 }
 
 const RoomDevice = (props: RoomDeviceProps) => {
 	// Find which clusters are represented in this room
 	const representedClusters = new Set<DeviceClusterName>();
-	for (const device of props.room.devices) {
+	for (const device of props.roomDevices.devices) {
 		for (const cluster of device.allClusters) {
-			if (CLUSTER_GROUPS.includes(cluster.name)) {
-				representedClusters.add(cluster.name);
-			}
+			representedClusters.add(cluster.name);
 		}
 	}
 
 	return (
 		<Card
-			key={props.room.roomName}
+			key={props.roomDevices.room}
 			sx={{
-				backgroundColor: props.room.roomColor || '#555',
+				backgroundColor: props.roomDevices.roomColor || '#555',
 				borderRadius: 2,
 				overflow: 'hidden',
 			}}
 		>
 			<CardActionArea
 				onClick={() => {
-					props.setRoom(props.room.roomName);
+					// Wait for animation
+					setTimeout(() => {
+						props.setRoom();
+					}, 300);
 				}}
+				component="div"
 				sx={{ p: 2 }}
 			>
 				<Box
@@ -295,7 +311,7 @@ const RoomDevice = (props: RoomDeviceProps) => {
 					}}
 				>
 					{/* Room icon */}
-					{props.room.roomIcon && (
+					{props.roomDevices.roomIcon && (
 						<Box
 							sx={{
 								display: 'flex',
@@ -305,7 +321,7 @@ const RoomDevice = (props: RoomDeviceProps) => {
 								fontSize: '2rem',
 							}}
 						>
-							{getIconComponent(props.room.roomIcon)}
+							{getIconComponent(props.roomDevices.roomIcon)}
 						</Box>
 					)}
 
@@ -318,7 +334,7 @@ const RoomDevice = (props: RoomDeviceProps) => {
 							flexGrow: 1,
 						}}
 					>
-						{props.room.roomName}
+						{props.roomDevices.room}
 					</Typography>
 
 					{/* Device cluster icons */}
@@ -332,38 +348,15 @@ const RoomDevice = (props: RoomDeviceProps) => {
 						{Array.from(representedClusters)
 							.sort()
 							.map((clusterName) => (
-								<Box
+								<ClusterIconButton
+									clusterName={clusterName}
 									key={clusterName}
-									onClick={(e) => {
-										e.stopPropagation();
-										// TODO
+									devices={props.roomDevices.devices}
+									invalidate={props.invalidate}
+									onLongPress={() => {
+										props.setDetailView(clusterName);
 									}}
-									sx={{
-										display: 'flex',
-										alignItems: 'center',
-										justifyContent: 'center',
-										backgroundColor:
-											'rgba(255, 255, 255, 0.4)',
-										borderRadius: '50%',
-										width: 48,
-										height: 48,
-										fontSize: '1.5rem',
-										color: 'rgba(0, 0, 0, 0.6)',
-										cursor: 'pointer',
-										transition: 'background-color 0.2s',
-										'&:hover': {
-											backgroundColor:
-												'rgba(255, 255, 255, 0.5)',
-										},
-									}}
-								>
-									{getClusterIcon(
-										props.room.devices
-											.flatMap((d) => d.allClusters)
-											.find((c) => c.name === clusterName)
-											?.icon
-									)}
-								</Box>
+								/>
 							))}
 					</Box>
 				</Box>

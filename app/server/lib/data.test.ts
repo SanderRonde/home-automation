@@ -220,6 +220,7 @@ describe('MappedData', () => {
 		class TestData extends Data<number> {
 			public getCallCount = 0;
 
+			// eslint-disable-next-line @typescript-eslint/require-await
 			public override async get(): Promise<number> {
 				this.getCallCount++;
 				// Simulate fetching fresh data
@@ -319,6 +320,7 @@ describe('CombinedData', () => {
 				super(value);
 			}
 
+			// eslint-disable-next-line @typescript-eslint/require-await
 			public override async get(): Promise<number> {
 				// Simulate fetching fresh data
 				return this.freshValue;
@@ -385,6 +387,7 @@ describe('CombinedData', () => {
 				super(value);
 			}
 
+			// eslint-disable-next-line @typescript-eslint/require-await
 			public override async get(): Promise<number> {
 				return this.freshValue;
 			}
@@ -428,6 +431,7 @@ describe('Complex scenarios', () => {
 				super(value);
 			}
 
+			// eslint-disable-next-line @typescript-eslint/require-await
 			public override async get(): Promise<number> {
 				return this.freshValue;
 			}
