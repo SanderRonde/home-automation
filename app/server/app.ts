@@ -1,10 +1,10 @@
+import { logImmediate, logReady, logTag } from './lib/logging/logger';
 import { hasArg, getArg, getNumberArg, getNumberEnv } from './lib/io';
 import { createServeOptions, type ServeOptions } from './lib/routes';
 import { CLIENT_FOLDER, DB_FOLDER, ROOT } from './lib/constants';
 import { ProgressLogger } from './lib/logging/progress-logger';
 import type { AllModules, ModuleConfig } from './modules';
 import { SettablePromise } from './lib/settable-promise';
-import { logReady, logTag } from './lib/logging/logger';
 import { printCommands } from './modules/bot/helpers';
 import { notifyAllModules } from './modules/modules';
 import { serveStatic } from './lib/serve-static';
@@ -263,25 +263,25 @@ class WebServer {
 }
 
 if (hasArg('help', 'h')) {
-	console.log('Usage:');
-	console.log('');
-	console.log('node app/server/app.js 		[-h | --help] [--http {port}] ');
-	console.log('				[--https {port}] [-v | --verbose]');
-	console.log('				[-vv | --veryverbose]');
-	console.log('');
-	console.log('-h, --help			Print this help message');
-	console.log('--http 		{port}		The HTTP port to use');
-	console.log('--https 	{port}		The HTTP port to use');
-	console.log('-v, --verbose			Log request-related data');
-	console.log('-vv, --veryverbose		Log even more request-related data');
-	console.log(
+	logImmediate('Usage:');
+	logImmediate('');
+	logImmediate('node app/server/app.js 		[-h | --help] [--http {port}] ');
+	logImmediate('				[--https {port}] [-v | --verbose]');
+	logImmediate('				[-vv | --veryverbose]');
+	logImmediate('');
+	logImmediate('-h, --help			Print this help message');
+	logImmediate('--http 		{port}		The HTTP port to use');
+	logImmediate('--https 	{port}		The HTTP port to use');
+	logImmediate('-v, --verbose			Log request-related data');
+	logImmediate('-vv, --veryverbose		Log even more request-related data');
+	logImmediate(
 		"-v{v+}, --{very+}verbose	Logs even more data. The more v's and very's the more data"
 	);
-	console.log(
+	logImmediate(
 		"-v*, --verbose*			Logs all data (equivalent of adding a lot of v's"
 	);
 
-	console.log('--log-telegram-bot-commands		Log all telegram bot commands');
+	logImmediate('--log-telegram-bot-commands		Log all telegram bot commands');
 	// eslint-disable-next-line n/no-process-exit
 	process.exit(0);
 }

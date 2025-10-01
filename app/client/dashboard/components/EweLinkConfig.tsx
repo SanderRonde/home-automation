@@ -8,7 +8,6 @@ import {
 	Stack,
 } from '@mui/material';
 import LaunchIcon from '@mui/icons-material/Launch';
-import CloudIcon from '@mui/icons-material/Cloud';
 import React from 'react';
 
 export const EweLinkConfig = (): JSX.Element => {
@@ -20,13 +19,6 @@ export const EweLinkConfig = (): JSX.Element => {
 	return (
 		<Box sx={{ p: 3, maxWidth: 800 }}>
 			<Stack spacing={3}>
-				<Box display="flex" alignItems="center" gap={2}>
-					<CloudIcon fontSize="large" color="primary" />
-					<Typography variant="h4" component="h1">
-						eWeLink Configuration
-					</Typography>
-				</Box>
-
 				<Alert severity="info">
 					eWeLink integration allows you to connect and control your
 					eWeLink smart devices through this home automation system.

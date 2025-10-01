@@ -220,7 +220,7 @@ export type BrandedRouteHandler<T, R> = (
 	response: BrandedRouteHandlerResponse
 ) => BrandedResponse<R, boolean> | Promise<BrandedResponse<R, boolean>>;
 
-type BrandedRouteHandlerResponse = {
+export type BrandedRouteHandlerResponse = {
 	json: <const T>(data: T, init?: ResponseInit) => BrandedResponse<T, false>;
 	error: <const T extends string | object>(
 		message: T,

@@ -1,4 +1,4 @@
-import { getTime } from './logger';
+import { getTime, logImmediate } from './logger';
 import chalk from 'chalk';
 
 export class ProgressLogger {
@@ -12,7 +12,7 @@ export class ProgressLogger {
 
 	private _getProgressBar() {
 		if (this._max - this._progress < 0) {
-			console.log(
+			logImmediate(
 				chalk.red('Increment got called more often than configured')
 			);
 		}
@@ -24,7 +24,7 @@ export class ProgressLogger {
 	}
 
 	public logInitial(): void {
-		console.log(
+		logImmediate(
 			chalk.bgBlack(
 				getTime(),
 				chalk.bgBlack(
@@ -38,7 +38,7 @@ export class ProgressLogger {
 
 	public increment(name: string): void {
 		this._progress++;
-		console.log(
+		logImmediate(
 			chalk.bgBlack(
 				getTime(),
 				chalk.bgBlack(
@@ -56,16 +56,16 @@ export class ProgressLogger {
 
 	public done(): void {
 		if (this._progress > this._max) {
-			console.log(
+			logImmediate(
 				chalk.red('Increment got called more often than configured')
 			);
 		} else if (this._progress < this._max) {
-			console.log(
+			logImmediate(
 				chalk.red('Increment got called less times than configured')
 			);
 		}
 
-		console.log(
+		logImmediate(
 			chalk.bgBlack(
 				getTime(),
 				chalk.bgBlack(

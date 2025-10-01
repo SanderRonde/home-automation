@@ -47,13 +47,16 @@ export abstract class DeviceEndpoint implements Disposable {
 
 	public getAllClustersByType<
 		T extends typeof Cluster & {
-			clusterName: string;
+			clusterName: DeviceClusterName;
 		},
 	>(type: T): InstanceType<T>[] {
 		return this.allClusters.filter(
 			(cluster) =>
-				(cluster.constructor as unknown as { clusterName: string })
-					.clusterName === type.clusterName
+				(
+					cluster.constructor as unknown as {
+						clusterName: DeviceClusterName;
+					}
+				).clusterName === type.clusterName
 		) as unknown as InstanceType<T>[];
 	}
 

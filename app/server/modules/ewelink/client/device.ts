@@ -47,8 +47,12 @@ export abstract class EwelinkDevice
 		const device = DEVICES.find((d) => d.modelName === model);
 		if (!device) {
 			if (!IGNORED_DEVICES.includes(model)) {
-				console.log(eWeLinkConfig.device.itemData);
-				logTag('ewelink', 'red', `Unsupported device model: ${model}`);
+				logTag(
+					'ewelink',
+					'red',
+					`Unsupported device model: ${model}`,
+					eWeLinkConfig.device.itemData
+				);
 			}
 			return null;
 		}

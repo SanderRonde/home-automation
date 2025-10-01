@@ -100,10 +100,8 @@ export class MCPNodeServer {
 		this.httpServer = createServer(
 			(req: IncomingMessage, res: ServerResponse) => {
 				// Only handle /mcp requests
-				console.log('http', req.url);
 				if (req.url !== '/mcp') {
 					res.writeHead(404);
-					console.log('not found');
 					res.end('Not found');
 					return;
 				}
@@ -129,13 +127,11 @@ export class MCPNodeServer {
 					// Read request body
 					let body = '';
 					req.on('data', (chunk: Buffer) => {
-						console.log('data', chunk.toString());
 						body += chunk.toString();
 					});
 
 					req.on('end', async () => {
 						try {
-							console.log('handle request');
 							// Parse the JSON body before passing to transport
 							let parsedBody;
 							try {
@@ -163,7 +159,6 @@ export class MCPNodeServer {
 								parsedBody
 							);
 						} catch (error) {
-							console.log('error', error);
 							console.error('MCP request error:', error);
 							res.writeHead(500);
 							res.end(

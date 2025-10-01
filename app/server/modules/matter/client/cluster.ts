@@ -121,18 +121,18 @@ class ClusterProxy<C extends MatterClusterInterface> {
 			const { matterClient, nodeId, endpointNumber, id } = this;
 			class cls extends Data<AT | undefined> {
 				public override async get(): Promise<Exclude<AT, undefined>> {
-					return (await matterClient.request({
+					const result = (await matterClient.request({
 						type: MatterServerInputMessageType.GetAttribute,
 						arguments: [nodeId, endpointNumber, id, attribute],
 					})) as Exclude<AT, undefined>;
+					if (mapper) {
+						return mapper(result) as Exclude<AT, undefined>;
+					}
+					return result;
 				}
 			}
 
-			const emitter = new cls(undefined);
-			if (mapper) {
-				return new MappedData<R, AT | undefined>(emitter, mapper);
-			}
-			return emitter;
+			return new cls(undefined);
 		})();
 		this.#attributes[attribute] = emitter;
 
@@ -295,10 +295,6 @@ class MatterOnOffCluster extends ConfigurableCluster<OnOffCluster>(
 class MatterWindowCoveringCluster extends ConfigurableCluster<WindowCovering.Complete>(
 	DeviceWindowCoveringCluster
 ) {
-	public currentPositionLiftPercentage = this._proxy.attributeGetter(
-		'currentPositionLiftPercentage',
-		(num) => num ?? 0
-	);
 	public targetPositionLiftPercentage = this._proxy.attributeGetter(
 		'targetPositionLiftPercent100ths',
 		(num) => (num ? num / 100 : 0)

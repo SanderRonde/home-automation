@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 
+import { logImmediate } from '../app/server/lib/logging/logger';
 import type { MCPDB } from '../app/server/modules/mcp';
 import { Database } from '../app/server/lib/db';
 
@@ -16,17 +17,17 @@ function listKeys(): void {
 	const keys = db.current().authKeys || [];
 
 	if (keys.length === 0) {
-		console.log('📝 No MCP authorization keys found.');
+		logImmediate('📝 No MCP authorization keys found.');
 		return;
 	}
 
-	console.log(`📝 Found ${keys.length} MCP authorization key(s):`);
-	console.log('');
+	logImmediate(`📝 Found ${keys.length} MCP authorization key(s):`);
+	logImmediate('');
 	keys.forEach((key, index) => {
-		console.log(`${index + 1}. ${key}`);
+		logImmediate(`${index + 1}. ${key}`);
 	});
-	console.log('');
-	console.log(
+	logImmediate('');
+	logImmediate(
 		'💡 To remove a key, use: bun scripts/manage-mcp-keys.ts remove <key>'
 	);
 }
@@ -37,7 +38,7 @@ function removeKey(keyToRemove: string): void {
 
 	const keyIndex = keys.indexOf(keyToRemove);
 	if (keyIndex === -1) {
-		console.log('❌ Key not found.');
+		logImmediate('❌ Key not found.');
 		return;
 	}
 
@@ -49,8 +50,8 @@ function removeKey(keyToRemove: string): void {
 		authKeys: updatedKeys,
 	}));
 
-	console.log('✅ Key removed successfully!');
-	console.log(`📊 Remaining keys: ${updatedKeys.length}`);
+	logImmediate('✅ Key removed successfully!');
+	logImmediate(`📊 Remaining keys: ${updatedKeys.length}`);
 }
 
 function clearAllKeys(): void {
@@ -58,7 +59,7 @@ function clearAllKeys(): void {
 	const keys = db.current().authKeys || [];
 
 	if (keys.length === 0) {
-		console.log('📝 No keys to clear.');
+		logImmediate('📝 No keys to clear.');
 		return;
 	}
 
@@ -67,27 +68,27 @@ function clearAllKeys(): void {
 		authKeys: [],
 	}));
 
-	console.log(`✅ Cleared ${keys.length} key(s) successfully!`);
+	logImmediate(`✅ Cleared ${keys.length} key(s) successfully!`);
 }
 
 function showUsage(): void {
-	console.log('🔧 MCP Key Management Tool');
-	console.log('');
-	console.log('Usage:');
-	console.log(
+	logImmediate('🔧 MCP Key Management Tool');
+	logImmediate('');
+	logImmediate('Usage:');
+	logImmediate(
 		'  bun scripts/manage-mcp-keys.ts list                    # List all keys'
 	);
-	console.log(
+	logImmediate(
 		'  bun scripts/manage-mcp-keys.ts remove <key>            # Remove specific key'
 	);
-	console.log(
+	logImmediate(
 		'  bun scripts/manage-mcp-keys.ts clear                   # Remove all keys'
 	);
-	console.log('');
-	console.log('Examples:');
-	console.log('  bun scripts/manage-mcp-keys.ts list');
-	console.log('  bun scripts/manage-mcp-keys.ts remove abc123...');
-	console.log('  bun scripts/manage-mcp-keys.ts clear');
+	logImmediate('');
+	logImmediate('Examples:');
+	logImmediate('  bun scripts/manage-mcp-keys.ts list');
+	logImmediate('  bun scripts/manage-mcp-keys.ts remove abc123...');
+	logImmediate('  bun scripts/manage-mcp-keys.ts clear');
 }
 
 function main(): void {
@@ -99,15 +100,18 @@ function main(): void {
 			listKeys();
 			break;
 		case 'remove':
-			const keyToRemove = args[1];
-			if (!keyToRemove) {
-				console.log('❌ Please provide a key to remove.');
-				console.log(
-					'Usage: bun scripts/manage-mcp-keys.ts remove <key>'
-				);
-				process.exit(1);
+			{
+				const keyToRemove = args[1];
+				if (!keyToRemove) {
+					logImmediate('❌ Please provide a key to remove.');
+					logImmediate(
+						'Usage: bun scripts/manage-mcp-keys.ts remove <key>'
+					);
+					// eslint-disable-next-line n/no-process-exit
+					process.exit(1);
+				}
+				removeKey(keyToRemove);
 			}
-			removeKey(keyToRemove);
 			break;
 		case 'clear':
 			clearAllKeys();

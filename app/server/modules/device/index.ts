@@ -1,4 +1,5 @@
 import { SettablePromise } from '../../lib/settable-promise';
+import type * as Icons from '@mui/icons-material';
 import type { Database } from '../../lib/db';
 import type { DeviceInfo } from './routing';
 import { initRouting } from './routing';
@@ -8,7 +9,9 @@ import { DeviceAPI } from './api';
 
 export interface DeviceDB {
 	device_registry: Record<string, DeviceInfo>;
-	room_icons?: Record<string, string>; // room name -> icon name
+	room_icons?: {
+		[room: string]: keyof typeof Icons;
+	};
 }
 
 export const Device = new (class Device extends ModuleMeta {

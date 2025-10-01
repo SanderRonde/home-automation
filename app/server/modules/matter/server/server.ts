@@ -695,6 +695,7 @@ async function main() {
 				arguments: [],
 			})
 			.then((devices) => {
+				// eslint-disable-next-line no-console
 				console.log('devices:', devices);
 			});
 	}

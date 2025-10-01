@@ -14,7 +14,6 @@ import {
 	ListItemSecondaryAction,
 	Chip,
 } from '@mui/material';
-import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import type { ReturnTypeForApi } from '../../lib/fetch';
 import DeleteIcon from '@mui/icons-material/Delete';
 import React, { useState, useEffect } from 'react';
@@ -115,13 +114,6 @@ export const WLEDConfig = (): JSX.Element => {
 	return (
 		<Box sx={{ p: 3, maxWidth: 800 }}>
 			<Stack spacing={3}>
-				<Box display="flex" alignItems="center" gap={2}>
-					<LightbulbIcon fontSize="large" color="primary" />
-					<Typography variant="h4" component="h1">
-						WLED Configuration
-					</Typography>
-				</Box>
-
 				<Alert severity="info">
 					Configure WLED devices by adding their IP addresses. These
 					devices will be automatically discovered and made available

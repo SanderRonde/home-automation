@@ -9,6 +9,7 @@ export const WelcomePage = (): JSX.Element => {
 				display: 'flex',
 				alignItems: 'center',
 				justifyContent: 'center',
+				p: { xs: 2, sm: 3 },
 			}}
 		>
 			<Paper sx={{ p: 4, maxWidth: 600, textAlign: 'center' }}>

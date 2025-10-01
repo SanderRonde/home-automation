@@ -1,5 +1,6 @@
 import { AppBar, IconButton, Toolbar, Typography, styled } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
+import type { SidebarTab } from './Sidebar';
 import React from 'react';
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
@@ -10,12 +11,30 @@ const StyledAppBar = styled(AppBar)(({ theme }) => ({
 interface TopBarProps {
 	open: boolean;
 	setOpen: (open: boolean) => void;
+	currentTab: string | SidebarTab;
 }
+
+const getTabDisplayName = (tab: string | SidebarTab): string => {
+	switch (tab) {
+		case 'home':
+			return 'Home';
+		case 'settings':
+			return 'Settings';
+		case 'devices':
+			return 'Devices';
+		case 'ewelink':
+			return 'eWeLink';
+		case 'wled':
+			return 'WLED';
+		default:
+			return 'Home Automation';
+	}
+};
 
 export const TopBar = (props: TopBarProps): JSX.Element => {
 	return (
 		<StyledAppBar position="fixed">
-			<Toolbar>
+			<Toolbar sx={{ height: TOP_BAR_HEIGHT }}>
 				<IconButton
 					color="inherit"
 					aria-label="toggle drawer"
@@ -26,9 +45,11 @@ export const TopBar = (props: TopBarProps): JSX.Element => {
 					<MenuIcon />
 				</IconButton>
 				<Typography variant="h6" noWrap component="div">
-					Home Automation
+					{getTabDisplayName(props.currentTab)}
 				</Typography>
 			</Toolbar>
 		</StyledAppBar>
 	);
 };
+
+export const TOP_BAR_HEIGHT = 64;

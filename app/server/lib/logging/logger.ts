@@ -33,8 +33,14 @@ const chalkColors = [
 	'whiteBright',
 ] as const;
 
+export function logImmediate(...args: unknown[]): void {
+	// eslint-disable-next-line no-console
+	console.log(...args);
+}
+
 function log(...args: unknown[]): void {
 	void logIsReady.then(() => {
+		// eslint-disable-next-line no-console
 		console.log(...args);
 	});
 }

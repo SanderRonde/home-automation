@@ -1,5 +1,7 @@
 #!/usr/bin/env bun
+/* eslint-disable n/no-process-exit */
 
+import { logImmediate } from '../app/server/lib/logging/logger';
 import * as readline from 'readline';
 import * as path from 'path';
 import { SQL } from 'bun';
@@ -31,7 +33,7 @@ class UserManager {
 		}
 	}
 
-	private async hashPassword(password: string): Promise<string> {
+	private hashPassword(password: string): string {
 		const hasher = new Bun.CryptoHasher('sha256');
 		hasher.update(password);
 		return hasher.digest('hex');
@@ -39,7 +41,7 @@ class UserManager {
 
 	public async createUser(username: string, password: string): Promise<void> {
 		try {
-			const passwordHash = await this.hashPassword(password);
+			const passwordHash = this.hashPassword(password);
 			const createdAt = Date.now();
 
 			await this._db`
@@ -47,7 +49,7 @@ class UserManager {
 				VALUES (${username}, ${passwordHash}, ${createdAt})
 			`;
 
-			console.log(`✓ User '${username}' created successfully`);
+			logImmediate(`✓ User '${username}' created successfully`);
 		} catch (error) {
 			if (
 				error instanceof Error &&
@@ -62,10 +64,11 @@ class UserManager {
 
 	public async deleteUser(username: string): Promise<void> {
 		try {
-			const result = await this
-				._db`DELETE FROM users WHERE username = ${username}`;
+			const result = await this._db<{
+				changes: number;
+			}>`DELETE FROM users WHERE username = ${username}`;
 			if (result.changes > 0) {
-				console.log(`✓ User '${username}' deleted successfully`);
+				logImmediate(`✓ User '${username}' deleted successfully`);
 			} else {
 				console.error(`✗ User '${username}' not found`);
 			}
@@ -82,19 +85,19 @@ class UserManager {
 		`;
 
 		if (users.length === 0) {
-			console.log('No users found');
+			logImmediate('No users found');
 			return;
 		}
 
-		console.log('\nUsers:');
-		console.log('─'.repeat(60));
+		logImmediate('\nUsers:');
+		logImmediate('─'.repeat(60));
 		for (const user of users) {
 			const date = new Date(user.created_at).toLocaleString();
-			console.log(
+			logImmediate(
 				`ID: ${user.id} | Username: ${user.username} | Created: ${date}`
 			);
 		}
-		console.log('─'.repeat(60));
+		logImmediate('─'.repeat(60));
 	}
 
 	public async changePassword(
@@ -102,15 +105,15 @@ class UserManager {
 		newPassword: string
 	): Promise<void> {
 		try {
-			const passwordHash = await this.hashPassword(newPassword);
+			const passwordHash = this.hashPassword(newPassword);
 
-			const result = await this._db`
+			const result = await this._db<{ changes: number }>`
 				UPDATE users SET password_hash = ${passwordHash}
 				WHERE username = ${username}
 			`;
 
 			if (result.changes > 0) {
-				console.log(
+				logImmediate(
 					`✓ Password for user '${username}' changed successfully`
 				);
 			} else {
@@ -186,14 +189,14 @@ async function main() {
 		command === '--help' ||
 		command === '-h'
 	) {
-		console.log('Usage: bun scripts/manage-users.ts <command> [options]');
-		console.log('');
-		console.log('Commands:');
-		console.log('  create <username>          Create a new user');
-		console.log('  delete <username>          Delete a user');
-		console.log('  list                       List all users');
-		console.log("  change-password <username> Change a user's password");
-		console.log('  help                       Show this help message');
+		logImmediate('Usage: bun scripts/manage-users.ts <command> [options]');
+		logImmediate('');
+		logImmediate('Commands:');
+		logImmediate('  create <username>          Create a new user');
+		logImmediate('  delete <username>          Delete a user');
+		logImmediate('  list                       List all users');
+		logImmediate("  change-password <username> Change a user's password");
+		logImmediate('  help                       Show this help message');
 		process.exit(0);
 	}
 
@@ -202,7 +205,7 @@ async function main() {
 			const username = args[1];
 			if (!username) {
 				console.error('Error: Username is required');
-				console.log(
+				logImmediate(
 					'Usage: bun scripts/manage-users.ts create <username>'
 				);
 				process.exit(1);
@@ -229,7 +232,7 @@ async function main() {
 			const username = args[1];
 			if (!username) {
 				console.error('Error: Username is required');
-				console.log(
+				logImmediate(
 					'Usage: bun scripts/manage-users.ts delete <username>'
 				);
 				process.exit(1);
@@ -244,7 +247,7 @@ async function main() {
 			) {
 				await manager.deleteUser(username);
 			} else {
-				console.log('Cancelled');
+				logImmediate('Cancelled');
 			}
 			break;
 		}
@@ -258,7 +261,7 @@ async function main() {
 			const username = args[1];
 			if (!username) {
 				console.error('Error: Username is required');
-				console.log(
+				logImmediate(
 					'Usage: bun scripts/manage-users.ts change-password <username>'
 				);
 				process.exit(1);
@@ -285,7 +288,7 @@ async function main() {
 
 		default:
 			console.error(`Unknown command: ${command}`);
-			console.log('Run "bun scripts/manage-users.ts help" for usage');
+			logImmediate('Run "bun scripts/manage-users.ts help" for usage');
 			process.exit(1);
 	}
 }

@@ -17,6 +17,7 @@
 		"eqeqeq": "warn",
 		"no-async-promise-executor": "warn",
 		"no-restricted-globals": ["error", "fetch"],
+		"no-console": ["error", { "allow": ["warn", "error", "trace"] }],
 		"no-case-declarations": "warn",
 		"no-prototype-builtins": "warn",
 		"no-useless-escape": "warn",

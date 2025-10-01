@@ -13,6 +13,7 @@ import type {
 } from '../server/server';
 import { DB_FOLDER, MATTER_DEBUG, ROOT } from '../../../lib/constants';
 import type { ChildProcessWithoutNullStreams } from 'child_process';
+import { logDev } from '../../../lib/logging/log-dev';
 import { logTag } from '../../../lib/logging/logger';
 import type { EndpointNumber } from '@matter/types';
 import { Data } from '../../../lib/data';
@@ -210,6 +211,6 @@ if (require.main === module) {
 	const matterClient = new MatterClient();
 	matterClient.start();
 	void matterClient.devices.subscribe((devices) => {
-		console.log('devices', devices);
+		logDev('devices', devices);
 	});
 }

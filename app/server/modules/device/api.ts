@@ -1,5 +1,6 @@
 import type { Device as DeviceInterface, DeviceSource } from './device';
 import type { DeviceInfo, RoomInfo } from './routing';
+import type * as Icons from '@mui/icons-material';
 import type { Database } from '../../lib/db';
 import { Data } from '../../lib/data';
 import type { DeviceDB } from '.';
@@ -7,7 +8,9 @@ import type { DeviceDB } from '.';
 export class DeviceAPI {
 	public constructor(private readonly _db: Database<DeviceDB>) {}
 
-	public readonly devices = new Data<Record<string, DeviceInterface>>({});
+	public readonly devices = new Data<{
+		[deviceId: string]: DeviceInterface;
+	}>({});
 
 	public setDevices(devices: DeviceInterface[], source: DeviceSource): void {
 		const currentDeviceIds = new Set(Object.keys(this.devices.current()));
@@ -53,7 +56,7 @@ export class DeviceAPI {
 	public updateDeviceRoom(
 		deviceId: string,
 		room?: string,
-		icon?: string
+		icon?: keyof typeof Icons
 	): boolean {
 		const knownDevices = this.getStoredDevices();
 
@@ -108,18 +111,30 @@ export class DeviceAPI {
 	}
 
 	private generatePastelColor(name: string): string {
-		// Simple hash function
+		// Predefined color palette for distinct room colors
+		const colorPalette = [
+			'#8FB5D6', // Light blue
+			'#7DD4A8', // Mint green
+			'#A4CD76', // Light green
+			'#8B9FDE', // Periwinkle blue
+			'#73D1B8', // Turquoise
+			'#E8B563', // Golden yellow
+			'#D4A5A5', // Dusty rose
+			'#B298DC', // Lavender
+			'#6ECEB2', // Seafoam
+			'#A8D08D', // Sage green
+			'#F4A261', // Sandy orange
+			'#E07A5F', // Terra cotta
+		];
+
+		// Simple hash function to pick from palette
 		let hash = 0;
 		for (let i = 0; i < name.length; i++) {
 			hash = name.charCodeAt(i) + ((hash << 5) - hash);
 		}
 
-		// Generate pastel colors (high lightness, medium saturation)
-		const hue = Math.abs(hash % 360);
-		const saturation = 45 + (Math.abs(hash >> 8) % 25); // 45-70%
-		const lightness = 75 + (Math.abs(hash >> 16) % 15); // 75-90%
-
-		return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+		const index = Math.abs(hash) % colorPalette.length;
+		return colorPalette[index];
 	}
 
 	public getStoredDevices(): Record<string, DeviceInfo> {

@@ -8,3 +8,4 @@
 [x] Update README.md
 [x] Typed routes
 [x] Add MCP server
+[ ] Bump prettier printWidth

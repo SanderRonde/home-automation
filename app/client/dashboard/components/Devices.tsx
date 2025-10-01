@@ -35,13 +35,13 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import type { ReturnTypeForApi } from '../../lib/fetch';
 import React, { useState, useEffect } from 'react';
 import { apiGet, apiPost } from '../../lib/fetch';
+import { getClusterIcon } from './clusterIcons';
 import * as Icons from '@mui/icons-material';
-import type { SxProps } from '@mui/material';
 
 interface EndpointVisualizationProps {
 	endpoint: ReturnTypeForApi<
-		'dashboard',
-		'/getDevices',
+		'device',
+		'/listWithValues',
 		'GET'
 	>['ok']['devices'][number]['endpoints'][number];
 	level: number;
@@ -80,7 +80,8 @@ const EndpointVisualization: React.FC<EndpointVisualizationProps> = (props) => {
 						{props.endpoint.clusters.map((cluster, idx) => (
 							<Chip
 								key={idx}
-								label={`${cluster.emoji} ${cluster.name}`}
+								icon={getClusterIcon(cluster.icon) || undefined}
+								label={cluster.name}
 								size="small"
 								variant="outlined"
 								sx={{ fontSize: '0.75rem' }}
@@ -111,8 +112,8 @@ const EndpointVisualization: React.FC<EndpointVisualizationProps> = (props) => {
 };
 
 type DeviceType = ReturnTypeForApi<
-	'dashboard',
-	'/getDevices',
+	'device',
+	'/listWithValues',
 	'GET'
 >['ok']['devices'][number];
 
@@ -135,12 +136,8 @@ interface DeviceCardProps {
 }
 
 const DeviceCard: React.FC<DeviceCardProps> = (props) => {
-	const allEmojis = props.device.allClusters.map((c) => c.emoji).join(' ');
-
-	const getIconComponent = (iconName: string) => {
-		const IconComponent = (
-			Icons as Record<string, React.ComponentType<{ sx?: SxProps }>>
-		)[iconName];
+	const getIconComponent = (iconName: keyof typeof Icons) => {
+		const IconComponent = Icons[iconName];
 		return IconComponent ? (
 			<IconComponent sx={{ fill: '#2f2f2f' }} />
 		) : null;
@@ -450,20 +447,28 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 							</Box>
 							{props.device.uniqueId.slice(0, 15)}...
 						</Typography>
-						{allEmojis && (
-							<Typography
-								variant="body2"
-								sx={{
-									fontSize: {
-										xs: '0.875rem',
-										sm: '1rem',
-									},
-									flexShrink: 0,
-								}}
-							>
-								{allEmojis}
-							</Typography>
-						)}
+						<Typography
+							variant="body2"
+							sx={{
+								fontSize: {
+									xs: '0.875rem',
+									sm: '1rem',
+								},
+								flexShrink: 0,
+							}}
+						>
+							{props.device.allClusters
+								.filter((cluster) => cluster.icon)
+								.map((cluster, idx) => (
+									<Box
+										key={`${cluster.name}-${idx}`}
+										component="span"
+										sx={{ mr: 0.5 }}
+									>
+										{getClusterIcon(cluster.icon)}
+									</Box>
+								))}
+						</Typography>
 						<ExpandMoreIcon
 							sx={{
 								transform: props.isExpanded
@@ -511,7 +516,11 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 									(cluster, idx) => (
 										<Chip
 											key={idx}
-											label={`${cluster.emoji} ${cluster.name}`}
+											icon={
+												getClusterIcon(cluster.icon) ||
+												undefined
+											}
+											label={cluster.name}
 											size="small"
 											color="primary"
 											variant="outlined"
@@ -559,7 +568,7 @@ export const Devices: React.FC = () => {
 	const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
 	const [devices, setDevices] = useState<
-		ReturnTypeForApi<'dashboard', '/getDevices', 'GET'>['ok']['devices']
+		ReturnTypeForApi<'device', '/listWithValues', 'GET'>['ok']['devices']
 	>([]);
 	const [pairingCode, setPairingCode] = useState('');
 	const [pairingLoading, setPairingLoading] = useState(false);
@@ -584,7 +593,7 @@ export const Devices: React.FC = () => {
 			if (showLoading) {
 				setLoadingDevices(true);
 			}
-			const response = await apiGet('dashboard', '/getDevices', {});
+			const response = await apiGet('device', '/listWithValues', {});
 
 			if (!response.ok) {
 				throw new Error(
@@ -734,19 +743,7 @@ export const Devices: React.FC = () => {
 	}, []);
 
 	return (
-		<Box>
-			<Typography
-				variant="h4"
-				sx={{
-					color: 'primary.main',
-					fontWeight: 300,
-					letterSpacing: '0.2rem',
-					mb: 3,
-				}}
-			>
-				Devices
-			</Typography>
-
+		<Box sx={{ p: { xs: 2, sm: 3 } }}>
 			<Grid container spacing={{ xs: 2, md: 3 }}>
 				{/* Right Column - Controls (on mobile, shown first) */}
 				<Grid size={{ xs: 12, md: 4 }} sx={{ order: { xs: 1, md: 2 } }}>

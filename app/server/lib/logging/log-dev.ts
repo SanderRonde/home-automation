@@ -1,3 +1,4 @@
+import { logImmediate } from './logger';
 import chalk from 'chalk';
 
 export function logDev(...args: unknown[]): void {
@@ -16,7 +17,7 @@ export function logDev(...args: unknown[]): void {
 	const leftPadding = Math.floor((totalLength - debugText.length) / 2);
 	const rightPadding = totalLength - debugText.length - leftPadding;
 
-	console.log(
+	logImmediate(
 		chalk.bgWhite(
 			chalk.black(
 				`[${' '.repeat(leftPadding)}${debugText}${' '.repeat(rightPadding)}]`

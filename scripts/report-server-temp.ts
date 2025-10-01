@@ -2,6 +2,7 @@ import {
 	genId,
 	getClientSecret,
 } from '../app/server/modules/auth/client-secret';
+import { logImmediate } from '../app/server/lib/logging/logger';
 import { exec } from 'child_process';
 import * as https from 'https';
 
@@ -24,11 +25,11 @@ function report(temperature: number, id: number, secret: string) {
 		},
 		(res) => {
 			if (res.statusCode === 200) {
-				console.log(
+				logImmediate(
 					`[${new Date().toLocaleTimeString()}] Reported temperature ${temperature}`
 				);
 			} else {
-				console.log(
+				logImmediate(
 					`[${new Date().toLocaleTimeString()}] Failed to report temperature`
 				);
 			}

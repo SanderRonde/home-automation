@@ -1,7 +1,7 @@
+import { getTime, logImmediate, warning } from './logger';
 import { redact } from '../../modules/auth/secret';
 import { generateRandomString } from '../random';
 import type { BunRequest, Server } from 'bun';
-import { getTime, warning } from './logger';
 import type { AppConfig } from '../../app';
 import { getIP } from './request-logger';
 import * as fs from 'fs/promises';
@@ -31,7 +31,7 @@ export class LogObj {
 	private constructor() {}
 
 	private static _log(...params: unknown[]) {
-		console.log(
+		logImmediate(
 			params
 				.map((param) => {
 					if (typeof param === 'string') {

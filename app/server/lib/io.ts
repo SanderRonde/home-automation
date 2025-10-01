@@ -1,3 +1,4 @@
+import { warning } from './logging/logger';
 import * as dotenv from 'dotenv';
 
 type NumArg = `${number}`;
@@ -131,7 +132,7 @@ export function getEnv<S extends EnvShape>(
 		if (!required) {
 			return void 0;
 		}
-		console.log(`Missing env variable "${name}"`);
+		warning(`Missing env variable "${name}"`);
 		// eslint-disable-next-line n/no-process-exit
 		process.exit(1);
 	}

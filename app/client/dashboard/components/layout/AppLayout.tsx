@@ -6,9 +6,9 @@ import {
 	useMediaQuery,
 	useTheme,
 } from '@mui/material';
+import { TOP_BAR_HEIGHT, TopBar } from './TopBar';
 import type { SidebarTab } from './Sidebar';
 import { Sidebar } from './Sidebar';
-import { TopBar } from './TopBar';
 import React from 'react';
 
 const darkTheme = createTheme({
@@ -78,7 +78,11 @@ export const AppLayout = (props: AppLayoutProps): JSX.Element => {
 					bgcolor: 'background.default',
 				}}
 			>
-				<TopBar open={open} setOpen={setOpen} />
+				<TopBar
+					open={open}
+					setOpen={setOpen}
+					currentTab={props.currentTab}
+				/>
 				<Sidebar
 					open={open}
 					isMobile={isMobile}
@@ -90,12 +94,11 @@ export const AppLayout = (props: AppLayoutProps): JSX.Element => {
 					component="main"
 					sx={{
 						flexGrow: 1,
-						p: { xs: 2, sm: 3 }, // Less padding on mobile
 						width: '100%',
-						height: 'calc(100vh - 64px)',
+						height: `calc(100vh - ${TOP_BAR_HEIGHT}px)`,
 						overflow: 'auto',
 						bgcolor: 'background.default',
-						marginTop: '64px',
+						marginTop: `${TOP_BAR_HEIGHT}px`,
 						transition: (theme) =>
 							theme.transitions.create('margin', {
 								easing: theme.transitions.easing.sharp,

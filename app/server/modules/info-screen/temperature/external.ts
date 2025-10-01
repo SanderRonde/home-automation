@@ -1,4 +1,5 @@
 import type { ExternalTemperatureResult, WeatherAPIResponse } from '../types';
+import { warning } from '../../../lib/logging/logger';
 import { ExternalWeatherTimePeriod } from '../types';
 import { getEnv } from '../../../lib/io';
 import { XHR } from '../../../lib/xhr';
@@ -58,7 +59,7 @@ export async function get(
 			windSpeed: currentDailyForecast.wind_speed,
 		};
 	} catch (e) {
-		console.log(e);
+		warning(e);
 		return null;
 	}
 }
