@@ -1,7 +1,4 @@
-import {
-	TemplateFn,
-	CHANGE_TYPE,
-} from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
+import { TemplateFn, CHANGE_TYPE } from '../../../../../node_modules/wc-lib/build/es/wc-lib.js';
 import { render } from '../../../../../node_modules/lit-html/lit-html.js';
 import type { CalendarOverview } from './calendar-overview.js';
 
@@ -29,8 +26,7 @@ export const CalendarOverviewHTML = new TemplateFn<CalendarOverview>(
 								<div
 									class="calendar-column-spacing"
 									style="${{
-										'grid-column-start':
-											(index + 1) * 2 + 1,
+										'grid-column-start': (index + 1) * 2 + 1,
 										'grid-column-end': (index + 1) * 2 + 2,
 										'grid-row-start': level + 1 + offset,
 										'grid-row-end': level + 2 + offset,
@@ -63,19 +59,14 @@ export const CalendarOverviewHTML = new TemplateFn<CalendarOverview>(
 								<div
 									class="event event-background all-day"
 									style="${{
-										'background-color':
-											event.color.background,
+										'background-color': event.color.background,
 										'grid-row-start': level + 1 + 1,
 										'grid-row-end': level + 2 + 1,
-										'grid-column-start':
-											(event.startIndex + 1) * 2,
-										'grid-column-end':
-											(event.endIndex + 1) * 2 + 1,
+										'grid-column-start': (event.startIndex + 1) * 2,
+										'grid-column-end': (event.endIndex + 1) * 2 + 1,
 									}}"
 								>
-									<div class="event-name">
-										${event.summary}
-									</div>
+									<div class="event-name">${event.summary}</div>
 								</div>
 							`;
 						})}
@@ -86,10 +77,8 @@ export const CalendarOverviewHTML = new TemplateFn<CalendarOverview>(
 							<div
 								class="all-day-spacer"
 								style="${{
-									'grid-row-start':
-										allDayEvents.length + 1 + 1,
-									'grid-row-end':
-										allDayEvents.length + 1 + 1 + 1,
+									'grid-row-start': allDayEvents.length + 1 + 1,
+									'grid-row-end': allDayEvents.length + 1 + 1 + 1,
 									'grid-column-start': 2,
 									'grid-column-end': 16,
 								}}"
@@ -107,19 +96,14 @@ export const CalendarOverviewHTML = new TemplateFn<CalendarOverview>(
 								<div
 									class="event event-background all-day"
 									style="${{
-										'background-color':
-											event.color.background,
+										'background-color': event.color.background,
 										'grid-row-start': level + 1 + offset,
 										'grid-row-end': level + 2 + offset,
-										'grid-column-start':
-											event.columnStart * 2,
-										'grid-column-end':
-											event.columnEnd * 2 + 1,
+										'grid-column-start': event.columnStart * 2,
+										'grid-column-end': event.columnEnd * 2 + 1,
 									}}"
 								>
-									<div class="event-name">
-										${event.summary}
-									</div>
+									<div class="event-name">${event.summary}</div>
 									<div class="event-time">
 										${event.startTime} - ${event.endTime}
 									</div>

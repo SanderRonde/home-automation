@@ -30,18 +30,12 @@ export class Color implements Color {
 	}
 
 	public static fromHex(hexString: string): Color {
-		const sliced = hexString.startsWith('#')
-			? hexString.slice(1)
-			: hexString;
+		const sliced = hexString.startsWith('#') ? hexString.slice(1) : hexString;
 		const [r, g, b] = sliced.match(/.{2}/g)!;
 		return new Color(parseInt(r, 16), parseInt(g, 16), parseInt(b, 16));
 	}
 
-	public static fromHSV(
-		hue: number,
-		saturation: number,
-		value: number
-	): Color {
+	public static fromHSV(hue: number, saturation: number, value: number): Color {
 		const { r, g, b } = HSVtoRGB(hue, saturation, value);
 		return new Color(r, g, b);
 	}
@@ -52,11 +46,7 @@ export class Color implements Color {
 	}
 
 	public static isSame(color1: Color, color2: Color): boolean {
-		return (
-			color1.r === color2.r &&
-			color1.b === color2.b &&
-			color1.g === color2.g
-		);
+		return color1.r === color2.r && color1.b === color2.b && color1.g === color2.g;
 	}
 
 	private _colorToHex(color: number) {
@@ -92,9 +82,7 @@ export class Color implements Color {
 	}
 
 	public toHex(): string {
-		return `#${this._colorToHex(this.r)}${this._colorToHex(
-			this.g
-		)}${this._colorToHex(this.b)}`;
+		return `#${this._colorToHex(this.r)}${this._colorToHex(this.g)}${this._colorToHex(this.b)}`;
 	}
 
 	public toDecimal(): number {
@@ -229,12 +217,8 @@ function rgbToCieXy(r: number, g: number, b: number): { x: number; y: number } {
 
 	// Step 2: Apply a gamma correction (sRGB to linear RGB).
 	red = red > 0.04045 ? Math.pow((red + 0.055) / 1.055, 2.4) : red / 12.92;
-	green =
-		green > 0.04045
-			? Math.pow((green + 0.055) / 1.055, 2.4)
-			: green / 12.92;
-	blue =
-		blue > 0.04045 ? Math.pow((blue + 0.055) / 1.055, 2.4) : blue / 12.92;
+	green = green > 0.04045 ? Math.pow((green + 0.055) / 1.055, 2.4) : green / 12.92;
+	blue = blue > 0.04045 ? Math.pow((blue + 0.055) / 1.055, 2.4) : blue / 12.92;
 
 	// Step 3: Convert from linear RGB to CIE XYZ using the sRGB D65 matrix.
 	const X = red * 0.4124 + green * 0.3576 + blue * 0.1805;
@@ -284,9 +268,7 @@ function cieXyToRgb(x: number, y: number): { r: number; g: number; b: number } {
 
 	// Step 4: Apply inverse gamma correction (linear RGB to sRGB).
 	const inverseGamma = (val: number) => {
-		return val > 0.0031308
-			? 1.055 * Math.pow(val, 1 / 2.4) - 0.055
-			: val * 12.92;
+		return val > 0.0031308 ? 1.055 * Math.pow(val, 1 / 2.4) - 0.055 : val * 12.92;
 	};
 
 	const r_srgb = inverseGamma(r_linear);

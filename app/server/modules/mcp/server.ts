@@ -46,9 +46,7 @@ export class MCPNodeServer {
 		}
 
 		// Check for Bearer token format
-		const token = authHeader.startsWith('Bearer ')
-			? authHeader.substring(7)
-			: authHeader;
+		const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
 
 		// Get the stored auth keys from database
 		const storedKeys = this.mcpDb.current().authKeys;
@@ -79,9 +77,7 @@ export class MCPNodeServer {
 						id: device.getUniqueId(),
 						name: device.getDeviceName(),
 						source: device.getSource(),
-						clusters: device.allClusters.map((cluster) =>
-							cluster.getName()
-						),
+						clusters: device.allClusters.map((cluster) => cluster.getName()),
 					});
 				}
 
@@ -97,84 +93,77 @@ export class MCPNodeServer {
 		);
 
 		// Create HTTP server
-		this.httpServer = createServer(
-			(req: IncomingMessage, res: ServerResponse) => {
-				// Only handle /mcp requests
-				if (req.url !== '/mcp') {
-					res.writeHead(404);
-					res.end('Not found');
-					return;
-				}
+		this.httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
+			// Only handle /mcp requests
+			if (req.url !== '/mcp') {
+				res.writeHead(404);
+				res.end('Not found');
+				return;
+			}
 
-				// Check authorization
-				if (!this.checkAuthorization(req)) {
-					res.writeHead(401, { 'Content-Type': 'application/json' });
-					res.end(
-						JSON.stringify({
-							jsonrpc: '2.0',
-							error: {
-								code: -32001,
-								message:
-									'Unauthorized. Please provide a valid authorization token.',
-							},
-							id: null,
-						})
-					);
-					return;
-				}
+			// Check authorization
+			if (!this.checkAuthorization(req)) {
+				res.writeHead(401, { 'Content-Type': 'application/json' });
+				res.end(
+					JSON.stringify({
+						jsonrpc: '2.0',
+						error: {
+							code: -32001,
+							message: 'Unauthorized. Please provide a valid authorization token.',
+						},
+						id: null,
+					})
+				);
+				return;
+			}
 
-				try {
-					// Read request body
-					let body = '';
-					req.on('data', (chunk: Buffer) => {
-						body += chunk.toString();
-					});
+			try {
+				// Read request body
+				let body = '';
+				req.on('data', (chunk: Buffer) => {
+					body += chunk.toString();
+				});
 
-					req.on('end', async () => {
+				req.on('end', async () => {
+					try {
+						// Parse the JSON body before passing to transport
+						let parsedBody;
 						try {
-							// Parse the JSON body before passing to transport
-							let parsedBody;
-							try {
-								parsedBody = JSON.parse(body);
-							} catch (parseError) {
-								console.error('JSON parse error:', parseError);
-								res.writeHead(400);
-								res.end(
-									JSON.stringify({
-										jsonrpc: '2.0',
-										error: {
-											code: -32700,
-											message: 'Parse error',
-										},
-										id: null,
-									})
-								);
-								return;
-							}
-
-							// Handle MCP request using the transport
-							await this.transport.handleRequest(
-								req,
-								res,
-								parsedBody
-							);
-						} catch (error) {
-							console.error('MCP request error:', error);
-							res.writeHead(500);
+							parsedBody = JSON.parse(body);
+						} catch (parseError) {
+							console.error('JSON parse error:', parseError);
+							res.writeHead(400);
 							res.end(
 								JSON.stringify({
-									error: 'Internal server error',
+									jsonrpc: '2.0',
+									error: {
+										code: -32700,
+										message: 'Parse error',
+									},
+									id: null,
 								})
 							);
+							return;
 						}
-					});
-				} catch (error) {
-					console.error('MCP server error:', error);
-					res.writeHead(500);
-					res.end(JSON.stringify({ error: 'Internal server error' }));
-				}
+
+						// Handle MCP request using the transport
+						await this.transport.handleRequest(req, res, parsedBody);
+					} catch (error) {
+						console.error('MCP request error:', error);
+						res.writeHead(500);
+						res.end(
+							JSON.stringify({
+								error: 'Internal server error',
+							})
+						);
+					}
+				});
+			} catch (error) {
+				console.error('MCP server error:', error);
+				res.writeHead(500);
+				res.end(JSON.stringify({ error: 'Internal server error' }));
 			}
-		);
+		});
 	}
 
 	public async start(): Promise<number> {
@@ -186,11 +175,7 @@ export class MCPNodeServer {
 				const server = this.httpServer;
 				server.listen(0, () => {
 					const port = (server.address() as AddressInfo).port;
-					logTag(
-						'MCP server',
-						'magenta',
-						`listening on port ${port}`
-					);
+					logTag('MCP server', 'magenta', `listening on port ${port}`);
 					resolve(port);
 				});
 			} else {

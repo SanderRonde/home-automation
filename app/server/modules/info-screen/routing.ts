@@ -1,8 +1,4 @@
-import {
-	createServeOptions,
-	staticResponse,
-	withRequestBody,
-} from '../../lib/routes';
+import { createServeOptions, staticResponse, withRequestBody } from '../../lib/routes';
 import infoScreenHtml from '../../../client/info-screen/index.html';
 import { serveStatic } from '../../lib/serve-static';
 import { CLIENT_FOLDER } from '../../lib/constants';
@@ -23,10 +19,7 @@ export async function initRouting(moduleConfig: ModuleConfig): Promise<void> {
 		routes: createServeOptions(
 			{
 				'/': infoScreenHtml,
-				...(await serveStatic(
-					path.join(CLIENT_FOLDER, 'info-screen'),
-					'info-screen'
-				)),
+				...(await serveStatic(path.join(CLIENT_FOLDER, 'info-screen'), 'info-screen')),
 				'/authorize': async (req: BunRequest) => {
 					const getParams = new URL(req.url).searchParams;
 					const code = getParams.get('code');
@@ -93,10 +86,7 @@ export async function initRouting(moduleConfig: ModuleConfig): Promise<void> {
 						const events = await getEvents(7);
 						return json({ events });
 					} catch (e) {
-						return json(
-							{ error: 'calendar API not authenticated' },
-							{ status: 500 }
-						);
+						return json({ error: 'calendar API not authenticated' }, { status: 500 });
 					}
 				},
 			},
@@ -105,9 +95,5 @@ export async function initRouting(moduleConfig: ModuleConfig): Promise<void> {
 		port: config.ports.info,
 	});
 
-	logTag(
-		'info-screen',
-		'magenta',
-		`server listening on port ${config.ports.info}`
-	);
+	logTag('info-screen', 'magenta', `server listening on port ${config.ports.info}`);
 }

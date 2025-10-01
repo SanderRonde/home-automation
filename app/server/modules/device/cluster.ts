@@ -65,9 +65,7 @@ export abstract class DeviceWindowCoveringCluster extends Cluster {
 	public abstract targetPositionLiftPercentage: Data<number | undefined>;
 	public abstract close(): Promise<void>;
 	public abstract open(): Promise<void>;
-	public abstract goToLiftPercentage(args: {
-		percentage: number;
-	}): Promise<void>;
+	public abstract goToLiftPercentage(args: { percentage: number }): Promise<void>;
 }
 
 export abstract class DeviceLevelControlCluster extends Cluster {
@@ -85,10 +83,7 @@ export abstract class DeviceLevelControlCluster extends Cluster {
 	 * Float from 0 to 1
 	 */
 	public abstract startupLevel: Data<number | undefined>;
-	public abstract setLevel(args: {
-		level: number;
-		transitionTimeDs?: number;
-	}): Promise<void>;
+	public abstract setLevel(args: { level: number; transitionTimeDs?: number }): Promise<void>;
 	public abstract setStartupLevel(args: {
 		level: number;
 		transitionTimeDs?: number;
@@ -113,19 +108,14 @@ export abstract class DeviceGroupsCluster extends Cluster {
 		return DeviceGroupsCluster.clusterName;
 	}
 
-	public abstract addGroup(args: {
-		groupId: number;
-		groupName: string;
-	}): Promise<{
+	public abstract addGroup(args: { groupId: number; groupName: string }): Promise<{
 		status: DeviceStatus;
 		groupId: DeviceGroupId;
 	}>;
 	public abstract listGroupMemberships(): Promise<{
 		groupList: DeviceGroupId[];
 	}>;
-	public abstract getFilteredGroupMembership(args: {
-		groupList: DeviceGroupId[];
-	}): Promise<{
+	public abstract getFilteredGroupMembership(args: { groupList: DeviceGroupId[] }): Promise<{
 		groupList: DeviceGroupId[];
 	}>;
 	public abstract removeGroup(args: { groupId: DeviceGroupId }): Promise<{
@@ -170,9 +160,7 @@ export abstract class DeviceRelativeHumidityMeasurementCluster extends Cluster {
 	public abstract relativeHumidity: Data<number | undefined>;
 }
 
-export abstract class DeviceBooleanStateCluster<
-	S extends boolean,
-> extends Cluster {
+export abstract class DeviceBooleanStateCluster<S extends boolean> extends Cluster {
 	public static clusterName = DeviceClusterName.BOOLEAN_STATE;
 
 	public getName(): DeviceClusterName {
@@ -211,8 +199,5 @@ export abstract class DeviceColorControlCluster extends Cluster {
 	}
 
 	public abstract color: Data<Color | undefined>;
-	public abstract setColor(args: {
-		color: Color;
-		overDurationMs?: number;
-	}): Promise<void>;
+	public abstract setColor(args: { color: Color; overDurationMs?: number }): Promise<void>;
 }

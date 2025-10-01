@@ -36,17 +36,13 @@ const ClusterIconButtonSkeleton = (props: ClusterIconButtonSkeletonProps) => {
 				document.addEventListener('pointerup', handlePointerUp);
 			}}
 			sx={{
-				backgroundColor: props.enabled
-					? '#ffffff'
-					: 'rgba(255, 255, 255, 0.2)',
+				backgroundColor: props.enabled ? '#ffffff' : 'rgba(255, 255, 255, 0.2)',
 				width: 48,
 				height: 48,
 				fontSize: '1.5rem',
 				color: props.enabled ? '#2a2a2a' : 'rgba(0, 0, 0, 0.5)',
 				'&:hover': {
-					backgroundColor: props.enabled
-						? '#f0f0f0'
-						: 'rgba(255, 255, 255, 0.4)',
+					backgroundColor: props.enabled ? '#f0f0f0' : 'rgba(255, 255, 255, 0.4)',
 				},
 			}}
 		>
@@ -61,9 +57,7 @@ const ClusterIconButtonSkeleton = (props: ClusterIconButtonSkeletonProps) => {
 
 const WindowCoveringIconButton = (props: ClusterIconButtonProps) => {
 	const devices = props.devices.filter((device) =>
-		device.allClusters.some(
-			(c) => c.name === DeviceClusterName.WINDOW_COVERING
-		)
+		device.allClusters.some((c) => c.name === DeviceClusterName.WINDOW_COVERING)
 	);
 	const anyEnabled = devices
 		.flatMap((d) => d.allClusters)
@@ -118,11 +112,7 @@ const OnOffIconButton = (props: ClusterIconButtonProps) => {
 	);
 };
 
-type DeviceType = ReturnTypeForApi<
-	'device',
-	'/listWithValues',
-	'GET'
->['ok']['devices'][number];
+type DeviceType = ReturnTypeForApi<'device', '/listWithValues', 'GET'>['ok']['devices'][number];
 
 export interface ClusterIconButtonProps {
 	clusterName: DeviceClusterName;
@@ -131,9 +121,7 @@ export interface ClusterIconButtonProps {
 	onLongPress: () => void;
 }
 
-export const ClusterIconButton = (
-	props: ClusterIconButtonProps
-): JSX.Element | null => {
+export const ClusterIconButton = (props: ClusterIconButtonProps): JSX.Element | null => {
 	if (props.clusterName === DeviceClusterName.WINDOW_COVERING) {
 		return <WindowCoveringIconButton {...props} />;
 	}

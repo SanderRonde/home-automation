@@ -1,8 +1,4 @@
-import {
-	createServeOptions,
-	staticResponse,
-	withRequestBody,
-} from '../../lib/routes';
+import { createServeOptions, staticResponse, withRequestBody } from '../../lib/routes';
 import { SettablePromise } from '../../lib/settable-promise';
 import type { ServeOptions } from '../../lib/routes';
 import { LogObj } from '../../lib/logging/lob-obj';
@@ -72,9 +68,6 @@ function _initRouting({ db }: ModuleConfig) {
 	);
 }
 
-export const initRouting = _initRouting as (
-	config: ModuleConfig
-) => ServeOptions<unknown>;
+export const initRouting = _initRouting as (config: ModuleConfig) => ServeOptions<unknown>;
 
-export type BotRoutes =
-	ReturnType<typeof _initRouting> extends ServeOptions<infer R> ? R : never;
+export type BotRoutes = ReturnType<typeof _initRouting> extends ServeOptions<infer R> ? R : never;

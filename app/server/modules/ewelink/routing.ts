@@ -7,10 +7,7 @@ import type { ModuleConfig } from '..';
 import { getEnv } from '../../lib/io';
 import type { EWelinkDB } from '.';
 
-function _initRouting(
-	{ db }: ModuleConfig,
-	api: InstanceType<typeof eWelink.WebAPI> | null
-) {
+function _initRouting({ db }: ModuleConfig, api: InstanceType<typeof eWelink.WebAPI> | null) {
 	return createServeOptions(
 		{
 			'/oauth': (_req, _server, { error }) => {
@@ -21,10 +18,7 @@ function _initRouting(
 				return staticResponse(
 					Response.redirect(
 						api.oauth.createLoginUrl({
-							redirectUrl: `${getEnv(
-								'SECRET_EWELINK_REDIRECT_URL_BASE',
-								true
-							)}/ewelink/redirect_url`,
+							redirectUrl: `${getEnv('SECRET_EWELINK_REDIRECT_URL_BASE', true)}/ewelink/redirect_url`,
 							state: 'XXX',
 						})
 					)
@@ -39,17 +33,11 @@ function _initRouting(
 
 				const token = await api.oauth.getToken({
 					code: code as string,
-					redirectUrl: `${getEnv(
-						'SECRET_EWELINK_REDIRECT_URL_BASE',
-						true
-					)}/ewelink/redirect_url`,
+					redirectUrl: `${getEnv('SECRET_EWELINK_REDIRECT_URL_BASE', true)}/ewelink/redirect_url`,
 					region: getEnv('SECRET_EWELINK_REGION', true),
 				});
 				if (!token.data) {
-					return error(
-						'Failed to get token! ' + (token.msg as string),
-						500
-					);
+					return error('Failed to get token! ' + (token.msg as string), 500);
 				}
 
 				db.update((old) => ({

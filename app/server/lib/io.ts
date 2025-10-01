@@ -108,17 +108,12 @@ interface EnvShape {
 	SECRET_EWELINK_REDIRECT_URL_BASE: string;
 }
 
-export function getEnv<S extends EnvShape>(
-	name: Extract<keyof S, string>
-): string | void;
+export function getEnv<S extends EnvShape>(name: Extract<keyof S, string>): string | void;
 export function getEnv<S extends EnvShape>(
 	name: Extract<keyof S, string>,
 	required: false
 ): string | void;
-export function getEnv<S extends EnvShape>(
-	name: Extract<keyof S, string>,
-	required: true
-): string;
+export function getEnv<S extends EnvShape>(name: Extract<keyof S, string>, required: true): string;
 export function getEnv<S extends EnvShape>(
 	name: Extract<keyof S, string>,
 	required: boolean
@@ -139,9 +134,7 @@ export function getEnv<S extends EnvShape>(
 	return value;
 }
 
-export function getNumberEnv<S extends EnvShape>(
-	name: Extract<keyof S, string>
-): number | void;
+export function getNumberEnv<S extends EnvShape>(name: Extract<keyof S, string>): number | void;
 export function getNumberEnv<S extends EnvShape>(
 	name: Extract<keyof S, string>,
 	required: false

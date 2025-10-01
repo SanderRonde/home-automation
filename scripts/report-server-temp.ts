@@ -1,7 +1,4 @@
-import {
-	genId,
-	getClientSecret,
-} from '../app/server/modules/auth/client-secret';
+import { genId, getClientSecret } from '../app/server/modules/auth/client-secret';
 import { logImmediate } from '../app/server/lib/logging/logger';
 import { exec } from 'child_process';
 import * as https from 'https';
@@ -29,9 +26,7 @@ function report(temperature: number, id: number, secret: string) {
 					`[${new Date().toLocaleTimeString()}] Reported temperature ${temperature}`
 				);
 			} else {
-				logImmediate(
-					`[${new Date().toLocaleTimeString()}] Failed to report temperature`
-				);
+				logImmediate(`[${new Date().toLocaleTimeString()}] Failed to report temperature`);
 			}
 		}
 	);
@@ -47,9 +42,7 @@ function measure(id: number, secret: string) {
 
 		for (const line of stdout.split('\n').slice(1)) {
 			if (line.startsWith('  temp1_input:')) {
-				const temperature = parseFloat(
-					line.split(/\s/g).filter((l) => l.length)[1]
-				);
+				const temperature = parseFloat(line.split(/\s/g).filter((l) => l.length)[1]);
 				report(temperature, id, secret);
 				break;
 			}

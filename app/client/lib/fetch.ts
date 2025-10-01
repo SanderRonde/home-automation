@@ -10,10 +10,7 @@ import type { BotRoutes } from '../../server/modules/bot/routing';
 import type { RouterTypes } from 'bun';
 import type z from 'zod';
 
-function replacePathParams(
-	endpoint: string,
-	pathParams: RouterTypes.ExtractRouteParams<string>
-) {
+function replacePathParams(endpoint: string, pathParams: RouterTypes.ExtractRouteParams<string>) {
 	return endpoint.replace(
 		/:(\w+)/g,
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
@@ -21,10 +18,7 @@ function replacePathParams(
 	);
 }
 
-export async function apiGet<
-	M extends keyof RoutesForModules,
-	E extends keyof RoutesForModules[M],
->(
+export async function apiGet<M extends keyof RoutesForModules, E extends keyof RoutesForModules[M]>(
 	module: M,
 	endpoint: Extract<E, string>,
 	pathParams: RouterTypes.ExtractRouteParams<Extract<E, string>>
@@ -33,21 +27,13 @@ export async function apiGet<
 		(
 			| {
 					ok: true;
-					json: () => Promise<
-						Exclude<ReturnTypeForApi<M, E, 'GET'>['ok'], string>
-					>;
-					text: () => Promise<
-						Extract<ReturnTypeForApi<M, E, 'GET'>['ok'], string>
-					>;
+					json: () => Promise<Exclude<ReturnTypeForApi<M, E, 'GET'>['ok'], string>>;
+					text: () => Promise<Extract<ReturnTypeForApi<M, E, 'GET'>['ok'], string>>;
 			  }
 			| {
 					ok: false;
-					json: () => Promise<
-						Exclude<ReturnTypeForApi<M, E, 'GET'>['error'], string>
-					>;
-					text: () => Promise<
-						Extract<ReturnTypeForApi<M, E, 'GET'>['error'], string>
-					>;
+					json: () => Promise<Exclude<ReturnTypeForApi<M, E, 'GET'>['error'], string>>;
+					text: () => Promise<Extract<ReturnTypeForApi<M, E, 'GET'>['error'], string>>;
 			  }
 		)
 > {
@@ -77,21 +63,13 @@ export async function apiPost<
 		(
 			| {
 					ok: true;
-					json: () => Promise<
-						Exclude<ReturnTypeForApi<M, E, 'POST'>['ok'], string>
-					>;
-					text: () => Promise<
-						Extract<ReturnTypeForApi<M, E, 'POST'>['ok'], string>
-					>;
+					json: () => Promise<Exclude<ReturnTypeForApi<M, E, 'POST'>['ok'], string>>;
+					text: () => Promise<Extract<ReturnTypeForApi<M, E, 'POST'>['ok'], string>>;
 			  }
 			| {
 					ok: false;
-					json: () => Promise<
-						Exclude<ReturnTypeForApi<M, E, 'POST'>['error'], string>
-					>;
-					text: () => Promise<
-						Extract<ReturnTypeForApi<M, E, 'POST'>['error'], string>
-					>;
+					json: () => Promise<Exclude<ReturnTypeForApi<M, E, 'POST'>['error'], string>>;
+					text: () => Promise<Extract<ReturnTypeForApi<M, E, 'POST'>['error'], string>>;
 			  }
 		)
 > {
@@ -134,16 +112,10 @@ export type BodyTypeForApi<
 	endpoint extends keyof RoutesForModules[M],
 	method extends 'GET' | 'POST',
 > =
-	RoutesForModules[M][endpoint] extends RouteBodyBrand<
-		unknown,
-		infer B extends z.ZodTypeAny
-	>
+	RoutesForModules[M][endpoint] extends RouteBodyBrand<unknown, infer B extends z.ZodTypeAny>
 		? z.input<B>
 		: RoutesForModules[M][endpoint] extends {
-					[K in method]?: RouteBodyBrand<
-						unknown,
-						infer B extends z.ZodTypeAny
-					>;
+					[K in method]?: RouteBodyBrand<unknown, infer B extends z.ZodTypeAny>;
 			  }
 			? z.input<B>
 			: never;
@@ -170,9 +142,7 @@ type _GetBrandedResponse<
 		? R[endpoint]
 		: R[endpoint] extends (
 					...args: unknown[]
-			  ) =>
-					| BrandedResponse<unknown, boolean>
-					| Promise<BrandedResponse<unknown, boolean>>
+			  ) => BrandedResponse<unknown, boolean> | Promise<BrandedResponse<unknown, boolean>>
 			? Awaited<ReturnType<R[endpoint]>>
 			: R[endpoint] extends {
 						[K in method]?: (
@@ -181,9 +151,5 @@ type _GetBrandedResponse<
 							| BrandedResponse<unknown, boolean>
 							| Promise<BrandedResponse<unknown, boolean>>;
 				  }
-				? Awaited<
-						ReturnType<
-							Extract<R[endpoint][method], CallableFunction>
-						>
-					>
+				? Awaited<ReturnType<Extract<R[endpoint][method], CallableFunction>>>
 				: never;

@@ -5,5 +5,4 @@ export function generateRandomString(length = 64): string {
 	}
 	return str;
 }
-const CHARS =
-	'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'.split('');
+const CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'.split('');

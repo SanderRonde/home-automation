@@ -26,8 +26,7 @@ export async function checkAuth(req: BunRequest): Promise<boolean> {
 	const queryParams = new URL(req.url).searchParams;
 	if (
 		queryParams.has('auth') &&
-		getClientSecret(parseInt(queryParams.get('id') ?? '0', 10)) ===
-			queryParams.get('auth')!
+		getClientSecret(parseInt(queryParams.get('id') ?? '0', 10)) === queryParams.get('auth')!
 	) {
 		return true;
 	}

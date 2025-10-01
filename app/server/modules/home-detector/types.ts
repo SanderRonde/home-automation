@@ -5,16 +5,10 @@ import type { AllModules } from '..';
 export interface HomeHooks {
 	[key: string]: {
 		home?: {
-			[name: string]: (
-				hookables: AllModules,
-				logObj: LogObj
-			) => PossiblePromise<void>;
+			[name: string]: (hookables: AllModules, logObj: LogObj) => PossiblePromise<void>;
 		};
 		away?: {
-			[name: string]: (
-				hookables: AllModules,
-				logObj: LogObj
-			) => PossiblePromise<void>;
+			[name: string]: (hookables: AllModules, logObj: LogObj) => PossiblePromise<void>;
 		};
 	};
 }

@@ -31,10 +31,7 @@ export class Bot extends BotStateBase {
 
 				const matches: string[] = [];
 				for (const name in all) {
-					if (
-						(match[2] === 'home') ===
-						(all[name] === HOME_STATE.HOME)
-					) {
+					if ((match[2] === 'home') === (all[name] === HOME_STATE.HOME)) {
 						matches.push(Bot.capitalize(name));
 					}
 				}
@@ -45,9 +42,7 @@ export class Bot extends BotStateBase {
 					} else if (matches.length === 1) {
 						return `${matches[0]} is`;
 					} else {
-						return `${matches.slice(0, -1).join(', ')} and ${
-							matches[matches.length - 1]
-						} are`;
+						return `${matches.slice(0, -1).join(', ')} and ${matches[matches.length - 1]} are`;
 					}
 				})();
 
@@ -61,54 +56,36 @@ export class Bot extends BotStateBase {
 
 				const homeState = Bot._config!.detector.get(match[1]);
 
-				(state.states.homeDetector as unknown as State).lastSubjects = [
-					match[1],
-				];
-				if (
-					(homeState === HOME_STATE.HOME) ===
-					(checkTarget === 'home')
-				) {
+				(state.states.homeDetector as unknown as State).lastSubjects = [match[1]];
+				if ((homeState === HOME_STATE.HOME) === (checkTarget === 'home')) {
 					return 'Yep';
 				} else {
 					return 'Nope';
 				}
 			});
-			mm(
-				/when did (.*) (arrive|(get home)|leave|(go away))/,
-				({ logObj, state, match }) => {
-					const checkTarget =
-						match[2] === 'arrive' || match[2] === 'get home'
-							? HOME_STATE.HOME
-							: HOME_STATE.AWAY;
-					const target = match[1];
+			mm(/when did (.*) (arrive|(get home)|leave|(go away))/, ({ logObj, state, match }) => {
+				const checkTarget =
+					match[2] === 'arrive' || match[2] === 'get home'
+						? HOME_STATE.HOME
+						: HOME_STATE.AWAY;
+				const target = match[1];
 
-					const nameMsg = logObj.attachMessage(`Name: ${target}`);
-					const pinger = Bot._config!.detector.getPinger(
-						target.toLowerCase()
-					);
-					if (!pinger) {
-						nameMsg.attachMessage(chalk.bold('Nonexistent'));
-						return 'Person does not exist';
-					}
-
-					nameMsg.attachMessage(
-						'Left at:',
-						chalk.bold(String(pinger.leftAt))
-					);
-					nameMsg.attachMessage(
-						'Arrived at:',
-						chalk.bold(String(pinger.joinedAt))
-					);
-
-					(
-						state.states.homeDetector as unknown as State
-					).lastSubjects = [target];
-
-					return checkTarget === HOME_STATE.HOME
-						? pinger.joinedAt.toLocaleString()
-						: pinger.leftAt.toLocaleString();
+				const nameMsg = logObj.attachMessage(`Name: ${target}`);
+				const pinger = Bot._config!.detector.getPinger(target.toLowerCase());
+				if (!pinger) {
+					nameMsg.attachMessage(chalk.bold('Nonexistent'));
+					return 'Person does not exist';
 				}
-			);
+
+				nameMsg.attachMessage('Left at:', chalk.bold(String(pinger.leftAt)));
+				nameMsg.attachMessage('Arrived at:', chalk.bold(String(pinger.joinedAt)));
+
+				(state.states.homeDetector as unknown as State).lastSubjects = [target];
+
+				return checkTarget === HOME_STATE.HOME
+					? pinger.joinedAt.toLocaleString()
+					: pinger.leftAt.toLocaleString();
+			});
 
 			conditional(
 				mm(
@@ -126,26 +103,16 @@ export class Bot extends BotStateBase {
 							contents: [],
 							header: ['Name', 'Time'],
 						};
-						for (const target of (
-							state.states.homeDetector as unknown as State
-						).lastSubjects!) {
-							const nameMsg = logObj.attachMessage(
-								`Name: ${target}`
-							);
-							const pinger = Bot._config!.detector.getPinger(
-								target.toLowerCase()
-							);
+						for (const target of (state.states.homeDetector as unknown as State)
+							.lastSubjects!) {
+							const nameMsg = logObj.attachMessage(`Name: ${target}`);
+							const pinger = Bot._config!.detector.getPinger(target.toLowerCase());
 							if (!pinger) {
-								nameMsg.attachMessage(
-									chalk.bold('Nonexistent')
-								);
+								nameMsg.attachMessage(chalk.bold('Nonexistent'));
 								continue;
 							}
 
-							nameMsg.attachMessage(
-								'Left at:',
-								chalk.bold(String(pinger.leftAt))
-							);
+							nameMsg.attachMessage('Left at:', chalk.bold(String(pinger.leftAt)));
 							nameMsg.attachMessage(
 								'Arrived at:',
 								chalk.bold(String(pinger.joinedAt))
@@ -155,38 +122,26 @@ export class Bot extends BotStateBase {
 								checkTarget === HOME_STATE.HOME
 									? pinger.joinedAt.toLocaleString()
 									: pinger.leftAt.toLocaleString();
-							table.contents.push([
-								Bot.capitalize(target),
-								timeMsg,
-							]);
+							table.contents.push([Bot.capitalize(target), timeMsg]);
 						}
 
 						return Bot.makeTable(table);
 					}
 				),
 				({ state }) => {
-					return (
-						(state.states.homeDetector as unknown as State)
-							.lastSubjects !== null
-					);
+					return (state.states.homeDetector as unknown as State).lastSubjects !== null;
 				}
 			);
 
-			mm(
-				'/help_homedetector',
-				/what commands are there for home(-| )?detector/,
-				() => {
-					return `Commands are:\n${Bot.matches.matches
-						.map((match) => {
-							return `RegExps: ${match.regexps
-								.map((r) => r.source)
-								.join(', ')}. Texts: ${match.texts.join(
-								', '
-							)}}`;
-						})
-						.join('\n')}`;
-				}
-			);
+			mm('/help_homedetector', /what commands are there for home(-| )?detector/, () => {
+				return `Commands are:\n${Bot.matches.matches
+					.map((match) => {
+						return `RegExps: ${match.regexps.map((r) => r.source).join(', ')}. Texts: ${match.texts.join(
+							', '
+						)}}`;
+					})
+					.join('\n')}`;
+			});
 
 			fallback(({ state }) => {
 				Bot.resetState(state);

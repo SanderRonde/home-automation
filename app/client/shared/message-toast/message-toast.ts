@@ -25,9 +25,7 @@ interface CreateConfig {
 			return html`
 				<div id="toast">
 					<div id="text">${props.message}</div>
-					<div @click="${this.onClick.bind(this)}" id="button">
-						${props.button}
-					</div>
+					<div @click="${this.onClick.bind(this)}" id="button">${props.button}</div>
 				</div>
 			`;
 		},
@@ -62,10 +60,7 @@ interface CreateConfig {
 						font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif
 					}
 
-					${clampWidthSelector('#toast')(
-						['padding', '3.6vw'],
-						['font-size', '6vw']
-					)}
+					${clampWidthSelector('#toast')(['padding', '3.6vw'], ['font-size', '6vw'])}
 
 					#button {
 						color: yellow;

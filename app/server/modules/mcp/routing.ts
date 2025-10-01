@@ -32,10 +32,7 @@ async function _initRouting(config: ModuleConfig) {
 					const response = await fetch(forwardedReq);
 					return staticResponse(response);
 				} catch (e) {
-					console.error(
-						'Error forwarding request to MCP Node.js server:',
-						error
-					);
+					console.error('Error forwarding request to MCP Node.js server:', error);
 					return error('Internal server error', 500);
 				}
 			},
@@ -44,6 +41,4 @@ async function _initRouting(config: ModuleConfig) {
 	);
 }
 
-export const initRouting = _initRouting as (
-	config: ModuleConfig
-) => Promise<ServeOptions<unknown>>;
+export const initRouting = _initRouting as (config: ModuleConfig) => Promise<ServeOptions<unknown>>;

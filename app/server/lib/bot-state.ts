@@ -68,9 +68,7 @@ interface MatchData {
 	conditions: ((params: MatchParams) => boolean)[];
 }
 
-type MatchMaker = (
-	...args: (string[] | string | RegExp[] | RegExp | MatchHandler)[]
-) => MatchData;
+type MatchMaker = (...args: (string[] | string | RegExp[] | RegExp | MatchHandler)[]) => MatchData;
 
 type SameMaker = (str: TemplateStringsArray, ...values: string[][]) => string[];
 
@@ -137,10 +135,7 @@ export abstract class Matchable extends BotUtil {
 						return condition(config);
 					})
 				) {
-					if (
-						earliestMatch === null ||
-						match.index < earliestMatch.index
-					) {
+					if (earliestMatch === null || match.index < earliestMatch.index) {
 						earliestMatch = {
 							type: 'text',
 							match,
@@ -156,9 +151,7 @@ export abstract class Matchable extends BotUtil {
 
 		if (earliestMatch) {
 			const newLogObj = logObj.attachMessage(
-				earliestMatch.type === 'text'
-					? 'Matching string:'
-					: 'Matching regex:',
+				earliestMatch.type === 'text' ? 'Matching string:' : 'Matching regex:',
 				chalk.bold(earliestMatch.matchText)
 			);
 			const getResponse = () => {
@@ -172,10 +165,7 @@ export abstract class Matchable extends BotUtil {
 								match: earliestMatch.match,
 								matchText: earliestMatch.matchText,
 								ask(question: string) {
-									return config.bot.askQuestion(
-										question,
-										config.message
-									);
+									return config.bot.askQuestion(question, config.message);
 								},
 								askCancelable(question: string) {
 									let _cancel: () => void;
@@ -193,10 +183,7 @@ export abstract class Matchable extends BotUtil {
 									};
 								},
 								sendText(text: string) {
-									return config.bot.sendText(
-										text,
-										config.message
-									);
+									return config.bot.sendText(text, config.message);
 								},
 							})
 						);
@@ -251,9 +238,7 @@ export abstract class Matchable extends BotUtil {
 					matchData.regexps!.push(
 						new RegExp(
 							innerArg,
-							innerArg.flags.includes('i')
-								? innerArg.flags
-								: innerArg.flags + 'i'
+							innerArg.flags.includes('i') ? innerArg.flags : innerArg.flags + 'i'
 						)
 					);
 				} else {
@@ -300,22 +285,15 @@ export abstract class Matchable extends BotUtil {
 
 		return this.flatten(
 			joinedOptions.map((joinedOption) => {
-				return this.splitAtWord(
-					`${joinedOption}${post.str[0]}`,
-					post.values[0],
-					{
-						str: post.str.slice(1),
-						values: post.values.slice(1),
-					}
-				);
+				return this.splitAtWord(`${joinedOption}${post.str[0]}`, post.values[0], {
+					str: post.str.slice(1),
+					values: post.values.slice(1),
+				});
 			})
 		);
 	}
 
-	public static createJoinedWords(
-		str: TemplateStringsArray,
-		...values: string[][]
-	): string[] {
+	public static createJoinedWords(str: TemplateStringsArray, ...values: string[][]): string[] {
 		if (values.length === 0) {
 			return [str[0]];
 		}
@@ -332,10 +310,7 @@ export abstract class Matchable extends BotUtil {
 			matchMaker: MatchMaker;
 			sameWordMaker: SameMaker;
 			fallbackSetter: (fallback: MatchFallback) => void;
-			conditional: (
-				match: MatchData,
-				condition: (params: MatchParams) => boolean
-			) => void;
+			conditional: (match: MatchData, condition: (params: MatchParams) => boolean) => void;
 		}) => unknown
 	): MatchConfig {
 		const config: MatchConfig = {
@@ -349,10 +324,7 @@ export abstract class Matchable extends BotUtil {
 				config.matches.push(match);
 				return match;
 			},
-			sameWordMaker: (
-				str: TemplateStringsArray,
-				...values: string[][]
-			): string[] => {
+			sameWordMaker: (str: TemplateStringsArray, ...values: string[][]): string[] => {
 				return this.createJoinedWords(str, ...values);
 			},
 			fallbackSetter: (fn) => {

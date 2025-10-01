@@ -49,9 +49,7 @@ interface EndpointVisualizationProps {
 }
 
 const EndpointVisualization: React.FC<EndpointVisualizationProps> = (props) => {
-	const hasContent =
-		props.endpoint.clusters.length > 0 ||
-		props.endpoint.endpoints.length > 0;
+	const hasContent = props.endpoint.clusters.length > 0 || props.endpoint.endpoints.length > 0;
 
 	if (!hasContent) {
 		return null;
@@ -60,20 +58,14 @@ const EndpointVisualization: React.FC<EndpointVisualizationProps> = (props) => {
 	return (
 		<Box sx={{ ml: props.level * 2, mt: props.level > 0 ? 1 : 0 }}>
 			{props.title && (
-				<Typography
-					variant="subtitle2"
-					sx={{ mb: 1, fontWeight: 'bold' }}
-				>
+				<Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
 					{props.title}
 				</Typography>
 			)}
 
 			{props.endpoint.clusters.length > 0 && (
 				<Box sx={{ mb: 2 }}>
-					<Typography
-						variant="body2"
-						sx={{ mb: 1, color: 'text.secondary' }}
-					>
+					<Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
 						Clusters:
 					</Typography>
 					<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
@@ -111,11 +103,7 @@ const EndpointVisualization: React.FC<EndpointVisualizationProps> = (props) => {
 	);
 };
 
-type DeviceType = ReturnTypeForApi<
-	'device',
-	'/listWithValues',
-	'GET'
->['ok']['devices'][number];
+type DeviceType = ReturnTypeForApi<'device', '/listWithValues', 'GET'>['ok']['devices'][number];
 
 interface DeviceCardProps {
 	device: DeviceType;
@@ -127,20 +115,14 @@ interface DeviceCardProps {
 	onSaveEdit: (deviceId: string) => void;
 	onCancelEdit: () => void;
 	onEditedNameChange: (name: string) => void;
-	onOpenRoomDialog: (
-		deviceId: string,
-		deviceName: string,
-		room?: string
-	) => void;
+	onOpenRoomDialog: (deviceId: string, deviceName: string, room?: string) => void;
 	isMobile: boolean;
 }
 
 const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 	const getIconComponent = (iconName: keyof typeof Icons) => {
 		const IconComponent = Icons[iconName];
-		return IconComponent ? (
-			<IconComponent sx={{ fill: '#2f2f2f' }} />
-		) : null;
+		return IconComponent ? <IconComponent sx={{ fill: '#2f2f2f' }} /> : null;
 	};
 
 	return (
@@ -168,14 +150,10 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 					>
 						<TextField
 							value={props.editedName}
-							onChange={(e) =>
-								props.onEditedNameChange(e.target.value)
-							}
+							onChange={(e) => props.onEditedNameChange(e.target.value)}
 							onKeyDown={(e) => {
 								if (e.key === 'Enter') {
-									void props.onSaveEdit(
-										props.device.uniqueId
-									);
+									void props.onSaveEdit(props.device.uniqueId);
 								} else if (e.key === 'Escape') {
 									props.onCancelEdit();
 								}
@@ -230,10 +208,7 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 								<IconButton
 									size="small"
 									onClick={() => {
-										props.onStartEdit(
-											props.device.uniqueId,
-											props.device.name
-										);
+										props.onStartEdit(props.device.uniqueId, props.device.name);
 									}}
 									sx={{
 										opacity: 0.6,
@@ -247,13 +222,7 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 								</IconButton>
 							</Tooltip>
 						</Box>
-						<Tooltip
-							title={
-								props.device.room
-									? 'Change room'
-									: 'Assign to room'
-							}
-						>
+						<Tooltip title={props.device.room ? 'Change room' : 'Assign to room'}>
 							<Box
 								onClick={() => {
 									props.onOpenRoomDialog(
@@ -277,8 +246,7 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 										? props.device.roomColor
 										: 'transparent',
 									cursor: 'pointer',
-									transition:
-										'filter 0.2s, background-color 0.2s',
+									transition: 'filter 0.2s, background-color 0.2s',
 									justifyContent: 'center',
 									'&:hover': {
 										filter: props.device.room
@@ -297,9 +265,7 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 									}}
 								>
 									{props.device.roomIcon ? (
-										getIconComponent(
-											props.device.roomIcon
-										) || <RoomIcon />
+										getIconComponent(props.device.roomIcon) || <RoomIcon />
 									) : (
 										<RoomIcon />
 									)}
@@ -329,16 +295,10 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 								<DialogContent>
 									<TextField
 										value={props.editedName}
-										onChange={(e) =>
-											props.onEditedNameChange(
-												e.target.value
-											)
-										}
+										onChange={(e) => props.onEditedNameChange(e.target.value)}
 										onKeyDown={(e) => {
 											if (e.key === 'Enter') {
-												void props.onSaveEdit(
-													props.device.uniqueId
-												);
+												void props.onSaveEdit(props.device.uniqueId);
 											} else if (e.key === 'Escape') {
 												props.onCancelEdit();
 											}
@@ -350,14 +310,10 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 									/>
 								</DialogContent>
 								<DialogActions>
-									<Button onClick={props.onCancelEdit}>
-										Cancel
-									</Button>
+									<Button onClick={props.onCancelEdit}>Cancel</Button>
 									<Button
 										onClick={() => {
-											void props.onSaveEdit(
-												props.device.uniqueId
-											);
+											void props.onSaveEdit(props.device.uniqueId);
 										}}
 										variant="contained"
 									>
@@ -392,8 +348,7 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 						backgroundColor: props.device.roomColor,
 					}}
 				>
-					{props.device.roomIcon &&
-						getIconComponent(props.device.roomIcon)}
+					{props.device.roomIcon && getIconComponent(props.device.roomIcon)}
 					<Typography
 						variant="body2"
 						sx={{
@@ -471,9 +426,7 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 						</Typography>
 						<ExpandMoreIcon
 							sx={{
-								transform: props.isExpanded
-									? 'rotate(180deg)'
-									: 'rotate(0deg)',
+								transform: props.isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
 								transition: 'transform 0.2s',
 								flexShrink: 0,
 							}}
@@ -496,13 +449,9 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 								Device ID
 							</Typography>
 							<Typography variant="body2" sx={{ mb: 1, pt: 2 }}>
-								{props.device.source.emoji}{' '}
-								{props.device.uniqueId}
+								{props.device.source.emoji} {props.device.uniqueId}
 							</Typography>
-							<Typography
-								variant="subtitle1"
-								sx={{ mb: 1, pt: 2 }}
-							>
+							<Typography variant="subtitle1" sx={{ mb: 1, pt: 2 }}>
 								All Device Clusters
 							</Typography>
 							<Box
@@ -512,21 +461,16 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 									gap: 1,
 								}}
 							>
-								{props.device.allClusters.map(
-									(cluster, idx) => (
-										<Chip
-											key={idx}
-											icon={
-												getClusterIcon(cluster.icon) ||
-												undefined
-											}
-											label={cluster.name}
-											size="small"
-											color="primary"
-											variant="outlined"
-										/>
-									)
-								)}
+								{props.device.allClusters.map((cluster, idx) => (
+									<Chip
+										key={idx}
+										icon={getClusterIcon(cluster.icon) || undefined}
+										label={cluster.name}
+										size="small"
+										color="primary"
+										variant="outlined"
+									/>
+								))}
 							</Box>
 						</Box>
 					)}
@@ -540,9 +484,7 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 								},
 							}}
 						>
-							<Typography variant="subtitle1">
-								Endpoint Structure
-							</Typography>
+							<Typography variant="subtitle1">Endpoint Structure</Typography>
 							<Chip
 								label={`${props.device.endpoints.length} endpoint${props.device.endpoints.length !== 1 ? 's' : ''}`}
 								size="small"
@@ -576,9 +518,7 @@ export const Devices: React.FC = () => {
 		type: 'success' | 'error';
 		text: string;
 	} | null>(null);
-	const [expandedDevices, setExpandedDevices] = useState<Set<string>>(
-		new Set()
-	);
+	const [expandedDevices, setExpandedDevices] = useState<Set<string>>(new Set());
 	const [loadingDevices, setLoadingDevices] = useState(false);
 	const [roomDialogFor, setRoomDialogFor] = useState<{
 		id: string;
@@ -596,9 +536,7 @@ export const Devices: React.FC = () => {
 			const response = await apiGet('device', '/listWithValues', {});
 
 			if (!response.ok) {
-				throw new Error(
-					`Failed to fetch devices: ${await response.text()}`
-				);
+				throw new Error(`Failed to fetch devices: ${await response.text()}`);
 			}
 
 			const data = await response.json();
@@ -634,9 +572,7 @@ export const Devices: React.FC = () => {
 			});
 
 			if (!response.ok) {
-				throw new Error(
-					`Failed to pair device: ${await response.text()}`
-				);
+				throw new Error(`Failed to pair device: ${await response.text()}`);
 			}
 
 			const pairedDevices = await response.json();
@@ -653,10 +589,7 @@ export const Devices: React.FC = () => {
 			console.error('Failed to pair Matter device:', error);
 			setPairingMessage({
 				type: 'error',
-				text:
-					error instanceof Error
-						? error.message
-						: 'Failed to pair device',
+				text: error instanceof Error ? error.message : 'Failed to pair device',
 			});
 
 			// Clear error message after delay
@@ -678,11 +611,7 @@ export const Devices: React.FC = () => {
 		});
 	};
 
-	const handleOpenRoomDialog = (
-		deviceId: string,
-		deviceName: string,
-		room?: string
-	) => {
+	const handleOpenRoomDialog = (deviceId: string, deviceName: string, room?: string) => {
 		setRoomDialogFor({ id: deviceId, name: deviceName, room });
 	};
 
@@ -763,14 +692,9 @@ export const Devices: React.FC = () => {
 								<TextField
 									label="Matter Pairing Code"
 									value={pairingCode}
-									onChange={(e) =>
-										setPairingCode(e.target.value)
-									}
+									onChange={(e) => setPairingCode(e.target.value)}
 									onKeyDown={(e) => {
-										if (
-											e.key === 'Enter' &&
-											!pairingLoading
-										) {
+										if (e.key === 'Enter' && !pairingLoading) {
 											void handlePair();
 										}
 									}}
@@ -782,16 +706,11 @@ export const Devices: React.FC = () => {
 								<Button
 									variant="contained"
 									onClick={handlePair}
-									disabled={
-										pairingLoading || !pairingCode.trim()
-									}
+									disabled={pairingLoading || !pairingCode.trim()}
 									fullWidth
 								>
 									{pairingLoading ? (
-										<CircularProgress
-											size={24}
-											color="inherit"
-										/>
+										<CircularProgress size={24} color="inherit" />
 									) : (
 										'Pair Device'
 									)}
@@ -845,12 +764,8 @@ export const Devices: React.FC = () => {
 								<DeviceCard
 									key={device.uniqueId}
 									device={device}
-									isExpanded={expandedDevices.has(
-										device.uniqueId
-									)}
-									isEditing={
-										editingDeviceId === device.uniqueId
-									}
+									isExpanded={expandedDevices.has(device.uniqueId)}
+									isEditing={editingDeviceId === device.uniqueId}
 									editedName={editedName}
 									onToggleExpansion={toggleDeviceExpansion}
 									onStartEdit={handleStartEdit}
@@ -863,9 +778,7 @@ export const Devices: React.FC = () => {
 							))}
 							{devices.length === 0 && (
 								<Box sx={{ textAlign: 'center', py: 4 }}>
-									<Typography color="text.secondary">
-										No devices found
-									</Typography>
+									<Typography color="text.secondary">No devices found</Typography>
 								</Box>
 							)}
 						</Stack>

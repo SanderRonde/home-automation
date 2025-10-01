@@ -23,10 +23,7 @@ export const WLed = new (class WLed extends ModuleMeta {
 		db.subscribe(async (data) => {
 			const currentDevices = this.devices.current();
 			const newDevices = { ...currentDevices };
-			const { added, removed } = diff(
-				Object.keys(currentDevices),
-				data.devices ?? []
-			);
+			const { added, removed } = diff(Object.keys(currentDevices), data.devices ?? []);
 			for (const ip of added) {
 				const client = new WLEDClient(ip);
 				await client.init();

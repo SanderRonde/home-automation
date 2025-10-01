@@ -86,11 +86,7 @@ function ConfigurableCluster(
 }
 
 export class WLEDOnOffCluster extends ConfigurableCluster(DeviceOnOffCluster) {
-	public isOn = new WLEDMapper(
-		this._client,
-		this._proxy.state,
-		(state) => state?.on ?? false
-	);
+	public isOn = new WLEDMapper(this._client, this._proxy.state, (state) => state?.on ?? false);
 
 	public setOn = async (on: boolean): Promise<void> => {
 		if (on) {
@@ -105,9 +101,7 @@ export class WLEDOnOffCluster extends ConfigurableCluster(DeviceOnOffCluster) {
 	};
 }
 
-export class WLEDLevelControlCluster extends ConfigurableCluster(
-	DeviceLevelControlCluster
-) {
+export class WLEDLevelControlCluster extends ConfigurableCluster(DeviceLevelControlCluster) {
 	public currentLevel = new WLEDMapper(
 		this._client,
 		this._proxy.state,
@@ -128,9 +122,7 @@ export class WLEDLevelControlCluster extends ConfigurableCluster(
 	public stop = (): Promise<void> => Promise.resolve();
 }
 
-export class WLEDColorControlCluster extends ConfigurableCluster(
-	DeviceColorControlCluster
-) {
+export class WLEDColorControlCluster extends ConfigurableCluster(DeviceColorControlCluster) {
 	public color = new WLEDMapper(this._client, this._proxy.state, (state) => {
 		const color = state.segments[0].colors?.[0];
 		if (!color) {

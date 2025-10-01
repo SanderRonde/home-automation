@@ -35,19 +35,12 @@ export interface TelegramText {
 	text: string;
 }
 
-type TelegramReply<
-	C = TelegramText | TelegramImage | TelegramVoice | TelegramDocument,
-> = {
+type TelegramReply<C = TelegramText | TelegramImage | TelegramVoice | TelegramDocument> = {
 	reply_to_message: TelegramMessage<C>;
 } & TelegramText;
 
 export type TelegramMessage<
-	C =
-		| TelegramReply
-		| TelegramText
-		| TelegramImage
-		| TelegramVoice
-		| TelegramDocument,
+	C = TelegramReply | TelegramText | TelegramImage | TelegramVoice | TelegramDocument,
 > = {
 	message_id: number;
 	from: {

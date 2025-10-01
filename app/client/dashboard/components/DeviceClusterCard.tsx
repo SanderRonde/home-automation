@@ -10,15 +10,9 @@ import type { EnumValue } from '../../../server/lib/enum';
 import { getClusterIcon } from './clusterIcons';
 import React from 'react';
 
-type DeviceType = ReturnTypeForApi<
-	'device',
-	'/listWithValues',
-	'GET'
->['ok']['devices'][number];
+type DeviceType = ReturnTypeForApi<'device', '/listWithValues', 'GET'>['ok']['devices'][number];
 
-interface DeviceClusterCardBaseProps<
-	C extends DashboardDeviceClusterWithState,
-> {
+interface DeviceClusterCardBaseProps<C extends DashboardDeviceClusterWithState> {
 	device: DeviceType;
 	cluster: C;
 	invalidate: () => void;
@@ -105,9 +99,7 @@ const WindowCoveringCard = (
 	const dragStartPosition = React.useRef<number>(0);
 
 	const currentPosition =
-		dragPosition !== null
-			? dragPosition
-			: props.cluster.targetPositionLiftPercentage;
+		dragPosition !== null ? dragPosition : props.cluster.targetPositionLiftPercentage;
 
 	const handlePointerDown = (e: React.PointerEvent) => {
 		setIsDragging(true);
@@ -163,9 +155,7 @@ const WindowCoveringCard = (
 	);
 };
 
-const OnOffCard = (
-	props: DeviceClusterCardBaseProps<DashboardDeviceClusterOnOff>
-): JSX.Element => {
+const OnOffCard = (props: DeviceClusterCardBaseProps<DashboardDeviceClusterOnOff>): JSX.Element => {
 	return (
 		<DeviceClusterCardSkeleton
 			{...props}
@@ -188,9 +178,7 @@ const OnOffCard = (
 
 export const DEVICE_CLUSTER_CARDS: Record<
 	EnumValue,
-	React.ComponentType<
-		DeviceClusterCardBaseProps<DashboardDeviceClusterWithState>
-	>
+	React.ComponentType<DeviceClusterCardBaseProps<DashboardDeviceClusterWithState>>
 > = {
 	[DeviceClusterName.WINDOW_COVERING]: WindowCoveringCard,
 	[DeviceClusterName.ON_OFF]: OnOffCard,

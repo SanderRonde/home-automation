@@ -90,9 +90,7 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 		columnEnd: number;
 	})[][] {
 		const weekdayEvents = this.getWeekDayEvents();
-		const max = Math.max(
-			...weekdayEvents.map((weekDay) => weekDay.events.length)
-		);
+		const max = Math.max(...weekdayEvents.map((weekDay) => weekDay.events.length));
 
 		const arr: (TimedEvent & {
 			columnStart: number;
@@ -130,17 +128,10 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 			endIndex: number;
 		})[][] = [];
 		for (const event of events) {
-			if (
-				event.start?.dateTime ||
-				!event.start?.date ||
-				!event.end?.date
-			) {
+			if (event.start?.dateTime || !event.start?.date || !event.end?.date) {
 				continue;
 			}
-			const startIndex = this.getDayIndex(
-				new Date(event.start?.date),
-				endsOfDays
-			);
+			const startIndex = this.getDayIndex(new Date(event.start?.date), endsOfDays);
 			const endIndex = Math.min(
 				endsOfDays.length - 1,
 				this.getDayIndex(new Date(event.end?.date), endsOfDays) - 1

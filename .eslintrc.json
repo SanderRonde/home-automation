@@ -69,10 +69,7 @@
 		"no-debugger": "warn",
 		"@typescript-eslint/no-inferrable-types": "off",
 		"node/no-unpublished-import": "off",
-		"@typescript-eslint/prefer-readonly": [
-			"error",
-			{ "onlyInlineLambdas": true }
-		],
+		"@typescript-eslint/prefer-readonly": ["error", { "onlyInlineLambdas": true }],
 		"@typescript-eslint/explicit-member-accessibility": [
 			"warn",
 			{

@@ -11,15 +11,7 @@ import type { z, ZodTypeAny } from 'zod';
 import { checkAuth } from './auth';
 import type { Server } from 'bun';
 
-const HTTP_METHODS = [
-	'GET',
-	'POST',
-	'PUT',
-	'DELETE',
-	'PATCH',
-	'OPTIONS',
-	'HEAD',
-];
+const HTTP_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'];
 
 export function createServeOptions<
 	T,
@@ -30,25 +22,15 @@ export function createServeOptions<
 			| Promise<BrandedResponse<T, false>>
 			| BrandedRouteHandler<K, unknown>
 			| {
-					[M in Bun.RouterTypes.HTTPMethod]?: BrandedRouteHandler<
-						K,
-						unknown
-					>;
+					[M in Bun.RouterTypes.HTTPMethod]?: BrandedRouteHandler<K, unknown>;
 			  }
 			| Bun.HTMLBundle
 			| Bun.BunFile;
 	},
 >(
-	routes: (DistributedOmit<
-		Exclude<Serve<T>, WebSocketServeOptions<T>>,
-		'fetch'
-	> & {
+	routes: (DistributedOmit<Exclude<Serve<T>, WebSocketServeOptions<T>>, 'fetch'> & {
 		routes: R;
-		fetch?: (
-			this: Server,
-			request: Request,
-			server: Server
-		) => Response | Promise<Response>;
+		fetch?: (this: Server, request: Request, server: Server) => Response | Promise<Response>;
 	})['routes'],
 	auth: boolean,
 	websocket?: ServeOptions<R>['websocket']
@@ -78,28 +60,17 @@ export function createServeOptions<
 
 						if (isApiRequest) {
 							// Return 401 for API requests
-							const unauthorizedRes = errorResponse(
-								'Unauthorized',
-								401
-							);
-							LogObj.logOutgoingResponse(
-								req,
-								unauthorizedRes,
-								server
-							);
+							const unauthorizedRes = errorResponse('Unauthorized', 401);
+							LogObj.logOutgoingResponse(req, unauthorizedRes, server);
 							return unauthorizedRes;
 						} else {
 							// Redirect to login page for regular page requests
 							const loginUrl = `/auth/login-page?redirect=${encodeURIComponent(url.pathname + url.search)}`;
-							const redirectRes = Response.redirect(
-								loginUrl,
-								302
-							) as BrandedResponse<unknown, false>;
-							LogObj.logOutgoingResponse(
-								req,
-								redirectRes,
-								server
-							);
+							const redirectRes = Response.redirect(loginUrl, 302) as BrandedResponse<
+								unknown,
+								false
+							>;
+							LogObj.logOutgoingResponse(req, redirectRes, server);
 							return redirectRes;
 						}
 					}
@@ -122,10 +93,7 @@ export function createServeOptions<
 				const errorRes = errorResponse(
 					{
 						error: 'Internal Server Error',
-						message:
-							error instanceof Error
-								? error.message
-								: 'Unknown error',
+						message: error instanceof Error ? error.message : 'Unknown error',
 					},
 					500
 				);
@@ -140,10 +108,7 @@ export function createServeOptions<
 		const route = routes[key];
 		if (typeof route === 'function') {
 			loggedRoutes[key] = middleware(route);
-		} else if (
-			typeof route === 'object' &&
-			HTTP_METHODS.some((method) => method in route)
-		) {
+		} else if (typeof route === 'object' && HTTP_METHODS.some((method) => method in route)) {
 			// All HTTP methods
 			loggedRoutes[key] = Object.fromEntries(
 				Object.entries(route).map(([httpMethod, handler]) => [
@@ -170,9 +135,7 @@ export function createServeOptions<
 export function withRequestBody<
 	const S extends ZodTypeAny,
 	const T,
-	const R extends
-		| BrandedResponse<unknown, boolean>
-		| Promise<BrandedResponse<unknown, boolean>>,
+	const R extends BrandedResponse<unknown, boolean> | Promise<BrandedResponse<unknown, boolean>>,
 >(
 	shape: S,
 	handler: (
@@ -226,10 +189,7 @@ export type BrandedRouteHandlerResponse = {
 		message: T,
 		statusCode: number
 	) => BrandedResponse<T, true>;
-	text: (
-		message: string,
-		statusCode: number
-	) => BrandedResponse<string, false>;
+	text: (message: string, statusCode: number) => BrandedResponse<string, false>;
 };
 
 export function untypedRequestJson(
@@ -238,23 +198,15 @@ export function untypedRequestJson(
 	return (request as BunRequest).json();
 }
 
-export function staticResponse(
-	response: Response
-): BrandedResponse<unknown, false> {
+export function staticResponse(response: Response): BrandedResponse<unknown, false> {
 	return response as BrandedResponse<unknown, false>;
 }
 
-function jsonResponse<T>(
-	data: T,
-	init?: Omit<ResponseInit, 'status'>
-): BrandedResponse<T, false> {
+function jsonResponse<T>(data: T, init?: Omit<ResponseInit, 'status'>): BrandedResponse<T, false> {
 	return Response.json(data, init) as BrandedResponse<T, false>;
 }
 
-function textResponse(
-	message: string,
-	statusCode: number
-): BrandedResponse<string, false> {
+function textResponse(message: string, statusCode: number): BrandedResponse<string, false> {
 	return new Response(message, {
 		status: statusCode,
 	}) as BrandedResponse<string, false>;

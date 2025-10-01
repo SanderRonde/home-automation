@@ -51,10 +51,7 @@ class UserManager {
 
 			logImmediate(`✓ User '${username}' created successfully`);
 		} catch (error) {
-			if (
-				error instanceof Error &&
-				error.message.includes('UNIQUE constraint failed')
-			) {
+			if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
 				console.error(`✗ User '${username}' already exists`);
 			} else {
 				console.error('✗ Failed to create user:', error);
@@ -78,9 +75,7 @@ class UserManager {
 	}
 
 	public async listUsers(): Promise<void> {
-		const users = await this._db<
-			Array<{ id: number; username: string; created_at: number }>
-		>`
+		const users = await this._db<Array<{ id: number; username: string; created_at: number }>>`
 			SELECT id, username, created_at FROM users ORDER BY created_at DESC
 		`;
 
@@ -93,17 +88,12 @@ class UserManager {
 		logImmediate('─'.repeat(60));
 		for (const user of users) {
 			const date = new Date(user.created_at).toLocaleString();
-			logImmediate(
-				`ID: ${user.id} | Username: ${user.username} | Created: ${date}`
-			);
+			logImmediate(`ID: ${user.id} | Username: ${user.username} | Created: ${date}`);
 		}
 		logImmediate('─'.repeat(60));
 	}
 
-	public async changePassword(
-		username: string,
-		newPassword: string
-	): Promise<void> {
+	public async changePassword(username: string, newPassword: string): Promise<void> {
 		try {
 			const passwordHash = this.hashPassword(newPassword);
 
@@ -113,9 +103,7 @@ class UserManager {
 			`;
 
 			if (result.changes > 0) {
-				logImmediate(
-					`✓ Password for user '${username}' changed successfully`
-				);
+				logImmediate(`✓ Password for user '${username}' changed successfully`);
 			} else {
 				console.error(`✗ User '${username}' not found`);
 			}
@@ -183,12 +171,7 @@ async function main() {
 	const args = process.argv.slice(2);
 	const command = args[0];
 
-	if (
-		!command ||
-		command === 'help' ||
-		command === '--help' ||
-		command === '-h'
-	) {
+	if (!command || command === 'help' || command === '--help' || command === '-h') {
 		logImmediate('Usage: bun scripts/manage-users.ts <command> [options]');
 		logImmediate('');
 		logImmediate('Commands:');
@@ -205,9 +188,7 @@ async function main() {
 			const username = args[1];
 			if (!username) {
 				console.error('Error: Username is required');
-				logImmediate(
-					'Usage: bun scripts/manage-users.ts create <username>'
-				);
+				logImmediate('Usage: bun scripts/manage-users.ts create <username>');
 				process.exit(1);
 			}
 
@@ -232,19 +213,14 @@ async function main() {
 			const username = args[1];
 			if (!username) {
 				console.error('Error: Username is required');
-				logImmediate(
-					'Usage: bun scripts/manage-users.ts delete <username>'
-				);
+				logImmediate('Usage: bun scripts/manage-users.ts delete <username>');
 				process.exit(1);
 			}
 
 			const confirm = await promptInput(
 				`Are you sure you want to delete user '${username}'? (yes/no): `
 			);
-			if (
-				confirm.toLowerCase() === 'yes' ||
-				confirm.toLowerCase() === 'y'
-			) {
+			if (confirm.toLowerCase() === 'yes' || confirm.toLowerCase() === 'y') {
 				await manager.deleteUser(username);
 			} else {
 				logImmediate('Cancelled');
@@ -261,16 +237,12 @@ async function main() {
 			const username = args[1];
 			if (!username) {
 				console.error('Error: Username is required');
-				logImmediate(
-					'Usage: bun scripts/manage-users.ts change-password <username>'
-				);
+				logImmediate('Usage: bun scripts/manage-users.ts change-password <username>');
 				process.exit(1);
 			}
 
 			const password = await promptPassword('Enter new password: ');
-			const confirmPassword = await promptPassword(
-				'Confirm new password: '
-			);
+			const confirmPassword = await promptPassword('Confirm new password: ');
 
 			if (password !== confirmPassword) {
 				console.error('✗ Passwords do not match');

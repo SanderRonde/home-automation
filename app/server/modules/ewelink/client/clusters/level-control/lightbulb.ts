@@ -10,8 +10,8 @@ type EwelinkLightPowerPowerParams = {
 };
 
 export class EwelinkLevelControlClusterLightbulb extends EwelinkLevelControlCluster {
-	protected override getProxy =
-		EwelinkClusterProxy.createGetter<EwelinkLevelControlClusterState>({
+	protected override getProxy = EwelinkClusterProxy.createGetter<EwelinkLevelControlClusterState>(
+		{
 			fromParams: (state: EwelinkLightPowerPowerParams) => ({
 				level: state.ltype ? state[state.ltype].br : 0,
 			}),
@@ -28,5 +28,6 @@ export class EwelinkLevelControlClusterLightbulb extends EwelinkLevelControlClus
 					},
 				} as EwelinkLightPowerPowerParams;
 			},
-		});
+		}
+	);
 }

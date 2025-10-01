@@ -1,9 +1,4 @@
-import {
-	Props,
-	PROP_TYPE,
-	config,
-	ConfigurableWebComponent,
-} from 'wc-lib/build/es/wc-lib';
+import { Props, PROP_TYPE, config, ConfigurableWebComponent } from 'wc-lib/build/es/wc-lib';
 import { AdvancedTemperatureDisplayHTML } from './advanced-temperature-display.html.js';
 import { AdvancedTemperatureDisplayCSS } from './advanced-temperature-display.css.js';
 
@@ -103,32 +98,21 @@ export class AdvancedTemperatureDisplay extends ConfigurableWebComponent<{
 		if (!response) {
 			return;
 		}
-		const {
-			temperature,
-			icon,
-			tempMin,
-			tempMax,
-			chanceOfRain,
-			windDegrees,
-			windSpeed,
-		} = (await response.json()) as {
-			temp: number;
-			temperature: string;
-			tempMin?: number;
-			tempMax?: number;
-			chanceOfRain: number;
-			windDegrees: number;
-			windSpeed: number;
-			icon: string;
-		};
+		const { temperature, icon, tempMin, tempMax, chanceOfRain, windDegrees, windSpeed } =
+			(await response.json()) as {
+				temp: number;
+				temperature: string;
+				tempMin?: number;
+				tempMax?: number;
+				chanceOfRain: number;
+				windDegrees: number;
+				windSpeed: number;
+				icon: string;
+			};
 		this.props.temperature = temperature;
 		this.props.icon = icon;
-		this.props.tempMin = tempMin
-			? `${Math.round(tempMin * 10) / 10}°`
-			: undefined;
-		this.props.tempMax = tempMax
-			? `${Math.round(tempMax * 10) / 10}°`
-			: undefined;
+		this.props.tempMin = tempMin ? `${Math.round(tempMin * 10) / 10}°` : undefined;
+		this.props.tempMax = tempMax ? `${Math.round(tempMax * 10) / 10}°` : undefined;
 		this.props.chanceOfRain = chanceOfRain;
 		this.props.windDegrees = windDegrees;
 		this.props.windSpeed = windSpeed;
@@ -145,9 +129,7 @@ export class AdvancedTemperatureDisplay extends ConfigurableWebComponent<{
 			() => {
 				void this.updateWeather();
 			},
-			this.props.tempType === TEMPERATURE_DISPLAY_TYPE.OUTSIDE
-				? 1000 * 60 * 60
-				: 1000 * 60
+			this.props.tempType === TEMPERATURE_DISPLAY_TYPE.OUTSIDE ? 1000 * 60 * 60 : 1000 * 60
 		);
 	}
 

@@ -62,10 +62,7 @@ export class UserManagement {
 		return hasher.digest('hex');
 	}
 
-	public async createUser(
-		username: string,
-		password: string
-	): Promise<User | null> {
+	public async createUser(username: string, password: string): Promise<User | null> {
 		try {
 			const passwordHash = this.hashPassword(password);
 			const createdAt = Date.now();
@@ -97,10 +94,7 @@ export class UserManagement {
 		}
 	}
 
-	public async verifyCredentials(
-		username: string,
-		password: string
-	): Promise<User | null> {
+	public async verifyCredentials(username: string, password: string): Promise<User | null> {
 		const passwordHash = this.hashPassword(password);
 
 		const users = await this._db<User[]>`
@@ -149,12 +143,8 @@ export class UserManagement {
 		await this._db`DELETE FROM sessions WHERE expires_at <= ${Date.now()}`;
 	}
 
-	public async listUsers(): Promise<
-		Array<{ id: number; username: string; created_at: number }>
-	> {
-		const users = await this._db<
-			Array<{ id: number; username: string; created_at: number }>
-		>`
+	public async listUsers(): Promise<Array<{ id: number; username: string; created_at: number }>> {
+		const users = await this._db<Array<{ id: number; username: string; created_at: number }>>`
 			SELECT id, username, created_at FROM users ORDER BY created_at DESC
 		`;
 		return users;

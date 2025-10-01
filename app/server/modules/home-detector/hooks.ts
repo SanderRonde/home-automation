@@ -30,18 +30,8 @@ export async function handleHooks(
 		const fn = changeHooks[name];
 		await fn(
 			await HomeDetector.modules,
-			logObj.attachMessage(
-				'Hook',
-				chalk.bold(String(index++)),
-				':',
-				chalk.bold(name)
-			)
+			logObj.attachMessage('Hook', chalk.bold(String(index++)), ':', chalk.bold(name))
 		);
 	}
-	logObj.attachMessage(
-		'State for',
-		chalk.bold(name),
-		'changed to',
-		chalk.bold(newState)
-	);
+	logObj.attachMessage('State for', chalk.bold(name), 'changed to', chalk.bold(newState));
 }

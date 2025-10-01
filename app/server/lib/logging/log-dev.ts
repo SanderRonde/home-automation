@@ -19,9 +19,7 @@ export function logDev(...args: unknown[]): void {
 
 	logImmediate(
 		chalk.bgWhite(
-			chalk.black(
-				`[${' '.repeat(leftPadding)}${debugText}${' '.repeat(rightPadding)}]`
-			)
+			chalk.black(`[${' '.repeat(leftPadding)}${debugText}${' '.repeat(rightPadding)}]`)
 		),
 		locationInfo,
 		message,

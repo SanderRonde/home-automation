@@ -13,9 +13,7 @@ type ChatStateInitJSON = Record<keyof AllModules, unknown>;
 export class ChatState {
 	public states!: ChatStateType;
 
-	public init(
-		json: ChatStateInitJSON = {} as Record<keyof AllModules, unknown>
-	): this {
+	public init(json: ChatStateInitJSON = {} as Record<keyof AllModules, unknown>): this {
 		this.states = {} as ChatStateType;
 
 		const modules = getAllModules();

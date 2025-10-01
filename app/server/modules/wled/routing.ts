@@ -25,34 +25,25 @@ function _initRouting(db: Database<WLEDDB>) {
 					const configJson = db.current().devices ?? [];
 					return json({ devices: configJson });
 				},
-				POST: withRequestBody(
-					WLEDConfig,
-					(body, _req, _server, { error, json }) => {
-						try {
-							// Store the config
-							db.update((old) => ({
-								...old,
-								devices: body.devices,
-							}));
+				POST: withRequestBody(WLEDConfig, (body, _req, _server, { error, json }) => {
+					try {
+						// Store the config
+						db.update((old) => ({
+							...old,
+							devices: body.devices,
+						}));
 
-							return json({ success: true });
-						} catch (e) {
-							return error(
-								{ error: 'Invalid config structure' },
-								400
-							);
-						}
+						return json({ success: true });
+					} catch (e) {
+						return error({ error: 'Invalid config structure' }, 400);
 					}
-				),
+				}),
 			},
 		},
 		true
 	);
 }
 
-export const initRouting = _initRouting as (
-	db: Database<WLEDDB>
-) => ServeOptions<unknown>;
+export const initRouting = _initRouting as (db: Database<WLEDDB>) => ServeOptions<unknown>;
 
-export type WledRoutes =
-	ReturnType<typeof _initRouting> extends ServeOptions<infer R> ? R : never;
+export type WledRoutes = ReturnType<typeof _initRouting> extends ServeOptions<infer R> ? R : never;

@@ -36,11 +36,7 @@ export class XHR {
 						.request(
 							{
 								hostname: parsedURL.hostname,
-								port:
-									options?.port ??
-									(parsedURL.protocol === 'https:'
-										? 443
-										: 80),
+								port: options?.port ?? (parsedURL.protocol === 'https:' ? 443 : 80),
 								path: `${parsedURL.pathname}${parsedURL.search}`,
 								method: 'POST',
 								headers: {
@@ -101,17 +97,13 @@ export class XHR {
 				throw new Error(`Unknown protocol: "${parsedURL.protocol}"`);
 			}
 
-			const qs = Object.keys(params).length
-				? `?${querystring.stringify(params)}`
-				: '';
+			const qs = Object.keys(params).length ? `?${querystring.stringify(params)}` : '';
 			const fullURL = `${xhrURL}${qs}`;
 			const req = basePackage
 				.get(
 					fullURL,
 					{
-						port:
-							options?.port ??
-							(parsedURL.protocol === 'https:' ? 443 : 80),
+						port: options?.port ?? (parsedURL.protocol === 'https:' ? 443 : 80),
 						headers: options?.headers,
 					},
 					(res) => {

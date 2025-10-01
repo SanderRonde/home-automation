@@ -6,12 +6,7 @@ import {
 	BridgedDeviceBasicInformationCluster,
 	GeneralCommissioning,
 } from '@matter/main/clusters';
-import type {
-	ClusterId,
-	DeviceTypeId,
-	Observable,
-	Observer,
-} from '@matter/main';
+import type { ClusterId, DeviceTypeId, Observable, Observer } from '@matter/main';
 import type { Endpoint, PairedNode } from '@project-chip/matter.js/device';
 import { Diagnostic, Environment, LogLevel, Logger } from '@matter/main';
 import type { NodeCommissioningOptions } from '@project-chip/matter.js';
@@ -41,11 +36,7 @@ export type MatterServerOutputMessage =
 	| {
 			category: MatterServerOutputMessageType.AttributeChanged;
 			nodeId: string;
-			attributePath: [
-				endpointNumber: number,
-				clusterId: ClusterId,
-				attributeName: string,
-			];
+			attributePath: [endpointNumber: number, clusterId: ClusterId, attributeName: string];
 			newValue: EncodedString<unknown>;
 	  }
 	| {
@@ -169,9 +160,7 @@ class MatterServer {
 
 	private async _watchNodeIds(nodeIds: NodeId[]): Promise<string[]> {
 		const nodes = await Promise.all(
-			nodeIds.map((nodeId) =>
-				this.commissioningController.getNode(nodeId)
-			)
+			nodeIds.map((nodeId) => this.commissioningController.getNode(nodeId))
 		);
 		nodes.forEach((node) => {
 			if (!node.isConnected) {
@@ -179,9 +168,7 @@ class MatterServer {
 			}
 		});
 		await Promise.all(
-			nodes.map((node) =>
-				node.initialized ? Promise.resolve() : node.events.initialized
-			)
+			nodes.map((node) => (node.initialized ? Promise.resolve() : node.events.initialized))
 		);
 		this._nodes.push(...nodes.map((node) => new NodeWatcher(node)));
 
@@ -190,10 +177,7 @@ class MatterServer {
 			.map((endpoint) => endpoint.getNumber().toString());
 	}
 
-	private _walkEndpoints(
-		device: Endpoint,
-		callback: (endpoint: Endpoint) => boolean
-	): void {
+	private _walkEndpoints(device: Endpoint, callback: (endpoint: Endpoint) => boolean): void {
 		for (const endpoint of device.getChildEndpoints()) {
 			if (callback(endpoint)) {
 				this._walkEndpoints(endpoint, callback);
@@ -217,9 +201,7 @@ class MatterServer {
 				.getClusterClient(BridgedDeviceBasicInformationCluster)
 				?.attributes.nodeLabel?.get?.());
 
-		const collectRecursiveEndpoints = (
-			device: Endpoint
-		): MatterDeviceEndpoint[] => {
+		const collectRecursiveEndpoints = (device: Endpoint): MatterDeviceEndpoint[] => {
 			const endpoints: MatterDeviceEndpoint[] = [];
 			for (const endpoint of device.getChildEndpoints()) {
 				if (endpoint.number === undefined) {
@@ -229,12 +211,10 @@ class MatterServer {
 					number: endpoint.number.toString(),
 					name: endpoint.name,
 					deviceType: endpoint.deviceType,
-					clusterMeta: endpoint
-						.getAllClusterClients()
-						.map((clusterClient) => ({
-							name: clusterClient.name,
-							id: clusterClient.id,
-						})),
+					clusterMeta: endpoint.getAllClusterClients().map((clusterClient) => ({
+						name: clusterClient.name,
+						id: clusterClient.id,
+					})),
 				};
 				endpoints.push({
 					...endpointInfo,
@@ -288,17 +268,13 @@ class MatterServer {
 		return devices;
 	}
 
-	private async _listNodeDevices(
-		watchedNode: NodeWatcher
-	): Promise<MatterDeviceInfo[]> {
+	private async _listNodeDevices(watchedNode: NodeWatcher): Promise<MatterDeviceInfo[]> {
 		const deviceInfos: Promise<MatterDeviceInfo | null>[] = [];
 		const recursiveEndpoints = this._getRecursiveEndpoints(watchedNode);
 		if (
 			recursiveEndpoints.every(
 				(endpoint) =>
-					!endpoint.endpoint.getClusterClient(
-						BridgedDeviceBasicInformationCluster
-					)
+					!endpoint.endpoint.getClusterClient(BridgedDeviceBasicInformationCluster)
 			)
 		) {
 			const rootEndpoint = watchedNode.node.getRootEndpoint();
@@ -307,10 +283,7 @@ class MatterServer {
 			}
 
 			// This node is a normal device.
-			const deviceInfo = await this._getDeviceInfo(
-				rootEndpoint,
-				watchedNode.node.nodeId
-			);
+			const deviceInfo = await this._getDeviceInfo(rootEndpoint, watchedNode.node.nodeId);
 			if (deviceInfo) {
 				return [deviceInfo];
 			}
@@ -340,29 +313,21 @@ class MatterServer {
 				deviceType: rootEndpoint.deviceType,
 				number: rootEndpoint.number.toString(),
 				endpoints: [],
-				clusterMeta: rootEndpoint
-					.getAllClusterClients()
-					.map((clusterClient) => ({
-						name: clusterClient.name,
-						id: clusterClient.id,
-					})),
+				clusterMeta: rootEndpoint.getAllClusterClients().map((clusterClient) => ({
+					name: clusterClient.name,
+					id: clusterClient.id,
+				})),
 			})
 		);
 
 		this._walkEndpoints(rootEndpoint, (endpoint) => {
-			if (
-				endpoint.getClusterClient(BridgedDeviceBasicInformationCluster)
-			) {
-				deviceInfos.push(
-					this._getDeviceInfo(endpoint, watchedNode.node.nodeId)
-				);
+			if (endpoint.getClusterClient(BridgedDeviceBasicInformationCluster)) {
+				deviceInfos.push(this._getDeviceInfo(endpoint, watchedNode.node.nodeId));
 				return false;
 			}
 			return true;
 		});
-		return (await Promise.all(deviceInfos)).filter(
-			(deviceInfo) => deviceInfo !== null
-		);
+		return (await Promise.all(deviceInfos)).filter((deviceInfo) => deviceInfo !== null);
 	}
 
 	private async _listDevices(): Promise<MatterDeviceInfo[]> {
@@ -459,9 +424,7 @@ class MatterServer {
 	async start() {
 		await this.commissioningController.start();
 
-		await this._watchNodeIds(
-			this.commissioningController.getCommissionedNodes()
-		);
+		await this._watchNodeIds(this.commissioningController.getCommissionedNodes());
 	}
 
 	async commission(pairingCode: string) {
@@ -472,12 +435,10 @@ class MatterServer {
 			throw new Error('Could not commission device with pairing code');
 		}
 
-		const commissioningOptions: NodeCommissioningOptions['commissioning'] =
-			{
-				regulatoryLocation:
-					GeneralCommissioning.RegulatoryLocationType.IndoorOutdoor,
-				regulatoryCountryCode: 'NL',
-			};
+		const commissioningOptions: NodeCommissioningOptions['commissioning'] = {
+			regulatoryLocation: GeneralCommissioning.RegulatoryLocationType.IndoorOutdoor,
+			regulatoryCountryCode: 'NL',
+		};
 
 		const options: NodeCommissioningOptions = {
 			commissioning: commissioningOptions,
@@ -488,8 +449,7 @@ class MatterServer {
 			passcode: setupPin,
 		};
 
-		const nodeId =
-			await this.commissioningController.commissionNode(options);
+		const nodeId = await this.commissioningController.commissionNode(options);
 
 		return await this._watchNodeIds([nodeId]);
 	}
@@ -588,11 +548,7 @@ class NodeWatcher extends Disposable {
 		writeStdout({
 			category: MatterServerOutputMessageType.EventTriggered,
 			nodeId: this.node.nodeId,
-			eventPath: [
-				event.path.endpointId,
-				event.path.clusterId,
-				event.path.eventName,
-			],
+			eventPath: [event.path.endpointId, event.path.clusterId, event.path.eventName],
 			eventData: Diagnostic.json(event.events),
 		});
 	};
@@ -641,8 +597,7 @@ function writeStdout(message: unknown) {
 	);
 }
 
-type ObservableForObserver<T> =
-	T extends Observable<infer U> ? Observer<U> : never;
+type ObservableForObserver<T> = T extends Observable<infer U> ? Observer<U> : never;
 
 async function main() {
 	const messageQueue: string[] = [];

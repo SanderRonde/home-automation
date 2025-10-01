@@ -10,15 +10,7 @@ function _initRouting({ modules }: ModuleConfig) {
 		{
 			'/': dashboardHtml,
 			'/favicon.ico': staticResponse(
-				new Response(
-					Bun.file(
-						path.join(
-							CLIENT_FOLDER,
-							'dashboard/static',
-							'favicon.ico'
-						)
-					)
-				)
+				new Response(Bun.file(path.join(CLIENT_FOLDER, 'dashboard/static', 'favicon.ico')))
 			),
 			'/pair/:code': async (req, _server, { json }) => {
 				const matterClient = await modules.matter.client.value;
@@ -35,6 +27,4 @@ function _initRouting({ modules }: ModuleConfig) {
 export type DashboardRoutes =
 	ReturnType<typeof _initRouting> extends ServeOptions<infer R> ? R : never;
 
-export const initRouting = _initRouting as (
-	config: ModuleConfig
-) => ServeOptions<unknown>;
+export const initRouting = _initRouting as (config: ModuleConfig) => ServeOptions<unknown>;

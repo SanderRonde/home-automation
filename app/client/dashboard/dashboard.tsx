@@ -56,9 +56,7 @@ function DashboardApp() {
 			case SidebarTab.WLED:
 				return <WLEDConfig />;
 			default:
-				return (
-					<NotFoundPage onReturnToSettings={handleReturnToSettings} />
-				);
+				return <NotFoundPage onReturnToSettings={handleReturnToSettings} />;
 		}
 	};
 

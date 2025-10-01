@@ -17,8 +17,8 @@ export const WelcomePage = (): JSX.Element => {
 					Welcome to Home Automation
 				</Typography>
 				<Typography variant="body1" color="text.secondary">
-					Select a module from the sidebar to get started. Here you
-					can configure and manage your home automation settings.
+					Select a module from the sidebar to get started. Here you can configure and
+					manage your home automation settings.
 				</Typography>
 			</Paper>
 		</Box>

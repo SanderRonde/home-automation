@@ -1,14 +1,7 @@
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 /* eslint-disable @typescript-eslint/no-duplicate-type-constituents */
-import {
-	DeviceOnOffCluster,
-	DeviceClusterName,
-	DeviceWindowCoveringCluster,
-} from './cluster';
-import type {
-	BrandedRouteHandlerResponse,
-	ServeOptions,
-} from '../../lib/routes';
+import { DeviceOnOffCluster, DeviceClusterName, DeviceWindowCoveringCluster } from './cluster';
+import type { BrandedRouteHandlerResponse, ServeOptions } from '../../lib/routes';
 import { createServeOptions, withRequestBody } from '../../lib/routes';
 import type * as Icons from '@mui/icons-material';
 import type { DeviceEndpoint } from './device';
@@ -42,11 +35,10 @@ export type DashboardDeviceClusterOnOff = DashboardDeviceClusterBase & {
 	isOn: boolean;
 };
 
-export type DashboardDeviceClusterWindowCovering =
-	DashboardDeviceClusterBase & {
-		name: DeviceClusterName.WINDOW_COVERING;
-		targetPositionLiftPercentage: number;
-	};
+export type DashboardDeviceClusterWindowCovering = DashboardDeviceClusterBase & {
+	name: DeviceClusterName.WINDOW_COVERING;
+	targetPositionLiftPercentage: number;
+};
 
 export type DashboardDeviceClusterWithState = DashboardDeviceClusterBase &
 	(DashboardDeviceClusterOnOff | DashboardDeviceClusterWindowCovering);
@@ -70,14 +62,9 @@ interface DashboardDeviceResponse extends DashboardDeviceEndpointResponse {
 }
 
 function _initRouting({ db, modules }: ModuleConfig, api: DeviceAPI) {
-	const getClusterState = async (
-		cluster: Cluster
-	): Promise<DashboardDeviceClusterWithState> => {
+	const getClusterState = async (cluster: Cluster): Promise<DashboardDeviceClusterWithState> => {
 		const clusterName = cluster.getName();
-		if (
-			cluster instanceof DeviceOnOffCluster &&
-			clusterName === DeviceClusterName.ON_OFF
-		) {
+		if (cluster instanceof DeviceOnOffCluster && clusterName === DeviceClusterName.ON_OFF) {
 			return {
 				name: clusterName,
 				icon: getClusterIconName(clusterName),
@@ -91,8 +78,7 @@ function _initRouting({ db, modules }: ModuleConfig, api: DeviceAPI) {
 			return {
 				name: clusterName,
 				icon: getClusterIconName(clusterName),
-				targetPositionLiftPercentage:
-					await cluster.targetPositionLiftPercentage.get(),
+				targetPositionLiftPercentage: await cluster.targetPositionLiftPercentage.get(),
 			};
 		}
 		return {
@@ -119,14 +105,10 @@ function _initRouting({ db, modules }: ModuleConfig, api: DeviceAPI) {
 				}
 
 				// Create response with all known devices
-				const devices: DeviceInfo[] = Object.values(knownDevices).map(
-					(device) => ({
-						...device,
-						status: currentDeviceIds.includes(device.id)
-							? 'online'
-							: 'offline',
-					})
-				);
+				const devices: DeviceInfo[] = Object.values(knownDevices).map((device) => ({
+					...device,
+					status: currentDeviceIds.includes(device.id) ? 'online' : 'offline',
+				}));
 
 				// Sort by status (online first) then by ID
 				devices.sort((a, b) => {
@@ -150,17 +132,12 @@ function _initRouting({ db, modules }: ModuleConfig, api: DeviceAPI) {
 			},
 			'/listWithValues': async (_req, _server, { json }) => {
 				const deviceApi = await modules.device.api.value;
-				const devices = [
-					...Object.values(await deviceApi.devices.get()),
-				];
+				const devices = [...Object.values(await deviceApi.devices.get())];
 				const storedDevices = deviceApi.getStoredDevices();
 				const rooms = deviceApi.getRooms();
 				const responseDevices: DashboardDeviceResponse[] = [];
 
-				const clusterStateCache = new WeakMap<
-					Cluster,
-					DashboardDeviceClusterWithState
-				>();
+				const clusterStateCache = new WeakMap<Cluster, DashboardDeviceClusterWithState>();
 				const _getClusterState = async (
 					cluster: Cluster
 				): Promise<DashboardDeviceClusterWithState> => {
@@ -182,8 +159,7 @@ function _initRouting({ db, modules }: ModuleConfig, api: DeviceAPI) {
 					}
 
 					for (const subEndpoint of endpoint.endpoints) {
-						const endpointResponse =
-							await getResponseForEndpoint(subEndpoint);
+						const endpointResponse = await getResponseForEndpoint(subEndpoint);
 						endpoints.push(endpointResponse);
 					}
 
@@ -205,8 +181,7 @@ function _initRouting({ db, modules }: ModuleConfig, api: DeviceAPI) {
 						allClusters.push(clusterState);
 					}
 
-					const endpointResponse =
-						await getResponseForEndpoint(device);
+					const endpointResponse = await getResponseForEndpoint(device);
 
 					const responseDevice: DashboardDeviceResponse = {
 						uniqueId: deviceId,
@@ -252,13 +227,7 @@ function _initRouting({ db, modules }: ModuleConfig, api: DeviceAPI) {
 				(body, _req, _server, { json }) => {
 					const { deviceId, room, icon } = body;
 
-					if (
-						api.updateDeviceRoom(
-							deviceId,
-							room,
-							icon as keyof typeof Icons
-						)
-					) {
+					if (api.updateDeviceRoom(deviceId, room, icon as keyof typeof Icons)) {
 						return json({ success: true });
 					}
 
@@ -309,23 +278,15 @@ function _initRouting({ db, modules }: ModuleConfig, api: DeviceAPI) {
 						async (cluster) => {
 							await Promise.all([
 								new Promise<void>((resolve) => {
-									const callback = (
-										value: number | undefined
-									) => {
-										if (
-											value ===
-											body.targetPositionLiftPercentage
-										) {
+									const callback = (value: number | undefined) => {
+										if (value === body.targetPositionLiftPercentage) {
 											resolve();
 										}
 									};
-									cluster.targetPositionLiftPercentage.subscribe(
-										callback
-									);
+									cluster.targetPositionLiftPercentage.subscribe(callback);
 								}),
 								void cluster.goToLiftPercentage({
-									percentage:
-										body.targetPositionLiftPercentage,
+									percentage: body.targetPositionLiftPercentage,
 								}),
 							]);
 						}
@@ -336,9 +297,7 @@ function _initRouting({ db, modules }: ModuleConfig, api: DeviceAPI) {
 	);
 }
 
-function getClusterIconName(
-	clusterName: DeviceClusterName
-): keyof typeof Icons | undefined {
+function getClusterIconName(clusterName: DeviceClusterName): keyof typeof Icons | undefined {
 	switch (clusterName) {
 		case DeviceClusterName.ON_OFF:
 			return 'Lightbulb';
@@ -389,9 +348,7 @@ async function performActionForDeviceCluster<
 		return res.error({ error: 'Cluster not found' }, 404);
 	}
 	const success = await Promise.race([
-		Promise.all(
-			(clusters as InstanceType<C>[]).map((c) => callback(c))
-		).then(() => true),
+		Promise.all((clusters as InstanceType<C>[]).map((c) => callback(c))).then(() => true),
 		wait(10000).then(() => false),
 	]);
 	if (!success) {
@@ -400,9 +357,7 @@ async function performActionForDeviceCluster<
 	return res.json({ success: true });
 }
 
-function validateClusterRoute<T extends `/cluster/${DeviceClusterName}`>(
-	route: T
-): T {
+function validateClusterRoute<T extends `/cluster/${DeviceClusterName}`>(route: T): T {
 	return route;
 }
 

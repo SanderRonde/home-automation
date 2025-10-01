@@ -16,9 +16,7 @@ export class AsyncQueue {
 	 *
 	 * The Promise returned from this function will resolve or reject when this item has completed or thrown an error.
 	 */
-	public addItem = async <T = unknown>(
-		callback: () => Promise<T>
-	): Promise<T> => {
+	public addItem = async <T = unknown>(callback: () => Promise<T>): Promise<T> => {
 		return new Promise((resolve, reject) => {
 			const previousQueueItem = this.lastQueueItem;
 			const newItem: QueueItem = {

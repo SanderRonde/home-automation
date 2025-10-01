@@ -27,9 +27,7 @@ function listKeys(): void {
 		logImmediate(`${index + 1}. ${key}`);
 	});
 	logImmediate('');
-	logImmediate(
-		'💡 To remove a key, use: bun scripts/manage-mcp-keys.ts remove <key>'
-	);
+	logImmediate('💡 To remove a key, use: bun scripts/manage-mcp-keys.ts remove <key>');
 }
 
 function removeKey(keyToRemove: string): void {
@@ -75,15 +73,9 @@ function showUsage(): void {
 	logImmediate('🔧 MCP Key Management Tool');
 	logImmediate('');
 	logImmediate('Usage:');
-	logImmediate(
-		'  bun scripts/manage-mcp-keys.ts list                    # List all keys'
-	);
-	logImmediate(
-		'  bun scripts/manage-mcp-keys.ts remove <key>            # Remove specific key'
-	);
-	logImmediate(
-		'  bun scripts/manage-mcp-keys.ts clear                   # Remove all keys'
-	);
+	logImmediate('  bun scripts/manage-mcp-keys.ts list                    # List all keys');
+	logImmediate('  bun scripts/manage-mcp-keys.ts remove <key>            # Remove specific key');
+	logImmediate('  bun scripts/manage-mcp-keys.ts clear                   # Remove all keys');
 	logImmediate('');
 	logImmediate('Examples:');
 	logImmediate('  bun scripts/manage-mcp-keys.ts list');
@@ -104,9 +96,7 @@ function main(): void {
 				const keyToRemove = args[1];
 				if (!keyToRemove) {
 					logImmediate('❌ Please provide a key to remove.');
-					logImmediate(
-						'Usage: bun scripts/manage-mcp-keys.ts remove <key>'
-					);
+					logImmediate('Usage: bun scripts/manage-mcp-keys.ts remove <key>');
 					// eslint-disable-next-line n/no-process-exit
 					process.exit(1);
 				}

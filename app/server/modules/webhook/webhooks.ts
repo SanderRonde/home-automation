@@ -14,9 +14,5 @@ export async function triggerWebhooks(
 	}
 
 	const webhook = webhooks[name];
-	await webhook(
-		await Webhook.modules,
-		logObj.attachMessage('Webhook'),
-		params
-	);
+	await webhook(await Webhook.modules, logObj.attachMessage('Webhook'), params);
 }

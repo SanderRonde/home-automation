@@ -26,10 +26,7 @@ class EwelinkEndpoint extends DeviceEndpoint implements Disposable {
 	}
 }
 
-export abstract class EwelinkDevice
-	extends EwelinkEndpoint
-	implements Device, Disposable
-{
+export abstract class EwelinkDevice extends EwelinkEndpoint implements Device, Disposable {
 	public getUniqueId(): string {
 		return `${this.getSource().value}:${this._eWeLinkConfig.device.itemData.deviceid}`;
 	}
@@ -66,8 +63,7 @@ class EwelinkM51CDevice extends EwelinkDevice {
 	public switches: number;
 	public constructor(eWeLinkConfig: EWeLinkConfig) {
 		const count = (
-			eWeLinkConfig.device.itemData
-				.params as unknown as EwelinkOnOffClusterM51CParams
+			eWeLinkConfig.device.itemData.params as unknown as EwelinkOnOffClusterM51CParams
 		).switches.length;
 		const outlets = Array.from(
 			{ length: count },
@@ -87,9 +83,7 @@ class EwelinkZBMiniDevice extends EwelinkDevice {
 	public static readonly modelName = 'ZCL_HA_DEVICEID_ON_OFF_LIGHT';
 
 	public constructor(eWeLinkConfig: EWeLinkConfig) {
-		super(eWeLinkConfig, [
-			new EwelinkOnOffClusterSimplePower(eWeLinkConfig),
-		]);
+		super(eWeLinkConfig, [new EwelinkOnOffClusterSimplePower(eWeLinkConfig)]);
 	}
 }
 
@@ -150,11 +144,7 @@ class EwelinkR5SceneControllerDevice extends EwelinkDevice {
 						new EwelinkOutletSwitchCluster(eWeLinkConfig, i),
 					])
 			);
-		super(
-			eWeLinkConfig,
-			[new EwelinkPowerSourceCluster(eWeLinkConfig)],
-			endpoints
-		);
+		super(eWeLinkConfig, [new EwelinkPowerSourceCluster(eWeLinkConfig)], endpoints);
 	}
 }
 

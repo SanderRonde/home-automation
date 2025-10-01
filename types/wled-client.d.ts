@@ -1,12 +1,5 @@
 declare module 'wled-client' {
-	type Primitive =
-		| null
-		| undefined
-		| string
-		| number
-		| boolean
-		| symbol
-		| bigint;
+	type Primitive = null | undefined | string | number | boolean | symbol | bigint;
 
 	type PartialDeep<T> = T extends Primitive
 		? Partial<T>
@@ -61,8 +54,7 @@ Same as `PartialDeep`, but accepts only `object`s as inputs. Internal helper for
 		Exclude<keyof T, Keys>
 	> &
 		{
-			[K in Keys]-?: Required<Pick<T, K>> &
-				Partial<Pick<T, Exclude<Keys, K>>>;
+			[K in Keys]-?: Required<Pick<T, K>> & Partial<Pick<T, Exclude<Keys, K>>>;
 		}[Keys];
 	declare type BuildStateFn = (
 		segment?: WLEDClientSegment
@@ -324,10 +316,9 @@ Same as `PartialDeep`, but accepts only `object`s as inputs. Internal helper for
 		 */
 		segments: WLEDClientSegment[];
 	}
-	declare type WLEDClientUpdatableState =
-		PartialDeep<WLEDClientExchangeableState> & WLEDClientStateSendOnly;
-	declare type WLEDClientState = WLEDClientExchangeableState &
-		WLEDClientStateReceiveOnly;
+	declare type WLEDClientUpdatableState = PartialDeep<WLEDClientExchangeableState> &
+		WLEDClientStateSendOnly;
+	declare type WLEDClientState = WLEDClientExchangeableState & WLEDClientStateReceiveOnly;
 	interface WLEDClientInfoLEDs {
 		/**
 		 * Total number of LEDs.
@@ -1045,8 +1036,7 @@ Same as `PartialDeep`, but accepts only `object`s as inputs. Internal helper for
 	declare type WLEDClientUpdatableConfig = PartialDeep<
 		WLEDClientExchangeableConfig & WLEDClientConfigSendOnly
 	>;
-	declare type WLEDClientConfig = WLEDClientExchangeableConfig &
-		WLEDClientConfigReceiveOnly;
+	declare type WLEDClientConfig = WLEDClientExchangeableConfig & WLEDClientConfigReceiveOnly;
 	interface WLEDClientContext {
 		/** WLED Client state object. */
 		state: WLEDClientState;
@@ -1375,9 +1365,7 @@ Same as `PartialDeep`, but accepts only `object`s as inputs. Internal helper for
 		 */
 		seg: WLEDSegment[];
 	}
-	declare type WLEDUpdatableState = PartialDeep<
-		WLEDExchangeableState & WLEDStateSendOnly
-	>;
+	declare type WLEDUpdatableState = PartialDeep<WLEDExchangeableState & WLEDStateSendOnly>;
 	declare type WLEDState = WLEDExchangeableState & WLEDStateReceiveOnly;
 	interface WLEDInfoLEDs {
 		/**
@@ -1519,10 +1507,7 @@ Same as `PartialDeep`, but accepts only `object`s as inputs. Internal helper for
 	}
 	declare type WLEDEffects = string[];
 	declare type WLEDPalettes = string[];
-	declare type WLEDPaletteData = (
-		| [number, number, number, number]
-		| string
-	)[];
+	declare type WLEDPaletteData = ([number, number, number, number] | string)[];
 	declare type WLEDPalettesData = {
 		[id: string]: WLEDPaletteData;
 	};
@@ -2062,9 +2047,7 @@ Same as `PartialDeep`, but accepts only `object`s as inputs. Internal helper for
 			[key: string]: any;
 		};
 	}
-	declare type WLEDUpdatableConfig = PartialDeep<
-		WLEDExchangeableConfig & WLEDConfigSendOnly
-	>;
+	declare type WLEDUpdatableConfig = PartialDeep<WLEDExchangeableConfig & WLEDConfigSendOnly>;
 	declare type WLEDConfig = WLEDExchangeableConfig & WLEDConfigReceiveOnly;
 	interface WLEDContext {
 		/** WLED state object. */
@@ -2124,10 +2107,7 @@ Same as `PartialDeep`, but accepts only `object`s as inputs. Internal helper for
 		constructor(options: Partial<WLEDClientOptions>);
 		init(): Promise<boolean | undefined>;
 		/** Get the latest context from the device. */
-		refreshContext(options?: {
-			presets?: boolean;
-			config?: boolean;
-		}): Promise<void>;
+		refreshContext(options?: { presets?: boolean; config?: boolean }): Promise<void>;
 		/** Get the latest state from the device. */
 		refreshState(): Promise<void>;
 		/** Get the latest info from the device. */
@@ -2160,9 +2140,7 @@ Same as `PartialDeep`, but accepts only `object`s as inputs. Internal helper for
 		 * @param segmentId One or more segment IDs
 		 */
 		buildStateWithSegments(
-			state:
-				| (WLEDClientUpdatableState | WLEDClientUpdatableSegment)
-				| BuildStateFn,
+			state: (WLEDClientUpdatableState | WLEDClientUpdatableSegment) | BuildStateFn,
 			segmentId?: number | number[]
 		): WLEDClientUpdatableState | WLEDClientUpdatableSegment;
 		/** Connect to the device's WebSocket API. */
@@ -2181,30 +2159,24 @@ Same as `PartialDeep`, but accepts only `object`s as inputs. Internal helper for
 		turnOn({
 			segmentId,
 			...options
-		}?: WLEDClientSendOptions &
-			WLEDClientSendSegmentOptions): Promise<void>;
+		}?: WLEDClientSendOptions & WLEDClientSendSegmentOptions): Promise<void>;
 		/** Set the device or segment power state to off. */
 		turnOff({
 			segmentId,
 			...options
-		}?: WLEDClientSendOptions &
-			WLEDClientSendSegmentOptions): Promise<void>;
+		}?: WLEDClientSendOptions & WLEDClientSendSegmentOptions): Promise<void>;
 		/** Change the device or segment power state to the opposite of what it currently is. */
 		toggle({
 			segmentId,
 			...options
-		}?: WLEDClientSendOptions &
-			WLEDClientSendSegmentOptions): Promise<void>;
+		}?: WLEDClientSendOptions & WLEDClientSendSegmentOptions): Promise<void>;
 		/**
 		 * Set the device's master brightness.
 		 * @param value Any integer between 0 and 255
 		 */
 		setBrightness(
 			value: number,
-			{
-				segmentId,
-				...options
-			}?: WLEDClientSendOptions & WLEDClientSendSegmentOptions
+			{ segmentId, ...options }?: WLEDClientSendOptions & WLEDClientSendSegmentOptions
 		): Promise<void>;
 		/**
 		 * Set the primary color of the device's main segment.
@@ -2221,10 +2193,7 @@ Same as `PartialDeep`, but accepts only `object`s as inputs. Internal helper for
 		 */
 		setPrimaryColor(
 			color: RGBColor | RGBWColor,
-			{
-				segmentId,
-				...options
-			}?: WLEDClientSendOptions & WLEDClientSendSegmentOptions
+			{ segmentId, ...options }?: WLEDClientSendOptions & WLEDClientSendSegmentOptions
 		): Promise<void>;
 		/**
 		 * Set the secondary color of the device's main segment.
@@ -2232,10 +2201,7 @@ Same as `PartialDeep`, but accepts only `object`s as inputs. Internal helper for
 		 */
 		setSecondaryColor(
 			color: RGBColor | RGBWColor,
-			{
-				segmentId,
-				...options
-			}?: WLEDClientSendOptions & WLEDClientSendSegmentOptions
+			{ segmentId, ...options }?: WLEDClientSendOptions & WLEDClientSendSegmentOptions
 		): Promise<void>;
 		/**
 		 * Set the tertiary color of the device's main segment.
@@ -2243,10 +2209,7 @@ Same as `PartialDeep`, but accepts only `object`s as inputs. Internal helper for
 		 */
 		setTertiaryColor(
 			color: RGBColor | RGBWColor,
-			{
-				segmentId,
-				...options
-			}?: WLEDClientSendOptions & WLEDClientSendSegmentOptions
+			{ segmentId, ...options }?: WLEDClientSendOptions & WLEDClientSendSegmentOptions
 		): Promise<void>;
 		/**
 		 * Set the correlated color temperature of the device's main segment.
@@ -2254,10 +2217,7 @@ Same as `PartialDeep`, but accepts only `object`s as inputs. Internal helper for
 		 */
 		setCCT(
 			kelvin: number,
-			{
-				segmentId,
-				...options
-			}?: WLEDClientSendOptions & WLEDClientSendSegmentOptions
+			{ segmentId, ...options }?: WLEDClientSendOptions & WLEDClientSendSegmentOptions
 		): Promise<void>;
 		/**
 		 * Set the palette applied to the device's main segment.
@@ -2265,10 +2225,7 @@ Same as `PartialDeep`, but accepts only `object`s as inputs. Internal helper for
 		 */
 		setPalette(
 			paletteId: number,
-			{
-				segmentId,
-				...options
-			}?: WLEDClientSendOptions & WLEDClientSendSegmentOptions
+			{ segmentId, ...options }?: WLEDClientSendOptions & WLEDClientSendSegmentOptions
 		): Promise<void>;
 		private paletteDataCache;
 		getPalettesData(page?: number): Promise<WLEDPalettesData>;
@@ -2278,24 +2235,15 @@ Same as `PartialDeep`, but accepts only `object`s as inputs. Internal helper for
 		 */
 		setEffect(
 			effectId: number,
-			{
-				segmentId,
-				...options
-			}?: WLEDClientSendOptions & WLEDClientSendSegmentOptions
+			{ segmentId, ...options }?: WLEDClientSendOptions & WLEDClientSendSegmentOptions
 		): Promise<void>;
 		setEffectSpeed(
 			value: number,
-			{
-				segmentId,
-				...options
-			}?: WLEDClientSendOptions & WLEDClientSendSegmentOptions
+			{ segmentId, ...options }?: WLEDClientSendOptions & WLEDClientSendSegmentOptions
 		): Promise<void>;
 		setEffectIntensity(
 			value: number,
-			{
-				segmentId,
-				...options
-			}?: WLEDClientSendOptions & WLEDClientSendSegmentOptions
+			{ segmentId, ...options }?: WLEDClientSendOptions & WLEDClientSendSegmentOptions
 		): Promise<void>;
 		/**
 		 * Duration of the crossfade between different colors/brightness levels.
@@ -2316,9 +2264,7 @@ Same as `PartialDeep`, but accepts only `object`s as inputs. Internal helper for
 		 * Create a new segment and adds it to the segment array.
 		 * @param {WLEDClientUpdatableSegment} data Every updatable parameter on the segment object except `id`
 		 */
-		createSegment(
-			data: Omit<WLEDClientUpdatableSegment, 'id'>
-		): Promise<void>;
+		createSegment(data: Omit<WLEDClientUpdatableSegment, 'id'>): Promise<void>;
 		/**
 		 * Update a specific segment by `id`.
 		 * @param {number} id ID of the segment to be updated
@@ -2338,9 +2284,7 @@ Same as `PartialDeep`, but accepts only `object`s as inputs. Internal helper for
 		 * Set the entire segment array.
 		 * @param {WLEDClientUpdatableSegment[]} segments Array of segment objects to replace the current array of segment objects
 		 */
-		setSegments(
-			segments: Omit<WLEDClientUpdatableSegment, 'id'>[]
-		): Promise<void>;
+		setSegments(segments: Omit<WLEDClientUpdatableSegment, 'id'>[]): Promise<void>;
 		/** Clear the segment array completely. */
 		clearSegments(): Promise<void>;
 		/**
@@ -2362,9 +2306,7 @@ Same as `PartialDeep`, but accepts only `object`s as inputs. Internal helper for
 			 * @param {number|WLEDClientNightlightState} with_state Optional. Duration if number is passed, otherwise nightlight state object containing other properties to set while activating the nightlight
 			 */
 			enable(
-				with_state?:
-					| number
-					| Omit<Partial<WLEDClientNightlightState>, 'on'>
+				with_state?: number | Omit<Partial<WLEDClientNightlightState>, 'on'>
 			): Promise<void>;
 			/** Deactivate the nightlight. */
 			disable(): Promise<void>;
@@ -2393,9 +2335,7 @@ Same as `PartialDeep`, but accepts only `object`s as inputs. Internal helper for
 		ignoreLiveData(until_reboot?: boolean): Promise<void>;
 		/** Allow live data to be displayed by the device. */
 		allowLiveData(): Promise<void>;
-		enableUDPSync(
-			options?: RequireAtLeastOne<WLEDClientState['udpSync']>
-		): Promise<void>;
+		enableUDPSync(options?: RequireAtLeastOne<WLEDClientState['udpSync']>): Promise<void>;
 		disableUDPSync(): Promise<void>;
 		/**
 		 * Get a preset by its ID.
@@ -2412,10 +2352,7 @@ Same as `PartialDeep`, but accepts only `object`s as inputs. Internal helper for
 		 * @param {number} id
 		 * @param {WLEDClientCurrentStatePreset} preset
 		 */
-		saveStateAsPreset(
-			id: number,
-			preset: WLEDClientCurrentStatePreset
-		): Promise<void>;
+		saveStateAsPreset(id: number, preset: WLEDClientCurrentStatePreset): Promise<void>;
 		/**
 		 * Save a preset.
 		 * @param {number} id

@@ -25,9 +25,7 @@ export type EWeLinkWebSocketMessage<P = Record<string, string | number>> =
 	  }
 	| 'pong';
 
-export class EWeLinkWSConnection extends EventEmitter<
-	EWeLinkWebSocketMessage<unknown>
-> {}
+export class EWeLinkWSConnection extends EventEmitter<EWeLinkWebSocketMessage<unknown>> {}
 
 export class EWeLinkConfig {
 	public constructor(
@@ -47,22 +45,16 @@ export class WrappedEWeLinkAPI {
 	private _queue = new AsyncQueue();
 	private _lastRequest = Date.now();
 
-	public constructor(
-		private readonly _connection: InstanceType<typeof eWelink.WebAPI>
-	) {}
+	public constructor(private readonly _connection: InstanceType<typeof eWelink.WebAPI>) {}
 
 	public setThingStatus(
-		info: Parameters<
-			InstanceType<typeof eWelink.WebAPI>['device']['setThingStatus']
-		>[0]
+		info: Parameters<InstanceType<typeof eWelink.WebAPI>['device']['setThingStatus']>[0]
 	): Promise<unknown> {
 		return this._connection.device.setThingStatus(info);
 	}
 
 	public getThingStatus<T>(
-		info: Parameters<
-			InstanceType<typeof eWelink.WebAPI>['device']['getThingStatus']
-		>[0]
+		info: Parameters<InstanceType<typeof eWelink.WebAPI>['device']['getThingStatus']>[0]
 	): Promise<T | null> {
 		if (!this._queue.isEmpty()) {
 			return Promise.resolve(null);
@@ -71,10 +63,7 @@ export class WrappedEWeLinkAPI {
 			const now = Date.now();
 			if (now - this._lastRequest < WrappedEWeLinkAPI.WAIT_TIME) {
 				await new Promise((resolve) =>
-					setTimeout(
-						resolve,
-						WrappedEWeLinkAPI.WAIT_TIME - (now - this._lastRequest)
-					)
+					setTimeout(resolve, WrappedEWeLinkAPI.WAIT_TIME - (now - this._lastRequest))
 				);
 			}
 			this._lastRequest = Date.now();

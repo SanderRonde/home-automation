@@ -1,8 +1,4 @@
-import {
-	WLEDColorControlCluster,
-	WLEDLevelControlCluster,
-	WLEDOnOffCluster,
-} from './cluster';
+import { WLEDColorControlCluster, WLEDLevelControlCluster, WLEDOnOffCluster } from './cluster';
 import { DeviceEndpoint, DeviceSource } from '../../device/device';
 import type { WLEDClient, WLEDClientInfo } from 'wled-client';
 import type { Cluster } from '../../device/cluster';

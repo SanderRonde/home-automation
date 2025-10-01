@@ -32,9 +32,7 @@ class Pinger {
 			ips: string[];
 		},
 		private readonly _db: Database<HomeDetectorDB>,
-		private readonly _onChange: (
-			newState: HOME_STATE
-		) => void | Promise<void>
+		private readonly _onChange: (newState: HOME_STATE) => void | Promise<void>
 	) {
 		void this._init();
 	}
@@ -90,9 +88,7 @@ class Pinger {
 		}
 
 		const results = await Promise.all(pings);
-		return results.some((v) => v.state === HOME_STATE.HOME)
-			? HOME_STATE.HOME
-			: HOME_STATE.AWAY;
+		return results.some((v) => v.state === HOME_STATE.HOME) ? HOME_STATE.HOME : HOME_STATE.AWAY;
 	}
 
 	private async _stateChange(
@@ -147,9 +143,8 @@ class Pinger {
 				await wait(CHANGE_PING_INTERVAL);
 			} else {
 				await wait(
-					(this._state === HOME_STATE.HOME
-						? HOME_PING_INTERVAL
-						: AWAY_PING_INTERVAL) * 1000
+					(this._state === HOME_STATE.HOME ? HOME_PING_INTERVAL : AWAY_PING_INTERVAL) *
+						1000
 				);
 			}
 		}
@@ -204,12 +199,10 @@ export class Detector {
 				[key: string]: string[];
 			};
 		};
-		for (const { key, data } of (Object.keys(config.base ?? {}) || []).map(
-			(n) => ({
-				key: n,
-				data: config.base[n],
-			})
-		)) {
+		for (const { key, data } of (Object.keys(config.base ?? {}) || []).map((n) => ({
+			key: n,
+			data: config.base[n],
+		}))) {
 			this._pingers.set(
 				key,
 				new Pinger(

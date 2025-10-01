@@ -14,12 +14,9 @@ interface AssociatedMessage {
 }
 
 export class LogObj {
-	private static _objMap: WeakMap<
-		Omit<BunRequest, 'json'> | http.ClientRequest,
-		LogObj
-	> = new WeakMap();
-	private static _requestTimingMap: Map<Omit<BunRequest, 'json'>, number> =
-		new Map();
+	private static _objMap: WeakMap<Omit<BunRequest, 'json'> | http.ClientRequest, LogObj> =
+		new WeakMap();
+	private static _requestTimingMap: Map<Omit<BunRequest, 'json'>, number> = new Map();
 	public static logLevel: number = 1;
 
 	private _messages: AssociatedMessage[] = [];
@@ -74,11 +71,7 @@ export class LogObj {
 		return obj;
 	}
 
-	public static fromFixture(
-		tag: string,
-		source: string,
-		timeout?: number
-	): LogObj {
+	public static fromFixture(tag: string, source: string, timeout?: number): LogObj {
 		const obj = new LogObj();
 		obj._timeout = timeout ?? obj._timeout;
 
@@ -93,10 +86,7 @@ export class LogObj {
 		return obj;
 	}
 
-	public static fromReqRes(
-		reqRes: Omit<BunRequest, 'json'>,
-		timeout?: number
-	): LogObj {
+	public static fromReqRes(reqRes: Omit<BunRequest, 'json'>, timeout?: number): LogObj {
 		if (!LogObj._objMap.has(reqRes)) {
 			const obj = new LogObj();
 			obj._timeout = timeout ?? obj._timeout;
@@ -105,10 +95,7 @@ export class LogObj {
 		return LogObj._objMap.get(reqRes)!;
 	}
 
-	public static fromOutgoingReq(
-		req: http.ClientRequest,
-		timeout?: number
-	): LogObj {
+	public static fromOutgoingReq(req: http.ClientRequest, timeout?: number): LogObj {
 		if (LogObj._objMap.has(req)) {
 			return LogObj._objMap.get(req)!;
 		}
@@ -169,9 +156,7 @@ export class LogObj {
 
 			const message = this._messages[i];
 
-			const timeFiller = new Array(new Date().toLocaleString().length + 2)
-				.fill(' ')
-				.join('');
+			const timeFiller = new Array(new Date().toLocaleString().length + 2).fill(' ').join('');
 			if (i === this._messages.length - 1) {
 				LogObj._log(timeFiller, `${padding} \\- `, ...message.content);
 				hasNextMessage[depth] = false;
@@ -194,11 +179,7 @@ export class LogObj {
 		return obj;
 	}
 
-	public static logOutgoingResponse(
-		req: BunRequest,
-		res: Response,
-		server: Server
-	): void {
+	public static logOutgoingResponse(req: BunRequest, res: Response, server: Server): void {
 		const obj = LogObj._objMap.get(req);
 		const start = LogObj._requestTimingMap.get(req)!;
 		const ip = getIP(req) ?? server.requestIP(req)?.address;
@@ -232,9 +213,7 @@ export class LogObj {
 
 	public attachMessage(...messages: string[]): LogObj {
 		if (this._finalized) {
-			warning(
-				'Attaching message to finalized log object, consider increasing timeout'
-			);
+			warning('Attaching message to finalized log object, consider increasing timeout');
 			console.trace();
 			return LogObj.fromParent();
 		}
@@ -254,14 +233,10 @@ export class LogObj {
 			const error = `${err.name}: ${err.message}\n${err.stack ?? ''}`;
 			const id = `E${generateRandomString(32)}`;
 			void fs.appendFile(errPath, `${id}: ${error}\n\n`);
-			this.attachMessage(
-				`${chalk.red('Error')}: ${err.toString()} (${id})`
-			);
+			this.attachMessage(`${chalk.red('Error')}: ${err.toString()} (${id})`);
 		}
 
-		this.attachMessage(
-			`${chalk.red('Error')}: ${err.toString()}\n${err.stack ?? ''}`
-		);
+		this.attachMessage(`${chalk.red('Error')}: ${err.toString()}\n${err.stack ?? ''}`);
 	}
 
 	public transferTo(target: LogObj): void {

@@ -90,9 +90,7 @@ export class TemperatureDisplay extends ConfigurableWebComponent<{
 			() => {
 				void this.updateWeather();
 			},
-			this.props.tempType === TEMPERATURE_DISPLAY_TYPE.OUTSIDE
-				? 1000 * 60 * 60
-				: 1000 * 60
+			this.props.tempType === TEMPERATURE_DISPLAY_TYPE.OUTSIDE ? 1000 * 60 * 60 : 1000 * 60
 		);
 	}
 

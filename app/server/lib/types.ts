@@ -12,10 +12,7 @@ declare global {
 		 * @param reviver A function that transforms the results. This function is called for each member of the object.
 		 * If a member contains nested objects, the nested objects are transformed before the parent object is.
 		 */
-		parse<T>(
-			text: EncodedString<T>,
-			reviver?: (key: unknown, value: unknown) => unknown
-		): T;
+		parse<T>(text: EncodedString<T>, reviver?: (key: unknown, value: unknown) => unknown): T;
 		/**
 		 * Converts a JavaScript value to a JavaScript Object Notation (JSON) string.
 		 * @param value A JavaScript value, usually an object or array, to be converted.

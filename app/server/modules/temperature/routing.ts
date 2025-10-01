@@ -11,10 +11,7 @@ function _initRouting({ sqlDB }: ModuleConfig) {
 			'/report/:name/:temp': async (req, _server, { error, text }) => {
 				const temp = parseFloat(req.params.temp);
 				if (Number.isNaN(temp) || temp === 0) {
-					return error(
-						`Invalid temperature "${req.params.temp}"`,
-						400
-					);
+					return error(`Invalid temperature "${req.params.temp}"`, 400);
 				}
 
 				// Set last temp
@@ -24,10 +21,7 @@ function _initRouting({ sqlDB }: ModuleConfig) {
 				LogObj.fromReqRes(req).attachMessage(
 					`Reported temperature: "${controller.getLastTemp()}`
 				);
-				return text(
-					`Reported temperature: "${controller.getLastTemp()}"`,
-					200
-				);
+				return text(`Reported temperature: "${controller.getLastTemp()}"`, 200);
 			},
 			'/getTemp': withRequestBody(
 				z.object({ name: z.string() }),
@@ -46,9 +40,7 @@ function _initRouting({ sqlDB }: ModuleConfig) {
 	);
 }
 
-export const initRouting = _initRouting as (
-	config: ModuleConfig
-) => ServeOptions<unknown>;
+export const initRouting = _initRouting as (config: ModuleConfig) => ServeOptions<unknown>;
 
 export type TemperatureRoutes =
 	ReturnType<typeof _initRouting> extends ServeOptions<infer R> ? R : never;

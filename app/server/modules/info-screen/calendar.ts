@@ -10,9 +10,7 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const optionalRequire = require('optional-require')(require) as (
-	requirePath: string
-) => unknown;
+const optionalRequire = require('optional-require')(require) as (requirePath: string) => unknown;
 
 export async function refresh(): Promise<void> {
 	try {
@@ -23,12 +21,7 @@ export async function refresh(): Promise<void> {
 		);
 		await authTokens(credentials, true);
 	} catch (e) {
-		logTag(
-			'calendar',
-			'red',
-			'Failed to re-use google code',
-			(e as Error).message
-		);
+		logTag('calendar', 'red', 'Failed to re-use google code', (e as Error).message);
 	}
 }
 
@@ -130,9 +123,9 @@ export async function getEvents(days: number): Promise<CalendarEvent[]> {
 		})
 	);
 	const flatEvents = flatten(joined);
-	const filter = optionalRequire(
-		path.join(SECRETS_FOLDER, 'event-filter.js')
-	) as (toFilter: CalendarEvent) => boolean;
+	const filter = optionalRequire(path.join(SECRETS_FOLDER, 'event-filter.js')) as (
+		toFilter: CalendarEvent
+	) => boolean;
 	if (filter) {
 		return flatEvents.filter((event) => {
 			return filter(event);

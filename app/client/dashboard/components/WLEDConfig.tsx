@@ -21,9 +21,9 @@ import { apiGet, apiPost } from '../../lib/fetch';
 import AddIcon from '@mui/icons-material/Add';
 
 export const WLEDConfig = (): JSX.Element => {
-	const [config, setConfig] = useState<
-		ReturnTypeForApi<'wled', '/config', 'GET'>['ok']
-	>({ devices: [] });
+	const [config, setConfig] = useState<ReturnTypeForApi<'wled', '/config', 'GET'>['ok']>({
+		devices: [],
+	});
 	const [newIP, setNewIP] = useState('');
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -45,9 +45,7 @@ export const WLEDConfig = (): JSX.Element => {
 		}
 	};
 
-	const saveConfig = async (
-		newConfig: ReturnTypeForApi<'wled', '/config', 'GET'>['ok']
-	) => {
+	const saveConfig = async (newConfig: ReturnTypeForApi<'wled', '/config', 'GET'>['ok']) => {
 		setLoading(true);
 		setError(null);
 		setSuccess(false);
@@ -115,9 +113,9 @@ export const WLEDConfig = (): JSX.Element => {
 		<Box sx={{ p: 3, maxWidth: 800 }}>
 			<Stack spacing={3}>
 				<Alert severity="info">
-					Configure WLED devices by adding their IP addresses. These
-					devices will be automatically discovered and made available
-					for control in your home automation system.
+					Configure WLED devices by adding their IP addresses. These devices will be
+					automatically discovered and made available for control in your home automation
+					system.
 				</Alert>
 
 				{error && (
@@ -126,11 +124,7 @@ export const WLEDConfig = (): JSX.Element => {
 					</Alert>
 				)}
 
-				{success && (
-					<Alert severity="success">
-						Configuration saved successfully!
-					</Alert>
-				)}
+				{success && <Alert severity="success">Configuration saved successfully!</Alert>}
 
 				<Card>
 					<CardContent>
@@ -162,17 +156,14 @@ export const WLEDConfig = (): JSX.Element => {
 
 							{config.devices.length === 0 ? (
 								<Alert severity="info">
-									No WLED devices configured. Add IP addresses
-									above to get started.
+									No WLED devices configured. Add IP addresses above to get
+									started.
 								</Alert>
 							) : (
 								<List>
 									{config.devices.map((ip, index) => (
 										<ListItem key={index} divider>
-											<ListItemText
-												primary={ip}
-												secondary="WLED Device"
-											/>
+											<ListItemText primary={ip} secondary="WLED Device" />
 											<ListItemSecondaryAction>
 												<Chip
 													label="Configured"
@@ -182,9 +173,7 @@ export const WLEDConfig = (): JSX.Element => {
 												/>
 												<IconButton
 													edge="end"
-													onClick={() =>
-														removeDevice(ip)
-													}
+													onClick={() => removeDevice(ip)}
 													disabled={loading}
 													color="error"
 												>
@@ -197,11 +186,9 @@ export const WLEDConfig = (): JSX.Element => {
 							)}
 
 							<Typography variant="body2" color="text.secondary">
-								<strong>Note:</strong> Make sure your WLED
-								devices are connected to the same network and
-								accessible via HTTP. The system will
-								automatically detect and configure them when
-								they come online.
+								<strong>Note:</strong> Make sure your WLED devices are connected to
+								the same network and accessible via HTTP. The system will
+								automatically detect and configure them when they come online.
 							</Typography>
 						</Stack>
 					</CardContent>

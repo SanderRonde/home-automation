@@ -1,12 +1,4 @@
-import {
-	Box,
-	Paper,
-	TextField,
-	Button,
-	Typography,
-	Alert,
-	Container,
-} from '@mui/material';
+import { Box, Paper, TextField, Button, Typography, Alert, Container } from '@mui/material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { createRoot } from 'react-dom/client';
@@ -87,20 +79,10 @@ function LoginPage(): JSX.Element {
 							maxWidth: 400,
 						}}
 					>
-						<Typography
-							variant="h4"
-							component="h1"
-							gutterBottom
-							align="center"
-						>
+						<Typography variant="h4" component="h1" gutterBottom align="center">
 							Home Automation
 						</Typography>
-						<Typography
-							variant="subtitle1"
-							gutterBottom
-							align="center"
-							mb={3}
-						>
+						<Typography variant="subtitle1" gutterBottom align="center" mb={3}>
 							Please sign in
 						</Typography>
 

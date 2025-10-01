@@ -59,9 +59,7 @@ class WebServer {
 				secrets: config.log?.secrets || false,
 
 				// In debug mode always log errors to console
-				errorLogPath: config.debug
-					? null
-					: (config?.log?.errorLogPath ?? null),
+				errorLogPath: config.debug ? null : (config?.log?.errorLogPath ?? null),
 			},
 			debug: config.debug || false,
 			instant: config.instant || false,
@@ -76,17 +74,12 @@ class WebServer {
 
 		const initValues = await Promise.all(
 			Object.values(modules).map(async (meta) => {
-				const sqlDB = new SQL(
-					`sqlite://${path.join(DB_FOLDER, meta.dbName)}.db`
-				);
+				const sqlDB = new SQL(`sqlite://${path.join(DB_FOLDER, meta.dbName)}.db`);
 				const moduleName = meta.name.toLowerCase();
 				const initConfig: ModuleConfig = {
 					config: this._config,
 					wsPublish: async (data: string) => {
-						return (await this._server.value).publish(
-							moduleName,
-							data
-						);
+						return (await this._server.value).publish(moduleName, data);
 					},
 					db: new Database(`${meta.dbName}.json`),
 					sqlDB: sqlDB,
@@ -94,16 +87,12 @@ class WebServer {
 				};
 				meta._sqlDB.set(sqlDB);
 				const result = await meta.init(initConfig);
-				const serveOptions =
-					(result?.serve as ServeOptions<unknown>) ?? {};
+				const serveOptions = (result?.serve as ServeOptions<unknown>) ?? {};
 				this._initLogger.increment(meta.loggerName);
 
-				const mappedRoutes: NonNullable<
-					ServeOptions<unknown>['routes']
-				> = {};
+				const mappedRoutes: NonNullable<ServeOptions<unknown>['routes']> = {};
 				for (const key in serveOptions.routes) {
-					mappedRoutes[`/${moduleName}${key}`] =
-						serveOptions.routes[key];
+					mappedRoutes[`/${moduleName}${key}`] = serveOptions.routes[key];
 				}
 				return {
 					routes: mappedRoutes,
@@ -202,17 +191,10 @@ class WebServer {
 			websocket: {
 				open: (ws) => {
 					ws.subscribe(ws.data.moduleName);
-					return websocketsByRoute[ws.data.route]?.websocket?.open?.(
-						ws,
-						server
-					);
+					return websocketsByRoute[ws.data.route]?.websocket?.open?.(ws, server);
 				},
 				message: (ws, message) =>
-					websocketsByRoute[ws.data.route]?.websocket?.message?.(
-						ws,
-						message,
-						server
-					),
+					websocketsByRoute[ws.data.route]?.websocket?.message?.(ws, message, server),
 				close: (ws, code, reason) => {
 					ws.unsubscribe(ws.data.moduleName);
 					return websocketsByRoute[ws.data.route]?.websocket?.close?.(
@@ -231,11 +213,7 @@ class WebServer {
 		await wait(100);
 		logReady();
 
-		logTag(
-			'HTTP server',
-			'magenta',
-			`listening on port ${this._config.ports.http}`
-		);
+		logTag('HTTP server', 'magenta', `listening on port ${this._config.ports.http}`);
 
 		// Run post-inits
 		void Promise.all(
@@ -250,8 +228,7 @@ class WebServer {
 			'Server start',
 			3 + Object.keys(getAllModules(false)).length
 		);
-		const { modules, routes, websocketsByRoute } =
-			await this._initModules();
+		const { modules, routes, websocketsByRoute } = await this._initModules();
 		this._initLogger.increment('modules');
 
 		LogObj.logLevel = this._config.log.level;
@@ -277,9 +254,7 @@ if (hasArg('help', 'h')) {
 	logImmediate(
 		"-v{v+}, --{very+}verbose	Logs even more data. The more v's and very's the more data"
 	);
-	logImmediate(
-		"-v*, --verbose*			Logs all data (equivalent of adding a lot of v's"
-	);
+	logImmediate("-v*, --verbose*			Logs all data (equivalent of adding a lot of v's");
 
 	logImmediate('--log-telegram-bot-commands		Log all telegram bot commands');
 	// eslint-disable-next-line n/no-process-exit

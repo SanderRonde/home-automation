@@ -1,11 +1,4 @@
-import {
-	Box,
-	Card,
-	CardActionArea,
-	Typography,
-	CircularProgress,
-	IconButton,
-} from '@mui/material';
+import { Box, Card, CardActionArea, Typography, CircularProgress, IconButton } from '@mui/material';
 import type { DeviceClusterName } from '../../../server/modules/device/cluster';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { DeviceClusterCard } from './DeviceClusterCard';
@@ -16,11 +9,7 @@ import * as Icons from '@mui/icons-material';
 import type { SxProps } from '@mui/material';
 import { apiGet } from '../../lib/fetch';
 
-type DeviceType = ReturnTypeForApi<
-	'device',
-	'/listWithValues',
-	'GET'
->['ok']['devices'][number];
+type DeviceType = ReturnTypeForApi<'device', '/listWithValues', 'GET'>['ok']['devices'][number];
 
 interface RoomDevices {
 	room: string;
@@ -30,9 +19,9 @@ interface RoomDevices {
 }
 
 const getIconComponent = (iconName: string) => {
-	const IconComponent = (
-		Icons as Record<string, React.ComponentType<{ sx?: SxProps }>>
-	)[iconName];
+	const IconComponent = (Icons as Record<string, React.ComponentType<{ sx?: SxProps }>>)[
+		iconName
+	];
 	return IconComponent ? <IconComponent /> : null;
 };
 
@@ -90,9 +79,7 @@ export const Home = (): JSX.Element => {
 			roomMap.get(device.room)!.devices.push(device);
 		}
 
-		return Array.from(roomMap.values()).sort((a, b) =>
-			a.room.localeCompare(b.room)
-		);
+		return Array.from(roomMap.values()).sort((a, b) => a.room.localeCompare(b.room));
 	}, [devices]);
 
 	if (loading) {
@@ -128,9 +115,7 @@ export const Home = (): JSX.Element => {
 					.filter(
 						(d) =>
 							!detailView.clusterName ||
-							d.allClusters.some(
-								(c) => c.name === detailView.clusterName
-							)
+							d.allClusters.some((c) => c.name === detailView.clusterName)
 					)}
 				invalidate={() => fetchDevices(false)}
 			/>
@@ -151,9 +136,7 @@ export const Home = (): JSX.Element => {
 						<RoomDevice
 							roomDevices={room}
 							key={room.room}
-							setRoom={() =>
-								setDetailView({ roomName: room.room })
-							}
+							setRoom={() => setDetailView({ roomName: room.room })}
 							setDetailView={(clusterName) =>
 								setDetailView({
 									roomName: room.room,
@@ -171,8 +154,8 @@ export const Home = (): JSX.Element => {
 					variant="body1"
 					sx={{ color: 'text.secondary', textAlign: 'center', mt: 4 }}
 				>
-					No devices assigned to rooms yet. Go to the Devices tab to
-					assign devices to rooms.
+					No devices assigned to rooms yet. Go to the Devices tab to assign devices to
+					rooms.
 				</Typography>
 			)}
 		</Box>
@@ -235,10 +218,7 @@ const RoomDetail = (props: RoomDetailProps) => {
 						width: '100%',
 					}}
 				>
-					<Typography
-						style={{ color: 'black', fontWeight: 'bold' }}
-						variant="h6"
-					>
+					<Typography style={{ color: 'black', fontWeight: 'bold' }} variant="h6">
 						{props.room.room}
 					</Typography>
 				</Box>

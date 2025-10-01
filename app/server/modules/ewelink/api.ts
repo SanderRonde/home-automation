@@ -1,10 +1,6 @@
 /* eslint-disable @typescript-eslint/no-base-to-string */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import {
-	EWeLinkConfig,
-	EWeLinkWSConnection,
-	WrappedEWeLinkAPI,
-} from './client/clusters/shared';
+import { EWeLinkConfig, EWeLinkWSConnection, WrappedEWeLinkAPI } from './client/clusters/shared';
 import { queueEwelinkTokenRefresh } from './routing';
 import { EWELINK_DEBUG } from '../../lib/constants';
 import { logTag } from '../../lib/logging/logger';
@@ -42,23 +38,15 @@ export class EWeLinkAPI implements Disposable {
 	}
 
 	private async initEWeLinkDevices() {
-		const eventEmitters = new Map<
-			string,
-			Data<EwelinkDeviceResponse | undefined>
-		>();
+		const eventEmitters = new Map<string, Data<EwelinkDeviceResponse | undefined>>();
 		const wrappedApi = new WrappedEWeLinkAPI(this._webApi);
-		const initialDevices = await this.updateDevices(
-			eventEmitters,
-			wrappedApi
-		);
+		const initialDevices = await this.updateDevices(eventEmitters, wrappedApi);
 		this._devices = initialDevices;
 		this._onDevices(initialDevices);
 
 		const interval = asyncSetInterval(
 			async () => {
-				this._onDevices(
-					await this.updateDevices(eventEmitters, wrappedApi)
-				);
+				this._onDevices(await this.updateDevices(eventEmitters, wrappedApi));
 			},
 			1000 * 60 * 2
 		);
@@ -82,11 +70,7 @@ export class EWeLinkAPI implements Disposable {
 		};
 		const apiKey = family.data.familyList?.map((user) => user.apikey)[0];
 		if (!apiKey) {
-			logTag(
-				'ewelink',
-				'red',
-				'No API key found any user in home for websocket connection'
-			);
+			logTag('ewelink', 'red', 'No API key found any user in home for websocket connection');
 			return null;
 		}
 		return apiKey;
@@ -121,17 +105,10 @@ export class EWeLinkAPI implements Disposable {
 		const devices: EwelinkDevice[] = [];
 		for (const deviceResponse of response ?? []) {
 			if (eventEmitters.has(deviceResponse.itemData.deviceid)) {
-				eventEmitters
-					.get(deviceResponse.itemData.deviceid)!
-					.set(deviceResponse);
+				eventEmitters.get(deviceResponse.itemData.deviceid)!.set(deviceResponse);
 			} else {
-				const eventEmitter = new Data<
-					EwelinkDeviceResponse | undefined
-				>(undefined);
-				eventEmitters.set(
-					deviceResponse.itemData.deviceid,
-					eventEmitter
-				);
+				const eventEmitter = new Data<EwelinkDeviceResponse | undefined>(undefined);
+				eventEmitters.set(deviceResponse.itemData.deviceid, eventEmitter);
 				const config = new EWeLinkConfig(
 					wrappedApi,
 					deviceResponse,
@@ -196,12 +173,7 @@ export class EWeLinkAPI implements Disposable {
 				try {
 					const data = JSON.parse(msg.data.toString());
 					if (EWELINK_DEBUG) {
-						logTag(
-							'ewelink',
-							'blue',
-							'ws-message',
-							JSON.stringify(data, null, '\t')
-						);
+						logTag('ewelink', 'blue', 'ws-message', JSON.stringify(data, null, '\t'));
 					}
 					this.wsConnectionWrapper.emit(data);
 				} catch (e) {
@@ -224,11 +196,7 @@ export class EWeLinkAPI implements Disposable {
 
 	public async refreshWithToken(token: string): Promise<EWeLinkAPI> {
 		this[Symbol.dispose]();
-		const instance = new EWeLinkAPI(
-			this._db,
-			this._webApi,
-			this._onDevices
-		);
+		const instance = new EWeLinkAPI(this._db, this._webApi, this._onDevices);
 		await instance.init(token);
 		return instance;
 	}

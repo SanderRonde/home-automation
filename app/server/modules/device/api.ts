@@ -32,10 +32,7 @@ export class DeviceAPI {
 		this.devices.set(newDevices);
 
 		// Update database with current device status
-		this.updateDeviceStatus(
-			Array.from(newDeviceIds),
-			Array.from(currentDeviceIds)
-		);
+		this.updateDeviceStatus(Array.from(newDeviceIds), Array.from(currentDeviceIds));
 	}
 
 	public updateDeviceName(deviceId: string, name: string): boolean {
@@ -53,11 +50,7 @@ export class DeviceAPI {
 		return false;
 	}
 
-	public updateDeviceRoom(
-		deviceId: string,
-		room?: string,
-		icon?: keyof typeof Icons
-	): boolean {
+	public updateDeviceRoom(deviceId: string, room?: string, icon?: keyof typeof Icons): boolean {
 		const knownDevices = this.getStoredDevices();
 
 		if (knownDevices[deviceId]) {
@@ -141,10 +134,7 @@ export class DeviceAPI {
 		return this._db.current().device_registry ?? {};
 	}
 
-	public updateDeviceStatus(
-		onlineDeviceIds: string[],
-		previousDeviceIds: string[]
-	): void {
+	public updateDeviceStatus(onlineDeviceIds: string[], previousDeviceIds: string[]): void {
 		const now = Date.now();
 		const knownDevices = { ...this.getStoredDevices() };
 

@@ -19,9 +19,7 @@ export async function serveStatic(
 		if (prefix) {
 			relativePath = path.join(prefix, relativePath);
 		}
-		routes[`/${relativePath}`] = staticResponse(
-			new Response(Bun.file(file))
-		);
+		routes[`/${relativePath}`] = staticResponse(new Response(Bun.file(file)));
 	}
 	return routes;
 }

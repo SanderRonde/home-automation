@@ -27,11 +27,7 @@ interface RoomAssignmentDialogProps {
 	onRoomAssigned: () => void;
 }
 
-type RoomInfo = ReturnTypeForApi<
-	'device',
-	'/rooms',
-	'GET'
->['ok']['rooms'][string];
+type RoomInfo = ReturnTypeForApi<'device', '/rooms', 'GET'>['ok']['rooms'][string];
 
 const COMMON_ROOM_ICONS = [
 	{ name: 'Bedroom', icon: 'Bed' },
@@ -73,13 +69,9 @@ const ICON_OPTIONS = [
 	'Cottage',
 ] satisfies (keyof typeof Icons)[];
 
-export const RoomAssignmentDialog: React.FC<RoomAssignmentDialogProps> = (
-	props
-) => {
+export const RoomAssignmentDialog: React.FC<RoomAssignmentDialogProps> = (props) => {
 	const [rooms, setRooms] = useState<Record<string, RoomInfo>>({});
-	const [selectedRoom, setSelectedRoom] = useState<string | null>(
-		props.currentRoom || null
-	);
+	const [selectedRoom, setSelectedRoom] = useState<string | null>(props.currentRoom || null);
 	const [newRoomName, setNewRoomName] = useState('');
 	const [selectedIcon, setSelectedIcon] = useState<string>('');
 	const [editingIcon, setEditingIcon] = useState(false);
@@ -186,21 +178,14 @@ export const RoomAssignmentDialog: React.FC<RoomAssignmentDialogProps> = (
 	}, [newRoomName, editingIcon]);
 
 	const getIconComponent = (iconName: string) => {
-		const IconComponent = (Icons as Record<string, React.ComponentType>)[
-			iconName
-		];
+		const IconComponent = (Icons as Record<string, React.ComponentType>)[iconName];
 		return IconComponent ? <IconComponent /> : null;
 	};
 
 	const displayRoomName = selectedRoom || newRoomName.trim();
 
 	return (
-		<Dialog
-			open={props.open}
-			onClose={props.onClose}
-			maxWidth="sm"
-			fullWidth
-		>
+		<Dialog open={props.open} onClose={props.onClose} maxWidth="sm" fullWidth>
 			<DialogTitle>Assign Room for {props.deviceName}</DialogTitle>
 			<DialogContent>
 				<Stack spacing={3} sx={{ mt: 1 }}>
@@ -237,17 +222,13 @@ export const RoomAssignmentDialog: React.FC<RoomAssignmentDialogProps> = (
 											width: '100%',
 										}}
 									>
-										{roomInfo?.icon &&
-											getIconComponent(roomInfo.icon)}
-										<Typography sx={{ flex: 1 }}>
-											{option}
-										</Typography>
+										{roomInfo?.icon && getIconComponent(roomInfo.icon)}
+										<Typography sx={{ flex: 1 }}>{option}</Typography>
 										<Chip
 											size="small"
 											label="Existing"
 											sx={{
-												backgroundColor:
-													roomInfo?.color,
+												backgroundColor: roomInfo?.color,
 												color: '#000',
 											}}
 										/>
@@ -259,13 +240,8 @@ export const RoomAssignmentDialog: React.FC<RoomAssignmentDialogProps> = (
 
 					{(isNewRoom || newRoomName) && (
 						<Box>
-							<Typography
-								variant="body2"
-								color="text.secondary"
-								gutterBottom
-							>
-								Creating new room:{' '}
-								<strong>{displayRoomName}</strong>
+							<Typography variant="body2" color="text.secondary" gutterBottom>
+								Creating new room: <strong>{displayRoomName}</strong>
 							</Typography>
 						</Box>
 					)}
@@ -280,14 +256,9 @@ export const RoomAssignmentDialog: React.FC<RoomAssignmentDialogProps> = (
 									mb: 1,
 								}}
 							>
-								<Typography variant="subtitle2">
-									Room Icon
-								</Typography>
+								<Typography variant="subtitle2">Room Icon</Typography>
 								{currentRoomInfo && !editingIcon && (
-									<IconButton
-										size="small"
-										onClick={() => setEditingIcon(true)}
-									>
+									<IconButton size="small" onClick={() => setEditingIcon(true)}>
 										<EditIcon fontSize="small" />
 									</IconButton>
 								)}
@@ -324,10 +295,7 @@ export const RoomAssignmentDialog: React.FC<RoomAssignmentDialogProps> = (
 							/>
 							{selectedIcon && (
 								<Box sx={{ mt: 2, textAlign: 'center' }}>
-									<Typography
-										variant="caption"
-										color="text.secondary"
-									>
+									<Typography variant="caption" color="text.secondary">
 										Preview
 									</Typography>
 									<Box

@@ -8,10 +8,7 @@ function _initRouting() {
 		{
 			'/:name': async (req, _server, { text }) => {
 				const name = req.params.name;
-				const params = (await untypedRequestJson(req)) as Record<
-					string,
-					unknown
-				>;
+				const params = (await untypedRequestJson(req)) as Record<string, unknown>;
 				await triggerWebhooks(
 					name,
 					params,

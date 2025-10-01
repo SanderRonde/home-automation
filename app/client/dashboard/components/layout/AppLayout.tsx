@@ -32,8 +32,7 @@ const darkTheme = createTheme({
 		MuiAppBar: {
 			styleOverrides: {
 				root: {
-					background:
-						'linear-gradient(45deg, #242424 30%, #2a2a2a 90%)',
+					background: 'linear-gradient(45deg, #242424 30%, #2a2a2a 90%)',
 					borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
 				},
 			},
@@ -41,8 +40,7 @@ const darkTheme = createTheme({
 		MuiDrawer: {
 			styleOverrides: {
 				paper: {
-					background:
-						'linear-gradient(180deg, #242424 0%, #1a1a1a 100%)',
+					background: 'linear-gradient(180deg, #242424 0%, #1a1a1a 100%)',
 					borderRight: '1px solid rgba(255, 255, 255, 0.05)',
 				},
 			},
@@ -78,11 +76,7 @@ export const AppLayout = (props: AppLayoutProps): JSX.Element => {
 					bgcolor: 'background.default',
 				}}
 			>
-				<TopBar
-					open={open}
-					setOpen={setOpen}
-					currentTab={props.currentTab}
-				/>
+				<TopBar open={open} setOpen={setOpen} currentTab={props.currentTab} />
 				<Sidebar
 					open={open}
 					isMobile={isMobile}
@@ -102,8 +96,7 @@ export const AppLayout = (props: AppLayoutProps): JSX.Element => {
 						transition: (theme) =>
 							theme.transitions.create('margin', {
 								easing: theme.transitions.easing.sharp,
-								duration:
-									theme.transitions.duration.leavingScreen,
+								duration: theme.transitions.duration.leavingScreen,
 							}),
 						// Only shift content on desktop when sidebar is open
 						marginLeft: !isMobile && open ? '240px' : 0,

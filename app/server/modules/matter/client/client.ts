@@ -60,11 +60,7 @@ export class MatterClient implements Disposable {
 		]);
 
 		this.#proc.on('error', (error) => {
-			logTag(
-				'matter-client',
-				'red',
-				`Failed to start process: ${error.message}`
-			);
+			logTag('matter-client', 'red', `Failed to start process: ${error.message}`);
 		});
 
 		this.#proc.stdout.on('data', (data: Buffer | string) => {
@@ -82,20 +78,12 @@ export class MatterClient implements Disposable {
 				try {
 					const message = JSON.parse(line.trim());
 					if (MATTER_DEBUG) {
-						logTag(
-							'matter-client',
-							'blue',
-							`Received message: ${line}`
-						);
+						logTag('matter-client', 'blue', `Received message: ${line}`);
 					}
 					this.#listeners.forEach((listener) => listener(message));
 				} catch (error) {
 					// If it's not JSON, it might be an error message from the process startup
-					logTag(
-						'matter-client',
-						'red',
-						`Process error: ${line.trim()}`
-					);
+					logTag('matter-client', 'red', `Process error: ${line.trim()}`);
 				}
 			}
 		});
@@ -122,18 +110,11 @@ export class MatterClient implements Disposable {
 		});
 		setTimeout(() => {
 			if (!responded) {
-				logTag(
-					'matter-client',
-					'red',
-					'No response from matter server'
-				);
+				logTag('matter-client', 'red', 'No response from matter server');
 			}
 		}, 5000);
 		this.onMessage((message) => {
-			if (
-				message.category ===
-				MatterServerOutputMessageType.StructureChanged
-			) {
+			if (message.category === MatterServerOutputMessageType.StructureChanged) {
 				void this.request({
 					type: MatterServerInputMessageType.ListDevices,
 					arguments: [],
@@ -146,15 +127,11 @@ export class MatterClient implements Disposable {
 		this.#proc?.kill();
 	}
 
-	public onMessage(
-		listener: (message: MatterServerOutputMessage) => void
-	): void {
+	public onMessage(listener: (message: MatterServerOutputMessage) => void): void {
 		this.#listeners.add(listener);
 	}
 
-	public offMessage(
-		listener: (message: MatterServerOutputMessage) => void
-	): void {
+	public offMessage(listener: (message: MatterServerOutputMessage) => void): void {
 		this.#listeners.delete(listener);
 	}
 
@@ -166,8 +143,7 @@ export class MatterClient implements Disposable {
 			const identifier = this.#requestIdentifier++;
 			const listener = (message: MatterServerOutputMessage) => {
 				if (
-					message.category ===
-						MatterServerOutputMessageType.Response &&
+					message.category === MatterServerOutputMessageType.Response &&
 					message.identifier === identifier
 				) {
 					this.offMessage(listener);
@@ -185,11 +161,7 @@ export class MatterClient implements Disposable {
 				...message,
 			});
 			if (MATTER_DEBUG) {
-				logTag(
-					'matter-client',
-					'blue',
-					`Sending message: ${messageString}`
-				);
+				logTag('matter-client', 'blue', `Sending message: ${messageString}`);
 			}
 			this.#proc.stdin.write(messageString + '\n');
 		});

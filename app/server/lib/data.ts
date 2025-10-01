@@ -93,9 +93,7 @@ export class MappedData<Type, UpstreamType> extends Data<Type> {
 		}
 	}
 
-	private readonly sub: DataCallback<UpstreamType> = (
-		upstreamValue: UpstreamType
-	) => {
+	private readonly sub: DataCallback<UpstreamType> = (upstreamValue: UpstreamType) => {
 		this.set(this.mapper(upstreamValue, this._value as Type | undefined));
 	};
 
@@ -119,10 +117,7 @@ export class MappedData<Type, UpstreamType> extends Data<Type> {
 
 	public override async get(): Promise<Exclude<Type, undefined>> {
 		const upstreamValue = await this.upstream.get();
-		const mappedValue = this.mapper(
-			upstreamValue,
-			this._value as Type | undefined
-		);
+		const mappedValue = this.mapper(upstreamValue, this._value as Type | undefined);
 		if (this._subscribers.size) {
 			this.set(mappedValue);
 		}
@@ -131,10 +126,7 @@ export class MappedData<Type, UpstreamType> extends Data<Type> {
 }
 
 export type Mapper<InputType = unknown, OutputType = unknown> = {
-	bivarianceHack(
-		input: InputType,
-		prevOutput: OutputType | undefined
-	): OutputType;
+	bivarianceHack(input: InputType, prevOutput: OutputType | undefined): OutputType;
 }['bivarianceHack'];
 export class CombinedData<T, U> extends Data<[T, U]> {
 	private readonly upstreams: CombinedDataUpstreams<T, U>;
@@ -144,10 +136,7 @@ export class CombinedData<T, U> extends Data<[T, U]> {
 		super([upstreams[0].current(), upstreams[1].current()]);
 		this.upstreams = upstreams;
 
-		this.subs = [
-			(value) => this.setSingle(0, value),
-			(value) => this.setSingle(1, value),
-		];
+		this.subs = [(value) => this.setSingle(0, value), (value) => this.setSingle(1, value)];
 	}
 
 	private setSingle(key: 0, value: T): void;

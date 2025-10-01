@@ -27,9 +27,7 @@ interface DevicePickerProps {
 }
 
 export const DevicePicker: React.FC<DevicePickerProps> = (props) => {
-	const [selectedDevices, setSelectedDevices] = React.useState<string[]>(
-		props.currentSelection
-	);
+	const [selectedDevices, setSelectedDevices] = React.useState<string[]>(props.currentSelection);
 	const [searchTerm, setSearchTerm] = React.useState('');
 	const [devices, setDevices] = React.useState<
 		ReturnTypeForApi<'device', '/list', 'GET'>['ok']['devices']
@@ -71,9 +69,7 @@ export const DevicePicker: React.FC<DevicePickerProps> = (props) => {
 
 	const handleToggleDevice = (deviceId: string) => {
 		setSelectedDevices((prev) =>
-			prev.includes(deviceId)
-				? prev.filter((id) => id !== deviceId)
-				: [...prev, deviceId]
+			prev.includes(deviceId) ? prev.filter((id) => id !== deviceId) : [...prev, deviceId]
 		);
 	};
 
@@ -130,9 +126,7 @@ export const DevicePicker: React.FC<DevicePickerProps> = (props) => {
 									<Chip
 										key={deviceId}
 										label={deviceId}
-										onDelete={() =>
-											handleRemoveChip(deviceId)
-										}
+										onDelete={() => handleRemoveChip(deviceId)}
 										color="primary"
 										variant="outlined"
 										size="small"
@@ -147,9 +141,7 @@ export const DevicePicker: React.FC<DevicePickerProps> = (props) => {
 					Available Devices:
 				</Typography>
 				{loading ? (
-					<Box
-						sx={{ display: 'flex', justifyContent: 'center', p: 3 }}
-					>
+					<Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
 						<CircularProgress />
 					</Box>
 				) : (
@@ -178,26 +170,17 @@ export const DevicePicker: React.FC<DevicePickerProps> = (props) => {
 								<ListItem
 									key={device.id}
 									component="button"
-									onClick={() =>
-										handleToggleDevice(device.id)
-									}
+									onClick={() => handleToggleDevice(device.id)}
 									sx={{
 										'&:hover': {
 											bgcolor: 'action.hover',
 										},
-										opacity:
-											device.status === 'offline'
-												? 0.6
-												: 1,
+										opacity: device.status === 'offline' ? 0.6 : 1,
 									}}
 								>
 									<Checkbox
-										checked={selectedDevices.includes(
-											device.id
-										)}
-										onChange={() =>
-											handleToggleDevice(device.id)
-										}
+										checked={selectedDevices.includes(device.id)}
+										onChange={() => handleToggleDevice(device.id)}
 										color="primary"
 									/>
 									<ListItemText
@@ -221,8 +204,7 @@ export const DevicePicker: React.FC<DevicePickerProps> = (props) => {
 													label={device.status}
 													size="small"
 													color={
-														device.status ===
-														'online'
+														device.status === 'online'
 															? 'success'
 															: 'default'
 													}

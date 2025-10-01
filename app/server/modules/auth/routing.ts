@@ -41,24 +41,18 @@ async function _getRoutes(userManagement: UserManagement) {
 							);
 
 							if (!user) {
-								return error(
-									'Invalid username or password',
-									401
-								);
+								return error('Invalid username or password', 401);
 							}
 
 							// Create session
-							const sessionId =
-								await userManagement.createSession(user.id);
+							const sessionId = await userManagement.createSession(user.id);
 
 							// Set session cookie
 							req.cookies.set('session', sessionId, {
 								httpOnly: true,
 								secure: false, // Set to true if using HTTPS
 								sameSite: 'lax',
-								expires: new Date(
-									Date.now() + 30 * 24 * 60 * 60 * 1000
-								),
+								expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
 							});
 
 							return json({
@@ -113,6 +107,4 @@ export const getRoutes = _getRoutes as (
 ) => Promise<ServeOptions<unknown>>;
 
 export type AuthRoutes =
-	Awaited<ReturnType<typeof _getRoutes>> extends ServeOptions<infer R>
-		? R
-		: never;
+	Awaited<ReturnType<typeof _getRoutes>> extends ServeOptions<infer R> ? R : never;

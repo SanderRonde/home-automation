@@ -56,10 +56,7 @@ export function wait(time: number): Promise<void> {
 		setTimeout(resolve, time);
 	});
 }
-export function asyncSetInterval(
-	callback: () => void | Promise<void>,
-	interval: number
-): Timer {
+export function asyncSetInterval(callback: () => void | Promise<void>, interval: number): Timer {
 	return setInterval(() => {
 		void callback();
 	}, interval);

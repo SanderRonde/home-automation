@@ -36,11 +36,7 @@ class TempControl {
 			Math.round(this.lastLoggedTemp) !== Math.round(temp) &&
 			Date.now() - this.lastLogTime > LOG_INTERVAL_SECS * 1000
 		) {
-			logTag(
-				'temp',
-				'cyan',
-				chalk.bold(`Current ${this.name} temperature: ${temp}°`)
-			);
+			logTag('temp', 'cyan', chalk.bold(`Current ${this.name} temperature: ${temp}°`));
 			this.lastLogTime = Date.now();
 		}
 
@@ -51,9 +47,7 @@ class TempControl {
 		return this.lastTemp;
 	}
 
-	public addListener(
-		listener: (temperature: number) => void | Promise<void>
-	) {
+	public addListener(listener: (temperature: number) => void | Promise<void>) {
 		this._listeners.push(listener);
 	}
 
@@ -87,10 +81,7 @@ class TempControl {
 
 const controllers: Map<string, TempControl> = new Map();
 
-export async function getController(
-	db: SQL,
-	name = 'default'
-): Promise<TempControl> {
+export async function getController(db: SQL, name = 'default'): Promise<TempControl> {
 	if (!controllers.has(name)) {
 		controllers.set(name, await new TempControl(db, name).init());
 	}
