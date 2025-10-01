@@ -116,6 +116,18 @@ export class MappedData<Type, UpstreamType> extends Data<Type> {
 		}
 		return this._value;
 	}
+
+	public override async get(): Promise<Exclude<Type, undefined>> {
+		const upstreamValue = await this.upstream.get();
+		const mappedValue = this.mapper(
+			upstreamValue,
+			this._value as Type | undefined
+		);
+		if (this._subscribers.size) {
+			this.set(mappedValue);
+		}
+		return mappedValue as Exclude<Type, undefined>;
+	}
 }
 
 export type Mapper<InputType = unknown, OutputType = unknown> = {
@@ -154,6 +166,18 @@ export class CombinedData<T, U> extends Data<[T, U]> {
 	protected override destroy(): void {
 		this.upstreams[0].unsubscribe(this.subs[0]);
 		this.upstreams[1].unsubscribe(this.subs[1]);
+	}
+
+	public override async get(): Promise<[T, U]> {
+		const [value1, value2] = await Promise.all([
+			this.upstreams[0].get(),
+			this.upstreams[1].get(),
+		]);
+		const combined: [T, U] = [value1, value2];
+		if (this._subscribers.size) {
+			this.set(combined);
+		}
+		return combined;
 	}
 }
 
