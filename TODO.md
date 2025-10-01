@@ -9,3 +9,6 @@
 [x] Typed routes
 [x] Add MCP server
 [x] Bump prettier printWidth
+[ ] Add more fine-grained controls to lights that support color
+[ ] Add UI for more clusters
+[ ] Add support for scenes
