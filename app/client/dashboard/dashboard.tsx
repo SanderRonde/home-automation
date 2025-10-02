@@ -4,6 +4,7 @@ import { SidebarTab } from './components/layout/Sidebar';
 import { NotFoundPage } from './components/NotFoundPage';
 import { WelcomePage } from './components/WelcomePage';
 import { WLEDConfig } from './components/WLEDConfig';
+import { MCPConfig } from './components/MCPConfig';
 import React, { useState, useEffect } from 'react';
 import { Devices } from './components/Devices';
 import { createRoot } from 'react-dom/client';
@@ -40,21 +41,18 @@ function DashboardApp() {
 
 	const renderContent = () => {
 		switch (currentTab) {
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
 			case SidebarTab.HOME:
 				return <Home />;
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
 			case SidebarTab.SETTINGS:
 				return <WelcomePage />;
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
 			case SidebarTab.DEVICES:
 				return <Devices />;
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
 			case SidebarTab.EWELINK:
 				return <EweLinkConfig />;
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
 			case SidebarTab.WLED:
 				return <WLEDConfig />;
+			case SidebarTab.MCP:
+				return <MCPConfig />;
 			default:
 				return <NotFoundPage onReturnToSettings={handleReturnToSettings} />;
 		}

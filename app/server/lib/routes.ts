@@ -32,7 +32,7 @@ export function createServeOptions<
 		routes: R;
 		fetch?: (this: Server, request: Request, server: Server) => Response | Promise<Response>;
 	})['routes'],
-	auth: boolean,
+	auth: boolean | Record<string, boolean>,
 	websocket?: ServeOptions<R>['websocket']
 ): ServeOptions<R> {
 	const middleware = (

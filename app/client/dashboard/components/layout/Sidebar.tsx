@@ -4,6 +4,7 @@ import {
 	Cloud as CloudIcon,
 	Lightbulb as LightbulbIcon,
 	Home as HomeIcon,
+	SmartToy as SmartToyIcon,
 } from '@mui/icons-material';
 import {
 	Drawer,
@@ -47,6 +48,7 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 		{ text: 'Devices', icon: <DeviceHubIcon />, id: SidebarTab.DEVICES }, // Updated icon for Matter
 		{ text: 'eWeLink', icon: <CloudIcon />, id: SidebarTab.EWELINK },
 		{ text: 'WLED', icon: <LightbulbIcon />, id: SidebarTab.WLED },
+		{ text: 'MCP', icon: <SmartToyIcon />, id: SidebarTab.MCP },
 	];
 
 	const handleTabChange = (tab: SidebarTab) => {
@@ -92,4 +94,5 @@ export enum SidebarTab {
 	DEVICES = 'devices',
 	EWELINK = 'ewelink',
 	WLED = 'wled',
+	MCP = 'mcp',
 }

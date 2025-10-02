@@ -21,9 +21,7 @@
 		"test:watch": "bun test --watch",
 		"start": "bun app/server/app.ts --http 1272 --https 1273 -vvvvvv --color -i",
 		"dev": "bun --hot app/server/app.ts --http 1272 --https 1273 -vvvvvv --color -i --debug",
-		"knip": "knip-bun",
-		"generate-mcp-key": "bun scripts/generate-mcp-key.ts",
-		"manage-mcp-keys": "bun scripts/manage-mcp-keys.ts"
+		"knip": "knip-bun"
 	},
 	"devDependencies": {
 		"@matter/types": "^0.15.3",

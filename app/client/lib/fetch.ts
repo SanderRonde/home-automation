@@ -6,6 +6,7 @@ import type { EwelinkRoutes } from '../../server/modules/ewelink/routing';
 import type { DeviceRoutes } from '../../server/modules/device/routing';
 import type { WledRoutes } from '../../server/modules/wled/routing';
 import type { AuthRoutes } from '../../server/modules/auth/routing';
+import type { MCPRoutes } from '../../server/modules/mcp/routing';
 import type { BotRoutes } from '../../server/modules/bot/routing';
 import type { RouterTypes } from 'bun';
 import type z from 'zod';
@@ -87,12 +88,48 @@ export async function apiPost<
 	)) as any;
 }
 
+export async function apiDelete<
+	M extends keyof RoutesForModules,
+	E extends keyof RoutesForModules[M],
+>(
+	module: M,
+	endpoint: Extract<E, string>,
+	pathParams: RouterTypes.ExtractRouteParams<Extract<E, string>>
+): Promise<
+	Omit<Response, 'json' | 'ok'> &
+		(
+			| {
+					ok: true;
+					json: () => Promise<Exclude<ReturnTypeForApi<M, E, 'DELETE'>['ok'], string>>;
+					text: () => Promise<Extract<ReturnTypeForApi<M, E, 'DELETE'>['ok'], string>>;
+			  }
+			| {
+					ok: false;
+					json: () => Promise<Exclude<ReturnTypeForApi<M, E, 'DELETE'>['error'], string>>;
+					text: () => Promise<Extract<ReturnTypeForApi<M, E, 'DELETE'>['error'], string>>;
+			  }
+		)
+> {
+	// eslint-disable-next-line no-restricted-globals
+	return (await fetch(
+		`/${module}${replacePathParams(endpoint, pathParams)}`,
+		{
+			method: 'DELETE',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+		}
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	)) as any;
+}
+
 type RoutesForModules = {
 	auth: AuthRoutes;
 	bot: BotRoutes;
 	dashboard: DashboardRoutes;
 	device: DeviceRoutes;
 	ewelink: EwelinkRoutes;
+	mcp: MCPRoutes;
 	temperature: TemperatureRoutes;
 	webhook: WebhookRoutes;
 	wled: WledRoutes;
@@ -101,7 +138,7 @@ type RoutesForModules = {
 export type ReturnTypeForApi<
 	M extends keyof RoutesForModules,
 	endpoint extends keyof RoutesForModules[M],
-	method extends 'GET' | 'POST',
+	method extends 'GET' | 'POST' | 'DELETE',
 > = {
 	ok: _ReturnTypeForApi<RoutesForModules[M], endpoint, method, false>;
 	error: _ReturnTypeForApi<RoutesForModules[M], endpoint, method, true>;
@@ -110,7 +147,7 @@ export type ReturnTypeForApi<
 export type BodyTypeForApi<
 	M extends keyof RoutesForModules,
 	endpoint extends keyof RoutesForModules[M],
-	method extends 'GET' | 'POST',
+	method extends 'GET' | 'POST' | 'DELETE',
 > =
 	RoutesForModules[M][endpoint] extends RouteBodyBrand<unknown, infer B extends z.ZodTypeAny>
 		? z.input<B>
@@ -123,7 +160,7 @@ export type BodyTypeForApi<
 type _ReturnTypeForApi<
 	R extends Record<string, unknown>,
 	endpoint extends keyof R,
-	method extends 'GET' | 'POST',
+	method extends 'GET' | 'POST' | 'DELETE',
 	E extends boolean,
 > =
 	Extract<
@@ -136,7 +173,7 @@ type _ReturnTypeForApi<
 type _GetBrandedResponse<
 	R extends Record<string, unknown>,
 	endpoint extends keyof R,
-	method extends 'GET' | 'POST',
+	method extends 'GET' | 'POST' | 'DELETE',
 > =
 	R[endpoint] extends BrandedResponse<unknown, boolean>
 		? R[endpoint]
