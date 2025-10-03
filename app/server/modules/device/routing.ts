@@ -1,6 +1,11 @@
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 /* eslint-disable @typescript-eslint/no-duplicate-type-constituents */
-import { DeviceOnOffCluster, DeviceClusterName, DeviceWindowCoveringCluster } from './cluster';
+import {
+	DeviceOnOffCluster,
+	DeviceClusterName,
+	DeviceWindowCoveringCluster,
+	DevicePowerSourceCluster,
+} from './cluster';
 import type { BrandedRouteHandlerResponse, ServeOptions } from '../../lib/routes';
 import { createServeOptions, withRequestBody } from '../../lib/routes';
 import type * as Icons from '@mui/icons-material';
@@ -40,8 +45,17 @@ export type DashboardDeviceClusterWindowCovering = DashboardDeviceClusterBase & 
 	targetPositionLiftPercentage: number;
 };
 
+export type DashboardDeviceClusterPowerSource = DashboardDeviceClusterBase & {
+	name: DeviceClusterName.POWER_SOURCE;
+	batteryPercentage?: number;
+};
+
 export type DashboardDeviceClusterWithState = DashboardDeviceClusterBase &
-	(DashboardDeviceClusterOnOff | DashboardDeviceClusterWindowCovering);
+	(
+		| DashboardDeviceClusterOnOff
+		| DashboardDeviceClusterWindowCovering
+		| DashboardDeviceClusterPowerSource
+	);
 
 interface DashboardDeviceEndpointResponse {
 	name: string;
@@ -81,6 +95,19 @@ function _initRouting({ db, modules }: ModuleConfig, api: DeviceAPI) {
 				icon: getClusterIconName(clusterName),
 				targetPositionLiftPercentage: await cluster.targetPositionLiftPercentage.get(),
 			};
+		}
+		if (
+			cluster instanceof DevicePowerSourceCluster &&
+			clusterName === DeviceClusterName.POWER_SOURCE
+		) {
+			const batteryLevel = await cluster.batteryChargeLevel.get();
+			if (batteryLevel !== null) {
+				return {
+					name: clusterName,
+					icon: getClusterIconName(clusterName),
+					batteryPercentage: batteryLevel,
+				};
+			}
 		}
 		return {
 			name: clusterName,

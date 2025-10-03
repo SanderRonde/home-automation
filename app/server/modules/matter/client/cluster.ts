@@ -62,8 +62,8 @@ class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 
 	public constructor(
 		node: PairedNode,
-		private readonly endpoint: Endpoint,
-		private readonly cluster: ClusterClientObj
+		public readonly endpoint: Endpoint,
+		public readonly cluster: ClusterClientObj
 	) {
 		node.events.attributeChanged.on(this.onAttributeChanged);
 		this._disposables.add(() => {

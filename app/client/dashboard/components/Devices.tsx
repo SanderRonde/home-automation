@@ -29,6 +29,7 @@ import {
 	Edit as EditIcon,
 	Check as CheckIcon,
 	Close as CloseIcon,
+	Battery90 as BatteryIcon,
 } from '@mui/icons-material';
 import { RoomAssignmentDialog } from './RoomAssignmentDialog';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -125,6 +126,39 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 		return IconComponent ? <IconComponent sx={{ fill: '#2f2f2f' }} /> : null;
 	};
 
+	// Helper to get battery percentage from all device clusters (including nested endpoints)
+	const getBatteryPercentage = (): number | undefined => {
+		const findBatteryInClusters = (
+			clusters: typeof props.device.clusters
+		): number | undefined => {
+			for (const cluster of clusters) {
+				// Type guard to check if this is a power source cluster with battery percentage
+				if ('batteryPercentage' in cluster && cluster.batteryPercentage !== undefined) {
+					return cluster.batteryPercentage;
+				}
+			}
+			return undefined;
+		};
+
+		// Check root device clusters
+		const rootBattery = findBatteryInClusters(props.device.clusters);
+		if (rootBattery !== undefined) {
+			return rootBattery;
+		}
+
+		// Check endpoint clusters
+		for (const endpoint of props.device.endpoints) {
+			const endpointBattery = findBatteryInClusters(endpoint.clusters);
+			if (endpointBattery !== undefined) {
+				return endpointBattery;
+			}
+		}
+
+		return undefined;
+	};
+
+	const batteryPercentage = getBatteryPercentage();
+
 	return (
 		<Card key={props.device.uniqueId} elevation={1}>
 			{/* Header with name, edit controls, and room */}
@@ -204,6 +238,43 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 							>
 								{props.device.name}
 							</Typography>
+							{batteryPercentage !== undefined && (
+								<Tooltip title={`Battery: ${Math.round(batteryPercentage * 100)}%`}>
+									<Box
+										sx={{
+											display: 'flex',
+											alignItems: 'center',
+											gap: 0.5,
+											px: 1,
+											py: 0.5,
+											borderRadius: 1,
+											backgroundColor: 'action.hover',
+											flexShrink: 0,
+										}}
+									>
+										<BatteryIcon
+											sx={{
+												fontSize: '1.2rem',
+												color:
+													batteryPercentage > 0.2
+														? 'success.main'
+														: batteryPercentage > 0.1
+															? 'warning.main'
+															: 'error.main',
+											}}
+										/>
+										<Typography
+											variant="body2"
+											sx={{
+												fontWeight: 500,
+												color: 'text.secondary',
+											}}
+										>
+											{Math.round(batteryPercentage * 100)}%
+										</Typography>
+									</Box>
+								</Tooltip>
+							)}
 							<Tooltip title="Edit name">
 								<IconButton
 									size="small"
