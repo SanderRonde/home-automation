@@ -10,6 +10,7 @@
 		"node": ">=16.0.0"
 	},
 	"scripts": {
+		"postinstall": "patch-package",
 		"compile": "tsc -p app/tsconfig.json",
 		"watch": "tsc -w -p app/tsconfig.json",
 		"pretty": "pretty-quick",
@@ -51,9 +52,9 @@
 	},
 	"dependencies": {
 		"@matter/main": "^0.15.3",
+		"@modelcontextprotocol/sdk": "^1.18.2",
 		"@mui/icons-material": "^7.3.2",
 		"@mui/material": "^7.3.2",
-		"@modelcontextprotocol/sdk": "^1.18.2",
 		"@project-chip/matter.js": "^0.15.3",
 		"chalk": "^2.4.2",
 		"dotenv": "^17.2.1",
@@ -65,6 +66,7 @@
 		"lit-html": "1.1.0",
 		"magic-home": "^2.6.0",
 		"optional-require": "^1.0.0",
+		"patch-package": "^8.0.1",
 		"ping": "^0.2.2",
 		"wc-lib": "^1.2.8",
 		"wled-client": "^0.22.1",
