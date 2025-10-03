@@ -1,6 +1,5 @@
 {
 	"compilerOptions": {
-		"baseUrl": ".",
 		"alwaysStrict": true,
 		"paths": {
 			"*": ["../../types/*"]

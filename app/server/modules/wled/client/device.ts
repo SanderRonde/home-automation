@@ -21,8 +21,8 @@ export class WLEDDevice extends DeviceEndpoint implements Device {
 		return DeviceSource.WLED;
 	}
 
-	public getDeviceName(): string {
-		return this._info.name ?? this._ip;
+	public getDeviceName(): Promise<string> {
+		return Promise.resolve(this._info.name ?? this._ip);
 	}
 
 	public get clusters(): Cluster[] {

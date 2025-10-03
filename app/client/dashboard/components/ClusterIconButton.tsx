@@ -48,7 +48,7 @@ const ClusterIconButtonSkeleton = (props: ClusterIconButtonSkeletonProps) => {
 		>
 			{getClusterIcon(
 				props.devices
-					.flatMap((d) => d.allClusters)
+					.flatMap((d) => d.clusters)
 					.filter((c) => c.name === props.clusterName)[0]?.icon
 			)}
 		</IconButton>
@@ -57,10 +57,10 @@ const ClusterIconButtonSkeleton = (props: ClusterIconButtonSkeletonProps) => {
 
 const WindowCoveringIconButton = (props: ClusterIconButtonProps) => {
 	const devices = props.devices.filter((device) =>
-		device.allClusters.some((c) => c.name === DeviceClusterName.WINDOW_COVERING)
+		device.clusters.some((c) => c.name === DeviceClusterName.WINDOW_COVERING)
 	);
 	const anyEnabled = devices
-		.flatMap((d) => d.allClusters)
+		.flatMap((d) => d.clusters)
 		.filter((c) => c.name === DeviceClusterName.WINDOW_COVERING)
 		.some((d) => d.targetPositionLiftPercentage === 0);
 	return (
@@ -86,10 +86,10 @@ const WindowCoveringIconButton = (props: ClusterIconButtonProps) => {
 
 const OnOffIconButton = (props: ClusterIconButtonProps) => {
 	const devices = props.devices.filter((device) =>
-		device.allClusters.some((c) => c.name === DeviceClusterName.ON_OFF)
+		device.clusters.some((c) => c.name === DeviceClusterName.ON_OFF)
 	);
 	const anyEnabled = devices
-		.flatMap((d) => d.allClusters)
+		.flatMap((d) => d.clusters)
 		.filter((c) => c.name === DeviceClusterName.ON_OFF)
 		.some((d) => d.isOn);
 	return (

@@ -80,6 +80,11 @@
 		"unused-imports/no-unused-member-access": "off",
 		"@typescript-eslint/ban-ts-comment": "off",
 		"@typescript-eslint/no-unsafe-argument": "off",
-		"node/no-extraneous-import": "off"
+		"n/no-extraneous-import": [
+			"error",
+			{
+				"allowModules": ["@matter/protocol"]
+			}
+		]
 	}
 }

@@ -19,23 +19,17 @@ import type {
 	TemperatureMeasurement,
 	WindowCovering,
 } from '@matter/main/clusters';
-import {
-	GroupId,
-	Status,
-	type Attribute,
-	type BitSchema,
-	type ClusterId,
-	type Command,
-} from '@matter/types';
-import { MatterServerInputMessageType, MatterServerOutputMessageType } from '../server/server';
+import { GroupId, Status, type Attribute, type BitSchema, type Command } from '@matter/types';
+import type { PairedNode, Endpoint } from '@project-chip/matter.js/device';
 import type { Cluster, DeviceGroupId } from '../../device/cluster';
 import type { LevelControl } from '@matter/main/clusters';
 import { DeviceClusterName } from '../../device/cluster';
+import type { ClusterClientObj } from '@matter/protocol';
+import type { Observable, Observer } from '@matter/main';
 import type { WritableAttribute } from '@matter/types';
 import { DeviceStatus } from '../../device/cluster';
 import { CombinedData } from '../../../lib/data';
 import { MappedData } from '../../../lib/data';
-import type { MatterClient } from './client';
 import { Color } from '../../../lib/color';
 import { Data } from '../../../lib/data';
 
@@ -62,48 +56,43 @@ export interface MatterClusterInterface {
 	commands: Record<string, Command<unknown, unknown, BitSchema>>;
 }
 
-class ClusterProxy<C extends MatterClusterInterface> {
+class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 	#attributes: Record<string, Data<unknown>> = {};
+	private _disposables: Set<() => void> = new Set();
 
 	public constructor(
-		private readonly nodeId: string,
-		private readonly endpointNumber: string,
-		private readonly id: ClusterId,
-		private readonly matterClient: MatterClient
+		node: PairedNode,
+		private readonly endpoint: Endpoint,
+		private readonly cluster: ClusterClientObj
 	) {
-		matterClient.onMessage((message) => {
-			if (message.category === MatterServerOutputMessageType.AttributeChanged) {
-				if (
-					message.nodeId === nodeId &&
-					message.attributePath[0] === Number(endpointNumber) &&
-					message.attributePath[1] === id
-				) {
-					this.onAttributeChanged(message.attributePath[2], JSON.parse(message.newValue));
-				}
-			}
+		node.events.attributeChanged.on(this.onAttributeChanged);
+		this._disposables.add(() => {
+			node.events.attributeChanged.off(this.onAttributeChanged);
 		});
 	}
 
-	public onAttributeChanged(attributeName: string, newValue: unknown): void {
-		const attribute = this.#attributes[attributeName];
-		if (attribute) {
-			void attribute.set(newValue);
+	public onAttributeChanged: ObservableForObserver<
+		InstanceType<typeof PairedNode>['events']['attributeChanged']
+	> = (attribute) => {
+		if (
+			attribute.path.endpointId === this.endpoint.number &&
+			attribute.path.clusterId === this.cluster.id
+		) {
+			this.#attributes[attribute.path.attributeName]?.set(attribute.value);
 		}
-	}
+	};
 
 	public attributeGetter<
 		A extends Extract<keyof C['attributes'], string>,
 		AT extends AttributeType<C['attributes'][A]>,
 		R = AT,
-	>(attribute: A, mapper?: (value: AT | undefined) => R): Data<R | undefined> {
+	>(attributeName: A, mapper?: (value: AT | undefined) => R): Data<R | undefined> {
 		const emitter = (() => {
-			const { matterClient, nodeId, endpointNumber, id } = this;
+			const { cluster } = this;
 			class cls extends Data<AT | undefined> {
 				public override async get(): Promise<Exclude<AT, undefined>> {
-					const result = (await matterClient.request({
-						type: MatterServerInputMessageType.GetAttribute,
-						arguments: [nodeId, endpointNumber, id, attribute],
-					})) as Exclude<AT, undefined>;
+					const attribute = cluster.attributes[attributeName];
+					const result = await attribute.get();
 					if (mapper) {
 						return mapper(result) as Exclude<AT, undefined>;
 					}
@@ -113,7 +102,7 @@ class ClusterProxy<C extends MatterClusterInterface> {
 
 			return new cls(undefined);
 		})();
-		this.#attributes[attribute] = emitter;
+		this.#attributes[attributeName] = emitter;
 
 		return emitter as Data<R | undefined>;
 	}
@@ -122,13 +111,11 @@ class ClusterProxy<C extends MatterClusterInterface> {
 		A extends Extract<WritableAttributes<C['attributes']>, string>,
 		AT extends AttributeType<C['attributes'][A]>,
 		I,
-	>(attribute: A, mapper: (value: I) => AT | Promise<AT>): (value: I) => Promise<void> {
+	>(attributeName: A, mapper: (value: I) => AT | Promise<AT>): (value: I) => Promise<void> {
 		return async (value: I) => {
 			const mapped = await mapper(value);
-			await this.matterClient.request({
-				type: MatterServerInputMessageType.SetAttribute,
-				arguments: [this.nodeId, this.endpointNumber, this.id, attribute, mapped],
-			});
+			const attribute = this.cluster.attributes[attributeName];
+			await attribute.set(mapped);
 		};
 	}
 
@@ -174,7 +161,7 @@ class ClusterProxy<C extends MatterClusterInterface> {
 		args: CommandTypes<C['commands'][M]>['args']
 	) => Promise<CommandTypes<C['commands'][M]>['response']>;
 	public command<M extends Extract<keyof C['commands'], string>, A = void, R = void>(
-		command: M,
+		commandName: M,
 		mappers?: {
 			input?: (
 				value: A
@@ -185,23 +172,23 @@ class ClusterProxy<C extends MatterClusterInterface> {
 		}
 	): (args: A) => Promise<CommandTypes<C['commands'][M]>['response']> {
 		return async (args: A) => {
-			const mappedInput = mappers?.input ? await mappers.input(args) : (args as unknown);
-			const payload: unknown[] =
-				mappedInput === undefined
-					? []
-					: Array.isArray(mappedInput)
-						? (mappedInput as unknown[])
-						: [mappedInput];
-			const result = this.matterClient.request({
-				type: MatterServerInputMessageType.CallCluster,
-				arguments: [this.nodeId, this.endpointNumber, this.id, command, payload],
-			});
-			const response = await result;
+			const mappedInput = ((mappers?.input ? await mappers.input(args) : args) ??
+				[]) as unknown[];
+			const command = this.cluster.commands[commandName];
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const response = await (command as any)(...mappedInput);
 			const mappedOutput = mappers?.output ? mappers.output(response) : response;
 			return mappedOutput as CommandTypes<C['commands'][M]>['response'];
 		};
 	}
+
+	public [Symbol.dispose](): void {
+		this._disposables.forEach((dispose) => dispose());
+		this._disposables.clear();
+	}
 }
+
+type ObservableForObserver<T> = T extends Observable<infer U> ? Observer<U> : never;
 
 function ConfigurableCluster<T extends MatterClusterInterface>(
 	Base: (abstract new () => Cluster & {
@@ -211,18 +198,13 @@ function ConfigurableCluster<T extends MatterClusterInterface>(
 	return class extends Base {
 		public _proxy: ClusterProxy<T>;
 
-		public constructor(
-			nodeId: string,
-			endpointNumber: string,
-			id: ClusterId,
-			matterClient: MatterClient
-		) {
+		public constructor(node: PairedNode, endpoint: Endpoint, cluster: ClusterClientObj) {
 			super();
-			this._proxy = new ClusterProxy(nodeId, endpointNumber, id, matterClient);
+			this._proxy = new ClusterProxy(node, endpoint, cluster);
 		}
 
 		public [Symbol.dispose](): void {
-			// ...
+			this._proxy[Symbol.dispose]();
 		}
 	};
 }
@@ -483,6 +465,8 @@ export const IGNORED_MATTER_CLUSTERS = [
 	'GroupKeyManagement',
 	'DiagnosticLogs',
 	'PowerSourceConfiguration',
+	// Provides things like scenes/automations. Pretty cool but that should be done within the current framework.
+	'Actions',
 	'AccessControl',
 	// Given that this requires complex timing logic might as well
 	// just keep this under the original framework.

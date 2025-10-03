@@ -60,6 +60,8 @@ export abstract class DeviceEndpoint implements Disposable {
 		) as unknown as InstanceType<T>[];
 	}
 
+	public abstract getDeviceName(): Promise<string>;
+
 	public [Symbol.dispose](): void {
 		for (const cluster of this.clusters) {
 			cluster[Symbol.dispose]();
@@ -73,7 +75,6 @@ export abstract class DeviceEndpoint implements Disposable {
 export interface Device extends DeviceEndpoint {
 	getUniqueId(): string;
 	getSource(): DeviceSource;
-	getDeviceName(): string;
 }
 
 export class DeviceSource extends ClassEnum {

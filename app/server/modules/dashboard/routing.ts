@@ -13,8 +13,8 @@ function _initRouting({ modules }: ModuleConfig) {
 				new Response(Bun.file(path.join(CLIENT_FOLDER, 'dashboard/static', 'favicon.ico')))
 			),
 			'/pair/:code': async (req, _server, { json }) => {
-				const matterClient = await modules.matter.client.value;
-				const pairedDevices = await matterClient.pair(req.params.code);
+				const matterClient = await modules.matter.server.value;
+				const pairedDevices = await matterClient.commission(req.params.code);
 				return json({
 					devices: pairedDevices,
 				});

@@ -44,6 +44,7 @@ export type DashboardDeviceClusterWithState = DashboardDeviceClusterBase &
 	(DashboardDeviceClusterOnOff | DashboardDeviceClusterWindowCovering);
 
 interface DashboardDeviceEndpointResponse {
+	name: string;
 	clusters: DashboardDeviceClusterWithState[];
 	endpoints: DashboardDeviceEndpointResponse[];
 }
@@ -55,7 +56,7 @@ interface DashboardDeviceResponse extends DashboardDeviceEndpointResponse {
 		name: string;
 		emoji: string;
 	};
-	allClusters: DashboardDeviceClusterWithState[];
+	clusters: DashboardDeviceClusterWithState[];
 	room?: string;
 	roomColor?: string;
 	roomIcon?: keyof typeof Icons;
@@ -164,40 +165,36 @@ function _initRouting({ db, modules }: ModuleConfig, api: DeviceAPI) {
 					}
 
 					return {
+						name: await endpoint.getDeviceName(),
 						clusters,
 						endpoints,
 					};
 				};
 
-				for (const device of devices) {
-					const deviceId = device.getUniqueId();
-					const storedDevice = storedDevices[deviceId];
-					const room = storedDevice?.room;
-					const roomInfo = room ? rooms[room] : undefined;
+				await Promise.all(
+					devices.map(async (device) => {
+						const deviceId = device.getUniqueId();
+						const storedDevice = storedDevices[deviceId];
+						const room = storedDevice?.room;
+						const roomInfo = room ? rooms[room] : undefined;
 
-					const allClusters = [];
-					for (const cluster of device.allClusters) {
-						const clusterState = await _getClusterState(cluster);
-						allClusters.push(clusterState);
-					}
+						const endpointResponse = await getResponseForEndpoint(device);
 
-					const endpointResponse = await getResponseForEndpoint(device);
-
-					const responseDevice: DashboardDeviceResponse = {
-						uniqueId: deviceId,
-						name: storedDevice?.name ?? device.getDeviceName(),
-						source: {
-							name: device.getSource().value,
-							emoji: device.getSource().toEmoji(),
-						},
-						allClusters,
-						room: room,
-						roomColor: roomInfo?.color,
-						roomIcon: roomInfo?.icon,
-						...endpointResponse,
-					};
-					responseDevices.push(responseDevice);
-				}
+						const responseDevice: DashboardDeviceResponse = {
+							uniqueId: deviceId,
+							source: {
+								name: device.getSource().value,
+								emoji: device.getSource().toEmoji(),
+							},
+							room: room,
+							roomColor: roomInfo?.color,
+							roomIcon: roomInfo?.icon,
+							...endpointResponse,
+							name: storedDevice?.name ?? endpointResponse.name,
+						};
+						responseDevices.push(responseDevice);
+					})
+				);
 
 				return json({
 					devices: responseDevices,

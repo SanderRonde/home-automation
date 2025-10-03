@@ -24,15 +24,15 @@ class EwelinkEndpoint extends DeviceEndpoint implements Disposable {
 	) {
 		super();
 	}
+
+	public getDeviceName(): Promise<string> {
+		return Promise.resolve(this._eWeLinkConfig.device.itemData.name);
+	}
 }
 
 export abstract class EwelinkDevice extends EwelinkEndpoint implements Device, Disposable {
 	public getUniqueId(): string {
 		return `${this.getSource().value}:${this._eWeLinkConfig.device.itemData.deviceid}`;
-	}
-
-	public getDeviceName(): string {
-		return this._eWeLinkConfig.device.itemData.name;
 	}
 
 	public getSource(): DeviceSource {

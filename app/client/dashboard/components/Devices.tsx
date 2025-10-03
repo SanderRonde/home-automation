@@ -90,7 +90,7 @@ const EndpointVisualization: React.FC<EndpointVisualizationProps> = (props) => {
 							<EndpointVisualization
 								endpoint={subEndpoint}
 								level={props.level + 1}
-								title={`Endpoint ${idx + 1}`}
+								title={subEndpoint.name}
 							/>
 							{idx < props.endpoint.endpoints.length - 1 && (
 								<Divider sx={{ my: 1, opacity: 0.3 }} />
@@ -412,7 +412,7 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 								flexShrink: 0,
 							}}
 						>
-							{props.device.allClusters
+							{props.device.clusters
 								.filter((cluster) => cluster.icon)
 								.map((cluster, idx) => (
 									<Box
@@ -443,7 +443,7 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 						borderColor: 'divider',
 					}}
 				>
-					{props.device.allClusters.length > 0 && (
+					{props.device.clusters.length > 0 && (
 						<Box sx={{ mb: 3 }}>
 							<Typography variant="subtitle1" sx={{ pt: 2 }}>
 								Device ID
@@ -461,7 +461,7 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 									gap: 1,
 								}}
 							>
-								{props.device.allClusters.map((cluster, idx) => (
+								{props.device.clusters.map((cluster, idx) => (
 									<Chip
 										key={idx}
 										icon={getClusterIcon(cluster.icon) || undefined}

@@ -1,89 +1,88 @@
-import type { MatterDeviceCluster, MatterDeviceEndpoint } from '../server/server';
+import {
+	BasicInformationCluster,
+	BridgedDeviceBasicInformationCluster,
+} from '@matter/main/clusters';
 import { DeviceEndpoint, DeviceSource, type Device } from '../../device/device';
 import { MATTER_CLUSTERS, IGNORED_MATTER_CLUSTERS } from './cluster';
-import type { DeviceClusterName } from '../../device/cluster';
+import type { PairedNode } from '@project-chip/matter.js/device';
+import type { Endpoint } from '@project-chip/matter.js/device';
+import type { ClusterClientObj } from '@matter/protocol';
 import { type MatterClusterInterface } from './cluster';
+import { EndpointNumber } from '@matter/types';
 import type { MatterCluster } from './cluster';
-import type { MatterClient } from './client';
+import type { NodeId } from '@matter/types';
 
 export class MatterEndpoint extends DeviceEndpoint {
 	public endpoints: MatterEndpoint[] = [];
 	public clusters: MatterCluster<MatterClusterInterface>[] = [];
 
-	readonly #nodeId: string;
-	readonly #endpointNumber: string;
-	readonly #matterClient: MatterClient;
-	readonly #clusterMeta: MatterDeviceCluster[];
+	readonly #name: Promise<string>;
+	readonly #node: PairedNode;
+	readonly #endpoint: Endpoint;
 
-	public constructor(
-		nodeId: string,
-		endpointNumber: string,
-		clusterMeta: MatterDeviceCluster[],
-		matterClient: MatterClient,
-		endpointMeta: MatterDeviceEndpoint[]
-	) {
+	public constructor(node: PairedNode, endpoint: Endpoint) {
 		super();
-		this.#nodeId = nodeId;
-		this.#endpointNumber = endpointNumber;
-		this.#matterClient = matterClient;
-		this.#clusterMeta = clusterMeta;
-		this.endpoints = endpointMeta.map(
-			(endpoint) =>
-				new MatterEndpoint(
-					this.#nodeId,
-					endpoint.number,
-					endpoint.clusterMeta,
-					matterClient,
-					endpoint.endpoints
-				)
-		);
-		this.clusters = this._getClusters();
-	}
+		this.#node = node;
+		this.#endpoint = endpoint;
 
-	protected _getClusters(): MatterCluster<MatterClusterInterface>[] {
-		const clusters: MatterCluster<MatterClusterInterface>[] = [];
-		for (const clusterMeta of this.#clusterMeta) {
-			const clusterName = clusterMeta.name as DeviceClusterName;
-			const ClusterWithName =
-				clusterName in MATTER_CLUSTERS
-					? MATTER_CLUSTERS[clusterName as keyof typeof MATTER_CLUSTERS]
-					: null;
+		this.endpoints = endpoint
+			.getChildEndpoints()
+			.filter((endpoint) => endpoint.number !== undefined)
+			.map((endpoint) => new MatterEndpoint(node, endpoint));
+		for (const childEndpoint of endpoint.getChildEndpoints()) {
+			if (childEndpoint.number === undefined) {
+				continue;
+			}
+		}
+
+		this.clusters = [];
+		for (const clusterClient of this.#endpoint.getAllClusterClients()) {
+			const clusterName = clusterClient.name as keyof typeof MATTER_CLUSTERS;
+			const ClusterWithName = MATTER_CLUSTERS[clusterName];
 			if (!ClusterWithName) {
-				if (!IGNORED_MATTER_CLUSTERS.includes(clusterMeta.name)) {
+				if (!IGNORED_MATTER_CLUSTERS.includes(clusterClient.name)) {
 					console.error(
-						`${this.#nodeId}/${this.#endpointNumber}: Cluster ${clusterMeta.name} not found`
+						`${this.#node.nodeId}/${this.#endpoint.number}: Cluster ${clusterClient.name} not found`
 					);
 				}
 				continue;
 			}
-			clusters.push(
+			this.clusters.push(
 				new ClusterWithName(
-					this.#nodeId,
-					this.#endpointNumber,
-					clusterMeta.id,
-					this.#matterClient
+					this.#node,
+					this.#endpoint,
+					clusterClient as unknown as ClusterClientObj
 				)
 			);
 		}
-		return clusters;
+
+		this.#name = (async () => {
+			return (
+				(await endpoint
+					.getClusterClient(BasicInformationCluster)
+					?.attributes.nodeLabel?.get?.()) ||
+				(await endpoint
+					.getClusterClient(BridgedDeviceBasicInformationCluster)
+					?.attributes.nodeLabel?.get?.()) ||
+				endpoint.name ||
+				'<empty>'
+			);
+		})();
+	}
+
+	public getDeviceName(): Promise<string> {
+		return this.#name;
 	}
 }
 
 export class MatterDevice extends MatterEndpoint implements Device {
-	readonly #rootEndpointNumber: string;
-	readonly #nodeId: string;
+	readonly #rootEndpointNumber: EndpointNumber;
+	readonly #nodeId: NodeId;
 
-	public constructor(
-		nodeId: string,
-		rootEndpointNumber: string,
-		public name: string,
-		matterClient: MatterClient,
-		clusterMeta: MatterDeviceCluster[],
-		endpointMeta: MatterDeviceEndpoint[]
-	) {
-		super(nodeId, rootEndpointNumber, clusterMeta, matterClient, endpointMeta);
-		this.#rootEndpointNumber = rootEndpointNumber;
-		this.#nodeId = nodeId;
+	public constructor(node: PairedNode, endpoint: Endpoint) {
+		super(node, endpoint);
+		this.#rootEndpointNumber = endpoint.number ?? EndpointNumber(0);
+		this.#nodeId = node.nodeId;
 	}
 
 	public getUniqueId(): string {
@@ -92,9 +91,5 @@ export class MatterDevice extends MatterEndpoint implements Device {
 
 	public getSource(): DeviceSource {
 		return DeviceSource.MATTER;
-	}
-
-	public getDeviceName(): string {
-		return this.name;
 	}
 }
