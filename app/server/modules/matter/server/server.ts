@@ -7,7 +7,6 @@ import type { Endpoint, PairedNode } from '@project-chip/matter.js/device';
 import type { NodeCommissioningOptions } from '@project-chip/matter.js';
 import { CommissioningController } from '@project-chip/matter.js';
 import { ManualPairingCodeCodec } from '@matter/main/types';
-import { logDev } from '../../../lib/logging/log-dev';
 import { DB_FOLDER } from '../../../lib/constants';
 import type { EndpointNumber } from '@matter/main';
 import type { NodeId } from '@matter/main/types';
@@ -82,7 +81,6 @@ export class MatterServer extends Disposable {
 	}
 
 	private async _watchNodeIds(nodeIds: NodeId[]): Promise<PairedNode[]> {
-		logDev('Watching node ids:', nodeIds);
 		const nodes = await Promise.all(
 			nodeIds.map((nodeId) => this.commissioningController.getNode(nodeId))
 		);
