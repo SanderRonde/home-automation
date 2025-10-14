@@ -5,6 +5,7 @@ import {
 } from '../../device/cluster';
 import type { Cluster, DeviceClusterName } from '../../device/cluster';
 import type { WLEDClient, WLEDClientState } from 'wled-client';
+import { EventEmitter } from '../../../lib/event-emitter';
 import { Data, MappedData } from '../../../lib/data';
 import type { Mapper } from '../../../lib/data';
 import { Color } from '../../../lib/color';
@@ -22,16 +23,20 @@ class WLEDState extends Data<WLEDClientState> {
 
 class WLEDMapper<M> extends MappedData<M, WLEDClientState> {
 	public constructor(
-		private readonly _client: WLEDClient,
-		upstream: Data<WLEDClientState>,
+		private readonly self: {
+			client: WLEDClient;
+			proxy: WLEDProxy;
+			onChange: EventEmitter<void>;
+		},
 		mapper: Mapper<WLEDClientState, M>,
 		alwaysTrack?: boolean
 	) {
-		super(upstream, mapper, alwaysTrack);
+		super(self.proxy.state, mapper, alwaysTrack);
+		this.subscribe(() => self.onChange.emit(undefined));
 	}
 
 	public override async get(): Promise<Exclude<M, undefined>> {
-		await this._client.refreshState();
+		await this.self.client.refreshState();
 		return super.get();
 	}
 }
@@ -72,44 +77,41 @@ function ConfigurableCluster(
 	}
 ) {
 	return class extends Base {
-		protected _proxy: WLEDProxy;
+		public proxy: WLEDProxy;
+		public onChange: EventEmitter<void> = new EventEmitter();
 
-		public constructor(protected readonly _client: WLEDClient) {
+		public constructor(public readonly client: WLEDClient) {
 			super();
-			this._proxy = new WLEDProxy(this._client);
+			this.proxy = new WLEDProxy(this.client);
 		}
 
 		public [Symbol.dispose](): void {
-			this._proxy[Symbol.dispose]();
+			this.proxy[Symbol.dispose]();
 		}
 	};
 }
 
 export class WLEDOnOffCluster extends ConfigurableCluster(DeviceOnOffCluster) {
-	public isOn = new WLEDMapper(this._client, this._proxy.state, (state) => state?.on ?? false);
+	public isOn = new WLEDMapper(this, (state) => state?.on ?? false);
 
 	public setOn = async (on: boolean): Promise<void> => {
 		if (on) {
-			await this._client.turnOn();
+			await this.client.turnOn();
 		} else {
-			await this._client.turnOff();
+			await this.client.turnOff();
 		}
 	};
 
 	public toggle = async (): Promise<void> => {
-		await this._client.toggle();
+		await this.client.toggle();
 	};
 }
 
 export class WLEDLevelControlCluster extends ConfigurableCluster(DeviceLevelControlCluster) {
-	public currentLevel = new WLEDMapper(
-		this._client,
-		this._proxy.state,
-		(state) => (state?.brightness ?? 0) / 255
-	);
+	public currentLevel = new WLEDMapper(this, (state) => (state?.brightness ?? 0) / 255);
 
 	public setLevel = (level: number): Promise<void> => {
-		return this._client.setBrightness(Math.round(level * 255));
+		return this.client.setBrightness(Math.round(level * 255));
 	};
 
 	// Does not exist, noop
@@ -123,7 +125,7 @@ export class WLEDLevelControlCluster extends ConfigurableCluster(DeviceLevelCont
 }
 
 export class WLEDColorControlCluster extends ConfigurableCluster(DeviceColorControlCluster) {
-	public color = new WLEDMapper(this._client, this._proxy.state, (state) => {
+	public color = new WLEDMapper(this, (state) => {
 		const color = state.segments[0].colors?.[0];
 		if (!color) {
 			return new Color(0, 0, 0);
@@ -132,6 +134,6 @@ export class WLEDColorControlCluster extends ConfigurableCluster(DeviceColorCont
 	});
 
 	public setColor = (color: Color): Promise<void> => {
-		return this._client.setColor([color.r, color.g, color.b]);
+		return this.client.setColor([color.r, color.g, color.b]);
 	};
 }

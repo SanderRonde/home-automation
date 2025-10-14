@@ -1,15 +1,19 @@
+import type {
+	DashboardDeviceClusterWithState,
+	DeviceListWithValuesResponse,
+} from '../../../server/modules/device/routing';
 import { Box, Card, CardActionArea, Typography, CircularProgress, IconButton } from '@mui/material';
 import type { DeviceClusterName } from '../../../server/modules/device/cluster';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { DeviceClusterCard } from './DeviceClusterCard';
 import { ClusterIconButton } from './ClusterIconButton';
-import type { ReturnTypeForApi } from '../../lib/fetch';
-import React, { useState, useEffect } from 'react';
+import { DeviceDetail } from './DeviceDetail';
 import * as Icons from '@mui/icons-material';
 import type { SxProps } from '@mui/material';
-import { apiGet } from '../../lib/fetch';
+import { useDevices } from './Devices';
+import React from 'react';
 
-type DeviceType = ReturnTypeForApi<'device', '/listWithValues', 'GET'>['ok']['devices'][number];
+type DeviceType = DeviceListWithValuesResponse[number];
 
 interface RoomDevices {
 	room: string;
@@ -25,38 +29,24 @@ const getIconComponent = (iconName: string) => {
 	return IconComponent ? <IconComponent /> : null;
 };
 
+export type HomeDetailView =
+	| {
+			type: 'room';
+			roomName: string;
+			clustersName?: DeviceClusterName;
+	  }
+	| {
+			type: 'device';
+			device: DeviceType;
+			cluster: DashboardDeviceClusterWithState;
+	  };
+
+type HomeDetailViewWithFrom = HomeDetailView & {
+	from: HomeDetailViewWithFrom | null;
+};
+
 export const Home = (): JSX.Element => {
-	const [devices, setDevices] = useState<DeviceType[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
-	const [detailView, setDetailView] = useState<{
-		roomName: string;
-		clusterName?: DeviceClusterName;
-	} | null>(null);
-
-	useEffect(() => {
-		void fetchDevices(true);
-	}, []);
-
-	const fetchDevices = async (clear: boolean) => {
-		try {
-			if (clear) {
-				setLoading(true);
-			}
-			const response = await apiGet('device', '/listWithValues', {});
-			if (response.ok) {
-				const data = await response.json();
-				setDevices(data.devices);
-			} else {
-				setError('Failed to fetch devices');
-			}
-		} catch (err) {
-			setError('Error loading devices');
-			console.error('Failed to fetch devices:', err);
-		} finally {
-			setLoading(false);
-		}
-	};
+	const { loading, devices, refresh } = useDevices();
 
 	// Group devices by room
 	const roomDevices: RoomDevices[] = React.useMemo(() => {
@@ -82,6 +72,17 @@ export const Home = (): JSX.Element => {
 		return Array.from(roomMap.values()).sort((a, b) => a.room.localeCompare(b.room));
 	}, [devices]);
 
+	const [detailView, setDetailView] = React.useState<HomeDetailViewWithFrom | null>(null);
+	const pushDetailView = React.useCallback((newDetailView: HomeDetailView) => {
+		setDetailView((oldDetailView) => ({
+			...newDetailView,
+			from: oldDetailView,
+		}));
+	}, []);
+	const popDetailView = React.useCallback(() => {
+		setDetailView((oldDetailView) => oldDetailView?.from ?? null);
+	}, []);
+
 	if (loading) {
 		return (
 			<Box
@@ -97,27 +98,32 @@ export const Home = (): JSX.Element => {
 		);
 	}
 
-	if (error) {
-		return (
-			<Box sx={{ p: 3 }}>
-				<Typography color="error">{error}</Typography>
-			</Box>
-		);
+	if (detailView && detailView.type === 'room') {
+		const room = roomDevices.find((r) => r.room === detailView.roomName);
+		if (room) {
+			return (
+				<RoomDetail
+					room={room}
+					onExit={popDetailView}
+					devices={devices
+						.filter((d) => d.room === detailView.roomName)
+						.filter(
+							(d) =>
+								!detailView.clustersName ||
+								d.allClusters.some((c) => c.name === detailView.clustersName)
+						)}
+					invalidate={() => refresh(false)}
+					pushDetailView={pushDetailView}
+				/>
+			);
+		}
 	}
-
-	if (detailView) {
+	if (detailView && detailView.type === 'device') {
 		return (
-			<RoomDetail
-				room={roomDevices.find((r) => r.room === detailView.roomName)!}
-				onExit={() => setDetailView(null)}
-				devices={devices
-					.filter((d) => d.room === detailView.roomName)
-					.filter(
-						(d) =>
-							!detailView.clusterName ||
-							d.clusters.some((c) => c.name === detailView.clusterName)
-					)}
-				invalidate={() => fetchDevices(false)}
+			<DeviceDetail
+				device={detailView.device}
+				cluster={detailView.cluster}
+				onExit={popDetailView}
 			/>
 		);
 	}
@@ -136,14 +142,20 @@ export const Home = (): JSX.Element => {
 						<RoomDevice
 							roomDevices={room}
 							key={room.room}
-							setRoom={() => setDetailView({ roomName: room.room })}
-							setDetailView={(clusterName) =>
-								setDetailView({
+							setRoom={() =>
+								pushDetailView({
+									type: 'room',
 									roomName: room.room,
-									clusterName,
 								})
 							}
-							invalidate={() => fetchDevices(false)}
+							pushDetailView={(clusterName) =>
+								pushDetailView({
+									type: 'room',
+									roomName: room.room,
+									clustersName: clusterName,
+								})
+							}
+							invalidate={() => refresh(false)}
 						/>
 					);
 				})}
@@ -167,6 +179,7 @@ interface RoomDetailProps {
 	onExit: () => void;
 	devices: DeviceType[];
 	invalidate: () => void;
+	pushDetailView: (detailView: HomeDetailView) => void;
 }
 
 const RoomDetail = (props: RoomDetailProps) => {
@@ -175,7 +188,7 @@ const RoomDetail = (props: RoomDetailProps) => {
 		const entries = [];
 
 		for (const device of props.devices) {
-			for (const cluster of device.clusters) {
+			for (const cluster of device.allClusters) {
 				entries.push({
 					device,
 					cluster,
@@ -239,6 +252,7 @@ const RoomDetail = (props: RoomDetailProps) => {
 								device={entry.device}
 								cluster={entry.cluster}
 								invalidate={props.invalidate}
+								pushDetailView={props.pushDetailView}
 							/>
 						);
 					})}
@@ -252,14 +266,14 @@ interface RoomDeviceProps {
 	roomDevices: RoomDevices;
 	invalidate: () => void;
 	setRoom: () => void;
-	setDetailView: (clusterName: DeviceClusterName) => void;
+	pushDetailView: (clusterName: DeviceClusterName) => void;
 }
 
 const RoomDevice = (props: RoomDeviceProps) => {
 	// Find which clusters are represented in this room
 	const representedClusters = new Set<DeviceClusterName>();
 	for (const device of props.roomDevices.devices) {
-		for (const cluster of device.clusters) {
+		for (const cluster of device.allClusters) {
 			representedClusters.add(cluster.name);
 		}
 	}
@@ -334,7 +348,7 @@ const RoomDevice = (props: RoomDeviceProps) => {
 									devices={props.roomDevices.devices}
 									invalidate={props.invalidate}
 									onLongPress={() => {
-										props.setDetailView(clusterName);
+										props.pushDetailView(clusterName);
 									}}
 								/>
 							))}

@@ -2,20 +2,22 @@ import type {
 	DashboardDeviceClusterOnOff,
 	DashboardDeviceClusterWindowCovering,
 	DashboardDeviceClusterWithState,
+	DashboardDeviceClusterOccupancySensing,
+	DeviceListWithValuesResponse,
 } from '../../../server/modules/device/routing';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import { Card, CardActionArea, Box, Typography } from '@mui/material';
-import { apiPost, type ReturnTypeForApi } from '../../lib/fetch';
 import type { EnumValue } from '../../../server/lib/enum';
 import { getClusterIcon } from './clusterIcons';
+import type { HomeDetailView } from './Home';
+import { apiPost } from '../../lib/fetch';
 import React from 'react';
 
-type DeviceType = ReturnTypeForApi<'device', '/listWithValues', 'GET'>['ok']['devices'][number];
-
 interface DeviceClusterCardBaseProps<C extends DashboardDeviceClusterWithState> {
-	device: DeviceType;
+	device: DeviceListWithValuesResponse[number];
 	cluster: C;
 	invalidate: () => void;
+	pushDetailView: (detailView: HomeDetailView) => void;
 }
 
 interface DeviceClusterCardProps
@@ -176,12 +178,124 @@ const OnOffCard = (props: DeviceClusterCardBaseProps<DashboardDeviceClusterOnOff
 	);
 };
 
+const OccupancySensingCard = (
+	props: DeviceClusterCardBaseProps<DashboardDeviceClusterOccupancySensing>
+): JSX.Element => {
+	const getTimeSince = (timestamp?: number): string => {
+		if (!timestamp) {
+			return 'Never';
+		}
+		const now = Date.now();
+		const diff = now - timestamp;
+		const seconds = Math.floor(diff / 1000);
+		const minutes = Math.floor(seconds / 60);
+		const hours = Math.floor(minutes / 60);
+		const days = Math.floor(hours / 24);
+
+		if (days > 0) {
+			return `${days}d ago`;
+		}
+		if (hours > 0) {
+			return `${hours}h ago`;
+		}
+		if (minutes > 0) {
+			return `${minutes}m ago`;
+		}
+		return `${seconds}s ago`;
+	};
+
+	return (
+		<Card
+			sx={{
+				borderRadius: 2,
+				overflow: 'hidden',
+				background: props.cluster.occupied ? '#1a472a' : '#2f2f2f',
+			}}
+		>
+			<CardActionArea
+				sx={{ p: 2 }}
+				onClick={() => {
+					props.pushDetailView({
+						type: 'device',
+						device: props.device,
+						cluster: props.cluster,
+					});
+				}}
+			>
+				<Box
+					sx={{
+						display: 'flex',
+						alignItems: 'center',
+						gap: 2,
+					}}
+				>
+					<Box
+						sx={{
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							background: props.cluster.occupied
+								? 'rgba(76, 175, 80, 0.2)'
+								: 'rgba(0, 0, 0, 0.08)',
+							borderRadius: '50%',
+							width: 48,
+							height: 48,
+							fontSize: '1.5rem',
+							color: props.cluster.occupied ? '#4caf50' : 'text.secondary',
+						}}
+					>
+						{getClusterIcon(props.cluster.icon)}
+					</Box>
+					<Box sx={{ flexGrow: 1 }}>
+						<Typography
+							variant="body1"
+							sx={{
+								fontWeight: 500,
+							}}
+						>
+							{props.device.name}
+						</Typography>
+						<Typography
+							variant="caption"
+							sx={{
+								color: 'text.secondary',
+							}}
+						>
+							Last triggered: {getTimeSince(props.cluster.lastTriggered)}
+						</Typography>
+					</Box>
+					{props.cluster.occupied && (
+						<Box
+							sx={{
+								width: 12,
+								height: 12,
+								borderRadius: '50%',
+								backgroundColor: '#4caf50',
+								animation: 'pulse 2s infinite',
+								'@keyframes pulse': {
+									'0%, 100%': {
+										opacity: 1,
+									},
+									'50%': {
+										opacity: 0.5,
+									},
+								},
+							}}
+						/>
+					)}
+				</Box>
+			</CardActionArea>
+		</Card>
+	);
+};
+
 export const DEVICE_CLUSTER_CARDS: Record<
 	EnumValue,
 	React.ComponentType<DeviceClusterCardBaseProps<DashboardDeviceClusterWithState>>
 > = {
 	[DeviceClusterName.WINDOW_COVERING]: WindowCoveringCard,
 	[DeviceClusterName.ON_OFF]: OnOffCard,
+	[DeviceClusterName.OCCUPANCY_SENSING]: OccupancySensingCard,
 };
 
 export const DeviceClusterCard = (
@@ -192,6 +306,9 @@ export const DeviceClusterCard = (
 	}
 	if (props.cluster.name === DeviceClusterName.WINDOW_COVERING) {
 		return <WindowCoveringCard {...props} cluster={props.cluster} />;
+	}
+	if (props.cluster.name === DeviceClusterName.OCCUPANCY_SENSING) {
+		return <OccupancySensingCard {...props} cluster={props.cluster} />;
 	}
 	return null;
 };

@@ -1,3 +1,4 @@
+import type { EventEmitter } from '../../lib/event-emitter';
 import type { Cluster, DeviceClusterName } from './cluster';
 import { ClassEnum } from '../../lib/enum';
 
@@ -75,6 +76,7 @@ export abstract class DeviceEndpoint implements Disposable {
 export interface Device extends DeviceEndpoint {
 	getUniqueId(): string;
 	getSource(): DeviceSource;
+	onChange: EventEmitter<void>;
 }
 
 export class DeviceSource extends ClassEnum {

@@ -188,6 +188,8 @@ class WebServer {
 				console.error('Error', error);
 				return new Response('Error', { status: 500 });
 			},
+			// Matter pairing can take a while
+			idleTimeout: 60,
 			websocket: {
 				open: (ws) => {
 					ws.subscribe(ws.data.moduleName);

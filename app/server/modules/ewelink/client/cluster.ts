@@ -26,6 +26,7 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 	private _lastParams: PARAMS | null = null;
 	protected readonly _eventEmitters = new Set<Data<unknown>>();
 	private _online: SettablePromise<boolean> = new SettablePromise();
+	public onChange: EventEmitter<void> = new EventEmitter();
 
 	private constructor(mappers?: {
 		fromParams: (state: object) => PARAMS;
@@ -146,6 +147,7 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 			}
 			return emitter;
 		})();
+		emitter.subscribe(() => this.onChange.emit(undefined));
 		this._eventEmitters.add(emitter);
 		return emitter as Data<R | undefined>;
 	}
@@ -204,10 +206,12 @@ function ConfigurableCluster<T extends object>(
 ) {
 	return class extends Base {
 		protected getProxy = EwelinkClusterProxy.createGetter<T>();
+		public onChange: EventEmitter<void>;
 
 		public constructor(protected readonly _eWeLinkConfig: EWeLinkConfig) {
 			super();
 			this.getProxy().setConfig(this._eWeLinkConfig);
+			this.onChange = this.getProxy().onChange;
 		}
 
 		public [Symbol.dispose](): void {

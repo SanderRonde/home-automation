@@ -22,6 +22,7 @@ export enum DeviceStatus {
 export abstract class Cluster implements Disposable {
 	public abstract [Symbol.dispose](): void;
 	public abstract getName(): DeviceClusterName;
+	public abstract onChange: EventEmitter<void>;
 }
 
 export enum DeviceClusterName {

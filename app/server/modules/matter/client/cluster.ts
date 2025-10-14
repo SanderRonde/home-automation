@@ -22,6 +22,7 @@ import type {
 import { GroupId, Status, type Attribute, type BitSchema, type Command } from '@matter/types';
 import type { PairedNode, Endpoint } from '@project-chip/matter.js/device';
 import type { Cluster, DeviceGroupId } from '../../device/cluster';
+import { EventEmitter } from '../../../lib/event-emitter';
 import type { LevelControl } from '@matter/main/clusters';
 import { DeviceClusterName } from '../../device/cluster';
 import type { ClusterClientObj } from '@matter/protocol';
@@ -59,6 +60,7 @@ export interface MatterClusterInterface {
 class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 	#attributes: Record<string, Data<unknown>> = {};
 	private _disposables: Set<() => void> = new Set();
+	public onChange: EventEmitter<void> = new EventEmitter();
 
 	public constructor(
 		node: PairedNode,
@@ -78,6 +80,7 @@ class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 			attribute.path.endpointId === this.endpoint.number &&
 			attribute.path.clusterId === this.cluster.id
 		) {
+			this.onChange.emit(undefined);
 			this.#attributes[attribute.path.attributeName]?.set(attribute.value);
 		}
 	};
@@ -92,11 +95,35 @@ class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 			class cls extends Data<AT | undefined> {
 				public override async get(): Promise<Exclude<AT, undefined>> {
 					const attribute = cluster.attributes[attributeName];
-					const result = await attribute.get();
-					if (mapper) {
-						return mapper(result) as Exclude<AT, undefined>;
+
+					const tryGet = async () => {
+						const result = await attribute.get();
+						if (mapper) {
+							return mapper(result) as Exclude<AT, undefined>;
+						}
+						return result;
+					};
+
+					for (let i = 0; i < 3; i++) {
+						try {
+							return await tryGet();
+						} catch (error) {
+							console.error(`Error getting attribute ${attributeName}`);
+						}
 					}
-					return result;
+
+					if (mapper) {
+						return mapper(undefined) as Exclude<AT, undefined>;
+					}
+					return undefined as unknown as Exclude<AT, undefined>;
+				}
+
+				public override set(value: AT | undefined): void {
+					if (mapper) {
+						super.set(mapper(value) as Exclude<AT, undefined>);
+					} else {
+						super.set(value);
+					}
 				}
 			}
 
@@ -197,10 +224,12 @@ function ConfigurableCluster<T extends MatterClusterInterface>(
 ) {
 	return class extends Base {
 		public _proxy: ClusterProxy<T>;
+		public onChange: EventEmitter<void>;
 
 		public constructor(node: PairedNode, endpoint: Endpoint, cluster: ClusterClientObj) {
 			super();
 			this._proxy = new ClusterProxy(node, endpoint, cluster);
+			this.onChange = this._proxy.onChange;
 		}
 
 		public [Symbol.dispose](): void {

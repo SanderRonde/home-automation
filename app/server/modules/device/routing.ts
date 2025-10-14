@@ -5,14 +5,15 @@ import {
 	DeviceClusterName,
 	DeviceWindowCoveringCluster,
 	DevicePowerSourceCluster,
+	DeviceOccupancySensingCluster,
 } from './cluster';
 import type { BrandedRouteHandlerResponse, ServeOptions } from '../../lib/routes';
 import { createServeOptions, withRequestBody } from '../../lib/routes';
+import type { Device, DeviceEndpoint } from './device';
+import type { AllModules, ModuleConfig } from '..';
 import type * as Icons from '@mui/icons-material';
-import type { DeviceEndpoint } from './device';
 import type { Cluster } from './cluster';
 import type { DeviceAPI } from './api';
-import type { ModuleConfig } from '..';
 import { wait } from '../../lib/time';
 import * as z from 'zod';
 
@@ -50,17 +51,25 @@ export type DashboardDeviceClusterPowerSource = DashboardDeviceClusterBase & {
 	batteryPercentage?: number;
 };
 
+export type DashboardDeviceClusterOccupancySensing = DashboardDeviceClusterBase & {
+	name: DeviceClusterName.OCCUPANCY_SENSING;
+	occupied: boolean;
+	lastTriggered?: number;
+};
+
 export type DashboardDeviceClusterWithState = DashboardDeviceClusterBase &
 	(
 		| DashboardDeviceClusterOnOff
 		| DashboardDeviceClusterWindowCovering
 		| DashboardDeviceClusterPowerSource
+		| DashboardDeviceClusterOccupancySensing
 	);
 
 interface DashboardDeviceEndpointResponse {
 	name: string;
-	clusters: DashboardDeviceClusterWithState[];
+	childClusters: DashboardDeviceClusterWithState[];
 	endpoints: DashboardDeviceEndpointResponse[];
+	allClusters: DashboardDeviceClusterWithState[];
 }
 
 interface DashboardDeviceResponse extends DashboardDeviceEndpointResponse {
@@ -70,50 +79,42 @@ interface DashboardDeviceResponse extends DashboardDeviceEndpointResponse {
 		name: string;
 		emoji: string;
 	};
-	clusters: DashboardDeviceClusterWithState[];
+	childClusters: DashboardDeviceClusterWithState[];
 	room?: string;
 	roomColor?: string;
 	roomIcon?: keyof typeof Icons;
 }
 
-function _initRouting({ db, modules }: ModuleConfig, api: DeviceAPI) {
-	const getClusterState = async (cluster: Cluster): Promise<DashboardDeviceClusterWithState> => {
-		const clusterName = cluster.getName();
-		if (cluster instanceof DeviceOnOffCluster && clusterName === DeviceClusterName.ON_OFF) {
-			return {
-				name: clusterName,
-				icon: getClusterIconName(clusterName),
-				isOn: await cluster.isOn.get(),
-			};
-		}
-		if (
-			cluster instanceof DeviceWindowCoveringCluster &&
-			clusterName === DeviceClusterName.WINDOW_COVERING
-		) {
-			return {
-				name: clusterName,
-				icon: getClusterIconName(clusterName),
-				targetPositionLiftPercentage: await cluster.targetPositionLiftPercentage.get(),
-			};
-		}
-		if (
-			cluster instanceof DevicePowerSourceCluster &&
-			clusterName === DeviceClusterName.POWER_SOURCE
-		) {
-			const batteryLevel = await cluster.batteryChargeLevel.get();
-			if (batteryLevel !== null) {
-				return {
-					name: clusterName,
-					icon: getClusterIconName(clusterName),
-					batteryPercentage: batteryLevel,
-				};
-			}
-		}
-		return {
-			name: clusterName,
-			icon: getClusterIconName(clusterName),
-		} as DashboardDeviceClusterWithState;
+function _initRouting({ db, modules, wsPublish }: ModuleConfig, api: DeviceAPI) {
+	const notifyDeviceChanges = async () => {
+		void wsPublish(
+			JSON.stringify({
+				type: 'devices',
+				devices: await listWithValues(api, modules),
+			})
+		);
 	};
+
+	// Subscribe to device changes and notify via WebSocket
+	const subscribedDevices = new Set<Device>();
+	api.devices.subscribe((devices) => {
+		if (!devices) {
+			return;
+		}
+		let didChange = Object.keys(devices).length !== subscribedDevices.size;
+		for (const device of Object.values(devices)) {
+			if (subscribedDevices.has(device)) {
+				continue;
+			}
+			subscribedDevices.add(device);
+			device.onChange.listen(() => void notifyDeviceChanges());
+			didChange = true;
+		}
+
+		if (didChange) {
+			void notifyDeviceChanges();
+		}
+	});
 
 	return createServeOptions(
 		{
@@ -159,73 +160,11 @@ function _initRouting({ db, modules }: ModuleConfig, api: DeviceAPI) {
 				return json({ devices });
 			},
 			'/listWithValues': async (_req, _server, { json }) => {
-				const deviceApi = await modules.device.api.value;
-				const devices = [...Object.values(await deviceApi.devices.get())];
-				const storedDevices = deviceApi.getStoredDevices();
-				const rooms = deviceApi.getRooms();
-				const responseDevices: DashboardDeviceResponse[] = [];
-
-				const clusterStateCache = new WeakMap<Cluster, DashboardDeviceClusterWithState>();
-				const _getClusterState = async (
-					cluster: Cluster
-				): Promise<DashboardDeviceClusterWithState> => {
-					if (clusterStateCache.has(cluster)) {
-						return clusterStateCache.get(cluster)!;
-					}
-					return await getClusterState(cluster);
-				};
-
-				const getResponseForEndpoint = async (
-					endpoint: DeviceEndpoint
-				): Promise<DashboardDeviceEndpointResponse> => {
-					const endpoints = [];
-					const clusters = [];
-
-					for (const cluster of endpoint.clusters) {
-						const clusterState = await _getClusterState(cluster);
-						clusters.push(clusterState);
-					}
-
-					for (const subEndpoint of endpoint.endpoints) {
-						const endpointResponse = await getResponseForEndpoint(subEndpoint);
-						endpoints.push(endpointResponse);
-					}
-
-					return {
-						name: await endpoint.getDeviceName(),
-						clusters,
-						endpoints,
-					};
-				};
-
-				await Promise.all(
-					devices.map(async (device) => {
-						const deviceId = device.getUniqueId();
-						const storedDevice = storedDevices[deviceId];
-						const room = storedDevice?.room;
-						const roomInfo = room ? rooms[room] : undefined;
-
-						const endpointResponse = await getResponseForEndpoint(device);
-
-						const responseDevice: DashboardDeviceResponse = {
-							uniqueId: deviceId,
-							source: {
-								name: device.getSource().value,
-								emoji: device.getSource().toEmoji(),
-							},
-							room: room,
-							roomColor: roomInfo?.color,
-							roomIcon: roomInfo?.icon,
-							...endpointResponse,
-							name: storedDevice?.name ?? endpointResponse.name,
-						};
-						responseDevices.push(responseDevice);
-					})
-				);
-
-				return json({
-					devices: responseDevices,
-				});
+				return json({ devices: await listWithValues(api, modules) });
+			},
+			'/occupancy/:deviceId': async (req, _server, { json }) => {
+				const history = await api.occupancyTracker.getHistory(req.params.deviceId, 100);
+				return json({ history });
 			},
 			'/updateName': withRequestBody(
 				z.object({
@@ -317,9 +256,163 @@ function _initRouting({ db, modules }: ModuleConfig, api: DeviceAPI) {
 					)
 			),
 		},
-		true
+		true,
+		{
+			// TODO: type this
+			open: async (ws) => {
+				ws.send(
+					JSON.stringify({
+						type: 'devices',
+						devices: await listWithValues(api, modules),
+					})
+				);
+			},
+			message: async (ws, message) => {
+				const parsedMessage = JSON.parse(message.toString()) as {
+					type: 'refreshDevices';
+				};
+				if (parsedMessage.type === 'refreshDevices') {
+					ws.send(
+						JSON.stringify({
+							type: 'devices',
+							devices: await listWithValues(api, modules),
+						})
+					);
+				}
+			},
+		}
 	);
 }
+
+const getClusterState = async (
+	api: DeviceAPI,
+	cluster: Cluster,
+	deviceId: string
+): Promise<DashboardDeviceClusterWithState> => {
+	const clusterName = cluster.getName();
+	if (cluster instanceof DeviceOnOffCluster && clusterName === DeviceClusterName.ON_OFF) {
+		return {
+			name: clusterName,
+			icon: getClusterIconName(clusterName),
+			isOn: await cluster.isOn.get(),
+		};
+	}
+	if (
+		cluster instanceof DeviceWindowCoveringCluster &&
+		clusterName === DeviceClusterName.WINDOW_COVERING
+	) {
+		return {
+			name: clusterName,
+			icon: getClusterIconName(clusterName),
+			targetPositionLiftPercentage: await cluster.targetPositionLiftPercentage.get(),
+		};
+	}
+	if (
+		cluster instanceof DevicePowerSourceCluster &&
+		clusterName === DeviceClusterName.POWER_SOURCE
+	) {
+		const batteryLevel = await cluster.batteryChargeLevel.get();
+		if (batteryLevel !== null) {
+			return {
+				name: clusterName,
+				icon: getClusterIconName(clusterName),
+				batteryPercentage: batteryLevel,
+			};
+		}
+	}
+	if (
+		cluster instanceof DeviceOccupancySensingCluster &&
+		clusterName === DeviceClusterName.OCCUPANCY_SENSING
+	) {
+		const occupied = await cluster.occupancy.get();
+		const lastEvent = await api.occupancyTracker.getLastTriggered(deviceId);
+		return {
+			name: clusterName,
+			icon: getClusterIconName(clusterName),
+			occupied,
+			lastTriggered: lastEvent?.timestamp,
+		};
+	}
+	return {
+		name: clusterName,
+		icon: getClusterIconName(clusterName),
+	} as DashboardDeviceClusterWithState;
+};
+
+const listWithValues = async (api: DeviceAPI, modules: AllModules) => {
+	const deviceApi = await modules.device.api.value;
+	const devices = [...Object.values(await deviceApi.devices.get())];
+	const storedDevices = deviceApi.getStoredDevices();
+	const rooms = deviceApi.getRooms();
+	const responseDevices: DashboardDeviceResponse[] = [];
+
+	const _getClusters = async (cluster: Cluster, deviceId: string) => {
+		if (!clusterStateCache.has(cluster)) {
+			const clusterState = await getClusterState(api, cluster, deviceId);
+			clusterStateCache.set(cluster, clusterState);
+		}
+		return clusterStateCache.get(cluster)!;
+	};
+
+	const clusterStateCache = new WeakMap<Cluster, DashboardDeviceClusterWithState>();
+	const getResponseForEndpoint = async (
+		endpoint: DeviceEndpoint,
+		deviceId: string
+	): Promise<DashboardDeviceEndpointResponse> => {
+		const endpoints = [];
+		const clusters = [];
+		const allClusters = [];
+
+		for (const cluster of endpoint.clusters) {
+			clusters.push(await _getClusters(cluster, deviceId));
+		}
+
+		for (const cluster of endpoint.allClusters) {
+			allClusters.push(await _getClusters(cluster, deviceId));
+		}
+
+		for (const subEndpoint of endpoint.endpoints) {
+			const endpointResponse = await getResponseForEndpoint(subEndpoint, deviceId);
+			endpoints.push(endpointResponse);
+		}
+
+		return {
+			name: await endpoint.getDeviceName(),
+			childClusters: clusters,
+			endpoints,
+			allClusters,
+		};
+	};
+
+	await Promise.all(
+		devices.map(async (device) => {
+			const deviceId = device.getUniqueId();
+			const storedDevice = storedDevices[deviceId];
+			const room = storedDevice?.room;
+			const roomInfo = room ? rooms[room] : undefined;
+
+			const endpointResponse = await getResponseForEndpoint(device, deviceId);
+
+			const responseDevice: DashboardDeviceResponse = {
+				uniqueId: deviceId,
+				source: {
+					name: device.getSource().value,
+					emoji: device.getSource().toEmoji(),
+				},
+				room: room,
+				roomColor: roomInfo?.color,
+				roomIcon: roomInfo?.icon,
+				...endpointResponse,
+				name: storedDevice?.name ?? endpointResponse.name,
+			};
+			responseDevices.push(responseDevice);
+		})
+	);
+
+	return responseDevices;
+};
+
+export type DeviceListWithValuesResponse = Awaited<ReturnType<typeof listWithValues>>;
 
 function getClusterIconName(clusterName: DeviceClusterName): keyof typeof Icons | undefined {
 	switch (clusterName) {

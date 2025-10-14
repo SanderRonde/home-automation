@@ -1,7 +1,8 @@
+import type { DeviceListWithValuesResponse } from '../../../server/modules/device/routing';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
-import { apiPost, type ReturnTypeForApi } from '../../lib/fetch';
 import { getClusterIcon } from './clusterIcons';
 import { IconButton } from '@mui/material';
+import { apiPost } from '../../lib/fetch';
 import React from 'react';
 
 interface ClusterIconButtonSkeletonProps extends ClusterIconButtonProps {
@@ -48,7 +49,7 @@ const ClusterIconButtonSkeleton = (props: ClusterIconButtonSkeletonProps) => {
 		>
 			{getClusterIcon(
 				props.devices
-					.flatMap((d) => d.clusters)
+					.flatMap((d) => d.allClusters)
 					.filter((c) => c.name === props.clusterName)[0]?.icon
 			)}
 		</IconButton>
@@ -57,10 +58,10 @@ const ClusterIconButtonSkeleton = (props: ClusterIconButtonSkeletonProps) => {
 
 const WindowCoveringIconButton = (props: ClusterIconButtonProps) => {
 	const devices = props.devices.filter((device) =>
-		device.clusters.some((c) => c.name === DeviceClusterName.WINDOW_COVERING)
+		device.allClusters.some((c) => c.name === DeviceClusterName.WINDOW_COVERING)
 	);
 	const anyEnabled = devices
-		.flatMap((d) => d.clusters)
+		.flatMap((d) => d.allClusters)
 		.filter((c) => c.name === DeviceClusterName.WINDOW_COVERING)
 		.some((d) => d.targetPositionLiftPercentage === 0);
 	return (
@@ -86,10 +87,10 @@ const WindowCoveringIconButton = (props: ClusterIconButtonProps) => {
 
 const OnOffIconButton = (props: ClusterIconButtonProps) => {
 	const devices = props.devices.filter((device) =>
-		device.clusters.some((c) => c.name === DeviceClusterName.ON_OFF)
+		device.allClusters.some((c) => c.name === DeviceClusterName.ON_OFF)
 	);
 	const anyEnabled = devices
-		.flatMap((d) => d.clusters)
+		.flatMap((d) => d.allClusters)
 		.filter((c) => c.name === DeviceClusterName.ON_OFF)
 		.some((d) => d.isOn);
 	return (
@@ -112,11 +113,9 @@ const OnOffIconButton = (props: ClusterIconButtonProps) => {
 	);
 };
 
-type DeviceType = ReturnTypeForApi<'device', '/listWithValues', 'GET'>['ok']['devices'][number];
-
 export interface ClusterIconButtonProps {
 	clusterName: DeviceClusterName;
-	devices: DeviceType[];
+	devices: DeviceListWithValuesResponse;
 	invalidate: () => void;
 	onLongPress: () => void;
 }

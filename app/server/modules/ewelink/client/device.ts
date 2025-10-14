@@ -12,17 +12,26 @@ import { DeviceEndpoint, DeviceSource, type Device } from '../../device/device';
 import { EwelinkOnOffClusterSimplePower } from './clusters/power/simple-power';
 import type { EwelinkOnOffClusterM51CParams } from './clusters/power/M5-1C';
 import { EwelinkOnOffClusterM51CSingle } from './clusters/power/M5-1C';
+import { EventEmitter } from '../../../lib/event-emitter';
 import type { EWeLinkConfig } from './clusters/shared';
 import { logTag } from '../../../lib/logging/logger';
 import type { EwelinkCluster } from './cluster';
 
 class EwelinkEndpoint extends DeviceEndpoint implements Disposable {
+	public readonly onChange: EventEmitter<void> = new EventEmitter();
+
 	public constructor(
 		protected readonly _eWeLinkConfig: EWeLinkConfig,
 		public readonly clusters: EwelinkCluster[],
 		public readonly endpoints: EwelinkEndpoint[] = []
 	) {
 		super();
+		for (const cluster of this.clusters) {
+			cluster.onChange.listen(() => this.onChange.emit(undefined));
+		}
+		for (const endpoint of this.endpoints) {
+			endpoint.onChange.listen(() => this.onChange.emit(undefined));
+		}
 	}
 
 	public getDeviceName(): Promise<string> {

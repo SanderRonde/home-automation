@@ -6,32 +6,37 @@ import { DeviceEndpoint, DeviceSource, type Device } from '../../device/device';
 import { MATTER_CLUSTERS, IGNORED_MATTER_CLUSTERS } from './cluster';
 import type { PairedNode } from '@project-chip/matter.js/device';
 import type { Endpoint } from '@project-chip/matter.js/device';
+import { EventEmitter } from '../../../lib/event-emitter';
 import type { ClusterClientObj } from '@matter/protocol';
 import { type MatterClusterInterface } from './cluster';
 import { EndpointNumber } from '@matter/types';
 import type { MatterCluster } from './cluster';
-import type { NodeId } from '@matter/types';
 
 export class MatterEndpoint extends DeviceEndpoint {
 	public endpoints: MatterEndpoint[] = [];
 	public clusters: MatterCluster<MatterClusterInterface>[] = [];
+	public readonly onChange: EventEmitter<void> = new EventEmitter();
 
 	readonly #name: Promise<string>;
 	readonly #node: PairedNode;
 	readonly #endpoint: Endpoint;
 
-	public constructor(node: PairedNode, endpoint: Endpoint) {
+	public constructor(node: PairedNode, endpoint: Endpoint, type: 'device' | 'bridge') {
 		super();
 		this.#node = node;
 		this.#endpoint = endpoint;
 
-		this.endpoints = endpoint
-			.getChildEndpoints()
-			.filter((endpoint) => endpoint.number !== undefined)
-			.map((endpoint) => new MatterEndpoint(node, endpoint));
-		for (const childEndpoint of endpoint.getChildEndpoints()) {
-			if (childEndpoint.number === undefined) {
-				continue;
+		this.endpoints = [];
+		if (type !== 'bridge') {
+			// For bridges don't add child endpoints. That would lead to us adding the same endpoint
+			// both as a top-level device and as a child of the bridge.
+			for (const childEndpoint of endpoint.getChildEndpoints()) {
+				if (childEndpoint.number === undefined) {
+					continue;
+				}
+				const matterEndpoint = new MatterEndpoint(node, childEndpoint, 'device');
+				matterEndpoint.onChange.listen(() => this.onChange.emit(undefined));
+				this.endpoints.push(matterEndpoint);
 			}
 		}
 
@@ -47,13 +52,13 @@ export class MatterEndpoint extends DeviceEndpoint {
 				}
 				continue;
 			}
-			this.clusters.push(
-				new ClusterWithName(
-					this.#node,
-					this.#endpoint,
-					clusterClient as unknown as ClusterClientObj
-				)
+			const cluster = new ClusterWithName(
+				this.#node,
+				this.#endpoint,
+				clusterClient as unknown as ClusterClientObj
 			);
+			cluster.onChange.listen(() => this.onChange.emit(undefined));
+			this.clusters.push(cluster);
 		}
 
 		this.#name = (async () => {
@@ -76,17 +81,20 @@ export class MatterEndpoint extends DeviceEndpoint {
 }
 
 export class MatterDevice extends MatterEndpoint implements Device {
-	readonly #rootEndpointNumber: EndpointNumber;
-	readonly #nodeId: NodeId;
+	private readonly uniqueId: string;
 
-	public constructor(node: PairedNode, endpoint: Endpoint) {
-		super(node, endpoint);
-		this.#rootEndpointNumber = endpoint.number ?? EndpointNumber(0);
-		this.#nodeId = node.nodeId;
+	public constructor(
+		node: PairedNode,
+		endpoint: Endpoint,
+		type: 'device' | 'bridge',
+		uniqueId: string | undefined
+	) {
+		super(node, endpoint, type);
+		this.uniqueId = uniqueId ?? `${node.nodeId}:${endpoint.number ?? EndpointNumber(0)}`;
 	}
 
 	public getUniqueId(): string {
-		return `${this.getSource().value}:${this.#nodeId}:${this.#rootEndpointNumber}`;
+		return `${this.getSource().value}:${this.uniqueId}`;
 	}
 
 	public getSource(): DeviceSource {

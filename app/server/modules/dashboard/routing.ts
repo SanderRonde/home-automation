@@ -15,9 +15,7 @@ function _initRouting({ modules }: ModuleConfig) {
 			'/pair/:code': async (req, _server, { json }) => {
 				const matterClient = await modules.matter.server.value;
 				const pairedDevices = await matterClient.commission(req.params.code);
-				return json({
-					devices: pairedDevices,
-				});
+				return json(pairedDevices.length);
 			},
 		},
 		true

@@ -68,7 +68,7 @@ export class Data<T> {
 }
 
 type DataCallback<T> = {
-	bivarianceHack(value: T, isInitial?: boolean): void;
+	bivarianceHack(value: T | undefined, isInitial?: boolean): void;
 }['bivarianceHack'];
 // Subset of `Data` that allows us to also map on data object that don't
 // expose the full Data interface.
@@ -136,7 +136,18 @@ export class CombinedData<T, U> extends Data<[T, U]> {
 		super([upstreams[0].current(), upstreams[1].current()]);
 		this.upstreams = upstreams;
 
-		this.subs = [(value) => this.setSingle(0, value), (value) => this.setSingle(1, value)];
+		this.subs = [
+			(value) => {
+				if (value !== undefined) {
+					this.setSingle(0, value);
+				}
+			},
+			(value) => {
+				if (value !== undefined) {
+					this.setSingle(1, value);
+				}
+			},
+		];
 	}
 
 	private setSingle(key: 0, value: T): void;

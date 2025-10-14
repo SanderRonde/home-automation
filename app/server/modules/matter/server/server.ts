@@ -1,20 +1,26 @@
 #!/usr/bin/env node
 /* eslint-disable @typescript-eslint/explicit-member-accessibility */
 
-import { BridgedDeviceBasicInformationCluster, GeneralCommissioning } from '@matter/main/clusters';
+import {
+	BasicInformationCluster,
+	BridgedDeviceBasicInformationCluster,
+	GeneralCommissioning,
+} from '@matter/main/clusters';
 import { Crypto, Environment, LogLevel, Logger, StandardCrypto } from '@matter/main';
 import type { Endpoint, PairedNode } from '@project-chip/matter.js/device';
 import type { NodeCommissioningOptions } from '@project-chip/matter.js';
 import { CommissioningController } from '@project-chip/matter.js';
 import { ManualPairingCodeCodec } from '@matter/main/types';
+import { logTag } from '../../../lib/logging/logger';
 import { DB_FOLDER } from '../../../lib/constants';
 import type { EndpointNumber } from '@matter/main';
 import type { NodeId } from '@matter/main/types';
 import { MatterDevice } from '../client/device';
+import { withFn } from '../../../lib/with';
 import { Data } from '../../../lib/data';
 import path from 'path';
 
-Logger.level = LogLevel.ERROR;
+Logger.level = LogLevel.INFO;
 
 // Use StandardCrypto (pure JS with AES-CCM polyfill) for Bun compatibility
 // This avoids the ERR_CRYPTO_UNKNOWN_CIPHER error with NodeJsCrypto
@@ -27,6 +33,7 @@ const environment = Environment.default;
 interface MatterDeviceInfo {
 	node: PairedNode;
 	endpoint: Endpoint;
+	type: 'device' | 'bridge';
 }
 
 class Disposable {
@@ -65,17 +72,24 @@ export class MatterServer extends Disposable {
 
 	private _nodes: PairedNode[] = [];
 
-	#updateDevices(deviceInfos: MatterDeviceInfo[]) {
+	async #updateDevices(deviceInfos: MatterDeviceInfo[]) {
 		const devices: Record<string, MatterDevice> = {
 			...this.devices.current(),
 		};
-		for (const { node, endpoint } of deviceInfos) {
+		for (const { node, endpoint, type } of deviceInfos) {
 			const id = `${node.nodeId}:${endpoint.number?.toString()}`;
 			if (devices[id]) {
 				continue;
 			}
 
-			devices[id] = new MatterDevice(node, endpoint);
+			const [uniqueId, uniqueIdBridged] = await Promise.all([
+				endpoint.getClusterClient(BasicInformationCluster)?.attributes.uniqueId?.get?.(),
+				endpoint
+					.getClusterClient(BridgedDeviceBasicInformationCluster)
+					?.attributes.uniqueId?.get?.(),
+			]);
+
+			devices[id] = new MatterDevice(node, endpoint, type, uniqueId ?? uniqueIdBridged);
 		}
 		this.devices.set(devices);
 	}
@@ -104,7 +118,7 @@ export class MatterServer extends Disposable {
 	}
 
 	private readonly _onStructureChanged = () => {
-		this.#updateDevices(this.listDevices());
+		void this.#updateDevices(this.listDevices());
 	};
 
 	private _walkEndpoints(device: Endpoint, callback: (endpoint: Endpoint) => boolean): void {
@@ -164,6 +178,7 @@ export class MatterServer extends Disposable {
 				{
 					node: node,
 					endpoint: rootEndpoint,
+					type: 'device',
 				},
 			];
 		}
@@ -178,6 +193,7 @@ export class MatterServer extends Disposable {
 		deviceInfos.push({
 			node: node,
 			endpoint: rootEndpoint,
+			type: 'bridge',
 		});
 
 		this._walkEndpoints(rootEndpoint, (endpoint) => {
@@ -188,6 +204,7 @@ export class MatterServer extends Disposable {
 				deviceInfos.push({
 					node: node,
 					endpoint,
+					type: 'device',
 				});
 				return false;
 			}
@@ -208,14 +225,22 @@ export class MatterServer extends Disposable {
 		await this.commissioningController.start();
 
 		await this._watchNodeIds(this.commissioningController.getCommissionedNodes());
-		this.#updateDevices(this.listDevices());
+		await new Promise((resolve) => setTimeout(resolve, 5000));
+		await this.#updateDevices(this.listDevices());
 	}
 
 	async commission(pairingCode: string): Promise<PairedNode[]> {
+		logTag('commissioning', 'magenta', 'commissioning device with pairing code', pairingCode);
 		const pairingCodeCodec = ManualPairingCodeCodec.decode(pairingCode);
 		const shortDiscriminator = pairingCodeCodec.shortDiscriminator;
 		const setupPin = pairingCodeCodec.passcode;
 		if (shortDiscriminator === undefined) {
+			logTag(
+				'commissioning',
+				'red',
+				'could not commission device with pairing code',
+				pairingCode
+			);
 			throw new Error('Could not commission device with pairing code');
 		}
 
@@ -233,8 +258,25 @@ export class MatterServer extends Disposable {
 			passcode: setupPin,
 		};
 
-		const nodeId = await this.commissioningController.commissionNode(options);
+		logTag('commissioning', 'magenta', 'bumping log level to INFO');
+		Logger.level = LogLevel.INFO;
+		const nodeId = await withFn(
+			() => {
+				logTag(
+					'commissioning',
+					'magenta',
+					'commissioning device with pairing code',
+					pairingCode
+				);
+				return this.commissioningController.commissionNode(options);
+			},
+			() => {
+				logTag('commissioning', 'magenta', 'bumping log level back to ERROR');
+				// Logger.level = LogLevel.ERROR;
+			}
+		);
 
+		logTag('commissioning', 'magenta', 'watching node ids', nodeId);
 		return await this._watchNodeIds([nodeId]);
 	}
 

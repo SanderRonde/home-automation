@@ -14,6 +14,9 @@ export const Matter = new (class Matter extends ModuleMeta {
 		this.server.set(matterServer);
 		void matterServer.start();
 		matterServer.devices.subscribe(async (devices) => {
+			if (!devices) {
+				return;
+			}
 			const api = await config.modules.device.api.value;
 			api.setDevices(Object.values(devices), DeviceSource.MATTER);
 		});

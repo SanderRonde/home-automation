@@ -31,26 +31,24 @@ import {
 	Close as CloseIcon,
 	Battery90 as BatteryIcon,
 } from '@mui/icons-material';
+import type { DeviceListWithValuesResponse } from '../../../server/modules/device/routing';
 import { RoomAssignmentDialog } from './RoomAssignmentDialog';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import type { ReturnTypeForApi } from '../../lib/fetch';
-import React, { useState, useEffect } from 'react';
-import { apiGet, apiPost } from '../../lib/fetch';
+import useWebsocket from '../../shared/resilient-socket';
 import { getClusterIcon } from './clusterIcons';
 import * as Icons from '@mui/icons-material';
+import { apiPost } from '../../lib/fetch';
+import React, { useState } from 'react';
 
 interface EndpointVisualizationProps {
-	endpoint: ReturnTypeForApi<
-		'device',
-		'/listWithValues',
-		'GET'
-	>['ok']['devices'][number]['endpoints'][number];
+	endpoint: DeviceListWithValuesResponse[number]['endpoints'][number];
 	level: number;
 	title?: string;
 }
 
 const EndpointVisualization: React.FC<EndpointVisualizationProps> = (props) => {
-	const hasContent = props.endpoint.clusters.length > 0 || props.endpoint.endpoints.length > 0;
+	const hasContent =
+		props.endpoint.childClusters.length > 0 || props.endpoint.endpoints.length > 0;
 
 	if (!hasContent) {
 		return null;
@@ -64,13 +62,13 @@ const EndpointVisualization: React.FC<EndpointVisualizationProps> = (props) => {
 				</Typography>
 			)}
 
-			{props.endpoint.clusters.length > 0 && (
+			{props.endpoint.childClusters.length > 0 && (
 				<Box sx={{ mb: 2 }}>
 					<Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
 						Clusters:
 					</Typography>
 					<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-						{props.endpoint.clusters.map((cluster, idx) => (
+						{props.endpoint.childClusters.map((cluster, idx) => (
 							<Chip
 								key={idx}
 								icon={getClusterIcon(cluster.icon) || undefined}
@@ -104,10 +102,8 @@ const EndpointVisualization: React.FC<EndpointVisualizationProps> = (props) => {
 	);
 };
 
-type DeviceType = ReturnTypeForApi<'device', '/listWithValues', 'GET'>['ok']['devices'][number];
-
 interface DeviceCardProps {
-	device: DeviceType;
+	device: DeviceListWithValuesResponse[number];
 	isExpanded: boolean;
 	isEditing: boolean;
 	editedName: string;
@@ -129,7 +125,7 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 	// Helper to get battery percentage from all device clusters (including nested endpoints)
 	const getBatteryPercentage = (): number | undefined => {
 		const findBatteryInClusters = (
-			clusters: typeof props.device.clusters
+			clusters: typeof props.device.allClusters
 		): number | undefined => {
 			for (const cluster of clusters) {
 				// Type guard to check if this is a power source cluster with battery percentage
@@ -141,14 +137,14 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 		};
 
 		// Check root device clusters
-		const rootBattery = findBatteryInClusters(props.device.clusters);
+		const rootBattery = findBatteryInClusters(props.device.allClusters);
 		if (rootBattery !== undefined) {
 			return rootBattery;
 		}
 
 		// Check endpoint clusters
 		for (const endpoint of props.device.endpoints) {
-			const endpointBattery = findBatteryInClusters(endpoint.clusters);
+			const endpointBattery = findBatteryInClusters(endpoint.allClusters);
 			if (endpointBattery !== undefined) {
 				return endpointBattery;
 			}
@@ -483,7 +479,7 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 								flexShrink: 0,
 							}}
 						>
-							{props.device.clusters
+							{props.device.allClusters
 								.filter((cluster) => cluster.icon)
 								.map((cluster, idx) => (
 									<Box
@@ -514,7 +510,7 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 						borderColor: 'divider',
 					}}
 				>
-					{props.device.clusters.length > 0 && (
+					{props.device.allClusters.length > 0 && (
 						<Box sx={{ mb: 3 }}>
 							<Typography variant="subtitle1" sx={{ pt: 2 }}>
 								Device ID
@@ -532,7 +528,7 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 									gap: 1,
 								}}
 							>
-								{props.device.clusters.map((cluster, idx) => (
+								{props.device.allClusters.map((cluster, idx) => (
 									<Chip
 										key={idx}
 										icon={getClusterIcon(cluster.icon) || undefined}
@@ -580,9 +576,6 @@ export const Devices: React.FC = () => {
 	const theme = useTheme();
 	const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-	const [devices, setDevices] = useState<
-		ReturnTypeForApi<'device', '/listWithValues', 'GET'>['ok']['devices']
-	>([]);
 	const [pairingCode, setPairingCode] = useState('');
 	const [pairingLoading, setPairingLoading] = useState(false);
 	const [pairingMessage, setPairingMessage] = useState<{
@@ -590,7 +583,6 @@ export const Devices: React.FC = () => {
 		text: string;
 	} | null>(null);
 	const [expandedDevices, setExpandedDevices] = useState<Set<string>>(new Set());
-	const [loadingDevices, setLoadingDevices] = useState(false);
 	const [roomDialogFor, setRoomDialogFor] = useState<{
 		id: string;
 		name: string;
@@ -599,35 +591,7 @@ export const Devices: React.FC = () => {
 	const [editingDeviceId, setEditingDeviceId] = useState<string | null>(null);
 	const [editedName, setEditedName] = useState('');
 
-	const fetchDevices = async (showLoading = false) => {
-		try {
-			if (showLoading) {
-				setLoadingDevices(true);
-			}
-			const response = await apiGet('device', '/listWithValues', {});
-
-			if (!response.ok) {
-				throw new Error(`Failed to fetch devices: ${await response.text()}`);
-			}
-
-			const data = await response.json();
-			// Sort devices first by source, then alphabetically by name
-			const sortedDevices = data.devices.sort((a, b) => {
-				if (a.source.name !== b.source.name) {
-					return a.source.name.localeCompare(b.source.name);
-				}
-				return a.name.localeCompare(b.name);
-			});
-
-			setDevices(sortedDevices);
-		} catch (error) {
-			console.error('Failed to fetch devices:', error);
-		} finally {
-			if (showLoading) {
-				setLoadingDevices(false);
-			}
-		}
-	};
+	const { devices, loading, refresh } = useDevices();
 
 	const handlePair = async () => {
 		if (!pairingCode.trim()) {
@@ -649,12 +613,12 @@ export const Devices: React.FC = () => {
 			const pairedDevices = await response.json();
 			setPairingMessage({
 				type: 'success',
-				text: `Device pairing initiated successfully. ${pairedDevices.devices.length} device${pairedDevices.devices.length !== 1 ? 's' : ''} paired.`,
+				text: `Device pairing initiated successfully. ${pairedDevices} device${pairedDevices !== 1 ? 's' : ''} paired.`,
 			});
 			setPairingCode('');
 
 			// Refresh the device list immediately and clear message after delay
-			await fetchDevices(true);
+			refresh(true);
 			setTimeout(() => setPairingMessage(null), 3000);
 		} catch (error) {
 			console.error('Failed to pair Matter device:', error);
@@ -691,7 +655,7 @@ export const Devices: React.FC = () => {
 	};
 
 	const handleRoomAssigned = () => {
-		void fetchDevices();
+		void refresh();
 	};
 
 	const handleStartEdit = (deviceId: string, currentName: string) => {
@@ -725,7 +689,7 @@ export const Devices: React.FC = () => {
 			);
 
 			if (response.ok) {
-				await fetchDevices();
+				refresh();
 				handleCancelEdit();
 			} else {
 				console.error('Failed to update device name');
@@ -734,13 +698,6 @@ export const Devices: React.FC = () => {
 			console.error('Failed to update device name:', error);
 		}
 	};
-
-	useEffect(() => {
-		void fetchDevices();
-		// Poll for updates every 30 seconds
-		const interval = setInterval(fetchDevices, 30000);
-		return () => clearInterval(interval);
-	}, []);
 
 	return (
 		<Box sx={{ p: { xs: 2, sm: 3 } }}>
@@ -820,7 +777,7 @@ export const Devices: React.FC = () => {
 						}}
 					>
 						<Stack spacing={2}>
-							{loadingDevices && (
+							{loading && (
 								<Box
 									sx={{
 										display: 'flex',
@@ -870,3 +827,49 @@ export const Devices: React.FC = () => {
 		</Box>
 	);
 };
+
+export function useDevices(): {
+	open: boolean;
+	refresh: (showSpinner?: boolean) => void;
+	devices: DeviceListWithValuesResponse;
+	loading: boolean;
+} {
+	const [devices, setDevices] = useState<DeviceListWithValuesResponse>([]);
+	const [loading, setLoading] = useState(false);
+
+	const { sendMessage, open } = useWebsocket<
+		{
+			type: 'devices';
+			devices: DeviceListWithValuesResponse;
+		},
+		{
+			type: 'refreshDevices';
+		}
+	>('/device/ws', {
+		onMessage: (message) => {
+			if (message.type === 'devices') {
+				// Sort devices first by source, then alphabetically by name
+				const sortedDevices = message.devices.sort((a, b) => {
+					if (a.source.name !== b.source.name) {
+						return a.source.name.localeCompare(b.source.name);
+					}
+					return a.name.localeCompare(b.name);
+				});
+				setDevices(sortedDevices);
+				setLoading(false);
+			}
+		},
+	});
+
+	return {
+		open,
+		refresh: (showSpinner = false) => {
+			if (showSpinner) {
+				setLoading(true);
+			}
+			sendMessage({ type: 'refreshDevices' });
+		},
+		devices,
+		loading,
+	};
+}

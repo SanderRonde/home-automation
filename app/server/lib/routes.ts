@@ -33,7 +33,7 @@ export function createServeOptions<
 		fetch?: (this: Server, request: Request, server: Server) => Response | Promise<Response>;
 	})['routes'],
 	auth: boolean | Record<string, boolean>,
-	websocket?: ServeOptions<R>['websocket']
+	extraWebsocket?: ServeOptions<R>['websocket']
 ): ServeOptions<R> {
 	const middleware = (
 		routeHandler:
@@ -128,7 +128,7 @@ export function createServeOptions<
 	}
 	return {
 		routes: loggedRoutes as ServeOptions<R>['routes'],
-		websocket,
+		websocket: extraWebsocket || undefined,
 	};
 }
 
@@ -203,7 +203,12 @@ export function staticResponse(response: Response): BrandedResponse<unknown, fal
 }
 
 function jsonResponse<T>(data: T, init?: Omit<ResponseInit, 'status'>): BrandedResponse<T, false> {
-	return Response.json(data, init) as BrandedResponse<T, false>;
+	try {
+		return Response.json(data, init) as BrandedResponse<T, false>;
+	} catch (error) {
+		console.error('Error creating JSON response:', error, 'json', data);
+		return errorResponse('Internal Server Error', 500) as unknown as BrandedResponse<T, false>;
+	}
 }
 
 function textResponse(message: string, statusCode: number): BrandedResponse<string, false> {
