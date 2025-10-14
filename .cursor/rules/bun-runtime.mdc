@@ -1,0 +1,82 @@
+---
+globs: app/server/**/*.ts
+---
+
+# Bun Runtime Guidelines
+
+This project uses **Bun** as the runtime, not Node.js. Leverage Bun-specific features and APIs.
+
+## Bun APIs to Use
+
+### Server & Routing
+
+```typescript
+import type { Server, BunRequest, ServerWebSocket } from 'bun';
+
+// Bun.serve with routing
+const server = Bun.serve({
+	port: 3000,
+	routes: {
+		'/api': { GET: handler, POST: handler },
+	},
+	websocket: {
+		/* ... */
+	},
+});
+```
+
+See [app/server/lib/routes.ts](mdc:app/server/lib/routes.ts) for the custom routing system.
+
+### Database
+
+Use `Bun.SQL` for SQLite databases:
+
+```typescript
+const db = new Bun.SQL('database/data.db');
+const result = await db`SELECT * FROM users WHERE id = ${id}`;
+```
+
+### File Operations
+
+Prefer Bun's file APIs:
+
+```typescript
+// Reading files
+const file = Bun.file('path/to/file.json');
+const text = await file.text();
+const json = await file.json();
+
+// Writing files
+await Bun.write('path/to/file.txt', 'content');
+```
+
+### HTTP Requests
+
+Use `fetch` (built-in to Bun):
+
+```typescript
+const response = await fetch('https://api.example.com/data');
+const data = await response.json();
+```
+
+## Performance Considerations
+
+- Bun is significantly faster than Node.js
+- Use native Bun APIs when available instead of Node.js polyfills
+- Bun has built-in TypeScript support (no transpilation needed for execution)
+- WebSocket implementation is more performant than `ws` package
+
+## Package Management
+
+- Use `bun install` instead of `npm install`
+- Use `bun run` or just `bun` to execute scripts
+- Bun reads `package.json` and is compatible with npm packages
+
+## NOT Node.js
+
+Avoid Node.js-specific patterns:
+
+- ❌ Don't use `require()` - use ES modules only
+- ❌ Don't use `__dirname` or `__filename` - use `import.meta.dir` and `import.meta.path`
+- ❌ Don't use Node.js `fs` module - use Bun.file APIs
+- ✅ Use Bun native APIs whenever possible

@@ -1,0 +1,150 @@
+---
+globs: **/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx
+---
+
+# Testing Guidelines
+
+This project uses Bun's built-in test runner.
+
+## Running Tests
+
+```bash
+# Run all tests
+bun test
+
+# Watch mode
+bun test --watch
+
+# Run specific test file
+bun test path/to/test.test.ts
+```
+
+## Test File Naming
+
+- Unit tests: `*.test.ts` or `*.spec.ts`
+- Component tests: `*.test.tsx` or `*.spec.tsx`
+- Place tests near the code they test
+
+## Test Structure
+
+```typescript
+import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
+
+describe('MyModule', () => {
+	beforeAll(() => {
+		// Setup before all tests in this describe
+	});
+
+	afterAll(() => {
+		// Cleanup after all tests
+	});
+
+	it('should do something', () => {
+		const result = doSomething();
+		expect(result).toBe(expected);
+	});
+
+	it('should handle async operations', async () => {
+		const result = await asyncOperation();
+		expect(result).toEqual({ success: true });
+	});
+});
+```
+
+## Assertions
+
+Bun test uses expect-style assertions:
+
+```typescript
+// Equality
+expect(value).toBe(5);
+expect(object).toEqual({ key: 'value' });
+
+// Truthiness
+expect(value).toBeTruthy();
+expect(value).toBeFalsy();
+expect(value).toBeNull();
+expect(value).toBeUndefined();
+
+// Numbers
+expect(number).toBeGreaterThan(5);
+expect(number).toBeLessThan(10);
+
+// Arrays and objects
+expect(array).toContain(item);
+expect(array).toHaveLength(3);
+expect(object).toHaveProperty('key');
+
+// Errors
+expect(() => throwError()).toThrow();
+expect(async () => asyncError()).toThrow();
+```
+
+## Mocking
+
+Use Bun's mocking capabilities:
+
+```typescript
+import { mock } from 'bun:test';
+
+const mockFn = mock((x: number) => x * 2);
+mockFn(5); // returns 10
+expect(mockFn).toHaveBeenCalledWith(5);
+expect(mockFn).toHaveBeenCalledTimes(1);
+```
+
+## Testing Modules
+
+When testing modules, mock dependencies:
+
+```typescript
+import { describe, it, expect, mock } from 'bun:test';
+import type { ModuleConfig } from '../modules';
+
+describe('DeviceModule', () => {
+	it('should initialize correctly', async () => {
+		const mockConfig: ModuleConfig = {
+			db: {
+				/* mock db */
+			},
+			wsPublish: mock(() => Promise.resolve()),
+			// ... other mocked config
+		};
+
+		const module = new DeviceModule();
+		await module.init(mockConfig);
+
+		expect(mockConfig.wsPublish).toHaveBeenCalled();
+	});
+});
+```
+
+## Testing API Routes
+
+Test route handlers in isolation:
+
+```typescript
+import { describe, it, expect } from 'bun:test';
+
+describe('Device API', () => {
+	it('should return device list', async () => {
+		const req = new Request('http://localhost/device/list');
+		const response = await handler(req, server, responseHelpers);
+
+		expect(response.status).toBe(200);
+		const data = await response.json();
+		expect(data).toHaveProperty('devices');
+	});
+});
+```
+
+## Best Practices
+
+- ✅ Write tests for critical functionality
+- ✅ Test error cases, not just happy paths
+- ✅ Use descriptive test names
+- ✅ Keep tests isolated and independent
+- ✅ Mock external dependencies
+- ❌ Don't test implementation details
+- ❌ Don't write tests that depend on test order
+- ❌ Avoid testing third-party libraries

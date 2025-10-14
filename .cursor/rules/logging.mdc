@@ -1,0 +1,87 @@
+---
+globs: app/server/**/*.ts
+---
+
+# Logging Guidelines
+
+Use the logging utilities from [app/server/lib/logging/logger.ts](mdc:app/server/lib/logging/logger.ts).
+
+## Logging Functions
+
+```typescript
+import { logTag, warning, logImmediate } from '../../lib/logging/logger';
+
+// Tagged logs with color
+logTag('DEVICE', 'blue', 'Device connected:', deviceId);
+logTag('ERROR', 'red', 'Failed to connect:', error);
+
+// Warning messages
+warning('Configuration missing for', deviceId);
+
+// Immediate logs (bypass ready check)
+logImmediate('Critical startup message');
+```
+
+## Available Colors
+
+Colors from chalk:
+
+- `'black'`, `'red'`, `'green'`, `'yellow'`, `'blue'`, `'magenta'`, `'cyan'`, `'white'`
+- `'gray'`, `'grey'`
+- Bright variants: `'redBright'`, `'greenBright'`, `'blueBright'`, etc.
+
+## Module-Specific Tags
+
+Each module should use its own tag consistently:
+
+```typescript
+// In device module
+logTag('DEVICE', 'blue', 'Message');
+
+// In matter module
+logTag('MATTER', 'magenta', 'Message');
+
+// In MCP module
+logTag('MCP', 'cyan', 'Message');
+```
+
+## When to Log
+
+- ✅ Module initialization
+- ✅ Important state changes
+- ✅ Errors and warnings
+- ✅ Connection events (connect/disconnect)
+- ✅ Critical operations (device control, authentication)
+- ❌ Avoid logging every API request (use LogObj for that)
+- ❌ Don't log sensitive data (passwords, tokens)
+
+## Request/Response Logging
+
+HTTP requests and responses are automatically logged by `LogObj` from [app/server/lib/logging/lob-obj.ts](mdc:app/server/lib/logging/lob-obj.ts). Do NOT manually log individual requests.
+
+```typescript
+// This is handled automatically by the routing middleware
+LogObj.fromIncomingReq(req);
+LogObj.logOutgoingResponse(req, response, server);
+```
+
+## Error Logging
+
+For caught errors:
+
+```typescript
+try {
+	await riskyOperation();
+} catch (error) {
+	logTag('MODULE', 'red', 'Operation failed:', error);
+	// Or use warning()
+	warning('Failed to perform operation:', error);
+}
+```
+
+## Development vs Production
+
+Logging verbosity can be controlled via command-line flags:
+
+- `-v`, `-vv`, `-vvv`, etc. - Increase verbosity
+- Use `--color` flag for colored output

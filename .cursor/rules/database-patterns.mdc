@@ -1,0 +1,111 @@
+---
+description: Database usage patterns for JSON and SQLite
+---
+
+# Database Patterns
+
+The project uses two database systems: JSON file storage and SQLite.
+
+## JSON Database
+
+Each module gets a JSON file database via `ModuleConfig`:
+
+```typescript
+export class MyModuleMeta extends ModuleMeta {
+	public async init(config: ModuleConfig) {
+		// Get current data
+		const data = await config.db.data;
+
+		// Set a value
+		await config.db.setVal('key', { value: 'data' });
+
+		// Access nested values
+		const value = (await config.db.data).key?.value;
+	}
+}
+```
+
+### JSON Database Location
+
+JSON files are stored in `database/` directory and named after the module (e.g., `database/device.json`).
+
+### JSON Database API
+
+The database is defined in [app/server/lib/database.ts](mdc:app/server/lib/database.ts):
+
+- `db.data: Promise<T>` - Get the full database object
+- `db.setVal(key, value): Promise<void>` - Set a value
+- Auto-saves to disk on changes
+- Thread-safe with proper locking
+
+## SQLite Database
+
+Use `config.sqlDB` for structured queries:
+
+```typescript
+import type { SQL } from 'bun';
+
+export class MyModuleMeta extends ModuleMeta {
+	public async init(config: ModuleConfig) {
+		const db: SQL = config.sqlDB;
+
+		// Create tables
+		await db`
+            CREATE TABLE IF NOT EXISTS devices (
+                id TEXT PRIMARY KEY,
+                name TEXT,
+                created_at INTEGER
+            )
+        `;
+
+		// Insert data
+		await db`
+            INSERT INTO devices (id, name, created_at)
+            VALUES (${id}, ${name}, ${Date.now()})
+        `;
+
+		// Query data (returns array)
+		const devices = await db`
+            SELECT * FROM devices WHERE name = ${searchName}
+        `;
+
+		// Single row
+		const device = (
+			await db`
+            SELECT * FROM devices WHERE id = ${id} LIMIT 1
+        `
+		)[0];
+	}
+}
+```
+
+## When to Use Which
+
+- **JSON Database**: Simple key-value storage, module configuration, small datasets
+- **SQLite Database**: Structured data, complex queries, relationships, large datasets
+
+## Data Reactivity
+
+For reactive data that notifies on changes, use the `Data<T>` class from [app/server/lib/data.ts](mdc:app/server/lib/data.ts):
+
+```typescript
+import { Data } from '../../lib/data';
+
+const data = new Data<string>('initial');
+
+// Subscribe to changes
+const unsubscribe = data.subscribe((value, isInitial) => {
+	console.log('Value changed:', value);
+});
+
+// Update value (notifies subscribers)
+data.set('new value');
+
+// Get current value
+const current = data.current();
+
+// Unsubscribe
+unsubscribe();
+```
+
+This is useful for device states, real-time data, and triggering WebSocket updates.

@@ -1,0 +1,226 @@
+---
+globs: app/client/**/*.tsx,app/client/**/*.ts
+---
+
+# API Communication (Client-Side)
+
+Client-side API communication patterns for React components.
+
+## API Utilities
+
+Use the fetch utilities from [app/client/lib/fetch.ts](mdc:app/client/lib/fetch.ts):
+
+```typescript
+import { apiGet, apiPost, apiPut, apiDelete } from '../../lib/fetch';
+
+// GET request with typed response
+const devices = await apiGet<Device[]>('/device/list');
+
+// POST request with body
+await apiPost('/device/control', {
+	deviceId: '123',
+	action: 'on',
+});
+
+// PUT request
+await apiPut('/device/update', { name: 'New Name' });
+
+// DELETE request
+await apiDelete('/device/remove', { id: '123' });
+```
+
+## Type-Safe API Calls
+
+Always type the response:
+
+```typescript
+interface DeviceResponse {
+	devices: Device[];
+	total: number;
+}
+
+const response = await apiGet<DeviceResponse>('/device/list');
+// response.devices is typed!
+```
+
+## Error Handling
+
+Wrap API calls in try-catch:
+
+```typescript
+const [error, setError] = React.useState<string | null>(null);
+
+const fetchData = async () => {
+	try {
+		const data = await apiGet<DataType>('/endpoint');
+		setData(data);
+		setError(null);
+	} catch (error) {
+		console.error('API error:', error);
+		setError('Failed to load data');
+	}
+};
+```
+
+## Loading States
+
+Track loading states for better UX:
+
+```typescript
+const [loading, setLoading] = React.useState<boolean>(false);
+const [data, setData] = React.useState<DataType | null>(null);
+
+const fetchData = async () => {
+	setLoading(true);
+	try {
+		const result = await apiGet<DataType>('/endpoint');
+		setData(result);
+	} catch (error) {
+		console.error('Error:', error);
+	} finally {
+		setLoading(false);
+	}
+};
+```
+
+## useEffect for Data Fetching
+
+```typescript
+React.useEffect(() => {
+	let cancelled = false;
+
+	const fetchData = async () => {
+		try {
+			const result = await apiGet<DataType>('/endpoint');
+			if (!cancelled) {
+				setData(result);
+			}
+		} catch (error) {
+			if (!cancelled) {
+				console.error('Error:', error);
+			}
+		}
+	};
+
+	void fetchData();
+
+	return () => {
+		cancelled = true;
+	};
+}, [dependencies]);
+```
+
+## Debouncing API Calls
+
+For search or input-triggered API calls:
+
+```typescript
+const [searchTerm, setSearchTerm] = React.useState('');
+
+React.useEffect(() => {
+	const timeoutId = setTimeout(async () => {
+		if (searchTerm) {
+			const results = await apiGet<SearchResult[]>(
+				`/search?q=${encodeURIComponent(searchTerm)}`
+			);
+			setResults(results);
+		}
+	}, 300); // 300ms debounce
+
+	return () => clearTimeout(timeoutId);
+}, [searchTerm]);
+```
+
+## Real-Time Updates with WebSocket
+
+Combine API calls with WebSocket for real-time updates:
+
+```typescript
+const [data, setData] = React.useState<DataType[]>([]);
+
+// Initial fetch
+React.useEffect(() => {
+	const fetchInitial = async () => {
+		const initial = await apiGet<DataType[]>('/data/list');
+		setData(initial);
+	};
+	void fetchInitial();
+}, []);
+
+// WebSocket updates
+React.useEffect(() => {
+	const ws = new WebSocket(`ws://${window.location.host}/ws/module`);
+
+	ws.onmessage = (event) => {
+		const update = JSON.parse(event.data);
+		if (update.type === 'data_update') {
+			setData(update.data);
+		}
+	};
+
+	return () => ws.close();
+}, []);
+```
+
+## Optimistic Updates
+
+For better UX, update UI immediately then sync with server:
+
+```typescript
+const toggleDevice = async (deviceId: string) => {
+	// Optimistic update
+	setDevices(devices.map((d) => (d.id === deviceId ? { ...d, on: !d.on } : d)));
+
+	try {
+		// Server sync
+		await apiPost('/device/toggle', { deviceId });
+	} catch (error) {
+		// Revert on error
+		const actualState = await apiGet<Device[]>('/device/list');
+		setDevices(actualState);
+		console.error('Toggle failed:', error);
+	}
+};
+```
+
+## Module Namespacing
+
+API routes are namespaced by module:
+
+- `/device/*` - Device module
+- `/matter/*` - Matter module
+- `/auth/*` - Auth module
+- `/dashboard/*` - Dashboard module
+
+Always include the module prefix:
+
+```typescript
+// ✅ Good
+await apiGet('/device/list');
+
+// ❌ Bad
+await apiGet('/list'); // Which module?
+```
+
+## Query Parameters
+
+Use URLSearchParams for query parameters:
+
+```typescript
+const params = new URLSearchParams({
+	filter: 'active',
+	limit: '10',
+});
+const data = await apiGet<DataType[]>(`/device/list?${params}`);
+```
+
+## Best Practices
+
+- ✅ Always type API responses
+- ✅ Handle loading and error states
+- ✅ Use try-catch for error handling
+- ✅ Cancel requests when components unmount
+- ✅ Combine with WebSocket for real-time updates
+- ❌ Don't make API calls on every render
+- ❌ Don't forget to handle errors
+- ❌ Avoid deeply nested API calls (use Promise.all)
