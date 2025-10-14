@@ -40,6 +40,9 @@ These rules can be fetched when needed by asking about specific topics:
 - **`websocket-communication.mdc`** - WebSocket patterns for real-time updates
 - **`matter-integration.mdc`** - Matter.js smart home integration
 - **`mcp-integration.mdc`** - Model Context Protocol (AI integration)
+- **`device-clusters.mdc`** - Understanding and working with device clusters
+- **`scenes-automation.mdc`** - Working with scenes and automation triggers
+- **`shared-types.mdc`** - Creating and using shared TypeScript types
 
 ## Quick Reference
 
@@ -57,11 +60,19 @@ These rules can be fetched when needed by asking about specific topics:
 
 ### Working with Smart Devices?
 
-→ Check: `matter-integration.mdc`
+→ Check: `matter-integration.mdc`, `device-clusters.mdc`
+
+### Creating Scenes or Automations?
+
+→ Check: `scenes-automation.mdc`, `device-clusters.mdc`
 
 ### Adding AI Integration?
 
 → Check: `mcp-integration.mdc`
+
+### Creating Shared Types?
+
+→ Check: `shared-types.mdc`
 
 ### Writing Tests?
 
@@ -114,12 +125,15 @@ Rules should be updated when:
 ✅ Database usage (JSON & SQLite)
 ✅ WebSocket communication
 ✅ React components and MUI
-✅ API communication patterns
+✅ Type-safe API communication
 ✅ Error handling
 ✅ Logging conventions
 ✅ Testing with Bun
 ✅ Matter.js integration
 ✅ MCP (AI) integration
+✅ Device cluster system
+✅ Scenes and automation
+✅ Shared type definitions
 
 ## Contributing
 

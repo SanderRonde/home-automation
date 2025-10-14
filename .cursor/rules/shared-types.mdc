@@ -1,0 +1,263 @@
+---
+description: Creating and using shared TypeScript types across frontend and backend
+---
+
+# Shared Types
+
+The `types/` directory contains TypeScript type definitions shared between frontend and backend.
+
+## Type Organization
+
+```
+types/
+├── scene.ts              # Scene and automation types
+├── castv2-player.d.ts    # Chromecast types
+├── magic-home.d.ts       # LED controller types
+├── wled-client.d.ts      # WLED types
+└── serviceworker.d.ts    # Service worker types
+```
+
+## Creating Shared Types
+
+Shared types should:
+
+- Be pure TypeScript type definitions (interfaces, types, enums)
+- Not contain runtime code or imports that execute
+- Be importable by both client and server
+- Use relative imports for other shared types
+
+Example structure:
+
+```typescript
+// types/my-feature.ts
+import type { DeviceClusterName } from '../app/server/modules/device/cluster';
+import type * as Icons from '@mui/icons-material';
+
+export type MyFeatureId = string;
+
+export interface MyFeature {
+	id: MyFeatureId;
+	name: string;
+	icon: keyof typeof Icons;
+	metadata: Record<string, unknown>;
+}
+
+export enum MyFeatureStatus {
+	ACTIVE = 'active',
+	INACTIVE = 'inactive',
+	PENDING = 'pending',
+}
+```
+
+## Import Patterns
+
+### Server-Side Import
+
+```typescript
+import type { Scene, SceneId } from '../../../../types/scene';
+
+// Use in server code
+export class SceneAPI {
+	public getScene(id: SceneId): Scene | undefined {
+		// ...
+	}
+}
+```
+
+### Client-Side Import
+
+```typescript
+import type { Scene } from '../../../../types/scene';
+import React from 'react';
+
+// Use in React components
+export const SceneList = (): JSX.Element => {
+	const [scenes, setScenes] = React.useState<Scene[]>([]);
+	// ...
+};
+```
+
+## Type-Only Imports
+
+Always use `import type` for type-only imports:
+
+```typescript
+// ✅ Good
+import type { Scene } from '../../../../types/scene';
+
+// ❌ Bad
+import { Scene } from '../../../../types/scene';
+```
+
+This ensures types are erased at runtime and don't cause import issues.
+
+## External Type Definitions
+
+For third-party libraries without types, create `.d.ts` files:
+
+```typescript
+// types/my-library.d.ts
+declare module 'my-library' {
+	export interface LibraryOptions {
+		host: string;
+		port: number;
+	}
+
+	export class LibraryClient {
+		public constructor(options: LibraryOptions);
+		public connect(): Promise<void>;
+	}
+}
+```
+
+## MUI Icon Types
+
+When using Material-UI icons as strings (for serialization):
+
+```typescript
+import type * as Icons from '@mui/icons-material';
+
+interface ComponentWithIcon {
+	icon: keyof typeof Icons; // String literal type of all icon names
+}
+
+// Usage
+const myComponent: ComponentWithIcon = {
+	icon: 'Home', // Type-safe icon name
+};
+
+// Rendering
+import * as Icons from '@mui/icons-material';
+const IconComponent = Icons[myComponent.icon];
+return <IconComponent />;
+```
+
+## API Response Types
+
+Define API response shapes in shared types:
+
+```typescript
+// types/api-responses.ts
+import type { Device } from '../app/server/modules/device/device';
+
+export interface DeviceListResponse {
+	devices: Device[];
+	total: number;
+}
+
+export interface SceneListResponse {
+	scenes: Scene[];
+}
+```
+
+Use in both server and client:
+
+```typescript
+// Server
+export const handler = async (req, server, { json }) => {
+	const response: DeviceListResponse = {
+		devices: await getDevices(),
+		total: deviceCount,
+	};
+	return json(response);
+};
+
+// Client
+const response = await apiGet<DeviceListResponse>('/device/list');
+```
+
+## Discriminated Unions
+
+Use discriminated unions for type-safe variants:
+
+```typescript
+// types/actions.ts
+export type DeviceAction =
+	| {
+			type: 'turn_on';
+			deviceId: string;
+	  }
+	| {
+			type: 'set_brightness';
+			deviceId: string;
+			brightness: number;
+	  }
+	| {
+			type: 'set_color';
+			deviceId: string;
+			color: { r: number; g: number; b: number };
+	  };
+
+// Usage with type narrowing
+function handleAction(action: DeviceAction) {
+	switch (action.type) {
+		case 'turn_on':
+			// action.deviceId is available, brightness is not
+			break;
+		case 'set_brightness':
+			// action.deviceId and action.brightness are available
+			break;
+		case 'set_color':
+			// action.deviceId and action.color are available
+			break;
+	}
+}
+```
+
+## Brand Types
+
+Use branded types for stronger type safety:
+
+```typescript
+// types/ids.ts
+export type DeviceId = string & { readonly __brand: 'DeviceId' };
+export type SceneId = string & { readonly __brand: 'SceneId' };
+export type UserId = string & { readonly __brand: 'UserId' };
+
+// Create branded values
+function createDeviceId(id: string): DeviceId {
+	return id as DeviceId;
+}
+
+// Now DeviceId and SceneId are not interchangeable
+function getDevice(id: DeviceId): Device {
+	/* ... */
+}
+function getScene(id: SceneId): Scene {
+	/* ... */
+}
+
+getDevice(sceneId); // ❌ Type error!
+```
+
+## Utility Types
+
+Create utility types for common patterns:
+
+```typescript
+// types/utils.ts
+
+// Make specific fields optional
+export type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+
+// Make specific fields required
+export type RequiredBy<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>;
+
+// Nested partial
+export type DeepPartial<T> = {
+	[P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
+};
+```
+
+## Best Practices
+
+- ✅ Keep shared types in `types/` directory
+- ✅ Use `import type` for type-only imports
+- ✅ Create discriminated unions for variants
+- ✅ Use branded types for IDs and similar values
+- ✅ Document complex types with JSDoc comments
+- ✅ Export all public types from type files
+- ❌ Don't include runtime code in type files
+- ❌ Don't import implementation details into type files
+- ❌ Avoid circular dependencies between type files
+- ❌ Don't use `any` - prefer `unknown` or proper typing

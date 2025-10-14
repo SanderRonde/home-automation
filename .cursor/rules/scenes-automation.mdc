@@ -1,0 +1,190 @@
+---
+description: Working with scenes and automation triggers
+---
+
+# Scenes and Automation
+
+Scenes allow grouping multiple device actions that can be triggered manually or automatically.
+
+## Scene Structure
+
+Scenes are defined in [types/scene.ts](mdc:types/scene.ts):
+
+```typescript
+interface Scene {
+	id: SceneId;
+	title: string;
+	icon: keyof typeof Icons; // MUI icon name
+	actions: SceneDeviceAction[];
+	trigger?: SceneTrigger; // Optional automation trigger
+}
+```
+
+## Scene Actions
+
+Actions control devices through their clusters:
+
+### On/Off Actions
+
+```typescript
+{
+	deviceId: string;
+	cluster: DeviceClusterName.ON_OFF;
+	action: {
+		isOn: boolean;
+	}
+}
+```
+
+### Window Covering Actions
+
+```typescript
+{
+	deviceId: string;
+	cluster: DeviceClusterName.WINDOW_COVERING;
+	action: {
+		targetPositionLiftPercentage: number; // 0-100
+	}
+}
+```
+
+## Scene Triggers
+
+Scenes can be triggered automatically by events:
+
+### Occupancy Trigger
+
+```typescript
+trigger: {
+	type: 'occupancy';
+	deviceId: string; // Motion sensor device ID
+}
+```
+
+When the specified sensor detects occupancy, the scene executes automatically.
+
+## Scene API
+
+The Scene API is in [app/server/modules/device/scene-api.ts](mdc:app/server/modules/device/scene-api.ts):
+
+### Creating Scenes
+
+```typescript
+const sceneId = api.sceneAPI.createScene({
+	title: 'Good Night',
+	icon: 'Nightlight',
+	actions: [
+		{
+			deviceId: 'light_1',
+			cluster: DeviceClusterName.ON_OFF,
+			action: { isOn: false },
+		},
+	],
+	trigger: {
+		type: 'occupancy',
+		deviceId: 'motion_1',
+	},
+});
+```
+
+### Updating Scenes
+
+```typescript
+api.sceneAPI.updateScene(sceneId, {
+	title: 'Updated Title',
+	icon: 'Home',
+	actions: [
+		/* ... */
+	],
+});
+```
+
+### Triggering Scenes
+
+```typescript
+// Manual trigger
+await api.sceneAPI.triggerScene(sceneId);
+
+// Automatic trigger (called by occupancy tracker)
+await api.sceneAPI.onTrigger({
+	type: 'occupancy',
+	deviceId: 'motion_1',
+});
+```
+
+### Listing Scenes
+
+```typescript
+const scenes = api.sceneAPI.listScenes();
+const scene = api.sceneAPI.getScene(sceneId);
+```
+
+## Scene Execution
+
+When a scene executes:
+
+1. All actions run in parallel using `Promise.all`
+2. Each action gets the device from the device registry
+3. The appropriate cluster is retrieved for the action type
+4. The cluster method is called to perform the action
+5. If any action fails, the scene execution is marked as failed
+
+## Client-Side Scene Management
+
+Example from [app/client/dashboard/components/Scenes.tsx](mdc:app/client/dashboard/components/Scenes.tsx):
+
+```typescript
+// List scenes
+const response = await apiGet('device', '/scenes/list', {});
+const data = await response.json();
+const scenes = data.scenes;
+
+// Create scene
+await apiPost('device', '/scenes/create', {}, sceneData);
+
+// Update scene
+await apiPost('device', '/scenes/:sceneId/update', { sceneId }, sceneData);
+
+// Delete scene
+await apiPost('device', '/scenes/:sceneId/delete', { sceneId });
+
+// Trigger scene
+await apiPost('device', '/scenes/:sceneId/trigger', { sceneId });
+```
+
+## Adding New Scene Action Types
+
+To add a new action type:
+
+1. **Define the action type** in [types/scene.ts](mdc:types/scene.ts):
+
+    ```typescript
+    export type SceneDeviceActionNewType = {
+    	deviceId: string;
+    	cluster: DeviceClusterName.NEW_CLUSTER;
+    	action: {
+    		// action-specific fields
+    	};
+    };
+
+    export type SceneDeviceAction =
+    	| SceneDeviceActionOnOff
+    	| SceneDeviceActionWindowCovering
+    	| SceneDeviceActionNewType;
+    ```
+
+2. **Update the Zod schema** in routing for validation
+3. **Add execution logic** in `SceneAPI.triggerScene()`
+4. **Update the UI** to allow creating/editing the new action type
+
+## Best Practices
+
+- ✅ Use descriptive scene titles
+- ✅ Choose appropriate MUI icons
+- ✅ Validate device IDs before creating scenes
+- ✅ Handle scene execution failures gracefully
+- ✅ Use type-safe union types for actions
+- ✅ Test scenes after creation
+- ❌ Don't create circular trigger dependencies
+- ❌ Avoid scenes with too many actions (impacts execution time)
+- ❌ Don't assume all devices have all clusters

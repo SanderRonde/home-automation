@@ -1,0 +1,254 @@
+---
+description: Understanding and working with device clusters
+---
+
+# Device Cluster System
+
+Devices expose capabilities through **clusters** - standardized interfaces for device features.
+
+## Cluster Concept
+
+Clusters are modular capabilities that devices implement:
+
+- **OnOff Cluster** - Turn devices on/off
+- **LevelControl Cluster** - Dimming/brightness control
+- **ColorControl Cluster** - Color temperature and RGB
+- **WindowCovering Cluster** - Blinds/shades control
+- **OccupancySensing Cluster** - Motion/presence detection
+- **TemperatureMeasurement Cluster** - Temperature sensing
+
+## Cluster Pattern
+
+Clusters are defined in [app/server/modules/device/cluster.ts](mdc:app/server/modules/device/cluster.ts):
+
+```typescript
+export abstract class DeviceCluster<T extends DeviceClusterName> {
+	public abstract readonly name: T;
+
+	public constructor(protected readonly device: Device) {}
+
+	// Cluster-specific methods
+}
+```
+
+## Common Clusters
+
+### OnOff Cluster
+
+```typescript
+export class DeviceOnOffCluster extends DeviceCluster<DeviceClusterName.ON_OFF> {
+	public readonly name = DeviceClusterName.ON_OFF;
+
+	public async setOn(isOn: boolean): Promise<void> {
+		// Implementation
+	}
+
+	public async toggle(): Promise<void> {
+		// Implementation
+	}
+
+	public isOn(): boolean {
+		// Get current state
+	}
+}
+```
+
+Usage:
+
+```typescript
+const device = await getDevice(deviceId);
+const onOffCluster = device.getClusterByType(DeviceOnOffCluster);
+if (onOffCluster) {
+	await onOffCluster.setOn(true);
+	await onOffCluster.toggle();
+	const isOn = onOffCluster.isOn();
+}
+```
+
+### WindowCovering Cluster
+
+```typescript
+export class DeviceWindowCoveringCluster extends DeviceCluster<DeviceClusterName.WINDOW_COVERING> {
+	public readonly name = DeviceClusterName.WINDOW_COVERING;
+
+	public async goToLiftPercentage(args: {
+		percentage: number; // 0-100
+	}): Promise<void> {
+		// Implementation
+	}
+
+	public getCurrentLiftPercentage(): number | undefined {
+		// Get current position
+	}
+}
+```
+
+Usage:
+
+```typescript
+const windowCluster = device.getClusterByType(DeviceWindowCoveringCluster);
+if (windowCluster) {
+	await windowCluster.goToLiftPercentage({ percentage: 50 }); // 50% open
+	const position = windowCluster.getCurrentLiftPercentage();
+}
+```
+
+### OccupancySensing Cluster
+
+```typescript
+export class DeviceOccupancySensingCluster extends DeviceCluster<DeviceClusterName.OCCUPANCY_SENSING> {
+	public readonly name = DeviceClusterName.OCCUPANCY_SENSING;
+
+	public isOccupied(): boolean {
+		// Get occupancy state
+	}
+}
+```
+
+## Getting Clusters from Devices
+
+Devices expose their clusters:
+
+```typescript
+// Get cluster by type (type-safe)
+const onOffCluster = device.getClusterByType(DeviceOnOffCluster);
+
+// Get cluster by name
+const cluster = device.getClusterByName(DeviceClusterName.ON_OFF);
+
+// Get all clusters
+const clusters = device.getClusters();
+```
+
+## Device State
+
+Clusters access device state through the reactive `Data<T>` system:
+
+```typescript
+export abstract class DeviceCluster<T extends DeviceClusterName> {
+	protected getState(): DeviceState {
+		return this.device.deviceState.current();
+	}
+
+	protected updateState(updater: (state: DeviceState) => DeviceState): void {
+		this.device.deviceState.set(updater(this.getState()));
+	}
+}
+```
+
+Example:
+
+```typescript
+public async setOn(isOn: boolean): Promise<void> {
+	// Update Matter device
+	await this.matterCluster.on();
+
+	// Update local state
+	this.updateState((state) => ({
+		...state,
+		[DeviceClusterName.ON_OFF]: {
+			on: isOn,
+		},
+	}));
+}
+```
+
+## Creating New Clusters
+
+To add a new cluster type:
+
+1. **Add cluster name enum** in `DeviceClusterName`:
+
+    ```typescript
+    export enum DeviceClusterName {
+    	ON_OFF = 'onOff',
+    	WINDOW_COVERING = 'windowCovering',
+    	NEW_CLUSTER = 'newCluster', // Add this
+    }
+    ```
+
+2. **Create cluster class**:
+
+    ```typescript
+    export class DeviceNewCluster extends DeviceCluster<DeviceClusterName.NEW_CLUSTER> {
+    	public readonly name = DeviceClusterName.NEW_CLUSTER;
+
+    	public async doSomething(): Promise<void> {
+    		// Implementation
+    	}
+    }
+    ```
+
+3. **Update device state type** to include cluster state
+4. **Register cluster** in device initialization
+5. **Add API endpoints** for cluster control
+
+## Type Safety
+
+The cluster system is fully type-safe:
+
+```typescript
+// Type parameter ensures name matches
+export class DeviceOnOffCluster extends DeviceCluster<DeviceClusterName.ON_OFF> {
+	public readonly name = DeviceClusterName.ON_OFF; // Must match type param
+}
+
+// getClusterByType returns the correct cluster type or undefined
+const cluster: DeviceOnOffCluster | undefined = device.getClusterByType(DeviceOnOffCluster);
+```
+
+## Cluster State Serialization
+
+Cluster states are serialized for WebSocket and API responses:
+
+```typescript
+interface DeviceState {
+	[DeviceClusterName.ON_OFF]?: {
+		on: boolean;
+	};
+	[DeviceClusterName.WINDOW_COVERING]?: {
+		currentPositionLiftPercentage: number;
+		targetPositionLiftPercentage: number;
+	};
+	// ... other clusters
+}
+```
+
+## Best Practices
+
+- ✅ Always check if cluster exists before using (`if (cluster) { ... }`)
+- ✅ Use `getClusterByType` for type safety
+- ✅ Update local state after Matter operations
+- ✅ Handle cluster operation failures gracefully
+- ✅ Use reactive `Data<T>` for state updates
+- ✅ Keep cluster logic focused and single-purpose
+- ❌ Don't assume all devices have all clusters
+- ❌ Don't bypass cluster interface to access Matter directly
+- ❌ Avoid tight coupling between clusters
+
+## Cluster Discovery
+
+When integrating Matter devices, clusters are discovered automatically:
+
+```typescript
+// Matter device reports supported clusters
+const matterClusters = matterDevice.getClusterClients();
+
+// Create corresponding DeviceCluster instances
+for (const matterCluster of matterClusters) {
+	if (matterCluster.id === OnOff.Cluster.id) {
+		device.addCluster(new DeviceOnOffCluster(device));
+	}
+	// ... other clusters
+}
+```
+
+## Cluster Icons
+
+Clusters have associated icons for UI display:
+
+```typescript
+import { getClusterIcon } from './clusterIcons';
+
+const icon = getClusterIcon(DeviceClusterName.ON_OFF); // Returns MUI icon component
+```
