@@ -85,14 +85,16 @@ interface DashboardDeviceResponse extends DashboardDeviceEndpointResponse {
 	roomIcon?: keyof typeof Icons;
 }
 
-function _initRouting({ db, modules, wsPublish }: ModuleConfig, api: DeviceAPI) {
+function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api: DeviceAPI) {
+	const wsPublish = (data: DeviceWebsocketServerMessage) => {
+		void _wsPublish(JSON.stringify(data));
+	};
+
 	const notifyDeviceChanges = async () => {
-		void wsPublish(
-			JSON.stringify({
-				type: 'devices',
-				devices: await listWithValues(api, modules),
-			})
-		);
+		void wsPublish({
+			type: 'devices',
+			devices: await listDevicesWithValues(api, modules),
+		});
 	};
 
 	// Subscribe to device changes and notify via WebSocket
@@ -160,7 +162,7 @@ function _initRouting({ db, modules, wsPublish }: ModuleConfig, api: DeviceAPI) 
 				return json({ devices });
 			},
 			'/listWithValues': async (_req, _server, { json }) => {
-				return json({ devices: await listWithValues(api, modules) });
+				return json({ devices: await listDevicesWithValues(api, modules) });
 			},
 			'/occupancy/:deviceId': async (req, _server, { json }) => {
 				const history = await api.occupancyTracker.getHistory(req.params.deviceId, 100);
@@ -255,6 +257,95 @@ function _initRouting({ db, modules, wsPublish }: ModuleConfig, api: DeviceAPI) 
 						}
 					)
 			),
+			'/scenes/list': (_req, _server, { json }) => {
+				const scenes = api.sceneAPI.listScenes();
+				return json({ scenes });
+			},
+			'/scenes/create': withRequestBody(
+				z.object({
+					title: z.string(),
+					icon: z.string() as z.ZodType<keyof typeof Icons>,
+					actions: z.array(
+						z.union([
+							z.object({
+								deviceId: z.string(),
+								cluster: z.literal(DeviceClusterName.ON_OFF),
+								action: z.object({
+									isOn: z.boolean(),
+								}),
+							}),
+							z.object({
+								deviceId: z.string(),
+								cluster: z.literal(DeviceClusterName.WINDOW_COVERING),
+								action: z.object({
+									targetPositionLiftPercentage: z.number(),
+								}),
+							}),
+						])
+					),
+					trigger: z
+						.object({
+							type: z.literal('occupancy'),
+							deviceId: z.string(),
+						})
+						.optional(),
+				}),
+				(body, _req, _server, { json }) => {
+					const sceneId = api.sceneAPI.createScene(body);
+					return json({ success: true, sceneId });
+				}
+			),
+			'/scenes/:sceneId/update': withRequestBody(
+				z.object({
+					title: z.string(),
+					icon: z.string() as z.ZodType<keyof typeof Icons>,
+					actions: z.array(
+						z.union([
+							z.object({
+								deviceId: z.string(),
+								cluster: z.literal(DeviceClusterName.ON_OFF),
+								action: z.object({
+									isOn: z.boolean(),
+								}),
+							}),
+							z.object({
+								deviceId: z.string(),
+								cluster: z.literal(DeviceClusterName.WINDOW_COVERING),
+								action: z.object({
+									targetPositionLiftPercentage: z.number(),
+								}),
+							}),
+						])
+					),
+					trigger: z
+						.object({
+							type: z.literal('occupancy'),
+							deviceId: z.string(),
+						})
+						.optional(),
+				}),
+				(body, req, _server, { json }) => {
+					const success = api.sceneAPI.updateScene(req.params.sceneId, body);
+					if (!success) {
+						return json({ error: 'Scene not found' }, { status: 404 });
+					}
+					return json({ success: true });
+				}
+			),
+			'/scenes/:sceneId/delete': (req, _server, { json }) => {
+				const success = api.sceneAPI.deleteScene(req.params.sceneId);
+				if (!success) {
+					return json({ error: 'Scene not found' }, { status: 404 });
+				}
+				return json({ success: true });
+			},
+			'/scenes/:sceneId/trigger': async (req, _server, { json }) => {
+				const success = await api.sceneAPI.triggerScene(req.params.sceneId);
+				if (!success) {
+					return json({ error: 'Scene not found or execution failed' }, { status: 404 });
+				}
+				return json({ success: true });
+			},
 		},
 		true,
 		{
@@ -263,26 +354,35 @@ function _initRouting({ db, modules, wsPublish }: ModuleConfig, api: DeviceAPI) 
 				ws.send(
 					JSON.stringify({
 						type: 'devices',
-						devices: await listWithValues(api, modules),
-					})
+						devices: await listDevicesWithValues(api, modules),
+					} satisfies DeviceWebsocketServerMessage)
 				);
 			},
 			message: async (ws, message) => {
-				const parsedMessage = JSON.parse(message.toString()) as {
-					type: 'refreshDevices';
-				};
+				const parsedMessage = JSON.parse(
+					message.toString()
+				) as DeviceWebsocketClientMessage;
 				if (parsedMessage.type === 'refreshDevices') {
 					ws.send(
 						JSON.stringify({
 							type: 'devices',
-							devices: await listWithValues(api, modules),
-						})
+							devices: await listDevicesWithValues(api, modules),
+						} satisfies DeviceWebsocketServerMessage)
 					);
 				}
 			},
 		}
 	);
 }
+
+export type DeviceWebsocketServerMessage = {
+	type: 'devices';
+	devices: DeviceListWithValuesResponse;
+};
+
+export type DeviceWebsocketClientMessage = {
+	type: 'refreshDevices';
+};
 
 const getClusterState = async (
 	api: DeviceAPI,
@@ -339,7 +439,7 @@ const getClusterState = async (
 	} as DashboardDeviceClusterWithState;
 };
 
-const listWithValues = async (api: DeviceAPI, modules: AllModules) => {
+async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 	const deviceApi = await modules.device.api.value;
 	const devices = [...Object.values(await deviceApi.devices.get())];
 	const storedDevices = deviceApi.getStoredDevices();
@@ -410,9 +510,9 @@ const listWithValues = async (api: DeviceAPI, modules: AllModules) => {
 	);
 
 	return responseDevices;
-};
+}
 
-export type DeviceListWithValuesResponse = Awaited<ReturnType<typeof listWithValues>>;
+export type DeviceListWithValuesResponse = Awaited<ReturnType<typeof listDevicesWithValues>>;
 
 function getClusterIconName(clusterName: DeviceClusterName): keyof typeof Icons | undefined {
 	switch (clusterName) {

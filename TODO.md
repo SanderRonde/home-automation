@@ -18,7 +18,7 @@
     - [ ] Switch
     - [ ] Illuminance measurement
     - [ ] Color control
-- [ ] Add support for scenes
+- [x] Add support for scenes
 - [ ] Detail pages for devices
     - [ ] Light
     - [ ] Window covering

@@ -5,6 +5,7 @@ import {
 	Lightbulb as LightbulbIcon,
 	Home as HomeIcon,
 	SmartToy as SmartToyIcon,
+	MovieFilter as MovieFilterIcon,
 } from '@mui/icons-material';
 import {
 	Drawer,
@@ -44,6 +45,7 @@ export interface SidebarProps {
 export const Sidebar = (props: SidebarProps): JSX.Element => {
 	const menuItems = [
 		{ text: 'Home', icon: <HomeIcon />, id: SidebarTab.HOME },
+		{ text: 'Scenes', icon: <MovieFilterIcon />, id: SidebarTab.SCENES },
 		{ text: 'Settings', icon: <SettingsIcon />, id: SidebarTab.SETTINGS },
 		{ text: 'Devices', icon: <DeviceHubIcon />, id: SidebarTab.DEVICES }, // Updated icon for Matter
 		{ text: 'eWeLink', icon: <CloudIcon />, id: SidebarTab.EWELINK },
@@ -90,6 +92,7 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 
 export enum SidebarTab {
 	HOME = 'home',
+	SCENES = 'scenes',
 	SETTINGS = 'settings',
 	DEVICES = 'devices',
 	EWELINK = 'ewelink',

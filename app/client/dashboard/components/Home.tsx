@@ -2,11 +2,21 @@ import type {
 	DashboardDeviceClusterWithState,
 	DeviceListWithValuesResponse,
 } from '../../../server/modules/device/routing';
-import { Box, Card, CardActionArea, Typography, CircularProgress, IconButton } from '@mui/material';
+import {
+	Box,
+	Card,
+	CardActionArea,
+	Typography,
+	CircularProgress,
+	IconButton,
+	Chip,
+} from '@mui/material';
 import type { DeviceClusterName } from '../../../server/modules/device/cluster';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { DeviceClusterCard } from './DeviceClusterCard';
 import { ClusterIconButton } from './ClusterIconButton';
+import type { Scene } from '../../../../types/scene';
+import { apiGet, apiPost } from '../../lib/fetch';
 import { DeviceDetail } from './DeviceDetail';
 import * as Icons from '@mui/icons-material';
 import type { SxProps } from '@mui/material';
@@ -47,6 +57,26 @@ type HomeDetailViewWithFrom = HomeDetailView & {
 
 export const Home = (): JSX.Element => {
 	const { loading, devices, refresh } = useDevices();
+	const [scenes, setScenes] = React.useState<Scene[]>([]);
+	const [triggeringSceneId, setTriggeringSceneId] = React.useState<string | null>(null);
+
+	// Load scenes with triggers
+	React.useEffect(() => {
+		const loadScenes = async () => {
+			try {
+				const response = await apiGet('device', '/scenes/list', {});
+				if (response.ok) {
+					const data = await response.json();
+					// Only show scenes without triggers on home screen. If there is a trigger
+					// it will run automatically when the trigger is met.
+					setScenes(data.scenes.filter((scene: Scene) => !scene.trigger));
+				}
+			} catch (error) {
+				console.error('Failed to load scenes:', error);
+			}
+		};
+		void loadScenes();
+	}, []);
 
 	// Group devices by room
 	const roomDevices: RoomDevices[] = React.useMemo(() => {
@@ -82,6 +112,20 @@ export const Home = (): JSX.Element => {
 	const popDetailView = React.useCallback(() => {
 		setDetailView((oldDetailView) => oldDetailView?.from ?? null);
 	}, []);
+
+	const handleTriggerScene = async (sceneId: string) => {
+		setTriggeringSceneId(sceneId);
+		try {
+			const response = await apiPost('device', '/scenes/:sceneId/trigger', { sceneId });
+			if (!response.ok) {
+				console.error('Failed to trigger scene');
+			}
+		} catch (error) {
+			console.error('Failed to trigger scene:', error);
+		} finally {
+			setTriggeringSceneId(null);
+		}
+	};
 
 	if (loading) {
 		return (
@@ -137,6 +181,45 @@ export const Home = (): JSX.Element => {
 					gap: 2,
 				}}
 			>
+				{/* Scene Triggers */}
+				{scenes.length > 0 && (
+					<Box
+						sx={{
+							display: 'flex',
+							flexWrap: 'wrap',
+							gap: 1.5,
+						}}
+					>
+						{scenes.map((scene) => {
+							const IconComponent = Icons[scene.icon] as React.ComponentType;
+							return (
+								<Chip
+									key={scene.id}
+									icon={<IconComponent />}
+									label={scene.title}
+									onClick={() => handleTriggerScene(scene.id)}
+									disabled={triggeringSceneId === scene.id}
+									sx={{
+										height: 48,
+										px: 2,
+										fontSize: '0.95rem',
+										fontWeight: 500,
+										backgroundColor: 'background.paper',
+										border: '1px solid',
+										borderColor: 'divider',
+										'& .MuiChip-icon': {
+											fontSize: '1.4rem',
+										},
+										'&:hover': {
+											backgroundColor: 'action.hover',
+										},
+									}}
+								/>
+							);
+						})}
+					</Box>
+				)}
+
 				{roomDevices.map((room) => {
 					return (
 						<RoomDevice

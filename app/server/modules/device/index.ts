@@ -1,4 +1,5 @@
 import { SettablePromise } from '../../lib/settable-promise';
+import type { Scene } from '../../../../types/scene';
 import type * as Icons from '@mui/icons-material';
 import type { Database } from '../../lib/db';
 import type { DeviceInfo } from './routing';
@@ -12,6 +13,7 @@ export interface DeviceDB {
 	room_icons?: {
 		[room: string]: keyof typeof Icons;
 	};
+	scenes?: Record<string, Scene>;
 }
 
 export const Device = new (class Device extends ModuleMeta {

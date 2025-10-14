@@ -31,7 +31,11 @@ import {
 	Close as CloseIcon,
 	Battery90 as BatteryIcon,
 } from '@mui/icons-material';
-import type { DeviceListWithValuesResponse } from '../../../server/modules/device/routing';
+import type {
+	DeviceListWithValuesResponse,
+	DeviceWebsocketClientMessage,
+	DeviceWebsocketServerMessage,
+} from '../../../server/modules/device/routing';
 import { RoomAssignmentDialog } from './RoomAssignmentDialog';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import useWebsocket from '../../shared/resilient-socket';
@@ -838,13 +842,8 @@ export function useDevices(): {
 	const [loading, setLoading] = useState(false);
 
 	const { sendMessage, open } = useWebsocket<
-		{
-			type: 'devices';
-			devices: DeviceListWithValuesResponse;
-		},
-		{
-			type: 'refreshDevices';
-		}
+		DeviceWebsocketServerMessage,
+		DeviceWebsocketClientMessage
 	>('/device/ws', {
 		onMessage: (message) => {
 			if (message.type === 'devices') {

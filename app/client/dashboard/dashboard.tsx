@@ -8,6 +8,7 @@ import { MCPConfig } from './components/MCPConfig';
 import React, { useState, useEffect } from 'react';
 import { Devices } from './components/Devices';
 import { createRoot } from 'react-dom/client';
+import { Scenes } from './components/Scenes';
 import { Home } from './components/Home';
 
 function DashboardApp() {
@@ -43,6 +44,8 @@ function DashboardApp() {
 		switch (currentTab) {
 			case SidebarTab.HOME:
 				return <Home />;
+			case SidebarTab.SCENES:
+				return <Scenes />;
 			case SidebarTab.SETTINGS:
 				return <WelcomePage />;
 			case SidebarTab.DEVICES:
