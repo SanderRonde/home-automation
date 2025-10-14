@@ -27,7 +27,7 @@ test.describe('Scene Management', () => {
 	});
 
 	test('should show create scene button', async ({ page }) => {
-		const createButton = await page
+		const createButton = page
 			.locator('button:has-text("Create")')
 			.or(page.locator('button[aria-label*="create"]'));
 
@@ -114,7 +114,7 @@ test.describe('Scene Management', () => {
 	test('should trigger a scene', async ({ page, sceneAPI, deviceAPI }) => {
 		const devices = await deviceAPI.getDevices();
 		const onOffDevice = devices.find(
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
 			(d: any) => d.allClusters.some((c: any) => c.name === 'onOff')
 		);
 
@@ -146,7 +146,7 @@ test.describe('Scene Management', () => {
 
 		// Verify device was controlled (check state)
 		const devicesAfter = await deviceAPI.getDevices();
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
 		const controlledDevice = devicesAfter.find((d: any) => d.uniqueId === onOffDevice.uniqueId);
 
 		expect(controlledDevice).toBeTruthy();
@@ -156,7 +156,7 @@ test.describe('Scene Management', () => {
 	test('should handle scene with multiple actions', async ({ sceneAPI, deviceAPI }) => {
 		const devices = await deviceAPI.getDevices();
 		const onOffDevices = devices.filter(
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
 			(d: any) => d.allClusters.some((c: any) => c.name === 'onOff')
 		);
 

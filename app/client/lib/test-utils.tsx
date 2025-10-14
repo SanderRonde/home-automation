@@ -40,7 +40,7 @@ export function setupDOM(): void {
 			public pointerType: string = 'mouse';
 			public isPrimary: boolean = true;
 
-			constructor(type: string, init?: PointerEventInit) {
+			public constructor(type: string, init?: PointerEventInit) {
 				super(type, init as unknown as never);
 				if (init) {
 					this.pointerId = init.pointerId ?? 1;
@@ -108,8 +108,8 @@ export class MockFetchManager {
 		this.responses.set(url, {
 			ok: status >= 200 && status < 300,
 			status,
-			json: async () => data,
-			text: async () => JSON.stringify(data),
+			json: () => Promise.resolve(data),
+			text: () => Promise.resolve(JSON.stringify(data)),
 		});
 	}
 
@@ -117,8 +117,8 @@ export class MockFetchManager {
 		this.responses.set(url, {
 			ok: false,
 			status,
-			json: async () => ({ error: message }),
-			text: async () => message,
+			json: () => Promise.resolve({ error: message }),
+			text: () => Promise.resolve(message),
 		});
 	}
 
@@ -129,15 +129,15 @@ export class MockFetchManager {
 
 		const mockResponse = this.responses.get(url);
 		if (mockResponse) {
-			return mockResponse as unknown as Response;
+			return Promise.resolve(mockResponse as unknown as Response);
 		}
 
 		// Default 404 response
 		return {
 			ok: false,
 			status: 404,
-			json: async () => ({ error: 'Not Found' }),
-			text: async () => 'Not Found',
+			json: () => Promise.resolve({ error: 'Not Found' }),
+			text: () => Promise.resolve('Not Found'),
 		} as unknown as Response;
 	};
 
@@ -196,6 +196,7 @@ export class MockWebSocket {
 		}, 0);
 	}
 
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	public send(_data: string | ArrayBufferLike | Blob | ArrayBufferView): void {
 		// Mock send - could track sent messages if needed
 	}

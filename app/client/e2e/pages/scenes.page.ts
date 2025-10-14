@@ -4,24 +4,24 @@ import type { Page, Locator } from '@playwright/test';
  * Page object for the Scenes page
  */
 export class ScenesPage {
-	readonly page: Page;
-	readonly scenesTab: Locator;
-	readonly createSceneButton: Locator;
-	readonly scenesList: Locator;
+	public readonly page: Page;
+	public readonly scenesTab: Locator;
+	public readonly createSceneButton: Locator;
+	public readonly scenesList: Locator;
 
-	constructor(page: Page) {
+	public constructor(page: Page) {
 		this.page = page;
 		this.scenesTab = page.locator('text=Scenes').first();
 		this.createSceneButton = page.locator('button:has-text("Create Scene")');
 		this.scenesList = page.locator('[data-testid="scenes-list"]');
 	}
 
-	async goto(): Promise<void> {
+	public async goto(): Promise<void> {
 		await this.page.goto('/#/scenes');
 		await this.page.waitForLoadState('networkidle');
 	}
 
-	async createScene(name: string, icon?: string): Promise<void> {
+	public async createScene(name: string, icon?: string): Promise<void> {
 		await this.createSceneButton.click();
 
 		// Fill in scene details
@@ -41,7 +41,7 @@ export class ScenesPage {
 		await this.page.waitForTimeout(500);
 	}
 
-	async addDeviceAction(
+	public async addDeviceAction(
 		sceneName: string,
 		deviceName: string,
 		action: { type: 'onoff'; isOn: boolean } | { type: 'covering'; position: number }
@@ -74,13 +74,13 @@ export class ScenesPage {
 		await saveButton.click();
 	}
 
-	async openScene(sceneName: string): Promise<void> {
+	public async openScene(sceneName: string): Promise<void> {
 		const sceneCard = this.page.locator(`text="${sceneName}"`).locator('..').locator('..');
 		await sceneCard.click();
 		await this.page.waitForTimeout(300);
 	}
 
-	async triggerScene(sceneName: string): Promise<void> {
+	public async triggerScene(sceneName: string): Promise<void> {
 		const sceneCard = this.page.locator(`text="${sceneName}"`).locator('..').locator('..');
 		const triggerButton = sceneCard.locator('button[aria-label="Trigger scene"]');
 		await triggerButton.click();
@@ -89,7 +89,7 @@ export class ScenesPage {
 		await this.page.waitForTimeout(1000);
 	}
 
-	async deleteScene(sceneName: string): Promise<void> {
+	public async deleteScene(sceneName: string): Promise<void> {
 		await this.openScene(sceneName);
 
 		// Click delete button
@@ -106,12 +106,12 @@ export class ScenesPage {
 		await this.page.waitForTimeout(500);
 	}
 
-	async getSceneCount(): Promise<number> {
+	public async getSceneCount(): Promise<number> {
 		const scenes = await this.page.locator('[data-testid="scene-card"]').all();
 		return scenes.length;
 	}
 
-	async isSceneVisible(sceneName: string): Promise<boolean> {
+	public async isSceneVisible(sceneName: string): Promise<boolean> {
 		return this.page.locator(`text="${sceneName}"`).isVisible({ timeout: 1000 });
 	}
 }

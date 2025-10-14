@@ -6,6 +6,12 @@ import {
 	DeviceWindowCoveringCluster,
 	DevicePowerSourceCluster,
 	DeviceOccupancySensingCluster,
+	DeviceTemperatureMeasurementCluster,
+	DeviceRelativeHumidityMeasurementCluster,
+	DeviceIlluminanceMeasurementCluster,
+	DeviceBooleanStateCluster,
+	DeviceSwitchCluster,
+	DeviceColorControlCluster,
 } from './cluster';
 import type { BrandedRouteHandlerResponse, ServeOptions } from '../../lib/routes';
 import { createServeOptions, withRequestBody } from '../../lib/routes';
@@ -13,6 +19,7 @@ import type { Device, DeviceEndpoint } from './device';
 import type { AllModules, ModuleConfig } from '..';
 import type * as Icons from '@mui/icons-material';
 import type { Cluster } from './cluster';
+import { Color } from '../../lib/color';
 import type { DeviceAPI } from './api';
 import { wait } from '../../lib/time';
 import * as z from 'zod';
@@ -57,12 +64,55 @@ export type DashboardDeviceClusterOccupancySensing = DashboardDeviceClusterBase 
 	lastTriggered?: number;
 };
 
+export type DashboardDeviceClusterTemperatureMeasurement = DashboardDeviceClusterBase & {
+	name: DeviceClusterName.TEMPERATURE_MEASUREMENT;
+	temperature: number;
+	lastUpdated?: number;
+};
+
+export type DashboardDeviceClusterRelativeHumidityMeasurement = DashboardDeviceClusterBase & {
+	name: DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT;
+	humidity: number;
+	lastUpdated?: number;
+};
+
+export type DashboardDeviceClusterIlluminanceMeasurement = DashboardDeviceClusterBase & {
+	name: DeviceClusterName.ILLUMINANCE_MEASUREMENT;
+	illuminance: number;
+	lastUpdated?: number;
+};
+
+export type DashboardDeviceClusterBooleanState = DashboardDeviceClusterBase & {
+	name: DeviceClusterName.BOOLEAN_STATE;
+	state: boolean;
+};
+
+export type DashboardDeviceClusterSwitch = DashboardDeviceClusterBase & {
+	name: DeviceClusterName.SWITCH;
+};
+
+export type DashboardDeviceClusterColorControl = DashboardDeviceClusterBase & {
+	name: DeviceClusterName.COLOR_CONTROL;
+	color: {
+		hue: number;
+		saturation: number;
+		value: number;
+	};
+	isOn?: boolean; // Merged from OnOff cluster if present
+};
+
 export type DashboardDeviceClusterWithState = DashboardDeviceClusterBase &
 	(
 		| DashboardDeviceClusterOnOff
 		| DashboardDeviceClusterWindowCovering
 		| DashboardDeviceClusterPowerSource
 		| DashboardDeviceClusterOccupancySensing
+		| DashboardDeviceClusterTemperatureMeasurement
+		| DashboardDeviceClusterRelativeHumidityMeasurement
+		| DashboardDeviceClusterIlluminanceMeasurement
+		| DashboardDeviceClusterBooleanState
+		| DashboardDeviceClusterSwitch
+		| DashboardDeviceClusterColorControl
 	);
 
 interface DashboardDeviceEndpointResponse {
@@ -168,6 +218,33 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 				const history = await api.occupancyTracker.getHistory(req.params.deviceId, 100);
 				return json({ history });
 			},
+			'/temperature/:deviceId/:timeframe': async (req, _server, { json }) => {
+				const timeframe = parseInt(req.params.timeframe, 10);
+				const history = await api.temperatureTracker.getHistory(
+					req.params.deviceId,
+					1000,
+					timeframe
+				);
+				return json({ history });
+			},
+			'/humidity/:deviceId/:timeframe': async (req, _server, { json }) => {
+				const timeframe = parseInt(req.params.timeframe, 10);
+				const history = await api.humidityTracker.getHistory(
+					req.params.deviceId,
+					1000,
+					timeframe
+				);
+				return json({ history });
+			},
+			'/illuminance/:deviceId/:timeframe': async (req, _server, { json }) => {
+				const timeframe = parseInt(req.params.timeframe, 10);
+				const history = await api.illuminanceTracker.getHistory(
+					req.params.deviceId,
+					1000,
+					timeframe
+				);
+				return json({ history });
+			},
 			'/updateName': withRequestBody(
 				z.object({
 					deviceId: z.string(),
@@ -254,6 +331,31 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 									percentage: body.targetPositionLiftPercentage,
 								}),
 							]);
+						}
+					)
+			),
+			[validateClusterRoute('/cluster/ColorControl')]: withRequestBody(
+				z.object({
+					deviceIds: z.array(z.string()),
+					hue: z.number().min(0).max(360),
+					saturation: z.number().min(0).max(100),
+					value: z.number().min(0).max(100).optional(),
+				}),
+				async (body, _req, _server, res) =>
+					performActionForDeviceCluster(
+						api,
+						res,
+						body.deviceIds,
+						DeviceColorControlCluster,
+						async (cluster) => {
+							const color = Color.fromHSV(
+								body.hue / 360,
+								body.saturation / 100,
+								(body.value ?? 100) / 100
+							);
+							await cluster.setColor({
+								color,
+							});
 						}
 					)
 			),
@@ -433,6 +535,68 @@ const getClusterState = async (
 			lastTriggered: lastEvent?.timestamp,
 		};
 	}
+	if (
+		cluster instanceof DeviceTemperatureMeasurementCluster &&
+		clusterName === DeviceClusterName.TEMPERATURE_MEASUREMENT
+	) {
+		const temperature = await cluster.temperature.get();
+		return {
+			name: clusterName,
+			icon: getClusterIconName(clusterName),
+			temperature,
+		};
+	}
+	if (
+		cluster instanceof DeviceRelativeHumidityMeasurementCluster &&
+		clusterName === DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT
+	) {
+		const humidity = await cluster.relativeHumidity.get();
+		return {
+			name: clusterName,
+			icon: getClusterIconName(clusterName),
+			humidity,
+		};
+	}
+	if (
+		cluster instanceof DeviceIlluminanceMeasurementCluster &&
+		clusterName === DeviceClusterName.ILLUMINANCE_MEASUREMENT
+	) {
+		const illuminance = await cluster.illuminance.get();
+		return {
+			name: clusterName,
+			icon: getClusterIconName(clusterName),
+			illuminance,
+		};
+	}
+	if (
+		cluster instanceof DeviceBooleanStateCluster &&
+		clusterName === DeviceClusterName.BOOLEAN_STATE
+	) {
+		const state = await cluster.state.get();
+		return {
+			name: clusterName,
+			icon: getClusterIconName(clusterName),
+			state,
+		};
+	}
+	if (cluster instanceof DeviceSwitchCluster && clusterName === DeviceClusterName.SWITCH) {
+		return {
+			name: clusterName,
+			icon: getClusterIconName(clusterName),
+		};
+	}
+	if (
+		cluster instanceof DeviceColorControlCluster &&
+		clusterName === DeviceClusterName.COLOR_CONTROL
+	) {
+		const color = await cluster.color.get();
+		const hsv = color.toHSV();
+		return {
+			name: clusterName,
+			icon: getClusterIconName(clusterName),
+			color: hsv,
+		};
+	}
 	return {
 		name: clusterName,
 		icon: getClusterIconName(clusterName),
@@ -463,6 +627,7 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 		const clusters = [];
 		const allClusters = [];
 
+		// Get all cluster states
 		for (const cluster of endpoint.clusters) {
 			clusters.push(await _getClusters(cluster, deviceId));
 		}
@@ -471,6 +636,40 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 			allClusters.push(await _getClusters(cluster, deviceId));
 		}
 
+		// Merge ColorControl and OnOff clusters
+		const mergeColorControlAndOnOff = (
+			clusterList: DashboardDeviceClusterWithState[]
+		): DashboardDeviceClusterWithState[] => {
+			const colorControl = clusterList.find(
+				(c) => c.name === DeviceClusterName.COLOR_CONTROL
+			) as DashboardDeviceClusterColorControl | undefined;
+			const onOff = clusterList.find((c) => c.name === DeviceClusterName.ON_OFF) as
+				| DashboardDeviceClusterOnOff
+				| undefined;
+
+			if (colorControl && onOff) {
+				// Merge OnOff state into ColorControl
+				const merged: DashboardDeviceClusterColorControl = {
+					...colorControl,
+					isOn: onOff.isOn,
+				};
+				// Return all clusters except OnOff, with merged ColorControl
+				return clusterList
+					.filter((c) => c.name !== DeviceClusterName.ON_OFF)
+					.map((c) => {
+						if (c.name === DeviceClusterName.COLOR_CONTROL) {
+							return merged;
+						}
+						return c;
+					});
+			}
+			return clusterList;
+		};
+
+		// Apply merging to both cluster lists
+		const mergedClusters = mergeColorControlAndOnOff(clusters);
+		const mergedAllClusters = mergeColorControlAndOnOff(allClusters);
+
 		for (const subEndpoint of endpoint.endpoints) {
 			const endpointResponse = await getResponseForEndpoint(subEndpoint, deviceId);
 			endpoints.push(endpointResponse);
@@ -478,9 +677,9 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 
 		return {
 			name: await endpoint.getDeviceName(),
-			childClusters: clusters,
+			childClusters: mergedClusters,
 			endpoints,
-			allClusters,
+			allClusters: mergedAllClusters,
 		};
 	};
 

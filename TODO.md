@@ -11,15 +11,16 @@
 - [x] Bump prettier printWidth
 - [x] Migrate MCP key generation to dashboard
 - [x] Websocket support for home tab
-- [ ] Add UI for more clusters
-    - [ ] Temperature measurement
-    - [ ] Relative humidity measurement
-    - [ ] Boolean state
-    - [ ] Switch
-    - [ ] Illuminance measurement
-    - [ ] Color control
+- [x] Add UI for more clusters
+    - [x] Temperature measurement
+    - [x] Relative humidity measurement
+    - [x] Boolean state
+    - [x] Switch
+    - [x] Illuminance measurement
+    - [x] Color control
 - [x] Add support for scenes
-- [ ] Detail pages for devices
-    - [ ] Light
-    - [ ] Window covering
-    - [ ] Color control
+- [x] Detail pages for devices
+    - [x] Light
+    - [x] Window covering
+    - [x] Color control
+- [ ] 3D house overview

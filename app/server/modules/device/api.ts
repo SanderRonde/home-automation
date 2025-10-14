@@ -1,6 +1,9 @@
 import type { Device as DeviceInterface, DeviceSource } from './device';
+import { TemperatureTracker } from './temperature-tracker';
+import { IlluminanceTracker } from './illuminance-tracker';
 import { OccupancyTracker } from './occupancy-tracker';
 import type { DeviceInfo, RoomInfo } from './routing';
+import { HumidityTracker } from './humidity-tracker';
 import type * as Icons from '@mui/icons-material';
 import type { Database } from '../../lib/db';
 import { SceneAPI } from './scene-api';
@@ -10,6 +13,9 @@ import type { SQL } from 'bun';
 
 export class DeviceAPI {
 	public readonly occupancyTracker: OccupancyTracker;
+	public readonly temperatureTracker: TemperatureTracker;
+	public readonly humidityTracker: HumidityTracker;
+	public readonly illuminanceTracker: IlluminanceTracker;
 	public readonly sceneAPI: SceneAPI;
 
 	public constructor(
@@ -18,6 +24,9 @@ export class DeviceAPI {
 	) {
 		this.sceneAPI = new SceneAPI(_db, this.devices);
 		this.occupancyTracker = new OccupancyTracker(sqlDB, this.sceneAPI);
+		this.temperatureTracker = new TemperatureTracker(sqlDB);
+		this.humidityTracker = new HumidityTracker(sqlDB);
+		this.illuminanceTracker = new IlluminanceTracker(sqlDB);
 	}
 
 	public readonly devices = new Data<{
@@ -46,8 +55,11 @@ export class DeviceAPI {
 		// Update database with current device status
 		this.updateDeviceStatus(Array.from(newDeviceIds), Array.from(currentDeviceIds));
 
-		// Setup occupancy tracking for new devices
+		// Setup tracking for new devices
 		this.occupancyTracker.trackDevices(devices);
+		this.temperatureTracker.trackDevices(devices);
+		this.humidityTracker.trackDevices(devices);
+		this.illuminanceTracker.trackDevices(devices);
 	}
 
 	public updateDeviceName(deviceId: string, name: string): boolean {

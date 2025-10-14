@@ -21,6 +21,7 @@ export class MockOnOffCluster extends DeviceOnOffCluster {
 	public async setOn(on: boolean): Promise<void> {
 		this.isOn.set(on);
 		this.onChange.emit();
+		return Promise.resolve();
 	}
 
 	public async toggle(): Promise<void> {
@@ -48,16 +49,19 @@ export class MockWindowCoveringCluster extends DeviceWindowCoveringCluster {
 	public async close(): Promise<void> {
 		this.targetPositionLiftPercentage.set(100);
 		this.onChange.emit();
+		return Promise.resolve();
 	}
 
 	public async open(): Promise<void> {
 		this.targetPositionLiftPercentage.set(0);
 		this.onChange.emit();
+		return Promise.resolve();
 	}
 
 	public async goToLiftPercentage(args: { percentage: number }): Promise<void> {
 		this.targetPositionLiftPercentage.set(args.percentage);
 		this.onChange.emit();
+		return Promise.resolve();
 	}
 
 	public [Symbol.dispose](): void {
@@ -122,7 +126,7 @@ export class MockDevice implements DeviceInterface {
 	}
 
 	public async getDeviceName(): Promise<string> {
-		return this._name;
+		return Promise.resolve(this._name);
 	}
 
 	public setDeviceName(name: string): void {
@@ -312,6 +316,7 @@ export function createMockSQL(): MockSQL {
  * Create a mock WebSocket publish function
  */
 export function createMockWSPublish(): (topic: string, data: unknown) => Promise<void> {
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	return mock(async (_topic: string, _data: unknown) => {
 		// Mock implementation - does nothing but can be spied on
 	});

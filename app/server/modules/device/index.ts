@@ -26,11 +26,11 @@ export const Device = new (class Device extends ModuleMeta {
 		this._db.set(config.db);
 
 		// Initialize SQL table for occupancy events
-		const tableExists = await config.sqlDB<{ name: string }[]>`
+		const occupancyTableExists = await config.sqlDB<{ name: string }[]>`
 			SELECT name FROM sqlite_master WHERE type='table' AND name='occupancy_events'
 		`;
 
-		if (!tableExists.length) {
+		if (!occupancyTableExists.length) {
 			await config.sqlDB`
 				CREATE TABLE occupancy_events (
 					id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,6 +41,63 @@ export const Device = new (class Device extends ModuleMeta {
 			`;
 			await config.sqlDB`
 				CREATE INDEX idx_occupancy_device_time ON occupancy_events(device_id, timestamp DESC)
+			`;
+		}
+
+		// Initialize SQL table for temperature events
+		const temperatureTableExists = await config.sqlDB<{ name: string }[]>`
+			SELECT name FROM sqlite_master WHERE type='table' AND name='temperature_events'
+		`;
+
+		if (!temperatureTableExists.length) {
+			await config.sqlDB`
+				CREATE TABLE temperature_events (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					device_id TEXT NOT NULL,
+					temperature REAL NOT NULL,
+					timestamp INTEGER NOT NULL
+				)
+			`;
+			await config.sqlDB`
+				CREATE INDEX idx_temperature_device_time ON temperature_events(device_id, timestamp DESC)
+			`;
+		}
+
+		// Initialize SQL table for humidity events
+		const humidityTableExists = await config.sqlDB<{ name: string }[]>`
+			SELECT name FROM sqlite_master WHERE type='table' AND name='humidity_events'
+		`;
+
+		if (!humidityTableExists.length) {
+			await config.sqlDB`
+				CREATE TABLE humidity_events (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					device_id TEXT NOT NULL,
+					humidity REAL NOT NULL,
+					timestamp INTEGER NOT NULL
+				)
+			`;
+			await config.sqlDB`
+				CREATE INDEX idx_humidity_device_time ON humidity_events(device_id, timestamp DESC)
+			`;
+		}
+
+		// Initialize SQL table for illuminance events
+		const illuminanceTableExists = await config.sqlDB<{ name: string }[]>`
+			SELECT name FROM sqlite_master WHERE type='table' AND name='illuminance_events'
+		`;
+
+		if (!illuminanceTableExists.length) {
+			await config.sqlDB`
+				CREATE TABLE illuminance_events (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					device_id TEXT NOT NULL,
+					illuminance REAL NOT NULL,
+					timestamp INTEGER NOT NULL
+				)
+			`;
+			await config.sqlDB`
+				CREATE INDEX idx_illuminance_device_time ON illuminance_events(device_id, timestamp DESC)
 			`;
 		}
 

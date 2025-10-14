@@ -8,7 +8,7 @@ test.describe('Smoke Tests', () => {
 		await page.waitForLoadState('networkidle');
 
 		// Check if page loaded successfully
-		const body = await page.locator('body');
+		const body = page.locator('body');
 		await expect(body).toBeVisible();
 
 		// Should have some content (not a blank page or error)

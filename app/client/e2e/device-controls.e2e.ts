@@ -11,7 +11,7 @@ test.describe('Device Controls', () => {
 
 	test('should control OnOff device', async ({ page, deviceAPI }) => {
 		// Find a device with OnOff capability
-		const onOffDevice = await page.locator('[data-cluster="onOff"]').first();
+		const onOffDevice = page.locator('[data-cluster="onOff"]').first();
 		const exists = await onOffDevice.isVisible().catch(() => false);
 
 		if (!exists) {
@@ -39,7 +39,7 @@ test.describe('Device Controls', () => {
 		await page.waitForLoadState('networkidle');
 
 		// State should have changed
-		const newDevice = await page.locator(`[data-device-id="${deviceId}"]`);
+		const newDevice = page.locator(`[data-device-id="${deviceId}"]`);
 		const newState = await newDevice.getAttribute('data-is-on');
 
 		expect(newState).not.toBe(isCurrentlyOn.toString());
@@ -47,7 +47,7 @@ test.describe('Device Controls', () => {
 
 	test('should control WindowCovering device', async ({ page, deviceAPI }) => {
 		// Find a device with WindowCovering capability
-		const coveringDevice = await page.locator('[data-cluster="windowCovering"]').first();
+		const coveringDevice = page.locator('[data-cluster="windowCovering"]').first();
 		const exists = await coveringDevice.isVisible().catch(() => false);
 
 		if (!exists) {
@@ -72,7 +72,7 @@ test.describe('Device Controls', () => {
 		await page.waitForLoadState('networkidle');
 
 		// Should show updated position
-		const newDevice = await page.locator(`[data-device-id="${deviceId}"]`);
+		const newDevice = page.locator(`[data-device-id="${deviceId}"]`);
 		const position = await newDevice.getAttribute('data-position');
 
 		expect(parseInt(position || '0')).toBeGreaterThanOrEqual(45);
@@ -105,8 +105,8 @@ test.describe('Device Controls', () => {
 		await page.waitForLoadState('networkidle');
 
 		// Both should be on
-		const device1 = await page.locator(`[data-device-id="${device1Id}"]`);
-		const device2 = await page.locator(`[data-device-id="${device2Id}"]`);
+		const device1 = page.locator(`[data-device-id="${device1Id}"]`);
+		const device2 = page.locator(`[data-device-id="${device2Id}"]`);
 
 		expect(await device1.getAttribute('data-is-on')).toBe('true');
 		expect(await device2.getAttribute('data-is-on')).toBe('true');
@@ -158,12 +158,12 @@ test.describe('Device Controls', () => {
 		await page.reload();
 		await page.waitForLoadState('networkidle');
 
-		const body = await page.locator('body');
+		const body = page.locator('body');
 		expect(await body.isVisible()).toBeTruthy();
 	});
 
 	test('should update UI when device state changes', async ({ page, deviceAPI }) => {
-		const onOffDevice = await page.locator('[data-cluster="onOff"]').first();
+		const onOffDevice = page.locator('[data-cluster="onOff"]').first();
 		const exists = await onOffDevice.isVisible().catch(() => false);
 
 		if (!exists) {
@@ -189,7 +189,7 @@ test.describe('Device Controls', () => {
 		await page.reload();
 		await page.waitForLoadState('networkidle');
 
-		const device = await page.locator(`[data-device-id="${deviceId}"]`);
+		const device = page.locator(`[data-device-id="${deviceId}"]`);
 		expect(await device.isVisible()).toBeTruthy();
 	});
 });
