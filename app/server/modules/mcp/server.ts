@@ -77,7 +77,7 @@ export class MCPNodeServer {
 						id: device.getUniqueId(),
 						name: device.getDeviceName(),
 						source: device.getSource(),
-						clusters: device.allClusters.map((cluster) => cluster.getName()),
+						clusters: device.allClusters.map(({ cluster }) => cluster.getName()),
 					});
 				}
 

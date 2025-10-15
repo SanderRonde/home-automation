@@ -18,9 +18,18 @@ import {
 	Divider,
 	Card,
 	CardContent,
+	ToggleButtonGroup,
+	ToggleButton,
 } from '@mui/material';
+import type {
+	DashboardDeviceClusterOnOff,
+	DashboardDeviceClusterLevelControl,
+	DashboardDeviceClusterColorControl,
+	DashboardDeviceClusterWindowCovering,
+	DashboardDeviceClusterWithStateMap,
+	DeviceListWithValuesResponse,
+} from '../../../server/modules/device/routing';
 import { Delete as DeleteIcon, Add as AddIcon, Close as CloseIcon } from '@mui/icons-material';
-import type { DeviceListWithValuesResponse } from '../../../server/modules/device/routing';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import type { Scene, SceneDeviceAction } from '../../../../types/scene';
 import * as Icons from '@mui/icons-material';
@@ -75,13 +84,14 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 
 	const IconComponent = Icons[selectedIcon];
 
-	// Get devices with OnOff or WindowCovering clusters
 	const availableDevices = React.useMemo(() => {
 		return props.devices.filter((device) =>
 			device.allClusters.some(
 				(cluster) =>
 					cluster.name === DeviceClusterName.ON_OFF ||
-					cluster.name === DeviceClusterName.WINDOW_COVERING
+					cluster.name === DeviceClusterName.WINDOW_COVERING ||
+					cluster.name === DeviceClusterName.COLOR_CONTROL ||
+					cluster.name === DeviceClusterName.LEVEL_CONTROL
 			)
 		);
 	}, [props.devices]);
@@ -123,10 +133,21 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 								...updates,
 								action: { targetPositionLiftPercentage: 0 },
 							};
+						} else if (updates.cluster === DeviceClusterName.COLOR_CONTROL) {
+							return {
+								...action,
+								...updates,
+								action: { hue: 0, saturation: 100, value: 100 },
+							};
+						} else if (updates.cluster === DeviceClusterName.LEVEL_CONTROL) {
+							return {
+								...action,
+								...updates,
+								action: { level: 100 },
+							};
 						}
 					}
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					return { ...action, ...updates } as any;
+					return { ...action, ...updates };
 				}
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				return action as any;
@@ -243,204 +264,16 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 						</Typography>
 						<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
 							{actions.map((action, index) => {
-								const device = getDeviceById(action.deviceId);
-								const availableClusters = device?.allClusters.filter(
-									(c) =>
-										c.name === DeviceClusterName.ON_OFF ||
-										c.name === DeviceClusterName.WINDOW_COVERING
-								);
-
 								return (
-									<Card key={action.key} variant="outlined">
-										<CardContent sx={{ '&:last-child': { pb: 2 } }}>
-											<Box
-												sx={{
-													display: 'flex',
-													flexDirection: 'column',
-													gap: 2,
-												}}
-											>
-												<Box
-													sx={{
-														display: 'flex',
-														gap: 1,
-														alignItems: 'center',
-													}}
-												>
-													<Typography
-														variant="body2"
-														sx={{ minWidth: 60 }}
-													>
-														#{index + 1}
-													</Typography>
-													<Autocomplete
-														options={availableDevices}
-														getOptionLabel={(option) => option.name}
-														value={device ?? null}
-														onChange={(_e, newValue) => {
-															if (newValue) {
-																handleActionChange(action.key, {
-																	deviceId: newValue.uniqueId,
-																});
-															}
-														}}
-														renderInput={(params) => (
-															<TextField
-																{...params}
-																label="Device"
-																size="small"
-															/>
-														)}
-														sx={{ flex: 1 }}
-													/>
-													<IconButton
-														size="small"
-														onClick={() =>
-															handleRemoveAction(action.key)
-														}
-														color="error"
-													>
-														<DeleteIcon />
-													</IconButton>
-												</Box>
-
-												{device &&
-													availableClusters &&
-													availableClusters.length > 0 && (
-														<>
-															<Autocomplete
-																options={availableClusters}
-																getOptionLabel={(option) =>
-																	option.name
-																}
-																value={
-																	availableClusters.find(
-																		(c) =>
-																			c.name ===
-																			action.cluster
-																	) ?? null
-																}
-																onChange={(_e, newValue) => {
-																	if (newValue) {
-																		handleActionChange(
-																			action.key,
-																			{
-																				cluster:
-																					newValue.name,
-																			}
-																		);
-																	}
-																}}
-																renderInput={(params) => (
-																	<TextField
-																		{...params}
-																		label="Cluster"
-																		size="small"
-																	/>
-																)}
-															/>
-
-															{/* Action Configuration */}
-															{action.cluster ===
-																DeviceClusterName.ON_OFF && (
-																<FormControlLabel
-																	control={
-																		<Switch
-																			checked={
-																				(
-																					action.action as {
-																						isOn: boolean;
-																					}
-																				).isOn
-																			}
-																			onChange={(e) =>
-																				handleActionChange(
-																					action.key,
-																					{
-																						action: {
-																							isOn: e
-																								.target
-																								.checked,
-																						},
-																					}
-																				)
-																			}
-																		/>
-																	}
-																	label={
-																		(
-																			action.action as {
-																				isOn: boolean;
-																			}
-																		).isOn
-																			? 'Turn On'
-																			: 'Turn Off'
-																	}
-																/>
-															)}
-
-															{action.cluster ===
-																DeviceClusterName.WINDOW_COVERING && (
-																<Box>
-																	<Typography
-																		variant="body2"
-																		gutterBottom
-																	>
-																		Position:{' '}
-																		{
-																			(
-																				action.action as {
-																					targetPositionLiftPercentage: number;
-																				}
-																			)
-																				.targetPositionLiftPercentage
-																		}
-																		%
-																	</Typography>
-																	<Slider
-																		value={
-																			(
-																				action.action as {
-																					targetPositionLiftPercentage: number;
-																				}
-																			)
-																				.targetPositionLiftPercentage
-																		}
-																		onChange={(_e, value) =>
-																			handleActionChange(
-																				action.key,
-																				{
-																					action: {
-																						targetPositionLiftPercentage:
-																							value,
-																					},
-																				}
-																			)
-																		}
-																		min={0}
-																		max={100}
-																		marks={[
-																			{
-																				value: 0,
-																				label: '0%',
-																			},
-																			{
-																				value: 50,
-																				label: '50%',
-																			},
-																			{
-																				value: 100,
-																				label: '100%',
-																			},
-																		]}
-																	/>
-																</Box>
-															)}
-														</>
-													)}
-											</Box>
-										</CardContent>
-									</Card>
+									<ActionConfig
+										action={action}
+										key={action.key}
+										index={index}
+										device={getDeviceById(action.deviceId)}
+										availableDevices={availableDevices}
+										handleActionChange={handleActionChange}
+										handleRemoveAction={handleRemoveAction}
+									/>
 								);
 							})}
 
@@ -515,5 +348,409 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 				</Button>
 			</DialogActions>
 		</Dialog>
+	);
+};
+
+interface ActionConfigProps {
+	action: DeviceActionEntry;
+	device: DeviceListWithValuesResponse[number] | undefined;
+	index: number;
+	availableDevices: DeviceListWithValuesResponse;
+	handleActionChange: (key: string, updates: Partial<DeviceActionEntry>) => void;
+	handleRemoveAction: (key: string) => void;
+}
+
+const ActionConfig = (props: ActionConfigProps) => {
+	if (!props.device) {
+		return null;
+	}
+
+	const availableClusters: DashboardDeviceClusterWithStateMap<
+		| DeviceClusterName.ON_OFF
+		| DeviceClusterName.WINDOW_COVERING
+		| DeviceClusterName.COLOR_CONTROL
+		| DeviceClusterName.LEVEL_CONTROL
+	> = {};
+	for (const cluster of props.device.allClusters) {
+		if (cluster.name === DeviceClusterName.COLOR_CONTROL) {
+			// @ts-ignore
+			availableClusters[cluster.name] = cluster;
+			if (cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL]) {
+				// @ts-ignore
+				availableClusters[DeviceClusterName.LEVEL_CONTROL] =
+					cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL];
+			}
+		} else if (
+			cluster.name === DeviceClusterName.ON_OFF ||
+			cluster.name === DeviceClusterName.WINDOW_COVERING ||
+			cluster.name === DeviceClusterName.LEVEL_CONTROL
+		) {
+			// @ts-ignore
+			availableClusters[cluster.name] = cluster;
+		}
+	}
+
+	return (
+		<Card key={props.action.key} variant="outlined">
+			<CardContent sx={{ '&:last-child': { pb: 2 } }}>
+				<Box
+					sx={{
+						display: 'flex',
+						flexDirection: 'column',
+						gap: 2,
+					}}
+				>
+					<Box
+						sx={{
+							display: 'flex',
+							gap: 1,
+							alignItems: 'center',
+						}}
+					>
+						<Typography variant="body2" sx={{ minWidth: 60 }}>
+							#{props.index + 1}
+						</Typography>
+						<Autocomplete
+							options={props.availableDevices}
+							getOptionLabel={(option) => option.name}
+							value={props.device ?? null}
+							onChange={(_e, newValue) => {
+								if (newValue) {
+									props.handleActionChange(props.action.key, {
+										deviceId: newValue.uniqueId,
+									});
+								}
+							}}
+							renderInput={(params) => (
+								<TextField {...params} label="Device" size="small" />
+							)}
+							sx={{ flex: 1 }}
+						/>
+						<IconButton
+							size="small"
+							onClick={() => props.handleRemoveAction(props.action.key)}
+							color="error"
+						>
+							<DeleteIcon />
+						</IconButton>
+					</Box>
+
+					{props.device &&
+						availableClusters &&
+						Object.keys(availableClusters).length > 0 && (
+							<>
+								<Autocomplete
+									options={
+										Object.values(availableClusters) as (
+											| DashboardDeviceClusterLevelControl
+											| DashboardDeviceClusterWindowCovering
+											| DashboardDeviceClusterColorControl
+											| DashboardDeviceClusterOnOff
+										)[]
+									}
+									getOptionLabel={(option) => option.name}
+									value={availableClusters[props.action.cluster] ?? null}
+									onChange={(_e, newValue) => {
+										if (newValue) {
+											props.handleActionChange(props.action.key, {
+												cluster: newValue.name,
+											});
+										}
+									}}
+									renderInput={(params) => (
+										<TextField {...params} label="Cluster" size="small" />
+									)}
+								/>
+
+								{/* Action Configuration */}
+								{props.action.cluster === DeviceClusterName.ON_OFF && (
+									<FormControlLabel
+										control={
+											<Switch
+												checked={
+													(
+														props.action.action as {
+															isOn: boolean;
+														}
+													).isOn
+												}
+												onChange={(e) =>
+													props.handleActionChange(props.action.key, {
+														action: {
+															isOn: e.target.checked,
+														},
+													})
+												}
+											/>
+										}
+										label={props.action.action.isOn ? 'Turn On' : 'Turn Off'}
+									/>
+								)}
+
+								{props.action.cluster === DeviceClusterName.WINDOW_COVERING && (
+									<Box>
+										<Typography variant="body2" gutterBottom>
+											Position:{' '}
+											{
+												(
+													props.action.action as {
+														targetPositionLiftPercentage: number;
+													}
+												).targetPositionLiftPercentage
+											}
+											%
+										</Typography>
+										<Slider
+											value={props.action.action.targetPositionLiftPercentage}
+											onChange={(_e, value) =>
+												props.handleActionChange(props.action.key, {
+													action: {
+														targetPositionLiftPercentage: value,
+													},
+												})
+											}
+											min={0}
+											max={100}
+											marks={[
+												{
+													value: 0,
+													label: '0%',
+												},
+												{
+													value: 50,
+													label: '50%',
+												},
+												{
+													value: 100,
+													label: '100%',
+												},
+											]}
+										/>
+									</Box>
+								)}
+
+								{props.action.cluster === DeviceClusterName.LEVEL_CONTROL && (
+									<Box>
+										<Typography variant="body2" gutterBottom>
+											Level:{' '}
+											{
+												(
+													props.action.action as {
+														level: number;
+													}
+												).level
+											}
+											%
+										</Typography>
+										<Slider
+											value={props.action.action.level}
+											onChange={(_e, value) =>
+												props.handleActionChange(props.action.key, {
+													action: {
+														level: value,
+													},
+												})
+											}
+											min={0}
+											max={100}
+											marks={[
+												{
+													value: 0,
+													label: '0%',
+												},
+												{
+													value: 50,
+													label: '50%',
+												},
+												{
+													value: 100,
+													label: '100%',
+												},
+											]}
+										/>
+									</Box>
+								)}
+
+								{((props.action.cluster === DeviceClusterName.COLOR_CONTROL &&
+									availableClusters[DeviceClusterName.COLOR_CONTROL]
+										?.mergedClusters?.[DeviceClusterName.ON_OFF]) ||
+									props.action.cluster === DeviceClusterName.ON_OFF) && (
+									<Box
+										sx={{
+											display: 'flex',
+											flexDirection: 'column',
+											gap: 2,
+										}}
+									>
+										<ToggleButtonGroup
+											value={
+												props.action.cluster === DeviceClusterName.ON_OFF
+													? props.action.action.isOn
+														? 'on'
+														: 'off'
+													: 'color'
+											}
+											exclusive
+											onChange={(_e, value) => {
+												if (value === 'off') {
+													props.handleActionChange(props.action.key, {
+														cluster: DeviceClusterName.ON_OFF,
+														action: {
+															isOn: false,
+														},
+													});
+												} else if (value === 'on') {
+													props.handleActionChange(props.action.key, {
+														cluster: DeviceClusterName.ON_OFF,
+														action: {
+															isOn: true,
+														},
+													});
+												} else if (value === 'color') {
+													props.handleActionChange(props.action.key, {
+														cluster: DeviceClusterName.COLOR_CONTROL,
+														action: {
+															hue: 0,
+															saturation: 100,
+															value: 100,
+														},
+													});
+												}
+											}}
+											fullWidth
+										>
+											<ToggleButton value="off">Off</ToggleButton>
+											<ToggleButton value="on">On</ToggleButton>
+											<ToggleButton value="color">Color</ToggleButton>
+										</ToggleButtonGroup>
+									</Box>
+								)}
+
+								{props.action.cluster === DeviceClusterName.COLOR_CONTROL && (
+									<Box
+										sx={{
+											display: 'flex',
+											flexDirection: 'column',
+											gap: 2,
+										}}
+									>
+										<Box>
+											<Typography variant="body2" gutterBottom>
+												Hue: {props.action.action.hue}°
+											</Typography>
+											<Slider
+												value={props.action.action.hue}
+												onChange={(_e, value) =>
+													props.handleActionChange(props.action.key, {
+														action: {
+															...(props.action.action as {
+																hue: number;
+																saturation: number;
+																value: number;
+															}),
+															hue: value,
+														},
+													})
+												}
+												min={0}
+												max={360}
+												marks={[
+													{
+														value: 0,
+														label: '0°',
+													},
+													{
+														value: 180,
+														label: '180°',
+													},
+													{
+														value: 360,
+														label: '360°',
+													},
+												]}
+											/>
+										</Box>
+										<Box>
+											<Typography variant="body2" gutterBottom>
+												Saturation: {props.action.action.saturation}%
+											</Typography>
+											<Slider
+												value={props.action.action.saturation}
+												onChange={(_e, value) =>
+													props.handleActionChange(props.action.key, {
+														action: {
+															...(props.action.action as {
+																hue: number;
+																saturation: number;
+																value: number;
+															}),
+															saturation: value,
+														},
+													})
+												}
+												min={0}
+												max={100}
+												marks={[
+													{
+														value: 0,
+														label: '0%',
+													},
+													{
+														value: 50,
+														label: '50%',
+													},
+													{
+														value: 100,
+														label: '100%',
+													},
+												]}
+											/>
+										</Box>
+										{!availableClusters[DeviceClusterName.COLOR_CONTROL]
+											?.mergedClusters[DeviceClusterName.LEVEL_CONTROL] && (
+											<Box>
+												<Typography variant="body2" gutterBottom>
+													Brightness: {props.action.action.value}%
+												</Typography>
+												<Slider
+													value={props.action.action.value}
+													onChange={(_e, value) =>
+														props.handleActionChange(props.action.key, {
+															action: {
+																...(props.action.action as {
+																	hue: number;
+																	saturation: number;
+																	value: number;
+																}),
+																value: value,
+															},
+														})
+													}
+													min={0}
+													max={100}
+													marks={[
+														{
+															value: 0,
+															label: '0%',
+														},
+														{
+															value: 50,
+															label: '50%',
+														},
+														{
+															value: 100,
+															label: '100%',
+														},
+													]}
+												/>
+											</Box>
+										)}
+									</Box>
+								)}
+							</>
+						)}
+				</Box>
+			</CardContent>
+		</Card>
 	);
 };

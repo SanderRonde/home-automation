@@ -19,8 +19,14 @@ export abstract class DeviceEndpoint implements Disposable {
 		}
 		return endpoints;
 	}
-	public get allClusters(): Cluster[] {
-		const clusters: Cluster[] = [...this.clusters];
+	public get allClusters(): {
+		cluster: Cluster;
+		endpoint: DeviceEndpoint;
+	}[] {
+		const clusters = this.clusters.map((cluster) => ({
+			cluster,
+			endpoint: this as DeviceEndpoint,
+		}));
 		for (const endpoint of this.endpoints) {
 			clusters.push(...endpoint.allClusters);
 		}

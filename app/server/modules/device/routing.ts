@@ -12,6 +12,7 @@ import {
 	DeviceBooleanStateCluster,
 	DeviceSwitchCluster,
 	DeviceColorControlCluster,
+	DeviceLevelControlCluster,
 } from './cluster';
 import type { BrandedRouteHandlerResponse, ServeOptions } from '../../lib/routes';
 import { createServeOptions, withRequestBody } from '../../lib/routes';
@@ -91,14 +92,22 @@ export type DashboardDeviceClusterSwitch = DashboardDeviceClusterBase & {
 	name: DeviceClusterName.SWITCH;
 };
 
+export type DashboardDeviceClusterLevelControl = DashboardDeviceClusterBase & {
+	name: DeviceClusterName.LEVEL_CONTROL;
+	currentLevel: number; // 0-100
+};
+
 export type DashboardDeviceClusterColorControl = DashboardDeviceClusterBase & {
 	name: DeviceClusterName.COLOR_CONTROL;
 	color: {
 		hue: number;
 		saturation: number;
-		value: number;
+		value: number; // Only used if no LevelControl available
 	};
-	isOn?: boolean; // Merged from OnOff cluster if present
+	mergedClusters: {
+		[DeviceClusterName.ON_OFF]?: DashboardDeviceClusterOnOff;
+		[DeviceClusterName.LEVEL_CONTROL]?: DashboardDeviceClusterLevelControl;
+	};
 };
 
 export type DashboardDeviceClusterWithState = DashboardDeviceClusterBase &
@@ -112,8 +121,15 @@ export type DashboardDeviceClusterWithState = DashboardDeviceClusterBase &
 		| DashboardDeviceClusterIlluminanceMeasurement
 		| DashboardDeviceClusterBooleanState
 		| DashboardDeviceClusterSwitch
+		| DashboardDeviceClusterLevelControl
 		| DashboardDeviceClusterColorControl
 	);
+
+export type DashboardDeviceClusterWithStateMap<D extends DeviceClusterName = DeviceClusterName> = {
+	[K in D]?: DashboardDeviceClusterWithState & {
+		name: K;
+	};
+};
 
 interface DashboardDeviceEndpointResponse {
 	name: string;
@@ -359,6 +375,24 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 						}
 					)
 			),
+			[validateClusterRoute('/cluster/LevelControl')]: withRequestBody(
+				z.object({
+					deviceIds: z.array(z.string()),
+					level: z.number().min(0).max(100),
+				}),
+				async (body, _req, _server, res) =>
+					performActionForDeviceCluster(
+						api,
+						res,
+						body.deviceIds,
+						DeviceLevelControlCluster,
+						async (cluster) => {
+							await cluster.setLevel({
+								level: body.level / 100, // Convert 0-100 to 0-1
+							});
+						}
+					)
+			),
 			'/scenes/list': (_req, _server, { json }) => {
 				const scenes = api.sceneAPI.listScenes();
 				return json({ scenes });
@@ -595,6 +629,18 @@ const getClusterState = async (
 			name: clusterName,
 			icon: getClusterIconName(clusterName),
 			color: hsv,
+			mergedClusters: {},
+		};
+	}
+	if (
+		cluster instanceof DeviceLevelControlCluster &&
+		clusterName === DeviceClusterName.LEVEL_CONTROL
+	) {
+		const level = await cluster.currentLevel.get();
+		return {
+			name: clusterName,
+			icon: getClusterIconName(clusterName),
+			currentLevel: level * 100, // Convert 0-1 to 0-100
 		};
 	}
 	return {
@@ -610,7 +656,7 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 	const rooms = deviceApi.getRooms();
 	const responseDevices: DashboardDeviceResponse[] = [];
 
-	const _getClusters = async (cluster: Cluster, deviceId: string) => {
+	const _getClusterState = async (cluster: Cluster, deviceId: string) => {
 		if (!clusterStateCache.has(cluster)) {
 			const clusterState = await getClusterState(api, cluster, deviceId);
 			clusterStateCache.set(cluster, clusterState);
@@ -629,46 +675,70 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 
 		// Get all cluster states
 		for (const cluster of endpoint.clusters) {
-			clusters.push(await _getClusters(cluster, deviceId));
+			clusters.push(await _getClusterState(cluster, deviceId));
 		}
 
-		for (const cluster of endpoint.allClusters) {
-			allClusters.push(await _getClusters(cluster, deviceId));
+		for (const { cluster, endpoint: clusterEndpoint } of endpoint.allClusters) {
+			allClusters.push({
+				cluster: await _getClusterState(cluster, deviceId),
+				endpoint: clusterEndpoint,
+			});
 		}
 
-		// Merge ColorControl and OnOff clusters
-		const mergeColorControlAndOnOff = (
-			clusterList: DashboardDeviceClusterWithState[]
-		): DashboardDeviceClusterWithState[] => {
-			const colorControl = clusterList.find(
-				(c) => c.name === DeviceClusterName.COLOR_CONTROL
-			) as DashboardDeviceClusterColorControl | undefined;
-			const onOff = clusterList.find((c) => c.name === DeviceClusterName.ON_OFF) as
-				| DashboardDeviceClusterOnOff
-				| undefined;
-
-			if (colorControl && onOff) {
-				// Merge OnOff state into ColorControl
-				const merged: DashboardDeviceClusterColorControl = {
-					...colorControl,
-					isOn: onOff.isOn,
-				};
-				// Return all clusters except OnOff, with merged ColorControl
-				return clusterList
-					.filter((c) => c.name !== DeviceClusterName.ON_OFF)
-					.map((c) => {
-						if (c.name === DeviceClusterName.COLOR_CONTROL) {
-							return merged;
-						}
-						return c;
-					});
+		const mergeEndpointClusters = (
+			clusterList: {
+				cluster: DashboardDeviceClusterWithState;
+				endpoint: DeviceEndpoint;
+			}[]
+		) => {
+			const clustersForEndpoints = new Map<
+				DeviceEndpoint,
+				DashboardDeviceClusterWithStateMap
+			>();
+			for (const { cluster, endpoint } of clusterList) {
+				const clusterMap = clustersForEndpoints.get(endpoint) ?? {};
+				// @ts-ignore
+				clusterMap[cluster.name] = cluster;
+				clustersForEndpoints.set(endpoint, clusterMap);
 			}
-			return clusterList;
+
+			const mergedClusters: DashboardDeviceClusterWithState[] = [];
+			for (const clusters of clustersForEndpoints.values()) {
+				// Merge ColorControl with OnOff and LevelControl clusters
+				if (
+					clusters[DeviceClusterName.COLOR_CONTROL] &&
+					(clusters[DeviceClusterName.ON_OFF] ||
+						clusters[DeviceClusterName.LEVEL_CONTROL])
+				) {
+					mergedClusters.push({
+						name: DeviceClusterName.COLOR_CONTROL,
+						icon: getClusterIconName(DeviceClusterName.COLOR_CONTROL),
+						color: {
+							hue: clusters[DeviceClusterName.COLOR_CONTROL].color.hue,
+							saturation: clusters[DeviceClusterName.COLOR_CONTROL].color.saturation,
+							value: clusters[DeviceClusterName.COLOR_CONTROL].color.value,
+						},
+						mergedClusters: {
+							[DeviceClusterName.ON_OFF]: clusters[DeviceClusterName.ON_OFF],
+							[DeviceClusterName.LEVEL_CONTROL]:
+								clusters[DeviceClusterName.LEVEL_CONTROL],
+						},
+					});
+				} else {
+					mergedClusters.push(...Object.values(clusters));
+				}
+			}
+			return mergedClusters;
 		};
 
 		// Apply merging to both cluster lists
-		const mergedClusters = mergeColorControlAndOnOff(clusters);
-		const mergedAllClusters = mergeColorControlAndOnOff(allClusters);
+		const mergedClusters = mergeEndpointClusters(
+			clusters.map((c) => ({
+				cluster: c,
+				endpoint: endpoint,
+			}))
+		);
+		const mergedAllClusters = mergeEndpointClusters(allClusters);
 
 		for (const subEndpoint of endpoint.endpoints) {
 			const endpointResponse = await getResponseForEndpoint(subEndpoint, deviceId);

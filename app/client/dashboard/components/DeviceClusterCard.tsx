@@ -672,11 +672,9 @@ const ColorControlCard = (
 		return `rgb(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)})`;
 	};
 
-	const color = hsvToRgb(
-		props.cluster.color.hue,
-		props.cluster.color.saturation,
-		props.cluster.color.value
-	);
+	// Use brightness from LevelControl if available, otherwise use HSV value
+	const brightness = props.cluster.brightness ?? props.cluster.color.value;
+	const color = hsvToRgb(props.cluster.color.hue, props.cluster.color.saturation, brightness);
 
 	return (
 		<Card

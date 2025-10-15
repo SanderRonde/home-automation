@@ -1,9 +1,16 @@
-import { DeviceClusterName, DeviceOnOffCluster, DeviceWindowCoveringCluster } from './cluster';
+import {
+	DeviceClusterName,
+	DeviceColorControlCluster,
+	DeviceLevelControlCluster,
+	DeviceOnOffCluster,
+	DeviceWindowCoveringCluster,
+} from './cluster';
 import type { Scene, SceneId, SceneTrigger } from '../../../../types/scene';
 import { assertUnreachable } from '../../lib/assert';
 import { logTag } from '../../lib/logging/logger';
 import type { Database } from '../../lib/db';
 import type { Data } from '../../lib/data';
+import { Color } from '../../lib/color';
 import type { Device } from './device';
 import type { DeviceDB } from '.';
 
@@ -127,6 +134,33 @@ export class SceneAPI {
 						}
 						await windowCoveringCluster.goToLiftPercentage({
 							percentage: sceneAction.action.targetPositionLiftPercentage,
+						});
+					} else if (sceneAction.cluster === DeviceClusterName.COLOR_CONTROL) {
+						const colorControlCluster =
+							device.getClusterByType(DeviceColorControlCluster);
+						if (!colorControlCluster) {
+							logTag(
+								'scene',
+								'red',
+								'ColorControlCluster not found:',
+								sceneAction.deviceId
+							);
+							return false;
+						}
+						const color = Color.fromHSV(
+							sceneAction.action.hue / 360,
+							sceneAction.action.saturation / 100,
+							sceneAction.action.value / 100
+						);
+						await colorControlCluster.setColor({ color });
+					} else if (sceneAction.cluster === DeviceClusterName.LEVEL_CONTROL) {
+						const levelControlCluster =
+							device.getClusterByType(DeviceLevelControlCluster);
+						if (!levelControlCluster) {
+							return false;
+						}
+						await levelControlCluster.setLevel({
+							level: sceneAction.action.level / 100,
 						});
 					} else {
 						assertUnreachable(sceneAction);

@@ -79,6 +79,7 @@ function ConfigurableCluster(
 	return class extends Base {
 		public proxy: WLEDProxy;
 		public onChange: EventEmitter<void> = new EventEmitter();
+		public b = Base;
 
 		public constructor(public readonly client: WLEDClient) {
 			super();

@@ -161,8 +161,15 @@ export class MockDevice implements DeviceInterface {
 		return [this, ...this.endpoints.flatMap((e) => e.allEndpoints)];
 	}
 
-	public get allClusters(): Cluster[] {
-		return [...this.clusters, ...this.endpoints.flatMap((e) => e.allClusters)];
+	public get allClusters(): { cluster: Cluster; endpoint: MockDevice }[] {
+		const clusters = this.clusters.map((cluster) => ({
+			cluster,
+			endpoint: this as MockDevice,
+		}));
+		for (const endpoint of this.endpoints) {
+			clusters.push(...endpoint.allClusters);
+		}
+		return clusters;
 	}
 
 	public [Symbol.dispose](): void {

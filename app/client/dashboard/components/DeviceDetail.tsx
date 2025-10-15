@@ -1013,16 +1013,28 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 	const [hue, setHue] = useState(props.cluster.color.hue);
 	const [saturation, setSaturation] = useState(props.cluster.color.saturation);
 	const [value, setValue] = useState(props.cluster.color.value);
-	const [isOn, setIsOn] = useState(props.cluster.isOn ?? true);
+	const [brightness, setBrightness] = useState(
+		props.cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL]?.currentLevel ??
+			props.cluster.color.value
+	);
+	const [isOn, setIsOn] = useState(
+		props.cluster.mergedClusters[DeviceClusterName.ON_OFF]?.isOn ?? true
+	);
 	const [isUpdating, setIsUpdating] = useState(false);
 	const roomColor = props.device.roomColor || '#555';
 	const colorCommitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+	const brightnessCommitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+	const hasLevelControl =
+		props.cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL] !== undefined;
 
 	// Cleanup timeout on unmount
 	useEffect(() => {
 		return () => {
 			if (colorCommitTimeoutRef.current) {
 				clearTimeout(colorCommitTimeoutRef.current);
+			}
+			if (brightnessCommitTimeoutRef.current) {
+				clearTimeout(brightnessCommitTimeoutRef.current);
 			}
 		};
 	}, []);
@@ -1087,7 +1099,10 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 	const handleColorChange = (newColor: { h: number; s: number; v: number }) => {
 		setHue(newColor.h);
 		setSaturation(newColor.s);
-		setValue(newColor.v);
+		// Only update value if no LevelControl available
+		if (!hasLevelControl) {
+			setValue(newColor.v);
+		}
 
 		// Debounce the API call
 		if (colorCommitTimeoutRef.current) {
@@ -1103,17 +1118,65 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 		try {
 			await apiPost(
 				'device',
-				'/cluster/ColorControl',
+				`/cluster/${DeviceClusterName.COLOR_CONTROL}`,
 				{},
 				{
 					deviceIds: [props.device.uniqueId],
 					hue,
 					saturation,
-					value,
+					// Only send value if no LevelControl available
+					...(hasLevelControl ? {} : { value }),
 				}
 			);
 		} catch (error) {
 			console.error('Failed to set color:', error);
+		} finally {
+			setIsUpdating(false);
+		}
+	};
+
+	const handleBrightnessChange = (newBrightness: number) => {
+		setBrightness(newBrightness);
+
+		// Debounce the API call
+		if (brightnessCommitTimeoutRef.current) {
+			clearTimeout(brightnessCommitTimeoutRef.current);
+		}
+		brightnessCommitTimeoutRef.current = setTimeout(() => {
+			void handleBrightnessCommit();
+		}, 100);
+	};
+
+	const handleBrightnessCommit = async () => {
+		setIsUpdating(true);
+		try {
+			if (hasLevelControl) {
+				// Use LevelControl cluster
+				await apiPost(
+					'device',
+					`/cluster/${DeviceClusterName.LEVEL_CONTROL}`,
+					{},
+					{
+						deviceIds: [props.device.uniqueId],
+						level: brightness,
+					}
+				);
+			} else {
+				// Fall back to ColorControl with value
+				await apiPost(
+					'device',
+					`/cluster/${DeviceClusterName.COLOR_CONTROL}`,
+					{},
+					{
+						deviceIds: [props.device.uniqueId],
+						hue,
+						saturation,
+						value: brightness,
+					}
+				);
+			}
+		} catch (error) {
+			console.error('Failed to set brightness:', error);
 		} finally {
 			setIsUpdating(false);
 		}
@@ -1124,7 +1187,7 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 		try {
 			await apiPost(
 				'device',
-				'/cluster/OnOff',
+				`/cluster/${DeviceClusterName.ON_OFF}`,
 				{},
 				{
 					deviceIds: [props.device.uniqueId],
@@ -1140,18 +1203,22 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 	const handlePresetColor = async (presetHue: number, presetSat: number) => {
 		setHue(presetHue);
 		setSaturation(presetSat);
-		setValue(100);
+		// Only update value if no LevelControl
+		if (!hasLevelControl) {
+			setValue(100);
+		}
 		setIsUpdating(true);
 		try {
 			await apiPost(
 				'device',
-				'/cluster/ColorControl',
+				`/cluster/${DeviceClusterName.COLOR_CONTROL}`,
 				{},
 				{
 					deviceIds: [props.device.uniqueId],
 					hue: presetHue,
 					saturation: presetSat,
-					value: 100,
+					// Only send value if no LevelControl
+					...(hasLevelControl ? {} : { value: 100 }),
 				}
 			);
 		} catch (error) {
@@ -1161,7 +1228,9 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 		}
 	};
 
-	const currentColor = hsvToHex(hue, saturation, value);
+	// Use brightness for display (from LevelControl if available, otherwise from HSV value)
+	const displayBrightness = hasLevelControl ? brightness : value;
+	const currentColor = hsvToHex(hue, saturation, displayBrightness);
 
 	// Define color presets
 	const colorPresets = [
@@ -1224,7 +1293,8 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 							>
 								{props.device.name}
 							</Typography>
-							{props.cluster.isOn !== undefined && (
+							{props.cluster.mergedClusters[DeviceClusterName.ON_OFF] !==
+								undefined && (
 								<FormControlLabel
 									control={
 										<Switch
@@ -1233,15 +1303,11 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 											disabled={isUpdating}
 											sx={{
 												'& .MuiSwitch-switchBase.Mui-checked': {
-													color: hsvToHex(hue, saturation, value),
+													color: currentColor,
 												},
 												'& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track':
 													{
-														backgroundColor: hsvToHex(
-															hue,
-															saturation,
-															value
-														),
+														backgroundColor: currentColor,
 														opacity: 0.5,
 													},
 											}}
@@ -1271,7 +1337,7 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 							}}
 						>
 							<Wheel
-								color={{ h: hue, s: saturation, v: value, a: 1 }}
+								color={{ h: hue, s: saturation, v: 100, a: 1 }}
 								onChange={(color) =>
 									handleColorChange({
 										h: color.hsv.h,
@@ -1295,12 +1361,13 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 									mb: 1.5,
 								}}
 							>
-								Brightness
+								Brightness{' '}
+								{hasLevelControl && `(${DeviceClusterName.LEVEL_CONTROL})`}
 							</Typography>
 							<Slider
-								value={value}
-								onChange={(_, newValue) => setValue(newValue)}
-								onChangeCommitted={handleColorCommit}
+								value={displayBrightness}
+								onChange={(_, newValue) => handleBrightnessChange(newValue)}
+								onChangeCommitted={() => void handleBrightnessCommit()}
 								valueLabelDisplay="auto"
 								min={0}
 								max={100}

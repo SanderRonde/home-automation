@@ -24,7 +24,29 @@ export type SceneDeviceActionWindowCovering = {
 	};
 };
 
-export type SceneDeviceAction = SceneDeviceActionOnOff | SceneDeviceActionWindowCovering;
+export type SceneDeviceActionLevelControl = {
+	deviceId: string;
+	cluster: DeviceClusterName.LEVEL_CONTROL;
+	action: {
+		level: number;
+	};
+};
+
+export type SceneDeviceActionColorControl = {
+	deviceId: string;
+	cluster: DeviceClusterName.COLOR_CONTROL;
+	action: {
+		hue: number;
+		saturation: number;
+		value: number;
+	};
+};
+
+export type SceneDeviceAction =
+	| SceneDeviceActionOnOff
+	| SceneDeviceActionWindowCovering
+	| SceneDeviceActionLevelControl
+	| SceneDeviceActionColorControl;
 
 export interface Scene {
 	id: SceneId;

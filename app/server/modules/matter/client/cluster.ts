@@ -28,7 +28,6 @@ import { DeviceClusterName } from '../../device/cluster';
 import type { ClusterClientObj } from '@matter/protocol';
 import type { Observable, Observer } from '@matter/main';
 import type { WritableAttribute } from '@matter/types';
-import { logDev } from '../../../lib/logging/log-dev';
 import { DeviceStatus } from '../../device/cluster';
 import { CombinedData } from '../../../lib/data';
 import { MappedData } from '../../../lib/data';
@@ -209,7 +208,6 @@ class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 			if (!command) {
 				throw new Error(`Command ${commandName} not found in cluster ${this.cluster.name}`);
 			}
-			logDev('command', command, mappedInput);
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			const response = await (command as any)(...mappedInput);
 			const mappedOutput = mappers?.output ? mappers.output(response) : response;
@@ -289,7 +287,7 @@ class MatterLevelControlCluster extends ConfigurableCluster<LevelControl.Complet
 	DeviceLevelControlCluster
 ) {
 	private _minLevel = this._proxy.attributeGetter(
-		'currentLevel',
+		'minLevel',
 		(v: number | null | undefined) => v ?? 0
 	);
 	private _maxLevel = this._proxy.attributeGetter(
