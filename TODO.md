@@ -24,3 +24,4 @@
     - [x] Window covering
     - [x] Color control
 - [ ] 3D house overview
+- [ ] Actions cluster

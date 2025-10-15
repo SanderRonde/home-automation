@@ -8,6 +8,7 @@ import React from 'react';
 interface ClusterIconButtonSkeletonProps extends ClusterIconButtonProps {
 	onPress: () => void;
 	enabled: boolean;
+	clusterIcon: JSX.Element | null;
 }
 
 const ClusterIconButtonSkeleton = (props: ClusterIconButtonSkeletonProps) => {
@@ -47,11 +48,7 @@ const ClusterIconButtonSkeleton = (props: ClusterIconButtonSkeletonProps) => {
 				},
 			}}
 		>
-			{getClusterIcon(
-				props.devices
-					.flatMap((d) => d.allClusters)
-					.filter((c) => c.name === props.clusterName)[0]?.icon
-			)}
+			{props.clusterIcon}
 		</IconButton>
 	);
 };
@@ -68,6 +65,11 @@ const WindowCoveringIconButton = (props: ClusterIconButtonProps) => {
 		<ClusterIconButtonSkeleton
 			{...props}
 			enabled={anyEnabled}
+			clusterIcon={getClusterIcon(
+				props.devices
+					.flatMap((d) => d.allClusters)
+					.filter((c) => c.name === props.clusterName)[0]?.icon
+			)}
 			onPress={async () => {
 				// Toggle all
 				await apiPost(
@@ -87,16 +89,43 @@ const WindowCoveringIconButton = (props: ClusterIconButtonProps) => {
 
 const OnOffIconButton = (props: ClusterIconButtonProps) => {
 	const devices = props.devices.filter((device) =>
-		device.allClusters.some((c) => c.name === DeviceClusterName.ON_OFF)
+		device.allClusters.some(
+			(c) =>
+				c.name === DeviceClusterName.ON_OFF ||
+				(c.name === DeviceClusterName.COLOR_CONTROL &&
+					c.mergedClusters[DeviceClusterName.ON_OFF])
+		)
 	);
 	const anyEnabled = devices
 		.flatMap((d) => d.allClusters)
-		.filter((c) => c.name === DeviceClusterName.ON_OFF)
-		.some((d) => d.isOn);
+		.some(
+			(d) =>
+				(d.name === DeviceClusterName.ON_OFF && d.isOn) ||
+				(d.name === DeviceClusterName.COLOR_CONTROL &&
+					d.mergedClusters[DeviceClusterName.ON_OFF]?.isOn)
+		);
+
+	let icon = null;
+	for (const device of devices) {
+		for (const cluster of device.allClusters) {
+			if (cluster.name === DeviceClusterName.ON_OFF) {
+				icon = getClusterIcon(cluster.icon);
+				break;
+			} else if (
+				cluster.name === DeviceClusterName.COLOR_CONTROL &&
+				cluster.mergedClusters[DeviceClusterName.ON_OFF]
+			) {
+				icon = getClusterIcon(cluster.mergedClusters[DeviceClusterName.ON_OFF]?.icon);
+				break;
+			}
+		}
+	}
+
 	return (
 		<ClusterIconButtonSkeleton
 			{...props}
 			enabled={anyEnabled}
+			clusterIcon={icon}
 			onPress={async () => {
 				await apiPost(
 					'device',
@@ -124,7 +153,10 @@ export const ClusterIconButton = (props: ClusterIconButtonProps): JSX.Element | 
 	if (props.clusterName === DeviceClusterName.WINDOW_COVERING) {
 		return <WindowCoveringIconButton {...props} />;
 	}
-	if (props.clusterName === DeviceClusterName.ON_OFF) {
+	if (
+		props.clusterName === DeviceClusterName.ON_OFF ||
+		props.clusterName === DeviceClusterName.COLOR_CONTROL
+	) {
 		return <OnOffIconButton {...props} />;
 	}
 	return null;
