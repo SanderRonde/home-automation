@@ -253,9 +253,10 @@ export const Scenes = (): JSX.Element => {
 																return null;
 															}
 
-															const cluster = device.allClusters.find(
-																(c) => c.name === action.cluster
-															);
+															const cluster =
+																device.flatAllClusters.find(
+																	(c) => c.name === action.cluster
+																);
 
 															return (
 																<Chip

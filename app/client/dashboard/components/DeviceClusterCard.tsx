@@ -9,6 +9,8 @@ import type {
 	DashboardDeviceClusterBooleanState,
 	DashboardDeviceClusterSwitch,
 	DashboardDeviceClusterColorControl,
+	DashboardDeviceClusterActions,
+	DashboardDeviceClusterSensorGroup,
 	DeviceListWithValuesResponse,
 } from '../../../server/modules/device/routing';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
@@ -102,6 +104,7 @@ const WindowCoveringCard = (
 ): JSX.Element => {
 	const [dragPosition, setDragPosition] = React.useState<number | null>(null);
 	const [isDragging, setIsDragging] = React.useState(false);
+	const [hasMoved, setHasMoved] = React.useState(false);
 	const cardRef = React.useRef<HTMLDivElement>(null);
 	const dragStartX = React.useRef<number>(0);
 	const dragStartPosition = React.useRef<number>(0);
@@ -111,6 +114,7 @@ const WindowCoveringCard = (
 
 	const handlePointerDown = (e: React.PointerEvent) => {
 		setIsDragging(true);
+		setHasMoved(false);
 		e.currentTarget.setPointerCapture(e.pointerId);
 		dragStartX.current = e.clientX;
 		dragStartPosition.current = props.cluster.targetPositionLiftPercentage;
@@ -121,9 +125,15 @@ const WindowCoveringCard = (
 			return;
 		}
 
+		const deltaX = Math.abs(e.clientX - dragStartX.current);
+		// Only consider it a drag if moved more than 5 pixels
+		if (deltaX > 5) {
+			setHasMoved(true);
+		}
+
 		const rect = cardRef.current.getBoundingClientRect();
-		const deltaX = e.clientX - dragStartX.current;
-		const deltaPercentage = (deltaX / rect.width) * 100 * 2; // 2x sensitivity
+		const fullDeltaX = e.clientX - dragStartX.current;
+		const deltaPercentage = (fullDeltaX / rect.width) * 100 * 2; // 2x sensitivity
 		const newPosition = dragStartPosition.current + deltaPercentage;
 		const clampedPosition = Math.max(0, Math.min(100, newPosition));
 		setDragPosition(Math.round(clampedPosition));
@@ -136,6 +146,17 @@ const WindowCoveringCard = (
 		setIsDragging(false);
 		e.currentTarget.releasePointerCapture(e.pointerId);
 
+		// If user didn't drag, open detail view
+		if (!hasMoved) {
+			props.pushDetailView({
+				type: 'device',
+				device: props.device,
+				cluster: props.cluster,
+			});
+			return;
+		}
+
+		// Otherwise, update the position
 		if (dragPosition !== null) {
 			await apiPost(
 				'device',
@@ -555,6 +576,135 @@ const IlluminanceMeasurementCard = (
 	);
 };
 
+const SensorGroupCard = (
+	props: DeviceClusterCardBaseProps<DashboardDeviceClusterSensorGroup>
+): JSX.Element => {
+	const occupancy = props.cluster.mergedClusters[DeviceClusterName.OCCUPANCY_SENSING];
+	const temperature = props.cluster.mergedClusters[DeviceClusterName.TEMPERATURE_MEASUREMENT];
+
+	const getTimeSince = (timestamp?: number): string => {
+		if (!timestamp) {
+			return 'Never';
+		}
+		const now = Date.now();
+		const diff = now - timestamp;
+		const seconds = Math.floor(diff / 1000);
+		const minutes = Math.floor(seconds / 60);
+		const hours = Math.floor(minutes / 60);
+		const days = Math.floor(hours / 24);
+
+		if (days > 0) {
+			return `${days}d ago`;
+		}
+		if (hours > 0) {
+			return `${hours}h ago`;
+		}
+		if (minutes > 0) {
+			return `${minutes}m ago`;
+		}
+		return `${seconds}s ago`;
+	};
+
+	// Background color based on occupancy
+	const backgroundColor = occupancy?.occupied ? '#1a472a' : '#2f2f2f';
+
+	return (
+		<Card
+			sx={{
+				borderRadius: 2,
+				overflow: 'hidden',
+				background: backgroundColor,
+			}}
+		>
+			<CardActionArea
+				sx={{ p: 2 }}
+				onClick={() => {
+					props.pushDetailView({
+						type: 'device',
+						device: props.device,
+						cluster: props.cluster,
+					});
+				}}
+			>
+				<Box
+					sx={{
+						display: 'flex',
+						alignItems: 'center',
+						gap: 2,
+					}}
+				>
+					<Box
+						sx={{
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							background: occupancy?.occupied
+								? 'rgba(76, 175, 80, 0.2)'
+								: 'rgba(0, 0, 0, 0.08)',
+							borderRadius: '50%',
+							width: 48,
+							height: 48,
+							fontSize: '1.5rem',
+							color: occupancy?.occupied ? '#4caf50' : 'text.secondary',
+						}}
+					>
+						{getClusterIcon(props.cluster.icon)}
+					</Box>
+					<Box sx={{ flexGrow: 1 }}>
+						<Typography
+							variant="body1"
+							sx={{
+								fontWeight: 500,
+							}}
+						>
+							{props.device.name}
+						</Typography>
+						{temperature && (
+							<Typography
+								variant="body2"
+								sx={{
+									color: 'text.secondary',
+								}}
+							>
+								{temperature.temperature.toFixed(1)}°C
+							</Typography>
+						)}
+						{occupancy && (
+							<Typography
+								variant="caption"
+								sx={{
+									color: 'text.secondary',
+								}}
+							>
+								Last: {getTimeSince(occupancy.lastTriggered)}
+							</Typography>
+						)}
+					</Box>
+					{occupancy?.occupied && (
+						<Box
+							sx={{
+								width: 12,
+								height: 12,
+								borderRadius: '50%',
+								backgroundColor: '#4caf50',
+								animation: 'pulse 2s infinite',
+								'@keyframes pulse': {
+									'0%, 100%': {
+										opacity: 1,
+									},
+									'50%': {
+										opacity: 0.5,
+									},
+								},
+							}}
+						/>
+					)}
+				</Box>
+			</CardActionArea>
+		</Card>
+	);
+};
+
 const BooleanStateCard = (
 	props: DeviceClusterCardBaseProps<DashboardDeviceClusterBooleanState>
 ): JSX.Element => {
@@ -673,7 +823,9 @@ const ColorControlCard = (
 	};
 
 	// Use brightness from LevelControl if available, otherwise use HSV value
-	const brightness = props.cluster.brightness ?? props.cluster.color.value;
+	const brightness =
+		props.cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL]?.currentLevel ??
+		props.cluster.color.value;
 	const color = hsvToRgb(props.cluster.color.hue, props.cluster.color.saturation, brightness);
 
 	return (
@@ -733,6 +885,80 @@ const ColorControlCard = (
 	);
 };
 
+const ActionsCard = (
+	props: DeviceClusterCardBaseProps<DashboardDeviceClusterActions>
+): JSX.Element => {
+	const activeAction = props.cluster.actions.find(
+		(action) => action.id === props.cluster.activeActionId
+	);
+
+	return (
+		<Card
+			sx={{
+				borderRadius: 2,
+				overflow: 'hidden',
+				background: '#374151',
+			}}
+		>
+			<CardActionArea
+				sx={{ p: 2 }}
+				onClick={() => {
+					props.pushDetailView({
+						type: 'device',
+						device: props.device,
+						cluster: props.cluster,
+					});
+				}}
+			>
+				<Box
+					sx={{
+						display: 'flex',
+						alignItems: 'center',
+						gap: 2,
+					}}
+				>
+					<Box
+						sx={{
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							background: 'rgba(255, 255, 255, 0.1)',
+							borderRadius: '50%',
+							width: 48,
+							height: 48,
+							fontSize: '1.5rem',
+							color: 'white',
+						}}
+					>
+						{getClusterIcon(props.cluster.icon)}
+					</Box>
+					<Box sx={{ flexGrow: 1 }}>
+						<Typography
+							variant="body1"
+							sx={{
+								fontWeight: 500,
+								color: 'white',
+							}}
+						>
+							{props.device.name}
+						</Typography>
+						{activeAction && (
+							<Typography
+								variant="caption"
+								sx={{
+									color: 'rgba(255, 255, 255, 0.7)',
+								}}
+							>
+								Active: {activeAction.name}
+							</Typography>
+						)}
+					</Box>
+				</Box>
+			</CardActionArea>
+		</Card>
+	);
+};
+
 export const DEVICE_CLUSTER_CARDS: Record<
 	EnumValue,
 	React.ComponentType<DeviceClusterCardBaseProps<DashboardDeviceClusterWithState>>
@@ -758,6 +984,10 @@ export const DeviceClusterCard = (
 		return <WindowCoveringCard {...props} cluster={props.cluster} />;
 	}
 	if (props.cluster.name === DeviceClusterName.OCCUPANCY_SENSING) {
+		// Check if it's a sensor group or standalone occupancy sensor
+		if ('mergedClusters' in props.cluster) {
+			return <SensorGroupCard {...props} cluster={props.cluster} />;
+		}
 		return <OccupancySensingCard {...props} cluster={props.cluster} />;
 	}
 	if (props.cluster.name === DeviceClusterName.TEMPERATURE_MEASUREMENT) {
@@ -777,6 +1007,9 @@ export const DeviceClusterCard = (
 	}
 	if (props.cluster.name === DeviceClusterName.COLOR_CONTROL) {
 		return <ColorControlCard {...props} cluster={props.cluster} />;
+	}
+	if (props.cluster.name === DeviceClusterName.ACTIONS) {
+		return <ActionsCard {...props} cluster={props.cluster} />;
 	}
 	return null;
 };

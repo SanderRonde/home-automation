@@ -280,7 +280,7 @@ class MatterWindowCoveringCluster extends ConfigurableCluster<WindowCovering.Com
 		}
 	>('goToLiftPercentage', {
 		input: ({ percentage }: { percentage: number }) => ({
-			liftPercent100thsValue: percentage / 100,
+			liftPercent100thsValue: percentage * 100,
 		}),
 	});
 }

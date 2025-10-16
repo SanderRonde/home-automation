@@ -86,7 +86,7 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 
 	const availableDevices = React.useMemo(() => {
 		return props.devices.filter((device) =>
-			device.allClusters.some(
+			device.mergedAllClusters.some(
 				(cluster) =>
 					cluster.name === DeviceClusterName.ON_OFF ||
 					cluster.name === DeviceClusterName.WINDOW_COVERING ||
@@ -99,7 +99,7 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 	// Get devices with occupancy sensors for triggers
 	const occupancyDevices = React.useMemo(() => {
 		return props.devices.filter((device) =>
-			device.allClusters.some(
+			device.mergedAllClusters.some(
 				(cluster) => cluster.name === DeviceClusterName.OCCUPANCY_SENSING
 			)
 		);
@@ -361,17 +361,13 @@ interface ActionConfigProps {
 }
 
 const ActionConfig = (props: ActionConfigProps) => {
-	if (!props.device) {
-		return null;
-	}
-
 	const availableClusters: DashboardDeviceClusterWithStateMap<
 		| DeviceClusterName.ON_OFF
 		| DeviceClusterName.WINDOW_COVERING
 		| DeviceClusterName.COLOR_CONTROL
 		| DeviceClusterName.LEVEL_CONTROL
 	> = {};
-	for (const cluster of props.device.allClusters) {
+	for (const cluster of props.device?.mergedAllClusters ?? []) {
 		if (cluster.name === DeviceClusterName.COLOR_CONTROL) {
 			// @ts-ignore
 			availableClusters[cluster.name] = cluster;
@@ -379,6 +375,11 @@ const ActionConfig = (props: ActionConfigProps) => {
 				// @ts-ignore
 				availableClusters[DeviceClusterName.LEVEL_CONTROL] =
 					cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL];
+			}
+			if (cluster.mergedClusters[DeviceClusterName.ON_OFF]) {
+				// @ts-ignore
+				availableClusters[DeviceClusterName.ON_OFF] =
+					cluster.mergedClusters[DeviceClusterName.ON_OFF];
 			}
 		} else if (
 			cluster.name === DeviceClusterName.ON_OFF ||
@@ -389,6 +390,7 @@ const ActionConfig = (props: ActionConfigProps) => {
 			availableClusters[cluster.name] = cluster;
 		}
 	}
+	console.log(availableClusters);
 
 	return (
 		<Card key={props.action.key} variant="outlined">

@@ -154,7 +154,7 @@ export const Home = (): JSX.Element => {
 						.filter(
 							(d) =>
 								!detailView.clustersName ||
-								d.allClusters.some((c) => c.name === detailView.clustersName)
+								d.mergedAllClusters.some((c) => c.name === detailView.clustersName)
 						)}
 					invalidate={() => refresh(false)}
 					pushDetailView={pushDetailView}
@@ -271,7 +271,7 @@ const RoomDetail = (props: RoomDetailProps) => {
 		const entries = [];
 
 		for (const device of props.devices) {
-			for (const cluster of device.allClusters) {
+			for (const cluster of device.mergedAllClusters) {
 				entries.push({
 					device,
 					cluster,
@@ -354,7 +354,7 @@ const RoomDevice = (props: RoomDeviceProps) => {
 	// Find which clusters are represented in this room
 	const representedClusters = new Set<DeviceClusterName>();
 	for (const device of props.roomDevices.devices) {
-		for (const cluster of device.allClusters) {
+		for (const cluster of device.mergedAllClusters) {
 			representedClusters.add(cluster.name);
 		}
 	}

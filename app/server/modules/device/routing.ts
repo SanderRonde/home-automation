@@ -13,12 +13,14 @@ import {
 	DeviceSwitchCluster,
 	DeviceColorControlCluster,
 	DeviceLevelControlCluster,
+	DeviceActionsCluster,
 } from './cluster';
 import type { BrandedRouteHandlerResponse, ServeOptions } from '../../lib/routes';
 import { createServeOptions, withRequestBody } from '../../lib/routes';
 import type { Device, DeviceEndpoint } from './device';
 import type { AllModules, ModuleConfig } from '..';
 import type * as Icons from '@mui/icons-material';
+import { Actions } from '@matter/main/clusters';
 import type { Cluster } from './cluster';
 import { Color } from '../../lib/color';
 import type { DeviceAPI } from './api';
@@ -97,6 +99,17 @@ export type DashboardDeviceClusterLevelControl = DashboardDeviceClusterBase & {
 	currentLevel: number; // 0-100
 };
 
+export type DashboardDeviceClusterActions = DashboardDeviceClusterBase & {
+	name: DeviceClusterName.ACTIONS;
+	actions: Array<{
+		id: number;
+		name: string;
+		type: Actions.ActionType;
+		state: Actions.ActionState;
+	}>;
+	activeActionId?: number;
+};
+
 export type DashboardDeviceClusterColorControl = DashboardDeviceClusterBase & {
 	name: DeviceClusterName.COLOR_CONTROL;
 	color: {
@@ -107,6 +120,16 @@ export type DashboardDeviceClusterColorControl = DashboardDeviceClusterBase & {
 	mergedClusters: {
 		[DeviceClusterName.ON_OFF]?: DashboardDeviceClusterOnOff;
 		[DeviceClusterName.LEVEL_CONTROL]?: DashboardDeviceClusterLevelControl;
+		[DeviceClusterName.ACTIONS]?: DashboardDeviceClusterActions;
+	};
+};
+
+export type DashboardDeviceClusterSensorGroup = DashboardDeviceClusterBase & {
+	name: DeviceClusterName.OCCUPANCY_SENSING;
+	mergedClusters: {
+		[DeviceClusterName.OCCUPANCY_SENSING]?: DashboardDeviceClusterOccupancySensing;
+		[DeviceClusterName.TEMPERATURE_MEASUREMENT]?: DashboardDeviceClusterTemperatureMeasurement;
+		[DeviceClusterName.ILLUMINANCE_MEASUREMENT]?: DashboardDeviceClusterIlluminanceMeasurement;
 	};
 };
 
@@ -123,6 +146,8 @@ export type DashboardDeviceClusterWithState = DashboardDeviceClusterBase &
 		| DashboardDeviceClusterSwitch
 		| DashboardDeviceClusterLevelControl
 		| DashboardDeviceClusterColorControl
+		| DashboardDeviceClusterActions
+		| DashboardDeviceClusterSensorGroup
 	);
 
 export type DashboardDeviceClusterWithStateMap<D extends DeviceClusterName = DeviceClusterName> = {
@@ -135,7 +160,8 @@ interface DashboardDeviceEndpointResponse {
 	name: string;
 	childClusters: DashboardDeviceClusterWithState[];
 	endpoints: DashboardDeviceEndpointResponse[];
-	allClusters: DashboardDeviceClusterWithState[];
+	mergedAllClusters: DashboardDeviceClusterWithState[];
+	flatAllClusters: DashboardDeviceClusterWithState[];
 }
 
 interface DashboardDeviceResponse extends DashboardDeviceEndpointResponse {
@@ -335,19 +361,9 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 						body.deviceIds,
 						DeviceWindowCoveringCluster,
 						async (cluster) => {
-							await Promise.all([
-								new Promise<void>((resolve) => {
-									const callback = (value: number | undefined) => {
-										if (value === body.targetPositionLiftPercentage) {
-											resolve();
-										}
-									};
-									cluster.targetPositionLiftPercentage.subscribe(callback);
-								}),
-								void cluster.goToLiftPercentage({
-									percentage: body.targetPositionLiftPercentage,
-								}),
-							]);
+							await cluster.goToLiftPercentage({
+								percentage: body.targetPositionLiftPercentage,
+							});
 						}
 					)
 			),
@@ -391,6 +407,22 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 							await cluster.setLevel({
 								level: body.level / 100, // Convert 0-100 to 0-1
 							});
+						}
+					)
+			),
+			[validateClusterRoute('/cluster/Actions')]: withRequestBody(
+				z.object({
+					deviceIds: z.array(z.string()),
+					actionId: z.number(),
+				}),
+				async (body, _req, _server, res) =>
+					performActionForDeviceCluster(
+						api,
+						res,
+						body.deviceIds,
+						DeviceActionsCluster,
+						async (cluster) => {
+							await cluster.executeAction({ actionId: body.actionId });
 						}
 					)
 			),
@@ -644,6 +676,16 @@ const getClusterState = async (
 			currentLevel: level * 100, // Convert 0-1 to 0-100
 		};
 	}
+	if (cluster instanceof DeviceActionsCluster && clusterName === DeviceClusterName.ACTIONS) {
+		const actionList = await cluster.actionList.get();
+		const activeAction = actionList.find((a) => a.state === Actions.ActionState.Active);
+		return {
+			name: clusterName,
+			icon: getClusterIconName(clusterName),
+			actions: actionList,
+			activeActionId: activeAction?.id,
+		};
+	}
 	return {
 		name: clusterName,
 		icon: getClusterIconName(clusterName),
@@ -705,12 +747,8 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 
 			const mergedClusters: DashboardDeviceClusterWithState[] = [];
 			for (const clusters of clustersForEndpoints.values()) {
-				// Merge ColorControl with OnOff and LevelControl clusters
-				if (
-					clusters[DeviceClusterName.COLOR_CONTROL] &&
-					(clusters[DeviceClusterName.ON_OFF] ||
-						clusters[DeviceClusterName.LEVEL_CONTROL])
-				) {
+				// Merge ColorControl with OnOff, LevelControl, and Actions clusters
+				if (clusters[DeviceClusterName.COLOR_CONTROL]) {
 					mergedClusters.push({
 						name: DeviceClusterName.COLOR_CONTROL,
 						icon: getClusterIconName(DeviceClusterName.COLOR_CONTROL),
@@ -723,11 +761,43 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 							[DeviceClusterName.ON_OFF]: clusters[DeviceClusterName.ON_OFF],
 							[DeviceClusterName.LEVEL_CONTROL]:
 								clusters[DeviceClusterName.LEVEL_CONTROL],
+							[DeviceClusterName.ACTIONS]: clusters[DeviceClusterName.ACTIONS],
 						},
 					});
-				} else {
-					mergedClusters.push(...Object.values(clusters));
+					// Remove merged clusters so they don't appear separately
+					delete clusters[DeviceClusterName.ON_OFF];
+					delete clusters[DeviceClusterName.LEVEL_CONTROL];
+					delete clusters[DeviceClusterName.ACTIONS];
+					delete clusters[DeviceClusterName.COLOR_CONTROL];
 				}
+
+				// Merge sensor clusters (OccupancySensing, TemperatureMeasurement, IlluminanceMeasurement)
+				const hasSensor =
+					clusters[DeviceClusterName.OCCUPANCY_SENSING] ||
+					clusters[DeviceClusterName.TEMPERATURE_MEASUREMENT] ||
+					clusters[DeviceClusterName.ILLUMINANCE_MEASUREMENT];
+
+				if (hasSensor) {
+					mergedClusters.push({
+						name: DeviceClusterName.OCCUPANCY_SENSING,
+						icon: getClusterIconName(DeviceClusterName.OCCUPANCY_SENSING),
+						mergedClusters: {
+							[DeviceClusterName.OCCUPANCY_SENSING]:
+								clusters[DeviceClusterName.OCCUPANCY_SENSING],
+							[DeviceClusterName.TEMPERATURE_MEASUREMENT]:
+								clusters[DeviceClusterName.TEMPERATURE_MEASUREMENT],
+							[DeviceClusterName.ILLUMINANCE_MEASUREMENT]:
+								clusters[DeviceClusterName.ILLUMINANCE_MEASUREMENT],
+						},
+					} as DashboardDeviceClusterSensorGroup);
+					// Remove merged clusters so they don't appear separately
+					delete clusters[DeviceClusterName.OCCUPANCY_SENSING];
+					delete clusters[DeviceClusterName.TEMPERATURE_MEASUREMENT];
+					delete clusters[DeviceClusterName.ILLUMINANCE_MEASUREMENT];
+				}
+
+				// Add remaining non-merged clusters
+				mergedClusters.push(...Object.values(clusters));
 			}
 			return mergedClusters;
 		};
@@ -739,18 +809,65 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 				endpoint: endpoint,
 			}))
 		);
-		const mergedAllClusters = mergeEndpointClusters(allClusters);
+		let mergedAllClusters = mergeEndpointClusters(allClusters);
 
 		for (const subEndpoint of endpoint.endpoints) {
 			const endpointResponse = await getResponseForEndpoint(subEndpoint, deviceId);
 			endpoints.push(endpointResponse);
 		}
 
+		// Post-process to merge multiple sensor groups into one
+		const sensorGroups: DashboardDeviceClusterSensorGroup[] = [];
+		const otherClusters: DashboardDeviceClusterWithState[] = [];
+
+		for (const cluster of mergedAllClusters) {
+			if (
+				cluster.name === DeviceClusterName.OCCUPANCY_SENSING &&
+				'mergedClusters' in cluster
+			) {
+				sensorGroups.push(cluster as DashboardDeviceClusterSensorGroup);
+			} else {
+				otherClusters.push(cluster);
+			}
+		}
+
+		// If we have multiple sensor groups, merge them into one
+		if (sensorGroups.length > 1) {
+			const mergedSensorGroup: DashboardDeviceClusterSensorGroup = {
+				name: DeviceClusterName.OCCUPANCY_SENSING,
+				icon: getClusterIconName(DeviceClusterName.OCCUPANCY_SENSING),
+				mergedClusters: {
+					[DeviceClusterName.OCCUPANCY_SENSING]: undefined,
+					[DeviceClusterName.TEMPERATURE_MEASUREMENT]: undefined,
+					[DeviceClusterName.ILLUMINANCE_MEASUREMENT]: undefined,
+				},
+			};
+
+			// Merge all sensor data from different groups
+			for (const group of sensorGroups) {
+				if (group.mergedClusters[DeviceClusterName.OCCUPANCY_SENSING]) {
+					mergedSensorGroup.mergedClusters[DeviceClusterName.OCCUPANCY_SENSING] =
+						group.mergedClusters[DeviceClusterName.OCCUPANCY_SENSING];
+				}
+				if (group.mergedClusters[DeviceClusterName.TEMPERATURE_MEASUREMENT]) {
+					mergedSensorGroup.mergedClusters[DeviceClusterName.TEMPERATURE_MEASUREMENT] =
+						group.mergedClusters[DeviceClusterName.TEMPERATURE_MEASUREMENT];
+				}
+				if (group.mergedClusters[DeviceClusterName.ILLUMINANCE_MEASUREMENT]) {
+					mergedSensorGroup.mergedClusters[DeviceClusterName.ILLUMINANCE_MEASUREMENT] =
+						group.mergedClusters[DeviceClusterName.ILLUMINANCE_MEASUREMENT];
+				}
+			}
+
+			mergedAllClusters = [...otherClusters, mergedSensorGroup];
+		}
+
 		return {
 			name: await endpoint.getDeviceName(),
 			childClusters: mergedClusters,
 			endpoints,
-			allClusters: mergedAllClusters,
+			mergedAllClusters: mergedAllClusters,
+			flatAllClusters: allClusters.map((c) => c.cluster),
 		};
 	};
 

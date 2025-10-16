@@ -129,7 +129,7 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 	// Helper to get battery percentage from all device clusters (including nested endpoints)
 	const getBatteryPercentage = (): number | undefined => {
 		const findBatteryInClusters = (
-			clusters: typeof props.device.allClusters
+			clusters: typeof props.device.mergedAllClusters
 		): number | undefined => {
 			for (const cluster of clusters) {
 				// Type guard to check if this is a power source cluster with battery percentage
@@ -141,14 +141,14 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 		};
 
 		// Check root device clusters
-		const rootBattery = findBatteryInClusters(props.device.allClusters);
+		const rootBattery = findBatteryInClusters(props.device.mergedAllClusters);
 		if (rootBattery !== undefined) {
 			return rootBattery;
 		}
 
 		// Check endpoint clusters
 		for (const endpoint of props.device.endpoints) {
-			const endpointBattery = findBatteryInClusters(endpoint.allClusters);
+			const endpointBattery = findBatteryInClusters(endpoint.mergedAllClusters);
 			if (endpointBattery !== undefined) {
 				return endpointBattery;
 			}
@@ -483,7 +483,7 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 								flexShrink: 0,
 							}}
 						>
-							{props.device.allClusters
+							{props.device.mergedAllClusters
 								.filter((cluster) => cluster.icon)
 								.map((cluster, idx) => (
 									<Box
@@ -514,7 +514,7 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 						borderColor: 'divider',
 					}}
 				>
-					{props.device.allClusters.length > 0 && (
+					{props.device.mergedAllClusters.length > 0 && (
 						<Box sx={{ mb: 3 }}>
 							<Typography variant="subtitle1" sx={{ pt: 2 }}>
 								Device ID
@@ -532,7 +532,7 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 									gap: 1,
 								}}
 							>
-								{props.device.allClusters.map((cluster, idx) => (
+								{props.device.mergedAllClusters.map((cluster, idx) => (
 									<Chip
 										key={idx}
 										icon={getClusterIcon(cluster.icon) || undefined}

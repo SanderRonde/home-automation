@@ -6,6 +6,8 @@ import type {
 	DashboardDeviceClusterIlluminanceMeasurement,
 	DashboardDeviceClusterWindowCovering,
 	DashboardDeviceClusterColorControl,
+	DashboardDeviceClusterActions,
+	DashboardDeviceClusterSensorGroup,
 	DeviceListWithValuesResponse,
 } from '../../../server/modules/device/routing';
 import {
@@ -862,6 +864,366 @@ const IlluminanceDetail = (props: IlluminanceDetailProps): JSX.Element => {
 	);
 };
 
+interface SensorGroupDetailProps extends DeviceDetailBaseProps<DashboardDeviceClusterSensorGroup> {}
+
+const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
+	const [timeframe, setTimeframe] = useState<Timeframe>('day');
+	const [loading, setLoading] = useState(false);
+	const roomColor = props.device.roomColor || '#555';
+
+	const occupancy = props.cluster.mergedClusters[DeviceClusterName.OCCUPANCY_SENSING];
+	const temperature = props.cluster.mergedClusters[DeviceClusterName.TEMPERATURE_MEASUREMENT];
+	const illuminance = props.cluster.mergedClusters[DeviceClusterName.ILLUMINANCE_MEASUREMENT];
+
+	const [tempHistory, setTempHistory] = useState<TemperatureEvent[]>([]);
+	const [illumHistory, setIllumHistory] = useState<IlluminanceEvent[]>([]);
+	const [occHistory, setOccHistory] = useState<OccupancyEvent[]>([]);
+
+	const deviceId = props.device.uniqueId;
+
+	useEffect(() => {
+		void fetchHistory();
+	}, [deviceId, timeframe, !!temperature, !!illuminance, !!occupancy]);
+
+	const fetchHistory = async () => {
+		try {
+			setLoading(true);
+
+			// Fetch temperature history if available
+			if (temperature) {
+				const response = await apiGet('device', '/temperature/:deviceId/:timeframe', {
+					deviceId: deviceId,
+					timeframe: TIMEFRAME_MS[timeframe].toString(),
+				});
+				if (response.ok) {
+					const data = await response.json();
+					setTempHistory(data.history || []);
+				}
+			}
+
+			// Fetch illuminance history if available
+			if (illuminance) {
+				const response = await apiGet('device', '/illuminance/:deviceId/:timeframe', {
+					timeframe: TIMEFRAME_MS[timeframe].toString(),
+					deviceId: deviceId,
+				});
+				if (response.ok) {
+					const data = await response.json();
+					setIllumHistory(data.history || []);
+				}
+			}
+
+			// Fetch occupancy history if available
+			if (occupancy) {
+				const response = await apiGet('device', '/occupancy/:deviceId', {
+					deviceId: deviceId,
+				});
+				if (response.ok) {
+					const data = (await response.json()) as { history?: OccupancyEvent[] };
+					setOccHistory(data.history || []);
+				}
+			}
+		} catch (err) {
+			console.error('Failed to fetch sensor history:', err);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const formatTimestamp = (timestamp: number): string => {
+		const date = new Date(timestamp);
+		const now = new Date();
+		const isToday = date.toDateString() === now.toDateString();
+		const isYesterday =
+			date.toDateString() === new Date(now.getTime() - 86400000).toDateString();
+
+		const timeStr = date.toLocaleTimeString('en-US', {
+			hour: '2-digit',
+			minute: '2-digit',
+		});
+
+		if (isToday) {
+			return `Today at ${timeStr}`;
+		}
+		if (isYesterday) {
+			return `Yesterday at ${timeStr}`;
+		}
+		return date.toLocaleString('en-US', {
+			month: 'short',
+			day: 'numeric',
+			hour: '2-digit',
+			minute: '2-digit',
+		});
+	};
+
+	const tempChartData = temperature
+		? {
+				labels: tempHistory
+					.slice()
+					.reverse()
+					.map((e) => {
+						const date = new Date(e.timestamp);
+						if (timeframe === 'hour' || timeframe === 'day') {
+							return date.toLocaleTimeString('en-US', {
+								hour: '2-digit',
+								minute: '2-digit',
+							});
+						}
+						return date.toLocaleDateString('en-US', {
+							month: 'short',
+							day: 'numeric',
+							hour: '2-digit',
+						});
+					}),
+				datasets: [
+					{
+						label: 'Temperature (°C)',
+						data: tempHistory
+							.slice()
+							.reverse()
+							.map((e) => e.temperature),
+						borderColor: 'rgb(59, 130, 246)',
+						backgroundColor: 'rgba(59, 130, 246, 0.1)',
+						tension: 0.4,
+						fill: true,
+					},
+				],
+			}
+		: null;
+
+	const illumChartData = illuminance
+		? {
+				labels: illumHistory
+					.slice()
+					.reverse()
+					.map((e) => {
+						const date = new Date(e.timestamp);
+						if (timeframe === 'hour' || timeframe === 'day') {
+							return date.toLocaleTimeString('en-US', {
+								hour: '2-digit',
+								minute: '2-digit',
+							});
+						}
+						return date.toLocaleDateString('en-US', {
+							month: 'short',
+							day: 'numeric',
+							hour: '2-digit',
+						});
+					}),
+				datasets: [
+					{
+						label: 'Illuminance (lux)',
+						data: illumHistory
+							.slice()
+							.reverse()
+							.map((e) => e.illuminance),
+						borderColor: 'rgb(251, 191, 36)',
+						backgroundColor: 'rgba(251, 191, 36, 0.1)',
+						tension: 0.4,
+						fill: true,
+					},
+				],
+			}
+		: null;
+
+	return (
+		<Box>
+			<Box
+				sx={{
+					backgroundColor: roomColor,
+					py: 1,
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
+					position: 'relative',
+				}}
+			>
+				<IconButton style={{ position: 'absolute', left: 0 }} onClick={props.onExit}>
+					<ArrowBackIcon style={{ fill: '#2f2f2f' }} />
+				</IconButton>
+				<Typography style={{ color: '#2f2f2f', fontWeight: 'bold' }} variant="h6">
+					Sensor Group
+				</Typography>
+			</Box>
+
+			<Box sx={{ p: { xs: 2, sm: 3 } }}>
+				<Card sx={{ mb: 3 }}>
+					<CardContent>
+						<Typography variant="h6" gutterBottom>
+							{props.device.name}
+						</Typography>
+
+						<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+							{temperature && (
+								<Box>
+									<Typography variant="body2" color="text.secondary">
+										Temperature
+									</Typography>
+									<Typography variant="h4" sx={{ color: '#3b82f6' }}>
+										{temperature.temperature.toFixed(1)}°C
+									</Typography>
+								</Box>
+							)}
+
+							{occupancy && (
+								<Box>
+									<Typography variant="body2" color="text.secondary">
+										Occupancy
+									</Typography>
+									<Chip
+										label={occupancy.occupied ? 'Occupied' : 'Clear'}
+										color={occupancy.occupied ? 'success' : 'default'}
+										sx={{ fontWeight: 'bold', mt: 1 }}
+									/>
+									{occHistory.length > 0 && (
+										<Typography
+											variant="caption"
+											color="text.secondary"
+											sx={{ mt: 1 }}
+										>
+											Last: {formatTimestamp(occHistory[0].timestamp)}
+										</Typography>
+									)}
+								</Box>
+							)}
+
+							{illuminance && (
+								<Box>
+									<Typography variant="body2" color="text.secondary">
+										Illuminance
+									</Typography>
+									<Typography variant="h4" sx={{ color: '#fbbf24' }}>
+										{illuminance.illuminance.toFixed(0)} lux
+									</Typography>
+								</Box>
+							)}
+						</Box>
+					</CardContent>
+				</Card>
+
+				{/* Timeframe selector for charts */}
+				{(temperature || illuminance) && (
+					<Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
+						<ToggleButtonGroup
+							value={timeframe}
+							exclusive
+							onChange={(_, value) => value && setTimeframe(value)}
+							size="small"
+						>
+							<ToggleButton value="hour">Hour</ToggleButton>
+							<ToggleButton value="day">Day</ToggleButton>
+							<ToggleButton value="week">Week</ToggleButton>
+							<ToggleButton value="month">Month</ToggleButton>
+						</ToggleButtonGroup>
+					</Box>
+				)}
+
+				{loading && (
+					<Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+						<CircularProgress />
+					</Box>
+				)}
+
+				{/* Temperature chart */}
+				{!loading && temperature && tempChartData && (
+					<Card sx={{ mb: 3 }}>
+						<CardContent>
+							<Typography variant="h6" gutterBottom>
+								Temperature History
+							</Typography>
+							{tempHistory.length === 0 ? (
+								<Typography color="text.secondary">No history available</Typography>
+							) : (
+								<Line
+									data={tempChartData}
+									options={{
+										responsive: true,
+										maintainAspectRatio: true,
+										plugins: {
+											legend: { display: false },
+											tooltip: { mode: 'index', intersect: false },
+										},
+										scales: { y: { beginAtZero: false } },
+									}}
+								/>
+							)}
+						</CardContent>
+					</Card>
+				)}
+
+				{/* Illuminance chart */}
+				{!loading && illuminance && illumChartData && (
+					<Card sx={{ mb: 3 }}>
+						<CardContent>
+							<Typography variant="h6" gutterBottom>
+								Illuminance History
+							</Typography>
+							{illumHistory.length === 0 ? (
+								<Typography color="text.secondary">No history available</Typography>
+							) : (
+								<Line
+									data={illumChartData}
+									options={{
+										responsive: true,
+										maintainAspectRatio: true,
+										plugins: {
+											legend: { display: false },
+											tooltip: { mode: 'index', intersect: false },
+										},
+										scales: { y: { beginAtZero: true } },
+									}}
+								/>
+							)}
+						</CardContent>
+					</Card>
+				)}
+
+				{/* Occupancy history */}
+				{!loading && occupancy && (
+					<Card>
+						<CardContent>
+							<Typography variant="h6" gutterBottom>
+								Occupancy History
+							</Typography>
+							{occHistory.length === 0 ? (
+								<Typography color="text.secondary">No history available</Typography>
+							) : (
+								<List>
+									{occHistory.map((event, index) => (
+										<ListItem
+											key={index}
+											sx={{
+												borderLeft: 4,
+												borderColor: event.occupied
+													? 'success.main'
+													: 'grey.500',
+												mb: 1,
+												bgcolor: 'background.paper',
+												borderRadius: 1,
+											}}
+										>
+											<ListItemText
+												primary={event.occupied ? 'Occupied' : 'Clear'}
+												secondary={formatTimestamp(event.timestamp)}
+												primaryTypographyProps={{
+													fontWeight: 'bold',
+													color: event.occupied
+														? 'success.main'
+														: 'text.secondary',
+												}}
+											/>
+										</ListItem>
+									))}
+								</List>
+							)}
+						</CardContent>
+					</Card>
+				)}
+			</Box>
+		</Box>
+	);
+};
+
 interface WindowCoveringDetailProps
 	extends DeviceDetailBaseProps<DashboardDeviceClusterWindowCovering> {}
 
@@ -965,7 +1327,7 @@ const WindowCoveringDetail = (props: WindowCoveringDetailProps): JSX.Element => 
 							<Box
 								sx={{
 									position: 'absolute',
-									top: `${targetPosition}%`,
+									top: `${Math.max(8, Math.min(92, targetPosition))}%`,
 									left: '50%',
 									transform: 'translate(-50%, -50%)',
 									backgroundColor: 'rgba(0, 0, 0, 0.7)',
@@ -1008,6 +1370,138 @@ const WindowCoveringDetail = (props: WindowCoveringDetailProps): JSX.Element => 
 	);
 };
 
+interface ActionsDetailProps extends DeviceDetailBaseProps<DashboardDeviceClusterActions> {}
+
+const ActionsDetail = (props: ActionsDetailProps): JSX.Element => {
+	const [executingActionId, setExecutingActionId] = useState<number | null>(null);
+	const roomColor = props.device.roomColor || '#555';
+
+	const handleExecuteAction = async (actionId: number) => {
+		setExecutingActionId(actionId);
+		try {
+			const response = await apiPost(
+				'device',
+				'/cluster/Actions',
+				{},
+				{
+					deviceIds: [props.device.uniqueId],
+					actionId,
+				}
+			);
+			if (!response.ok) {
+				console.error('Failed to execute action');
+			}
+		} catch (error) {
+			console.error('Failed to execute action:', error);
+		} finally {
+			setExecutingActionId(null);
+		}
+	};
+
+	return (
+		<Box>
+			<Box
+				sx={{
+					backgroundColor: roomColor,
+					py: 1,
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
+					position: 'relative',
+				}}
+			>
+				<IconButton style={{ position: 'absolute', left: 0 }} onClick={props.onExit}>
+					<ArrowBackIcon style={{ fill: '#2f2f2f' }} />
+				</IconButton>
+				<Typography style={{ color: '#2f2f2f', fontWeight: 'bold' }} variant="h6">
+					Actions
+				</Typography>
+			</Box>
+
+			<Box sx={{ p: { xs: 2, sm: 3 } }}>
+				<Card sx={{ mb: 3 }}>
+					<CardContent>
+						<Typography variant="h6" gutterBottom>
+							{props.device.name}
+						</Typography>
+						<Typography variant="body2" color="text.secondary">
+							Select an action to execute
+						</Typography>
+					</CardContent>
+				</Card>
+
+				<Card>
+					<CardContent>
+						<Typography variant="h6" gutterBottom>
+							Available Actions
+						</Typography>
+						<Box
+							sx={{
+								display: 'flex',
+								flexDirection: 'column',
+								gap: 2,
+								mt: 2,
+							}}
+						>
+							{props.cluster.actions.map((action) => {
+								const isActive = action.id === props.cluster.activeActionId;
+								const isExecuting = action.id === executingActionId;
+
+								return (
+									<Box
+										key={action.id}
+										onClick={() =>
+											!isExecuting && void handleExecuteAction(action.id)
+										}
+										sx={{
+											p: 2,
+											borderRadius: 2,
+											border: '2px solid',
+											borderColor: isActive ? 'primary.main' : 'divider',
+											backgroundColor: isActive
+												? 'rgba(25, 118, 210, 0.08)'
+												: 'background.paper',
+											cursor: isExecuting ? 'wait' : 'pointer',
+											transition: 'all 0.2s',
+											'&:hover': {
+												backgroundColor: isActive
+													? 'rgba(25, 118, 210, 0.12)'
+													: 'rgba(0, 0, 0, 0.04)',
+												borderColor: 'primary.main',
+											},
+										}}
+									>
+										<Box
+											sx={{
+												display: 'flex',
+												alignItems: 'center',
+												justifyContent: 'space-between',
+											}}
+										>
+											<Typography
+												variant="body1"
+												sx={{
+													fontWeight: isActive ? 600 : 400,
+												}}
+											>
+												{action.name}
+											</Typography>
+											{isActive && (
+												<Chip label="Active" color="primary" size="small" />
+											)}
+											{isExecuting && <CircularProgress size={20} />}
+										</Box>
+									</Box>
+								);
+							})}
+						</Box>
+					</CardContent>
+				</Card>
+			</Box>
+		</Box>
+	);
+};
+
 interface ColorControlDetailProps
 	extends DeviceDetailBaseProps<DashboardDeviceClusterColorControl> {}
 
@@ -1023,11 +1517,13 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 		props.cluster.mergedClusters[DeviceClusterName.ON_OFF]?.isOn ?? true
 	);
 	const [isUpdating, setIsUpdating] = useState(false);
+	const [executingActionId, setExecutingActionId] = useState<number | null>(null);
 	const roomColor = props.device.roomColor || '#555';
 	const colorCommitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 	const brightnessCommitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 	const hasLevelControl =
 		props.cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL] !== undefined;
+	const actionsCluster = props.cluster.mergedClusters[DeviceClusterName.ACTIONS];
 
 	// Cleanup timeout on unmount
 	useEffect(() => {
@@ -1227,6 +1723,28 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 			console.error('Failed to set preset color:', error);
 		} finally {
 			setIsUpdating(false);
+		}
+	};
+
+	const handleExecuteAction = async (actionId: number) => {
+		setExecutingActionId(actionId);
+		try {
+			const response = await apiPost(
+				'device',
+				'/cluster/Actions',
+				{},
+				{
+					deviceIds: [props.device.uniqueId],
+					actionId,
+				}
+			);
+			if (!response.ok) {
+				console.error('Failed to execute action');
+			}
+		} catch (error) {
+			console.error('Failed to execute action:', error);
+		} finally {
+			setExecutingActionId(null);
 		}
 	};
 
@@ -1492,6 +2010,81 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 						</Card>
 					</CardContent>
 				</Card>
+
+				{/* Actions Section */}
+				{actionsCluster && actionsCluster.actions.length > 0 && (
+					<Card sx={{ mt: 3 }}>
+						<CardContent>
+							<Typography variant="h6" gutterBottom>
+								Actions
+							</Typography>
+							<Box
+								sx={{
+									display: 'flex',
+									flexDirection: 'column',
+									gap: 2,
+									mt: 2,
+								}}
+							>
+								{actionsCluster.actions.map((action) => {
+									const isActive = action.id === actionsCluster.activeActionId;
+									const isExecuting = action.id === executingActionId;
+
+									return (
+										<Box
+											key={action.id}
+											onClick={() =>
+												!isExecuting && void handleExecuteAction(action.id)
+											}
+											sx={{
+												p: 2,
+												borderRadius: 2,
+												border: '2px solid',
+												borderColor: isActive ? 'primary.main' : 'divider',
+												backgroundColor: isActive
+													? 'rgba(25, 118, 210, 0.08)'
+													: 'background.paper',
+												cursor: isExecuting ? 'wait' : 'pointer',
+												transition: 'all 0.2s',
+												'&:hover': {
+													backgroundColor: isActive
+														? 'rgba(25, 118, 210, 0.12)'
+														: 'rgba(0, 0, 0, 0.04)',
+													borderColor: 'primary.main',
+												},
+											}}
+										>
+											<Box
+												sx={{
+													display: 'flex',
+													alignItems: 'center',
+													justifyContent: 'space-between',
+												}}
+											>
+												<Typography
+													variant="body1"
+													sx={{
+														fontWeight: isActive ? 600 : 400,
+													}}
+												>
+													{action.name}
+												</Typography>
+												{isActive && (
+													<Chip
+														label="Active"
+														color="primary"
+														size="small"
+													/>
+												)}
+												{isExecuting && <CircularProgress size={20} />}
+											</Box>
+										</Box>
+									);
+								})}
+							</Box>
+						</CardContent>
+					</Card>
+				)}
 			</Box>
 		</Box>
 	);
@@ -1501,6 +2094,10 @@ export const DeviceDetail = (
 	props: DeviceDetailBaseProps<DashboardDeviceClusterWithState>
 ): JSX.Element | null => {
 	if (props.cluster.name === DeviceClusterName.OCCUPANCY_SENSING) {
+		// Check if it's a sensor group or standalone occupancy sensor
+		if ('mergedClusters' in props.cluster) {
+			return <SensorGroupDetail {...props} cluster={props.cluster} />;
+		}
 		return <OccupancyDetail {...props} cluster={props.cluster} />;
 	}
 	if (props.cluster.name === DeviceClusterName.TEMPERATURE_MEASUREMENT) {
@@ -1517,6 +2114,9 @@ export const DeviceDetail = (
 	}
 	if (props.cluster.name === DeviceClusterName.COLOR_CONTROL) {
 		return <ColorControlDetail {...props} cluster={props.cluster} />;
+	}
+	if (props.cluster.name === DeviceClusterName.ACTIONS) {
+		return <ActionsDetail {...props} cluster={props.cluster} />;
 	}
 	return null;
 };

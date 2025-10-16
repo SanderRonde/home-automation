@@ -55,10 +55,10 @@ const ClusterIconButtonSkeleton = (props: ClusterIconButtonSkeletonProps) => {
 
 const WindowCoveringIconButton = (props: ClusterIconButtonProps) => {
 	const devices = props.devices.filter((device) =>
-		device.allClusters.some((c) => c.name === DeviceClusterName.WINDOW_COVERING)
+		device.mergedAllClusters.some((c) => c.name === DeviceClusterName.WINDOW_COVERING)
 	);
 	const anyEnabled = devices
-		.flatMap((d) => d.allClusters)
+		.flatMap((d) => d.mergedAllClusters)
 		.filter((c) => c.name === DeviceClusterName.WINDOW_COVERING)
 		.some((d) => d.targetPositionLiftPercentage === 0);
 	return (
@@ -67,7 +67,7 @@ const WindowCoveringIconButton = (props: ClusterIconButtonProps) => {
 			enabled={anyEnabled}
 			clusterIcon={getClusterIcon(
 				props.devices
-					.flatMap((d) => d.allClusters)
+					.flatMap((d) => d.mergedAllClusters)
 					.filter((c) => c.name === props.clusterName)[0]?.icon
 			)}
 			onPress={async () => {
@@ -89,7 +89,7 @@ const WindowCoveringIconButton = (props: ClusterIconButtonProps) => {
 
 const OnOffIconButton = (props: ClusterIconButtonProps) => {
 	const devices = props.devices.filter((device) =>
-		device.allClusters.some(
+		device.mergedAllClusters.some(
 			(c) =>
 				c.name === DeviceClusterName.ON_OFF ||
 				(c.name === DeviceClusterName.COLOR_CONTROL &&
@@ -97,7 +97,7 @@ const OnOffIconButton = (props: ClusterIconButtonProps) => {
 		)
 	);
 	const anyEnabled = devices
-		.flatMap((d) => d.allClusters)
+		.flatMap((d) => d.mergedAllClusters)
 		.some(
 			(d) =>
 				(d.name === DeviceClusterName.ON_OFF && d.isOn) ||
@@ -107,7 +107,7 @@ const OnOffIconButton = (props: ClusterIconButtonProps) => {
 
 	let icon = null;
 	for (const device of devices) {
-		for (const cluster of device.allClusters) {
+		for (const cluster of device.mergedAllClusters) {
 			if (cluster.name === DeviceClusterName.ON_OFF) {
 				icon = getClusterIcon(cluster.icon);
 				break;
