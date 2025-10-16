@@ -11,20 +11,14 @@ import type { Mapper } from '../../../lib/data';
 import { Color } from '../../../lib/color';
 
 class WLEDState extends Data<WLEDClientState> {
-	public constructor(private readonly _client: WLEDClient) {
-		super(_client.state);
-	}
-
-	public override async get(): Promise<WLEDClientState> {
-		await this._client.refreshState();
-		return super.get();
+	public constructor(client: WLEDClient) {
+		super(client.state);
 	}
 }
 
 class WLEDMapper<M> extends MappedData<M, WLEDClientState> {
 	public constructor(
-		private readonly self: {
-			client: WLEDClient;
+		self: {
 			proxy: WLEDProxy;
 			onChange: EventEmitter<void>;
 		},
@@ -33,11 +27,6 @@ class WLEDMapper<M> extends MappedData<M, WLEDClientState> {
 	) {
 		super(self.proxy.state, mapper, alwaysTrack);
 		this.subscribe(() => self.onChange.emit(undefined));
-	}
-
-	public override async get(): Promise<Exclude<M, undefined>> {
-		await this.self.client.refreshState();
-		return super.get();
 	}
 }
 
