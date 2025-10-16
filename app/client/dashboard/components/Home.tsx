@@ -298,13 +298,11 @@ const RoomDetail = (props: RoomDetailProps) => {
 					display: 'flex',
 					alignItems: 'center',
 					justifyContent: 'center',
+					position: 'relative',
 				}}
 			>
-				<IconButton
-					style={{ position: 'absolute', left: 0 }}
-					onClick={() => props.onExit()}
-				>
-					<ArrowBackIcon style={{ fill: 'black' }} />
+				<IconButton sx={{ position: 'absolute', left: 0 }} onClick={() => props.onExit()}>
+					<ArrowBackIcon sx={{ fill: 'black' }} />
 				</IconButton>
 				<Box
 					style={{

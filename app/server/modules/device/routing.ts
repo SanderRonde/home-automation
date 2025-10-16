@@ -149,6 +149,7 @@ interface DashboardDeviceResponse extends DashboardDeviceEndpointResponse {
 	room?: string;
 	roomColor?: string;
 	roomIcon?: keyof typeof Icons;
+	managementUrl?: string;
 }
 
 function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api: DeviceAPI) {
@@ -773,6 +774,7 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 				roomIcon: roomInfo?.icon,
 				...endpointResponse,
 				name: storedDevice?.name ?? endpointResponse.name,
+				managementUrl: device.getManagementUrl?.(),
 			};
 			responseDevices.push(responseDevice);
 		})

@@ -1,5 +1,6 @@
 import { HomeDetector } from './home-detector';
 import { Temperature } from './temperature';
+import { HexLed } from './hex-led/hex-led';
 import { InfoScreen } from './info-screen';
 import { Dashboard } from './dashboard';
 import { Webhook } from './webhook';
@@ -30,6 +31,7 @@ const getModuleObj = () => ({
 	bot: Bot,
 	auth: Auth,
 	wled: WLed,
+	hexLed: HexLed,
 	device: Device,
 	matter: Matter,
 	dashboard: Dashboard,

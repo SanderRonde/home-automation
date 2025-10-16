@@ -1,4 +1,5 @@
 import type { EventEmitter } from '../../lib/event-emitter';
+import type { Actions } from '@matter/main/clusters';
 import type { Color } from '../../lib/color';
 import type { Data } from '../../lib/data';
 
@@ -38,6 +39,7 @@ export enum DeviceClusterName {
 	SWITCH = 'Switch',
 	ILLUMINANCE_MEASUREMENT = 'IlluminanceMeasurement',
 	COLOR_CONTROL = 'ColorControl',
+	ACTIONS = 'Actions',
 }
 
 export abstract class DeviceOnOffCluster extends Cluster {
@@ -201,4 +203,22 @@ export abstract class DeviceColorControlCluster extends Cluster {
 
 	public abstract color: Data<Color>;
 	public abstract setColor(args: { color: Color; overDurationMs?: number }): Promise<void>;
+}
+
+export interface ActionStruct {
+	id: number;
+	name: string;
+	type: Actions.ActionType;
+	state: Actions.ActionState;
+}
+
+export abstract class DeviceActionsCluster extends Cluster {
+	public static clusterName = DeviceClusterName.ACTIONS;
+
+	public getName(): DeviceClusterName {
+		return DeviceActionsCluster.clusterName;
+	}
+
+	public abstract actionList: Data<ActionStruct[]>;
+	public abstract executeAction(args: { actionId: number }): Promise<void>;
 }

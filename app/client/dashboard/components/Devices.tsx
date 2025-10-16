@@ -706,59 +706,8 @@ export const Devices: React.FC = () => {
 	return (
 		<Box sx={{ p: { xs: 2, sm: 3 } }}>
 			<Grid container spacing={{ xs: 2, md: 3 }}>
-				{/* Right Column - Controls (on mobile, shown first) */}
-				<Grid size={{ xs: 12, md: 4 }} sx={{ order: { xs: 1, md: 2 } }}>
-					{/* Pairing Section */}
-					<Card sx={{ mb: 3 }}>
-						<CardContent>
-							<Typography variant="h6" gutterBottom>
-								Pair New Matter Device
-							</Typography>
-							<Box
-								sx={{
-									display: 'flex',
-									flexDirection: 'column',
-									gap: 2,
-								}}
-							>
-								<TextField
-									label="Matter Pairing Code"
-									value={pairingCode}
-									onChange={(e) => setPairingCode(e.target.value)}
-									onKeyDown={(e) => {
-										if (e.key === 'Enter' && !pairingLoading) {
-											void handlePair();
-										}
-									}}
-									placeholder="MT:Y.K9519960000"
-									fullWidth
-									disabled={pairingLoading}
-									size="small"
-								/>
-								<Button
-									variant="contained"
-									onClick={handlePair}
-									disabled={pairingLoading || !pairingCode.trim()}
-									fullWidth
-								>
-									{pairingLoading ? (
-										<CircularProgress size={24} color="inherit" />
-									) : (
-										'Pair Device'
-									)}
-								</Button>
-								{pairingMessage && (
-									<Alert severity={pairingMessage.type}>
-										{pairingMessage.text}
-									</Alert>
-								)}
-							</Box>
-						</CardContent>
-					</Card>
-				</Grid>
-
-				{/* Left Column - Devices List */}
-				<Grid size={{ xs: 12, md: 8 }} sx={{ order: { xs: 2, md: 1 } }}>
+				{/* Left Column - Devices List (on mobile, shown first) */}
+				<Grid size={{ xs: 12, md: 8 }} sx={{ order: { xs: 1, md: 1 } }}>
 					<Box
 						sx={{
 							maxHeight: '100%',
@@ -815,6 +764,80 @@ export const Devices: React.FC = () => {
 							)}
 						</Stack>
 					</Box>
+				</Grid>
+
+				{/* Right Column - Controls (on mobile, shown at bottom) */}
+				<Grid size={{ xs: 12, md: 4 }} sx={{ order: { xs: 2, md: 2 } }}>
+					<Stack spacing={3}>
+						{/* Pairing Section */}
+						<Card>
+							<CardContent>
+								<Typography variant="h6" gutterBottom>
+									Pair New Matter Device
+								</Typography>
+								<Box
+									sx={{
+										display: 'flex',
+										flexDirection: 'column',
+										gap: 2,
+									}}
+								>
+									<TextField
+										label="Matter Pairing Code"
+										value={pairingCode}
+										onChange={(e) => setPairingCode(e.target.value)}
+										onKeyDown={(e) => {
+											if (e.key === 'Enter' && !pairingLoading) {
+												void handlePair();
+											}
+										}}
+										placeholder="MT:Y.K9519960000"
+										fullWidth
+										disabled={pairingLoading}
+										size="small"
+									/>
+									<Button
+										variant="contained"
+										onClick={handlePair}
+										disabled={pairingLoading || !pairingCode.trim()}
+										fullWidth
+									>
+										{pairingLoading ? (
+											<CircularProgress size={24} color="inherit" />
+										) : (
+											'Pair Device'
+										)}
+									</Button>
+									{pairingMessage && (
+										<Alert severity={pairingMessage.type}>
+											{pairingMessage.text}
+										</Alert>
+									)}
+								</Box>
+							</CardContent>
+						</Card>
+
+						{/* eWeLink Integration */}
+						<Card>
+							<CardContent>
+								<Typography variant="h6" gutterBottom>
+									eWeLink Integration
+								</Typography>
+								<Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+									Connect your eWeLink smart devices through OAuth authentication.
+								</Typography>
+								<Button
+									variant="outlined"
+									fullWidth
+									onClick={() => {
+										window.location.hash = 'ewelink';
+									}}
+								>
+									Configure eWeLink
+								</Button>
+							</CardContent>
+						</Card>
+					</Stack>
 				</Grid>
 			</Grid>
 

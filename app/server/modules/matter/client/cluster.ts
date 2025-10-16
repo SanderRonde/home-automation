@@ -8,9 +8,11 @@ import {
 	DeviceIlluminanceMeasurementCluster,
 	DeviceTemperatureMeasurementCluster,
 	DeviceColorControlCluster,
+	DeviceActionsCluster,
 } from '../../device/cluster';
 import type {
 	ColorControl,
+	Actions,
 	Groups,
 	IlluminanceMeasurement,
 	OccupancySensing,
@@ -456,6 +458,21 @@ class MatterColorControlCluster extends ConfigurableCluster<ColorControl.Complet
 	});
 }
 
+class MatterActionsCluster extends ConfigurableCluster<Actions.Cluster>(DeviceActionsCluster) {
+	public actionList = this._proxy.attributeGetter(
+		'actionList',
+		(actions) =>
+			actions?.map((action) => ({
+				id: action.actionId,
+				name: action.name,
+				type: action.type,
+				state: action.state,
+			})) ?? []
+	);
+
+	public executeAction = this._proxy.command('startAction');
+}
+
 function fromMatterStatus(status: Status): DeviceStatus {
 	switch (status) {
 		case Status.Success:
@@ -484,6 +501,7 @@ export const MATTER_CLUSTERS = {
 	[DeviceClusterName.ILLUMINANCE_MEASUREMENT]: MatterIlluminanceMeasurementCluster,
 	[DeviceClusterName.TEMPERATURE_MEASUREMENT]: MatterTemperatureMeasurementCluster,
 	[DeviceClusterName.COLOR_CONTROL]: MatterColorControlCluster,
+	[DeviceClusterName.ACTIONS]: MatterActionsCluster,
 };
 
 export const IGNORED_MATTER_CLUSTERS = [
@@ -500,8 +518,6 @@ export const IGNORED_MATTER_CLUSTERS = [
 	'GroupKeyManagement',
 	'DiagnosticLogs',
 	'PowerSourceConfiguration',
-	// Provides things like scenes/automations. Pretty cool but that should be done within the current framework.
-	'Actions',
 	'AccessControl',
 	// Given that this requires complex timing logic might as well
 	// just keep this under the original framework.

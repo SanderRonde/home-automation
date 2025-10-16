@@ -42,4 +42,8 @@ export class WLEDDevice extends DeviceEndpoint implements Device {
 	public get endpoints(): DeviceEndpoint[] {
 		return [];
 	}
+
+	public getManagementUrl(): string {
+		return `http://${this._ip}`;
+	}
 }

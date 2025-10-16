@@ -83,12 +83,14 @@ export interface Device extends DeviceEndpoint {
 	getUniqueId(): string;
 	getSource(): DeviceSource;
 	onChange: EventEmitter<void>;
+	getManagementUrl?(): string | undefined;
 }
 
 export class DeviceSource extends ClassEnum {
 	public static readonly MATTER = new DeviceSource('matter');
 	public static readonly EWELINK = new DeviceSource('ewelink');
 	public static readonly WLED = new DeviceSource('wled');
+	public static readonly HEX_LED = new DeviceSource('hex-led');
 
 	public toEmoji(): string {
 		switch (this) {
@@ -98,6 +100,8 @@ export class DeviceSource extends ClassEnum {
 				return '🔗';
 			case DeviceSource.WLED:
 				return '💡';
+			case DeviceSource.HEX_LED:
+				return '🔷';
 			default:
 				throw new Error('Invalid DeviceSource');
 		}

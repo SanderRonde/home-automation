@@ -1,9 +1,9 @@
+import { LEDSourcesConfig } from './components/LEDSourcesConfig';
 import { EweLinkConfig } from './components/EweLinkConfig';
 import { AppLayout } from './components/layout/AppLayout';
 import { SidebarTab } from './components/layout/Sidebar';
 import { NotFoundPage } from './components/NotFoundPage';
 import { WelcomePage } from './components/WelcomePage';
-import { WLEDConfig } from './components/WLEDConfig';
 import { MCPConfig } from './components/MCPConfig';
 import React, { useState, useEffect } from 'react';
 import { Devices } from './components/Devices';
@@ -52,8 +52,8 @@ function DashboardApp() {
 				return <Devices />;
 			case SidebarTab.EWELINK:
 				return <EweLinkConfig />;
-			case SidebarTab.WLED:
-				return <WLEDConfig />;
+			case SidebarTab.LED_SOURCES:
+				return <LEDSourcesConfig />;
 			case SidebarTab.MCP:
 				return <MCPConfig />;
 			default:

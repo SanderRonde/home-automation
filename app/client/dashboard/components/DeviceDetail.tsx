@@ -37,6 +37,8 @@ import {
 	ToggleButton,
 	Switch,
 	FormControlLabel,
+	Alert,
+	Link,
 } from '@mui/material';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import React, { useState, useEffect, useRef } from 'react';
@@ -1274,6 +1276,19 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 			</Box>
 
 			<Box sx={{ p: { xs: 2, sm: 3 } }}>
+				{props.device.managementUrl && (
+					<Alert severity="info" sx={{ mb: 3 }}>
+						Manage this device at{' '}
+						<Link
+							href={props.device.managementUrl}
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							{props.device.managementUrl}
+						</Link>
+					</Alert>
+				)}
+
 				<Card sx={{ mb: 3 }}>
 					<CardContent>
 						<Box

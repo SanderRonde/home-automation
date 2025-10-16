@@ -49,7 +49,7 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 		{ text: 'Settings', icon: <SettingsIcon />, id: SidebarTab.SETTINGS },
 		{ text: 'Devices', icon: <DeviceHubIcon />, id: SidebarTab.DEVICES }, // Updated icon for Matter
 		{ text: 'eWeLink', icon: <CloudIcon />, id: SidebarTab.EWELINK },
-		{ text: 'WLED', icon: <LightbulbIcon />, id: SidebarTab.WLED },
+		{ text: 'LED Sources', icon: <LightbulbIcon />, id: SidebarTab.LED_SOURCES },
 		{ text: 'MCP', icon: <SmartToyIcon />, id: SidebarTab.MCP },
 	];
 
@@ -96,6 +96,6 @@ export enum SidebarTab {
 	SETTINGS = 'settings',
 	DEVICES = 'devices',
 	EWELINK = 'ewelink',
-	WLED = 'wled',
+	LED_SOURCES = 'led-sources',
 	MCP = 'mcp',
 }
