@@ -390,7 +390,6 @@ const ActionConfig = (props: ActionConfigProps) => {
 			availableClusters[cluster.name] = cluster;
 		}
 	}
-	console.log(availableClusters);
 
 	return (
 		<Card key={props.action.key} variant="outlined">
