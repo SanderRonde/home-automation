@@ -153,8 +153,9 @@ function useWebsocket<IN, OUT>(
 		if (!path) {
 			return;
 		}
+		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 		socket.current = new ResilientSocket<OUT, IN>({
-			url: `ws://${location.host}${path}`,
+			url: `${protocol}//${location.host}${path}`,
 			onOpen() {
 				setOpen(true);
 			},
