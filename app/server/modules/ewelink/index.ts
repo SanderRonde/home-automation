@@ -50,12 +50,20 @@ export const EWeLink = new (class EWeLink extends ModuleMeta {
 					'No token supplied, get one by going to /ewelink/oauth'
 				);
 			} else {
-				this.api = await new EWeLinkAPI(db, webApi, async (devices) => {
-					(await config.modules.device.api.value).setDevices(
-						devices,
-						DeviceSource.EWELINK
+				try {
+					this.api = await new EWeLinkAPI(db, webApi, async (devices) => {
+						(await config.modules.device.api.value).setDevices(
+							devices,
+							DeviceSource.EWELINK
+						);
+					}).init(token);
+				} catch (e) {
+					logTag(
+						'ewelink',
+						'yellow',
+						`Failed to connect to ewelink ${e.message}, try re-authenticating`
 					);
-				}).init(token);
+				}
 			}
 		}
 

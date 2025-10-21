@@ -34,19 +34,19 @@ export const HexLed = new (class HexLed extends ModuleMeta {
 				try {
 					const client = new LEDClient(url);
 					await client.connect();
-					newDevices[url as string] = new HexLEDDevice(url, client);
-					logTag('HEX-LED', 'blue', 'Device initialized:', url);
+					newDevices[url] = new HexLEDDevice(url, client);
+					logTag('HEX-LED', 'magenta', 'Device initialized:', url);
 				} catch (error) {
 					warning('Failed to initialize HEX-LED device:', url, error);
 				}
 			}
 
 			for (const url of removed) {
-				const device = currentDevices[url as string];
+				const device = currentDevices[url];
 				if (device) {
 					device[Symbol.dispose]();
 				}
-				delete newDevices[url as string];
+				delete newDevices[url];
 			}
 
 			this.devices.set(newDevices);

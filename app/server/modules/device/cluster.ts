@@ -135,6 +135,8 @@ export abstract class DeviceOccupancySensingCluster extends Cluster {
 	}
 
 	public abstract occupancy: Data<boolean>;
+
+	public abstract onOccupied: EventEmitter<{ occupied: boolean }>;
 }
 
 export abstract class DeviceTemperatureMeasurementCluster extends Cluster {
@@ -176,12 +178,27 @@ export abstract class DeviceBooleanStateCluster<S extends boolean> extends Clust
 export abstract class DeviceSwitchCluster extends Cluster {
 	public static clusterName = DeviceClusterName.SWITCH;
 
+	public abstract getTotalCount(): number;
+	public abstract getIndex(): number;
+
 	public getName(): DeviceClusterName {
 		return DeviceSwitchCluster.clusterName;
 	}
 
 	public abstract onPress: EventEmitter<void>;
-	public abstract onDoublePress: EventEmitter<void>;
+}
+
+export abstract class DeviceSwitchWithLongPressCluster extends DeviceSwitchCluster {
+	public abstract onLongPress: EventEmitter<void>;
+}
+
+export abstract class DeviceSwitchWithMultiPressCluster extends DeviceSwitchCluster {
+	public abstract onMultiPress: EventEmitter<{ pressCount: number }>;
+}
+
+export abstract class DeviceSwitchWithLongPressAndMultiPressCluster extends DeviceSwitchCluster {
+	public abstract onLongPress: EventEmitter<void>;
+	public abstract onMultiPress: EventEmitter<{ pressCount: number }>;
 }
 
 export abstract class DeviceIlluminanceMeasurementCluster extends Cluster {

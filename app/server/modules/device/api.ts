@@ -5,6 +5,7 @@ import { OccupancyTracker } from './occupancy-tracker';
 import type { DeviceInfo, RoomInfo } from './routing';
 import { HumidityTracker } from './humidity-tracker';
 import type * as Icons from '@mui/icons-material';
+import { SwitchTracker } from './switch-tracker';
 import type { Database } from '../../lib/db';
 import { SceneAPI } from './scene-api';
 import { Data } from '../../lib/data';
@@ -16,6 +17,7 @@ export class DeviceAPI {
 	public readonly temperatureTracker: TemperatureTracker;
 	public readonly humidityTracker: HumidityTracker;
 	public readonly illuminanceTracker: IlluminanceTracker;
+	public readonly buttonPressTracker: SwitchTracker;
 	public readonly sceneAPI: SceneAPI;
 
 	public constructor(
@@ -27,6 +29,7 @@ export class DeviceAPI {
 		this.temperatureTracker = new TemperatureTracker(sqlDB);
 		this.humidityTracker = new HumidityTracker(sqlDB);
 		this.illuminanceTracker = new IlluminanceTracker(sqlDB);
+		this.buttonPressTracker = new SwitchTracker(sqlDB, this.sceneAPI);
 	}
 
 	public readonly devices = new Data<{
@@ -60,6 +63,7 @@ export class DeviceAPI {
 		this.temperatureTracker.trackDevices(devices);
 		this.humidityTracker.trackDevices(devices);
 		this.illuminanceTracker.trackDevices(devices);
+		this.buttonPressTracker.trackDevices(devices);
 	}
 
 	public updateDeviceName(deviceId: string, name: string): boolean {

@@ -5,7 +5,7 @@ import React from 'react';
 export const EweLinkConfig = (): JSX.Element => {
 	const handleUpdateCredentials = () => {
 		// Open the OAuth URL in a new window/tab
-		window.open('/ewelink/oauth/', '_blank');
+		window.open('/ewelink/oauth', '_blank');
 	};
 
 	return (

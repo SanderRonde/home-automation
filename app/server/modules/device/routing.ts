@@ -453,10 +453,17 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 						])
 					),
 					trigger: z
-						.object({
-							type: z.literal('occupancy'),
-							deviceId: z.string(),
-						})
+						.union([
+							z.object({
+								type: z.literal('occupancy'),
+								deviceId: z.string(),
+							}),
+							z.object({
+								type: z.literal('button-press'),
+								deviceId: z.string(),
+								buttonIndex: z.number().optional(),
+							}),
+						])
 						.optional(),
 				}),
 				(body, _req, _server, { json }) => {
@@ -487,10 +494,17 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 						])
 					),
 					trigger: z
-						.object({
-							type: z.literal('occupancy'),
-							deviceId: z.string(),
-						})
+						.union([
+							z.object({
+								type: z.literal('occupancy'),
+								deviceId: z.string(),
+							}),
+							z.object({
+								type: z.literal('button-press'),
+								deviceId: z.string(),
+								buttonIndex: z.number().optional(),
+							}),
+						])
 						.optional(),
 				}),
 				(body, req, _server, { json }) => {

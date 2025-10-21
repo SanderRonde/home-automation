@@ -30,19 +30,11 @@ export class OccupancyTracker {
 				let lastState: boolean | undefined = undefined;
 
 				// Subscribe to occupancy changes
-				const unsubscribe = occupancyCluster.occupancy.subscribe((occupied, isInitial) => {
-					if (occupied === undefined) {
-						return;
-					}
-					// Log state changes (but not initial state unless it's occupied)
-					if (!isInitial || occupied) {
-						if (lastState !== occupied) {
-							lastState = occupied;
-							void this.logEvent(deviceId, occupied);
-							void this._sceneAPI.onTrigger({ type: 'occupancy', deviceId });
-						}
-					} else {
+				const unsubscribe = occupancyCluster.onOccupied.listen(({ occupied }) => {
+					if (lastState !== occupied) {
 						lastState = occupied;
+						void this.logEvent(deviceId, occupied);
+						void this._sceneAPI.onTrigger({ type: 'occupancy', deviceId });
 					}
 				});
 

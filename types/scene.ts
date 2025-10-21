@@ -3,10 +3,16 @@ import type * as Icons from '@mui/icons-material';
 
 export type SceneId = string;
 
-export interface SceneTrigger {
-	type: 'occupancy';
-	deviceId: string;
-}
+export type SceneTrigger =
+	| {
+			type: 'occupancy';
+			deviceId: string;
+	  }
+	| {
+			type: 'button-press';
+			deviceId: string;
+			buttonIndex: number;
+	  };
 
 export type SceneDeviceActionOnOff = {
 	deviceId: string;

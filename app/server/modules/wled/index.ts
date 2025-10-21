@@ -1,3 +1,4 @@
+import { logTag } from '../../lib/logging/logger';
 import { DeviceSource } from '../device/device';
 import { WLEDDevice } from './client/device';
 import type { Database } from '../../lib/db';
@@ -28,17 +29,22 @@ export const WLed = new (class WLed extends ModuleMeta {
 			const newDevices = { ...currentDevices };
 			const { added, removed } = diff(Object.keys(currentDevices), data.devices ?? []);
 			for (const ip of added) {
-				// TODO:(sander) probe whether this is available, catch errors
-				const client = new WLEDClient(ip);
-				// Gets around a bug where handleErrors is not bound to the client
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-				(client as any).JSONAPI.handleErrors = (client as any).JSONAPI.handleErrors.bind(
+				try {
+					const client = new WLEDClient(ip);
+					// Gets around a bug where handleErrors is not bound to the client
 					// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-					(client as any).JSONAPI
-				);
-				if (await client.init()) {
-					await client.refreshInfo();
-					newDevices[ip] = new WLEDDevice(ip, client.info, client);
+					(client as any).JSONAPI.handleErrors =
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+						(client as any).JSONAPI.handleErrors.bind(
+							// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+							(client as any).JSONAPI
+						);
+					if (await client.init()) {
+						await client.refreshInfo();
+						newDevices[ip] = new WLEDDevice(ip, client.info, client);
+					}
+				} catch (error) {
+					logTag('WLED', 'red', 'Error initializing device:', ip, error);
 				}
 			}
 			for (const ip of removed) {

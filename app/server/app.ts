@@ -298,3 +298,7 @@ void new WebServer({
 	instant: hasArg('instant', 'i'),
 	logTelegramBotCommands: hasArg('log-telegram-bot-commands'),
 }).init();
+
+process.on('SIGINT', () => {
+	console.log('interrupt!');
+});

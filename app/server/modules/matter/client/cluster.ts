@@ -9,6 +9,7 @@ import {
 	DeviceTemperatureMeasurementCluster,
 	DeviceColorControlCluster,
 	DeviceActionsCluster,
+	DeviceSwitchCluster,
 } from '../../device/cluster';
 import type {
 	ColorControl,
@@ -21,9 +22,17 @@ import type {
 	TemperatureMeasurement,
 	WindowCovering,
 } from '@matter/main/clusters';
-import { GroupId, Status, type Attribute, type BitSchema, type Command } from '@matter/types';
+import {
+	GroupId,
+	Status,
+	type Attribute,
+	type BitSchema,
+	type Command,
+	type Event,
+} from '@matter/types';
 import type { PairedNode, Endpoint } from '@project-chip/matter.js/device';
 import type { Cluster, DeviceGroupId } from '../../device/cluster';
+import type { Switch } from '@matter/types/clusters/switch';
 import { EventEmitter } from '../../../lib/event-emitter';
 import type { LevelControl } from '@matter/main/clusters';
 import { DeviceClusterName } from '../../device/cluster';
@@ -49,6 +58,8 @@ type CommandTypes<C extends Command<unknown, unknown, BitSchema>> =
 				response: R;
 			}
 		: never;
+type EventTypes<E extends Event<unknown, BitSchema>> =
+	E extends Event<infer T, BitSchema> ? T : never;
 
 type WritableAttributes<ATTR extends Record<string, Attribute<unknown, BitSchema>>> = {
 	[K in keyof ATTR]: ATTR[K] extends WritableAttribute<unknown, BitSchema> ? K : never;
@@ -57,6 +68,7 @@ type WritableAttributes<ATTR extends Record<string, Attribute<unknown, BitSchema
 export interface MatterClusterInterface {
 	attributes: Record<string, Attribute<unknown, BitSchema>>;
 	commands: Record<string, Command<unknown, unknown, BitSchema>>;
+	events: Record<string, Event<unknown, BitSchema>>;
 }
 
 class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
@@ -217,6 +229,27 @@ class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 		};
 	}
 
+	public event<E extends Extract<keyof C['events'], string>, R>(
+		eventName: E,
+		mappers?: {
+			output: (value: EventTypes<C['events'][E]>) => R;
+		}
+	): EventEmitter<R> {
+		const event = this.cluster.events[eventName];
+		if (!event) {
+			throw new Error(`Event ${eventName} not found in cluster ${this.cluster.name}`);
+		}
+
+		const emitter = new EventEmitter<R>();
+		event.addListener((newValue) => {
+			const mappedOutput = mappers?.output
+				? mappers.output(newValue as EventTypes<C['events'][E]>)
+				: newValue;
+			emitter.emit(mappedOutput as R);
+		});
+		return emitter;
+	}
+
 	public [Symbol.dispose](): void {
 		this._disposables.forEach((dispose) => dispose());
 		this._disposables.clear();
@@ -370,6 +403,8 @@ class MatterOccupancySensingCluster extends ConfigurableCluster<OccupancySensing
 		'occupancy',
 		(state) => state?.occupied ?? false
 	);
+
+	public onOccupied = this._proxy.event('occupancyChanged');
 }
 
 class MatterIlluminanceMeasurementCluster extends ConfigurableCluster<IlluminanceMeasurement.Cluster>(
@@ -473,6 +508,43 @@ class MatterActionsCluster extends ConfigurableCluster<Actions.Cluster>(DeviceAc
 	public executeAction = this._proxy.command('startAction');
 }
 
+class MatterSwitchClusterBase extends ConfigurableCluster<Switch.Complete>(DeviceSwitchCluster) {
+	public getTotalCount = () => this._counts.totalCount;
+	public getIndex = () => this._counts.count;
+
+	public constructor(
+		node: PairedNode,
+		endpoint: Endpoint,
+		cluster: ClusterClientObj,
+		private readonly _counts: {
+			totalCount: number;
+			count: number;
+		}
+	) {
+		super(node, endpoint, cluster);
+	}
+}
+
+class MatterSwitchCluster extends MatterSwitchClusterBase {
+	public onPress = this._proxy.event('initialPress');
+}
+
+class MatterSwitchWithLongPressCluster extends MatterSwitchClusterBase {
+	public onPress = this._proxy.event('initialPress');
+	public onLongPress = this._proxy.event('longPress');
+}
+
+class MatterSwitchWithMultiPressCluster extends MatterSwitchClusterBase {
+	public onPress = this._proxy.event('initialPress');
+	public onMultiPress = this._proxy.event('multiPressComplete');
+}
+
+class MatterSwitchWithLongPressAndMultiPressCluster extends MatterSwitchClusterBase {
+	public onPress = this._proxy.event('initialPress');
+	public onLongPress = this._proxy.event('longPress');
+	public onMultiPress = this._proxy.event('multiPressComplete');
+}
+
 function fromMatterStatus(status: Status): DeviceStatus {
 	switch (status) {
 		case Status.Success:
@@ -492,16 +564,104 @@ function toMatterGroupId(groupId: DeviceGroupId): GroupId {
 }
 
 export const MATTER_CLUSTERS = {
-	[DeviceClusterName.ON_OFF]: MatterOnOffCluster,
-	[DeviceClusterName.WINDOW_COVERING]: MatterWindowCoveringCluster,
-	[DeviceClusterName.LEVEL_CONTROL]: MatterLevelControlCluster,
-	[DeviceClusterName.POWER_SOURCE]: MatterPowerSourceCluster,
-	[DeviceClusterName.GROUPS]: MatterGroupsCluster,
-	[DeviceClusterName.OCCUPANCY_SENSING]: MatterOccupancySensingCluster,
-	[DeviceClusterName.ILLUMINANCE_MEASUREMENT]: MatterIlluminanceMeasurementCluster,
-	[DeviceClusterName.TEMPERATURE_MEASUREMENT]: MatterTemperatureMeasurementCluster,
-	[DeviceClusterName.COLOR_CONTROL]: MatterColorControlCluster,
-	[DeviceClusterName.ACTIONS]: MatterActionsCluster,
+	[DeviceClusterName.ON_OFF]: (
+		node: PairedNode,
+		endpoint: Endpoint,
+		cluster: ClusterClientObj
+	): MatterOnOffCluster => new MatterOnOffCluster(node, endpoint, cluster),
+	[DeviceClusterName.WINDOW_COVERING]: (
+		node: PairedNode,
+		endpoint: Endpoint,
+		cluster: ClusterClientObj
+	): MatterWindowCoveringCluster => new MatterWindowCoveringCluster(node, endpoint, cluster),
+	[DeviceClusterName.LEVEL_CONTROL]: (
+		node: PairedNode,
+		endpoint: Endpoint,
+		cluster: ClusterClientObj
+	): MatterLevelControlCluster => new MatterLevelControlCluster(node, endpoint, cluster),
+	[DeviceClusterName.POWER_SOURCE]: (
+		node: PairedNode,
+		endpoint: Endpoint,
+		cluster: ClusterClientObj
+	): MatterPowerSourceCluster => new MatterPowerSourceCluster(node, endpoint, cluster),
+	[DeviceClusterName.GROUPS]: (
+		node: PairedNode,
+		endpoint: Endpoint,
+		cluster: ClusterClientObj
+	): MatterGroupsCluster => new MatterGroupsCluster(node, endpoint, cluster),
+	[DeviceClusterName.COLOR_CONTROL]: (
+		node: PairedNode,
+		endpoint: Endpoint,
+		cluster: ClusterClientObj
+	): MatterColorControlCluster => new MatterColorControlCluster(node, endpoint, cluster),
+	[DeviceClusterName.ACTIONS]: (
+		node: PairedNode,
+		endpoint: Endpoint,
+		cluster: ClusterClientObj
+	): MatterActionsCluster => new MatterActionsCluster(node, endpoint, cluster),
+	[DeviceClusterName.OCCUPANCY_SENSING]: (
+		node: PairedNode,
+		endpoint: Endpoint,
+		cluster: ClusterClientObj
+	): MatterOccupancySensingCluster => new MatterOccupancySensingCluster(node, endpoint, cluster),
+	[DeviceClusterName.ILLUMINANCE_MEASUREMENT]: (
+		node: PairedNode,
+		endpoint: Endpoint,
+		cluster: ClusterClientObj
+	): MatterIlluminanceMeasurementCluster =>
+		new MatterIlluminanceMeasurementCluster(node, endpoint, cluster),
+	[DeviceClusterName.TEMPERATURE_MEASUREMENT]: (
+		node: PairedNode,
+		endpoint: Endpoint,
+		cluster: ClusterClientObj
+	): MatterTemperatureMeasurementCluster =>
+		new MatterTemperatureMeasurementCluster(node, endpoint, cluster),
+	[DeviceClusterName.SWITCH]: async (
+		node: PairedNode,
+		endpoint: Endpoint,
+		cluster: ClusterClientObj,
+		clusterClients: ClusterClientObj[]
+	): Promise<MatterSwitchCluster | null> => {
+		const featureMap = await (
+			cluster as unknown as ClusterClientObj<Switch.Complete>
+		).attributes.featureMap.get();
+		if (!featureMap) {
+			console.error(`Switch cluster on endpoint ${endpoint.number} has no feature map`);
+			return null;
+		}
+		if (!featureMap.momentarySwitch) {
+			console.error(
+				`Switch cluster on endpoint ${endpoint.number} is not a momentary switch`
+			);
+			return null;
+		}
+
+		const allSwitchClusters = clusterClients.filter(
+			(clusterClient) => clusterClient.name === DeviceClusterName.SWITCH.toString()
+		);
+		const sortedSwitchClusters = allSwitchClusters.sort((a, b) => a.endpointId - b.endpointId);
+		const indexInClusters = sortedSwitchClusters.indexOf(cluster);
+
+		const counts = {
+			totalCount: sortedSwitchClusters.length,
+			count: indexInClusters + 1,
+		};
+
+		if (featureMap.momentarySwitchMultiPress && featureMap.momentarySwitchLongPress) {
+			return new MatterSwitchWithLongPressAndMultiPressCluster(
+				node,
+				endpoint,
+				cluster,
+				counts
+			);
+		} else if (featureMap.momentarySwitchMultiPress) {
+			return new MatterSwitchWithMultiPressCluster(node, endpoint, cluster, counts);
+		} else if (featureMap.momentarySwitchLongPress) {
+			return new MatterSwitchWithLongPressCluster(node, endpoint, cluster, counts);
+		} else {
+			return new MatterSwitchCluster(node, endpoint, cluster, counts);
+		}
+	},
 };
 
 export const IGNORED_MATTER_CLUSTERS = [
@@ -519,7 +679,4 @@ export const IGNORED_MATTER_CLUSTERS = [
 	'DiagnosticLogs',
 	'PowerSourceConfiguration',
 	'AccessControl',
-	// Given that this requires complex timing logic might as well
-	// just keep this under the original framework.
-	'Switch',
 ];

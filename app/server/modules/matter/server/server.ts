@@ -20,7 +20,7 @@ import { withFn } from '../../../lib/with';
 import { Data } from '../../../lib/data';
 import path from 'path';
 
-Logger.level = LogLevel.INFO;
+Logger.level = LogLevel.WARN;
 
 // Use StandardCrypto (pure JS with AES-CCM polyfill) for Bun compatibility
 // This avoids the ERR_CRYPTO_UNKNOWN_CIPHER error with NodeJsCrypto
@@ -89,7 +89,12 @@ export class MatterServer extends Disposable {
 					?.attributes.uniqueId?.get?.(),
 			]);
 
-			devices[id] = new MatterDevice(node, endpoint, type, uniqueId ?? uniqueIdBridged);
+			devices[id] = await MatterDevice.createDevice(
+				node,
+				endpoint,
+				type,
+				uniqueId ?? uniqueIdBridged
+			);
 		}
 		this.devices.set(devices);
 	}

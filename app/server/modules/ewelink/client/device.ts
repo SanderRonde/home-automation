@@ -148,9 +148,9 @@ class EwelinkR5SceneControllerDevice extends EwelinkDevice {
 		const endpoints = new Array(6)
 			.fill(0)
 			.map(
-				(_, i) =>
+				(_, i, arr) =>
 					new EwelinkEndpoint(eWeLinkConfig, [
-						new EwelinkOutletSwitchCluster(eWeLinkConfig, i),
+						new EwelinkOutletSwitchCluster(eWeLinkConfig, arr.length, i),
 					])
 			);
 		super(eWeLinkConfig, [new EwelinkPowerSourceCluster(eWeLinkConfig)], endpoints);

@@ -89,12 +89,22 @@ export class SceneAPI {
 
 	public async onTrigger(trigger: SceneTrigger): Promise<void> {
 		for (const scene of this.listScenes()) {
-			if (
-				scene.trigger?.type === trigger.type &&
-				scene.trigger?.deviceId === trigger.deviceId
-			) {
-				await this.triggerScene(scene.id);
+			if (!scene.trigger || scene.trigger.type !== trigger.type) {
+				continue;
 			}
+
+			if (scene.trigger.deviceId !== trigger.deviceId) {
+				continue;
+			}
+
+			// For button press triggers, also match buttonIndex if specified
+			if (trigger.type === 'button-press' && scene.trigger.type === 'button-press') {
+				if (scene.trigger.buttonIndex !== trigger.buttonIndex) {
+					continue;
+				}
+			}
+
+			await this.triggerScene(scene.id);
 		}
 	}
 

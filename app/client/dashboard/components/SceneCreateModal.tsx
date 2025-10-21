@@ -78,8 +78,16 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 		})) ?? []
 	);
 	const [enableTrigger, setEnableTrigger] = useState(!!props.existingScene?.trigger);
+	const [triggerType, setTriggerType] = useState<'occupancy' | 'button-press'>(
+		props.existingScene?.trigger?.type ?? 'occupancy'
+	);
 	const [triggerDeviceId, setTriggerDeviceId] = useState<string | null>(
 		props.existingScene?.trigger?.deviceId ?? null
+	);
+	const [triggerButtonIndex, setTriggerButtonIndex] = useState<number | undefined>(
+		props.existingScene?.trigger?.type === 'button-press'
+			? props.existingScene.trigger.buttonIndex
+			: undefined
 	);
 
 	const IconComponent = Icons[selectedIcon];
@@ -104,6 +112,28 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 			)
 		);
 	}, [props.devices]);
+
+	// Get devices with switch/button clusters for triggers
+	const buttonDevices = React.useMemo(() => {
+		return props.devices.filter((device) =>
+			device.mergedAllClusters.some((cluster) => cluster.name === DeviceClusterName.SWITCH)
+		);
+	}, [props.devices]);
+
+	// Get button count for the selected device
+	const selectedDeviceButtonCount = React.useMemo(() => {
+		if (!triggerDeviceId || triggerType !== 'button-press') {
+			return 0;
+		}
+		const device = buttonDevices.find((d) => d.uniqueId === triggerDeviceId);
+		if (!device) {
+			return 0;
+		}
+		// Count switch clusters
+		return device.mergedAllClusters.filter(
+			(cluster) => cluster.name === DeviceClusterName.SWITCH
+		).length;
+	}, [triggerDeviceId, triggerType, buttonDevices]);
 
 	const handleAddAction = () => {
 		const newAction: DeviceActionEntry = {
@@ -167,15 +197,25 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 			return;
 		}
 
+		let trigger: Scene['trigger'] = undefined;
+		if (enableTrigger && triggerDeviceId) {
+			if (triggerType === 'occupancy') {
+				trigger = { type: 'occupancy', deviceId: triggerDeviceId };
+			} else if (triggerType === 'button-press') {
+				trigger = {
+					type: 'button-press',
+					deviceId: triggerDeviceId,
+					buttonIndex: triggerButtonIndex,
+				};
+			}
+		}
+
 		const scene: Omit<Scene, 'id'> = {
 			title: title.trim(),
 			icon: selectedIcon,
 			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			actions: actions.map(({ key: _key, ...action }) => action),
-			trigger:
-				enableTrigger && triggerDeviceId
-					? { type: 'occupancy', deviceId: triggerDeviceId }
-					: undefined,
+			trigger,
 		};
 
 		props.onSave(scene);
@@ -300,6 +340,7 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 										setEnableTrigger(e.target.checked);
 										if (!e.target.checked) {
 											setTriggerDeviceId(null);
+											setTriggerButtonIndex(undefined);
 										}
 									}}
 								/>
@@ -308,25 +349,93 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 						/>
 
 						{enableTrigger && (
-							<Box sx={{ mt: 2 }}>
-								<Autocomplete
-									options={occupancyDevices}
-									getOptionLabel={(option) => option.name}
-									value={
-										occupancyDevices.find(
-											(d) => d.uniqueId === triggerDeviceId
-										) ?? null
-									}
-									onChange={(_e, newValue) => {
-										setTriggerDeviceId(newValue?.uniqueId ?? null);
+							<Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+								<ToggleButtonGroup
+									value={triggerType}
+									exclusive
+									onChange={(_e, value) => {
+										if (value) {
+											setTriggerType(value);
+											setTriggerDeviceId(null);
+											setTriggerButtonIndex(undefined);
+										}
 									}}
-									renderInput={(params) => (
-										<TextField {...params} label="Occupancy Sensor" />
-									)}
-								/>
-								<Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-									Scene will trigger when occupancy is detected
-								</Typography>
+									fullWidth
+								>
+									<ToggleButton value="occupancy">Occupancy</ToggleButton>
+									<ToggleButton value="button-press">Button Press</ToggleButton>
+								</ToggleButtonGroup>
+
+								{triggerType === 'occupancy' && (
+									<>
+										<Autocomplete
+											options={occupancyDevices}
+											getOptionLabel={(option) => option.name}
+											value={
+												occupancyDevices.find(
+													(d) => d.uniqueId === triggerDeviceId
+												) ?? null
+											}
+											onChange={(_e, newValue) => {
+												setTriggerDeviceId(newValue?.uniqueId ?? null);
+											}}
+											renderInput={(params) => (
+												<TextField {...params} label="Occupancy Sensor" />
+											)}
+										/>
+										<Typography variant="caption" color="text.secondary">
+											Scene will trigger when occupancy is detected
+										</Typography>
+									</>
+								)}
+
+								{triggerType === 'button-press' && (
+									<>
+										<Autocomplete
+											options={buttonDevices}
+											getOptionLabel={(option) => option.name}
+											value={
+												buttonDevices.find(
+													(d) => d.uniqueId === triggerDeviceId
+												) ?? null
+											}
+											onChange={(_e, newValue) => {
+												setTriggerDeviceId(newValue?.uniqueId ?? null);
+												setTriggerButtonIndex(undefined);
+											}}
+											renderInput={(params) => (
+												<TextField {...params} label="Button Device" />
+											)}
+										/>
+
+										{triggerDeviceId && selectedDeviceButtonCount > 1 && (
+											<Autocomplete
+												options={Array.from(
+													{ length: selectedDeviceButtonCount },
+													(_, i) => i
+												)}
+												getOptionLabel={(option) => `Button ${option + 1}`}
+												value={triggerButtonIndex ?? null}
+												onChange={(_e, newValue) => {
+													setTriggerButtonIndex(
+														newValue !== null ? newValue : undefined
+													);
+												}}
+												renderInput={(params) => (
+													<TextField
+														{...params}
+														label="Button Index"
+														helperText="Leave empty to trigger on any button"
+													/>
+												)}
+											/>
+										)}
+
+										<Typography variant="caption" color="text.secondary">
+											Scene will trigger when the button is pressed
+										</Typography>
+									</>
+								)}
 							</Box>
 						)}
 					</Box>

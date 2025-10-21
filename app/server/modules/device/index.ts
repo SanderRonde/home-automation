@@ -101,6 +101,25 @@ export const Device = new (class Device extends ModuleMeta {
 			`;
 		}
 
+		// Initialize SQL table for button press events
+		const buttonPressTableExists = await config.sqlDB<{ name: string }[]>`
+			SELECT name FROM sqlite_master WHERE type='table' AND name='button_press_events'
+		`;
+
+		if (!buttonPressTableExists.length) {
+			await config.sqlDB`
+				CREATE TABLE button_press_events (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					device_id TEXT NOT NULL,
+					button_index INTEGER,
+					timestamp INTEGER NOT NULL
+				)
+			`;
+			await config.sqlDB`
+				CREATE INDEX idx_button_press_device_time ON button_press_events(device_id, timestamp DESC)
+			`;
+		}
+
 		const api = new DeviceAPI(config.db, config.sqlDB);
 		this.api.set(api);
 		return {
