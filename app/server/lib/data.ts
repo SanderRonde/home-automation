@@ -23,16 +23,8 @@ export class Data<T> {
 		}
 	}
 
-	public get(): Promise<Exclude<T, undefined>> {
-		return new Promise((resolve) => {
-			const callback = (value: T) => {
-				if (value !== undefined) {
-					this.unsubscribe(callback);
-					resolve(value as Exclude<T, undefined>);
-				}
-			};
-			this.subscribe(callback);
-		});
+	public get(): Promise<T> {
+		return Promise.resolve(this.current());
 	}
 
 	public current(): T {

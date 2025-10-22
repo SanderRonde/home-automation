@@ -4,8 +4,8 @@ import {
 	DeviceLevelControlCluster,
 	DeviceOnOffCluster,
 } from '../../device/cluster';
+import type { ActionStruct, DeviceClusterName } from '../../device/cluster';
 import { CombinedData, Data, MappedData } from '../../../lib/data';
-import type { ActionStruct, Cluster } from '../../device/cluster';
 import { EventEmitter } from '../../../lib/event-emitter';
 import type { LEDClient, RGBColor } from './led-client';
 import { Actions } from '@matter/main/clusters';
@@ -31,27 +31,24 @@ class HexLEDMapper<S, M> extends MappedData<M, S> {
 	}
 }
 
-function ConfigurableCluster(
-	Base: abstract new () => Cluster & {
-		getName: () => string;
+class ConfigurableCluster {
+	public onChange: EventEmitter<void> = new EventEmitter();
+
+	public constructor(public readonly client: LEDClient) {
+		client.onChange.listen(() => this.onChange.emit(undefined));
 	}
-) {
-	return class extends Base {
-		public onChange: EventEmitter<void> = new EventEmitter();
 
-		public constructor(public readonly client: LEDClient) {
-			super();
-			client.onChange.listen(() => this.onChange.emit(undefined));
-		}
-
-		public [Symbol.dispose](): void {
-			// Cleanup if needed
-		}
-	};
+	public [Symbol.dispose](): void {
+		// Cleanup if needed
+	}
 }
 
-export class HexLEDOnOffCluster extends ConfigurableCluster(DeviceOnOffCluster) {
+export class HexLEDOnOffCluster extends ConfigurableCluster implements DeviceOnOffCluster {
 	public isOn = new HexLEDMapper(this, this.client.state, (state) => state?.power_state ?? false);
+
+	public getName(): DeviceClusterName {
+		return DeviceOnOffCluster.clusterName;
+	}
 
 	public setOn = async (on: boolean): Promise<void> => {
 		await this.client.setState({ power_state: on });
@@ -63,7 +60,14 @@ export class HexLEDOnOffCluster extends ConfigurableCluster(DeviceOnOffCluster) 
 	};
 }
 
-export class HexLEDLevelControlCluster extends ConfigurableCluster(DeviceLevelControlCluster) {
+export class HexLEDLevelControlCluster
+	extends ConfigurableCluster
+	implements DeviceLevelControlCluster
+{
+	public getName(): DeviceClusterName {
+		return DeviceLevelControlCluster.clusterName;
+	}
+
 	public currentLevel = new HexLEDMapper(
 		this,
 		this.client.state,
@@ -84,7 +88,14 @@ export class HexLEDLevelControlCluster extends ConfigurableCluster(DeviceLevelCo
 	public stop = (): Promise<void> => Promise.resolve();
 }
 
-export class HexLEDColorControlCluster extends ConfigurableCluster(DeviceColorControlCluster) {
+export class HexLEDColorControlCluster
+	extends ConfigurableCluster
+	implements DeviceColorControlCluster
+{
+	public getName(): DeviceClusterName {
+		return DeviceColorControlCluster.clusterName;
+	}
+
 	public color = new HexLEDMapper(this, this.client.effects, (effects) => {
 		const currentEffect = effects.current_effect;
 
@@ -119,7 +130,11 @@ export class HexLEDColorControlCluster extends ConfigurableCluster(DeviceColorCo
 	};
 }
 
-export class HexLEDActionsCluster extends ConfigurableCluster(DeviceActionsCluster) {
+export class HexLEDActionsCluster extends ConfigurableCluster implements DeviceActionsCluster {
+	public getName(): DeviceClusterName {
+		return DeviceActionsCluster.clusterName;
+	}
+
 	public actionList = new HexLEDMapper(
 		this,
 		new CombinedData([this.client.presets, this.client.state]),

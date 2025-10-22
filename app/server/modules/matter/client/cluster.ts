@@ -113,13 +113,13 @@ class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 		const emitter = (() => {
 			const { cluster } = this;
 			class cls extends Data<AT | undefined> {
-				public override async get(): Promise<Exclude<AT, undefined>> {
+				public override async get(): Promise<AT> {
 					const attribute = cluster.attributes[attributeName];
 
 					const tryGet = async () => {
 						const result = await attribute.get();
 						if (mapper) {
-							return mapper(result) as Exclude<AT, undefined>;
+							return mapper(result);
 						}
 						return result;
 					};
@@ -133,9 +133,9 @@ class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 					}
 
 					if (mapper) {
-						return mapper(undefined) as Exclude<AT, undefined>;
+						return mapper(undefined) as unknown as AT;
 					}
-					return undefined as unknown as Exclude<AT, undefined>;
+					return undefined as unknown as AT;
 				}
 
 				public override set(value: AT | undefined): void {

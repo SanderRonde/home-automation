@@ -2891,11 +2891,6 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 									sx={{
 										fontWeight: 600,
 										letterSpacing: '-0.02em',
-										background:
-											'linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 100%)',
-										WebkitBackgroundClip: 'text',
-										WebkitTextFillColor: 'transparent',
-										backgroundClip: 'text',
 									}}
 								>
 									{props.device.name}
