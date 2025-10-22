@@ -15,11 +15,12 @@ import type {
 	DeviceListWithValuesResponse,
 } from '../../../server/modules/device/routing';
 import { DeviceClusterName, ThermostatMode } from '../../../server/modules/device/cluster';
+import { fadeInUpStaggered, staggerItem } from '../../lib/animations';
 import { Card, CardActionArea, Box, Typography } from '@mui/material';
-import { fadeInUpStaggered } from '../../lib/animations';
 import { getClusterIcon } from './clusterIcons';
 import type { HomeDetailView } from './Home';
 import { apiPost } from '../../lib/fetch';
+import { motion } from 'framer-motion';
 import React from 'react';
 
 export interface DeviceClusterCardBaseProps<C extends DashboardDeviceClusterWithState> {
@@ -79,27 +80,43 @@ const DeviceClusterCardSkeleton = (props: DeviceClusterCardProps) => {
 
 	const isDraggable = !!props.onPointerMove;
 	return (
-		<Card
-			ref={props.cardRef}
-			sx={{
-				...fadeInUpStaggered(props.animationIndex),
-				borderRadius: 2,
-				overflow: 'hidden',
-				background: props.cardBackground,
-				touchAction: isDraggable ? 'none' : undefined,
-				userSelect: isDraggable ? 'none' : undefined,
-			}}
-			onClick={isDraggable ? undefined : props.onPress}
-			onPointerDown={props.onPointerDown}
-			onPointerMove={props.onPointerMove}
-			onPointerUp={props.onPointerUp}
+		<motion.div
+			variants={staggerItem}
+			whileHover={isDraggable ? undefined : 'hover'}
+			whileTap={isDraggable ? undefined : 'tap'}
+			initial="rest"
+			animate="rest"
+			style={{ position: 'relative' }}
 		>
-			{isDraggable ? (
-				<Box sx={{ p: 2, cursor: 'pointer' }}>{cardContent}</Box>
-			) : (
-				<CardActionArea sx={{ p: 2 }}>{cardContent}</CardActionArea>
-			)}
-		</Card>
+			<Card
+				ref={props.cardRef}
+				sx={{
+					...fadeInUpStaggered(props.animationIndex),
+					borderRadius: 3,
+					overflow: 'hidden',
+					background: props.cardBackground,
+					touchAction: isDraggable ? 'none' : undefined,
+					userSelect: isDraggable ? 'none' : undefined,
+					boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+					transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+					'&:hover': {
+						boxShadow: isDraggable
+							? '0 2px 8px rgba(0,0,0,0.08)'
+							: '0 8px 24px rgba(0,0,0,0.15)',
+					},
+				}}
+				onClick={isDraggable ? undefined : props.onPress}
+				onPointerDown={props.onPointerDown}
+				onPointerMove={props.onPointerMove}
+				onPointerUp={props.onPointerUp}
+			>
+				{isDraggable ? (
+					<Box sx={{ p: 2, cursor: 'pointer' }}>{cardContent}</Box>
+				) : (
+					<CardActionArea sx={{ p: 2 }}>{cardContent}</CardActionArea>
+				)}
+			</Card>
+		</motion.div>
 	);
 };
 

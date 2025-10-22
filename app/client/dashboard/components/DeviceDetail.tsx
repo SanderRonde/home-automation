@@ -42,9 +42,19 @@ import {
 	FormControlLabel,
 	Alert,
 	Link,
+	Button,
 } from '@mui/material';
+import {
+	pageVariants,
+	cardVariants,
+	staggerContainer,
+	staggerItem,
+	smoothSpring,
+	bouncySpring,
+} from '../../lib/animations';
 import { DeviceClusterName, ThermostatMode } from '../../../server/modules/device/cluster';
-import { fadeIn, fadeInUp, fadeInUpStaggered } from '../../lib/animations';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import React, { useState, useEffect, useRef } from 'react';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { apiGet, apiPost } from '../../lib/fetch';
@@ -52,6 +62,7 @@ import { Wheel } from '@uiw/react-color';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore - react-chartjs-2 is an ESM module, Bun handles it at runtime
 import { Line } from 'react-chartjs-2';
+import { motion } from 'framer-motion';
 
 // Register Chart.js components
 ChartJS.register(
@@ -160,21 +171,31 @@ const OccupancyDetail = (props: OccupancyDetailProps): JSX.Element => {
 	const currentState = history.length > 0 ? history[0] : props.cluster;
 
 	return (
-		<Box sx={fadeIn}>
+		<motion.div
+			variants={pageVariants}
+			initial="initial"
+			animate="animate"
+			exit="exit"
+			style={{ height: '100%' }}
+		>
 			<Box
 				sx={{
 					backgroundColor: roomColor,
-					py: 1,
+					py: 1.5,
 					display: 'flex',
 					alignItems: 'center',
 					justifyContent: 'center',
 					position: 'relative',
+					boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
 				}}
 			>
 				<IconButton style={{ position: 'absolute', left: 0 }} onClick={props.onExit}>
 					<ArrowBackIcon style={{ fill: '#2f2f2f' }} />
 				</IconButton>
-				<Typography style={{ color: '#2f2f2f', fontWeight: 'bold' }} variant="h6">
+				<Typography
+					style={{ color: '#2f2f2f', fontWeight: 600, letterSpacing: '-0.02em' }}
+					variant="h6"
+				>
 					Occupancy Sensor
 				</Typography>
 			</Box>
@@ -202,86 +223,155 @@ const OccupancyDetail = (props: OccupancyDetailProps): JSX.Element => {
 
 				{!loading && !error && (
 					<>
-						<Card sx={{ mb: 3 }}>
-							<CardContent>
-								<Typography variant="h6" gutterBottom>
-									{deviceName || 'Unknown Device'}
-								</Typography>
-								<Box
-									sx={{
-										display: 'flex',
-										alignItems: 'center',
-										gap: 2,
-										mt: 2,
-									}}
-								>
-									<Typography variant="body1" color="text.secondary">
-										Current State:
-									</Typography>
-									<Chip
-										label={currentState?.occupied ? 'Occupied' : 'Clear'}
-										color={currentState?.occupied ? 'success' : 'default'}
-										sx={{
-											fontWeight: 'bold',
-										}}
-									/>
-								</Box>
-								{currentState && 'timestamp' in currentState && (
+						<motion.div variants={cardVariants} initial="initial" animate="animate">
+							<Card
+								sx={{
+									mb: 3,
+									borderRadius: 3,
+									boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+									background: 'linear-gradient(135deg, #2a2a2a 0%, #353535 100%)',
+								}}
+							>
+								<CardContent sx={{ p: 3 }}>
 									<Typography
-										variant="body2"
-										color="text.secondary"
-										sx={{ mt: 1 }}
+										variant="h6"
+										gutterBottom
+										sx={{ fontWeight: 600, letterSpacing: '-0.01em' }}
 									>
-										Last updated: {formatTimestamp(currentState.timestamp)}
+										{deviceName || 'Unknown Device'}
 									</Typography>
-								)}
-							</CardContent>
-						</Card>
-
-						<Card sx={fadeInUpStaggered(1)}>
-							<CardContent>
-								<Typography variant="h6" gutterBottom>
-									History
-								</Typography>
-								{history.length === 0 ? (
-									<Typography color="text.secondary">
-										No history available
-									</Typography>
-								) : (
-									<List>
-										{history.map((event, index) => (
-											<ListItem
-												key={index}
+									<Box
+										sx={{
+											display: 'flex',
+											alignItems: 'center',
+											gap: 2,
+											mt: 2,
+										}}
+									>
+										<Typography
+											variant="body1"
+											color="text.secondary"
+											sx={{ fontWeight: 500 }}
+										>
+											Current State:
+										</Typography>
+										<motion.div
+											initial={{ scale: 0.8 }}
+											animate={{ scale: 1 }}
+											transition={{ delay: 0.2, ...bouncySpring }}
+										>
+											<Chip
+												label={
+													currentState?.occupied ? 'Occupied' : 'Clear'
+												}
+												color={
+													currentState?.occupied ? 'success' : 'default'
+												}
 												sx={{
-													borderLeft: 4,
-													borderColor: event.occupied
-														? 'success.main'
-														: 'grey.500',
-													mb: 1,
-													bgcolor: 'background.paper',
-													borderRadius: 1,
+													fontWeight: 600,
+													px: 1,
 												}}
-											>
-												<ListItemText
-													primary={event.occupied ? 'Occupied' : 'Clear'}
-													secondary={formatTimestamp(event.timestamp)}
-													primaryTypographyProps={{
-														fontWeight: 'bold',
-														color: event.occupied
-															? 'success.main'
-															: 'text.secondary',
-													}}
-												/>
-											</ListItem>
-										))}
-									</List>
-								)}
-							</CardContent>
-						</Card>
+											/>
+										</motion.div>
+									</Box>
+									{currentState && 'timestamp' in currentState && (
+										<Typography
+											variant="body2"
+											color="text.secondary"
+											sx={{ mt: 1.5, fontSize: '0.875rem' }}
+										>
+											Last updated: {formatTimestamp(currentState.timestamp)}
+										</Typography>
+									)}
+								</CardContent>
+							</Card>
+						</motion.div>
+
+						<motion.div
+							variants={cardVariants}
+							initial="initial"
+							animate="animate"
+							transition={{ delay: 0.1 }}
+						>
+							<Card
+								sx={{
+									borderRadius: 3,
+									boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+									background: 'linear-gradient(135deg, #2a2a2a 0%, #353535 100%)',
+								}}
+							>
+								<CardContent sx={{ p: 3 }}>
+									<Typography
+										variant="h6"
+										gutterBottom
+										sx={{ fontWeight: 600, letterSpacing: '-0.01em' }}
+									>
+										History
+									</Typography>
+									{history.length === 0 ? (
+										<Typography color="text.secondary">
+											No history available
+										</Typography>
+									) : (
+										<motion.div
+											variants={staggerContainer}
+											initial="initial"
+											animate="animate"
+										>
+											<List sx={{ py: 1 }}>
+												{history.map((event, index) => (
+													<motion.div key={index} variants={staggerItem}>
+														<ListItem
+															sx={{
+																borderLeft: 4,
+																borderColor: event.occupied
+																	? 'success.main'
+																	: 'grey.400',
+																mb: 1.5,
+																bgcolor: 'background.paper',
+																borderRadius: 2,
+																boxShadow:
+																	'0 2px 8px rgba(0,0,0,0.06)',
+																transition: 'all 0.2s',
+																'&:hover': {
+																	boxShadow:
+																		'0 4px 12px rgba(0,0,0,0.1)',
+																	transform: 'translateX(4px)',
+																},
+															}}
+														>
+															<ListItemText
+																primary={
+																	event.occupied
+																		? 'Occupied'
+																		: 'Clear'
+																}
+																secondary={formatTimestamp(
+																	event.timestamp
+																)}
+																primaryTypographyProps={{
+																	fontWeight: 600,
+																	color: event.occupied
+																		? 'success.main'
+																		: 'text.secondary',
+																}}
+																secondaryTypographyProps={{
+																	fontSize: '0.875rem',
+																}}
+															/>
+														</ListItem>
+													</motion.div>
+												))}
+											</List>
+										</motion.div>
+									)}
+								</CardContent>
+							</Card>
+						</motion.div>
 					</>
 				)}
 			</Box>
-		</Box>
+		</motion.div>
 	);
 };
 
@@ -377,21 +467,31 @@ const TemperatureDetail = (props: TemperatureDetailProps): JSX.Element => {
 	};
 
 	return (
-		<Box sx={fadeIn}>
+		<motion.div
+			variants={pageVariants}
+			initial="initial"
+			animate="animate"
+			exit="exit"
+			style={{ height: '100%' }}
+		>
 			<Box
 				sx={{
 					backgroundColor: roomColor,
-					py: 1,
+					py: 1.5,
 					display: 'flex',
 					alignItems: 'center',
 					justifyContent: 'center',
 					position: 'relative',
+					boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
 				}}
 			>
 				<IconButton style={{ position: 'absolute', left: 0 }} onClick={props.onExit}>
 					<ArrowBackIcon style={{ fill: '#2f2f2f' }} />
 				</IconButton>
-				<Typography style={{ color: '#2f2f2f', fontWeight: 'bold' }} variant="h6">
+				<Typography
+					style={{ color: '#2f2f2f', fontWeight: 600, letterSpacing: '-0.02em' }}
+					variant="h6"
+				>
 					Temperature Sensor
 				</Typography>
 			</Box>
@@ -413,74 +513,113 @@ const TemperatureDetail = (props: TemperatureDetailProps): JSX.Element => {
 
 				{!loading && !error && (
 					<>
-						<Card sx={{ ...fadeInUp, mb: 3 }}>
-							<CardContent>
-								<Typography variant="h6" gutterBottom>
-									{props.device.name}
-								</Typography>
-								<Typography
-									variant="h3"
-									sx={{ color: '#3b82f6', fontWeight: 'bold' }}
-								>
-									{props.cluster.temperature.toFixed(1)}°C
-								</Typography>
-							</CardContent>
-						</Card>
-
-						<Card sx={{ ...fadeInUpStaggered(1), mb: 3 }}>
-							<CardContent>
-								<Box
-									sx={{
-										display: 'flex',
-										justifyContent: 'space-between',
-										alignItems: 'center',
-										mb: 2,
-									}}
-								>
-									<Typography variant="h6">History</Typography>
-									<ToggleButtonGroup
-										value={timeframe}
-										exclusive
-										onChange={(_, value) => value && setTimeframe(value)}
-										size="small"
+						<motion.div variants={cardVariants} initial="initial" animate="animate">
+							<Card
+								sx={{
+									mb: 3,
+									borderRadius: 3,
+									boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+									background:
+										'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 197, 253, 0.1) 100%)',
+									border: '1px solid rgba(59, 130, 246, 0.2)',
+								}}
+							>
+								<CardContent sx={{ p: 3 }}>
+									<Typography
+										variant="h6"
+										gutterBottom
+										sx={{ fontWeight: 500, opacity: 0.8 }}
 									>
-										<ToggleButton value="hour">Hour</ToggleButton>
-										<ToggleButton value="day">Day</ToggleButton>
-										<ToggleButton value="week">Week</ToggleButton>
-										<ToggleButton value="month">Month</ToggleButton>
-									</ToggleButtonGroup>
-								</Box>
-								{history.length === 0 ? (
-									<Typography color="text.secondary">
-										No history available
+										{props.device.name}
 									</Typography>
-								) : (
-									<Line
-										data={chartData}
-										options={{
-											responsive: true,
-											maintainAspectRatio: true,
-											plugins: {
-												legend: { display: false },
-												tooltip: {
-													mode: 'index',
-													intersect: false,
-												},
-											},
-											scales: {
-												y: {
-													beginAtZero: false,
-												},
-											},
+									<motion.div
+										initial={{ scale: 0.8, opacity: 0 }}
+										animate={{ scale: 1, opacity: 1 }}
+										transition={{ delay: 0.2, ...smoothSpring }}
+									>
+										<Typography
+											variant="h2"
+											sx={{
+												color: '#3b82f6',
+												fontWeight: 700,
+												letterSpacing: '-0.03em',
+											}}
+										>
+											{props.cluster.temperature.toFixed(1)}°C
+										</Typography>
+									</motion.div>
+								</CardContent>
+							</Card>
+						</motion.div>
+
+						<motion.div
+							variants={cardVariants}
+							initial="initial"
+							animate="animate"
+							transition={{ delay: 0.1 }}
+						>
+							<Card
+								sx={{
+									mb: 3,
+									borderRadius: 3,
+									boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+									background: 'linear-gradient(135deg, #2a2a2a 0%, #353535 100%)',
+								}}
+							>
+								<CardContent>
+									<Box
+										sx={{
+											display: 'flex',
+											justifyContent: 'space-between',
+											alignItems: 'center',
+											mb: 2,
 										}}
-									/>
-								)}
-							</CardContent>
-						</Card>
+									>
+										<Typography variant="h6">History</Typography>
+										<ToggleButtonGroup
+											value={timeframe}
+											exclusive
+											onChange={(_, value) => value && setTimeframe(value)}
+											size="small"
+										>
+											<ToggleButton value="hour">Hour</ToggleButton>
+											<ToggleButton value="day">Day</ToggleButton>
+											<ToggleButton value="week">Week</ToggleButton>
+											<ToggleButton value="month">Month</ToggleButton>
+										</ToggleButtonGroup>
+									</Box>
+									{history.length === 0 ? (
+										<Typography color="text.secondary">
+											No history available
+										</Typography>
+									) : (
+										<Line
+											data={chartData}
+											options={{
+												responsive: true,
+												maintainAspectRatio: true,
+												plugins: {
+													legend: { display: false },
+													tooltip: {
+														mode: 'index',
+														intersect: false,
+													},
+												},
+												scales: {
+													y: {
+														beginAtZero: false,
+													},
+												},
+											}}
+										/>
+									)}
+								</CardContent>
+							</Card>
+						</motion.div>
 					</>
 				)}
 			</Box>
-		</Box>
+		</motion.div>
 	);
 };
 
@@ -567,21 +706,31 @@ const HumidityDetail = (props: HumidityDetailProps): JSX.Element => {
 	};
 
 	return (
-		<Box sx={fadeIn}>
+		<motion.div
+			variants={pageVariants}
+			initial="initial"
+			animate="animate"
+			exit="exit"
+			style={{ height: '100%' }}
+		>
 			<Box
 				sx={{
 					backgroundColor: roomColor,
-					py: 1,
+					py: 1.5,
 					display: 'flex',
 					alignItems: 'center',
 					justifyContent: 'center',
 					position: 'relative',
+					boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
 				}}
 			>
 				<IconButton style={{ position: 'absolute', left: 0 }} onClick={props.onExit}>
 					<ArrowBackIcon style={{ fill: '#2f2f2f' }} />
 				</IconButton>
-				<Typography style={{ color: '#2f2f2f', fontWeight: 'bold' }} variant="h6">
+				<Typography
+					style={{ color: '#2f2f2f', fontWeight: 600, letterSpacing: '-0.02em' }}
+					variant="h6"
+				>
 					Humidity Sensor
 				</Typography>
 			</Box>
@@ -603,76 +752,115 @@ const HumidityDetail = (props: HumidityDetailProps): JSX.Element => {
 
 				{!loading && !error && (
 					<>
-						<Card sx={{ ...fadeInUp, mb: 3 }}>
-							<CardContent>
-								<Typography variant="h6" gutterBottom>
-									{props.device.name}
-								</Typography>
-								<Typography
-									variant="h3"
-									sx={{ color: '#10b981', fontWeight: 'bold' }}
-								>
-									{(props.cluster.humidity * 100).toFixed(0)}%
-								</Typography>
-							</CardContent>
-						</Card>
-
-						<Card sx={{ ...fadeInUpStaggered(1), mb: 3 }}>
-							<CardContent>
-								<Box
-									sx={{
-										display: 'flex',
-										justifyContent: 'space-between',
-										alignItems: 'center',
-										mb: 2,
-									}}
-								>
-									<Typography variant="h6">History</Typography>
-									<ToggleButtonGroup
-										value={timeframe}
-										exclusive
-										onChange={(_, value) => value && setTimeframe(value)}
-										size="small"
+						<motion.div variants={cardVariants} initial="initial" animate="animate">
+							<Card
+								sx={{
+									mb: 3,
+									borderRadius: 3,
+									boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+									background:
+										'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(167, 243, 208, 0.1) 100%)',
+									border: '1px solid rgba(16, 185, 129, 0.2)',
+								}}
+							>
+								<CardContent sx={{ p: 3 }}>
+									<Typography
+										variant="h6"
+										gutterBottom
+										sx={{ fontWeight: 500, opacity: 0.8 }}
 									>
-										<ToggleButton value="hour">Hour</ToggleButton>
-										<ToggleButton value="day">Day</ToggleButton>
-										<ToggleButton value="week">Week</ToggleButton>
-										<ToggleButton value="month">Month</ToggleButton>
-									</ToggleButtonGroup>
-								</Box>
-								{history.length === 0 ? (
-									<Typography color="text.secondary">
-										No history available
+										{props.device.name}
 									</Typography>
-								) : (
-									<Line
-										data={chartData}
-										options={{
-											responsive: true,
-											maintainAspectRatio: true,
-											plugins: {
-												legend: { display: false },
-												tooltip: {
-													mode: 'index',
-													intersect: false,
-												},
-											},
-											scales: {
-												y: {
-													beginAtZero: false,
-													max: 100,
-													min: 0,
-												},
-											},
+									<motion.div
+										initial={{ scale: 0.8, opacity: 0 }}
+										animate={{ scale: 1, opacity: 1 }}
+										transition={{ delay: 0.2, ...smoothSpring }}
+									>
+										<Typography
+											variant="h2"
+											sx={{
+												color: '#10b981',
+												fontWeight: 700,
+												letterSpacing: '-0.03em',
+											}}
+										>
+											{(props.cluster.humidity * 100).toFixed(0)}%
+										</Typography>
+									</motion.div>
+								</CardContent>
+							</Card>
+						</motion.div>
+
+						<motion.div
+							variants={cardVariants}
+							initial="initial"
+							animate="animate"
+							transition={{ delay: 0.1 }}
+						>
+							<Card
+								sx={{
+									mb: 3,
+									borderRadius: 3,
+									boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+									background: 'linear-gradient(135deg, #2a2a2a 0%, #353535 100%)',
+								}}
+							>
+								<CardContent>
+									<Box
+										sx={{
+											display: 'flex',
+											justifyContent: 'space-between',
+											alignItems: 'center',
+											mb: 2,
 										}}
-									/>
-								)}
-							</CardContent>
-						</Card>
+									>
+										<Typography variant="h6">History</Typography>
+										<ToggleButtonGroup
+											value={timeframe}
+											exclusive
+											onChange={(_, value) => value && setTimeframe(value)}
+											size="small"
+										>
+											<ToggleButton value="hour">Hour</ToggleButton>
+											<ToggleButton value="day">Day</ToggleButton>
+											<ToggleButton value="week">Week</ToggleButton>
+											<ToggleButton value="month">Month</ToggleButton>
+										</ToggleButtonGroup>
+									</Box>
+									{history.length === 0 ? (
+										<Typography color="text.secondary">
+											No history available
+										</Typography>
+									) : (
+										<Line
+											data={chartData}
+											options={{
+												responsive: true,
+												maintainAspectRatio: true,
+												plugins: {
+													legend: { display: false },
+													tooltip: {
+														mode: 'index',
+														intersect: false,
+													},
+												},
+												scales: {
+													y: {
+														beginAtZero: false,
+														max: 100,
+														min: 0,
+													},
+												},
+											}}
+										/>
+									)}
+								</CardContent>
+							</Card>
+						</motion.div>
 					</>
 				)}
 			</Box>
-		</Box>
+		</motion.div>
 	);
 };
 
@@ -759,21 +947,31 @@ const IlluminanceDetail = (props: IlluminanceDetailProps): JSX.Element => {
 	};
 
 	return (
-		<Box sx={fadeIn}>
+		<motion.div
+			variants={pageVariants}
+			initial="initial"
+			animate="animate"
+			exit="exit"
+			style={{ height: '100%' }}
+		>
 			<Box
 				sx={{
 					backgroundColor: roomColor,
-					py: 1,
+					py: 1.5,
 					display: 'flex',
 					alignItems: 'center',
 					justifyContent: 'center',
 					position: 'relative',
+					boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
 				}}
 			>
 				<IconButton style={{ position: 'absolute', left: 0 }} onClick={props.onExit}>
 					<ArrowBackIcon style={{ fill: '#2f2f2f' }} />
 				</IconButton>
-				<Typography style={{ color: '#2f2f2f', fontWeight: 'bold' }} variant="h6">
+				<Typography
+					style={{ color: '#2f2f2f', fontWeight: 600, letterSpacing: '-0.02em' }}
+					variant="h6"
+				>
 					Light Sensor
 				</Typography>
 			</Box>
@@ -795,74 +993,113 @@ const IlluminanceDetail = (props: IlluminanceDetailProps): JSX.Element => {
 
 				{!loading && !error && (
 					<>
-						<Card sx={{ ...fadeInUp, mb: 3 }}>
-							<CardContent>
-								<Typography variant="h6" gutterBottom>
-									{props.device.name}
-								</Typography>
-								<Typography
-									variant="h3"
-									sx={{ color: '#fbbf24', fontWeight: 'bold' }}
-								>
-									{props.cluster.illuminance.toFixed(0)} lux
-								</Typography>
-							</CardContent>
-						</Card>
-
-						<Card sx={{ ...fadeInUpStaggered(1), mb: 3 }}>
-							<CardContent>
-								<Box
-									sx={{
-										display: 'flex',
-										justifyContent: 'space-between',
-										alignItems: 'center',
-										mb: 2,
-									}}
-								>
-									<Typography variant="h6">History</Typography>
-									<ToggleButtonGroup
-										value={timeframe}
-										exclusive
-										onChange={(_, value) => value && setTimeframe(value)}
-										size="small"
+						<motion.div variants={cardVariants} initial="initial" animate="animate">
+							<Card
+								sx={{
+									mb: 3,
+									borderRadius: 3,
+									boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+									background:
+										'linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(253, 230, 138, 0.1) 100%)',
+									border: '1px solid rgba(251, 191, 36, 0.2)',
+								}}
+							>
+								<CardContent sx={{ p: 3 }}>
+									<Typography
+										variant="h6"
+										gutterBottom
+										sx={{ fontWeight: 500, opacity: 0.8 }}
 									>
-										<ToggleButton value="hour">Hour</ToggleButton>
-										<ToggleButton value="day">Day</ToggleButton>
-										<ToggleButton value="week">Week</ToggleButton>
-										<ToggleButton value="month">Month</ToggleButton>
-									</ToggleButtonGroup>
-								</Box>
-								{history.length === 0 ? (
-									<Typography color="text.secondary">
-										No history available
+										{props.device.name}
 									</Typography>
-								) : (
-									<Line
-										data={chartData}
-										options={{
-											responsive: true,
-											maintainAspectRatio: true,
-											plugins: {
-												legend: { display: false },
-												tooltip: {
-													mode: 'index',
-													intersect: false,
-												},
-											},
-											scales: {
-												y: {
-													beginAtZero: true,
-												},
-											},
+									<motion.div
+										initial={{ scale: 0.8, opacity: 0 }}
+										animate={{ scale: 1, opacity: 1 }}
+										transition={{ delay: 0.2, ...smoothSpring }}
+									>
+										<Typography
+											variant="h2"
+											sx={{
+												color: '#fbbf24',
+												fontWeight: 700,
+												letterSpacing: '-0.03em',
+											}}
+										>
+											{props.cluster.illuminance.toFixed(0)} lux
+										</Typography>
+									</motion.div>
+								</CardContent>
+							</Card>
+						</motion.div>
+
+						<motion.div
+							variants={cardVariants}
+							initial="initial"
+							animate="animate"
+							transition={{ delay: 0.1 }}
+						>
+							<Card
+								sx={{
+									mb: 3,
+									borderRadius: 3,
+									boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+									background: 'linear-gradient(135deg, #2a2a2a 0%, #353535 100%)',
+								}}
+							>
+								<CardContent>
+									<Box
+										sx={{
+											display: 'flex',
+											justifyContent: 'space-between',
+											alignItems: 'center',
+											mb: 2,
 										}}
-									/>
-								)}
-							</CardContent>
-						</Card>
+									>
+										<Typography variant="h6">History</Typography>
+										<ToggleButtonGroup
+											value={timeframe}
+											exclusive
+											onChange={(_, value) => value && setTimeframe(value)}
+											size="small"
+										>
+											<ToggleButton value="hour">Hour</ToggleButton>
+											<ToggleButton value="day">Day</ToggleButton>
+											<ToggleButton value="week">Week</ToggleButton>
+											<ToggleButton value="month">Month</ToggleButton>
+										</ToggleButtonGroup>
+									</Box>
+									{history.length === 0 ? (
+										<Typography color="text.secondary">
+											No history available
+										</Typography>
+									) : (
+										<Line
+											data={chartData}
+											options={{
+												responsive: true,
+												maintainAspectRatio: true,
+												plugins: {
+													legend: { display: false },
+													tooltip: {
+														mode: 'index',
+														intersect: false,
+													},
+												},
+												scales: {
+													y: {
+														beginAtZero: true,
+													},
+												},
+											}}
+										/>
+									)}
+								</CardContent>
+							</Card>
+						</motion.div>
 					</>
 				)}
 			</Box>
-		</Box>
+		</motion.div>
 	);
 };
 
@@ -1029,95 +1266,120 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 		: null;
 
 	return (
-		<Box sx={fadeIn}>
+		<motion.div
+			variants={pageVariants}
+			initial="initial"
+			animate="animate"
+			exit="exit"
+			style={{ height: '100%' }}
+		>
 			<Box
 				sx={{
 					backgroundColor: roomColor,
-					py: 1,
+					py: 1.5,
 					display: 'flex',
 					alignItems: 'center',
 					justifyContent: 'center',
 					position: 'relative',
+					boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
 				}}
 			>
 				<IconButton style={{ position: 'absolute', left: 0 }} onClick={props.onExit}>
 					<ArrowBackIcon style={{ fill: '#2f2f2f' }} />
 				</IconButton>
-				<Typography style={{ color: '#2f2f2f', fontWeight: 'bold' }} variant="h6">
+				<Typography
+					style={{ color: '#2f2f2f', fontWeight: 600, letterSpacing: '-0.02em' }}
+					variant="h6"
+				>
 					Sensor Group
 				</Typography>
 			</Box>
 
 			<Box sx={{ p: { xs: 2, sm: 3 } }}>
-				<Card sx={{ ...fadeInUp, mb: 3 }}>
-					<CardContent>
-						<Typography variant="h6" gutterBottom>
-							{props.device.name}
-						</Typography>
+				<motion.div variants={cardVariants} initial="initial" animate="animate">
+					<Card
+						sx={{
+							mb: 3,
+							borderRadius: 3,
+							boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+							background: 'linear-gradient(135deg, #2a2a2a 0%, #353535 100%)',
+						}}
+					>
+						<CardContent>
+							<Typography variant="h6" gutterBottom>
+								{props.device.name}
+							</Typography>
 
-						<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-							{temperature && (
-								<Box>
-									<Typography variant="body2" color="text.secondary">
-										Temperature
-									</Typography>
-									<Typography variant="h4" sx={{ color: '#3b82f6' }}>
-										{temperature.temperature.toFixed(1)}°C
-									</Typography>
-								</Box>
-							)}
-
-							{occupancy && (
-								<Box>
-									<Typography variant="body2" color="text.secondary">
-										Occupancy
-									</Typography>
-									<Chip
-										label={occupancy.occupied ? 'Occupied' : 'Clear'}
-										color={occupancy.occupied ? 'success' : 'default'}
-										sx={{ fontWeight: 'bold', mt: 1 }}
-									/>
-									{occHistory.length > 0 && (
-										<Typography
-											variant="caption"
-											color="text.secondary"
-											sx={{ mt: 1 }}
-										>
-											Last: {formatTimestamp(occHistory[0].timestamp)}
+							<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+								{temperature && (
+									<Box>
+										<Typography variant="body2" color="text.secondary">
+											Temperature
 										</Typography>
-									)}
-								</Box>
-							)}
+										<Typography variant="h4" sx={{ color: '#3b82f6' }}>
+											{temperature.temperature.toFixed(1)}°C
+										</Typography>
+									</Box>
+								)}
 
-							{illuminance && (
-								<Box>
-									<Typography variant="body2" color="text.secondary">
-										Illuminance
-									</Typography>
-									<Typography variant="h4" sx={{ color: '#fbbf24' }}>
-										{illuminance.illuminance.toFixed(0)} lux
-									</Typography>
-								</Box>
-							)}
-						</Box>
-					</CardContent>
-				</Card>
+								{occupancy && (
+									<Box>
+										<Typography variant="body2" color="text.secondary">
+											Occupancy
+										</Typography>
+										<Chip
+											label={occupancy.occupied ? 'Occupied' : 'Clear'}
+											color={occupancy.occupied ? 'success' : 'default'}
+											sx={{ fontWeight: 'bold', mt: 1 }}
+										/>
+										{occHistory.length > 0 && (
+											<Typography
+												variant="caption"
+												color="text.secondary"
+												sx={{ mt: 1 }}
+											>
+												Last: {formatTimestamp(occHistory[0].timestamp)}
+											</Typography>
+										)}
+									</Box>
+								)}
+
+								{illuminance && (
+									<Box>
+										<Typography variant="body2" color="text.secondary">
+											Illuminance
+										</Typography>
+										<Typography variant="h4" sx={{ color: '#fbbf24' }}>
+											{illuminance.illuminance.toFixed(0)} lux
+										</Typography>
+									</Box>
+								)}
+							</Box>
+						</CardContent>
+					</Card>
+				</motion.div>
 
 				{/* Timeframe selector for charts */}
 				{(temperature || illuminance) && (
-					<Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
-						<ToggleButtonGroup
-							value={timeframe}
-							exclusive
-							onChange={(_, value) => value && setTimeframe(value)}
-							size="small"
-						>
-							<ToggleButton value="hour">Hour</ToggleButton>
-							<ToggleButton value="day">Day</ToggleButton>
-							<ToggleButton value="week">Week</ToggleButton>
-							<ToggleButton value="month">Month</ToggleButton>
-						</ToggleButtonGroup>
-					</Box>
+					<motion.div
+						initial={{ opacity: 0, y: 10 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ delay: 0.2, ...smoothSpring }}
+					>
+						<Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
+							<ToggleButtonGroup
+								value={timeframe}
+								exclusive
+								onChange={(_, value) => value && setTimeframe(value)}
+								size="small"
+							>
+								<ToggleButton value="hour">Hour</ToggleButton>
+								<ToggleButton value="day">Day</ToggleButton>
+								<ToggleButton value="week">Week</ToggleButton>
+								<ToggleButton value="month">Month</ToggleButton>
+							</ToggleButtonGroup>
+						</Box>
+					</motion.div>
 				)}
 
 				{loading && (
@@ -1128,101 +1390,183 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 
 				{/* Temperature chart */}
 				{!loading && temperature && tempChartData && (
-					<Card sx={{ ...fadeInUpStaggered(1), mb: 3 }}>
-						<CardContent>
-							<Typography variant="h6" gutterBottom>
-								Temperature History
-							</Typography>
-							{tempHistory.length === 0 ? (
-								<Typography color="text.secondary">No history available</Typography>
-							) : (
-								<Line
-									data={tempChartData}
-									options={{
-										responsive: true,
-										maintainAspectRatio: true,
-										plugins: {
-											legend: { display: false },
-											tooltip: { mode: 'index', intersect: false },
-										},
-										scales: { y: { beginAtZero: false } },
-									}}
-								/>
-							)}
-						</CardContent>
-					</Card>
+					<motion.div
+						variants={cardVariants}
+						initial="initial"
+						animate="animate"
+						transition={{ delay: 0.3 }}
+					>
+						<Card
+							sx={{
+								mb: 3,
+								borderRadius: 3,
+								boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+								background: 'linear-gradient(135deg, #2a2a2a 0%, #353535 100%)',
+							}}
+						>
+							<CardContent>
+								<Typography
+									variant="h6"
+									gutterBottom
+									sx={{ fontWeight: 600, letterSpacing: '-0.01em' }}
+								>
+									Temperature History
+								</Typography>
+								{tempHistory.length === 0 ? (
+									<Typography color="text.secondary">
+										No history available
+									</Typography>
+								) : (
+									<Line
+										data={tempChartData}
+										options={{
+											responsive: true,
+											maintainAspectRatio: true,
+											plugins: {
+												legend: { display: false },
+												tooltip: { mode: 'index', intersect: false },
+											},
+											scales: { y: { beginAtZero: false } },
+										}}
+									/>
+								)}
+							</CardContent>
+						</Card>
+					</motion.div>
 				)}
 
 				{/* Illuminance chart */}
 				{!loading && illuminance && illumChartData && (
-					<Card sx={{ ...fadeInUpStaggered(2), mb: 3 }}>
-						<CardContent>
-							<Typography variant="h6" gutterBottom>
-								Illuminance History
-							</Typography>
-							{illumHistory.length === 0 ? (
-								<Typography color="text.secondary">No history available</Typography>
-							) : (
-								<Line
-									data={illumChartData}
-									options={{
-										responsive: true,
-										maintainAspectRatio: true,
-										plugins: {
-											legend: { display: false },
-											tooltip: { mode: 'index', intersect: false },
-										},
-										scales: { y: { beginAtZero: true } },
-									}}
-								/>
-							)}
-						</CardContent>
-					</Card>
+					<motion.div
+						variants={cardVariants}
+						initial="initial"
+						animate="animate"
+						transition={{ delay: 0.4 }}
+					>
+						<Card
+							sx={{
+								mb: 3,
+								borderRadius: 3,
+								boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+								background: 'linear-gradient(135deg, #2a2a2a 0%, #353535 100%)',
+							}}
+						>
+							<CardContent>
+								<Typography
+									variant="h6"
+									gutterBottom
+									sx={{ fontWeight: 600, letterSpacing: '-0.01em' }}
+								>
+									Illuminance History
+								</Typography>
+								{illumHistory.length === 0 ? (
+									<Typography color="text.secondary">
+										No history available
+									</Typography>
+								) : (
+									<Line
+										data={illumChartData}
+										options={{
+											responsive: true,
+											maintainAspectRatio: true,
+											plugins: {
+												legend: { display: false },
+												tooltip: { mode: 'index', intersect: false },
+											},
+											scales: { y: { beginAtZero: true } },
+										}}
+									/>
+								)}
+							</CardContent>
+						</Card>
+					</motion.div>
 				)}
 
 				{/* Occupancy history */}
 				{!loading && occupancy && (
-					<Card sx={fadeInUpStaggered(3)}>
-						<CardContent>
-							<Typography variant="h6" gutterBottom>
-								Occupancy History
-							</Typography>
-							{occHistory.length === 0 ? (
-								<Typography color="text.secondary">No history available</Typography>
-							) : (
-								<List>
-									{occHistory.map((event, index) => (
-										<ListItem
-											key={index}
-											sx={{
-												borderLeft: 4,
-												borderColor: event.occupied
-													? 'success.main'
-													: 'grey.500',
-												mb: 1,
-												bgcolor: 'background.paper',
-												borderRadius: 1,
-											}}
-										>
-											<ListItemText
-												primary={event.occupied ? 'Occupied' : 'Clear'}
-												secondary={formatTimestamp(event.timestamp)}
-												primaryTypographyProps={{
-													fontWeight: 'bold',
-													color: event.occupied
-														? 'success.main'
-														: 'text.secondary',
-												}}
-											/>
-										</ListItem>
-									))}
-								</List>
-							)}
-						</CardContent>
-					</Card>
+					<motion.div
+						variants={cardVariants}
+						initial="initial"
+						animate="animate"
+						transition={{ delay: 0.5 }}
+					>
+						<Card
+							sx={{
+								borderRadius: 3,
+								boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+								background: 'linear-gradient(135deg, #2a2a2a 0%, #353535 100%)',
+							}}
+						>
+							<CardContent>
+								<Typography
+									variant="h6"
+									gutterBottom
+									sx={{ fontWeight: 600, letterSpacing: '-0.01em' }}
+								>
+									Occupancy History
+								</Typography>
+								{occHistory.length === 0 ? (
+									<Typography color="text.secondary">
+										No history available
+									</Typography>
+								) : (
+									<motion.div
+										variants={staggerContainer}
+										initial="initial"
+										animate="animate"
+									>
+										<List>
+											{occHistory.map((event, index) => (
+												<motion.div key={index} variants={staggerItem}>
+													<ListItem
+														sx={{
+															borderLeft: 4,
+															borderColor: event.occupied
+																? 'success.main'
+																: 'grey.400',
+															mb: 1.5,
+															bgcolor: 'background.paper',
+															borderRadius: 2,
+															boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+															transition: 'all 0.2s',
+															'&:hover': {
+																boxShadow:
+																	'0 4px 12px rgba(0,0,0,0.1)',
+																transform: 'translateX(4px)',
+															},
+														}}
+													>
+														<ListItemText
+															primary={
+																event.occupied
+																	? 'Occupied'
+																	: 'Clear'
+															}
+															secondary={formatTimestamp(
+																event.timestamp
+															)}
+															primaryTypographyProps={{
+																fontWeight: 600,
+																color: event.occupied
+																	? 'success.main'
+																	: 'text.secondary',
+															}}
+															secondaryTypographyProps={{
+																fontSize: '0.875rem',
+															}}
+														/>
+													</ListItem>
+												</motion.div>
+											))}
+										</List>
+									</motion.div>
+								)}
+							</CardContent>
+						</Card>
+					</motion.div>
 				)}
 			</Box>
-		</Box>
+		</motion.div>
 	);
 };
 
@@ -1274,117 +1618,227 @@ const WindowCoveringDetail = (props: WindowCoveringDetailProps): JSX.Element => 
 	};
 
 	return (
-		<Box sx={fadeIn}>
+		<motion.div
+			variants={pageVariants}
+			initial="initial"
+			animate="animate"
+			exit="exit"
+			style={{ height: '100%' }}
+		>
 			<Box
 				sx={{
 					backgroundColor: roomColor,
-					py: 1,
+					py: 1.5,
 					display: 'flex',
 					alignItems: 'center',
 					justifyContent: 'center',
 					position: 'relative',
+					boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
 				}}
 			>
 				<IconButton style={{ position: 'absolute', left: 0 }} onClick={props.onExit}>
 					<ArrowBackIcon style={{ fill: '#2f2f2f' }} />
 				</IconButton>
-				<Typography style={{ color: '#2f2f2f', fontWeight: 'bold' }} variant="h6">
+				<Typography
+					style={{ color: '#2f2f2f', fontWeight: 600, letterSpacing: '-0.02em' }}
+					variant="h6"
+				>
 					Window Covering
 				</Typography>
 			</Box>
 
 			<Box sx={{ p: { xs: 2, sm: 3 } }}>
-				<Card sx={{ ...fadeInUp, mb: 3 }}>
-					<CardContent>
-						<Typography variant="h6" gutterBottom>
-							{props.device.name}
-						</Typography>
+				<motion.div variants={cardVariants} initial="initial" animate="animate">
+					<Card
+						sx={{
+							mb: 3,
+							borderRadius: 3,
+							boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+							background: 'linear-gradient(135deg, #2a2a2a 0%, #353535 100%)',
+						}}
+					>
+						<CardContent>
+							<Typography variant="h6" gutterBottom>
+								{props.device.name}
+							</Typography>
 
-						{/* Animated blind visualization */}
-						<Box
-							sx={{
-								position: 'relative',
-								width: '100%',
-								height: 300,
-								border: '3px solid #4b5563',
-								borderRadius: 2,
-								overflow: 'hidden',
-								backgroundColor: '#e5e7eb',
-								my: 3,
-							}}
-						>
-							{/* Window frame */}
+							{/* Animated blind visualization */}
 							<Box
 								sx={{
-									position: 'absolute',
-									top: 0,
-									left: 0,
-									right: 0,
-									bottom: 0,
-									background:
-										'linear-gradient(180deg, #87ceeb 0%, #87ceeb 70%, #90ee90 70%, #90ee90 100%)',
-								}}
-							/>
-							{/* Blind */}
-							<Box
-								sx={{
-									position: 'absolute',
-									top: 0,
-									left: 0,
-									right: 0,
-									height: `${displayPosition}%`,
-									background:
-										'repeating-linear-gradient(0deg, #9ca3af 0px, #9ca3af 10px, #6b7280 10px, #6b7280 11px)',
-									boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
-									transition: userHasInteracted
-										? 'height 0.5s ease-in-out'
-										: 'none',
-								}}
-							/>
-							{/* Position indicator */}
-							<Box
-								sx={{
-									position: 'absolute',
-									top: `${Math.max(8, Math.min(92, displayPosition))}%`,
-									left: '50%',
-									transform: 'translate(-50%, -50%)',
-									backgroundColor: 'rgba(0, 0, 0, 0.7)',
-									color: 'white',
-									padding: '4px 12px',
-									borderRadius: 1,
-									fontWeight: 'bold',
-									fontSize: '1.2rem',
+									position: 'relative',
+									width: '100%',
+									height: 300,
+									border: '3px solid #4b5563',
+									borderRadius: 2,
+									overflow: 'hidden',
+									backgroundColor: '#e5e7eb',
+									my: 3,
 								}}
 							>
-								{Math.round(displayPosition)}%
+								{/* Window frame */}
+								<Box
+									sx={{
+										position: 'absolute',
+										top: 0,
+										left: 0,
+										right: 0,
+										bottom: 0,
+										background:
+											'linear-gradient(180deg, #87ceeb 0%, #87ceeb 70%, #90ee90 70%, #90ee90 100%)',
+									}}
+								/>
+								{/* Sun icon */}
+								<Box
+									sx={{
+										position: 'absolute',
+										top: '15%',
+										right: '15%',
+										width: 50,
+										height: 50,
+										borderRadius: '50%',
+										background:
+											'radial-gradient(circle, #ffd700 0%, #ffed4e 100%)',
+										boxShadow: '0 0 20px rgba(255, 215, 0, 0.6)',
+										'&::before': {
+											content: '""',
+											position: 'absolute',
+											top: '50%',
+											left: '50%',
+											width: '70px',
+											height: '70px',
+											transform: 'translate(-50%, -50%)',
+											borderRadius: '50%',
+											background:
+												'radial-gradient(circle, rgba(255, 215, 0, 0.3) 0%, transparent 70%)',
+										},
+									}}
+								/>
+								{/* Blind */}
+								<Box
+									sx={{
+										position: 'absolute',
+										top: 0,
+										left: 0,
+										right: 0,
+										height: `${displayPosition}%`,
+										background:
+											'repeating-linear-gradient(0deg, #9ca3af 0px, #9ca3af 10px, #6b7280 10px, #6b7280 11px)',
+										boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
+										transition: userHasInteracted
+											? 'height 0.5s ease-in-out'
+											: 'none',
+									}}
+								/>
+								{/* Position indicator */}
+								<Box
+									sx={{
+										position: 'absolute',
+										top: `${Math.max(8, Math.min(92, displayPosition))}%`,
+										left: '50%',
+										transform: 'translate(-50%, -50%)',
+										backgroundColor: 'rgba(0, 0, 0, 0.7)',
+										color: 'white',
+										padding: '4px 12px',
+										borderRadius: 1,
+										fontWeight: 'bold',
+										fontSize: '1.2rem',
+									}}
+								>
+									{Math.round(displayPosition)}%
+								</Box>
 							</Box>
-						</Box>
 
-						{/* Slider control */}
-						<Box sx={{ px: 2 }}>
-							<Typography gutterBottom>
-								Position (0% = Open, 100% = Closed)
-							</Typography>
-							<Slider
-								value={displayPosition}
-								onChange={(_, value) => handlePositionChange(value)}
-								onChangeCommitted={(_, value) => handlePositionCommit(value)}
-								valueLabelDisplay="auto"
-								min={0}
-								max={100}
-								disabled={isUpdating}
+							{/* Slider control */}
+							<Box sx={{ px: 2 }}>
+								<Typography gutterBottom>
+									Position (0% = Open, 100% = Closed)
+								</Typography>
+								<Slider
+									value={displayPosition}
+									onChange={(_, value) => handlePositionChange(value)}
+									onChangeCommitted={(_, value) => handlePositionCommit(value)}
+									valueLabelDisplay="auto"
+									min={0}
+									max={100}
+									disabled={isUpdating}
+									sx={{
+										'& .MuiSlider-thumb': {
+											width: 24,
+											height: 24,
+										},
+									}}
+								/>
+							</Box>
+
+							{/* Quick action buttons */}
+							<Box
 								sx={{
-									'& .MuiSlider-thumb': {
-										width: 24,
-										height: 24,
-									},
+									display: 'flex',
+									gap: 2,
+									px: 2,
+									mt: 3,
 								}}
-							/>
-						</Box>
-					</CardContent>
-				</Card>
+							>
+								<Button
+									variant="contained"
+									fullWidth
+									disabled={isUpdating}
+									onClick={() => {
+										handlePositionChange(0);
+										void handlePositionCommit(0);
+									}}
+									sx={{
+										py: 1.5,
+										fontSize: '2rem',
+										minWidth: 0,
+										background:
+											'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+										boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+										'&:hover': {
+											background:
+												'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+											boxShadow: '0 6px 16px rgba(59, 130, 246, 0.4)',
+										},
+										'&:disabled': {
+											opacity: 0.5,
+										},
+									}}
+								>
+									<KeyboardArrowUpIcon sx={{ fontSize: '2.5rem' }} />
+								</Button>
+								<Button
+									variant="contained"
+									fullWidth
+									disabled={isUpdating}
+									onClick={() => {
+										handlePositionChange(100);
+										void handlePositionCommit(100);
+									}}
+									sx={{
+										py: 1.5,
+										fontSize: '2rem',
+										minWidth: 0,
+										background:
+											'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
+										boxShadow: '0 4px 12px rgba(107, 114, 128, 0.3)',
+										'&:hover': {
+											background:
+												'linear-gradient(135deg, #4b5563 0%, #374151 100%)',
+											boxShadow: '0 6px 16px rgba(107, 114, 128, 0.4)',
+										},
+										'&:disabled': {
+											opacity: 0.5,
+										},
+									}}
+								>
+									<KeyboardArrowDownIcon sx={{ fontSize: '2.5rem' }} />
+								</Button>
+							</Box>
+						</CardContent>
+					</Card>
+				</motion.div>
 			</Box>
-		</Box>
+		</motion.div>
 	);
 };
 
@@ -1554,208 +2008,229 @@ const ThermostatDetail = (props: ThermostatDetailProps): JSX.Element => {
 	const accentColor = getModeColor(mode);
 
 	return (
-		<Box>
+		<motion.div
+			variants={pageVariants}
+			initial="initial"
+			animate="animate"
+			exit="exit"
+			style={{ height: '100%' }}
+		>
 			<Box
 				sx={{
 					backgroundColor: roomColor,
-					py: 1,
+					py: 1.5,
 					display: 'flex',
 					alignItems: 'center',
 					justifyContent: 'center',
 					position: 'relative',
+					boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
 				}}
 			>
 				<IconButton style={{ position: 'absolute', left: 0 }} onClick={props.onExit}>
 					<ArrowBackIcon style={{ fill: '#2f2f2f' }} />
 				</IconButton>
-				<Typography style={{ color: '#2f2f2f', fontWeight: 'bold' }} variant="h6">
+				<Typography
+					style={{ color: '#2f2f2f', fontWeight: 600, letterSpacing: '-0.02em' }}
+					variant="h6"
+				>
 					Thermostat
 				</Typography>
 			</Box>
 
 			<Box sx={{ p: { xs: 2, sm: 3 } }}>
-				<Card sx={{ mb: 3 }}>
-					<CardContent>
-						<Typography variant="h6" gutterBottom>
-							{props.device.name}
-						</Typography>
+				<motion.div variants={cardVariants} initial="initial" animate="animate">
+					<Card
+						sx={{
+							mb: 3,
+							borderRadius: 3,
+							boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+							background: 'linear-gradient(135deg, #2a2a2a 0%, #353535 100%)',
+						}}
+					>
+						<CardContent>
+							<Typography variant="h6" gutterBottom>
+								{props.device.name}
+							</Typography>
 
-						{/* Circular Slider */}
-						<Box
-							sx={{
-								display: 'flex',
-								justifyContent: 'center',
-								alignItems: 'center',
-								my: 4,
-							}}
-						>
+							{/* Circular Slider */}
 							<Box
-								ref={circleRef}
 								sx={{
-									position: 'relative',
-									width: 280,
-									height: 280,
-									cursor: isDragging ? 'grabbing' : 'pointer',
-									touchAction: 'none',
+									display: 'flex',
+									justifyContent: 'center',
+									alignItems: 'center',
+									my: 4,
 								}}
-								onPointerDown={handlePointerDown}
-								onPointerMove={isDragging ? handlePointerMove : undefined}
-								onPointerUp={handlePointerUp}
 							>
-								{/* Background circle */}
-								<svg
-									width="280"
-									height="280"
-									style={{ position: 'absolute', top: 0, left: 0 }}
-								>
-									{/* Background arc */}
-									<circle
-										cx="140"
-										cy="140"
-										r="120"
-										fill="none"
-										stroke="#e5e7eb"
-										strokeWidth="20"
-										strokeDasharray="753"
-										strokeDashoffset="188"
-										style={{
-											transform: 'rotate(135deg)',
-											transformOrigin: 'center',
-										}}
-									/>
-
-									{/* Active arc (from min to target) */}
-									<circle
-										cx="140"
-										cy="140"
-										r="120"
-										fill="none"
-										stroke={accentColor}
-										strokeWidth="20"
-										strokeLinecap="round"
-										strokeDasharray="753"
-										strokeDashoffset={
-											188 + 753 * (1 - (targetAngle - 135) / 270)
-										}
-										style={{
-											transform: 'rotate(135deg)',
-											transformOrigin: 'center',
-											transition: isDragging
-												? 'none'
-												: 'stroke-dashoffset 0.3s ease',
-										}}
-									/>
-
-									{/* Handle for target temperature */}
-									<circle
-										cx={
-											140 +
-											120 * Math.cos(((targetAngle - 90) * Math.PI) / 180)
-										}
-										cy={
-											140 +
-											120 * Math.sin(((targetAngle - 90) * Math.PI) / 180)
-										}
-										r="16"
-										fill="white"
-										stroke={accentColor}
-										strokeWidth="3"
-									/>
-
-									{/* Current temperature indicator */}
-									<circle
-										cx={
-											140 +
-											100 * Math.cos(((currentAngle - 90) * Math.PI) / 180)
-										}
-										cy={
-											140 +
-											100 * Math.sin(((currentAngle - 90) * Math.PI) / 180)
-										}
-										r="6"
-										fill="#6b7280"
-									/>
-								</svg>
-
-								{/* Center content */}
 								<Box
+									ref={circleRef}
 									sx={{
-										position: 'absolute',
-										top: '50%',
-										left: '50%',
-										transform: 'translate(-50%, -50%)',
-										textAlign: 'center',
+										position: 'relative',
+										width: 280,
+										height: 280,
+										cursor: isDragging ? 'grabbing' : 'pointer',
+										touchAction: 'none',
 									}}
+									onPointerDown={handlePointerDown}
+									onPointerMove={isDragging ? handlePointerMove : undefined}
+									onPointerUp={handlePointerUp}
 								>
-									<Typography
-										variant="h2"
-										sx={{
-											fontWeight: 'bold',
-											color: accentColor,
-											mb: 1,
-										}}
+									{/* Background circle */}
+									<svg
+										width="280"
+										height="280"
+										style={{ position: 'absolute', top: 0, left: 0 }}
 									>
-										{displayTemp.toFixed(1)}°
-									</Typography>
-									<Typography
-										variant="body2"
-										sx={{
-											color: 'text.secondary',
-										}}
-									>
-										Current: {props.cluster.currentTemperature.toFixed(1)}°C
-									</Typography>
-									{props.cluster.isHeating && (
-										<Chip
-											label="Heating"
-											size="small"
-											sx={{
-												mt: 1,
-												backgroundColor: accentColor,
-												color: 'white',
+										{/* Background arc */}
+										<circle
+											cx="140"
+											cy="140"
+											r="120"
+											fill="none"
+											stroke="#e5e7eb"
+											strokeWidth="20"
+											strokeDasharray="753"
+											strokeDashoffset="188"
+											style={{
+												transform: 'rotate(135deg)',
+												transformOrigin: 'center',
 											}}
 										/>
-									)}
+
+										{/* Active arc (from min to target) */}
+										<circle
+											cx="140"
+											cy="140"
+											r="120"
+											fill="none"
+											stroke={accentColor}
+											strokeWidth="20"
+											strokeLinecap="round"
+											strokeDasharray="753"
+											strokeDashoffset={
+												188 + 753 * (1 - (targetAngle - 135) / 270)
+											}
+											style={{
+												transform: 'rotate(135deg)',
+												transformOrigin: 'center',
+												transition: isDragging
+													? 'none'
+													: 'stroke-dashoffset 0.3s ease',
+											}}
+										/>
+
+										{/* Handle for target temperature */}
+										<circle
+											cx={
+												140 +
+												120 * Math.cos(((targetAngle - 90) * Math.PI) / 180)
+											}
+											cy={
+												140 +
+												120 * Math.sin(((targetAngle - 90) * Math.PI) / 180)
+											}
+											r="16"
+											fill="white"
+											stroke={accentColor}
+											strokeWidth="3"
+										/>
+
+										{/* Current temperature indicator */}
+										<circle
+											cx={
+												140 +
+												100 *
+													Math.cos(((currentAngle - 90) * Math.PI) / 180)
+											}
+											cy={
+												140 +
+												100 *
+													Math.sin(((currentAngle - 90) * Math.PI) / 180)
+											}
+											r="6"
+											fill="#6b7280"
+										/>
+									</svg>
+
+									{/* Center content */}
+									<Box
+										sx={{
+											position: 'absolute',
+											top: '50%',
+											left: '50%',
+											transform: 'translate(-50%, -50%)',
+											textAlign: 'center',
+										}}
+									>
+										<Typography
+											variant="h2"
+											sx={{
+												fontWeight: 'bold',
+												color: accentColor,
+												mb: 1,
+											}}
+										>
+											{displayTemp.toFixed(1)}°
+										</Typography>
+										<Typography
+											variant="body2"
+											sx={{
+												color: 'text.secondary',
+											}}
+										>
+											Current: {props.cluster.currentTemperature.toFixed(1)}°C
+										</Typography>
+										{props.cluster.isHeating && (
+											<Chip
+												label="Heating"
+												size="small"
+												sx={{
+													mt: 1,
+													backgroundColor: accentColor,
+													color: 'white',
+												}}
+											/>
+										)}
+									</Box>
 								</Box>
 							</Box>
-						</Box>
 
-						{/* Mode Toggle Buttons */}
-						<Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-							<ToggleButtonGroup
-								value={mode}
-								exclusive
-								onChange={(_, value) => value && void handleModeChange(value)}
-								size="large"
-								disabled={isUpdating}
+							{/* Mode Toggle Buttons */}
+							<Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+								<ToggleButtonGroup
+									value={mode}
+									exclusive
+									onChange={(_, value) => value && void handleModeChange(value)}
+									size="large"
+									disabled={isUpdating}
+								>
+									<ToggleButton value={ThermostatMode.OFF}>Off</ToggleButton>
+									<ToggleButton value={ThermostatMode.HEAT}>Heat</ToggleButton>
+									<ToggleButton value={ThermostatMode.COOL}>Cool</ToggleButton>
+									<ToggleButton value={ThermostatMode.AUTO}>Auto</ToggleButton>
+								</ToggleButtonGroup>
+							</Box>
+
+							{/* Temperature Range Info */}
+							<Box
+								sx={{
+									display: 'flex',
+									justifyContent: 'space-between',
+									px: 2,
+									pt: 2,
+								}}
 							>
-								<ToggleButton value={ThermostatMode.OFF}>Off</ToggleButton>
-								<ToggleButton value={ThermostatMode.HEAT}>Heat</ToggleButton>
-								<ToggleButton value={ThermostatMode.COOL}>Cool</ToggleButton>
-								<ToggleButton value={ThermostatMode.AUTO}>Auto</ToggleButton>
-							</ToggleButtonGroup>
-						</Box>
-
-						{/* Temperature Range Info */}
-						<Box
-							sx={{
-								display: 'flex',
-								justifyContent: 'space-between',
-								px: 2,
-								pt: 2,
-							}}
-						>
-							<Typography variant="caption" color="text.secondary">
-								Min: {props.cluster.minTemperature}°C
-							</Typography>
-							<Typography variant="caption" color="text.secondary">
-								Max: {props.cluster.maxTemperature}°C
-							</Typography>
-						</Box>
-					</CardContent>
-				</Card>
+								<Typography variant="caption" color="text.secondary">
+									Min: {props.cluster.minTemperature}°C
+								</Typography>
+								<Typography variant="caption" color="text.secondary">
+									Max: {props.cluster.maxTemperature}°C
+								</Typography>
+							</Box>
+						</CardContent>
+					</Card>
+				</motion.div>
 			</Box>
-		</Box>
+		</motion.div>
 	);
 };
 
@@ -1788,106 +2263,175 @@ const ActionsDetail = (props: ActionsDetailProps): JSX.Element => {
 	};
 
 	return (
-		<Box sx={fadeIn}>
+		<motion.div
+			variants={pageVariants}
+			initial="initial"
+			animate="animate"
+			exit="exit"
+			style={{ height: '100%' }}
+		>
 			<Box
 				sx={{
 					backgroundColor: roomColor,
-					py: 1,
+					py: 1.5,
 					display: 'flex',
 					alignItems: 'center',
 					justifyContent: 'center',
 					position: 'relative',
+					boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
 				}}
 			>
 				<IconButton style={{ position: 'absolute', left: 0 }} onClick={props.onExit}>
 					<ArrowBackIcon style={{ fill: '#2f2f2f' }} />
 				</IconButton>
-				<Typography style={{ color: '#2f2f2f', fontWeight: 'bold' }} variant="h6">
+				<Typography
+					style={{ color: '#2f2f2f', fontWeight: 600, letterSpacing: '-0.02em' }}
+					variant="h6"
+				>
 					Actions
 				</Typography>
 			</Box>
 
 			<Box sx={{ p: { xs: 2, sm: 3 } }}>
-				<Card sx={{ ...fadeInUp, mb: 3 }}>
-					<CardContent>
-						<Typography variant="h6" gutterBottom>
-							{props.device.name}
-						</Typography>
-						<Typography variant="body2" color="text.secondary">
-							Select an action to execute
-						</Typography>
-					</CardContent>
-				</Card>
+				<motion.div variants={cardVariants} initial="initial" animate="animate">
+					<Card
+						sx={{
+							mb: 3,
+							borderRadius: 3,
+							boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+							background: 'linear-gradient(135deg, #2a2a2a 0%, #353535 100%)',
+						}}
+					>
+						<CardContent sx={{ p: 3 }}>
+							<Typography
+								variant="h6"
+								gutterBottom
+								sx={{ fontWeight: 600, letterSpacing: '-0.01em' }}
+							>
+								{props.device.name}
+							</Typography>
+							<Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+								Select an action to execute
+							</Typography>
+						</CardContent>
+					</Card>
+				</motion.div>
 
-				<Card sx={fadeInUpStaggered(1)}>
-					<CardContent>
-						<Typography variant="h6" gutterBottom>
-							Available Actions
-						</Typography>
-						<Box
-							sx={{
-								display: 'flex',
-								flexDirection: 'column',
-								gap: 2,
-								mt: 2,
-							}}
-						>
-							{props.cluster.actions.map((action) => {
-								const isActive = action.id === props.cluster.activeActionId;
-								const isExecuting = action.id === executingActionId;
+				<motion.div
+					variants={cardVariants}
+					initial="initial"
+					animate="animate"
+					transition={{ delay: 0.1 }}
+				>
+					<Card
+						sx={{
+							borderRadius: 3,
+							boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+							background: 'linear-gradient(135deg, #2a2a2a 0%, #353535 100%)',
+						}}
+					>
+						<CardContent sx={{ p: 3 }}>
+							<Typography
+								variant="h6"
+								gutterBottom
+								sx={{ fontWeight: 600, letterSpacing: '-0.01em' }}
+							>
+								Available Actions
+							</Typography>
+							<motion.div
+								variants={staggerContainer}
+								initial="initial"
+								animate="animate"
+							>
+								<Box
+									sx={{
+										display: 'flex',
+										flexDirection: 'column',
+										gap: 2,
+										mt: 2,
+									}}
+								>
+									{props.cluster.actions.map((action) => {
+										const isActive = action.id === props.cluster.activeActionId;
+										const isExecuting = action.id === executingActionId;
 
-								return (
-									<Box
-										key={action.id}
-										onClick={() =>
-											!isExecuting && void handleExecuteAction(action.id)
-										}
-										sx={{
-											p: 2,
-											borderRadius: 2,
-											border: '2px solid',
-											borderColor: isActive ? 'primary.main' : 'divider',
-											backgroundColor: isActive
-												? 'rgba(25, 118, 210, 0.08)'
-												: 'background.paper',
-											cursor: isExecuting ? 'wait' : 'pointer',
-											transition: 'all 0.2s',
-											'&:hover': {
-												backgroundColor: isActive
-													? 'rgba(25, 118, 210, 0.12)'
-													: 'rgba(0, 0, 0, 0.04)',
-												borderColor: 'primary.main',
-											},
-										}}
-									>
-										<Box
-											sx={{
-												display: 'flex',
-												alignItems: 'center',
-												justifyContent: 'space-between',
-											}}
-										>
-											<Typography
-												variant="body1"
-												sx={{
-													fontWeight: isActive ? 600 : 400,
-												}}
+										return (
+											<motion.div
+												key={action.id}
+												variants={staggerItem}
+												whileHover={
+													isExecuting ? {} : { scale: 1.02, x: 4 }
+												}
+												whileTap={isExecuting ? {} : { scale: 0.98 }}
+												transition={smoothSpring}
 											>
-												{action.name}
-											</Typography>
-											{isActive && (
-												<Chip label="Active" color="primary" size="small" />
-											)}
-											{isExecuting && <CircularProgress size={20} />}
-										</Box>
-									</Box>
-								);
-							})}
-						</Box>
-					</CardContent>
-				</Card>
+												<Box
+													onClick={() =>
+														!isExecuting &&
+														void handleExecuteAction(action.id)
+													}
+													sx={{
+														p: 2.5,
+														borderRadius: 2,
+														border: '2px solid',
+														borderColor: isActive
+															? 'primary.main'
+															: 'divider',
+														backgroundColor: isActive
+															? 'rgba(25, 118, 210, 0.08)'
+															: 'background.paper',
+														cursor: isExecuting ? 'wait' : 'pointer',
+														boxShadow: isActive
+															? '0 2px 8px rgba(25, 118, 210, 0.2)'
+															: '0 1px 3px rgba(0,0,0,0.05)',
+														transition: 'all 0.2s',
+														'&:hover': {
+															backgroundColor: isActive
+																? 'rgba(25, 118, 210, 0.12)'
+																: 'rgba(0, 0, 0, 0.04)',
+															borderColor: 'primary.main',
+															boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+														},
+													}}
+												>
+													<Box
+														sx={{
+															display: 'flex',
+															alignItems: 'center',
+															justifyContent: 'space-between',
+														}}
+													>
+														<Typography
+															variant="body1"
+															sx={{
+																fontWeight: isActive ? 600 : 500,
+															}}
+														>
+															{action.name}
+														</Typography>
+														{isActive && (
+															<Chip
+																label="Active"
+																color="primary"
+																size="small"
+																sx={{ fontWeight: 600 }}
+															/>
+														)}
+														{isExecuting && (
+															<CircularProgress size={20} />
+														)}
+													</Box>
+												</Box>
+											</motion.div>
+										);
+									})}
+								</Box>
+							</motion.div>
+						</CardContent>
+					</Card>
+				</motion.div>
 			</Box>
-		</Box>
+		</motion.div>
 	);
 };
 
@@ -2156,15 +2700,22 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 	];
 
 	return (
-		<Box sx={fadeIn}>
+		<motion.div
+			variants={pageVariants}
+			initial="initial"
+			animate="animate"
+			exit="exit"
+			style={{ height: '100%' }}
+		>
 			<Box
 				sx={{
 					backgroundColor: roomColor,
-					py: 1,
+					py: 1.5,
 					display: 'flex',
 					alignItems: 'center',
 					justifyContent: 'center',
 					position: 'relative',
+					boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
 				}}
 			>
 				<IconButton style={{ position: 'absolute', left: 0 }} onClick={props.onExit}>
@@ -2174,8 +2725,8 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 					variant="h6"
 					sx={{
 						color: '#2f2f2f',
-						fontWeight: 500,
-						letterSpacing: '-0.01em',
+						fontWeight: 600,
+						letterSpacing: '-0.02em',
 					}}
 				>
 					Color Control
@@ -2184,298 +2735,489 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 
 			<Box sx={{ p: { xs: 2, sm: 3 } }}>
 				{props.device.managementUrl && (
-					<Alert severity="info" sx={{ ...fadeInUp, mb: 3 }}>
-						Manage this device at{' '}
-						<Link
-							href={props.device.managementUrl}
-							target="_blank"
-							rel="noopener noreferrer"
+					<motion.div variants={cardVariants} initial="initial" animate="animate">
+						<Alert
+							severity="info"
+							sx={{
+								mb: 3,
+								borderRadius: 2,
+								boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+							}}
 						>
-							{props.device.managementUrl}
-						</Link>
-					</Alert>
+							Manage this device at{' '}
+							<Link
+								href={props.device.managementUrl}
+								target="_blank"
+								rel="noopener noreferrer"
+							>
+								{props.device.managementUrl}
+							</Link>
+						</Alert>
+					</motion.div>
 				)}
 
-				<Card sx={{ ...fadeInUpStaggered(1), mb: 3 }}>
-					<CardContent>
-						<Box
-							sx={{
-								display: 'flex',
-								justifyContent: 'space-between',
-								alignItems: 'center',
-								mb: 3,
-							}}
-						>
-							<Typography
-								variant="h5"
-								sx={{
-									fontWeight: 500,
-									letterSpacing: '-0.01em',
-								}}
-							>
-								{props.device.name}
-							</Typography>
-							{props.cluster.mergedClusters[DeviceClusterName.ON_OFF] !==
-								undefined && (
-								<FormControlLabel
-									control={
-										<Switch
-											checked={isOn}
-											onChange={(e) => void handleToggle(e.target.checked)}
-											disabled={isUpdating}
-											sx={{
-												'& .MuiSwitch-switchBase.Mui-checked': {
-													color: currentColor,
-												},
-												'& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track':
-													{
-														backgroundColor: currentColor,
-														opacity: 0.5,
-													},
-											}}
-										/>
-									}
-									label={
-										<Typography
-											sx={{
-												fontSize: '0.875rem',
-												fontWeight: 500,
-												opacity: 0.8,
-											}}
-										>
-											{isOn ? 'On' : 'Off'}
-										</Typography>
-									}
-								/>
-							)}
-						</Box>
-
-						{/* Color wheel */}
-						<Box
-							sx={{
-								display: 'flex',
-								justifyContent: 'center',
-								my: 3,
-							}}
-						>
-							<Wheel
-								color={{ h: hue, s: saturation, v: 100, a: 1 }}
-								onChange={(color) =>
-									handleColorChange({
-										h: color.hsv.h,
-										s: color.hsv.s,
-										v: color.hsv.v,
-									})
-								}
-								width={300}
-								height={300}
-							/>
-						</Box>
-
-						{/* Brightness slider */}
-						<Box sx={{ px: 2, mb: 3 }}>
-							<Typography
-								gutterBottom
-								sx={{
-									fontSize: '0.875rem',
-									fontWeight: 500,
-									opacity: 0.7,
-									mb: 1.5,
-								}}
-							>
-								Brightness{' '}
-								{hasLevelControl && `(${DeviceClusterName.LEVEL_CONTROL})`}
-							</Typography>
-							<Slider
-								value={displayBrightness}
-								onChange={(_, newValue) => handleBrightnessChange(newValue)}
-								onChangeCommitted={() => void handleBrightnessCommit()}
-								valueLabelDisplay="auto"
-								min={0}
-								max={100}
-								disabled={isUpdating}
-								sx={{
-									'& .MuiSlider-track': {
-										background: `linear-gradient(to right, #000, ${hsvToHex(hue, saturation, 100)})`,
-										border: 'none',
-										height: 6,
-									},
-									'& .MuiSlider-rail': {
-										backgroundColor: '#e0e0e0',
-										opacity: 1,
-										height: 6,
-									},
-									'& .MuiSlider-thumb': {
-										width: 20,
-										height: 20,
-										backgroundColor: '#fff',
-										border: '2px solid currentColor',
-										boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-										'&:hover, &.Mui-focusVisible': {
-											boxShadow: '0 0 0 8px rgba(0,0,0,0.06)',
-										},
-									},
-									'& .MuiSlider-valueLabel': {
-										backgroundColor: 'rgba(0,0,0,0.8)',
-										borderRadius: '4px',
-										fontSize: '0.875rem',
-									},
-								}}
-							/>
-						</Box>
-
-						{/* Color presets */}
-						<Box sx={{ mb: 3 }}>
+				<motion.div
+					variants={cardVariants}
+					initial="initial"
+					animate="animate"
+					transition={{ delay: 0.1 }}
+				>
+					<Card
+						sx={{
+							mb: 3,
+							borderRadius: 3,
+							boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+							background: 'linear-gradient(135deg, #2a2a2a 0%, #353535 100%)',
+						}}
+					>
+						<CardContent sx={{ p: { xs: 2, sm: 3 } }}>
 							<Box
 								sx={{
 									display: 'flex',
-									gap: 1.5,
-									flexWrap: 'wrap',
-									justifyContent: 'center',
+									justifyContent: 'space-between',
+									alignItems: 'center',
+									mb: 4,
 								}}
 							>
-								{colorPresets.map((preset) => {
-									const presetColor = hsvToHex(
-										preset.hue,
-										preset.saturation,
-										100
-									);
-									return (
-										<Box
-											key={preset.name}
-											onClick={() =>
-												void handlePresetColor(
-													preset.hue,
-													preset.saturation
-												)
-											}
-											sx={{
-												width: 48,
-												height: 48,
-												borderRadius: '50%',
-												backgroundColor: presetColor,
-												cursor: isUpdating ? 'default' : 'pointer',
-												opacity: isUpdating ? 0.5 : 1,
-												transition: 'all 0.2s ease',
-												boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-												'&:hover': {
-													transform: isUpdating ? 'none' : 'scale(1.1)',
-													boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
-												},
-												'&:active': {
-													transform: isUpdating ? 'none' : 'scale(0.95)',
-												},
-											}}
-										/>
-									);
-								})}
+								<Typography
+									variant="h5"
+									sx={{
+										fontWeight: 600,
+										letterSpacing: '-0.02em',
+										background:
+											'linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 100%)',
+										WebkitBackgroundClip: 'text',
+										WebkitTextFillColor: 'transparent',
+										backgroundClip: 'text',
+									}}
+								>
+									{props.device.name}
+								</Typography>
+								{props.cluster.mergedClusters[DeviceClusterName.ON_OFF] !==
+									undefined && (
+									<FormControlLabel
+										control={
+											<Switch
+												checked={isOn}
+												onChange={(e) =>
+													void handleToggle(e.target.checked)
+												}
+												disabled={isUpdating}
+												sx={{
+													'& .MuiSwitch-switchBase.Mui-checked': {
+														color: currentColor,
+													},
+													'& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track':
+														{
+															backgroundColor: currentColor,
+															opacity: 0.5,
+														},
+												}}
+											/>
+										}
+										label={
+											<Typography
+												sx={{
+													fontSize: '0.875rem',
+													fontWeight: 500,
+													opacity: 0.8,
+												}}
+											>
+												{isOn ? 'On' : 'Off'}
+											</Typography>
+										}
+									/>
+								)}
 							</Box>
-						</Box>
 
-						{/* Preview */}
-						<Card
-							sx={{
-								backgroundColor: currentColor,
-								height: 80,
-								display: 'flex',
-								alignItems: 'center',
-								justifyContent: 'center',
-								borderRadius: 2,
-								boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-							}}
-						>
-							<Typography
-								sx={{
-									color: 'white',
-									fontSize: '0.875rem',
-									fontWeight: 500,
-									letterSpacing: '0.05em',
-									textShadow: '0 1px 3px rgba(0,0,0,0.5)',
-									opacity: 0.9,
-								}}
+							{/* Color wheel */}
+							<motion.div
+								initial={{ scale: 0.9, opacity: 0 }}
+								animate={{ scale: 1, opacity: 1 }}
+								transition={{ delay: 0.2, ...smoothSpring }}
 							>
-								{currentColor.toUpperCase()}
-							</Typography>
-						</Card>
-					</CardContent>
-				</Card>
+								<Box
+									sx={{
+										display: 'flex',
+										justifyContent: 'center',
+										my: 4,
+										position: 'relative',
+									}}
+								>
+									<Box
+										sx={{
+											borderRadius: '50%',
+											padding: 2,
+											background: 'rgba(255, 255, 255, 0.5)',
+											boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+										}}
+									>
+										<Wheel
+											color={{ h: hue, s: saturation, v: 100, a: 1 }}
+											onChange={(color) =>
+												handleColorChange({
+													h: color.hsv.h,
+													s: color.hsv.s,
+													v: color.hsv.v,
+												})
+											}
+											width={280}
+											height={280}
+										/>
+									</Box>
+								</Box>
+							</motion.div>
+
+							{/* Brightness slider */}
+							<motion.div
+								initial={{ opacity: 0, y: 10 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ delay: 0.3, ...smoothSpring }}
+							>
+								<Box sx={{ px: 3, mb: 4 }}>
+									<Typography
+										gutterBottom
+										sx={{
+											fontSize: '0.875rem',
+											fontWeight: 600,
+											color: 'text.primary',
+											mb: 2,
+											letterSpacing: '0.02em',
+											textTransform: 'uppercase',
+											opacity: 0.8,
+										}}
+									>
+										Brightness{' '}
+										{hasLevelControl && `(${DeviceClusterName.LEVEL_CONTROL})`}
+									</Typography>
+									<Slider
+										value={displayBrightness}
+										onChange={(_, newValue) => handleBrightnessChange(newValue)}
+										onChangeCommitted={() => void handleBrightnessCommit()}
+										valueLabelDisplay="auto"
+										min={0}
+										max={100}
+										disabled={isUpdating}
+										sx={{
+											'& .MuiSlider-track': {
+												background: `linear-gradient(to right, #000, ${hsvToHex(hue, saturation, 100)})`,
+												border: 'none',
+												height: 8,
+												borderRadius: 4,
+											},
+											'& .MuiSlider-rail': {
+												backgroundColor: '#e5e7eb',
+												opacity: 1,
+												height: 8,
+												borderRadius: 4,
+											},
+											'& .MuiSlider-thumb': {
+												width: 24,
+												height: 24,
+												backgroundColor: '#fff',
+												border: '3px solid currentColor',
+												boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+												transition: 'all 0.2s ease',
+												'&:hover, &.Mui-focusVisible': {
+													boxShadow: '0 6px 16px rgba(0,0,0,0.35)',
+													transform: 'scale(1.1)',
+												},
+											},
+											'& .MuiSlider-valueLabel': {
+												backgroundColor: 'rgba(0,0,0,0.85)',
+												borderRadius: '8px',
+												fontSize: '0.875rem',
+												fontWeight: 600,
+												padding: '4px 8px',
+											},
+										}}
+									/>
+								</Box>
+							</motion.div>
+
+							{/* Color presets */}
+							<motion.div
+								variants={staggerContainer}
+								initial="initial"
+								animate="animate"
+							>
+								<Box sx={{ mb: 4, px: 2 }}>
+									<Typography
+										sx={{
+											fontSize: '0.875rem',
+											fontWeight: 600,
+											color: 'text.primary',
+											mb: 2,
+											letterSpacing: '0.02em',
+											textTransform: 'uppercase',
+											opacity: 0.8,
+											textAlign: 'center',
+										}}
+									>
+										Quick Colors
+									</Typography>
+									<Box
+										sx={{
+											display: 'flex',
+											gap: 2,
+											flexWrap: 'wrap',
+											justifyContent: 'center',
+										}}
+									>
+										{colorPresets.map((preset) => {
+											const presetColor = hsvToHex(
+												preset.hue,
+												preset.saturation,
+												100
+											);
+											return (
+												<motion.div
+													key={preset.name}
+													variants={staggerItem}
+													whileHover={{ scale: 1.15, y: -4 }}
+													whileTap={{ scale: 0.9 }}
+													transition={bouncySpring}
+												>
+													<Box
+														onClick={() =>
+															void handlePresetColor(
+																preset.hue,
+																preset.saturation
+															)
+														}
+														sx={{
+															width: 52,
+															height: 52,
+															borderRadius: '50%',
+															backgroundColor: presetColor,
+															cursor: isUpdating
+																? 'default'
+																: 'pointer',
+															opacity: isUpdating ? 0.5 : 1,
+															boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+															border: '3px solid white',
+															position: 'relative',
+															'&::after': {
+																content: '""',
+																position: 'absolute',
+																inset: -2,
+																borderRadius: '50%',
+																padding: 2,
+																background: `linear-gradient(135deg, ${presetColor}, ${presetColor})`,
+																WebkitMask:
+																	'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+																WebkitMaskComposite: 'xor',
+																maskComposite: 'exclude',
+																opacity: 0,
+																transition: 'opacity 0.2s',
+															},
+															'&:hover::after': {
+																opacity: isUpdating ? 0 : 0.5,
+															},
+														}}
+													/>
+												</motion.div>
+											);
+										})}
+									</Box>
+								</Box>
+							</motion.div>
+
+							{/* Preview */}
+							<motion.div
+								initial={{ opacity: 0, scale: 0.95 }}
+								animate={{ opacity: 1, scale: 1 }}
+								transition={{ delay: 0.4, ...smoothSpring }}
+							>
+								<Card
+									sx={{
+										height: 100,
+										display: 'flex',
+										flexDirection: 'column',
+										alignItems: 'center',
+										justifyContent: 'center',
+										borderRadius: 3,
+										boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+										overflow: 'hidden',
+										position: 'relative',
+										'&::before': {
+											content: '""',
+											position: 'absolute',
+											inset: 0,
+											background: `linear-gradient(135deg, ${currentColor} 0%, ${currentColor}dd 100%)`,
+											transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+										},
+									}}
+								>
+									<Box
+										sx={{
+											position: 'relative',
+											zIndex: 1,
+											textAlign: 'center',
+										}}
+									>
+										<Typography
+											sx={{
+												color: 'white',
+												fontSize: '1rem',
+												fontWeight: 600,
+												letterSpacing: '0.1em',
+												textShadow: '0 2px 8px rgba(0,0,0,0.4)',
+												mb: 0.5,
+											}}
+										>
+											PREVIEW
+										</Typography>
+										<Typography
+											sx={{
+												color: 'white',
+												fontSize: '0.875rem',
+												fontWeight: 500,
+												letterSpacing: '0.05em',
+												textShadow: '0 1px 4px rgba(0,0,0,0.4)',
+												opacity: 0.95,
+												fontFamily: 'monospace',
+											}}
+										>
+											{currentColor.toUpperCase()}
+										</Typography>
+									</Box>
+								</Card>
+							</motion.div>
+						</CardContent>
+					</Card>
+				</motion.div>
 
 				{/* Actions Section */}
 				{actionsCluster && actionsCluster.actions.length > 0 && (
-					<Card sx={{ ...fadeInUpStaggered(2), mt: 3 }}>
-						<CardContent>
-							<Typography variant="h6" gutterBottom>
-								Actions
-							</Typography>
-							<Box
-								sx={{
-									display: 'flex',
-									flexDirection: 'column',
-									gap: 2,
-									mt: 2,
-								}}
-							>
-								{actionsCluster.actions.map((action) => {
-									const isActive = action.id === actionsCluster.activeActionId;
-									const isExecuting = action.id === executingActionId;
+					<motion.div
+						variants={cardVariants}
+						initial="initial"
+						animate="animate"
+						transition={{ delay: 0.5 }}
+					>
+						<Card
+							sx={{
+								mt: 3,
+								borderRadius: 3,
+								boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+								background: 'linear-gradient(135deg, #2a2a2a 0%, #353535 100%)',
+							}}
+						>
+							<CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+								<Typography
+									variant="h6"
+									gutterBottom
+									sx={{
+										fontWeight: 600,
+										letterSpacing: '-0.01em',
+									}}
+								>
+									Actions
+								</Typography>
+								<motion.div
+									variants={staggerContainer}
+									initial="initial"
+									animate="animate"
+								>
+									<Box
+										sx={{
+											display: 'flex',
+											flexDirection: 'column',
+											gap: 2,
+											mt: 2,
+										}}
+									>
+										{actionsCluster.actions.map((action) => {
+											const isActive =
+												action.id === actionsCluster.activeActionId;
+											const isExecuting = action.id === executingActionId;
 
-									return (
-										<Box
-											key={action.id}
-											onClick={() =>
-												!isExecuting && void handleExecuteAction(action.id)
-											}
-											sx={{
-												p: 2,
-												borderRadius: 2,
-												border: '2px solid',
-												borderColor: isActive ? 'primary.main' : 'divider',
-												backgroundColor: isActive
-													? 'rgba(25, 118, 210, 0.08)'
-													: 'background.paper',
-												cursor: isExecuting ? 'wait' : 'pointer',
-												transition: 'all 0.2s',
-												'&:hover': {
-													backgroundColor: isActive
-														? 'rgba(25, 118, 210, 0.12)'
-														: 'rgba(0, 0, 0, 0.04)',
-													borderColor: 'primary.main',
-												},
-											}}
-										>
-											<Box
-												sx={{
-													display: 'flex',
-													alignItems: 'center',
-													justifyContent: 'space-between',
-												}}
-											>
-												<Typography
-													variant="body1"
-													sx={{
-														fontWeight: isActive ? 600 : 400,
-													}}
+											return (
+												<motion.div
+													key={action.id}
+													variants={staggerItem}
+													whileHover={
+														isExecuting ? {} : { scale: 1.02, x: 4 }
+													}
+													whileTap={isExecuting ? {} : { scale: 0.98 }}
+													transition={smoothSpring}
 												>
-													{action.name}
-												</Typography>
-												{isActive && (
-													<Chip
-														label="Active"
-														color="primary"
-														size="small"
-													/>
-												)}
-												{isExecuting && <CircularProgress size={20} />}
-											</Box>
-										</Box>
-									);
-								})}
-							</Box>
-						</CardContent>
-					</Card>
+													<Box
+														onClick={() =>
+															!isExecuting &&
+															void handleExecuteAction(action.id)
+														}
+														sx={{
+															p: 2.5,
+															borderRadius: 2,
+															border: '2px solid',
+															borderColor: isActive
+																? 'primary.main'
+																: 'divider',
+															backgroundColor: isActive
+																? 'rgba(25, 118, 210, 0.08)'
+																: 'background.paper',
+															cursor: isExecuting
+																? 'wait'
+																: 'pointer',
+															boxShadow: isActive
+																? '0 2px 8px rgba(25, 118, 210, 0.2)'
+																: '0 1px 3px rgba(0,0,0,0.05)',
+															transition: 'all 0.2s',
+															'&:hover': {
+																backgroundColor: isActive
+																	? 'rgba(25, 118, 210, 0.12)'
+																	: 'rgba(0, 0, 0, 0.04)',
+																borderColor: 'primary.main',
+																boxShadow:
+																	'0 4px 12px rgba(0,0,0,0.1)',
+															},
+														}}
+													>
+														<Box
+															sx={{
+																display: 'flex',
+																alignItems: 'center',
+																justifyContent: 'space-between',
+															}}
+														>
+															<Typography
+																variant="body1"
+																sx={{
+																	fontWeight: isActive
+																		? 600
+																		: 500,
+																}}
+															>
+																{action.name}
+															</Typography>
+															{isActive && (
+																<Chip
+																	label="Active"
+																	color="primary"
+																	size="small"
+																	sx={{
+																		fontWeight: 600,
+																	}}
+																/>
+															)}
+															{isExecuting && (
+																<CircularProgress size={20} />
+															)}
+														</Box>
+													</Box>
+												</motion.div>
+											);
+										})}
+									</Box>
+								</motion.div>
+							</CardContent>
+						</Card>
+					</motion.div>
 				)}
 			</Box>
-		</Box>
+		</motion.div>
 	);
 };
 
