@@ -16,7 +16,8 @@ import type { ReturnTypeForApi } from '../../lib/fetch';
 import { Edit as EditIcon } from '@mui/icons-material';
 import React, { useState, useEffect } from 'react';
 import { apiGet, apiPost } from '../../lib/fetch';
-import * as Icons from '@mui/icons-material';
+import type { IncludedIconNames } from './icon';
+import { IconComponent } from './icon';
 
 interface RoomAssignmentDialogProps {
 	open: boolean;
@@ -41,7 +42,7 @@ const COMMON_ROOM_ICONS = [
 	{ name: 'Attic', icon: 'Roofing' },
 	{ name: 'Utility Closet', icon: 'Settings' },
 	{ name: 'Toilet', icon: 'Wc' },
-] satisfies { name: string; icon: keyof typeof Icons }[];
+] satisfies { name: string; icon: IncludedIconNames }[];
 
 const ICON_OPTIONS = [
 	'Bed',
@@ -67,13 +68,13 @@ const ICON_OPTIONS = [
 	'Shower',
 	'Deck',
 	'Cottage',
-] satisfies (keyof typeof Icons)[];
+] satisfies IncludedIconNames[];
 
 export const RoomAssignmentDialog: React.FC<RoomAssignmentDialogProps> = (props) => {
 	const [rooms, setRooms] = useState<Record<string, RoomInfo>>({});
 	const [selectedRoom, setSelectedRoom] = useState<string | null>(props.currentRoom || null);
 	const [newRoomName, setNewRoomName] = useState('');
-	const [selectedIcon, setSelectedIcon] = useState<string>('');
+	const [selectedIcon, setSelectedIcon] = useState<IncludedIconNames | ''>();
 	const [editingIcon, setEditingIcon] = useState(false);
 	const [loading, setLoading] = useState(false);
 
@@ -177,11 +178,6 @@ export const RoomAssignmentDialog: React.FC<RoomAssignmentDialogProps> = (props)
 		}
 	}, [newRoomName, editingIcon]);
 
-	const getIconComponent = (iconName: string) => {
-		const IconComponent = (Icons as Record<string, React.ComponentType>)[iconName];
-		return IconComponent ? <IconComponent /> : null;
-	};
-
 	const displayRoomName = selectedRoom || newRoomName.trim();
 
 	return (
@@ -222,7 +218,9 @@ export const RoomAssignmentDialog: React.FC<RoomAssignmentDialogProps> = (props)
 											width: '100%',
 										}}
 									>
-										{roomInfo?.icon && getIconComponent(roomInfo.icon)}
+										{roomInfo?.icon && (
+											<IconComponent iconName={roomInfo.icon} />
+										)}
 										<Typography sx={{ flex: 1 }}>{option}</Typography>
 										<Chip
 											size="small"
@@ -287,7 +285,9 @@ export const RoomAssignmentDialog: React.FC<RoomAssignmentDialogProps> = (props)
 												gap: 1,
 											}}
 										>
-											{getIconComponent(option)}
+											<IconComponent
+												iconName={option as (typeof ICON_OPTIONS)[number]}
+											/>
 											<Typography>{option}</Typography>
 										</Box>
 									</li>
@@ -307,7 +307,7 @@ export const RoomAssignmentDialog: React.FC<RoomAssignmentDialogProps> = (props)
 											display: 'inline-block',
 										}}
 									>
-										{getIconComponent(selectedIcon)}
+										<IconComponent iconName={selectedIcon} />
 									</Box>
 								</Box>
 							)}

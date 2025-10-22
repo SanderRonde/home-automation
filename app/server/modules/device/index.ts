@@ -1,8 +1,8 @@
+import type { IncludedIconNames } from '../../../client/dashboard/components/icon';
 import { SettablePromise } from '../../lib/settable-promise';
 import type { DeviceGroup } from '../../../../types/group';
 import type { Palette } from '../../../../types/palette';
 import type { Scene } from '../../../../types/scene';
-import type * as Icons from '@mui/icons-material';
 import type { Database } from '../../lib/db';
 import type { DeviceInfo } from './routing';
 import { initRouting } from './routing';
@@ -13,7 +13,7 @@ import { DeviceAPI } from './api';
 export interface DeviceDB {
 	device_registry: Record<string, DeviceInfo>;
 	room_icons?: {
-		[room: string]: keyof typeof Icons;
+		[room: string]: IncludedIconNames;
 	};
 	scenes?: Record<string, Scene>;
 	groups?: Record<string, DeviceGroup>;

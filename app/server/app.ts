@@ -10,6 +10,8 @@ import { notifyAllModules } from './modules/modules';
 import { serveStatic } from './lib/serve-static';
 import { LogObj } from './lib/logging/lob-obj';
 import { getAllModules } from './modules';
+import { checkAuth } from './lib/auth';
+import type { BunRequest } from 'bun';
 import { Database } from './lib/db';
 import { wait } from './lib/time';
 import { SQL } from 'bun';
@@ -151,10 +153,17 @@ class WebServer {
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			any
 		>({
-			fetch: (req, server) => {
+			fetch: async (req, server) => {
 				const url = new URL(req.url);
 				const websocket = websocketsByRoute[url.pathname];
 				if (websocket) {
+					// Check authentication for WebSocket upgrade
+					const isAuthenticated = await checkAuth(req as unknown as BunRequest);
+					if (!isAuthenticated) {
+						logTag('WEBSOCKET', 'yellow', 'Unauthorized WebSocket connection attempt');
+						return new Response('Unauthorized', { status: 401 });
+					}
+
 					server.upgrade(req, {
 						data: {
 							route: url.pathname,
@@ -171,6 +180,7 @@ class WebServer {
 					{
 						...(await serveStatic(CLIENT_FOLDER)),
 						...(await serveStatic(path.join(ROOT, 'static'))),
+						...(await serveStatic(path.join(ROOT, 'static', 'icons'), 'icons')),
 					},
 					false
 				).routes,

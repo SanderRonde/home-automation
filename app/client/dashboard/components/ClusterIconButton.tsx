@@ -1,8 +1,8 @@
 import type { DeviceListWithValuesResponse } from '../../../server/modules/device/routing';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
-import { getClusterIcon } from './clusterIcons';
 import { IconButton } from '@mui/material';
 import { apiPost } from '../../lib/fetch';
+import { IconComponent } from './icon';
 import React from 'react';
 
 interface ClusterIconButtonSkeletonProps extends ClusterIconButtonProps {
@@ -61,15 +61,14 @@ const WindowCoveringIconButton = (props: ClusterIconButtonProps) => {
 		.flatMap((d) => d.mergedAllClusters)
 		.filter((c) => c.name === DeviceClusterName.WINDOW_COVERING)
 		.some((d) => d.targetPositionLiftPercentage === 0);
+	const icon = props.devices
+		.flatMap((d) => d.mergedAllClusters)
+		.filter((c) => c.name === props.clusterName)[0]?.icon;
 	return (
 		<ClusterIconButtonSkeleton
 			{...props}
 			enabled={anyEnabled}
-			clusterIcon={getClusterIcon(
-				props.devices
-					.flatMap((d) => d.mergedAllClusters)
-					.filter((c) => c.name === props.clusterName)[0]?.icon
-			)}
+			clusterIcon={icon ? <IconComponent iconName={icon} /> : null}
 			onPress={async () => {
 				// Toggle all
 				await apiPost(
@@ -109,13 +108,17 @@ const OnOffIconButton = (props: ClusterIconButtonProps) => {
 	for (const device of devices) {
 		for (const cluster of device.mergedAllClusters) {
 			if (cluster.name === DeviceClusterName.ON_OFF) {
-				icon = getClusterIcon(cluster.icon);
+				icon = cluster.icon ? <IconComponent iconName={cluster.icon} /> : null;
 				break;
 			} else if (
 				cluster.name === DeviceClusterName.COLOR_CONTROL &&
 				cluster.mergedClusters[DeviceClusterName.ON_OFF]
 			) {
-				icon = getClusterIcon(cluster.mergedClusters[DeviceClusterName.ON_OFF]?.icon);
+				icon = cluster.mergedClusters[DeviceClusterName.ON_OFF]?.icon ? (
+					<IconComponent
+						iconName={cluster.mergedClusters[DeviceClusterName.ON_OFF]?.icon}
+					/>
+				) : null;
 				break;
 			}
 		}
@@ -165,7 +168,7 @@ const ColorControlIconButton = (props: ClusterIconButtonProps) => {
 	for (const device of devices) {
 		for (const cluster of device.mergedAllClusters) {
 			if (cluster.name === DeviceClusterName.COLOR_CONTROL) {
-				icon = getClusterIcon(cluster.icon);
+				icon = cluster.icon ? <IconComponent iconName={cluster.icon} /> : null;
 				break;
 			}
 		}

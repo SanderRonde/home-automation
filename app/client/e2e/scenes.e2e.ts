@@ -72,7 +72,7 @@ test.describe('Scene Management', () => {
 		// Create a scene first
 		const scene = await sceneAPI.createScene({
 			title: `Update Test ${Date.now()}`,
-			icon: 'Edit',
+			icon: 'Settings',
 			actions: [],
 		});
 
@@ -93,7 +93,7 @@ test.describe('Scene Management', () => {
 		// Create a scene
 		const scene = await sceneAPI.createScene({
 			title: `Delete Test ${Date.now()}`,
-			icon: 'Delete',
+			icon: 'Balcony',
 			actions: [],
 		});
 
@@ -126,7 +126,7 @@ test.describe('Scene Management', () => {
 		// Create scene with action
 		const scene = await sceneAPI.createScene({
 			title: `Trigger Test ${Date.now()}`,
-			icon: 'PlayArrow',
+			icon: 'Home',
 			actions: [
 				{
 					deviceId: onOffDevice.uniqueId,
@@ -168,7 +168,7 @@ test.describe('Scene Management', () => {
 		// Create scene with multiple actions
 		const scene = await sceneAPI.createScene({
 			title: `Multi Action ${Date.now()}`,
-			icon: 'GridView',
+			icon: 'Home',
 			actions: [
 				{
 					deviceId: onOffDevices[0].uniqueId,
@@ -199,7 +199,7 @@ test.describe('Scene Management', () => {
 	test('should persist scenes across page reloads', async ({ page, sceneAPI }) => {
 		const scene = await sceneAPI.createScene({
 			title: `Persist Test ${Date.now()}`,
-			icon: 'Save',
+			icon: 'Home',
 			actions: [],
 		});
 
@@ -220,7 +220,7 @@ test.describe('Scene Management', () => {
 	test('should handle empty scene actions', async ({ sceneAPI }) => {
 		const scene = await sceneAPI.createScene({
 			title: `Empty Actions ${Date.now()}`,
-			icon: 'RadioButtonUnchecked',
+			icon: 'Home',
 			actions: [],
 		});
 

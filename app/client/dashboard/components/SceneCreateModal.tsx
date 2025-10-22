@@ -35,9 +35,10 @@ import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import type { Scene, SceneDeviceAction } from '../../../../types/scene';
 import type { DeviceGroup } from '../../../../types/group';
 import type { Palette } from '../../../../types/palette';
-import * as Icons from '@mui/icons-material';
+import type { IncludedIconNames } from './icon';
 import { apiGet } from '../../lib/fetch';
 import React, { useState } from 'react';
+import { IconComponent } from './icon';
 
 interface SceneCreateModalProps {
 	open: boolean;
@@ -53,7 +54,7 @@ type DeviceActionEntry = SceneDeviceAction & {
 };
 
 // Popular MUI icons for scenes
-const SCENE_ICONS: Array<{ icon: keyof typeof Icons; label: string }> = [
+const SCENE_ICONS: Array<{ icon: IncludedIconNames; label: string }> = [
 	{ icon: 'Nightlight', label: 'Sleep' },
 	{ icon: 'WbSunny', label: 'Wake up' },
 	{ icon: 'Home', label: 'Home' },
@@ -77,7 +78,7 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 	const [groups, setGroups] = useState<DeviceGroup[]>([]);
 	const [palettes, setPalettes] = useState<Palette[]>([]);
 	const [title, setTitle] = useState(props.existingScene?.title ?? '');
-	const [selectedIcon, setSelectedIcon] = useState<keyof typeof Icons>(
+	const [selectedIcon, setSelectedIcon] = useState<IncludedIconNames>(
 		props.existingScene?.icon ?? 'Star'
 	);
 	const [actions, setActions] = useState<DeviceActionEntry[]>(
@@ -129,8 +130,6 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 			? props.existingScene.trigger.buttonIndex
 			: undefined
 	);
-
-	const IconComponent = Icons[selectedIcon];
 
 	const availableDevices = React.useMemo(() => {
 		return props.devices.filter((device) =>
@@ -346,7 +345,7 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 								flexShrink: 0,
 							}}
 						>
-							<IconComponent sx={{ fontSize: 32 }} />
+							<IconComponent iconName={selectedIcon} sx={{ fontSize: 32 }} />
 						</Box>
 					</Box>
 
@@ -362,10 +361,9 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 							}
 						}}
 						renderOption={(props, option) => {
-							const OptionIcon = Icons[option.icon] as React.ComponentType;
 							return (
 								<Box component="li" {...props} sx={{ display: 'flex', gap: 1 }}>
-									<OptionIcon />
+									<IconComponent iconName={option.icon} />
 									<Typography>{option.label}</Typography>
 								</Box>
 							);

@@ -1,10 +1,10 @@
+import type { IncludedIconNames } from '../../../client/dashboard/components/icon';
 import type { Device as DeviceInterface, DeviceSource } from './device';
 import { TemperatureTracker } from './temperature-tracker';
 import { IlluminanceTracker } from './illuminance-tracker';
 import { OccupancyTracker } from './occupancy-tracker';
 import type { DeviceInfo, RoomInfo } from './routing';
 import { HumidityTracker } from './humidity-tracker';
-import type * as Icons from '@mui/icons-material';
 import { SwitchTracker } from './switch-tracker';
 import type { Database } from '../../lib/db';
 import { PaletteAPI } from './palette-api';
@@ -87,7 +87,7 @@ export class DeviceAPI {
 		return false;
 	}
 
-	public updateDeviceRoom(deviceId: string, room?: string, icon?: keyof typeof Icons): boolean {
+	public updateDeviceRoom(deviceId: string, room?: string, icon?: IncludedIconNames): boolean {
 		const knownDevices = this.getStoredDevices();
 
 		if (knownDevices[deviceId]) {

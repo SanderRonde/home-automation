@@ -25,7 +25,8 @@
 		"test:e2e:debug": "playwright test --debug",
 		"test:e2e:headed": "playwright test --headed",
 		"test:all": "bun test && playwright test",
-		"start": "bun app/server/app.ts --http 1272 --https 1273 -vvvvvv --color -i",
+		"build:client": "bun scripts/build-client.ts",
+		"start:prod": "NODE_ENV=production bun app/server/app.ts --http 1272 --https 1273 -vvvvvv --color -i",
 		"dev": "bun app/server/app.ts --http 1272 --https 1273 -vvvvvv --color -i --debug",
 		"knip": "knip-bun"
 	},

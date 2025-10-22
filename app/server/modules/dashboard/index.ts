@@ -5,9 +5,9 @@ import { ModuleMeta } from '../meta';
 export const Dashboard = new (class Dashboard extends ModuleMeta {
 	public name = 'dashboard';
 
-	public init(config: ModuleConfig) {
+	public async init(config: ModuleConfig) {
 		return {
-			serve: initRouting(config),
+			serve: await initRouting(config),
 		};
 	}
 })();

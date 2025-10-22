@@ -1,5 +1,5 @@
+import type { IncludedIconNames } from '../app/client/dashboard/components/icon';
 import type { DeviceClusterName } from '../app/server/modules/device/cluster';
-import type * as Icons from '@mui/icons-material';
 
 export type SceneId = string;
 
@@ -71,7 +71,7 @@ export type SceneDeviceAction =
 export interface Scene {
 	id: SceneId;
 	title: string;
-	icon: keyof typeof Icons;
+	icon: IncludedIconNames;
 	actions: SceneDeviceAction[];
 	trigger?: SceneTrigger;
 }

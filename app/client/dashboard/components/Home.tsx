@@ -21,10 +21,10 @@ import { ClusterIconButton } from './ClusterIconButton';
 import type { Scene } from '../../../../types/scene';
 import { PaletteSelector } from './PaletteSelector';
 import { apiGet, apiPost } from '../../lib/fetch';
+import type { IncludedIconNames } from './icon';
 import { DeviceDetail } from './DeviceDetail';
-import * as Icons from '@mui/icons-material';
-import type { SxProps } from '@mui/material';
 import { useDevices } from './Devices';
+import { IconComponent } from './icon';
 import React from 'react';
 
 type DeviceType = DeviceListWithValuesResponse[number];
@@ -32,16 +32,9 @@ type DeviceType = DeviceListWithValuesResponse[number];
 interface RoomDevices {
 	room: string;
 	roomColor?: string;
-	roomIcon?: string;
+	roomIcon?: IncludedIconNames;
 	devices: DeviceType[];
 }
-
-const getIconComponent = (iconName: string) => {
-	const IconComponent = (Icons as Record<string, React.ComponentType<{ sx?: SxProps }>>)[
-		iconName
-	];
-	return IconComponent ? <IconComponent /> : null;
-};
 
 export type HomeDetailView =
 	| {
@@ -133,15 +126,59 @@ export const Home = (): JSX.Element => {
 
 	if (loading) {
 		return (
-			<Box
-				sx={{
-					display: 'flex',
-					justifyContent: 'center',
-					alignItems: 'center',
-					height: '50vh',
-				}}
-			>
-				<CircularProgress />
+			<Box sx={{ p: { xs: 2, sm: 3 } }}>
+				<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+					{/* Skeleton for room cards */}
+					{[1, 2, 3].map((index) => (
+						<Card
+							key={index}
+							sx={{
+								backgroundColor: '#555',
+								borderRadius: 2,
+								overflow: 'hidden',
+							}}
+						>
+							<Box sx={{ p: 2 }}>
+								<Box
+									sx={{
+										display: 'flex',
+										alignItems: 'center',
+										gap: 2,
+									}}
+								>
+									<CircularProgress
+										size={24}
+										sx={{ color: 'rgba(0, 0, 0, 0.3)' }}
+									/>
+									<Box
+										sx={{
+											flexGrow: 1,
+											height: 24,
+											bgcolor: 'rgba(0, 0, 0, 0.1)',
+											borderRadius: 1,
+										}}
+									/>
+									<Box
+										sx={{
+											width: 40,
+											height: 40,
+											bgcolor: 'rgba(0, 0, 0, 0.1)',
+											borderRadius: '50%',
+										}}
+									/>
+									<Box
+										sx={{
+											width: 40,
+											height: 40,
+											bgcolor: 'rgba(0, 0, 0, 0.1)',
+											borderRadius: '50%',
+										}}
+									/>
+								</Box>
+							</Box>
+						</Card>
+					))}
+				</Box>
 			</Box>
 		);
 	}
@@ -196,11 +233,10 @@ export const Home = (): JSX.Element => {
 						}}
 					>
 						{scenes.map((scene) => {
-							const IconComponent = Icons[scene.icon] as React.ComponentType;
 							return (
 								<Chip
 									key={scene.id}
-									icon={<IconComponent />}
+									icon={<IconComponent iconName={scene.icon} />}
 									label={scene.title}
 									onClick={() => handleTriggerScene(scene.id)}
 									disabled={triggeringSceneId === scene.id}
@@ -482,7 +518,7 @@ const RoomDevice = (props: RoomDeviceProps) => {
 								fontSize: '2rem',
 							}}
 						>
-							{getIconComponent(props.roomDevices.roomIcon)}
+							<IconComponent iconName={props.roomDevices.roomIcon} />
 						</Box>
 					)}
 

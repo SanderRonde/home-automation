@@ -19,12 +19,12 @@ import {
 	DeviceThermostatCluster,
 	ThermostatMode,
 } from './cluster';
+import type { IncludedIconNames } from '../../../client/dashboard/components/icon';
 import type { BrandedRouteHandlerResponse, ServeOptions } from '../../lib/routes';
 import { createServeOptions, withRequestBody } from '../../lib/routes';
 import { applyPaletteToDevices } from './palette-executor';
 import type { Device, DeviceEndpoint } from './device';
 import type { AllModules, ModuleConfig } from '..';
-import type * as Icons from '@mui/icons-material';
 import { Actions } from '@matter/main/clusters';
 import { Color } from '../../lib/color';
 import type { DeviceAPI } from './api';
@@ -42,12 +42,12 @@ export interface DeviceInfo {
 export interface RoomInfo {
 	name: string;
 	color: string; // Pastel color based on name hash
-	icon?: keyof typeof Icons;
+	icon?: IncludedIconNames;
 }
 
 type DashboardDeviceClusterBase = {
 	name: DeviceClusterName;
-	icon?: keyof typeof Icons;
+	icon?: IncludedIconNames;
 };
 
 export type DashboardDeviceClusterOnOff = DashboardDeviceClusterBase & {
@@ -190,7 +190,7 @@ interface DashboardDeviceResponse extends DashboardDeviceEndpointResponse {
 	childClusters: DashboardDeviceClusterWithState[];
 	room?: string;
 	roomColor?: string;
-	roomIcon?: keyof typeof Icons;
+	roomIcon?: IncludedIconNames;
 	managementUrl?: string;
 }
 
@@ -328,7 +328,7 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 				(body, _req, _server, { json }) => {
 					const { deviceId, room, icon } = body;
 
-					if (api.updateDeviceRoom(deviceId, room, icon as keyof typeof Icons)) {
+					if (api.updateDeviceRoom(deviceId, room, icon as IncludedIconNames)) {
 						return json({ success: true });
 					}
 
@@ -471,7 +471,7 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 			'/scenes/create': withRequestBody(
 				z.object({
 					title: z.string(),
-					icon: z.string() as z.ZodType<keyof typeof Icons>,
+					icon: z.string() as z.ZodType<IncludedIconNames>,
 					actions: z.array(
 						z.union([
 							z.object({
@@ -540,7 +540,7 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 			'/scenes/:sceneId/update': withRequestBody(
 				z.object({
 					title: z.string(),
-					icon: z.string() as z.ZodType<keyof typeof Icons>,
+					icon: z.string() as z.ZodType<IncludedIconNames>,
 					actions: z.array(
 						z.union([
 							z.object({
@@ -1171,7 +1171,7 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 
 export type DeviceListWithValuesResponse = Awaited<ReturnType<typeof listDevicesWithValues>>;
 
-function getClusterIconName(clusterName: DeviceClusterName): keyof typeof Icons | undefined {
+function getClusterIconName(clusterName: DeviceClusterName): IncludedIconNames | undefined {
 	switch (clusterName) {
 		case DeviceClusterName.ON_OFF:
 			return 'Lightbulb';

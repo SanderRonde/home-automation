@@ -5,7 +5,10 @@ import {
 	createTheme,
 	useMediaQuery,
 	useTheme,
+	Alert,
+	Collapse,
 } from '@mui/material';
+import { useOffline } from '../../../lib/offline-context';
 import { TOP_BAR_HEIGHT, TopBar } from './TopBar';
 import type { SidebarTab } from './Sidebar';
 import { Sidebar } from './Sidebar';
@@ -57,6 +60,7 @@ interface AppLayoutProps {
 export const AppLayout = (props: AppLayoutProps): JSX.Element => {
 	const theme = useTheme();
 	const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+	const { isOnline } = useOffline();
 
 	// Start with sidebar closed on mobile, open on desktop
 	const [open, setOpen] = React.useState(!isMobile);
@@ -102,6 +106,12 @@ export const AppLayout = (props: AppLayoutProps): JSX.Element => {
 						marginLeft: !isMobile && open ? '240px' : 0,
 					}}
 				>
+					{/* Offline indicator banner */}
+					<Collapse in={!isOnline}>
+						<Alert severity="warning" sx={{ borderRadius: 0, mb: 0 }}>
+							You're offline - viewing cached data. Device controls are disabled.
+						</Alert>
+					</Collapse>
 					{props.children}
 				</Box>
 			</Box>

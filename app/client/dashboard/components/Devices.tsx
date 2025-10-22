@@ -40,10 +40,9 @@ import { RoomAssignmentDialog } from './RoomAssignmentDialog';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import useWebsocket from '../../shared/resilient-socket';
 import { fadeInUpStaggered } from '../../lib/animations';
-import { getClusterIcon } from './clusterIcons';
-import * as Icons from '@mui/icons-material';
 import { apiPost } from '../../lib/fetch';
 import React, { useState } from 'react';
+import { IconComponent } from './icon';
 
 interface EndpointVisualizationProps {
 	endpoint: DeviceListWithValuesResponse[number]['endpoints'][number];
@@ -76,7 +75,11 @@ const EndpointVisualization: React.FC<EndpointVisualizationProps> = (props) => {
 						{props.endpoint.childClusters.map((cluster, idx) => (
 							<Chip
 								key={idx}
-								icon={getClusterIcon(cluster.icon) || undefined}
+								icon={
+									cluster.icon ? (
+										<IconComponent iconName={cluster.icon} />
+									) : undefined
+								}
 								label={cluster.name}
 								size="small"
 								variant="outlined"
@@ -123,11 +126,6 @@ interface DeviceCardProps {
 }
 
 const DeviceCard: React.FC<DeviceCardProps> = (props) => {
-	const getIconComponent = (iconName: keyof typeof Icons) => {
-		const IconComponent = Icons[iconName];
-		return IconComponent ? <IconComponent sx={{ fill: '#2f2f2f' }} /> : null;
-	};
-
 	// Helper to get battery percentage from all device clusters (including nested endpoints)
 	const getBatteryPercentage = (): number | undefined => {
 		const findBatteryInClusters = (
@@ -342,7 +340,10 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 									}}
 								>
 									{props.device.roomIcon ? (
-										getIconComponent(props.device.roomIcon) || <RoomIcon />
+										<IconComponent
+											sx={{ fill: '#2f2f2f' }}
+											iconName={props.device.roomIcon}
+										/>
 									) : (
 										<RoomIcon />
 									)}
@@ -425,14 +426,10 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 						backgroundColor: props.device.roomColor,
 					}}
 				>
-					{props.device.roomIcon && getIconComponent(props.device.roomIcon)}
-					<Typography
-						variant="body2"
-						sx={{
-							color: '#2f2f2f',
-							fontWeight: 500,
-						}}
-					>
+					{props.device.roomIcon && (
+						<IconComponent sx={{ fill: '#2f2f2f' }} iconName={props.device.roomIcon} />
+					)}
+					<Typography variant="body2" sx={{ color: '#2f2f2f', fontWeight: 500 }}>
 						{props.device.room}
 					</Typography>
 				</Box>
@@ -497,7 +494,9 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 										component="span"
 										sx={{ mr: 0.5 }}
 									>
-										{getClusterIcon(cluster.icon)}
+										{cluster.icon ? (
+											<IconComponent iconName={cluster.icon} />
+										) : null}
 									</Box>
 								))}
 						</Typography>
@@ -541,7 +540,11 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 								{props.device.mergedAllClusters.map((cluster, idx) => (
 									<Chip
 										key={idx}
-										icon={getClusterIcon(cluster.icon) || undefined}
+										icon={
+											cluster.icon ? (
+												<IconComponent iconName={cluster.icon} />
+											) : undefined
+										}
 										label={cluster.name}
 										size="small"
 										color="primary"

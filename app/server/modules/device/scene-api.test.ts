@@ -45,7 +45,7 @@ describe('SceneAPI', () => {
 			const scene2: Scene = {
 				id: 'scene2',
 				title: 'Good Night',
-				icon: 'NightsStay',
+				icon: 'WbSunny',
 				actions: [],
 			};
 
@@ -162,7 +162,7 @@ describe('SceneAPI', () => {
 
 			const success = api.updateScene(sceneId, {
 				title: 'Updated',
-				icon: 'Edit',
+				icon: 'Settings',
 				actions: [],
 			});
 
@@ -170,7 +170,7 @@ describe('SceneAPI', () => {
 
 			const scene = api.getScene(sceneId);
 			expect(scene?.title).toBe('Updated');
-			expect(scene?.icon).toBe('Edit');
+			expect(scene?.icon).toBe('Settings');
 		});
 
 		test('should return false for non-existent scene', () => {
@@ -192,7 +192,7 @@ describe('SceneAPI', () => {
 
 			api.updateScene(sceneId, {
 				title: 'Updated',
-				icon: 'Edit',
+				icon: 'Settings',
 				actions: [],
 			});
 
@@ -205,7 +205,7 @@ describe('SceneAPI', () => {
 		test('should delete existing scene', () => {
 			const sceneId = api.createScene({
 				title: 'To Delete',
-				icon: 'Delete',
+				icon: 'Balcony',
 				actions: [],
 			});
 
@@ -224,7 +224,7 @@ describe('SceneAPI', () => {
 		test('should persist deletion to database', () => {
 			const sceneId = api.createScene({
 				title: 'To Delete',
-				icon: 'Delete',
+				icon: 'Balcony',
 				actions: [],
 			});
 
@@ -250,7 +250,7 @@ describe('SceneAPI', () => {
 
 			const sceneId = api.createScene({
 				title: 'Turn On Light',
-				icon: 'LightbulbOutline',
+				icon: 'Lightbulb',
 				actions: [
 					{
 						deviceId: 'light1',
@@ -307,7 +307,7 @@ describe('SceneAPI', () => {
 
 			const sceneId = api.createScene({
 				title: 'All Lights On',
-				icon: 'LightbulbOutline',
+				icon: 'Lightbulb',
 				actions: [
 					{
 						deviceId: 'light1',
@@ -332,7 +332,7 @@ describe('SceneAPI', () => {
 		test('should return false if device not found', async () => {
 			const sceneId = api.createScene({
 				title: 'Missing Device',
-				icon: 'Error',
+				icon: 'Home',
 				actions: [
 					{
 						deviceId: 'nonexistent',
@@ -354,7 +354,7 @@ describe('SceneAPI', () => {
 
 			const sceneId = api.createScene({
 				title: 'Missing Cluster',
-				icon: 'Error',
+				icon: 'Home',
 				actions: [
 					{
 						deviceId: 'device1',
@@ -502,7 +502,7 @@ describe('SceneAPI', () => {
 
 			api.createScene({
 				title: 'Manual Scene',
-				icon: 'TouchApp',
+				icon: 'Home',
 				actions: [
 					{
 						deviceId: 'light1',

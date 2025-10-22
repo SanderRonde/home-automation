@@ -19,9 +19,8 @@ import { SceneCreateModal } from './SceneCreateModal';
 import type { Scene } from '../../../../types/scene';
 import React, { useState, useEffect } from 'react';
 import { apiGet, apiPost } from '../../lib/fetch';
-import { getClusterIcon } from './clusterIcons';
-import * as Icons from '@mui/icons-material';
 import { useDevices } from './Devices';
+import { IconComponent } from './icon';
 
 export const Scenes = (): JSX.Element => {
 	const { devices, loading: devicesLoading } = useDevices();
@@ -216,8 +215,6 @@ export const Scenes = (): JSX.Element => {
 				) : (
 					<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
 						{scenes.map((scene) => {
-							const IconComponent = Icons[scene.icon];
-
 							return (
 								<Card key={scene.id} sx={{ borderRadius: 2, overflow: 'hidden' }}>
 									<CardContent>
@@ -260,7 +257,10 @@ export const Scenes = (): JSX.Element => {
 														flexShrink: 0,
 													}}
 												>
-													<IconComponent sx={{ fontSize: 28 }} />
+													<IconComponent
+														iconName={scene.icon}
+														sx={{ fontSize: 28 }}
+													/>
 												</Box>
 												<Box sx={{ flex: 1, minWidth: 0 }}>
 													<Typography
@@ -326,9 +326,11 @@ export const Scenes = (): JSX.Element => {
 																	>
 																		<Chip
 																			icon={
-																				getClusterIcon(
-																					cluster?.icon
-																				) ?? undefined
+																				<IconComponent
+																					iconName={
+																						scene.icon
+																					}
+																				/>
 																			}
 																			label={
 																				<div
@@ -410,9 +412,13 @@ export const Scenes = (): JSX.Element => {
 																<Chip
 																	key={`${action.deviceId}-${action.cluster}-${index}`}
 																	icon={
-																		getClusterIcon(
-																			cluster?.icon
-																		) ?? undefined
+																		cluster?.icon ? (
+																			<IconComponent
+																				iconName={
+																					cluster.icon
+																				}
+																			/>
+																		) : undefined
 																	}
 																	label={device.name}
 																	size="small"

@@ -8,7 +8,7 @@ export async function serveStatic(
 	prefix?: string
 ): Promise<Record<string, BrandedResponse<unknown, false>>> {
 	const files = await glob(
-		`${dir}/**/*.{html,js,css,ico,png,jpg,jpeg,gif,svg,webp,woff,woff2,ttf,eot,otf,ico,webmanifest}`,
+		`${dir}/**/*.{html,js,css,ico,png,jpg,jpeg,gif,svg,webp,woff,woff2,ttf,eot,otf,ico,webmanifest,json}`,
 		{
 			nodir: true,
 		}

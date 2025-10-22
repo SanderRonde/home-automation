@@ -13,6 +13,33 @@ import type { BotRoutes } from '../../server/modules/bot/routing';
 import type { RouterTypes } from 'bun';
 import type z from 'zod';
 
+// In-memory cache for API responses
+interface CacheEntry {
+	data: unknown;
+	timestamp: number;
+}
+
+const responseCache = new Map<string, CacheEntry>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+function getCachedResponse(url: string): unknown {
+	const entry = responseCache.get(url);
+	if (entry && Date.now() - entry.timestamp < CACHE_TTL) {
+		return entry.data;
+	}
+	if (entry) {
+		responseCache.delete(url);
+	}
+	return null;
+}
+
+function setCachedResponse(url: string, data: unknown): void {
+	responseCache.set(url, {
+		data,
+		timestamp: Date.now(),
+	});
+}
+
 function replacePathParams(endpoint: string, pathParams: RouterTypes.ExtractRouteParams<string>) {
 	return endpoint.replace(
 		/:(\w+)/g,
@@ -40,17 +67,51 @@ export async function apiGet<M extends keyof RoutesForModules, E extends keyof R
 			  }
 		)
 > {
-	// eslint-disable-next-line no-restricted-globals
-	return (await fetch(
-		`/${module}${replacePathParams(endpoint, pathParams)}`,
-		{
+	const url = `/${module}${replacePathParams(endpoint, pathParams)}`;
+
+	// Try to fetch from network
+	try {
+		// eslint-disable-next-line no-restricted-globals
+		const response = await fetch(url, {
 			method: 'GET',
 			headers: {
 				'Content-Type': 'application/json',
 			},
+		});
+
+		// Cache successful GET responses
+		if (response.ok) {
+			const clonedResponse = response.clone();
+			clonedResponse
+				.json()
+				.then((data) => {
+					setCachedResponse(url, data);
+				})
+				.catch(() => {
+					// Ignore cache errors
+				});
 		}
+
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	)) as any;
+		return response as any;
+	} catch (error) {
+		// Network error - try to return cached response
+		const cached = getCachedResponse(url);
+		if (cached !== null) {
+			const mockResponse = new Response(JSON.stringify(cached), {
+				status: 200,
+				headers: {
+					'Content-Type': 'application/json',
+					'X-From-Cache': 'true',
+				},
+			});
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			return mockResponse as any;
+		}
+
+		// No cache available, rethrow
+		throw error;
+	}
 }
 
 export async function apiPost<
@@ -76,6 +137,19 @@ export async function apiPost<
 			  }
 		)
 > {
+	// Check if offline
+	if (typeof navigator !== 'undefined' && !navigator.onLine) {
+		const mockResponse = new Response(
+			JSON.stringify({ error: 'Cannot perform this action while offline' }),
+			{
+				status: 503,
+				headers: { 'Content-Type': 'application/json' },
+			}
+		);
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		return mockResponse as any;
+	}
+
 	// eslint-disable-next-line no-restricted-globals
 	return (await fetch(
 		`/${module}${replacePathParams(endpoint, pathParams)}`,
@@ -112,6 +186,19 @@ export async function apiDelete<
 			  }
 		)
 > {
+	// Check if offline
+	if (typeof navigator !== 'undefined' && !navigator.onLine) {
+		const mockResponse = new Response(
+			JSON.stringify({ error: 'Cannot perform this action while offline' }),
+			{
+				status: 503,
+				headers: { 'Content-Type': 'application/json' },
+			}
+		);
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		return mockResponse as any;
+	}
+
 	// eslint-disable-next-line no-restricted-globals
 	return (await fetch(
 		`/${module}${replacePathParams(endpoint, pathParams)}`,
@@ -143,10 +230,13 @@ export type ReturnTypeForApi<
 	M extends keyof RoutesForModules,
 	endpoint extends keyof RoutesForModules[M],
 	method extends 'GET' | 'POST' | 'DELETE',
-> = {
-	ok: _ReturnTypeForApi<RoutesForModules[M], endpoint, method, false>;
-	error: _ReturnTypeForApi<RoutesForModules[M], endpoint, method, true>;
-};
+> =
+	RoutesForModules[M] extends Record<string, unknown>
+		? {
+				ok: _ReturnTypeForApi<RoutesForModules[M], endpoint, method, false>;
+				error: _ReturnTypeForApi<RoutesForModules[M], endpoint, method, true>;
+			}
+		: never;
 
 export type BodyTypeForApi<
 	M extends keyof RoutesForModules,
@@ -184,7 +274,7 @@ type _GetBrandedResponse<
 		: R[endpoint] extends (
 					...args: unknown[]
 			  ) => BrandedResponse<unknown, boolean> | Promise<BrandedResponse<unknown, boolean>>
-			? Awaited<ReturnType<R[endpoint]>>
+			? Awaited<ReturnType<Extract<R[endpoint], CallableFunction>>>
 			: R[endpoint] extends {
 						[K in method]?: (
 							...args: unknown[]

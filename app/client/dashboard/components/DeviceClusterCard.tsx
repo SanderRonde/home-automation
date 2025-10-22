@@ -16,11 +16,16 @@ import type {
 import { DeviceClusterName, ThermostatMode } from '../../../server/modules/device/cluster';
 import { fadeInUpStaggered, staggerItem } from '../../lib/animations';
 import { Card, CardActionArea, Box, Typography } from '@mui/material';
-import { getClusterIcon } from './clusterIcons';
+import type { IncludedIconNames } from './icon';
 import type { HomeDetailView } from './Home';
 import { apiPost } from '../../lib/fetch';
 import { motion } from 'framer-motion';
+import { IconComponent } from './icon';
 import React from 'react';
+
+const IconOrNull = ({ icon }: { icon: IncludedIconNames | undefined }) => {
+	return icon ? <IconComponent iconName={icon} /> : null;
+};
 
 export interface DeviceClusterCardBaseProps<C extends DashboardDeviceClusterWithState> {
 	device: DeviceListWithValuesResponse[number];
@@ -63,7 +68,7 @@ const DeviceClusterCardSkeleton = (props: DeviceClusterCardProps) => {
 					color: 'text.secondary',
 				}}
 			>
-				{getClusterIcon(props.cluster.icon)}
+				<IconOrNull icon={props.cluster.icon} />
 			</Box>
 			<Typography
 				variant="body1"
@@ -285,7 +290,7 @@ const OccupancySensingCard = (
 						color: props.cluster.occupied ? '#4caf50' : 'text.secondary',
 					}}
 				>
-					{getClusterIcon(props.cluster.icon)}
+					<IconOrNull icon={props.cluster.icon} />
 				</Box>
 				<Box sx={{ flexGrow: 1 }}>
 					<Typography
@@ -381,7 +386,7 @@ const TemperatureMeasurementCard = (
 						color: 'white',
 					}}
 				>
-					{getClusterIcon(props.cluster.icon)}
+					<IconOrNull icon={props.cluster.icon} />
 				</Box>
 				<Box sx={{ flexGrow: 1 }}>
 					<Typography
@@ -455,7 +460,7 @@ const RelativeHumidityMeasurementCard = (
 						color: 'white',
 					}}
 				>
-					{getClusterIcon(props.cluster.icon)}
+					<IconOrNull icon={props.cluster.icon} />
 				</Box>
 				<Box sx={{ flexGrow: 1 }}>
 					<Typography
@@ -541,7 +546,7 @@ const IlluminanceMeasurementCard = (
 						color: getTextColor(props.cluster.illuminance),
 					}}
 				>
-					{getClusterIcon(props.cluster.icon)}
+					<IconOrNull icon={props.cluster.icon} />
 				</Box>
 				<Box sx={{ flexGrow: 1 }}>
 					<Typography
@@ -668,7 +673,7 @@ const SensorGroupCard = (
 								: 'text.secondary',
 					}}
 				>
-					{getClusterIcon(props.cluster.icon)}
+					<IconOrNull icon={props.cluster.icon} />
 				</Box>
 				<Box sx={{ flexGrow: 1 }}>
 					<Typography
@@ -850,7 +855,7 @@ const ColorControlCard = (
 						color: 'white',
 					}}
 				>
-					{getClusterIcon(props.cluster.icon)}
+					<IconOrNull icon={props.cluster.icon} />
 				</Box>
 				<Typography
 					variant="body1"
@@ -936,7 +941,7 @@ const ThermostatCard = (
 						color: accentColor,
 					}}
 				>
-					{getClusterIcon(props.cluster.icon)}
+					<IconOrNull icon={props.cluster.icon} />
 				</Box>
 				<Box sx={{ flexGrow: 1 }}>
 					<Typography
@@ -1027,7 +1032,7 @@ const ActionsCard = (
 						color: 'white',
 					}}
 				>
-					{getClusterIcon(props.cluster.icon)}
+					<IconOrNull icon={props.cluster.icon} />
 				</Box>
 				<Box sx={{ flexGrow: 1 }}>
 					<Typography
