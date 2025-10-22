@@ -10,7 +10,6 @@ import {
 import { EwelinkBooleanStateDoorSensorCluster } from './clusters/boolean-state/door-sensor';
 import { DeviceEndpoint, DeviceSource, type Device } from '../../device/device';
 import { EwelinkOnOffClusterSimplePower } from './clusters/power/simple-power';
-import type { EwelinkOnOffClusterM51CParams } from './clusters/power/M5-1C';
 import { EwelinkOnOffClusterM51CSingle } from './clusters/power/M5-1C';
 import { EventEmitter } from '../../../lib/event-emitter';
 import type { EWeLinkConfig } from './clusters/shared';
@@ -71,9 +70,11 @@ class EwelinkM51CDevice extends EwelinkDevice {
 
 	public switches: number;
 	public constructor(eWeLinkConfig: EWeLinkConfig) {
-		const count = (
-			eWeLinkConfig.device.itemData.params as unknown as EwelinkOnOffClusterM51CParams
-		).switches.length;
+		// const count = (
+		// 	eWeLinkConfig.device.itemData.params as unknown as EwelinkOnOffClusterM51CParams
+		// ).switches.length;
+		// For now forcibly use just 1 outlet
+		const count = 1;
 		const outlets = Array.from(
 			{ length: count },
 			(_, i) =>

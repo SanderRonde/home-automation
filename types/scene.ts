@@ -15,7 +15,8 @@ export type SceneTrigger =
 	  };
 
 export type SceneDeviceActionOnOff = {
-	deviceId: string;
+	deviceId?: string;
+	groupId?: string;
 	cluster: DeviceClusterName.ON_OFF;
 	action: {
 		isOn: boolean;
@@ -23,7 +24,8 @@ export type SceneDeviceActionOnOff = {
 };
 
 export type SceneDeviceActionWindowCovering = {
-	deviceId: string;
+	deviceId?: string;
+	groupId?: string;
 	cluster: DeviceClusterName.WINDOW_COVERING;
 	action: {
 		targetPositionLiftPercentage: number;
@@ -31,7 +33,8 @@ export type SceneDeviceActionWindowCovering = {
 };
 
 export type SceneDeviceActionLevelControl = {
-	deviceId: string;
+	deviceId?: string;
+	groupId?: string;
 	cluster: DeviceClusterName.LEVEL_CONTROL;
 	action: {
 		level: number;
@@ -39,7 +42,8 @@ export type SceneDeviceActionLevelControl = {
 };
 
 export type SceneDeviceActionColorControl = {
-	deviceId: string;
+	deviceId?: string;
+	groupId?: string;
 	cluster: DeviceClusterName.COLOR_CONTROL;
 	action: {
 		hue: number;
@@ -48,11 +52,21 @@ export type SceneDeviceActionColorControl = {
 	};
 };
 
+export type SceneDeviceActionColorControlPalette = {
+	deviceId?: string;
+	groupId?: string;
+	cluster: DeviceClusterName.COLOR_CONTROL;
+	action: {
+		paletteId: string;
+	};
+};
+
 export type SceneDeviceAction =
 	| SceneDeviceActionOnOff
 	| SceneDeviceActionWindowCovering
 	| SceneDeviceActionLevelControl
-	| SceneDeviceActionColorControl;
+	| SceneDeviceActionColorControl
+	| SceneDeviceActionColorControlPalette;
 
 export interface Scene {
 	id: SceneId;

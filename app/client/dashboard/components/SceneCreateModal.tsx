@@ -1,3 +1,12 @@
+import type {
+	DashboardDeviceClusterOnOff,
+	DashboardDeviceClusterLevelControl,
+	DashboardDeviceClusterColorControl,
+	DashboardDeviceClusterWindowCovering,
+	DashboardDeviceClusterWithStateMap,
+	DeviceListWithValuesResponse,
+	DashboardDeviceClusterWithState,
+} from '../../../server/modules/device/routing';
 import {
 	Dialog,
 	DialogTitle,
@@ -21,18 +30,13 @@ import {
 	ToggleButtonGroup,
 	ToggleButton,
 } from '@mui/material';
-import type {
-	DashboardDeviceClusterOnOff,
-	DashboardDeviceClusterLevelControl,
-	DashboardDeviceClusterColorControl,
-	DashboardDeviceClusterWindowCovering,
-	DashboardDeviceClusterWithStateMap,
-	DeviceListWithValuesResponse,
-} from '../../../server/modules/device/routing';
 import { Delete as DeleteIcon, Add as AddIcon, Close as CloseIcon } from '@mui/icons-material';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import type { Scene, SceneDeviceAction } from '../../../../types/scene';
+import type { DeviceGroup } from '../../../../types/group';
+import type { Palette } from '../../../../types/palette';
 import * as Icons from '@mui/icons-material';
+import { apiGet } from '../../lib/fetch';
 import React, { useState } from 'react';
 
 interface SceneCreateModalProps {
@@ -43,7 +47,10 @@ interface SceneCreateModalProps {
 	existingScene?: Scene;
 }
 
-type DeviceActionEntry = SceneDeviceAction & { key: string };
+type DeviceActionEntry = SceneDeviceAction & {
+	key: string;
+	targetType?: 'device' | 'group';
+};
 
 // Popular MUI icons for scenes
 const SCENE_ICONS: Array<{ icon: keyof typeof Icons; label: string }> = [
@@ -67,6 +74,8 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 	const theme = useTheme();
 	const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
+	const [groups, setGroups] = useState<DeviceGroup[]>([]);
+	const [palettes, setPalettes] = useState<Palette[]>([]);
 	const [title, setTitle] = useState(props.existingScene?.title ?? '');
 	const [selectedIcon, setSelectedIcon] = useState<keyof typeof Icons>(
 		props.existingScene?.icon ?? 'Star'
@@ -74,9 +83,40 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 	const [actions, setActions] = useState<DeviceActionEntry[]>(
 		props.existingScene?.actions.map((action, index) => ({
 			...action,
-			key: `${action.deviceId}-${action.cluster}-${index}`,
+			key: `${action.deviceId || action.groupId}-${action.cluster}-${index}`,
+			targetType: action.groupId ? ('group' as const) : ('device' as const),
 		})) ?? []
 	);
+
+	// Load groups and palettes
+	React.useEffect(() => {
+		if (props.open) {
+			const loadGroups = async () => {
+				try {
+					const response = await apiGet('device', '/groups/list', {});
+					if (response.ok) {
+						const data = await response.json();
+						setGroups(data.groups);
+					}
+				} catch (error) {
+					console.error('Failed to load groups:', error);
+				}
+			};
+			const loadPalettes = async () => {
+				try {
+					const response = await apiGet('device', '/palettes/list', {});
+					if (response.ok) {
+						const data = await response.json();
+						setPalettes(data.palettes);
+					}
+				} catch (error) {
+					console.error('Failed to load palettes:', error);
+				}
+			};
+			void loadGroups();
+			void loadPalettes();
+		}
+	}, [props.open]);
 	const [enableTrigger, setEnableTrigger] = useState(!!props.existingScene?.trigger);
 	const [triggerType, setTriggerType] = useState<'occupancy' | 'button-press'>(
 		props.existingScene?.trigger?.type ?? 'occupancy'
@@ -141,8 +181,44 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 			cluster: DeviceClusterName.ON_OFF,
 			action: { isOn: true },
 			key: `new-${Date.now()}`,
+			targetType: 'device',
 		};
 		setActions([...actions, newAction]);
+	};
+
+	// Get common clusters for a group
+	const getGroupCommonClusters = (groupId: string): DeviceClusterName[] => {
+		const group = groups.find((g) => g.id === groupId);
+		if (!group) {
+			return [];
+		}
+
+		const deviceList = group.deviceIds
+			.map((id) => props.devices.find((d) => d.uniqueId === id))
+			.filter((d) => d !== undefined);
+
+		if (deviceList.length === 0) {
+			return [];
+		}
+
+		// Find clusters that all devices have
+		const clusterCounts = new Map<DeviceClusterName, number>();
+		for (const device of deviceList) {
+			for (const cluster of device.mergedAllClusters) {
+				clusterCounts.set(cluster.name, (clusterCounts.get(cluster.name) || 0) + 1);
+			}
+		}
+
+		return Array.from(clusterCounts.entries())
+			.filter(([, count]) => count === deviceList.length)
+			.map(([name]) => name)
+			.filter(
+				(name) =>
+					name === DeviceClusterName.ON_OFF ||
+					name === DeviceClusterName.WINDOW_COVERING ||
+					name === DeviceClusterName.COLOR_CONTROL ||
+					name === DeviceClusterName.LEVEL_CONTROL
+			);
 	};
 
 	const handleRemoveAction = (key: string) => {
@@ -193,7 +269,7 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 		if (actions.length === 0) {
 			return;
 		}
-		if (actions.some((action) => !action.deviceId)) {
+		if (actions.some((action) => !action.deviceId && !action.groupId)) {
 			return;
 		}
 
@@ -205,7 +281,7 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 				trigger = {
 					type: 'button-press',
 					deviceId: triggerDeviceId,
-					buttonIndex: triggerButtonIndex,
+					buttonIndex: triggerButtonIndex!,
 				};
 			}
 		}
@@ -214,7 +290,7 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 			title: title.trim(),
 			icon: selectedIcon,
 			// eslint-disable-next-line @typescript-eslint/no-unused-vars
-			actions: actions.map(({ key: _key, ...action }) => action),
+			actions: actions.map(({ key: _key, targetType: _targetType, ...action }) => action),
 			trigger,
 		};
 
@@ -304,13 +380,33 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 						</Typography>
 						<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
 							{actions.map((action, index) => {
+								const group = action.groupId
+									? groups.find((g) => g.id === action.groupId)
+									: undefined;
+								const devices: DeviceListWithValuesResponse[number][] = [];
+								if (group) {
+									devices.push(
+										...group.deviceIds
+											.map(getDeviceById)
+											.filter((d) => d !== undefined)
+									);
+								} else {
+									const device = getDeviceById(action.deviceId || '');
+									if (device) {
+										devices.push(device);
+									}
+								}
 								return (
 									<ActionConfig
 										action={action}
 										key={action.key}
 										index={index}
-										device={getDeviceById(action.deviceId)}
+										devices={devices}
+										group={group}
 										availableDevices={availableDevices}
+										availableGroups={groups}
+										availablePalettes={palettes}
+										getGroupCommonClusters={getGroupCommonClusters}
 										handleActionChange={handleActionChange}
 										handleRemoveAction={handleRemoveAction}
 									/>
@@ -450,7 +546,9 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 					variant="contained"
 					fullWidth={isMobile}
 					disabled={
-						!title.trim() || actions.length === 0 || actions.some((a) => !a.deviceId)
+						!title.trim() ||
+						actions.length === 0 ||
+						actions.some((a) => !a.deviceId && !a.groupId)
 					}
 				>
 					{props.existingScene ? 'Save' : 'Create'}
@@ -462,41 +560,109 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 
 interface ActionConfigProps {
 	action: DeviceActionEntry;
-	device: DeviceListWithValuesResponse[number] | undefined;
+	devices: DeviceListWithValuesResponse[number][];
+	group: DeviceGroup | undefined;
 	index: number;
 	availableDevices: DeviceListWithValuesResponse;
+	availableGroups: DeviceGroup[];
+	availablePalettes: Palette[];
+	getGroupCommonClusters: (groupId: string) => DeviceClusterName[];
 	handleActionChange: (key: string, updates: Partial<DeviceActionEntry>) => void;
 	handleRemoveAction: (key: string) => void;
 }
 
 const ActionConfig = (props: ActionConfigProps) => {
+	const targetType = props.action.targetType || 'device';
+	const [colorMode, setColorMode] = React.useState<'manual' | 'palette'>(
+		props.action.cluster === DeviceClusterName.COLOR_CONTROL &&
+			'paletteId' in props.action.action
+			? 'palette'
+			: 'manual'
+	);
+	const isGroup = targetType === 'group';
+
+	// Get available clusters based on whether it's a device or group
 	const availableClusters: DashboardDeviceClusterWithStateMap<
 		| DeviceClusterName.ON_OFF
 		| DeviceClusterName.WINDOW_COVERING
 		| DeviceClusterName.COLOR_CONTROL
 		| DeviceClusterName.LEVEL_CONTROL
 	> = {};
-	for (const cluster of props.device?.mergedAllClusters ?? []) {
-		if (cluster.name === DeviceClusterName.COLOR_CONTROL) {
-			// @ts-ignore
-			availableClusters[cluster.name] = cluster;
-			if (cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL]) {
-				// @ts-ignore
-				availableClusters[DeviceClusterName.LEVEL_CONTROL] =
-					cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL];
+
+	if (!isGroup) {
+		// For devices, get clusters from the device
+		for (const device of props.devices) {
+			for (const cluster of device.mergedAllClusters ?? []) {
+				if (cluster.name === DeviceClusterName.COLOR_CONTROL) {
+					// @ts-ignore
+					availableClusters[cluster.name] = cluster;
+					if (cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL]) {
+						// @ts-ignore
+						availableClusters[DeviceClusterName.LEVEL_CONTROL] =
+							cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL];
+					}
+					if (cluster.mergedClusters[DeviceClusterName.ON_OFF]) {
+						// @ts-ignore
+						availableClusters[DeviceClusterName.ON_OFF] =
+							cluster.mergedClusters[DeviceClusterName.ON_OFF];
+					}
+				} else if (
+					cluster.name === DeviceClusterName.ON_OFF ||
+					cluster.name === DeviceClusterName.WINDOW_COVERING ||
+					cluster.name === DeviceClusterName.LEVEL_CONTROL
+				) {
+					// @ts-ignore
+					availableClusters[cluster.name] = cluster;
+				}
 			}
-			if (cluster.mergedClusters[DeviceClusterName.ON_OFF]) {
-				// @ts-ignore
-				availableClusters[DeviceClusterName.ON_OFF] =
-					cluster.mergedClusters[DeviceClusterName.ON_OFF];
+		}
+	} else {
+		const clusterMap: Partial<
+			Record<
+				| DeviceClusterName.ON_OFF
+				| DeviceClusterName.WINDOW_COVERING
+				| DeviceClusterName.COLOR_CONTROL
+				| DeviceClusterName.LEVEL_CONTROL,
+				DashboardDeviceClusterWithState[]
+			>
+		> = {};
+		for (const device of props.devices) {
+			for (const cluster of device.mergedAllClusters ?? []) {
+				if (cluster.name === DeviceClusterName.COLOR_CONTROL) {
+					clusterMap[cluster.name] ??= [];
+					clusterMap[cluster.name]!.push(cluster);
+					if (cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL]) {
+						clusterMap[DeviceClusterName.LEVEL_CONTROL] ??= [];
+						clusterMap[DeviceClusterName.LEVEL_CONTROL].push(
+							cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL]
+						);
+					}
+					if (cluster.mergedClusters[DeviceClusterName.ON_OFF]) {
+						clusterMap[DeviceClusterName.ON_OFF] ??= [];
+						clusterMap[DeviceClusterName.ON_OFF].push(
+							cluster.mergedClusters[DeviceClusterName.ON_OFF]
+						);
+					}
+				} else if (
+					cluster.name === DeviceClusterName.ON_OFF ||
+					cluster.name === DeviceClusterName.WINDOW_COVERING ||
+					cluster.name === DeviceClusterName.LEVEL_CONTROL
+				) {
+					clusterMap[cluster.name] ??= [];
+					clusterMap[cluster.name]!.push(cluster);
+				}
 			}
-		} else if (
-			cluster.name === DeviceClusterName.ON_OFF ||
-			cluster.name === DeviceClusterName.WINDOW_COVERING ||
-			cluster.name === DeviceClusterName.LEVEL_CONTROL
-		) {
-			// @ts-ignore
-			availableClusters[cluster.name] = cluster;
+		}
+
+		for (const clusterName in clusterMap) {
+			if (
+				clusterMap[clusterName as keyof typeof clusterMap]!.length === props.devices.length
+			) {
+				availableClusters[clusterName as keyof typeof clusterMap] = clusterMap[
+					clusterName as keyof typeof clusterMap
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				]![0] as any;
+			}
 		}
 	}
 
@@ -520,22 +686,63 @@ const ActionConfig = (props: ActionConfigProps) => {
 						<Typography variant="body2" sx={{ minWidth: 60 }}>
 							#{props.index + 1}
 						</Typography>
-						<Autocomplete
-							options={props.availableDevices}
-							getOptionLabel={(option) => option.name}
-							value={props.device ?? null}
-							onChange={(_e, newValue) => {
-								if (newValue) {
+
+						{/* Toggle between Device and Group */}
+						<ToggleButtonGroup
+							value={targetType}
+							exclusive
+							onChange={(_e, newType) => {
+								if (newType) {
 									props.handleActionChange(props.action.key, {
-										deviceId: newValue.uniqueId,
+										targetType: newType,
+										deviceId: newType === 'device' ? '' : undefined,
+										groupId: newType === 'group' ? '' : undefined,
 									});
 								}
 							}}
-							renderInput={(params) => (
-								<TextField {...params} label="Device" size="small" />
-							)}
-							sx={{ flex: 1 }}
-						/>
+							size="small"
+						>
+							<ToggleButton value="device">Device</ToggleButton>
+							<ToggleButton value="group">Group</ToggleButton>
+						</ToggleButtonGroup>
+
+						{/* Device or Group Selector */}
+						{!isGroup ? (
+							<Autocomplete
+								options={props.availableDevices}
+								getOptionLabel={(option) => option.name}
+								value={props.devices[0] ?? null}
+								onChange={(_e, newValue) => {
+									if (newValue) {
+										props.handleActionChange(props.action.key, {
+											deviceId: newValue.uniqueId,
+										});
+									}
+								}}
+								renderInput={(params) => (
+									<TextField {...params} label="Device" size="small" />
+								)}
+								sx={{ flex: 1 }}
+							/>
+						) : (
+							<Autocomplete
+								options={props.availableGroups}
+								getOptionLabel={(option) => option.name}
+								value={props.group ?? null}
+								onChange={(_e, newValue) => {
+									if (newValue) {
+										props.handleActionChange(props.action.key, {
+											groupId: newValue.id,
+										});
+									}
+								}}
+								renderInput={(params) => (
+									<TextField {...params} label="Group" size="small" />
+								)}
+								sx={{ flex: 1 }}
+							/>
+						)}
+
 						<IconButton
 							size="small"
 							onClick={() => props.handleRemoveAction(props.action.key)}
@@ -545,10 +752,29 @@ const ActionConfig = (props: ActionConfigProps) => {
 						</IconButton>
 					</Box>
 
-					{props.device &&
-						availableClusters &&
-						Object.keys(availableClusters).length > 0 && (
-							<>
+					{/* Show cluster selection if device is selected or if group is selected */}
+					{((!isGroup &&
+						props.devices.length > 0 &&
+						Object.keys(availableClusters).length > 0) ||
+						(isGroup && props.group)) && (
+						<>
+							{isGroup && props.group ? (
+								<Autocomplete
+									options={props.getGroupCommonClusters(props.group.id)}
+									getOptionLabel={(option) => option}
+									value={props.action.cluster}
+									onChange={(_e, newValue) => {
+										if (newValue) {
+											props.handleActionChange(props.action.key, {
+												cluster: newValue as SceneDeviceAction['cluster'],
+											});
+										}
+									}}
+									renderInput={(params) => (
+										<TextField {...params} label="Action Type" size="small" />
+									)}
+								/>
+							) : (
 								<Autocomplete
 									options={
 										Object.values(availableClusters) as (
@@ -571,259 +797,309 @@ const ActionConfig = (props: ActionConfigProps) => {
 										<TextField {...params} label="Cluster" size="small" />
 									)}
 								/>
+							)}
 
-								{/* Action Configuration */}
-								{props.action.cluster === DeviceClusterName.ON_OFF && (
-									<FormControlLabel
-										control={
-											<Switch
-												checked={
-													(
-														props.action.action as {
-															isOn: boolean;
-														}
-													).isOn
+							{/* Action Configuration */}
+							{props.action.cluster === DeviceClusterName.ON_OFF && (
+								<FormControlLabel
+									control={
+										<Switch
+											checked={
+												(
+													props.action.action as {
+														isOn: boolean;
+													}
+												).isOn
+											}
+											onChange={(e) =>
+												props.handleActionChange(props.action.key, {
+													action: {
+														isOn: e.target.checked,
+													},
+												})
+											}
+										/>
+									}
+									label={props.action.action.isOn ? 'Turn On' : 'Turn Off'}
+								/>
+							)}
+
+							{props.action.cluster === DeviceClusterName.WINDOW_COVERING && (
+								<Box>
+									<Typography variant="body2" gutterBottom>
+										Position:{' '}
+										{
+											(
+												props.action.action as {
+													targetPositionLiftPercentage: number;
 												}
-												onChange={(e) =>
-													props.handleActionChange(props.action.key, {
-														action: {
-															isOn: e.target.checked,
-														},
-													})
-												}
-											/>
+											).targetPositionLiftPercentage
 										}
-										label={props.action.action.isOn ? 'Turn On' : 'Turn Off'}
+										%
+									</Typography>
+									<Slider
+										value={props.action.action.targetPositionLiftPercentage}
+										onChange={(_e, value) =>
+											props.handleActionChange(props.action.key, {
+												action: {
+													targetPositionLiftPercentage: value,
+												},
+											})
+										}
+										min={0}
+										max={100}
+										marks={[
+											{
+												value: 0,
+												label: '0%',
+											},
+											{
+												value: 50,
+												label: '50%',
+											},
+											{
+												value: 100,
+												label: '100%',
+											},
+										]}
 									/>
-								)}
+								</Box>
+							)}
 
-								{props.action.cluster === DeviceClusterName.WINDOW_COVERING && (
-									<Box>
-										<Typography variant="body2" gutterBottom>
-											Position:{' '}
+							{props.action.cluster === DeviceClusterName.LEVEL_CONTROL && (
+								<Box>
+									<Typography variant="body2" gutterBottom>
+										Level:{' '}
+										{
+											(
+												props.action.action as {
+													level: number;
+												}
+											).level
+										}
+										%
+									</Typography>
+									<Slider
+										value={props.action.action.level}
+										onChange={(_e, value) =>
+											props.handleActionChange(props.action.key, {
+												action: {
+													level: value,
+												},
+											})
+										}
+										min={0}
+										max={100}
+										marks={[
 											{
-												(
-													props.action.action as {
-														targetPositionLiftPercentage: number;
-													}
-												).targetPositionLiftPercentage
-											}
-											%
-										</Typography>
-										<Slider
-											value={props.action.action.targetPositionLiftPercentage}
-											onChange={(_e, value) =>
-												props.handleActionChange(props.action.key, {
-													action: {
-														targetPositionLiftPercentage: value,
-													},
-												})
-											}
-											min={0}
-											max={100}
-											marks={[
-												{
-													value: 0,
-													label: '0%',
-												},
-												{
-													value: 50,
-													label: '50%',
-												},
-												{
-													value: 100,
-													label: '100%',
-												},
-											]}
-										/>
-									</Box>
-								)}
-
-								{props.action.cluster === DeviceClusterName.LEVEL_CONTROL && (
-									<Box>
-										<Typography variant="body2" gutterBottom>
-											Level:{' '}
+												value: 0,
+												label: '0%',
+											},
 											{
-												(
-													props.action.action as {
-														level: number;
-													}
-												).level
-											}
-											%
-										</Typography>
-										<Slider
-											value={props.action.action.level}
-											onChange={(_e, value) =>
-												props.handleActionChange(props.action.key, {
-													action: {
-														level: value,
-													},
-												})
-											}
-											min={0}
-											max={100}
-											marks={[
-												{
-													value: 0,
-													label: '0%',
-												},
-												{
-													value: 50,
-													label: '50%',
-												},
-												{
-													value: 100,
-													label: '100%',
-												},
-											]}
-										/>
-									</Box>
-								)}
+												value: 50,
+												label: '50%',
+											},
+											{
+												value: 100,
+												label: '100%',
+											},
+										]}
+									/>
+								</Box>
+							)}
 
-								{((props.action.cluster === DeviceClusterName.COLOR_CONTROL &&
-									availableClusters[DeviceClusterName.COLOR_CONTROL]
-										?.mergedClusters?.[DeviceClusterName.ON_OFF]) ||
-									props.action.cluster === DeviceClusterName.ON_OFF) && (
-									<Box
-										sx={{
-											display: 'flex',
-											flexDirection: 'column',
-											gap: 2,
+							{((props.action.cluster === DeviceClusterName.COLOR_CONTROL &&
+								availableClusters[DeviceClusterName.COLOR_CONTROL]
+									?.mergedClusters?.[DeviceClusterName.ON_OFF]) ||
+								props.action.cluster === DeviceClusterName.ON_OFF) && (
+								<Box
+									sx={{
+										display: 'flex',
+										flexDirection: 'column',
+										gap: 2,
+									}}
+								>
+									<ToggleButtonGroup
+										value={
+											props.action.cluster === DeviceClusterName.ON_OFF
+												? props.action.action.isOn
+													? 'on'
+													: 'off'
+												: 'color'
+										}
+										exclusive
+										onChange={(_e, value) => {
+											if (value === 'off') {
+												props.handleActionChange(props.action.key, {
+													cluster: DeviceClusterName.ON_OFF,
+													action: {
+														isOn: false,
+													},
+												});
+											} else if (value === 'on') {
+												props.handleActionChange(props.action.key, {
+													cluster: DeviceClusterName.ON_OFF,
+													action: {
+														isOn: true,
+													},
+												});
+											} else if (value === 'color') {
+												props.handleActionChange(props.action.key, {
+													cluster: DeviceClusterName.COLOR_CONTROL,
+													action: {
+														hue: 0,
+														saturation: 100,
+														value: 100,
+													},
+												});
+											}
 										}}
+										fullWidth
 									>
+										<ToggleButton value="off">Off</ToggleButton>
+										<ToggleButton value="on">On</ToggleButton>
+										<ToggleButton value="color">Color</ToggleButton>
+									</ToggleButtonGroup>
+								</Box>
+							)}
+
+							{props.action.cluster === DeviceClusterName.COLOR_CONTROL && (
+								<Box
+									sx={{
+										display: 'flex',
+										flexDirection: 'column',
+										gap: 2,
+									}}
+								>
+									{/* Color Mode Selector (only for groups) */}
+									{isGroup && (
 										<ToggleButtonGroup
-											value={
-												props.action.cluster === DeviceClusterName.ON_OFF
-													? props.action.action.isOn
-														? 'on'
-														: 'off'
-													: 'color'
-											}
+											value={colorMode}
 											exclusive
 											onChange={(_e, value) => {
-												if (value === 'off') {
-													props.handleActionChange(props.action.key, {
-														cluster: DeviceClusterName.ON_OFF,
-														action: {
-															isOn: false,
-														},
-													});
-												} else if (value === 'on') {
-													props.handleActionChange(props.action.key, {
-														cluster: DeviceClusterName.ON_OFF,
-														action: {
-															isOn: true,
-														},
-													});
-												} else if (value === 'color') {
-													props.handleActionChange(props.action.key, {
-														cluster: DeviceClusterName.COLOR_CONTROL,
-														action: {
-															hue: 0,
-															saturation: 100,
-															value: 100,
-														},
-													});
+												if (value) {
+													setColorMode(value);
+													// Clear action data when switching modes
+													if (value === 'manual') {
+														props.handleActionChange(props.action.key, {
+															action: {
+																hue: 0,
+																saturation: 100,
+																value: 100,
+															},
+														});
+													} else {
+														props.handleActionChange(props.action.key, {
+															action: {
+																paletteId: '',
+															},
+														});
+													}
 												}
 											}}
 											fullWidth
 										>
-											<ToggleButton value="off">Off</ToggleButton>
-											<ToggleButton value="on">On</ToggleButton>
-											<ToggleButton value="color">Color</ToggleButton>
+											<ToggleButton value="manual">Manual Color</ToggleButton>
+											<ToggleButton value="palette">Palette</ToggleButton>
 										</ToggleButtonGroup>
-									</Box>
-								)}
+									)}
 
-								{props.action.cluster === DeviceClusterName.COLOR_CONTROL && (
-									<Box
-										sx={{
-											display: 'flex',
-											flexDirection: 'column',
-											gap: 2,
-										}}
-									>
+									{/* Color Preview (only for manual mode) */}
+									{colorMode === 'manual' && 'hue' in props.action.action && (
+										<Box
+											sx={{
+												width: '100%',
+												height: 60,
+												borderRadius: 2,
+												border: '1px solid',
+												borderColor: 'divider',
+												backgroundColor: `hsl(${props.action.action.hue ?? 0}, ${props.action.action.saturation ?? 100}%, ${(props.action.action.value ?? 100) / 2}%)`,
+											}}
+										/>
+									)}
+
+									{/* Palette Selector */}
+									{colorMode === 'palette' && (
 										<Box>
-											<Typography variant="body2" gutterBottom>
-												Hue: {props.action.action.hue}°
-											</Typography>
-											<Slider
-												value={props.action.action.hue}
-												onChange={(_e, value) =>
+											<Autocomplete
+												options={props.availablePalettes}
+												getOptionLabel={(option) => option.name}
+												value={(() => {
+													if ('paletteId' in props.action.action) {
+														const paletteId = (
+															props.action.action as {
+																paletteId: string;
+															}
+														).paletteId;
+														return (
+															props.availablePalettes.find(
+																(p) => p.id === paletteId
+															) ?? null
+														);
+													}
+													return null;
+												})()}
+												onChange={(_e, newValue) => {
 													props.handleActionChange(props.action.key, {
 														action: {
-															...(props.action.action as {
-																hue: number;
-																saturation: number;
-																value: number;
-															}),
-															hue: value,
+															paletteId: newValue?.id ?? '',
 														},
-													})
-												}
-												min={0}
-												max={360}
-												marks={[
-													{
-														value: 0,
-														label: '0°',
-													},
-													{
-														value: 180,
-														label: '180°',
-													},
-													{
-														value: 360,
-														label: '360°',
-													},
-												]}
+													});
+												}}
+												renderInput={(params) => (
+													<TextField
+														{...params}
+														label="Select Palette"
+														size="small"
+													/>
+												)}
+												renderOption={(props, option) => (
+													<li {...props}>
+														<Box
+															sx={{
+																display: 'flex',
+																alignItems: 'center',
+																gap: 1,
+																width: '100%',
+															}}
+														>
+															<Typography sx={{ flex: 1 }}>
+																{option.name}
+															</Typography>
+															<Box
+																sx={{
+																	display: 'flex',
+																	gap: 0.5,
+																}}
+															>
+																{option.colors.map((color, idx) => (
+																	<Box
+																		key={idx}
+																		sx={{
+																			width: 20,
+																			height: 20,
+																			backgroundColor: color,
+																			borderRadius: '50%',
+																			border: '1px solid rgba(0,0,0,0.2)',
+																		}}
+																	/>
+																))}
+															</Box>
+														</Box>
+													</li>
+												)}
 											/>
 										</Box>
-										<Box>
-											<Typography variant="body2" gutterBottom>
-												Saturation: {props.action.action.saturation}%
-											</Typography>
-											<Slider
-												value={props.action.action.saturation}
-												onChange={(_e, value) =>
-													props.handleActionChange(props.action.key, {
-														action: {
-															...(props.action.action as {
-																hue: number;
-																saturation: number;
-																value: number;
-															}),
-															saturation: value,
-														},
-													})
-												}
-												min={0}
-												max={100}
-												marks={[
-													{
-														value: 0,
-														label: '0%',
-													},
-													{
-														value: 50,
-														label: '50%',
-													},
-													{
-														value: 100,
-														label: '100%',
-													},
-												]}
-											/>
-										</Box>
-										{!availableClusters[DeviceClusterName.COLOR_CONTROL]
-											?.mergedClusters[DeviceClusterName.LEVEL_CONTROL] && (
+									)}
+
+									{colorMode === 'manual' && 'hue' in props.action.action && (
+										<>
 											<Box>
 												<Typography variant="body2" gutterBottom>
-													Brightness: {props.action.action.value}%
+													Hue: {props.action.action.hue}°
 												</Typography>
 												<Slider
-													value={props.action.action.value}
+													value={props.action.action.hue}
 													onChange={(_e, value) =>
 														props.handleActionChange(props.action.key, {
 															action: {
@@ -832,7 +1108,43 @@ const ActionConfig = (props: ActionConfigProps) => {
 																	saturation: number;
 																	value: number;
 																}),
-																value: value,
+																hue: value,
+															},
+														})
+													}
+													min={0}
+													max={360}
+													marks={[
+														{
+															value: 0,
+															label: '0°',
+														},
+														{
+															value: 180,
+															label: '180°',
+														},
+														{
+															value: 360,
+															label: '360°',
+														},
+													]}
+												/>
+											</Box>
+											<Box>
+												<Typography variant="body2" gutterBottom>
+													Saturation: {props.action.action.saturation}%
+												</Typography>
+												<Slider
+													value={props.action.action.saturation}
+													onChange={(_e, value) =>
+														props.handleActionChange(props.action.key, {
+															action: {
+																...(props.action.action as {
+																	hue: number;
+																	saturation: number;
+																	value: number;
+																}),
+																saturation: value,
 															},
 														})
 													}
@@ -854,11 +1166,58 @@ const ActionConfig = (props: ActionConfigProps) => {
 													]}
 												/>
 											</Box>
-										)}
-									</Box>
-								)}
-							</>
-						)}
+											{'value' in props.action.action &&
+												!availableClusters[DeviceClusterName.COLOR_CONTROL]
+													?.mergedClusters[
+													DeviceClusterName.LEVEL_CONTROL
+												] && (
+													<Box>
+														<Typography variant="body2" gutterBottom>
+															Brightness: {props.action.action.value}%
+														</Typography>
+														<Slider
+															value={props.action.action.value}
+															onChange={(_e, value) =>
+																props.handleActionChange(
+																	props.action.key,
+																	{
+																		action: {
+																			...(props.action
+																				.action as {
+																				hue: number;
+																				saturation: number;
+																				value: number;
+																			}),
+																			value: value,
+																		},
+																	}
+																)
+															}
+															min={0}
+															max={100}
+															marks={[
+																{
+																	value: 0,
+																	label: '0%',
+																},
+																{
+																	value: 50,
+																	label: '50%',
+																},
+																{
+																	value: 100,
+																	label: '100%',
+																},
+															]}
+														/>
+													</Box>
+												)}
+										</>
+									)}
+								</Box>
+							)}
+						</>
+					)}
 				</Box>
 			</CardContent>
 		</Card>

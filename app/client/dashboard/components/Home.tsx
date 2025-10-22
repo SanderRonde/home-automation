@@ -11,7 +11,7 @@ import {
 	IconButton,
 	Chip,
 } from '@mui/material';
-import type { DeviceClusterName } from '../../../server/modules/device/cluster';
+import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { DeviceClusterCard } from './DeviceClusterCard';
 import { ClusterIconButton } from './ClusterIconButton';
@@ -145,6 +145,32 @@ export const Home = (): JSX.Element => {
 	if (detailView && detailView.type === 'room') {
 		const room = roomDevices.find((r) => r.room === detailView.roomName);
 		if (room) {
+			// Check if we're viewing ColorControl clusters specially
+			if (detailView.clustersName === DeviceClusterName.COLOR_CONTROL) {
+				// Import and use ColorControlRoomDetail
+				const ColorControlRoomDetail = React.lazy(() =>
+					import('./ColorControlRoomDetail.js').then((m) => ({
+						default: m.ColorControlRoomDetail,
+					}))
+				);
+				return (
+					<React.Suspense fallback={<CircularProgress />}>
+						<ColorControlRoomDetail
+							room={room}
+							onExit={popDetailView}
+							devices={devices
+								.filter((d) => d.room === detailView.roomName)
+								.filter((d) =>
+									d.mergedAllClusters.some(
+										(c) => c.name === DeviceClusterName.COLOR_CONTROL
+									)
+								)}
+							invalidate={() => refresh(false)}
+						/>
+					</React.Suspense>
+				);
+			}
+
 			return (
 				<RoomDetail
 					room={room}

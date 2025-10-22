@@ -8,7 +8,9 @@ import {
 import type { Scene, SceneId, SceneTrigger } from '../../../../types/scene';
 import { assertUnreachable } from '../../lib/assert';
 import { logTag } from '../../lib/logging/logger';
+import type { PaletteAPI } from './palette-api';
 import type { Database } from '../../lib/db';
+import type { GroupAPI } from './group-api';
 import type { Data } from '../../lib/data';
 import { Color } from '../../lib/color';
 import type { Device } from './device';
@@ -19,7 +21,9 @@ export class SceneAPI {
 		private readonly _db: Database<DeviceDB>,
 		private readonly _devices: Data<{
 			[deviceId: string]: Device;
-		}>
+		}>,
+		private readonly _groupAPI: GroupAPI,
+		private readonly _paletteAPI: PaletteAPI
 	) {}
 
 	public listScenes(): Scene[] {
@@ -117,65 +121,149 @@ export class SceneAPI {
 		const success = (
 			await Promise.all(
 				scene.actions.map(async (sceneAction) => {
-					const device = this._devices.current()[sceneAction.deviceId];
-					if (!device) {
-						logTag('scene', 'red', 'Device not found:', sceneAction.deviceId);
+					// Resolve devices: either single device or group of devices
+					const devices: Device[] = [];
+
+					if (sceneAction.deviceId) {
+						const device = this._devices.current()[sceneAction.deviceId];
+						if (!device) {
+							logTag('scene', 'red', 'Device not found:', sceneAction.deviceId);
+							return false;
+						}
+						devices.push(device);
+					} else if (sceneAction.groupId) {
+						const group = this._groupAPI.getGroup(sceneAction.groupId);
+						if (!group) {
+							logTag('scene', 'red', 'Group not found:', sceneAction.groupId);
+							return false;
+						}
+						// Resolve group to devices that support the cluster
+						for (const deviceId of group.deviceIds) {
+							const device = this._devices.current()[deviceId];
+							if (device) {
+								devices.push(device);
+							}
+						}
+					} else {
+						logTag('scene', 'red', 'Action has neither deviceId nor groupId');
 						return false;
 					}
-					if (sceneAction.cluster === DeviceClusterName.ON_OFF) {
-						const onOffCluster = device.getClusterByType(DeviceOnOffCluster);
-						if (!onOffCluster) {
-							logTag('scene', 'red', 'OnOffCluster not found:', sceneAction.deviceId);
-							return false;
-						}
-						await onOffCluster.setOn(sceneAction.action.isOn);
-					} else if (sceneAction.cluster === DeviceClusterName.WINDOW_COVERING) {
-						const windowCoveringCluster = device.getClusterByType(
-							DeviceWindowCoveringCluster
-						);
-						if (!windowCoveringCluster) {
+
+					// Handle palette actions for groups
+					if (
+						sceneAction.cluster === DeviceClusterName.COLOR_CONTROL &&
+						'paletteId' in sceneAction.action &&
+						sceneAction.groupId
+					) {
+						const palette = this._paletteAPI.getPalette(sceneAction.action.paletteId);
+						if (!palette) {
 							logTag(
 								'scene',
 								'red',
-								'WindowCoveringCluster not found:',
-								sceneAction.deviceId
+								'Palette not found:',
+								sceneAction.action.paletteId
 							);
 							return false;
 						}
-						await windowCoveringCluster.goToLiftPercentage({
-							percentage: sceneAction.action.targetPositionLiftPercentage,
-						});
-					} else if (sceneAction.cluster === DeviceClusterName.COLOR_CONTROL) {
-						const colorControlCluster =
-							device.getClusterByType(DeviceColorControlCluster);
-						if (!colorControlCluster) {
-							logTag(
-								'scene',
-								'red',
-								'ColorControlCluster not found:',
-								sceneAction.deviceId
-							);
-							return false;
-						}
-						const color = Color.fromHSV(
-							sceneAction.action.hue / 360,
-							sceneAction.action.saturation / 100,
-							sceneAction.action.value / 100
-						);
-						await colorControlCluster.setColor({ color });
-					} else if (sceneAction.cluster === DeviceClusterName.LEVEL_CONTROL) {
-						const levelControlCluster =
-							device.getClusterByType(DeviceLevelControlCluster);
-						if (!levelControlCluster) {
-							return false;
-						}
-						await levelControlCluster.setLevel({
-							level: sceneAction.action.level / 100,
-						});
-					} else {
-						assertUnreachable(sceneAction);
+
+						// Import and use palette executor
+						const { applyPaletteToDevices } = await import('./palette-executor.js');
+						const success = await applyPaletteToDevices(devices, palette);
+						return success;
 					}
-					return true;
+
+					// Execute action on all devices
+					const deviceResults = await Promise.all(
+						devices.map(async (device) => {
+							if (sceneAction.cluster === DeviceClusterName.ON_OFF) {
+								const onOffCluster = device.getClusterByType(DeviceOnOffCluster);
+								if (!onOffCluster) {
+									logTag(
+										'scene',
+										'yellow',
+										'OnOffCluster not found:',
+										device.getUniqueId()
+									);
+									return false;
+								}
+								await onOffCluster.setOn(sceneAction.action.isOn);
+							} else if (sceneAction.cluster === DeviceClusterName.WINDOW_COVERING) {
+								const windowCoveringCluster = device.getClusterByType(
+									DeviceWindowCoveringCluster
+								);
+								if (!windowCoveringCluster) {
+									logTag(
+										'scene',
+										'yellow',
+										'WindowCoveringCluster not found:',
+										device.getUniqueId()
+									);
+									return false;
+								}
+								await windowCoveringCluster.goToLiftPercentage({
+									percentage: sceneAction.action.targetPositionLiftPercentage,
+								});
+							} else if (sceneAction.cluster === DeviceClusterName.COLOR_CONTROL) {
+								// Check if this is a palette action
+								if ('paletteId' in sceneAction.action) {
+									// Palette actions should only be used with groups
+									if (!sceneAction.groupId) {
+										logTag(
+											'scene',
+											'yellow',
+											'Palette action used without group'
+										);
+										return false;
+									}
+									// Skip individual device processing for palette actions
+									// They are handled at the group level below
+									return true;
+								}
+
+								// Handle manual HSV color
+								const colorControlCluster =
+									device.getClusterByType(DeviceColorControlCluster);
+								if (!colorControlCluster) {
+									logTag(
+										'scene',
+										'yellow',
+										'ColorControlCluster not found:',
+										device.getUniqueId()
+									);
+									return false;
+								}
+								const color = Color.fromHSV(
+									sceneAction.action.hue / 360,
+									sceneAction.action.saturation / 100,
+									sceneAction.action.value / 100
+								);
+								await colorControlCluster.setColor({ color });
+							} else if (sceneAction.cluster === DeviceClusterName.LEVEL_CONTROL) {
+								const levelControlCluster =
+									device.getClusterByType(DeviceLevelControlCluster);
+								if (!levelControlCluster) {
+									logTag(
+										'scene',
+										'yellow',
+										'LevelControlCluster not found:',
+										device.getUniqueId()
+									);
+									return false;
+								}
+								await levelControlCluster.setLevel({
+									level: sceneAction.action.level / 100,
+								});
+							} else {
+								assertUnreachable(sceneAction);
+							}
+							return true;
+						})
+					);
+
+					// For groups, we consider it successful if at least one device succeeded
+					return sceneAction.groupId
+						? deviceResults.some((r) => r)
+						: deviceResults.every((r) => r);
 				})
 			)
 		).every((success) => success);

@@ -7,7 +7,9 @@ import { HumidityTracker } from './humidity-tracker';
 import type * as Icons from '@mui/icons-material';
 import { SwitchTracker } from './switch-tracker';
 import type { Database } from '../../lib/db';
+import { PaletteAPI } from './palette-api';
 import { SceneAPI } from './scene-api';
+import { GroupAPI } from './group-api';
 import { Data } from '../../lib/data';
 import type { DeviceDB } from '.';
 import type { SQL } from 'bun';
@@ -18,13 +20,17 @@ export class DeviceAPI {
 	public readonly humidityTracker: HumidityTracker;
 	public readonly illuminanceTracker: IlluminanceTracker;
 	public readonly buttonPressTracker: SwitchTracker;
+	public readonly paletteAPI: PaletteAPI;
 	public readonly sceneAPI: SceneAPI;
+	public readonly groupAPI: GroupAPI;
 
 	public constructor(
 		private readonly _db: Database<DeviceDB>,
 		sqlDB: SQL
 	) {
-		this.sceneAPI = new SceneAPI(_db, this.devices);
+		this.groupAPI = new GroupAPI(_db);
+		this.paletteAPI = new PaletteAPI(_db);
+		this.sceneAPI = new SceneAPI(_db, this.devices, this.groupAPI, this.paletteAPI);
 		this.occupancyTracker = new OccupancyTracker(sqlDB, this.sceneAPI);
 		this.temperatureTracker = new TemperatureTracker(sqlDB);
 		this.humidityTracker = new HumidityTracker(sqlDB);

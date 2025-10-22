@@ -78,6 +78,7 @@ export class MockWindowCoveringCluster extends DeviceWindowCoveringCluster {
  */
 export class MockOccupancySensingCluster extends DeviceOccupancySensingCluster {
 	public occupancy = new Data<boolean>(false);
+	public onOccupied = new EventEmitter<{ occupied: boolean }>();
 	public onChange = new EventEmitter<void>();
 
 	private _disposed = false;

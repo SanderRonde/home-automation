@@ -17,6 +17,7 @@ import {
 } from './cluster';
 import type { BrandedRouteHandlerResponse, ServeOptions } from '../../lib/routes';
 import { createServeOptions, withRequestBody } from '../../lib/routes';
+import { applyPaletteToDevices } from './palette-executor';
 import type { Device, DeviceEndpoint } from './device';
 import type { AllModules, ModuleConfig } from '..';
 import type * as Icons from '@mui/icons-material';
@@ -437,17 +438,45 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 					actions: z.array(
 						z.union([
 							z.object({
-								deviceId: z.string(),
+								deviceId: z.string().optional(),
+								groupId: z.string().optional(),
 								cluster: z.literal(DeviceClusterName.ON_OFF),
 								action: z.object({
 									isOn: z.boolean(),
 								}),
 							}),
 							z.object({
-								deviceId: z.string(),
+								deviceId: z.string().optional(),
+								groupId: z.string().optional(),
 								cluster: z.literal(DeviceClusterName.WINDOW_COVERING),
 								action: z.object({
 									targetPositionLiftPercentage: z.number(),
+								}),
+							}),
+							z.object({
+								deviceId: z.string().optional(),
+								groupId: z.string().optional(),
+								cluster: z.literal(DeviceClusterName.COLOR_CONTROL),
+								action: z.object({
+									hue: z.number(),
+									saturation: z.number(),
+									value: z.number(),
+								}),
+							}),
+							z.object({
+								deviceId: z.string().optional(),
+								groupId: z.string().optional(),
+								cluster: z.literal(DeviceClusterName.COLOR_CONTROL),
+								action: z.object({
+									paletteId: z.string(),
+								}),
+							}),
+							z.object({
+								deviceId: z.string().optional(),
+								groupId: z.string().optional(),
+								cluster: z.literal(DeviceClusterName.LEVEL_CONTROL),
+								action: z.object({
+									level: z.number(),
 								}),
 							}),
 						])
@@ -461,7 +490,7 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 							z.object({
 								type: z.literal('button-press'),
 								deviceId: z.string(),
-								buttonIndex: z.number().optional(),
+								buttonIndex: z.number(),
 							}),
 						])
 						.optional(),
@@ -478,17 +507,45 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 					actions: z.array(
 						z.union([
 							z.object({
-								deviceId: z.string(),
+								deviceId: z.string().optional(),
+								groupId: z.string().optional(),
 								cluster: z.literal(DeviceClusterName.ON_OFF),
 								action: z.object({
 									isOn: z.boolean(),
 								}),
 							}),
 							z.object({
-								deviceId: z.string(),
+								deviceId: z.string().optional(),
+								groupId: z.string().optional(),
 								cluster: z.literal(DeviceClusterName.WINDOW_COVERING),
 								action: z.object({
 									targetPositionLiftPercentage: z.number(),
+								}),
+							}),
+							z.object({
+								deviceId: z.string().optional(),
+								groupId: z.string().optional(),
+								cluster: z.literal(DeviceClusterName.COLOR_CONTROL),
+								action: z.object({
+									hue: z.number(),
+									saturation: z.number(),
+									value: z.number(),
+								}),
+							}),
+							z.object({
+								deviceId: z.string().optional(),
+								groupId: z.string().optional(),
+								cluster: z.literal(DeviceClusterName.COLOR_CONTROL),
+								action: z.object({
+									paletteId: z.string(),
+								}),
+							}),
+							z.object({
+								deviceId: z.string().optional(),
+								groupId: z.string().optional(),
+								cluster: z.literal(DeviceClusterName.LEVEL_CONTROL),
+								action: z.object({
+									level: z.number(),
 								}),
 							}),
 						])
@@ -502,7 +559,7 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 							z.object({
 								type: z.literal('button-press'),
 								deviceId: z.string(),
-								buttonIndex: z.number().optional(),
+								buttonIndex: z.number(),
 							}),
 						])
 						.optional(),
@@ -529,6 +586,152 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 				}
 				return json({ success: true });
 			},
+			'/groups/list': (_req, _server, { json }) => {
+				const groups = api.groupAPI.listGroups();
+				return json({ groups });
+			},
+			'/groups/create': withRequestBody(
+				z.object({
+					name: z.string(),
+					deviceIds: z.array(z.string()),
+				}),
+				(body, _req, _server, { json }) => {
+					try {
+						const groupId = api.groupAPI.createGroup(body);
+						return json({ success: true, groupId });
+					} catch (error) {
+						return json(
+							{
+								error:
+									error instanceof Error
+										? error.message
+										: 'Failed to create group',
+							},
+							{ status: 400 }
+						);
+					}
+				}
+			),
+			'/groups/:groupId/update': withRequestBody(
+				z.object({
+					name: z.string(),
+					deviceIds: z.array(z.string()),
+				}),
+				(body, req, _server, { json }) => {
+					try {
+						const success = api.groupAPI.updateGroup(req.params.groupId, body);
+						if (!success) {
+							return json({ error: 'Group not found' }, { status: 404 });
+						}
+						return json({ success: true });
+					} catch (error) {
+						return json(
+							{
+								error:
+									error instanceof Error
+										? error.message
+										: 'Failed to update group',
+							},
+							{ status: 400 }
+						);
+					}
+				}
+			),
+			'/groups/:groupId/delete': (req, _server, { json }) => {
+				const success = api.groupAPI.deleteGroup(req.params.groupId);
+				if (!success) {
+					return json({ error: 'Group not found' }, { status: 404 });
+				}
+				return json({ success: true });
+			},
+			'/palettes/list': (_req, _server, { json }) => {
+				const palettes = api.paletteAPI.listPalettes();
+				return json({ palettes });
+			},
+			'/palettes/create': withRequestBody(
+				z.object({
+					name: z.string(),
+					colors: z.array(z.string()),
+				}),
+				(body, _req, _server, { json }) => {
+					try {
+						const paletteId = api.paletteAPI.createPalette(body);
+						return json({ success: true, paletteId });
+					} catch (error) {
+						return json(
+							{
+								error:
+									error instanceof Error
+										? error.message
+										: 'Failed to create palette',
+							},
+							{ status: 400 }
+						);
+					}
+				}
+			),
+			'/palettes/:paletteId/update': withRequestBody(
+				z.object({
+					name: z.string(),
+					colors: z.array(z.string()),
+				}),
+				(body, req, _server, { json }) => {
+					try {
+						const success = api.paletteAPI.updatePalette(req.params.paletteId, body);
+						if (!success) {
+							return json({ error: 'Palette not found' }, { status: 404 });
+						}
+						return json({ success: true });
+					} catch (error) {
+						return json(
+							{
+								error:
+									error instanceof Error
+										? error.message
+										: 'Failed to update palette',
+							},
+							{ status: 400 }
+						);
+					}
+				}
+			),
+			'/palettes/:paletteId/delete': (req, _server, { json }) => {
+				const success = api.paletteAPI.deletePalette(req.params.paletteId);
+				if (!success) {
+					return json({ error: 'Palette not found' }, { status: 404 });
+				}
+				return json({ success: true });
+			},
+			'/palettes/:paletteId/apply': withRequestBody(
+				z.object({
+					deviceIds: z.array(z.string()),
+				}),
+				async (body, req, _server, { json }) => {
+					const palette = api.paletteAPI.getPalette(req.params.paletteId);
+					if (!palette) {
+						return json({ error: 'Palette not found' }, { status: 404 });
+					}
+
+					// Get devices
+					const devices = body.deviceIds
+						.map((id) => api.devices.current()[id])
+						.filter((d) => d !== undefined);
+
+					if (devices.length === 0) {
+						return json({ error: 'No devices found' }, { status: 404 });
+					}
+
+					const success = await applyPaletteToDevices(devices, palette);
+					if (!success) {
+						return json(
+							{ error: 'Failed to apply palette to all devices' },
+							{ status: 500 }
+						);
+					}
+
+					return json({ success: true });
+				}
+			),
 		},
 		true,
 		{
@@ -962,12 +1165,12 @@ async function performActionForDeviceCluster<
 	if (devices.some((d) => !d)) {
 		return res.error({ error: 'Device not found' }, 404);
 	}
-	const clusters = devices.map((d) => d.getClusterByType(clusterType));
+	const clusters = devices.flatMap((d) => d.getAllClustersByType(clusterType));
 	if (clusters.some((c) => !c)) {
 		return res.error({ error: 'Cluster not found' }, 404);
 	}
 	const success = await Promise.race([
-		Promise.all((clusters as InstanceType<C>[]).map((c) => callback(c))).then(() => true),
+		Promise.all(clusters.map((c) => callback(c))).then(() => true),
 		wait(10000).then(() => false),
 	]);
 	if (!success) {

@@ -8,7 +8,6 @@ import type { PairedNode } from '@project-chip/matter.js/device';
 import type { Endpoint } from '@project-chip/matter.js/device';
 import { EventEmitter } from '../../../lib/event-emitter';
 import { type MatterClusterInterface } from './cluster';
-import { logDev } from '../../../lib/logging/log-dev';
 import { EndpointNumber } from '@matter/types';
 import type { MatterCluster } from './cluster';
 
@@ -147,7 +146,9 @@ export class MatterDevice extends MatterEndpoint implements Device {
 			try {
 				// Attempt to get vendor ID synchronously from cached attributes
 				// This is a best-effort approach for Hue deep linking
-				const vendorId = (basicInfo.attributes as any).vendorId?._value;
+				const vendorId = (
+					basicInfo.attributes as unknown as { vendorId: { _value: number } }
+				).vendorId?._value;
 				if (vendorId === 0x100b || vendorId === 4107) {
 					// Generate Philips Hue app deep link
 					// Format: philips-hue://local/{bridgeId}

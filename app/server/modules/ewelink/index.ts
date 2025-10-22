@@ -61,7 +61,7 @@ export const EWeLink = new (class EWeLink extends ModuleMeta {
 					logTag(
 						'ewelink',
 						'yellow',
-						`Failed to connect to ewelink ${e.message}, try re-authenticating`
+						`Failed to connect to ewelink ${e instanceof Error ? e.message : 'Unknown error'}, try re-authenticating`
 					);
 				}
 			}

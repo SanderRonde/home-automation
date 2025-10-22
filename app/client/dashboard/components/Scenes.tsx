@@ -13,6 +13,8 @@ import {
 	Delete as DeleteIcon,
 	PlayArrow as PlayArrowIcon,
 } from '@mui/icons-material';
+import type { DeviceGroup } from '../../../../types/group';
+import type { Palette } from '../../../../types/palette';
 import { SceneCreateModal } from './SceneCreateModal';
 import type { Scene } from '../../../../types/scene';
 import React, { useState, useEffect } from 'react';
@@ -24,6 +26,8 @@ import { useDevices } from './Devices';
 export const Scenes = (): JSX.Element => {
 	const { devices, loading: devicesLoading } = useDevices();
 	const [scenes, setScenes] = useState<Scene[]>([]);
+	const [groups, setGroups] = useState<DeviceGroup[]>([]);
+	const [palettes, setPalettes] = useState<Palette[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [modalOpen, setModalOpen] = useState(false);
 	const [editingScene, setEditingScene] = useState<Scene | undefined>(undefined);
@@ -45,6 +49,30 @@ export const Scenes = (): JSX.Element => {
 
 	useEffect(() => {
 		void loadScenes();
+		const loadGroups = async () => {
+			try {
+				const response = await apiGet('device', '/groups/list', {});
+				if (response.ok) {
+					const data = await response.json();
+					setGroups(data.groups);
+				}
+			} catch (error) {
+				console.error('Failed to load groups:', error);
+			}
+		};
+		const loadPalettes = async () => {
+			try {
+				const response = await apiGet('device', '/palettes/list', {});
+				if (response.ok) {
+					const data = await response.json();
+					setPalettes(data.palettes);
+				}
+			} catch (error) {
+				console.error('Failed to load palettes:', error);
+			}
+		};
+		void loadGroups();
+		void loadPalettes();
 	}, []);
 
 	const handleCreateScene = () => {
@@ -118,6 +146,10 @@ export const Scenes = (): JSX.Element => {
 
 	const getDeviceById = (deviceId: string) => {
 		return devices.find((d) => d.uniqueId === deviceId);
+	};
+
+	const getGroupById = (groupId: string) => {
+		return groups.find((g) => g.id === groupId);
 	};
 
 	if (loading || devicesLoading) {
@@ -246,8 +278,124 @@ export const Scenes = (): JSX.Element => {
 														}}
 													>
 														{scene.actions.map((action, index) => {
+															// Handle group actions
+															if (action.groupId) {
+																const group = getGroupById(
+																	action.groupId
+																);
+																if (!group) {
+																	return null;
+																}
+
+																let cluster = null;
+																for (const device of devices) {
+																	cluster =
+																		device.flatAllClusters.find(
+																			(c) =>
+																				c.name ===
+																				action.cluster
+																		);
+																	if (cluster) {
+																		break;
+																	}
+																}
+
+																// Check if this is a palette action
+																const isPaletteAction =
+																	'paletteId' in action.action;
+																const palette = isPaletteAction
+																	? palettes.find(
+																			(p) =>
+																				p.id ===
+																				(
+																					action.action as {
+																						paletteId: string;
+																					}
+																				).paletteId
+																		)
+																	: null;
+
+																return (
+																	<Box
+																		key={`${action.groupId}-${action.cluster}-${index}`}
+																		sx={{
+																			display: 'flex',
+																			gap: 0.5,
+																			alignItems: 'center',
+																		}}
+																	>
+																		<Chip
+																			icon={
+																				getClusterIcon(
+																					cluster?.icon
+																				) ?? undefined
+																			}
+																			label={
+																				<div
+																					style={{
+																						display:
+																							'flex',
+																						alignItems:
+																							'center',
+																						gap: 4,
+																					}}
+																				>
+																					{group.name}
+																					{palette && (
+																						<Box
+																							sx={{
+																								display:
+																									'flex',
+																								gap: 0.25,
+																								alignItems:
+																									'center',
+																							}}
+																						>
+																							{palette.colors.map(
+																								(
+																									color,
+																									idx
+																								) => (
+																									<Box
+																										key={
+																											idx
+																										}
+																										sx={{
+																											width: 12,
+																											height: 12,
+																											backgroundColor:
+																												color,
+																											borderRadius:
+																												'50%',
+																											border: '1px solid black',
+																										}}
+																									/>
+																								)
+																							)}
+																						</Box>
+																					)}
+																				</div>
+																			}
+																			size="small"
+																			sx={{
+																				backgroundColor:
+																					'primary.light',
+																				'& .MuiChip-label':
+																					{
+																						color: 'rgba(0, 0, 0, 0.87)',
+																					},
+																				'& .MuiChip-icon': {
+																					color: 'rgba(0, 0, 0, 0.6)',
+																				},
+																			}}
+																		/>
+																	</Box>
+																);
+															}
+
+															// Handle device actions
 															const device = getDeviceById(
-																action.deviceId
+																action.deviceId || ''
 															);
 															if (!device) {
 																return null;

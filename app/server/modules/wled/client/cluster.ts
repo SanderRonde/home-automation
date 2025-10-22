@@ -6,6 +6,7 @@ import {
 import type { Cluster, DeviceClusterName } from '../../device/cluster';
 import type { WLEDClient, WLEDClientState } from 'wled-client';
 import { EventEmitter } from '../../../lib/event-emitter';
+import { logDev } from '../../../lib/logging/log-dev';
 import { Data, MappedData } from '../../../lib/data';
 import type { Mapper } from '../../../lib/data';
 import { Color } from '../../../lib/color';
@@ -85,6 +86,7 @@ export class WLEDOnOffCluster extends ConfigurableCluster(DeviceOnOffCluster) {
 	public isOn = new WLEDMapper(this, (state) => state?.on ?? false);
 
 	public setOn = async (on: boolean): Promise<void> => {
+		logDev('setting on to', on);
 		if (on) {
 			await this.client.turnOn();
 		} else {
@@ -93,6 +95,7 @@ export class WLEDOnOffCluster extends ConfigurableCluster(DeviceOnOffCluster) {
 	};
 
 	public toggle = async (): Promise<void> => {
+		logDev('toggling');
 		await this.client.toggle();
 	};
 }
@@ -100,7 +103,8 @@ export class WLEDOnOffCluster extends ConfigurableCluster(DeviceOnOffCluster) {
 export class WLEDLevelControlCluster extends ConfigurableCluster(DeviceLevelControlCluster) {
 	public currentLevel = new WLEDMapper(this, (state) => (state?.brightness ?? 0) / 255);
 
-	public setLevel = (level: number): Promise<void> => {
+	public setLevel = ({ level }: { level: number }): Promise<void> => {
+		logDev('setting level to', level);
 		return this.client.setBrightness(Math.round(level * 255));
 	};
 
@@ -123,7 +127,8 @@ export class WLEDColorControlCluster extends ConfigurableCluster(DeviceColorCont
 		return new Color(color[0], color[1], color[2]);
 	});
 
-	public setColor = (color: Color): Promise<void> => {
+	public setColor = ({ color }: { color: Color }): Promise<void> => {
+		logDev('setting color to', color);
 		return this.client.setColor([color.r, color.g, color.b]);
 	};
 }

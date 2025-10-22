@@ -299,6 +299,22 @@ void new WebServer({
 	logTelegramBotCommands: hasArg('log-telegram-bot-commands'),
 }).init();
 
+let shuttingDown = false;
 process.on('SIGINT', () => {
-	console.log('interrupt!');
+	if (shuttingDown) {
+		return;
+	}
+	shuttingDown = true;
+	let countdown = 3;
+	const interval = setInterval(() => {
+		// eslint-disable-next-line no-console
+		console.log(`Shutting down in ${countdown}...`);
+		countdown--;
+		if (countdown < 0) {
+			clearInterval(interval);
+			// Wait for Matter to finish
+			// eslint-disable-next-line n/no-process-exit
+			process.exit(0);
+		}
+	}, 1000);
 });

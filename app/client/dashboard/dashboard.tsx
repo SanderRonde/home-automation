@@ -6,9 +6,11 @@ import { NotFoundPage } from './components/NotFoundPage';
 import { WelcomePage } from './components/WelcomePage';
 import { MCPConfig } from './components/MCPConfig';
 import React, { useState, useEffect } from 'react';
+import { Palettes } from './components/Palettes';
 import { Devices } from './components/Devices';
 import { createRoot } from 'react-dom/client';
 import { Scenes } from './components/Scenes';
+import { Groups } from './components/Groups';
 import { Home } from './components/Home';
 
 function DashboardApp() {
@@ -46,6 +48,10 @@ function DashboardApp() {
 				return <Home />;
 			case SidebarTab.SCENES:
 				return <Scenes />;
+			case SidebarTab.GROUPS:
+				return <Groups />;
+			case SidebarTab.PALETTES:
+				return <Palettes />;
 			case SidebarTab.SETTINGS:
 				return <WelcomePage />;
 			case SidebarTab.DEVICES:

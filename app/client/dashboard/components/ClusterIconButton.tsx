@@ -142,6 +142,45 @@ const OnOffIconButton = (props: ClusterIconButtonProps) => {
 	);
 };
 
+const ColorControlIconButton = (props: ClusterIconButtonProps) => {
+	const devices = props.devices.filter((device) =>
+		device.mergedAllClusters.some(
+			(c) =>
+				c.name === DeviceClusterName.ON_OFF ||
+				(c.name === DeviceClusterName.COLOR_CONTROL &&
+					c.mergedClusters[DeviceClusterName.ON_OFF])
+		)
+	);
+
+	const anyEnabled = devices
+		.flatMap((d) => d.mergedAllClusters)
+		.some(
+			(d) =>
+				(d.name === DeviceClusterName.ON_OFF && d.isOn) ||
+				(d.name === DeviceClusterName.COLOR_CONTROL &&
+					d.mergedClusters[DeviceClusterName.ON_OFF]?.isOn)
+		);
+
+	let icon = null;
+	for (const device of devices) {
+		for (const cluster of device.mergedAllClusters) {
+			if (cluster.name === DeviceClusterName.COLOR_CONTROL) {
+				icon = getClusterIcon(cluster.icon);
+				break;
+			}
+		}
+	}
+
+	return (
+		<ClusterIconButtonSkeleton
+			{...props}
+			enabled={anyEnabled}
+			clusterIcon={icon}
+			onPress={props.onLongPress}
+		/>
+	);
+};
+
 export interface ClusterIconButtonProps {
 	clusterName: DeviceClusterName;
 	devices: DeviceListWithValuesResponse;
@@ -153,11 +192,16 @@ export const ClusterIconButton = (props: ClusterIconButtonProps): JSX.Element | 
 	if (props.clusterName === DeviceClusterName.WINDOW_COVERING) {
 		return <WindowCoveringIconButton {...props} />;
 	}
-	if (
-		props.clusterName === DeviceClusterName.ON_OFF ||
-		props.clusterName === DeviceClusterName.COLOR_CONTROL
-	) {
+	if (props.clusterName === DeviceClusterName.ON_OFF) {
 		return <OnOffIconButton {...props} />;
+	}
+	if (props.clusterName === DeviceClusterName.COLOR_CONTROL) {
+		return (
+			<>
+				<ColorControlIconButton {...props} />
+				<OnOffIconButton {...props} />
+			</>
+		);
 	}
 	return null;
 };
