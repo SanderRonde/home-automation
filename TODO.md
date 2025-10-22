@@ -25,4 +25,4 @@
     - [x] Color control
 - [ ] 3D house overview
 - [x] Actions cluster
-- [ ] Tuya support
+- [x] Tuya support
