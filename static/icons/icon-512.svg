@@ -2,11 +2,18 @@
 <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
 	<defs>
 		<linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-			<stop offset="0%" style="stop-color:#1976d2;stop-opacity:1" />
-			<stop offset="100%" style="stop-color:#42a5f5;stop-opacity:1" />
+			<stop offset="0%" style="stop-color:#4A90E2;stop-opacity:1" />
+			<stop offset="100%" style="stop-color:#357ABD;stop-opacity:1" />
 		</linearGradient>
 	</defs>
-	<rect width="512" height="512" rx="76.8" fill="url(#grad)"/>
-	<path d="M 128 179.2 L 256 102.4 L 384 179.2 L 384 332.8 L 256 409.6 L 128 332.8 Z" fill="white"/>
-	<circle cx="256" cy="256" r="51.2" fill="#1976d2"/>
+	<!-- House roof -->
+	<path d="M 256 64 L 64 224 L 96 224 L 96 448 L 416 448 L 416 224 L 448 224 Z" fill="url(#grad)" stroke="#2C5F8D" stroke-width="16"/>
+	<!-- Door -->
+	<rect x="208" y="320" width="96" height="128" fill="#2C5F8D" rx="8"/>
+	<!-- Window left -->
+	<rect x="128" y="256" width="64" height="64" fill="#FFE082" rx="8"/>
+	<!-- Window right -->
+	<rect x="320" y="256" width="64" height="64" fill="#FFE082" rx="8"/>
+	<!-- Door knob -->
+	<circle cx="280" cy="384" r="8" fill="#FFE082"/>
 </svg>

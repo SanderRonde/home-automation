@@ -6,19 +6,29 @@ import * as path from 'path';
 const ROOT = path.join(__dirname, '../');
 const ICONS_FOLDER = path.join(ROOT, 'static/icons');
 
-// Simple SVG icon generator
+// House icon generator matching favicon.svg design
 function generateIconSVG(size: number): string {
+	const scale = size / 64; // Base design is 64x64
+	const strokeWidth = 2 * scale;
+
 	return `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
 	<defs>
 		<linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-			<stop offset="0%" style="stop-color:#1976d2;stop-opacity:1" />
-			<stop offset="100%" style="stop-color:#42a5f5;stop-opacity:1" />
+			<stop offset="0%" style="stop-color:#4A90E2;stop-opacity:1" />
+			<stop offset="100%" style="stop-color:#357ABD;stop-opacity:1" />
 		</linearGradient>
 	</defs>
-	<rect width="${size}" height="${size}" rx="${size * 0.15}" fill="url(#grad)"/>
-	<path d="M ${size * 0.25} ${size * 0.35} L ${size * 0.5} ${size * 0.2} L ${size * 0.75} ${size * 0.35} L ${size * 0.75} ${size * 0.65} L ${size * 0.5} ${size * 0.8} L ${size * 0.25} ${size * 0.65} Z" fill="white"/>
-	<circle cx="${size * 0.5}" cy="${size * 0.5}" r="${size * 0.1}" fill="#1976d2"/>
+	<!-- House roof -->
+	<path d="M ${32 * scale} ${8 * scale} L ${8 * scale} ${28 * scale} L ${12 * scale} ${28 * scale} L ${12 * scale} ${56 * scale} L ${52 * scale} ${56 * scale} L ${52 * scale} ${28 * scale} L ${56 * scale} ${28 * scale} Z" fill="url(#grad)" stroke="#2C5F8D" stroke-width="${strokeWidth}"/>
+	<!-- Door -->
+	<rect x="${26 * scale}" y="${40 * scale}" width="${12 * scale}" height="${16 * scale}" fill="#2C5F8D" rx="${1 * scale}"/>
+	<!-- Window left -->
+	<rect x="${16 * scale}" y="${32 * scale}" width="${8 * scale}" height="${8 * scale}" fill="#FFE082" rx="${1 * scale}"/>
+	<!-- Window right -->
+	<rect x="${40 * scale}" y="${32 * scale}" width="${8 * scale}" height="${8 * scale}" fill="#FFE082" rx="${1 * scale}"/>
+	<!-- Door knob -->
+	<circle cx="${35 * scale}" cy="${48 * scale}" r="${1 * scale}" fill="#FFE082"/>
 </svg>`;
 }
 
