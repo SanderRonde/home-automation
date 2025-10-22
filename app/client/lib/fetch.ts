@@ -6,6 +6,7 @@ import type { EwelinkRoutes } from '../../server/modules/ewelink/routing';
 import type { HexLedRoutes } from '../../server/modules/hex-led/routing';
 import type { DeviceRoutes } from '../../server/modules/device/routing';
 import type { WledRoutes } from '../../server/modules/wled/routing';
+import type { TuyaRoutes } from '../../server/modules/tuya/routing';
 import type { AuthRoutes } from '../../server/modules/auth/routing';
 import type { MCPRoutes } from '../../server/modules/mcp/routing';
 import type { BotRoutes } from '../../server/modules/bot/routing';
@@ -133,6 +134,7 @@ type RoutesForModules = {
 	'hex-led': HexLedRoutes;
 	mcp: MCPRoutes;
 	temperature: TemperatureRoutes;
+	tuya: TuyaRoutes;
 	webhook: WebhookRoutes;
 	wled: WledRoutes;
 };

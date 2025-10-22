@@ -14,6 +14,8 @@ import {
 	DeviceColorControlCluster,
 	DeviceLevelControlCluster,
 	DeviceActionsCluster,
+	DeviceThermostatCluster,
+	ThermostatMode,
 } from './cluster';
 import type { BrandedRouteHandlerResponse, ServeOptions } from '../../lib/routes';
 import { createServeOptions, withRequestBody } from '../../lib/routes';
@@ -134,6 +136,16 @@ export type DashboardDeviceClusterSensorGroup = DashboardDeviceClusterBase & {
 	};
 };
 
+export type DashboardDeviceClusterThermostat = DashboardDeviceClusterBase & {
+	name: DeviceClusterName.THERMOSTAT;
+	currentTemperature: number;
+	targetTemperature: number;
+	mode: ThermostatMode;
+	isHeating: boolean;
+	minTemperature: number;
+	maxTemperature: number;
+};
+
 export type DashboardDeviceClusterWithState = DashboardDeviceClusterBase &
 	(
 		| DashboardDeviceClusterOnOff
@@ -148,6 +160,7 @@ export type DashboardDeviceClusterWithState = DashboardDeviceClusterBase &
 		| DashboardDeviceClusterLevelControl
 		| DashboardDeviceClusterColorControl
 		| DashboardDeviceClusterActions
+		| DashboardDeviceClusterThermostat
 		| DashboardDeviceClusterSensorGroup
 	);
 
@@ -424,6 +437,28 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 						DeviceActionsCluster,
 						async (cluster) => {
 							await cluster.executeAction({ actionId: body.actionId });
+						}
+					)
+			),
+			[validateClusterRoute('/cluster/Thermostat')]: withRequestBody(
+				z.object({
+					deviceIds: z.array(z.string()),
+					targetTemperature: z.number().optional(),
+					mode: z.nativeEnum(ThermostatMode).optional(),
+				}),
+				async (body, _req, _server, res) =>
+					performActionForDeviceCluster(
+						api,
+						res,
+						body.deviceIds,
+						DeviceThermostatCluster,
+						async (cluster) => {
+							if (body.targetTemperature !== undefined) {
+								await cluster.setTargetTemperature(body.targetTemperature);
+							}
+							if (body.mode !== undefined) {
+								await cluster.setMode(body.mode);
+							}
 						}
 					)
 			),
@@ -903,6 +938,21 @@ const getClusterState = async (
 			activeActionId: activeAction?.id,
 		};
 	}
+	if (
+		cluster instanceof DeviceThermostatCluster &&
+		clusterName === DeviceClusterName.THERMOSTAT
+	) {
+		return {
+			name: clusterName,
+			icon: getClusterIconName(clusterName),
+			currentTemperature: await cluster.currentTemperature.get(),
+			targetTemperature: await cluster.targetTemperature.get(),
+			mode: await cluster.mode.get(),
+			isHeating: await cluster.isHeating.get(),
+			minTemperature: await cluster.minTemperature.get(),
+			maxTemperature: await cluster.maxTemperature.get(),
+		};
+	}
 	return {
 		name: clusterName,
 		icon: getClusterIconName(clusterName),
@@ -1145,6 +1195,8 @@ function getClusterIconName(clusterName: DeviceClusterName): keyof typeof Icons 
 			return 'LightMode';
 		case DeviceClusterName.COLOR_CONTROL:
 			return 'Palette';
+		case DeviceClusterName.THERMOSTAT:
+			return 'DeviceThermostat';
 		default:
 			return undefined;
 	}

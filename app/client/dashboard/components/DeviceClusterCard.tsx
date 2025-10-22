@@ -11,21 +11,23 @@ import type {
 	DashboardDeviceClusterColorControl,
 	DashboardDeviceClusterActions,
 	DashboardDeviceClusterSensorGroup,
+	DashboardDeviceClusterThermostat,
 	DeviceListWithValuesResponse,
 } from '../../../server/modules/device/routing';
-import { DeviceClusterName } from '../../../server/modules/device/cluster';
+import { DeviceClusterName, ThermostatMode } from '../../../server/modules/device/cluster';
 import { Card, CardActionArea, Box, Typography } from '@mui/material';
-import type { EnumValue } from '../../../server/lib/enum';
+import { fadeInUpStaggered } from '../../lib/animations';
 import { getClusterIcon } from './clusterIcons';
 import type { HomeDetailView } from './Home';
 import { apiPost } from '../../lib/fetch';
 import React from 'react';
 
-interface DeviceClusterCardBaseProps<C extends DashboardDeviceClusterWithState> {
+export interface DeviceClusterCardBaseProps<C extends DashboardDeviceClusterWithState> {
 	device: DeviceListWithValuesResponse[number];
 	cluster: C;
 	invalidate: () => void;
 	pushDetailView: (detailView: HomeDetailView) => void;
+	animationIndex: number;
 }
 
 interface DeviceClusterCardProps
@@ -36,10 +38,11 @@ interface DeviceClusterCardProps
 	onPointerDown?: (e: React.PointerEvent) => void;
 	onPointerMove?: (e: React.PointerEvent) => void;
 	onPointerUp?: (e: React.PointerEvent) => void;
+	children?: React.ReactNode;
 }
 
 const DeviceClusterCardSkeleton = (props: DeviceClusterCardProps) => {
-	const cardContent = (
+	const cardContent = props.children ?? (
 		<Box
 			sx={{
 				display: 'flex',
@@ -79,6 +82,7 @@ const DeviceClusterCardSkeleton = (props: DeviceClusterCardProps) => {
 		<Card
 			ref={props.cardRef}
 			sx={{
+				...fadeInUpStaggered(props.animationIndex),
 				borderRadius: 2,
 				overflow: 'hidden',
 				background: props.cardBackground,
@@ -232,87 +236,80 @@ const OccupancySensingCard = (
 	};
 
 	return (
-		<Card
-			sx={{
-				borderRadius: 2,
-				overflow: 'hidden',
-				background: props.cluster.occupied ? '#1a472a' : '#2f2f2f',
+		<DeviceClusterCardSkeleton
+			{...props}
+			cardBackground={props.cluster.occupied ? '#1a472a' : '#2f2f2f'}
+			onPress={() => {
+				props.pushDetailView({
+					type: 'device',
+					device: props.device,
+					cluster: props.cluster,
+				});
 			}}
 		>
-			<CardActionArea
-				sx={{ p: 2 }}
-				onClick={() => {
-					props.pushDetailView({
-						type: 'device',
-						device: props.device,
-						cluster: props.cluster,
-					});
+			<Box
+				sx={{
+					display: 'flex',
+					alignItems: 'center',
+					gap: 2,
 				}}
 			>
 				<Box
 					sx={{
 						display: 'flex',
 						alignItems: 'center',
-						gap: 2,
+						justifyContent: 'center',
+						background: props.cluster.occupied
+							? 'rgba(76, 175, 80, 0.2)'
+							: 'rgba(0, 0, 0, 0.08)',
+						borderRadius: '50%',
+						width: 48,
+						height: 48,
+						fontSize: '1.5rem',
+						color: props.cluster.occupied ? '#4caf50' : 'text.secondary',
 					}}
 				>
-					<Box
+					{getClusterIcon(props.cluster.icon)}
+				</Box>
+				<Box sx={{ flexGrow: 1 }}>
+					<Typography
+						variant="body1"
 						sx={{
-							display: 'flex',
-							alignItems: 'center',
-							justifyContent: 'center',
-							background: props.cluster.occupied
-								? 'rgba(76, 175, 80, 0.2)'
-								: 'rgba(0, 0, 0, 0.08)',
-							borderRadius: '50%',
-							width: 48,
-							height: 48,
-							fontSize: '1.5rem',
-							color: props.cluster.occupied ? '#4caf50' : 'text.secondary',
+							fontWeight: 500,
 						}}
 					>
-						{getClusterIcon(props.cluster.icon)}
-					</Box>
-					<Box sx={{ flexGrow: 1 }}>
-						<Typography
-							variant="body1"
-							sx={{
-								fontWeight: 500,
-							}}
-						>
-							{props.device.name}
-						</Typography>
-						<Typography
-							variant="caption"
-							sx={{
-								color: 'text.secondary',
-							}}
-						>
-							Last triggered: {getTimeSince(props.cluster.lastTriggered)}
-						</Typography>
-					</Box>
-					{props.cluster.occupied && (
-						<Box
-							sx={{
-								width: 12,
-								height: 12,
-								borderRadius: '50%',
-								backgroundColor: '#4caf50',
-								animation: 'pulse 2s infinite',
-								'@keyframes pulse': {
-									'0%, 100%': {
-										opacity: 1,
-									},
-									'50%': {
-										opacity: 0.5,
-									},
-								},
-							}}
-						/>
-					)}
+						{props.device.name}
+					</Typography>
+					<Typography
+						variant="caption"
+						sx={{
+							color: 'text.secondary',
+						}}
+					>
+						Last triggered: {getTimeSince(props.cluster.lastTriggered)}
+					</Typography>
 				</Box>
-			</CardActionArea>
-		</Card>
+				{props.cluster.occupied && (
+					<Box
+						sx={{
+							width: 12,
+							height: 12,
+							borderRadius: '50%',
+							backgroundColor: '#4caf50',
+							animation: 'pulse 2s infinite',
+							'@keyframes pulse': {
+								'0%, 100%': {
+									opacity: 1,
+								},
+								'50%': {
+									opacity: 0.5,
+								},
+							},
+						}}
+					/>
+				)}
+			</Box>
+		</DeviceClusterCardSkeleton>
 	);
 };
 
@@ -337,68 +334,61 @@ const TemperatureMeasurementCard = (
 	};
 
 	return (
-		<Card
-			sx={{
-				borderRadius: 2,
-				overflow: 'hidden',
-				background: getTemperatureColor(props.cluster.temperature),
+		<DeviceClusterCardSkeleton
+			{...props}
+			cardBackground={getTemperatureColor(props.cluster.temperature)}
+			onPress={() => {
+				props.pushDetailView({
+					type: 'device',
+					device: props.device,
+					cluster: props.cluster,
+				});
 			}}
 		>
-			<CardActionArea
-				sx={{ p: 2 }}
-				onClick={() => {
-					props.pushDetailView({
-						type: 'device',
-						device: props.device,
-						cluster: props.cluster,
-					});
+			<Box
+				sx={{
+					display: 'flex',
+					alignItems: 'center',
+					gap: 2,
 				}}
 			>
 				<Box
 					sx={{
 						display: 'flex',
 						alignItems: 'center',
-						gap: 2,
+						justifyContent: 'center',
+						background: 'rgba(255, 255, 255, 0.2)',
+						borderRadius: '50%',
+						width: 48,
+						height: 48,
+						fontSize: '1.5rem',
+						color: 'white',
 					}}
 				>
-					<Box
+					{getClusterIcon(props.cluster.icon)}
+				</Box>
+				<Box sx={{ flexGrow: 1 }}>
+					<Typography
+						variant="body1"
 						sx={{
-							display: 'flex',
-							alignItems: 'center',
-							justifyContent: 'center',
-							background: 'rgba(255, 255, 255, 0.2)',
-							borderRadius: '50%',
-							width: 48,
-							height: 48,
-							fontSize: '1.5rem',
+							fontWeight: 500,
 							color: 'white',
 						}}
 					>
-						{getClusterIcon(props.cluster.icon)}
-					</Box>
-					<Box sx={{ flexGrow: 1 }}>
-						<Typography
-							variant="body1"
-							sx={{
-								fontWeight: 500,
-								color: 'white',
-							}}
-						>
-							{props.device.name}
-						</Typography>
-						<Typography
-							variant="h6"
-							sx={{
-								color: 'white',
-								fontWeight: 'bold',
-							}}
-						>
-							{props.cluster.temperature.toFixed(1)}°C
-						</Typography>
-					</Box>
+						{props.device.name}
+					</Typography>
+					<Typography
+						variant="h6"
+						sx={{
+							color: 'white',
+							fontWeight: 'bold',
+						}}
+					>
+						{props.cluster.temperature.toFixed(1)}°C
+					</Typography>
 				</Box>
-			</CardActionArea>
-		</Card>
+			</Box>
+		</DeviceClusterCardSkeleton>
 	);
 };
 
@@ -418,68 +408,61 @@ const RelativeHumidityMeasurementCard = (
 	};
 
 	return (
-		<Card
-			sx={{
-				borderRadius: 2,
-				overflow: 'hidden',
-				background: getHumidityColor(props.cluster.humidity),
+		<DeviceClusterCardSkeleton
+			{...props}
+			cardBackground={getHumidityColor(props.cluster.humidity)}
+			onPress={() => {
+				props.pushDetailView({
+					type: 'device',
+					device: props.device,
+					cluster: props.cluster,
+				});
 			}}
 		>
-			<CardActionArea
-				sx={{ p: 2 }}
-				onClick={() => {
-					props.pushDetailView({
-						type: 'device',
-						device: props.device,
-						cluster: props.cluster,
-					});
+			<Box
+				sx={{
+					display: 'flex',
+					alignItems: 'center',
+					gap: 2,
 				}}
 			>
 				<Box
 					sx={{
 						display: 'flex',
 						alignItems: 'center',
-						gap: 2,
+						justifyContent: 'center',
+						background: 'rgba(255, 255, 255, 0.2)',
+						borderRadius: '50%',
+						width: 48,
+						height: 48,
+						fontSize: '1.5rem',
+						color: 'white',
 					}}
 				>
-					<Box
+					{getClusterIcon(props.cluster.icon)}
+				</Box>
+				<Box sx={{ flexGrow: 1 }}>
+					<Typography
+						variant="body1"
 						sx={{
-							display: 'flex',
-							alignItems: 'center',
-							justifyContent: 'center',
-							background: 'rgba(255, 255, 255, 0.2)',
-							borderRadius: '50%',
-							width: 48,
-							height: 48,
-							fontSize: '1.5rem',
+							fontWeight: 500,
 							color: 'white',
 						}}
 					>
-						{getClusterIcon(props.cluster.icon)}
-					</Box>
-					<Box sx={{ flexGrow: 1 }}>
-						<Typography
-							variant="body1"
-							sx={{
-								fontWeight: 500,
-								color: 'white',
-							}}
-						>
-							{props.device.name}
-						</Typography>
-						<Typography
-							variant="h6"
-							sx={{
-								color: 'white',
-								fontWeight: 'bold',
-							}}
-						>
-							{(props.cluster.humidity * 100).toFixed(0)}%
-						</Typography>
-					</Box>
+						{props.device.name}
+					</Typography>
+					<Typography
+						variant="h6"
+						sx={{
+							color: 'white',
+							fontWeight: 'bold',
+						}}
+					>
+						{(props.cluster.humidity * 100).toFixed(0)}%
+					</Typography>
 				</Box>
-			</CardActionArea>
-		</Card>
+			</Box>
+		</DeviceClusterCardSkeleton>
 	);
 };
 
@@ -508,71 +491,64 @@ const IlluminanceMeasurementCard = (
 	};
 
 	return (
-		<Card
-			sx={{
-				borderRadius: 2,
-				overflow: 'hidden',
-				background: getIlluminanceColor(props.cluster.illuminance),
+		<DeviceClusterCardSkeleton
+			{...props}
+			cardBackground={getIlluminanceColor(props.cluster.illuminance)}
+			onPress={() => {
+				props.pushDetailView({
+					type: 'device',
+					device: props.device,
+					cluster: props.cluster,
+				});
 			}}
 		>
-			<CardActionArea
-				sx={{ p: 2 }}
-				onClick={() => {
-					props.pushDetailView({
-						type: 'device',
-						device: props.device,
-						cluster: props.cluster,
-					});
+			<Box
+				sx={{
+					display: 'flex',
+					alignItems: 'center',
+					gap: 2,
 				}}
 			>
 				<Box
 					sx={{
 						display: 'flex',
 						alignItems: 'center',
-						gap: 2,
+						justifyContent: 'center',
+						background:
+							props.cluster.illuminance < 200
+								? 'rgba(255, 255, 255, 0.2)'
+								: 'rgba(0, 0, 0, 0.2)',
+						borderRadius: '50%',
+						width: 48,
+						height: 48,
+						fontSize: '1.5rem',
+						color: getTextColor(props.cluster.illuminance),
 					}}
 				>
-					<Box
+					{getClusterIcon(props.cluster.icon)}
+				</Box>
+				<Box sx={{ flexGrow: 1 }}>
+					<Typography
+						variant="body1"
 						sx={{
-							display: 'flex',
-							alignItems: 'center',
-							justifyContent: 'center',
-							background:
-								props.cluster.illuminance < 200
-									? 'rgba(255, 255, 255, 0.2)'
-									: 'rgba(0, 0, 0, 0.2)',
-							borderRadius: '50%',
-							width: 48,
-							height: 48,
-							fontSize: '1.5rem',
+							fontWeight: 500,
 							color: getTextColor(props.cluster.illuminance),
 						}}
 					>
-						{getClusterIcon(props.cluster.icon)}
-					</Box>
-					<Box sx={{ flexGrow: 1 }}>
-						<Typography
-							variant="body1"
-							sx={{
-								fontWeight: 500,
-								color: getTextColor(props.cluster.illuminance),
-							}}
-						>
-							{props.device.name}
-						</Typography>
-						<Typography
-							variant="h6"
-							sx={{
-								color: getTextColor(props.cluster.illuminance),
-								fontWeight: 'bold',
-							}}
-						>
-							{props.cluster.illuminance.toFixed(0)} lux
-						</Typography>
-					</Box>
+						{props.device.name}
+					</Typography>
+					<Typography
+						variant="h6"
+						sx={{
+							color: getTextColor(props.cluster.illuminance),
+							fontWeight: 'bold',
+						}}
+					>
+						{props.cluster.illuminance.toFixed(0)} lux
+					</Typography>
 				</Box>
-			</CardActionArea>
-		</Card>
+			</Box>
+		</DeviceClusterCardSkeleton>
 	);
 };
 
@@ -609,99 +585,92 @@ const SensorGroupCard = (
 	const backgroundColor = occupancy?.occupied ? '#1a472a' : '#2f2f2f';
 
 	return (
-		<Card
-			sx={{
-				borderRadius: 2,
-				overflow: 'hidden',
-				background: backgroundColor,
+		<DeviceClusterCardSkeleton
+			{...props}
+			cardBackground={backgroundColor}
+			onPress={() => {
+				props.pushDetailView({
+					type: 'device',
+					device: props.device,
+					cluster: props.cluster,
+				});
 			}}
 		>
-			<CardActionArea
-				sx={{ p: 2 }}
-				onClick={() => {
-					props.pushDetailView({
-						type: 'device',
-						device: props.device,
-						cluster: props.cluster,
-					});
+			<Box
+				sx={{
+					display: 'flex',
+					alignItems: 'center',
+					gap: 2,
 				}}
 			>
 				<Box
 					sx={{
 						display: 'flex',
 						alignItems: 'center',
-						gap: 2,
+						justifyContent: 'center',
+						background: occupancy?.occupied
+							? 'rgba(76, 175, 80, 0.2)'
+							: 'rgba(0, 0, 0, 0.08)',
+						borderRadius: '50%',
+						width: 48,
+						height: 48,
+						fontSize: '1.5rem',
+						color: occupancy?.occupied ? '#4caf50' : 'text.secondary',
 					}}
 				>
-					<Box
+					{getClusterIcon(props.cluster.icon)}
+				</Box>
+				<Box sx={{ flexGrow: 1 }}>
+					<Typography
+						variant="body1"
 						sx={{
-							display: 'flex',
-							alignItems: 'center',
-							justifyContent: 'center',
-							background: occupancy?.occupied
-								? 'rgba(76, 175, 80, 0.2)'
-								: 'rgba(0, 0, 0, 0.08)',
-							borderRadius: '50%',
-							width: 48,
-							height: 48,
-							fontSize: '1.5rem',
-							color: occupancy?.occupied ? '#4caf50' : 'text.secondary',
+							fontWeight: 500,
 						}}
 					>
-						{getClusterIcon(props.cluster.icon)}
-					</Box>
-					<Box sx={{ flexGrow: 1 }}>
+						{props.device.name}
+					</Typography>
+					{temperature && (
 						<Typography
-							variant="body1"
+							variant="body2"
 							sx={{
-								fontWeight: 500,
+								color: 'text.secondary',
 							}}
 						>
-							{props.device.name}
+							{temperature.temperature.toFixed(1)}°C
 						</Typography>
-						{temperature && (
-							<Typography
-								variant="body2"
-								sx={{
-									color: 'text.secondary',
-								}}
-							>
-								{temperature.temperature.toFixed(1)}°C
-							</Typography>
-						)}
-						{occupancy && (
-							<Typography
-								variant="caption"
-								sx={{
-									color: 'text.secondary',
-								}}
-							>
-								Last: {getTimeSince(occupancy.lastTriggered)}
-							</Typography>
-						)}
-					</Box>
-					{occupancy?.occupied && (
-						<Box
+					)}
+					{occupancy && (
+						<Typography
+							variant="caption"
 							sx={{
-								width: 12,
-								height: 12,
-								borderRadius: '50%',
-								backgroundColor: '#4caf50',
-								animation: 'pulse 2s infinite',
-								'@keyframes pulse': {
-									'0%, 100%': {
-										opacity: 1,
-									},
-									'50%': {
-										opacity: 0.5,
-									},
-								},
+								color: 'text.secondary',
 							}}
-						/>
+						>
+							Last: {getTimeSince(occupancy.lastTriggered)}
+						</Typography>
 					)}
 				</Box>
-			</CardActionArea>
-		</Card>
+				{occupancy?.occupied && (
+					<Box
+						sx={{
+							width: 12,
+							height: 12,
+							borderRadius: '50%',
+							backgroundColor: '#4caf50',
+							animation: 'pulse 2s infinite',
+							'@keyframes pulse': {
+								'0%, 100%': {
+									opacity: 1,
+								},
+								'50%': {
+									opacity: 0.5,
+								},
+							},
+						}}
+					/>
+				)}
+			</Box>
+		</DeviceClusterCardSkeleton>
 	);
 };
 
@@ -720,49 +689,41 @@ const SwitchCard = (
 	props: DeviceClusterCardBaseProps<DashboardDeviceClusterSwitch>
 ): JSX.Element => {
 	return (
-		<Card
-			sx={{
-				borderRadius: 2,
-				overflow: 'hidden',
-				background: '#374151',
-			}}
-		>
-			<CardActionArea sx={{ p: 2 }}>
+		<DeviceClusterCardSkeleton {...props} cardBackground="#374151">
+			<Box
+				sx={{
+					display: 'flex',
+					alignItems: 'center',
+					gap: 2,
+				}}
+			>
 				<Box
 					sx={{
 						display: 'flex',
 						alignItems: 'center',
-						gap: 2,
+						justifyContent: 'center',
+						background: 'rgba(255, 255, 255, 0.1)',
+						borderRadius: '50%',
+						width: 48,
+						height: 48,
+						fontSize: '1.5rem',
+						color: 'white',
 					}}
 				>
-					<Box
-						sx={{
-							display: 'flex',
-							alignItems: 'center',
-							justifyContent: 'center',
-							background: 'rgba(255, 255, 255, 0.1)',
-							borderRadius: '50%',
-							width: 48,
-							height: 48,
-							fontSize: '1.5rem',
-							color: 'white',
-						}}
-					>
-						{getClusterIcon(props.cluster.icon)}
-					</Box>
-					<Typography
-						variant="body1"
-						sx={{
-							fontWeight: 500,
-							color: 'white',
-							flexGrow: 1,
-						}}
-					>
-						{props.device.name}
-					</Typography>
+					{getClusterIcon(props.cluster.icon)}
 				</Box>
-			</CardActionArea>
-		</Card>
+				<Typography
+					variant="body1"
+					sx={{
+						fontWeight: 500,
+						color: 'white',
+						flexGrow: 1,
+					}}
+				>
+					{props.device.name}
+				</Typography>
+			</Box>
+		</DeviceClusterCardSkeleton>
 	);
 };
 
@@ -829,59 +790,172 @@ const ColorControlCard = (
 	const color = hsvToRgb(props.cluster.color.hue, props.cluster.color.saturation, brightness);
 
 	return (
-		<Card
-			sx={{
-				borderRadius: 2,
-				overflow: 'hidden',
-				background: color,
+		<DeviceClusterCardSkeleton
+			{...props}
+			cardBackground={color}
+			onPress={() => {
+				props.pushDetailView({
+					type: 'device',
+					device: props.device,
+					cluster: props.cluster,
+				});
 			}}
 		>
-			<CardActionArea
-				sx={{ p: 2 }}
-				onClick={() => {
-					props.pushDetailView({
-						type: 'device',
-						device: props.device,
-						cluster: props.cluster,
-					});
+			<Box
+				sx={{
+					display: 'flex',
+					alignItems: 'center',
+					gap: 2,
 				}}
 			>
 				<Box
 					sx={{
 						display: 'flex',
 						alignItems: 'center',
-						gap: 2,
+						justifyContent: 'center',
+						background: 'rgba(0, 0, 0, 0.3)',
+						borderRadius: '50%',
+						width: 48,
+						height: 48,
+						fontSize: '1.5rem',
+						color: 'white',
 					}}
 				>
-					<Box
-						sx={{
-							display: 'flex',
-							alignItems: 'center',
-							justifyContent: 'center',
-							background: 'rgba(0, 0, 0, 0.3)',
-							borderRadius: '50%',
-							width: 48,
-							height: 48,
-							fontSize: '1.5rem',
-							color: 'white',
-						}}
-					>
-						{getClusterIcon(props.cluster.icon)}
-					</Box>
+					{getClusterIcon(props.cluster.icon)}
+				</Box>
+				<Typography
+					variant="body1"
+					sx={{
+						fontWeight: 500,
+						color: 'white',
+						textShadow: '0 0 4px rgba(0,0,0,0.5)',
+						flexGrow: 1,
+					}}
+				>
+					{props.device.name}
+				</Typography>
+			</Box>
+		</DeviceClusterCardSkeleton>
+	);
+};
+
+const ThermostatCard = (
+	props: DeviceClusterCardBaseProps<DashboardDeviceClusterThermostat>
+): JSX.Element => {
+	const getModeColor = (mode: ThermostatMode): string => {
+		switch (mode) {
+			case ThermostatMode.HEAT:
+				return '#f97316';
+			case ThermostatMode.COOL:
+				return '#3b82f6';
+			case ThermostatMode.AUTO:
+				return '#10b981';
+			case ThermostatMode.OFF:
+			default:
+				return '#6b7280';
+		}
+	};
+
+	const getModeLabel = (mode: ThermostatMode): string => {
+		switch (mode) {
+			case ThermostatMode.HEAT:
+				return 'Heating';
+			case ThermostatMode.COOL:
+				return 'Cooling';
+			case ThermostatMode.AUTO:
+				return 'Auto';
+			case ThermostatMode.OFF:
+			default:
+				return 'Off';
+		}
+	};
+
+	const backgroundColor = props.cluster.isHeating ? '#2d1b0e' : '#2f2f2f';
+	const accentColor = getModeColor(props.cluster.mode);
+
+	return (
+		<DeviceClusterCardSkeleton
+			{...props}
+			cardBackground={backgroundColor}
+			onPress={() => {
+				props.pushDetailView({
+					type: 'device',
+					device: props.device,
+					cluster: props.cluster,
+				});
+			}}
+		>
+			<Box
+				sx={{
+					display: 'flex',
+					alignItems: 'center',
+					gap: 2,
+				}}
+			>
+				<Box
+					sx={{
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						background: props.cluster.isHeating
+							? 'rgba(249, 115, 22, 0.2)'
+							: 'rgba(0, 0, 0, 0.08)',
+						borderRadius: '50%',
+						width: 48,
+						height: 48,
+						fontSize: '1.5rem',
+						color: accentColor,
+					}}
+				>
+					{getClusterIcon(props.cluster.icon)}
+				</Box>
+				<Box sx={{ flexGrow: 1 }}>
 					<Typography
 						variant="body1"
 						sx={{
 							fontWeight: 500,
-							color: 'white',
-							textShadow: '0 0 4px rgba(0,0,0,0.5)',
-							flexGrow: 1,
 						}}
 					>
 						{props.device.name}
 					</Typography>
+					<Typography
+						variant="caption"
+						sx={{
+							color: 'text.secondary',
+						}}
+					>
+						{getModeLabel(props.cluster.mode)}
+						{props.cluster.isHeating && ' • Active'}
+					</Typography>
 				</Box>
-			</CardActionArea>
-		</Card>
+				<Box
+					sx={{
+						display: 'flex',
+						flexDirection: 'column',
+						alignItems: 'flex-end',
+						gap: 0.5,
+					}}
+				>
+					<Typography
+						variant="h6"
+						sx={{
+							fontWeight: 'bold',
+							color: accentColor,
+						}}
+					>
+						{props.cluster.targetTemperature.toFixed(1)}°C
+					</Typography>
+					<Typography
+						variant="caption"
+						sx={{
+							color: 'text.secondary',
+						}}
+					>
+						{props.cluster.currentTemperature.toFixed(1)}°C
+					</Typography>
+				</Box>
+			</Box>
+		</DeviceClusterCardSkeleton>
 	);
 };
 
@@ -893,85 +967,63 @@ const ActionsCard = (
 	);
 
 	return (
-		<Card
-			sx={{
-				borderRadius: 2,
-				overflow: 'hidden',
-				background: '#374151',
+		<DeviceClusterCardSkeleton
+			{...props}
+			cardBackground="#374151"
+			onPress={() => {
+				props.pushDetailView({
+					type: 'device',
+					device: props.device,
+					cluster: props.cluster,
+				});
 			}}
 		>
-			<CardActionArea
-				sx={{ p: 2 }}
-				onClick={() => {
-					props.pushDetailView({
-						type: 'device',
-						device: props.device,
-						cluster: props.cluster,
-					});
+			<Box
+				sx={{
+					display: 'flex',
+					alignItems: 'center',
+					gap: 2,
 				}}
 			>
 				<Box
 					sx={{
 						display: 'flex',
 						alignItems: 'center',
-						gap: 2,
+						justifyContent: 'center',
+						background: 'rgba(255, 255, 255, 0.1)',
+						borderRadius: '50%',
+						width: 48,
+						height: 48,
+						fontSize: '1.5rem',
+						color: 'white',
 					}}
 				>
-					<Box
+					{getClusterIcon(props.cluster.icon)}
+				</Box>
+				<Box sx={{ flexGrow: 1 }}>
+					<Typography
+						variant="body1"
 						sx={{
-							display: 'flex',
-							alignItems: 'center',
-							justifyContent: 'center',
-							background: 'rgba(255, 255, 255, 0.1)',
-							borderRadius: '50%',
-							width: 48,
-							height: 48,
-							fontSize: '1.5rem',
+							fontWeight: 500,
 							color: 'white',
 						}}
 					>
-						{getClusterIcon(props.cluster.icon)}
-					</Box>
-					<Box sx={{ flexGrow: 1 }}>
+						{props.device.name}
+					</Typography>
+					{activeAction && (
 						<Typography
-							variant="body1"
+							variant="caption"
 							sx={{
-								fontWeight: 500,
-								color: 'white',
+								color: 'rgba(255, 255, 255, 0.7)',
 							}}
 						>
-							{props.device.name}
+							Active: {activeAction.name}
 						</Typography>
-						{activeAction && (
-							<Typography
-								variant="caption"
-								sx={{
-									color: 'rgba(255, 255, 255, 0.7)',
-								}}
-							>
-								Active: {activeAction.name}
-							</Typography>
-						)}
-					</Box>
+					)}
 				</Box>
-			</CardActionArea>
-		</Card>
+			</Box>
+		</DeviceClusterCardSkeleton>
 	);
-};
-
-export const DEVICE_CLUSTER_CARDS: Record<
-	EnumValue,
-	React.ComponentType<DeviceClusterCardBaseProps<DashboardDeviceClusterWithState>>
-> = {
-	[DeviceClusterName.WINDOW_COVERING]: WindowCoveringCard,
-	[DeviceClusterName.ON_OFF]: OnOffCard,
-	[DeviceClusterName.OCCUPANCY_SENSING]: OccupancySensingCard,
-	[DeviceClusterName.TEMPERATURE_MEASUREMENT]: TemperatureMeasurementCard,
-	[DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT]: RelativeHumidityMeasurementCard,
-	[DeviceClusterName.ILLUMINANCE_MEASUREMENT]: IlluminanceMeasurementCard,
-	[DeviceClusterName.BOOLEAN_STATE]: BooleanStateCard,
-	[DeviceClusterName.SWITCH]: SwitchCard,
-	[DeviceClusterName.COLOR_CONTROL]: ColorControlCard,
 };
 
 export const DeviceClusterCard = (
@@ -1010,6 +1062,9 @@ export const DeviceClusterCard = (
 	}
 	if (props.cluster.name === DeviceClusterName.ACTIONS) {
 		return <ActionsCard {...props} cluster={props.cluster} />;
+	}
+	if (props.cluster.name === DeviceClusterName.THERMOSTAT) {
+		return <ThermostatCard {...props} cluster={props.cluster} />;
 	}
 	return null;
 };

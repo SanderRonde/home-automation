@@ -4,6 +4,7 @@ import { AppLayout } from './components/layout/AppLayout';
 import { SidebarTab } from './components/layout/Sidebar';
 import { NotFoundPage } from './components/NotFoundPage';
 import { WelcomePage } from './components/WelcomePage';
+import { TuyaConfig } from './components/TuyaConfig';
 import { MCPConfig } from './components/MCPConfig';
 import React, { useState, useEffect } from 'react';
 import { Palettes } from './components/Palettes';
@@ -58,6 +59,8 @@ function DashboardApp() {
 				return <Devices />;
 			case SidebarTab.EWELINK:
 				return <EweLinkConfig />;
+			case SidebarTab.TUYA:
+				return <TuyaConfig />;
 			case SidebarTab.LED_SOURCES:
 				return <LEDSourcesConfig />;
 			case SidebarTab.MCP:

@@ -40,6 +40,7 @@ export enum DeviceClusterName {
 	ILLUMINANCE_MEASUREMENT = 'IlluminanceMeasurement',
 	COLOR_CONTROL = 'ColorControl',
 	ACTIONS = 'Actions',
+	THERMOSTAT = 'Thermostat',
 }
 
 export abstract class DeviceOnOffCluster extends Cluster {
@@ -238,4 +239,47 @@ export abstract class DeviceActionsCluster extends Cluster {
 
 	public abstract actionList: Data<ActionStruct[]>;
 	public abstract executeAction(args: { actionId: number }): Promise<void>;
+}
+
+export enum ThermostatMode {
+	OFF = 'off',
+	HEAT = 'heat',
+	COOL = 'cool',
+	AUTO = 'auto',
+}
+
+export abstract class DeviceThermostatCluster extends Cluster {
+	public static clusterName = DeviceClusterName.THERMOSTAT;
+
+	public getName(): DeviceClusterName {
+		return DeviceThermostatCluster.clusterName;
+	}
+
+	/**
+	 * Current temperature in degrees Celsius
+	 */
+	public abstract currentTemperature: Data<number>;
+	/**
+	 * Target temperature in degrees Celsius
+	 */
+	public abstract targetTemperature: Data<number>;
+	/**
+	 * Current thermostat mode
+	 */
+	public abstract mode: Data<ThermostatMode>;
+	/**
+	 * Whether the thermostat is currently heating or cooling
+	 */
+	public abstract isHeating: Data<boolean>;
+	/**
+	 * Minimum temperature in degrees Celsius (default: 5°C)
+	 */
+	public abstract minTemperature: Data<number>;
+	/**
+	 * Maximum temperature in degrees Celsius (default: 35°C)
+	 */
+	public abstract maxTemperature: Data<number>;
+
+	public abstract setTargetTemperature(temperature: number): Promise<void>;
+	public abstract setMode(mode: ThermostatMode): Promise<void>;
 }

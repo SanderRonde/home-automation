@@ -8,6 +8,7 @@ import type {
 	DashboardDeviceClusterColorControl,
 	DashboardDeviceClusterActions,
 	DashboardDeviceClusterSensorGroup,
+	DashboardDeviceClusterThermostat,
 	DeviceListWithValuesResponse,
 } from '../../../server/modules/device/routing';
 import {
@@ -42,7 +43,8 @@ import {
 	Alert,
 	Link,
 } from '@mui/material';
-import { DeviceClusterName } from '../../../server/modules/device/cluster';
+import { DeviceClusterName, ThermostatMode } from '../../../server/modules/device/cluster';
+import { fadeIn, fadeInUp, fadeInUpStaggered } from '../../lib/animations';
 import React, { useState, useEffect, useRef } from 'react';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { apiGet, apiPost } from '../../lib/fetch';
@@ -158,7 +160,7 @@ const OccupancyDetail = (props: OccupancyDetailProps): JSX.Element => {
 	const currentState = history.length > 0 ? history[0] : props.cluster;
 
 	return (
-		<Box>
+		<Box sx={fadeIn}>
 			<Box
 				sx={{
 					backgroundColor: roomColor,
@@ -236,7 +238,7 @@ const OccupancyDetail = (props: OccupancyDetailProps): JSX.Element => {
 							</CardContent>
 						</Card>
 
-						<Card>
+						<Card sx={fadeInUpStaggered(1)}>
 							<CardContent>
 								<Typography variant="h6" gutterBottom>
 									History
@@ -375,7 +377,7 @@ const TemperatureDetail = (props: TemperatureDetailProps): JSX.Element => {
 	};
 
 	return (
-		<Box>
+		<Box sx={fadeIn}>
 			<Box
 				sx={{
 					backgroundColor: roomColor,
@@ -411,7 +413,7 @@ const TemperatureDetail = (props: TemperatureDetailProps): JSX.Element => {
 
 				{!loading && !error && (
 					<>
-						<Card sx={{ mb: 3 }}>
+						<Card sx={{ ...fadeInUp, mb: 3 }}>
 							<CardContent>
 								<Typography variant="h6" gutterBottom>
 									{props.device.name}
@@ -425,7 +427,7 @@ const TemperatureDetail = (props: TemperatureDetailProps): JSX.Element => {
 							</CardContent>
 						</Card>
 
-						<Card sx={{ mb: 3 }}>
+						<Card sx={{ ...fadeInUpStaggered(1), mb: 3 }}>
 							<CardContent>
 								<Box
 									sx={{
@@ -565,7 +567,7 @@ const HumidityDetail = (props: HumidityDetailProps): JSX.Element => {
 	};
 
 	return (
-		<Box>
+		<Box sx={fadeIn}>
 			<Box
 				sx={{
 					backgroundColor: roomColor,
@@ -601,7 +603,7 @@ const HumidityDetail = (props: HumidityDetailProps): JSX.Element => {
 
 				{!loading && !error && (
 					<>
-						<Card sx={{ mb: 3 }}>
+						<Card sx={{ ...fadeInUp, mb: 3 }}>
 							<CardContent>
 								<Typography variant="h6" gutterBottom>
 									{props.device.name}
@@ -615,7 +617,7 @@ const HumidityDetail = (props: HumidityDetailProps): JSX.Element => {
 							</CardContent>
 						</Card>
 
-						<Card sx={{ mb: 3 }}>
+						<Card sx={{ ...fadeInUpStaggered(1), mb: 3 }}>
 							<CardContent>
 								<Box
 									sx={{
@@ -757,7 +759,7 @@ const IlluminanceDetail = (props: IlluminanceDetailProps): JSX.Element => {
 	};
 
 	return (
-		<Box>
+		<Box sx={fadeIn}>
 			<Box
 				sx={{
 					backgroundColor: roomColor,
@@ -793,7 +795,7 @@ const IlluminanceDetail = (props: IlluminanceDetailProps): JSX.Element => {
 
 				{!loading && !error && (
 					<>
-						<Card sx={{ mb: 3 }}>
+						<Card sx={{ ...fadeInUp, mb: 3 }}>
 							<CardContent>
 								<Typography variant="h6" gutterBottom>
 									{props.device.name}
@@ -807,7 +809,7 @@ const IlluminanceDetail = (props: IlluminanceDetailProps): JSX.Element => {
 							</CardContent>
 						</Card>
 
-						<Card sx={{ mb: 3 }}>
+						<Card sx={{ ...fadeInUpStaggered(1), mb: 3 }}>
 							<CardContent>
 								<Box
 									sx={{
@@ -1027,7 +1029,7 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 		: null;
 
 	return (
-		<Box>
+		<Box sx={fadeIn}>
 			<Box
 				sx={{
 					backgroundColor: roomColor,
@@ -1047,7 +1049,7 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 			</Box>
 
 			<Box sx={{ p: { xs: 2, sm: 3 } }}>
-				<Card sx={{ mb: 3 }}>
+				<Card sx={{ ...fadeInUp, mb: 3 }}>
 					<CardContent>
 						<Typography variant="h6" gutterBottom>
 							{props.device.name}
@@ -1126,7 +1128,7 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 
 				{/* Temperature chart */}
 				{!loading && temperature && tempChartData && (
-					<Card sx={{ mb: 3 }}>
+					<Card sx={{ ...fadeInUpStaggered(1), mb: 3 }}>
 						<CardContent>
 							<Typography variant="h6" gutterBottom>
 								Temperature History
@@ -1153,7 +1155,7 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 
 				{/* Illuminance chart */}
 				{!loading && illuminance && illumChartData && (
-					<Card sx={{ mb: 3 }}>
+					<Card sx={{ ...fadeInUpStaggered(2), mb: 3 }}>
 						<CardContent>
 							<Typography variant="h6" gutterBottom>
 								Illuminance History
@@ -1180,7 +1182,7 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 
 				{/* Occupancy history */}
 				{!loading && occupancy && (
-					<Card>
+					<Card sx={fadeInUpStaggered(3)}>
 						<CardContent>
 							<Typography variant="h6" gutterBottom>
 								Occupancy History
@@ -1232,9 +1234,23 @@ const WindowCoveringDetail = (props: WindowCoveringDetailProps): JSX.Element => 
 		props.cluster.targetPositionLiftPercentage
 	);
 	const [isUpdating, setIsUpdating] = useState(false);
+	const [userHasInteracted, setUserHasInteracted] = useState(false);
 	const roomColor = props.device.roomColor || '#555';
 
+	// Animate slider position from 0 to actual value on mount
+	const animatedPosition = 0;
+	// useAnimatedValue(
+	// 	props.cluster.targetPositionLiftPercentage,
+	// 	0,
+	// 	500,
+	// 	0
+	// );
+
+	// Use animated value initially, then switch to user-controlled value after interaction
+	const displayPosition = userHasInteracted ? targetPosition : animatedPosition;
+
 	const handlePositionChange = (newPosition: number) => {
+		setUserHasInteracted(true);
 		setTargetPosition(newPosition);
 	};
 
@@ -1258,7 +1274,7 @@ const WindowCoveringDetail = (props: WindowCoveringDetailProps): JSX.Element => 
 	};
 
 	return (
-		<Box>
+		<Box sx={fadeIn}>
 			<Box
 				sx={{
 					backgroundColor: roomColor,
@@ -1278,7 +1294,7 @@ const WindowCoveringDetail = (props: WindowCoveringDetailProps): JSX.Element => 
 			</Box>
 
 			<Box sx={{ p: { xs: 2, sm: 3 } }}>
-				<Card sx={{ mb: 3 }}>
+				<Card sx={{ ...fadeInUp, mb: 3 }}>
 					<CardContent>
 						<Typography variant="h6" gutterBottom>
 							{props.device.name}
@@ -1316,18 +1332,20 @@ const WindowCoveringDetail = (props: WindowCoveringDetailProps): JSX.Element => 
 									top: 0,
 									left: 0,
 									right: 0,
-									height: `${targetPosition}%`,
+									height: `${displayPosition}%`,
 									background:
 										'repeating-linear-gradient(0deg, #9ca3af 0px, #9ca3af 10px, #6b7280 10px, #6b7280 11px)',
 									boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
-									transition: 'height 0.5s ease-in-out',
+									transition: userHasInteracted
+										? 'height 0.5s ease-in-out'
+										: 'none',
 								}}
 							/>
 							{/* Position indicator */}
 							<Box
 								sx={{
 									position: 'absolute',
-									top: `${Math.max(8, Math.min(92, targetPosition))}%`,
+									top: `${Math.max(8, Math.min(92, displayPosition))}%`,
 									left: '50%',
 									transform: 'translate(-50%, -50%)',
 									backgroundColor: 'rgba(0, 0, 0, 0.7)',
@@ -1338,7 +1356,7 @@ const WindowCoveringDetail = (props: WindowCoveringDetailProps): JSX.Element => 
 									fontSize: '1.2rem',
 								}}
 							>
-								{targetPosition}%
+								{Math.round(displayPosition)}%
 							</Box>
 						</Box>
 
@@ -1348,7 +1366,7 @@ const WindowCoveringDetail = (props: WindowCoveringDetailProps): JSX.Element => 
 								Position (0% = Open, 100% = Closed)
 							</Typography>
 							<Slider
-								value={targetPosition}
+								value={displayPosition}
 								onChange={(_, value) => handlePositionChange(value)}
 								onChangeCommitted={(_, value) => handlePositionCommit(value)}
 								valueLabelDisplay="auto"
@@ -1362,6 +1380,377 @@ const WindowCoveringDetail = (props: WindowCoveringDetailProps): JSX.Element => 
 									},
 								}}
 							/>
+						</Box>
+					</CardContent>
+				</Card>
+			</Box>
+		</Box>
+	);
+};
+
+interface ThermostatDetailProps extends DeviceDetailBaseProps<DashboardDeviceClusterThermostat> {}
+
+const ThermostatDetail = (props: ThermostatDetailProps): JSX.Element => {
+	const [targetTemperature, setTargetTemperature] = useState(props.cluster.targetTemperature);
+	const [mode, setMode] = useState(props.cluster.mode);
+	const [isUpdating, setIsUpdating] = useState(false);
+	const [userHasInteracted, setUserHasInteracted] = useState(false);
+	const roomColor = props.device.roomColor || '#555';
+
+	// Circular slider state
+	const [isDragging, setIsDragging] = useState(false);
+	const circleRef = useRef<HTMLDivElement>(null);
+
+	// Animate temperature from min to target on mount
+	const animatedTemp = 0;
+	// useAnimatedValue(
+	// 	props.cluster.targetTemperature,
+	// 	props.cluster.minTemperature,
+	// 	500,
+	// 	0
+	// );
+
+	// Use animated value initially, then switch to user-controlled value after interaction
+	const displayTemp = userHasInteracted ? targetTemperature : animatedTemp;
+
+	const handleModeChange = async (newMode: ThermostatMode) => {
+		setMode(newMode);
+		setIsUpdating(true);
+		try {
+			await apiPost(
+				'device',
+				'/cluster/Thermostat',
+				{},
+				{
+					deviceIds: [props.device.uniqueId],
+					mode: newMode,
+				}
+			);
+		} catch (error) {
+			console.error('Failed to set thermostat mode:', error);
+		} finally {
+			setIsUpdating(false);
+		}
+	};
+
+	const handleTemperatureChange = (newTemp: number) => {
+		setUserHasInteracted(true);
+		const clampedTemp = Math.max(
+			props.cluster.minTemperature,
+			Math.min(props.cluster.maxTemperature, newTemp)
+		);
+		setTargetTemperature(clampedTemp);
+	};
+
+	const handleTemperatureCommit = async () => {
+		if (targetTemperature === props.cluster.targetTemperature) {
+			return;
+		}
+
+		setIsUpdating(true);
+		try {
+			await apiPost(
+				'device',
+				'/cluster/Thermostat',
+				{},
+				{
+					deviceIds: [props.device.uniqueId],
+					targetTemperature,
+				}
+			);
+		} catch (error) {
+			console.error('Failed to set target temperature:', error);
+		} finally {
+			setIsUpdating(false);
+		}
+	};
+
+	const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+		setUserHasInteracted(true);
+		setIsDragging(true);
+		e.currentTarget.setPointerCapture(e.pointerId);
+		handlePointerMove(e);
+	};
+
+	const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+		if (!circleRef.current) {
+			return;
+		}
+
+		const rect = circleRef.current.getBoundingClientRect();
+		const centerX = rect.left + rect.width / 2;
+		const centerY = rect.top + rect.height / 2;
+
+		const deltaX = e.clientX - centerX;
+		const deltaY = e.clientY - centerY;
+
+		// Calculate angle (-180 to 180)
+		let angle = (Math.atan2(deltaY, deltaX) * 180) / Math.PI;
+
+		// Convert to 0-360 range, starting from top (270° = 0%)
+		angle = (angle + 360) % 360;
+
+		// Map angle to temperature (start from bottom, go clockwise 270°)
+		// We use 270° of the circle (from -135° to +135° relative to top)
+		const startAngle = 135; // Start position (bottom-left)
+		const endAngle = 45; // End position (bottom-right)
+
+		let normalizedAngle: number;
+		if (angle >= startAngle || angle <= endAngle) {
+			if (angle >= startAngle) {
+				normalizedAngle = angle - startAngle;
+			} else {
+				normalizedAngle = 360 - startAngle + angle;
+			}
+		} else {
+			// Click is in the dead zone
+			return;
+		}
+
+		const totalRange = 270; // 270 degrees of arc
+		const percentage = normalizedAngle / totalRange;
+
+		// Map to temperature range
+		const { minTemperature, maxTemperature } = props.cluster;
+		const tempRange = maxTemperature - minTemperature;
+		const newTemp = minTemperature + percentage * tempRange;
+
+		handleTemperatureChange(Math.round(newTemp * 2) / 2); // Round to 0.5°C
+	};
+
+	const handlePointerUp = async (e: React.PointerEvent<HTMLDivElement>) => {
+		if (isDragging) {
+			e.currentTarget.releasePointerCapture(e.pointerId);
+			setIsDragging(false);
+			await handleTemperatureCommit();
+		}
+	};
+
+	const getModeColor = (checkMode: ThermostatMode): string => {
+		switch (checkMode) {
+			case ThermostatMode.HEAT:
+				return '#f97316';
+			case ThermostatMode.COOL:
+				return '#3b82f6';
+			case ThermostatMode.AUTO:
+				return '#10b981';
+			case ThermostatMode.OFF:
+			default:
+				return '#6b7280';
+		}
+	};
+
+	// Calculate angle for temperature position on arc
+	const tempToAngle = (temp: number): number => {
+		const { minTemperature, maxTemperature } = props.cluster;
+		const tempRange = maxTemperature - minTemperature;
+		const percentage = (temp - minTemperature) / tempRange;
+		return 135 + percentage * 270; // Start at 135° (bottom-left), go 270° clockwise
+	};
+
+	const targetAngle = tempToAngle(displayTemp);
+	const currentAngle = tempToAngle(props.cluster.currentTemperature);
+
+	const accentColor = getModeColor(mode);
+
+	return (
+		<Box>
+			<Box
+				sx={{
+					backgroundColor: roomColor,
+					py: 1,
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
+					position: 'relative',
+				}}
+			>
+				<IconButton style={{ position: 'absolute', left: 0 }} onClick={props.onExit}>
+					<ArrowBackIcon style={{ fill: '#2f2f2f' }} />
+				</IconButton>
+				<Typography style={{ color: '#2f2f2f', fontWeight: 'bold' }} variant="h6">
+					Thermostat
+				</Typography>
+			</Box>
+
+			<Box sx={{ p: { xs: 2, sm: 3 } }}>
+				<Card sx={{ mb: 3 }}>
+					<CardContent>
+						<Typography variant="h6" gutterBottom>
+							{props.device.name}
+						</Typography>
+
+						{/* Circular Slider */}
+						<Box
+							sx={{
+								display: 'flex',
+								justifyContent: 'center',
+								alignItems: 'center',
+								my: 4,
+							}}
+						>
+							<Box
+								ref={circleRef}
+								sx={{
+									position: 'relative',
+									width: 280,
+									height: 280,
+									cursor: isDragging ? 'grabbing' : 'pointer',
+									touchAction: 'none',
+								}}
+								onPointerDown={handlePointerDown}
+								onPointerMove={isDragging ? handlePointerMove : undefined}
+								onPointerUp={handlePointerUp}
+							>
+								{/* Background circle */}
+								<svg
+									width="280"
+									height="280"
+									style={{ position: 'absolute', top: 0, left: 0 }}
+								>
+									{/* Background arc */}
+									<circle
+										cx="140"
+										cy="140"
+										r="120"
+										fill="none"
+										stroke="#e5e7eb"
+										strokeWidth="20"
+										strokeDasharray="753"
+										strokeDashoffset="188"
+										style={{
+											transform: 'rotate(135deg)',
+											transformOrigin: 'center',
+										}}
+									/>
+
+									{/* Active arc (from min to target) */}
+									<circle
+										cx="140"
+										cy="140"
+										r="120"
+										fill="none"
+										stroke={accentColor}
+										strokeWidth="20"
+										strokeLinecap="round"
+										strokeDasharray="753"
+										strokeDashoffset={
+											188 + 753 * (1 - (targetAngle - 135) / 270)
+										}
+										style={{
+											transform: 'rotate(135deg)',
+											transformOrigin: 'center',
+											transition: isDragging
+												? 'none'
+												: 'stroke-dashoffset 0.3s ease',
+										}}
+									/>
+
+									{/* Handle for target temperature */}
+									<circle
+										cx={
+											140 +
+											120 * Math.cos(((targetAngle - 90) * Math.PI) / 180)
+										}
+										cy={
+											140 +
+											120 * Math.sin(((targetAngle - 90) * Math.PI) / 180)
+										}
+										r="16"
+										fill="white"
+										stroke={accentColor}
+										strokeWidth="3"
+									/>
+
+									{/* Current temperature indicator */}
+									<circle
+										cx={
+											140 +
+											100 * Math.cos(((currentAngle - 90) * Math.PI) / 180)
+										}
+										cy={
+											140 +
+											100 * Math.sin(((currentAngle - 90) * Math.PI) / 180)
+										}
+										r="6"
+										fill="#6b7280"
+									/>
+								</svg>
+
+								{/* Center content */}
+								<Box
+									sx={{
+										position: 'absolute',
+										top: '50%',
+										left: '50%',
+										transform: 'translate(-50%, -50%)',
+										textAlign: 'center',
+									}}
+								>
+									<Typography
+										variant="h2"
+										sx={{
+											fontWeight: 'bold',
+											color: accentColor,
+											mb: 1,
+										}}
+									>
+										{displayTemp.toFixed(1)}°
+									</Typography>
+									<Typography
+										variant="body2"
+										sx={{
+											color: 'text.secondary',
+										}}
+									>
+										Current: {props.cluster.currentTemperature.toFixed(1)}°C
+									</Typography>
+									{props.cluster.isHeating && (
+										<Chip
+											label="Heating"
+											size="small"
+											sx={{
+												mt: 1,
+												backgroundColor: accentColor,
+												color: 'white',
+											}}
+										/>
+									)}
+								</Box>
+							</Box>
+						</Box>
+
+						{/* Mode Toggle Buttons */}
+						<Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+							<ToggleButtonGroup
+								value={mode}
+								exclusive
+								onChange={(_, value) => value && void handleModeChange(value)}
+								size="large"
+								disabled={isUpdating}
+							>
+								<ToggleButton value={ThermostatMode.OFF}>Off</ToggleButton>
+								<ToggleButton value={ThermostatMode.HEAT}>Heat</ToggleButton>
+								<ToggleButton value={ThermostatMode.COOL}>Cool</ToggleButton>
+								<ToggleButton value={ThermostatMode.AUTO}>Auto</ToggleButton>
+							</ToggleButtonGroup>
+						</Box>
+
+						{/* Temperature Range Info */}
+						<Box
+							sx={{
+								display: 'flex',
+								justifyContent: 'space-between',
+								px: 2,
+								pt: 2,
+							}}
+						>
+							<Typography variant="caption" color="text.secondary">
+								Min: {props.cluster.minTemperature}°C
+							</Typography>
+							<Typography variant="caption" color="text.secondary">
+								Max: {props.cluster.maxTemperature}°C
+							</Typography>
 						</Box>
 					</CardContent>
 				</Card>
@@ -1399,7 +1788,7 @@ const ActionsDetail = (props: ActionsDetailProps): JSX.Element => {
 	};
 
 	return (
-		<Box>
+		<Box sx={fadeIn}>
 			<Box
 				sx={{
 					backgroundColor: roomColor,
@@ -1419,7 +1808,7 @@ const ActionsDetail = (props: ActionsDetailProps): JSX.Element => {
 			</Box>
 
 			<Box sx={{ p: { xs: 2, sm: 3 } }}>
-				<Card sx={{ mb: 3 }}>
+				<Card sx={{ ...fadeInUp, mb: 3 }}>
 					<CardContent>
 						<Typography variant="h6" gutterBottom>
 							{props.device.name}
@@ -1430,7 +1819,7 @@ const ActionsDetail = (props: ActionsDetailProps): JSX.Element => {
 					</CardContent>
 				</Card>
 
-				<Card>
+				<Card sx={fadeInUpStaggered(1)}>
 					<CardContent>
 						<Typography variant="h6" gutterBottom>
 							Available Actions
@@ -1767,7 +2156,7 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 	];
 
 	return (
-		<Box>
+		<Box sx={fadeIn}>
 			<Box
 				sx={{
 					backgroundColor: roomColor,
@@ -1795,7 +2184,7 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 
 			<Box sx={{ p: { xs: 2, sm: 3 } }}>
 				{props.device.managementUrl && (
-					<Alert severity="info" sx={{ mb: 3 }}>
+					<Alert severity="info" sx={{ ...fadeInUp, mb: 3 }}>
 						Manage this device at{' '}
 						<Link
 							href={props.device.managementUrl}
@@ -1807,7 +2196,7 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 					</Alert>
 				)}
 
-				<Card sx={{ mb: 3 }}>
+				<Card sx={{ ...fadeInUpStaggered(1), mb: 3 }}>
 					<CardContent>
 						<Box
 							sx={{
@@ -2013,7 +2402,7 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 
 				{/* Actions Section */}
 				{actionsCluster && actionsCluster.actions.length > 0 && (
-					<Card sx={{ mt: 3 }}>
+					<Card sx={{ ...fadeInUpStaggered(2), mt: 3 }}>
 						<CardContent>
 							<Typography variant="h6" gutterBottom>
 								Actions
@@ -2117,6 +2506,9 @@ export const DeviceDetail = (
 	}
 	if (props.cluster.name === DeviceClusterName.ACTIONS) {
 		return <ActionsDetail {...props} cluster={props.cluster} />;
+	}
+	if (props.cluster.name === DeviceClusterName.THERMOSTAT) {
+		return <ThermostatDetail {...props} cluster={props.cluster} />;
 	}
 	return null;
 };

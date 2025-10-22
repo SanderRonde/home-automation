@@ -12,10 +12,14 @@ import {
 	Chip,
 } from '@mui/material';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
+import type { DeviceClusterCardBaseProps } from './DeviceClusterCard';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import type { Palette } from '../../../../types/palette';
+import { fadeInUpStaggered } from '../../lib/animations';
 import { DeviceClusterCard } from './DeviceClusterCard';
 import { ClusterIconButton } from './ClusterIconButton';
 import type { Scene } from '../../../../types/scene';
+import { PaletteSelector } from './PaletteSelector';
 import { apiGet, apiPost } from '../../lib/fetch';
 import { DeviceDetail } from './DeviceDetail';
 import * as Icons from '@mui/icons-material';
@@ -145,36 +149,11 @@ export const Home = (): JSX.Element => {
 	if (detailView && detailView.type === 'room') {
 		const room = roomDevices.find((r) => r.room === detailView.roomName);
 		if (room) {
-			// Check if we're viewing ColorControl clusters specially
-			if (detailView.clustersName === DeviceClusterName.COLOR_CONTROL) {
-				// Import and use ColorControlRoomDetail
-				const ColorControlRoomDetail = React.lazy(() =>
-					import('./ColorControlRoomDetail.js').then((m) => ({
-						default: m.ColorControlRoomDetail,
-					}))
-				);
-				return (
-					<React.Suspense fallback={<CircularProgress />}>
-						<ColorControlRoomDetail
-							room={room}
-							onExit={popDetailView}
-							devices={devices
-								.filter((d) => d.room === detailView.roomName)
-								.filter((d) =>
-									d.mergedAllClusters.some(
-										(c) => c.name === DeviceClusterName.COLOR_CONTROL
-									)
-								)}
-							invalidate={() => refresh(false)}
-						/>
-					</React.Suspense>
-				);
-			}
-
 			return (
 				<RoomDetail
 					room={room}
 					onExit={popDetailView}
+					clustersName={detailView.clustersName}
 					devices={devices
 						.filter((d) => d.room === detailView.roomName)
 						.filter(
@@ -246,7 +225,7 @@ export const Home = (): JSX.Element => {
 					</Box>
 				)}
 
-				{roomDevices.map((room) => {
+				{roomDevices.map((room, index) => {
 					return (
 						<RoomDevice
 							roomDevices={room}
@@ -265,6 +244,7 @@ export const Home = (): JSX.Element => {
 								})
 							}
 							invalidate={() => refresh(false)}
+							animationIndex={index}
 						/>
 					);
 				})}
@@ -285,6 +265,7 @@ export const Home = (): JSX.Element => {
 
 interface RoomDetailProps {
 	room: RoomDevices;
+	clustersName: DeviceClusterName | undefined;
 	onExit: () => void;
 	devices: DeviceType[];
 	invalidate: () => void;
@@ -344,6 +325,17 @@ const RoomDetail = (props: RoomDetailProps) => {
 				</Box>
 			</Box>
 
+			{props.clustersName === DeviceClusterName.COLOR_CONTROL && (
+				<ColorControlRoomDetail
+					clustersName={props.clustersName}
+					pushDetailView={props.pushDetailView}
+					room={props.room}
+					onExit={props.onExit}
+					devices={props.devices}
+					invalidate={props.invalidate}
+				/>
+			)}
+
 			<Box sx={{ p: { xs: 2, sm: 3 } }}>
 				<Box
 					sx={{
@@ -352,19 +344,85 @@ const RoomDetail = (props: RoomDetailProps) => {
 						gap: 2,
 					}}
 				>
-					{deviceClusterEntries.map((entry, index) => {
-						return (
-							<DeviceClusterCard
-								key={`${entry.device.uniqueId}-${entry.cluster.name}-${index}`}
-								device={entry.device}
-								cluster={entry.cluster}
-								invalidate={props.invalidate}
-								pushDetailView={props.pushDetailView}
-							/>
-						);
-					})}
+					{(() => {
+						let animationIndex = 0;
+						return deviceClusterEntries.map((entry) => {
+							const currentAnimationIndex = animationIndex;
+							const Component = DeviceClusterCard({
+								key: `${entry.device.uniqueId}-${entry.cluster.name}`,
+								device: entry.device,
+								cluster: entry.cluster,
+								invalidate: props.invalidate,
+								pushDetailView: props.pushDetailView,
+								animationIndex: currentAnimationIndex,
+							} as DeviceClusterCardBaseProps<DashboardDeviceClusterWithState>);
+							if (Component !== null) {
+								animationIndex++;
+							}
+							return Component;
+						});
+					})()}
 				</Box>
 			</Box>
+		</Box>
+	);
+};
+
+const ColorControlRoomDetail = (props: RoomDetailProps): JSX.Element => {
+	const [palettes, setPalettes] = React.useState<Palette[]>([]);
+	const [applyingPalette, setApplyingPalette] = React.useState<string | null>(null);
+
+	React.useEffect(() => {
+		const loadPalettes = async () => {
+			try {
+				const response = await apiGet('device', '/palettes/list', {});
+				if (response.ok) {
+					const data = await response.json();
+					setPalettes(data.palettes);
+				}
+			} catch (error) {
+				console.error('Failed to load palettes:', error);
+			}
+		};
+		void loadPalettes();
+	}, []);
+
+	const handleApplyPalette = async (paletteId: string) => {
+		setApplyingPalette(paletteId);
+		try {
+			const deviceIds = props.devices.map((d) => d.uniqueId);
+			const response = await apiPost(
+				'device',
+				'/palettes/:paletteId/apply',
+				{ paletteId },
+				{ deviceIds }
+			);
+			if (response.ok) {
+				// Refresh devices to show new colors
+				props.invalidate();
+			}
+		} catch (error) {
+			console.error('Failed to apply palette:', error);
+		} finally {
+			setApplyingPalette(null);
+		}
+	};
+
+	return (
+		<Box sx={{ p: { xs: 2, sm: 3 } }}>
+			{/* Palette Selector */}
+			{palettes.length > 0 && (
+				<Box sx={{ mb: 3 }}>
+					<Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>
+						Color Palettes:
+					</Typography>
+					<PaletteSelector
+						palettes={palettes}
+						onSelect={handleApplyPalette}
+						selectedPaletteId={applyingPalette}
+					/>
+				</Box>
+			)}
 		</Box>
 	);
 };
@@ -374,6 +432,7 @@ interface RoomDeviceProps {
 	invalidate: () => void;
 	setRoom: () => void;
 	pushDetailView: (clusterName: DeviceClusterName) => void;
+	animationIndex: number;
 }
 
 const RoomDevice = (props: RoomDeviceProps) => {
@@ -389,6 +448,7 @@ const RoomDevice = (props: RoomDeviceProps) => {
 		<Card
 			key={props.roomDevices.room}
 			sx={{
+				...fadeInUpStaggered(props.animationIndex),
 				backgroundColor: props.roomDevices.roomColor || '#555',
 				borderRadius: 2,
 				overflow: 'hidden',

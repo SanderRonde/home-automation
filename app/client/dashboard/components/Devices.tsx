@@ -39,6 +39,7 @@ import type {
 import { RoomAssignmentDialog } from './RoomAssignmentDialog';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import useWebsocket from '../../shared/resilient-socket';
+import { fadeInUpStaggered } from '../../lib/animations';
 import { getClusterIcon } from './clusterIcons';
 import * as Icons from '@mui/icons-material';
 import { apiPost } from '../../lib/fetch';
@@ -118,6 +119,7 @@ interface DeviceCardProps {
 	onEditedNameChange: (name: string) => void;
 	onOpenRoomDialog: (deviceId: string, deviceName: string, room?: string) => void;
 	isMobile: boolean;
+	animationIndex?: number;
 }
 
 const DeviceCard: React.FC<DeviceCardProps> = (props) => {
@@ -160,7 +162,11 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 	const batteryPercentage = getBatteryPercentage();
 
 	return (
-		<Card key={props.device.uniqueId} elevation={1}>
+		<Card
+			key={props.device.uniqueId}
+			elevation={1}
+			sx={props.animationIndex !== undefined ? fadeInUpStaggered(props.animationIndex) : {}}
+		>
 			{/* Header with name, edit controls, and room */}
 			<Box
 				sx={{
@@ -741,7 +747,7 @@ export const Devices: React.FC = () => {
 									<CircularProgress size={24} />
 								</Box>
 							)}
-							{devices.map((device) => (
+							{devices.map((device, index) => (
 								<DeviceCard
 									key={device.uniqueId}
 									device={device}
@@ -752,6 +758,7 @@ export const Devices: React.FC = () => {
 									onStartEdit={handleStartEdit}
 									onSaveEdit={handleSaveEdit}
 									onCancelEdit={handleCancelEdit}
+									animationIndex={index}
 									onEditedNameChange={setEditedName}
 									onOpenRoomDialog={handleOpenRoomDialog}
 									isMobile={isMobile}

@@ -91,6 +91,7 @@ export class DeviceSource extends ClassEnum {
 	public static readonly EWELINK = new DeviceSource('ewelink');
 	public static readonly WLED = new DeviceSource('wled');
 	public static readonly HEX_LED = new DeviceSource('hex-led');
+	public static readonly TUYA = new DeviceSource('tuya');
 
 	public toEmoji(): string {
 		switch (this) {
@@ -102,6 +103,8 @@ export class DeviceSource extends ClassEnum {
 				return '💡';
 			case DeviceSource.HEX_LED:
 				return '🔷';
+			case DeviceSource.TUYA:
+				return '🏠';
 			default:
 				throw new Error('Invalid DeviceSource');
 		}
