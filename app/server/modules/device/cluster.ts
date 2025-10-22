@@ -50,7 +50,7 @@ export abstract class DeviceOnOffCluster extends Cluster {
 		return DeviceOnOffCluster.clusterName;
 	}
 
-	public abstract isOn: Data<boolean>;
+	public abstract isOn: Data<boolean | undefined>;
 	public abstract setOn(on: boolean): Promise<void>;
 	public abstract toggle(): Promise<void>;
 }
@@ -102,7 +102,7 @@ export abstract class DevicePowerSourceCluster extends Cluster {
 		return DevicePowerSourceCluster.clusterName;
 	}
 
-	public abstract batteryChargeLevel: Data<number | null>;
+	public abstract batteryChargeLevel: Data<number | undefined>;
 }
 
 export abstract class DeviceGroupsCluster extends Cluster {
@@ -135,7 +135,7 @@ export abstract class DeviceOccupancySensingCluster extends Cluster {
 		return DeviceOccupancySensingCluster.clusterName;
 	}
 
-	public abstract occupancy: Data<boolean>;
+	public abstract occupancy: Data<boolean | undefined>;
 
 	public abstract onOccupied: EventEmitter<{ occupied: boolean }>;
 }
@@ -150,7 +150,7 @@ export abstract class DeviceTemperatureMeasurementCluster extends Cluster {
 	/**
 	 * Temperature in degrees Celsius
 	 */
-	public abstract temperature: Data<number>;
+	public abstract temperature: Data<number | undefined>;
 }
 
 export abstract class DeviceRelativeHumidityMeasurementCluster extends Cluster {
@@ -163,7 +163,7 @@ export abstract class DeviceRelativeHumidityMeasurementCluster extends Cluster {
 	/**
 	 * Relative humidity as a float from 0 to 1
 	 */
-	public abstract relativeHumidity: Data<number>;
+	public abstract relativeHumidity: Data<number | undefined>;
 }
 
 export abstract class DeviceBooleanStateCluster<S extends boolean> extends Cluster {
@@ -219,7 +219,7 @@ export abstract class DeviceColorControlCluster extends Cluster {
 		return DeviceColorControlCluster.clusterName;
 	}
 
-	public abstract color: Data<Color>;
+	public abstract color: Data<Color | undefined>;
 	public abstract setColor(args: { color: Color; overDurationMs?: number }): Promise<void>;
 }
 
@@ -258,27 +258,19 @@ export abstract class DeviceThermostatCluster extends Cluster {
 	/**
 	 * Current temperature in degrees Celsius
 	 */
-	public abstract currentTemperature: Data<number>;
+	public abstract currentTemperature: Data<number | undefined>;
 	/**
 	 * Target temperature in degrees Celsius
 	 */
-	public abstract targetTemperature: Data<number>;
+	public abstract targetTemperature: Data<number | undefined>;
 	/**
 	 * Current thermostat mode
 	 */
-	public abstract mode: Data<ThermostatMode>;
+	public abstract mode: Data<ThermostatMode | undefined>;
 	/**
 	 * Whether the thermostat is currently heating or cooling
 	 */
 	public abstract isHeating: Data<boolean>;
-	/**
-	 * Minimum temperature in degrees Celsius (default: 5°C)
-	 */
-	public abstract minTemperature: Data<number>;
-	/**
-	 * Maximum temperature in degrees Celsius (default: 35°C)
-	 */
-	public abstract maxTemperature: Data<number>;
 
 	public abstract setTargetTemperature(temperature: number): Promise<void>;
 	public abstract setMode(mode: ThermostatMode): Promise<void>;

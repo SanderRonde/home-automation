@@ -23,8 +23,8 @@
     - [x] Light
     - [x] Window covering
     - [x] Color control
-- [ ] 3D house overview
+- [x] Improve class inheritance, right now TS does not type-check abstract classes
 - [x] Actions cluster
 - [x] Tuya support
+- [ ] 3D house overview
 - [ ] Improve performance
-- [ ] Improve class inheritance, right now TS does not type-check abstract classes

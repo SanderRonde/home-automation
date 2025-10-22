@@ -9,7 +9,14 @@ import {
 	DeviceTemperatureMeasurementCluster,
 	DeviceColorControlCluster,
 	DeviceActionsCluster,
+} from '../../device/cluster';
+import type {
+	Cluster,
+	DeviceGroupId,
 	DeviceSwitchCluster,
+	DeviceSwitchWithLongPressAndMultiPressCluster,
+	DeviceSwitchWithLongPressCluster,
+	DeviceSwitchWithMultiPressCluster,
 } from '../../device/cluster';
 import type {
 	ColorControl,
@@ -31,7 +38,6 @@ import {
 	type Event,
 } from '@matter/types';
 import type { PairedNode, Endpoint } from '@project-chip/matter.js/device';
-import type { Cluster, DeviceGroupId } from '../../device/cluster';
 import type { Switch } from '@matter/types/clusters/switch';
 import { EventEmitter } from '../../../lib/event-emitter';
 import type { LevelControl } from '@matter/main/clusters';
@@ -102,8 +108,8 @@ class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 	public attributeGetter<
 		A extends Extract<keyof C['attributes'], string>,
 		AT extends AttributeType<C['attributes'][A]>,
-		R = AT,
-	>(attributeName: A, mapper?: (value: AT | undefined) => R): Data<R | undefined> {
+		R = AT | undefined,
+	>(attributeName: A, mapper?: (value: AT | undefined) => R): Data<R> {
 		const emitter = (() => {
 			const { cluster } = this;
 			class cls extends Data<AT | undefined> {
@@ -145,7 +151,7 @@ class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 		})();
 		this.#attributes[attributeName] = emitter;
 
-		return emitter as Data<R | undefined>;
+		return emitter as unknown as Data<R>;
 	}
 
 	public attributeSetter<
@@ -229,7 +235,7 @@ class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 		};
 	}
 
-	public event<E extends Extract<keyof C['events'], string>, R>(
+	public event<E extends Extract<keyof C['events'], string>, R = EventTypes<C['events'][E]>>(
 		eventName: E,
 		mappers?: {
 			output: (value: EventTypes<C['events'][E]>) => R;
@@ -258,28 +264,25 @@ class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 
 type ObservableForObserver<T> = T extends Observable<infer U> ? Observer<U> : never;
 
-function ConfigurableCluster<T extends MatterClusterInterface>(
-	Base: (abstract new () => Cluster & {
-		getName: () => DeviceClusterName;
-	}) & { clusterName: DeviceClusterName }
-) {
-	return class extends Base {
-		public _proxy: ClusterProxy<T>;
-		public onChange: EventEmitter<void>;
+class ConfigurableCluster<T extends MatterClusterInterface> {
+	public _proxy: ClusterProxy<T>;
+	public onChange: EventEmitter<void>;
 
-		public constructor(node: PairedNode, endpoint: Endpoint, cluster: ClusterClientObj) {
-			super();
-			this._proxy = new ClusterProxy(node, endpoint, cluster);
-			this.onChange = this._proxy.onChange;
-		}
+	public constructor(node: PairedNode, endpoint: Endpoint, cluster: ClusterClientObj) {
+		this._proxy = new ClusterProxy<T>(node, endpoint, cluster);
+		this.onChange = this._proxy.onChange;
+	}
 
-		public [Symbol.dispose](): void {
-			this._proxy[Symbol.dispose]();
-		}
-	};
+	public [Symbol.dispose](): void {
+		this._proxy[Symbol.dispose]();
+	}
 }
 
-class MatterOnOffCluster extends ConfigurableCluster<OnOffCluster>(DeviceOnOffCluster) {
+class MatterOnOffCluster extends ConfigurableCluster<OnOffCluster> implements DeviceOnOffCluster {
+	public getName(): DeviceClusterName {
+		return DeviceOnOffCluster.clusterName;
+	}
+
 	public isOn = this._proxy.attributeGetter('onOff');
 
 	public setOn(on: boolean): Promise<void> {
@@ -293,9 +296,14 @@ class MatterOnOffCluster extends ConfigurableCluster<OnOffCluster>(DeviceOnOffCl
 	public toggle = this._proxy.command('toggle');
 }
 
-class MatterWindowCoveringCluster extends ConfigurableCluster<WindowCovering.Complete>(
-	DeviceWindowCoveringCluster
-) {
+class MatterWindowCoveringCluster
+	extends ConfigurableCluster<WindowCovering.Complete>
+	implements DeviceWindowCoveringCluster
+{
+	public getName(): DeviceClusterName {
+		return DeviceWindowCoveringCluster.clusterName;
+	}
+
 	public targetPositionLiftPercentage = this._proxy.attributeGetter(
 		'targetPositionLiftPercent100ths',
 		(num) => (num ? num / 100 : 0)
@@ -318,9 +326,14 @@ class MatterWindowCoveringCluster extends ConfigurableCluster<WindowCovering.Com
 	});
 }
 
-class MatterLevelControlCluster extends ConfigurableCluster<LevelControl.Complete>(
-	DeviceLevelControlCluster
-) {
+class MatterLevelControlCluster
+	extends ConfigurableCluster<LevelControl.Complete>
+	implements DeviceLevelControlCluster
+{
+	public getName(): DeviceClusterName {
+		return DeviceLevelControlCluster.clusterName;
+	}
+
 	private _minLevel = this._proxy.attributeGetter(
 		'minLevel',
 		(v: number | null | undefined) => v ?? 0
@@ -329,12 +342,9 @@ class MatterLevelControlCluster extends ConfigurableCluster<LevelControl.Complet
 		'maxLevel',
 		(v: number | null | undefined) => v ?? 0
 	);
-	private async _valueToFloat(v: number | null | undefined) {
+	private _valueToFloat(v: number | null | undefined) {
 		const value = v ?? 0;
-		const [minLevel, maxLevel] = await Promise.all([
-			this._minLevel.get(),
-			this._maxLevel.get(),
-		]);
+		const [minLevel, maxLevel] = [this._minLevel.current(), this._maxLevel.current()];
 		return (value - minLevel) / (maxLevel - minLevel);
 	}
 	private async _floatToValue(f: number) {
@@ -388,44 +398,75 @@ class MatterLevelControlCluster extends ConfigurableCluster<LevelControl.Complet
 	});
 }
 
-class MatterPowerSourceCluster extends ConfigurableCluster<PowerSource.Complete>(
-	DevicePowerSourceCluster
-) {
+class MatterPowerSourceCluster
+	extends ConfigurableCluster<PowerSource.Complete>
+	implements DevicePowerSourceCluster
+{
+	public getName(): DeviceClusterName {
+		return DevicePowerSourceCluster.clusterName;
+	}
+
 	public batteryChargeLevel = this._proxy.attributeGetter('batPercentRemaining', (value) =>
-		value ? value / 200 : null
+		value ? value / 200 : undefined
 	);
 }
 
-class MatterOccupancySensingCluster extends ConfigurableCluster<OccupancySensing.Complete>(
-	DeviceOccupancySensingCluster
-) {
+class MatterOccupancySensingCluster
+	extends ConfigurableCluster<OccupancySensing.Complete>
+	implements DeviceOccupancySensingCluster
+{
+	public getName(): DeviceClusterName {
+		return DeviceOccupancySensingCluster.clusterName;
+	}
+
 	public occupancy = this._proxy.attributeGetter(
 		'occupancy',
 		(state) => state?.occupied ?? false
 	);
 
-	public onOccupied = this._proxy.event('occupancyChanged');
+	public onOccupied = this._proxy.event('occupancyChanged', {
+		output: ({ occupancy }) => {
+			return { occupied: occupancy.occupied ?? false };
+		},
+	});
 }
 
-class MatterIlluminanceMeasurementCluster extends ConfigurableCluster<IlluminanceMeasurement.Cluster>(
-	DeviceIlluminanceMeasurementCluster
-) {
+class MatterIlluminanceMeasurementCluster
+	extends ConfigurableCluster<IlluminanceMeasurement.Cluster>
+	implements DeviceIlluminanceMeasurementCluster
+{
+	public getName(): DeviceClusterName {
+		return DeviceIlluminanceMeasurementCluster.clusterName;
+	}
+
 	/**
 	 * MeasuredValue = 10,000 x log10(lux) + 1,
 	 */
 	public illuminance = this._proxy.attributeGetter('measuredValue', (value) => value ?? 0);
 }
 
-class MatterTemperatureMeasurementCluster extends ConfigurableCluster<TemperatureMeasurement.Cluster>(
-	DeviceTemperatureMeasurementCluster
-) {
+class MatterTemperatureMeasurementCluster
+	extends ConfigurableCluster<TemperatureMeasurement.Cluster>
+	implements DeviceTemperatureMeasurementCluster
+{
+	public getName(): DeviceClusterName {
+		return DeviceTemperatureMeasurementCluster.clusterName;
+	}
+
 	public temperature = this._proxy.attributeGetter(
 		'measuredValue',
 		(value) => (value ?? 0) / 100
 	);
 }
 
-class MatterGroupsCluster extends ConfigurableCluster<Groups.Cluster>(DeviceGroupsCluster) {
+class MatterGroupsCluster
+	extends ConfigurableCluster<Groups.Cluster>
+	implements DeviceGroupsCluster
+{
+	public getName(): DeviceClusterName {
+		return DeviceGroupsCluster.clusterName;
+	}
+
 	public addGroup = this._proxy.command('addGroup', {
 		output: ({ status, groupId }) => ({
 			status: fromMatterStatus(status),
@@ -464,9 +505,14 @@ class MatterGroupsCluster extends ConfigurableCluster<Groups.Cluster>(DeviceGrou
 	});
 }
 
-class MatterColorControlCluster extends ConfigurableCluster<ColorControl.Complete>(
-	DeviceColorControlCluster
-) {
+class MatterColorControlCluster
+	extends ConfigurableCluster<ColorControl.Complete>
+	implements DeviceColorControlCluster
+{
+	public getName(): DeviceClusterName {
+		return DeviceColorControlCluster.clusterName;
+	}
+
 	private static readonly MAX_COLOR_VALUE = 65279;
 
 	private _currentX = this._proxy.attributeGetter('currentX', (value) =>
@@ -493,7 +539,14 @@ class MatterColorControlCluster extends ConfigurableCluster<ColorControl.Complet
 	});
 }
 
-class MatterActionsCluster extends ConfigurableCluster<Actions.Cluster>(DeviceActionsCluster) {
+class MatterActionsCluster
+	extends ConfigurableCluster<Actions.Cluster>
+	implements DeviceActionsCluster
+{
+	public getName(): DeviceClusterName {
+		return DeviceActionsCluster.clusterName;
+	}
+
 	public actionList = this._proxy.attributeGetter(
 		'actionList',
 		(actions) =>
@@ -508,7 +561,11 @@ class MatterActionsCluster extends ConfigurableCluster<Actions.Cluster>(DeviceAc
 	public executeAction = this._proxy.command('startAction');
 }
 
-class MatterSwitchClusterBase extends ConfigurableCluster<Switch.Complete>(DeviceSwitchCluster) {
+abstract class MatterSwitchClusterBase extends ConfigurableCluster<Switch.Complete> {
+	public getName(): DeviceClusterName {
+		return DeviceClusterName.SWITCH;
+	}
+
 	public getTotalCount = () => this._counts.totalCount;
 	public getIndex = () => this._counts.count;
 
@@ -525,24 +582,42 @@ class MatterSwitchClusterBase extends ConfigurableCluster<Switch.Complete>(Devic
 	}
 }
 
-class MatterSwitchCluster extends MatterSwitchClusterBase {
-	public onPress = this._proxy.event('initialPress');
+const voidMapper = { output: () => void 0 };
+class MatterSwitchCluster extends MatterSwitchClusterBase implements DeviceSwitchCluster {
+	public onPress = this._proxy.event('initialPress', voidMapper);
 }
 
-class MatterSwitchWithLongPressCluster extends MatterSwitchClusterBase {
-	public onPress = this._proxy.event('initialPress');
-	public onLongPress = this._proxy.event('longPress');
+class MatterSwitchWithLongPressCluster
+	extends MatterSwitchClusterBase
+	implements DeviceSwitchWithLongPressCluster
+{
+	public onPress = this._proxy.event('initialPress', voidMapper);
+	public onLongPress = this._proxy.event('longPress', voidMapper);
 }
 
-class MatterSwitchWithMultiPressCluster extends MatterSwitchClusterBase {
-	public onPress = this._proxy.event('initialPress');
-	public onMultiPress = this._proxy.event('multiPressComplete');
+class MatterSwitchWithMultiPressCluster
+	extends MatterSwitchClusterBase
+	implements DeviceSwitchWithMultiPressCluster
+{
+	public onPress = this._proxy.event('initialPress', voidMapper);
+	public onMultiPress = this._proxy.event('multiPressComplete', {
+		output: ({ totalNumberOfPressesCounted }) => {
+			return { pressCount: totalNumberOfPressesCounted ?? 0 };
+		},
+	});
 }
 
-class MatterSwitchWithLongPressAndMultiPressCluster extends MatterSwitchClusterBase {
-	public onPress = this._proxy.event('initialPress');
-	public onLongPress = this._proxy.event('longPress');
-	public onMultiPress = this._proxy.event('multiPressComplete');
+class MatterSwitchWithLongPressAndMultiPressCluster
+	extends MatterSwitchClusterBase
+	implements DeviceSwitchWithLongPressAndMultiPressCluster
+{
+	public onPress = this._proxy.event('initialPress', voidMapper);
+	public onLongPress = this._proxy.event('longPress', voidMapper);
+	public onMultiPress = this._proxy.event('multiPressComplete', {
+		output: ({ totalNumberOfPressesCounted }) => {
+			return { pressCount: totalNumberOfPressesCounted ?? 0 };
+		},
+	});
 }
 
 function fromMatterStatus(status: Status): DeviceStatus {

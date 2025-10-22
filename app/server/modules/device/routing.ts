@@ -950,8 +950,8 @@ const getClusterState = async (
 			targetTemperature: await cluster.targetTemperature.get(),
 			mode: await cluster.mode.get(),
 			isHeating: await cluster.isHeating.get(),
-			minTemperature: await cluster.minTemperature.get(),
-			maxTemperature: await cluster.maxTemperature.get(),
+			minTemperature: 5.0,
+			maxTemperature: 30.0,
 		};
 	}
 	return {

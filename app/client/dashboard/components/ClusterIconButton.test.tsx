@@ -54,6 +54,7 @@ describe('ClusterIconButton', () => {
 					devices={devices}
 					invalidate={invalidate}
 					onLongPress={onLongPress}
+					allClusters={new Set([DeviceClusterName.ON_OFF])}
 				/>
 			);
 
@@ -83,6 +84,7 @@ describe('ClusterIconButton', () => {
 					devices={devices}
 					invalidate={mock(() => {})}
 					onLongPress={mock(() => {})}
+					allClusters={new Set([DeviceClusterName.ON_OFF])}
 				/>
 			);
 
@@ -112,6 +114,7 @@ describe('ClusterIconButton', () => {
 					devices={devices}
 					invalidate={mock(() => {})}
 					onLongPress={mock(() => {})}
+					allClusters={new Set([DeviceClusterName.ON_OFF])}
 				/>
 			);
 
@@ -143,6 +146,7 @@ describe('ClusterIconButton', () => {
 					devices={devices}
 					invalidate={invalidate}
 					onLongPress={mock(() => {})}
+					allClusters={new Set([DeviceClusterName.ON_OFF])}
 				/>
 			);
 
@@ -183,6 +187,7 @@ describe('ClusterIconButton', () => {
 					devices={devices}
 					invalidate={invalidate}
 					onLongPress={mock(() => {})}
+					allClusters={new Set([DeviceClusterName.ON_OFF])}
 				/>
 			);
 
@@ -222,6 +227,7 @@ describe('ClusterIconButton', () => {
 					devices={devices}
 					invalidate={mock(() => {})}
 					onLongPress={mock(() => {})}
+					allClusters={new Set([DeviceClusterName.WINDOW_COVERING])}
 				/>
 			);
 
@@ -250,6 +256,7 @@ describe('ClusterIconButton', () => {
 					devices={devices}
 					invalidate={mock(() => {})}
 					onLongPress={mock(() => {})}
+					allClusters={new Set([DeviceClusterName.WINDOW_COVERING])}
 				/>
 			);
 
@@ -279,6 +286,7 @@ describe('ClusterIconButton', () => {
 					devices={devices}
 					invalidate={mock(() => {})}
 					onLongPress={mock(() => {})}
+					allClusters={new Set([DeviceClusterName.WINDOW_COVERING])}
 				/>
 			);
 
@@ -308,6 +316,7 @@ describe('ClusterIconButton', () => {
 					devices={devices}
 					invalidate={mock(() => {})}
 					onLongPress={mock(() => {})}
+					allClusters={new Set([])}
 				/>
 			);
 
@@ -349,6 +358,7 @@ describe('ClusterIconButton', () => {
 					devices={devices}
 					invalidate={mock(() => {})}
 					onLongPress={mock(() => {})}
+					allClusters={new Set([DeviceClusterName.ON_OFF])}
 				/>
 			);
 
@@ -389,6 +399,9 @@ describe('ClusterIconButton', () => {
 					devices={devices}
 					invalidate={mock(() => {})}
 					onLongPress={mock(() => {})}
+					allClusters={
+						new Set([DeviceClusterName.ON_OFF, DeviceClusterName.COLOR_CONTROL])
+					}
 				/>
 			);
 

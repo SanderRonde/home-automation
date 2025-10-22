@@ -3,8 +3,8 @@ import {
 	DeviceLevelControlCluster,
 	DeviceOnOffCluster,
 } from '../../device/cluster';
-import type { Cluster, DeviceClusterName } from '../../device/cluster';
 import type { WLEDClient, WLEDClientState } from 'wled-client';
+import type { DeviceClusterName } from '../../device/cluster';
 import { EventEmitter } from '../../../lib/event-emitter';
 import { Data, MappedData } from '../../../lib/data';
 import type { Mapper } from '../../../lib/data';
@@ -60,29 +60,25 @@ class WLEDProxy implements Disposable {
 	}
 }
 
-function ConfigurableCluster(
-	Base: abstract new () => Cluster & {
-		getName: () => DeviceClusterName;
+class ConfigurableCluster {
+	public proxy: WLEDProxy;
+	public onChange: EventEmitter<void> = new EventEmitter();
+
+	public constructor(public readonly client: WLEDClient) {
+		this.proxy = new WLEDProxy(client);
 	}
-) {
-	return class extends Base {
-		public proxy: WLEDProxy;
-		public onChange: EventEmitter<void> = new EventEmitter();
-		public b = Base;
 
-		public constructor(public readonly client: WLEDClient) {
-			super();
-			this.proxy = new WLEDProxy(this.client);
-		}
-
-		public [Symbol.dispose](): void {
-			this.proxy[Symbol.dispose]();
-		}
-	};
+	public [Symbol.dispose](): void {
+		this.proxy[Symbol.dispose]();
+	}
 }
 
-export class WLEDOnOffCluster extends ConfigurableCluster(DeviceOnOffCluster) {
+export class WLEDOnOffCluster extends ConfigurableCluster implements DeviceOnOffCluster {
 	public isOn = new WLEDMapper(this, (state) => state?.on ?? false);
+
+	public getName(): DeviceClusterName {
+		return DeviceOnOffCluster.clusterName;
+	}
 
 	public setOn = async (on: boolean): Promise<void> => {
 		if (on) {
@@ -97,8 +93,15 @@ export class WLEDOnOffCluster extends ConfigurableCluster(DeviceOnOffCluster) {
 	};
 }
 
-export class WLEDLevelControlCluster extends ConfigurableCluster(DeviceLevelControlCluster) {
+export class WLEDLevelControlCluster
+	extends ConfigurableCluster
+	implements DeviceLevelControlCluster
+{
 	public currentLevel = new WLEDMapper(this, (state) => (state?.brightness ?? 0) / 255);
+
+	public getName(): DeviceClusterName {
+		return DeviceLevelControlCluster.clusterName;
+	}
 
 	public setLevel = ({ level }: { level: number }): Promise<void> => {
 		return this.client.setBrightness(Math.round(level * 255));
@@ -114,7 +117,14 @@ export class WLEDLevelControlCluster extends ConfigurableCluster(DeviceLevelCont
 	public stop = (): Promise<void> => Promise.resolve();
 }
 
-export class WLEDColorControlCluster extends ConfigurableCluster(DeviceColorControlCluster) {
+export class WLEDColorControlCluster
+	extends ConfigurableCluster
+	implements DeviceColorControlCluster
+{
+	public getName(): DeviceClusterName {
+		return DeviceColorControlCluster.clusterName;
+	}
+
 	public color = new WLEDMapper(this, (state) => {
 		const color = state.segments[0].colors?.[0];
 		if (!color) {
