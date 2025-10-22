@@ -1,6 +1,7 @@
 ---
 alwaysApply: true
 ---
+
 # Home Automation Project Structure
 
 This is a TypeScript home automation system using Bun runtime with a modular architecture.
@@ -8,17 +9,19 @@ This is a TypeScript home automation system using Bun runtime with a modular arc
 ## Project Layout
 
 - `app/` - Main application code
-  - `server/` - Backend server code
-    - [app.ts](mdc:app/server/app.ts) - Entry point, initializes WebServer and all modules
-    - `modules/` - Feature modules (bot, auth, wled, device, switch, matter, mcp, etc.)
-    - `lib/` - Shared server utilities
-    - `config/` - Server configuration files
-  - `client/` - Frontend React code with TypeScript
-    - `config/` - Configuration UI components
-    - `switch/` - Switch control UI
-    - `info-screen/` - Info display UI
-    - `lib/` - Shared client utilities
-  - [tsconfig.json](mdc:app/tsconfig.json) - TypeScript configuration
+    - `server/` - Backend server code
+        - [app.ts](mdc:app/server/app.ts) - Entry point, initializes WebServer and all modules
+        - `modules/` - Feature modules (bot, auth, wled, device, switch, matter, mcp, etc.)
+        - `lib/` - Shared server utilities
+        - `config/` - Server configuration files
+    - `client/` - Frontend React code with TypeScript
+        - `dashboard/` - Main dashboard UI (React with MUI)
+        - `config/` - Configuration UI components
+        - `switch/` - Switch control UI
+        - `info-screen/` - Info display UI
+        - `lib/` - Shared client utilities
+        - `shared/` - Shared client components
+    - [tsconfig.json](mdc:app/tsconfig.json) - TypeScript configuration
 - `types/` - Shared TypeScript type definitions
 - `database/` - Database storage files
 - `scripts/` - Utility scripts (e.g., MCP key generation)
@@ -50,4 +53,5 @@ This is a TypeScript home automation system using Bun runtime with a modular arc
 
 - Main entry: [app/server/app.ts](mdc:app/server/app.ts)
 - Module definitions: `app/server/modules/`
-- Client entry points: `app/client/{config,switch,info-screen}/`
+- Client entry points: `app/client/{dashboard,config,switch,info-screen}/`
+- Dashboard entry: [app/client/dashboard/dashboard.tsx](mdc:app/client/dashboard/dashboard.tsx)

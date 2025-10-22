@@ -1,6 +1,7 @@
 ---
 globs: app/client/**/*.tsx
 ---
+
 # React Component Guidelines
 
 React components in the `app/client/` directory follow these conventions:
@@ -9,17 +10,25 @@ React components in the `app/client/` directory follow these conventions:
 
 - **Functional components**: Use function components with hooks
 - **TypeScript**: Always type props interfaces
-  ```typescript
-  interface MyComponentProps {
-      value: string;
-      onChange: (val: string) => void;
-  }
-  
-  export const MyComponent = (props: MyComponentProps): JSX.Element => {
-      // ...
-  };
-  ```
+
+    ```typescript
+    interface MyComponentProps {
+        value: string;
+        onChange: (val: string) => void;
+    }
+
+    export const MyComponent = (props: MyComponentProps): JSX.Element => {
+        // Access props using props.propertyName
+        return <div>{props.value}</div>;
+    };
+    ```
+
 - **Return type**: Explicitly return `JSX.Element`
+- **Props access**: NEVER destructure props. Always access using `props.propertyName`
+    - ❌ Don't use: `const { value, onChange } = props`
+    - ❌ Don't use: `(props: MyComponentProps) => { const { value } = props; }`
+    - ❌ Don't use: `({ value, onChange }: MyComponentProps) => { ... }`
+    - ✅ Do use: `props.value`, `props.onChange`, etc.
 
 ## Material-UI (MUI)
 
@@ -27,12 +36,12 @@ This project uses Material-UI v7 for UI components:
 
 ```typescript
 import {
-    Box,
-    Paper,
-    Typography,
-    Button,
-    TextField,
-    // ... other components
+	Box,
+	Paper,
+	Typography,
+	Button,
+	TextField,
+	// ... other components
 } from '@mui/material';
 import { Icon } from '@mui/icons-material';
 ```
@@ -44,16 +53,18 @@ import { Icon } from '@mui/icons-material';
 ## State Management
 
 - **useState**: For local component state
-  ```typescript
-  const [value, setValue] = React.useState<string>('');
-  ```
+    ```typescript
+    const [value, setValue] = React.useState<string>('');
+    ```
 - **useEffect**: For side effects (API calls, subscriptions)
-  ```typescript
-  React.useEffect(() => {
-      // effect
-      return () => { /* cleanup */ };
-  }, [dependencies]);
-  ```
+    ```typescript
+    React.useEffect(() => {
+    	// effect
+    	return () => {
+    		/* cleanup */
+    	};
+    }, [dependencies]);
+    ```
 
 ## API Communication
 
@@ -74,9 +85,9 @@ await apiPost('/module/endpoint', { payload: data });
 For code editors, use `@monaco-editor/react`:
 
 ```typescript
-import Editor from '@monaco-editor/react';
 import type * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import type { editor } from 'monaco-editor';
+import Editor from '@monaco-editor/react';
 
 type Monaco = typeof monaco;
 ```
@@ -91,5 +102,6 @@ type Monaco = typeof monaco;
 ## Examples
 
 See existing components for reference:
+
 - [SwitchEditor.tsx](mdc:app/client/config/components/SwitchEditor.tsx) - Editor with tabs and Monaco
 - [DevicePicker.tsx](mdc:app/client/config/components/DevicePicker.tsx) - Device selection component

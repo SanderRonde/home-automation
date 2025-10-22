@@ -19,6 +19,8 @@ bun test --watch
 bun test path/to/test.test.ts
 ```
 
+**Important**: When testing changes, NEVER start the server yourself (don't run `bun start`). Always ask the user to test the server. It's acceptable to run linting, compilation, or tests, but not the server itself.
+
 ## Test File Naming
 
 - Unit tests: `*.test.ts` or `*.spec.ts`

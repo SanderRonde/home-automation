@@ -1,6 +1,7 @@
 ---
 globs: *.ts,*.tsx
 ---
+
 # TypeScript Code Style
 
 Follow these TypeScript conventions used throughout the project:
@@ -8,24 +9,24 @@ Follow these TypeScript conventions used throughout the project:
 ## Type Safety
 
 - **Strict mode enabled**: All strict TypeScript options are on
-  - `noImplicitAny`, `strictNullChecks`, `strictPropertyInitialization`
+    - `noImplicitAny`, `strictNullChecks`, `strictPropertyInitialization`
 - **Explicit types**: Prefer explicit type annotations for function returns
 - **Type imports**: Always use separate type imports
-  ```typescript
-  import type { SomeType } from './module';
-  import { someFunction } from './module';
-  ```
+    ```typescript
+    import type { SomeType } from './module';
+    import { someFunction } from './module';
+    ```
 - **No `any`**: Avoid `any` types - use `unknown` if type is truly unknown
 
 ## Class & Member Conventions
 
 - **Explicit accessibility**: Always declare `public`, `private`, or `protected` on class members
-  ```typescript
-  export class MyClass {
-      public publicMethod(): void {}
-      private _privateField: string = '';
-  }
-  ```
+    ```typescript
+    export class MyClass {
+    	public publicMethod(): void {}
+    	private _privateField: string = '';
+    }
+    ```
 - **Private fields**: Prefix with underscore (`_privateField`)
 - **Readonly preference**: Use `readonly` for fields that don't change (especially in lambdas)
 - **No `this` reassignment**: Avoid aliasing `this` - use arrow functions
@@ -47,6 +48,9 @@ Follow these TypeScript conventions used throughout the project:
 
 ## Imports
 
+- **Relative imports**: Always use relative imports (e.g., `../../../server/modules/device/cluster`)
+    - Do NOT use absolute imports or path aliases
+    - Import paths should be relative to the current file
 - **No unused imports**: Unused imports will be flagged
 - **Module resolution**: Node16 module resolution
 - **Import order**: Imports are auto-sorted by prettier-plugin-sort-imports

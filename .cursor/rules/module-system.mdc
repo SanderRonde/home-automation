@@ -1,6 +1,7 @@
 ---
 description: Guide for creating and working with server modules
 ---
+
 # Module System Architecture
 
 The server uses a modular architecture where each feature is a self-contained module.
@@ -11,29 +12,40 @@ Each module extends `ModuleMeta` from [app/server/modules/meta.ts](mdc:app/serve
 
 ```typescript
 export class MyModuleMeta extends ModuleMeta {
-    public name = 'mymodule';
-    
-    public async init(config: ModuleConfig): Promise<{ serve: ServeOptions<unknown> }> {
-        // Initialize module
-        return {
-            serve: {
-                routes: {
-                    '/route': { GET: handler }
-                },
-                websocket: { /* optional */ }
-            }
-        };
-    }
-    
-    public async postInit(): Promise<void> {
-        // Called after all modules are initialized
-    }
+	public name = 'mymodule';
+
+	public async init(config: ModuleConfig): Promise<{ serve: ServeOptions<unknown> }> {
+		// Initialize module
+		return {
+			serve: {
+				routes: {
+					'/route': { GET: handler },
+				},
+				websocket: {
+					/* optional */
+				},
+			},
+		};
+	}
+
+	public async postInit(): Promise<void> {
+		// Called after all modules are initialized
+	}
 }
 ```
+
+## Module File Naming
+
+- **Root-level module files**: Name as `<moduleName>.ts` (not `index.ts`)
+    - ✅ `app/server/modules/device/device.ts`
+    - ❌ `app/server/modules/device/index.ts`
+- **Other module files**: Use camelCase naming
+    - ✅ `hueDevices.ts`, `botHelpers.ts`, `cluster.ts`
 
 ## Module Configuration
 
 Each module receives `ModuleConfig` with:
+
 - `config: AppConfig` - Server configuration (ports, logging, etc.)
 - `wsPublish: (data: string) => Promise<...>` - Publish to module's WebSocket topic
 - `db: Database<T>` - JSON file database for the module
@@ -43,43 +55,44 @@ Each module receives `ModuleConfig` with:
 ## Module Communication
 
 - **Inter-module access**: Use `this.modules` to access other modules
-  ```typescript
-  const bot = await this.modules;
-  await bot.bot.sendMessage('Hello');
-  ```
+    ```typescript
+    const bot = await this.modules;
+    await bot.bot.sendMessage('Hello');
+    ```
 - **Home state notifications**: Modules get notified when home state changes (online/offline)
-  - Override `onOffline()` and `onBackOnline()` methods
+    - Override `onOffline()` and `onBackOnline()` methods
 - **WebSocket publishing**: Each module has its own topic (module name)
-  ```typescript
-  await config.wsPublish(JSON.stringify({ event: 'update', data }));
-  ```
+    ```typescript
+    await config.wsPublish(JSON.stringify({ event: 'update', data }));
+    ```
 
 ## Routing
 
 - Routes are prefixed with `/${moduleName}`
-  - Module route `/api` becomes `/{modulename}/api`
+    - Module route `/api` becomes `/{modulename}/api`
 - Use `ServeOptions` format from [app/server/lib/routes.ts](mdc:app/server/lib/routes.ts)
 - Support GET, POST, PUT, DELETE, PATCH methods
 
 ## Database Access
 
 - **JSON DB**: For simple key-value storage
-  ```typescript
-  const data = await config.db.data;
-  await config.db.setVal('key', value);
-  ```
+    ```typescript
+    const data = await config.db.data;
+    await config.db.setVal('key', value);
+    ```
 - **SQLite**: For structured data with queries
-  ```typescript
-  const result = await config.sqlDB`SELECT * FROM table`;
-  ```
+    ```typescript
+    const result = await config.sqlDB`SELECT * FROM table`;
+    ```
 
 ## Module Registration
 
 Register new modules in [app/server/modules/modules.ts](mdc:app/server/modules/modules.ts):
+
 ```typescript
 const getModuleObj = () => ({
-    myModule: MyModule,
-    // ... other modules
+	myModule: MyModule,
+	// ... other modules
 });
 ```
 

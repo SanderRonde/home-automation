@@ -68,7 +68,8 @@ const data = await response.json();
 
 ## Package Management
 
-- Use `bun install` instead of `npm install`
+- Use `bun add <package>` to add new dependencies (not `npm install`)
+- Use `bun install` to install dependencies from package.json
 - Use `bun run` or just `bun` to execute scripts
 - Bun reads `package.json` and is compatible with npm packages
 
