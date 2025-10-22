@@ -7,7 +7,6 @@ import type {
 	DashboardDeviceClusterRelativeHumidityMeasurement,
 	DashboardDeviceClusterIlluminanceMeasurement,
 	DashboardDeviceClusterBooleanState,
-	DashboardDeviceClusterSwitch,
 	DashboardDeviceClusterColorControl,
 	DashboardDeviceClusterActions,
 	DashboardDeviceClusterSensorGroup,
@@ -574,6 +573,7 @@ const SensorGroupCard = (
 ): JSX.Element => {
 	const occupancy = props.cluster.mergedClusters[DeviceClusterName.OCCUPANCY_SENSING];
 	const temperature = props.cluster.mergedClusters[DeviceClusterName.TEMPERATURE_MEASUREMENT];
+	const humidity = props.cluster.mergedClusters[DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT];
 
 	const getTimeSince = (timestamp?: number): string => {
 		if (!timestamp) {
@@ -598,8 +598,35 @@ const SensorGroupCard = (
 		return `${seconds}s ago`;
 	};
 
-	// Background color based on occupancy
-	const backgroundColor = occupancy?.occupied ? '#1a472a' : '#2f2f2f';
+	// Background color logic
+	const getBackgroundColor = (): string => {
+		// If occupancy sensor exists, use its state for background
+		if (occupancy) {
+			return occupancy.occupied ? '#1a472a' : '#2f2f2f';
+		}
+		// Otherwise, use temperature-based coloring if available
+		if (temperature) {
+			const temp = temperature.temperature;
+			if (temp < 10) {
+				return '#1e3a8a'; // Deep blue (cold)
+			}
+			if (temp < 18) {
+				return '#3b82f6'; // Blue (cool)
+			}
+			if (temp < 22) {
+				return '#10b981'; // Green (comfortable)
+			}
+			if (temp < 26) {
+				return '#f59e0b'; // Orange (warm)
+			}
+			return '#dc2626'; // Red (hot)
+		}
+		// Default gray
+		return '#2f2f2f';
+	};
+
+	const backgroundColor = getBackgroundColor();
+	const isTemperatureBased = !occupancy && temperature;
 
 	return (
 		<DeviceClusterCardSkeleton
@@ -627,12 +654,18 @@ const SensorGroupCard = (
 						justifyContent: 'center',
 						background: occupancy?.occupied
 							? 'rgba(76, 175, 80, 0.2)'
-							: 'rgba(0, 0, 0, 0.08)',
+							: isTemperatureBased
+								? 'rgba(255, 255, 255, 0.2)'
+								: 'rgba(0, 0, 0, 0.08)',
 						borderRadius: '50%',
 						width: 48,
 						height: 48,
 						fontSize: '1.5rem',
-						color: occupancy?.occupied ? '#4caf50' : 'text.secondary',
+						color: occupancy?.occupied
+							? '#4caf50'
+							: isTemperatureBased
+								? 'white'
+								: 'text.secondary',
 					}}
 				>
 					{getClusterIcon(props.cluster.icon)}
@@ -642,20 +675,41 @@ const SensorGroupCard = (
 						variant="body1"
 						sx={{
 							fontWeight: 500,
+							color: isTemperatureBased ? 'white' : undefined,
 						}}
 					>
 						{props.device.name}
 					</Typography>
-					{temperature && (
-						<Typography
-							variant="body2"
-							sx={{
-								color: 'text.secondary',
-							}}
-						>
-							{temperature.temperature.toFixed(1)}°C
-						</Typography>
-					)}
+					<Box
+						sx={{
+							display: 'flex',
+							gap: 1.5,
+							alignItems: 'baseline',
+						}}
+					>
+						{temperature && (
+							<Typography
+								variant="body2"
+								sx={{
+									color: isTemperatureBased ? 'white' : 'text.secondary',
+									fontWeight: isTemperatureBased ? 'bold' : undefined,
+								}}
+							>
+								{temperature.temperature.toFixed(1)}°C
+							</Typography>
+						)}
+						{humidity && (
+							<Typography
+								variant="body2"
+								sx={{
+									color: isTemperatureBased ? 'white' : 'text.secondary',
+									fontWeight: isTemperatureBased ? 'bold' : undefined,
+								}}
+							>
+								{(humidity.humidity * 100).toFixed(0)}%
+							</Typography>
+						)}
+					</Box>
 					{occupancy && (
 						<Typography
 							variant="caption"
@@ -699,48 +753,6 @@ const BooleanStateCard = (
 			{...props}
 			cardBackground={props.cluster.state ? '#1a472a' : '#2f2f2f'}
 		/>
-	);
-};
-
-const SwitchCard = (
-	props: DeviceClusterCardBaseProps<DashboardDeviceClusterSwitch>
-): JSX.Element => {
-	return (
-		<DeviceClusterCardSkeleton {...props} cardBackground="#374151">
-			<Box
-				sx={{
-					display: 'flex',
-					alignItems: 'center',
-					gap: 2,
-				}}
-			>
-				<Box
-					sx={{
-						display: 'flex',
-						alignItems: 'center',
-						justifyContent: 'center',
-						background: 'rgba(255, 255, 255, 0.1)',
-						borderRadius: '50%',
-						width: 48,
-						height: 48,
-						fontSize: '1.5rem',
-						color: 'white',
-					}}
-				>
-					{getClusterIcon(props.cluster.icon)}
-				</Box>
-				<Typography
-					variant="body1"
-					sx={{
-						fontWeight: 500,
-						color: 'white',
-						flexGrow: 1,
-					}}
-				>
-					{props.device.name}
-				</Typography>
-			</Box>
-		</DeviceClusterCardSkeleton>
 	);
 };
 
@@ -1070,9 +1082,6 @@ export const DeviceClusterCard = (
 	}
 	if (props.cluster.name === DeviceClusterName.BOOLEAN_STATE) {
 		return <BooleanStateCard {...props} cluster={props.cluster} />;
-	}
-	if (props.cluster.name === DeviceClusterName.SWITCH) {
-		return <SwitchCard {...props} cluster={props.cluster} />;
 	}
 	if (props.cluster.name === DeviceClusterName.COLOR_CONTROL) {
 		return <ColorControlCard {...props} cluster={props.cluster} />;

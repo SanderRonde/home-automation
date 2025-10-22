@@ -511,6 +511,7 @@ const RoomDevice = (props: RoomDeviceProps) => {
 							.map((clusterName) => (
 								<ClusterIconButton
 									clusterName={clusterName}
+									allClusters={representedClusters}
 									key={clusterName}
 									devices={props.roomDevices.devices}
 									invalidate={props.invalidate}

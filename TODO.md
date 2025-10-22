@@ -26,3 +26,5 @@
 - [ ] 3D house overview
 - [x] Actions cluster
 - [x] Tuya support
+- [ ] Improve performance
+- [ ] Improve class inheritance, right now TS does not type-check abstract classes

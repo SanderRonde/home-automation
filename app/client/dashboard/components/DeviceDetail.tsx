@@ -1112,9 +1112,11 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 
 	const occupancy = props.cluster.mergedClusters[DeviceClusterName.OCCUPANCY_SENSING];
 	const temperature = props.cluster.mergedClusters[DeviceClusterName.TEMPERATURE_MEASUREMENT];
+	const humidity = props.cluster.mergedClusters[DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT];
 	const illuminance = props.cluster.mergedClusters[DeviceClusterName.ILLUMINANCE_MEASUREMENT];
 
 	const [tempHistory, setTempHistory] = useState<TemperatureEvent[]>([]);
+	const [humidityHistory, setHumidityHistory] = useState<HumidityEvent[]>([]);
 	const [illumHistory, setIllumHistory] = useState<IlluminanceEvent[]>([]);
 	const [occHistory, setOccHistory] = useState<OccupancyEvent[]>([]);
 
@@ -1122,7 +1124,7 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 
 	useEffect(() => {
 		void fetchHistory();
-	}, [deviceId, timeframe, !!temperature, !!illuminance, !!occupancy]);
+	}, [deviceId, timeframe, !!temperature, !!humidity, !!illuminance, !!occupancy]);
 
 	const fetchHistory = async () => {
 		try {
@@ -1137,6 +1139,18 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 				if (response.ok) {
 					const data = await response.json();
 					setTempHistory(data.history || []);
+				}
+			}
+
+			// Fetch humidity history if available
+			if (humidity) {
+				const response = await apiGet('device', '/humidity/:deviceId/:timeframe', {
+					deviceId: deviceId,
+					timeframe: TIMEFRAME_MS[timeframe].toString(),
+				});
+				if (response.ok) {
+					const data = await response.json();
+					setHumidityHistory(data.history || []);
 				}
 			}
 
@@ -1223,6 +1237,41 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 							.map((e) => e.temperature),
 						borderColor: 'rgb(59, 130, 246)',
 						backgroundColor: 'rgba(59, 130, 246, 0.1)',
+						tension: 0.4,
+						fill: true,
+					},
+				],
+			}
+		: null;
+
+	const humidityChartData = humidity
+		? {
+				labels: humidityHistory
+					.slice()
+					.reverse()
+					.map((e) => {
+						const date = new Date(e.timestamp);
+						if (timeframe === 'hour' || timeframe === 'day') {
+							return date.toLocaleTimeString('en-US', {
+								hour: '2-digit',
+								minute: '2-digit',
+							});
+						}
+						return date.toLocaleDateString('en-US', {
+							month: 'short',
+							day: 'numeric',
+							hour: '2-digit',
+						});
+					}),
+				datasets: [
+					{
+						label: 'Humidity (%)',
+						data: humidityHistory
+							.slice()
+							.reverse()
+							.map((e) => e.humidity * 100),
+						borderColor: 'rgb(16, 185, 129)',
+						backgroundColor: 'rgba(16, 185, 129, 0.1)',
 						tension: 0.4,
 						fill: true,
 					},
@@ -1322,6 +1371,17 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 									</Box>
 								)}
 
+								{humidity && (
+									<Box>
+										<Typography variant="body2" color="text.secondary">
+											Humidity
+										</Typography>
+										<Typography variant="h4" sx={{ color: '#10b981' }}>
+											{(humidity.humidity * 100).toFixed(0)}%
+										</Typography>
+									</Box>
+								)}
+
 								{occupancy && (
 									<Box>
 										<Typography variant="body2" color="text.secondary">
@@ -1360,7 +1420,7 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 				</motion.div>
 
 				{/* Timeframe selector for charts */}
-				{(temperature || illuminance) && (
+				{(temperature || humidity || illuminance) && (
 					<motion.div
 						initial={{ opacity: 0, y: 10 }}
 						animate={{ opacity: 1, y: 0 }}
@@ -1427,6 +1487,53 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 												tooltip: { mode: 'index', intersect: false },
 											},
 											scales: { y: { beginAtZero: false } },
+										}}
+									/>
+								)}
+							</CardContent>
+						</Card>
+					</motion.div>
+				)}
+
+				{/* Humidity chart */}
+				{!loading && humidity && humidityChartData && (
+					<motion.div
+						variants={cardVariants}
+						initial="initial"
+						animate="animate"
+						transition={{ delay: 0.35 }}
+					>
+						<Card
+							sx={{
+								mb: 3,
+								borderRadius: 3,
+								boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+								background: 'linear-gradient(135deg, #2a2a2a 0%, #353535 100%)',
+							}}
+						>
+							<CardContent>
+								<Typography
+									variant="h6"
+									gutterBottom
+									sx={{ fontWeight: 600, letterSpacing: '-0.01em' }}
+								>
+									Humidity History
+								</Typography>
+								{humidityHistory.length === 0 ? (
+									<Typography color="text.secondary">
+										No history available
+									</Typography>
+								) : (
+									<Line
+										data={humidityChartData}
+										options={{
+											responsive: true,
+											maintainAspectRatio: true,
+											plugins: {
+												legend: { display: false },
+												tooltip: { mode: 'index', intersect: false },
+											},
+											scales: { y: { beginAtZero: false, min: 0, max: 100 } },
 										}}
 									/>
 								)}

@@ -43,6 +43,10 @@ export abstract class EwelinkDevice extends EwelinkEndpoint implements Device, D
 		return `${this.getSource().value}:${this._eWeLinkConfig.device.itemData.deviceid}`;
 	}
 
+	public getDeviceId(): string {
+		return this._eWeLinkConfig.device.itemData.deviceid;
+	}
+
 	public getSource(): DeviceSource {
 		return DeviceSource.EWELINK;
 	}

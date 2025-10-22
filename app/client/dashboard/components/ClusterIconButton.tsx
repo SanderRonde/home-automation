@@ -183,6 +183,7 @@ const ColorControlIconButton = (props: ClusterIconButtonProps) => {
 
 export interface ClusterIconButtonProps {
 	clusterName: DeviceClusterName;
+	allClusters: Set<DeviceClusterName>;
 	devices: DeviceListWithValuesResponse;
 	invalidate: () => void;
 	onLongPress: () => void;
@@ -199,7 +200,7 @@ export const ClusterIconButton = (props: ClusterIconButtonProps): JSX.Element | 
 		return (
 			<>
 				<ColorControlIconButton {...props} />
-				<OnOffIconButton {...props} />
+				{!props.allClusters.has(DeviceClusterName.ON_OFF) && <OnOffIconButton {...props} />}
 			</>
 		);
 	}

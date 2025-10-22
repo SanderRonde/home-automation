@@ -103,22 +103,31 @@ export class EWeLinkAPI implements Disposable {
 		};
 
 		const devices: EwelinkDevice[] = [];
+		const currentDevicesById = new Map<string, EwelinkDevice>();
+		for (const device of this._devices) {
+			currentDevicesById.set(device.getDeviceId(), device);
+		}
 		for (const deviceResponse of response ?? []) {
 			if (eventEmitters.has(deviceResponse.itemData.deviceid)) {
 				eventEmitters.get(deviceResponse.itemData.deviceid)!.set(deviceResponse);
-			} else {
-				const eventEmitter = new Data<EwelinkDeviceResponse | undefined>(undefined);
-				eventEmitters.set(deviceResponse.itemData.deviceid, eventEmitter);
-				const config = new EWeLinkConfig(
-					wrappedApi,
-					deviceResponse,
-					this.wsConnectionWrapper,
-					eventEmitter
-				);
-				const ewelinkDevice = EwelinkDevice.from(config);
-				if (ewelinkDevice) {
-					devices.push(ewelinkDevice);
+				const currentDevice = currentDevicesById.get(deviceResponse.itemData.deviceid);
+				if (currentDevice) {
+					devices.push(currentDevice);
 				}
+				continue;
+			}
+
+			const eventEmitter = new Data<EwelinkDeviceResponse | undefined>(undefined);
+			eventEmitters.set(deviceResponse.itemData.deviceid, eventEmitter);
+			const config = new EWeLinkConfig(
+				wrappedApi,
+				deviceResponse,
+				this.wsConnectionWrapper,
+				eventEmitter
+			);
+			const ewelinkDevice = EwelinkDevice.from(config);
+			if (ewelinkDevice) {
+				devices.push(ewelinkDevice);
 			}
 		}
 		return devices;
