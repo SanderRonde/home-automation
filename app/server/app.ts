@@ -11,7 +11,6 @@ import { serveStatic } from './lib/serve-static';
 import { LogObj } from './lib/logging/lob-obj';
 import { getAllModules } from './modules';
 import { checkAuth } from './lib/auth';
-import type { BunRequest } from 'bun';
 import { Database } from './lib/db';
 import { wait } from './lib/time';
 import { SQL } from 'bun';

@@ -70,7 +70,7 @@ const ICON_OPTIONS = [
 	'Cottage',
 ] satisfies IncludedIconNames[];
 
-export const RoomAssignmentDialog: React.FC<RoomAssignmentDialogProps> = (props) => {
+export const RoomAssignmentDialog = React.memo<RoomAssignmentDialogProps>((props) => {
 	const [rooms, setRooms] = useState<Record<string, RoomInfo>>({});
 	const [selectedRoom, setSelectedRoom] = useState<string | null>(props.currentRoom || null);
 	const [newRoomName, setNewRoomName] = useState('');
@@ -339,4 +339,4 @@ export const RoomAssignmentDialog: React.FC<RoomAssignmentDialogProps> = (props)
 			</DialogActions>
 		</Dialog>
 	);
-};
+});

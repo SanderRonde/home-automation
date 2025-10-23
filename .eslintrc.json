@@ -1,5 +1,5 @@
 {
-	"plugins": ["@typescript-eslint", "unused-imports"],
+	"plugins": ["@typescript-eslint", "unused-imports", "react-hooks"],
 	"extends": [
 		"./node_modules/gts/",
 		"plugin:@typescript-eslint/recommended-requiring-type-checking"
@@ -86,5 +86,11 @@
 				"allowModules": ["@matter/protocol"]
 			}
 		]
-	}
+	},
+	"overrides": [
+		{
+			"files": ["**/*.tsx"],
+			"extends": ["plugin:react-hooks/recommended"]
+		}
+	]
 }

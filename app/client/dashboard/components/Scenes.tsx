@@ -326,11 +326,16 @@ export const Scenes = (): JSX.Element => {
 																	>
 																		<Chip
 																			icon={
-																				<IconComponent
-																					iconName={
-																						scene.icon
-																					}
-																				/>
+																				cluster?.icon ? (
+																					<IconComponent
+																						iconName={
+																							cluster.icon
+																						}
+																						sx={{
+																							fontSize: 18,
+																						}}
+																					/>
+																				) : undefined
 																			}
 																			label={
 																				<div
@@ -340,6 +345,7 @@ export const Scenes = (): JSX.Element => {
 																						alignItems:
 																							'center',
 																						gap: 4,
+																						color: 'white',
 																					}}
 																				>
 																					{group.name}
@@ -380,6 +386,8 @@ export const Scenes = (): JSX.Element => {
 																			}
 																			size="small"
 																			sx={{
+																				paddingLeft: '4px',
+																				paddingRight: '4px',
 																				backgroundColor:
 																					'primary.light',
 																				'& .MuiChip-label':
@@ -417,12 +425,28 @@ export const Scenes = (): JSX.Element => {
 																				iconName={
 																					cluster.icon
 																				}
+																				sx={{
+																					fontSize: 18,
+																				}}
 																			/>
 																		) : undefined
 																	}
-																	label={device.name}
+																	label={
+																		<div
+																			style={{
+																				color: 'white',
+																				display: 'flex',
+																				alignItems:
+																					'center',
+																			}}
+																		>
+																			{device.name}
+																		</div>
+																	}
 																	size="small"
 																	sx={{
+																		paddingLeft: '4px',
+																		paddingRight: '4px',
 																		backgroundColor:
 																			device.roomColor ??
 																			'action.hover',

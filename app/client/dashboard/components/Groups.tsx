@@ -142,7 +142,7 @@ export const Groups = (): JSX.Element => {
 					// Calculate common clusters
 					const clusterMap = new Map<string, number>();
 					for (const device of groupDevices) {
-						for (const cluster of device.mergedAllClusters) {
+						for (const cluster of device.flatAllClusters) {
 							clusterMap.set(cluster.name, (clusterMap.get(cluster.name) || 0) + 1);
 						}
 					}

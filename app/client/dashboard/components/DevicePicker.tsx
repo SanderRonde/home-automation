@@ -26,7 +26,77 @@ interface DevicePickerProps {
 	title?: string;
 }
 
-export const DevicePicker: React.FC<DevicePickerProps> = (props) => {
+interface DeviceListItemProps {
+	device: ReturnTypeForApi<'device', '/list', 'GET'>['ok']['devices'][number];
+	isSelected: boolean;
+	onToggle: (deviceId: string) => void;
+}
+
+const DeviceListItem = React.memo((props: DeviceListItemProps): JSX.Element => {
+	return (
+		<ListItem
+			component="button"
+			onClick={() => props.onToggle(props.device.id)}
+			sx={{
+				'&:hover': {
+					bgcolor: 'action.hover',
+				},
+				opacity: props.device.status === 'offline' ? 0.6 : 1,
+			}}
+		>
+			<Checkbox
+				checked={props.isSelected}
+				onChange={() => props.onToggle(props.device.id)}
+				color="primary"
+			/>
+			<ListItemText
+				primary={
+					<Box
+						sx={{
+							display: 'flex',
+							alignItems: 'center',
+							gap: 1,
+						}}
+					>
+						<Typography
+							sx={{
+								fontFamily: 'monospace',
+								fontSize: '0.9rem',
+							}}
+						>
+							{props.device.name || props.device.id}
+						</Typography>
+						<Chip
+							label={props.device.status}
+							size="small"
+							color={props.device.status === 'online' ? 'success' : 'default'}
+							variant="outlined"
+							sx={{
+								fontSize: '0.7rem',
+								height: '20px',
+							}}
+						/>
+					</Box>
+				}
+				secondary={
+					props.device.name ? (
+						<Typography
+							sx={{
+								fontFamily: 'monospace',
+								fontSize: '0.8rem',
+								color: 'text.secondary',
+							}}
+						>
+							{props.device.id}
+						</Typography>
+					) : undefined
+				}
+			/>
+		</ListItem>
+	);
+});
+
+export const DevicePicker = React.memo<DevicePickerProps>((props) => {
 	const [selectedDevices, setSelectedDevices] = React.useState<string[]>(props.currentSelection);
 	const [searchTerm, setSearchTerm] = React.useState('');
 	const [devices, setDevices] = React.useState<
@@ -167,70 +237,12 @@ export const DevicePicker: React.FC<DevicePickerProps> = (props) => {
 							</ListItem>
 						) : (
 							filteredDevices.map((device) => (
-								<ListItem
+								<DeviceListItem
 									key={device.id}
-									component="button"
-									onClick={() => handleToggleDevice(device.id)}
-									sx={{
-										'&:hover': {
-											bgcolor: 'action.hover',
-										},
-										opacity: device.status === 'offline' ? 0.6 : 1,
-									}}
-								>
-									<Checkbox
-										checked={selectedDevices.includes(device.id)}
-										onChange={() => handleToggleDevice(device.id)}
-										color="primary"
-									/>
-									<ListItemText
-										primary={
-											<Box
-												sx={{
-													display: 'flex',
-													alignItems: 'center',
-													gap: 1,
-												}}
-											>
-												<Typography
-													sx={{
-														fontFamily: 'monospace',
-														fontSize: '0.9rem',
-													}}
-												>
-													{device.name || device.id}
-												</Typography>
-												<Chip
-													label={device.status}
-													size="small"
-													color={
-														device.status === 'online'
-															? 'success'
-															: 'default'
-													}
-													variant="outlined"
-													sx={{
-														fontSize: '0.7rem',
-														height: '20px',
-													}}
-												/>
-											</Box>
-										}
-										secondary={
-											device.name ? (
-												<Typography
-													sx={{
-														fontFamily: 'monospace',
-														fontSize: '0.8rem',
-														color: 'text.secondary',
-													}}
-												>
-													{device.id}
-												</Typography>
-											) : undefined
-										}
-									/>
-								</ListItem>
+									device={device}
+									isSelected={selectedDevices.includes(device.id)}
+									onToggle={handleToggleDevice}
+								/>
 							))
 						)}
 					</List>
@@ -251,4 +263,4 @@ export const DevicePicker: React.FC<DevicePickerProps> = (props) => {
 			</DialogActions>
 		</Dialog>
 	);
-};
+});

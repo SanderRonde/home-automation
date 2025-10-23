@@ -98,11 +98,7 @@ const OccupancyDetail = (props: OccupancyDetailProps): JSX.Element => {
 	const roomColor = props.device.roomColor || '#555';
 
 	const deviceId = props.device.uniqueId;
-	useEffect(() => {
-		void fetchHistory();
-	}, [deviceId]);
-
-	const fetchHistory = async () => {
+	const fetchHistory = React.useCallback(async () => {
 		if (!deviceId) {
 			setError('No device ID provided');
 			setLoading(false);
@@ -140,7 +136,11 @@ const OccupancyDetail = (props: OccupancyDetailProps): JSX.Element => {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [deviceId]);
+
+	useEffect(() => {
+		void fetchHistory();
+	}, [fetchHistory]);
 
 	const formatTimestamp = (timestamp: number): string => {
 		const date = new Date(timestamp);
@@ -401,11 +401,7 @@ const TemperatureDetail = (props: TemperatureDetailProps): JSX.Element => {
 
 	const deviceId = props.device.uniqueId;
 
-	useEffect(() => {
-		void fetchHistory();
-	}, [deviceId, timeframe]);
-
-	const fetchHistory = async () => {
+	const fetchHistory = React.useCallback(async () => {
 		try {
 			setLoading(true);
 			const response = await apiGet('device', '/temperature/:deviceId/:timeframe', {
@@ -425,7 +421,11 @@ const TemperatureDetail = (props: TemperatureDetailProps): JSX.Element => {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [deviceId, timeframe]);
+
+	useEffect(() => {
+		void fetchHistory();
+	}, [fetchHistory]);
 
 	const chartData = {
 		labels: history
@@ -640,11 +640,7 @@ const HumidityDetail = (props: HumidityDetailProps): JSX.Element => {
 
 	const deviceId = props.device.uniqueId;
 
-	useEffect(() => {
-		void fetchHistory();
-	}, [deviceId, timeframe]);
-
-	const fetchHistory = async () => {
+	const fetchHistory = React.useCallback(async () => {
 		try {
 			setLoading(true);
 			const response = await apiGet('device', '/humidity/:deviceId/:timeframe', {
@@ -664,7 +660,11 @@ const HumidityDetail = (props: HumidityDetailProps): JSX.Element => {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [deviceId, timeframe]);
+
+	useEffect(() => {
+		void fetchHistory();
+	}, [fetchHistory]);
 
 	const chartData = {
 		labels: history
@@ -881,11 +881,7 @@ const IlluminanceDetail = (props: IlluminanceDetailProps): JSX.Element => {
 
 	const deviceId = props.device.uniqueId;
 
-	useEffect(() => {
-		void fetchHistory();
-	}, [deviceId, timeframe]);
-
-	const fetchHistory = async () => {
+	const fetchHistory = React.useCallback(async () => {
 		try {
 			setLoading(true);
 			const response = await apiGet('device', '/illuminance/:deviceId/:timeframe', {
@@ -905,7 +901,11 @@ const IlluminanceDetail = (props: IlluminanceDetailProps): JSX.Element => {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [deviceId, timeframe]);
+
+	useEffect(() => {
+		void fetchHistory();
+	}, [fetchHistory]);
 
 	const chartData = {
 		labels: history
@@ -1122,16 +1122,17 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 
 	const deviceId = props.device.uniqueId;
 
-	useEffect(() => {
-		void fetchHistory();
-	}, [deviceId, timeframe, !!temperature, !!humidity, !!illuminance, !!occupancy]);
+	const hasHumidity = !!humidity;
+	const hasIlluminance = !!illuminance;
+	const hasOccupancy = !!occupancy;
+	const hasTemperature = !!temperature;
 
-	const fetchHistory = async () => {
+	const fetchHistory = React.useCallback(async () => {
 		try {
 			setLoading(true);
 
 			// Fetch temperature history if available
-			if (temperature) {
+			if (hasTemperature) {
 				const response = await apiGet('device', '/temperature/:deviceId/:timeframe', {
 					deviceId: deviceId,
 					timeframe: TIMEFRAME_MS[timeframe].toString(),
@@ -1143,7 +1144,7 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 			}
 
 			// Fetch humidity history if available
-			if (humidity) {
+			if (hasHumidity) {
 				const response = await apiGet('device', '/humidity/:deviceId/:timeframe', {
 					deviceId: deviceId,
 					timeframe: TIMEFRAME_MS[timeframe].toString(),
@@ -1155,7 +1156,7 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 			}
 
 			// Fetch illuminance history if available
-			if (illuminance) {
+			if (hasIlluminance) {
 				const response = await apiGet('device', '/illuminance/:deviceId/:timeframe', {
 					timeframe: TIMEFRAME_MS[timeframe].toString(),
 					deviceId: deviceId,
@@ -1167,7 +1168,7 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 			}
 
 			// Fetch occupancy history if available
-			if (occupancy) {
+			if (hasOccupancy) {
 				const response = await apiGet('device', '/occupancy/:deviceId', {
 					deviceId: deviceId,
 				});
@@ -1181,7 +1182,11 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [deviceId, timeframe, hasHumidity, hasIlluminance, hasOccupancy, hasTemperature]);
+
+	useEffect(() => {
+		void fetchHistory();
+	}, [fetchHistory]);
 
 	const formatTimestamp = (timestamp: number): string => {
 		const date = new Date(timestamp);

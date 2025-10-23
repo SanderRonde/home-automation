@@ -1,12 +1,3 @@
-import type {
-	DashboardDeviceClusterOnOff,
-	DashboardDeviceClusterLevelControl,
-	DashboardDeviceClusterColorControl,
-	DashboardDeviceClusterWindowCovering,
-	DashboardDeviceClusterWithStateMap,
-	DeviceListWithValuesResponse,
-	DashboardDeviceClusterWithState,
-} from '../../../server/modules/device/routing';
 import {
 	Dialog,
 	DialogTitle,
@@ -29,7 +20,18 @@ import {
 	CardContent,
 	ToggleButtonGroup,
 	ToggleButton,
+	ListItemProps,
+	TextFieldProps,
 } from '@mui/material';
+import type {
+	DashboardDeviceClusterOnOff,
+	DashboardDeviceClusterLevelControl,
+	DashboardDeviceClusterColorControl,
+	DashboardDeviceClusterWindowCovering,
+	DashboardDeviceClusterWithStateMap,
+	DeviceListWithValuesResponse,
+	DashboardDeviceClusterWithState,
+} from '../../../server/modules/device/routing';
 import { Delete as DeleteIcon, Add as AddIcon, Close as CloseIcon } from '@mui/icons-material';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import type { Scene, SceneDeviceAction } from '../../../../types/scene';
@@ -69,9 +71,10 @@ const SCENE_ICONS: Array<{ icon: IncludedIconNames; label: string }> = [
 	{ icon: 'LightMode', label: 'Bright' },
 	{ icon: 'DarkMode', label: 'Dark' },
 	{ icon: 'Star', label: 'Favorite' },
+	{ icon: 'Bed', label: 'Bed' },
 ];
 
-export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
+export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.Element => {
 	const theme = useTheme();
 	const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -186,79 +189,85 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 	};
 
 	// Get common clusters for a group
-	const getGroupCommonClusters = (groupId: string): DeviceClusterName[] => {
-		const group = groups.find((g) => g.id === groupId);
-		if (!group) {
-			return [];
-		}
-
-		const deviceList = group.deviceIds
-			.map((id) => props.devices.find((d) => d.uniqueId === id))
-			.filter((d) => d !== undefined);
-
-		if (deviceList.length === 0) {
-			return [];
-		}
-
-		// Find clusters that all devices have
-		const clusterCounts = new Map<DeviceClusterName, number>();
-		for (const device of deviceList) {
-			for (const cluster of device.mergedAllClusters) {
-				clusterCounts.set(cluster.name, (clusterCounts.get(cluster.name) || 0) + 1);
+	const getGroupCommonClusters = React.useCallback(
+		(groupId: string): DeviceClusterName[] => {
+			const group = groups.find((g) => g.id === groupId);
+			if (!group) {
+				return [];
 			}
-		}
 
-		return Array.from(clusterCounts.entries())
-			.filter(([, count]) => count === deviceList.length)
-			.map(([name]) => name)
-			.filter(
-				(name) =>
-					name === DeviceClusterName.ON_OFF ||
-					name === DeviceClusterName.WINDOW_COVERING ||
-					name === DeviceClusterName.COLOR_CONTROL ||
-					name === DeviceClusterName.LEVEL_CONTROL
-			);
-	};
+			const deviceList = group.deviceIds
+				.map((id) => props.devices.find((d) => d.uniqueId === id))
+				.filter((d) => d !== undefined);
 
-	const handleRemoveAction = (key: string) => {
-		setActions(actions.filter((action) => action.key !== key));
-	};
+			if (deviceList.length === 0) {
+				return [];
+			}
 
-	const handleActionChange = (key: string, updates: Partial<DeviceActionEntry>) => {
-		setActions(
-			actions.map((action) => {
-				if (action.key === key) {
-					// When cluster changes, reset action to appropriate default
-					if (updates.cluster && updates.cluster !== action.cluster) {
-						if (updates.cluster === DeviceClusterName.ON_OFF) {
-							return { ...action, ...updates, action: { isOn: true } };
-						} else if (updates.cluster === DeviceClusterName.WINDOW_COVERING) {
-							return {
-								...action,
-								...updates,
-								action: { targetPositionLiftPercentage: 0 },
-							};
-						} else if (updates.cluster === DeviceClusterName.COLOR_CONTROL) {
-							return {
-								...action,
-								...updates,
-								action: { hue: 0, saturation: 100, value: 100 },
-							};
-						} else if (updates.cluster === DeviceClusterName.LEVEL_CONTROL) {
-							return {
-								...action,
-								...updates,
-								action: { level: 100 },
-							};
-						}
-					}
-					return { ...action, ...updates };
+			// Find clusters that all devices have
+			const clusterCounts = new Map<DeviceClusterName, number>();
+			for (const device of deviceList) {
+				for (const cluster of device.flatAllClusters) {
+					clusterCounts.set(cluster.name, (clusterCounts.get(cluster.name) || 0) + 1);
 				}
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				return action as any;
-			})
-		);
-	};
+			}
+
+			return Array.from(clusterCounts.entries())
+				.filter(([, count]) => count === deviceList.length)
+				.map(([name]) => name)
+				.filter(
+					(name) =>
+						name === DeviceClusterName.ON_OFF ||
+						name === DeviceClusterName.WINDOW_COVERING ||
+						name === DeviceClusterName.COLOR_CONTROL ||
+						name === DeviceClusterName.LEVEL_CONTROL
+				);
+		},
+		[groups, props.devices]
+	);
+
+	const handleRemoveAction = React.useCallback((key: string) => {
+		setActions((actions) => actions.filter((action) => action.key !== key));
+	}, []);
+
+	const handleActionChange = React.useCallback(
+		(key: string, updates: Partial<DeviceActionEntry>) => {
+			setActions((actions) =>
+				actions.map((action) => {
+					if (action.key === key) {
+						// When cluster changes, reset action to appropriate default
+						if (updates.cluster && updates.cluster !== action.cluster) {
+							if (updates.cluster === DeviceClusterName.ON_OFF) {
+								return { ...action, ...updates, action: { isOn: true } };
+							} else if (updates.cluster === DeviceClusterName.WINDOW_COVERING) {
+								return {
+									...action,
+									...updates,
+									action: { targetPositionLiftPercentage: 0 },
+								};
+							} else if (updates.cluster === DeviceClusterName.COLOR_CONTROL) {
+								return {
+									...action,
+									...updates,
+									action: { hue: 0, saturation: 100, value: 100 },
+								};
+							} else if (updates.cluster === DeviceClusterName.LEVEL_CONTROL) {
+								return {
+									...action,
+									...updates,
+									action: { level: 100 },
+								};
+							}
+						}
+						return { ...action, ...updates };
+					}
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					return action as any;
+				})
+			);
+		},
+		[]
+	);
 
 	const handleSave = () => {
 		// Validate
@@ -296,9 +305,49 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 		props.onSave(scene);
 	};
 
-	const getDeviceById = (deviceId: string) => {
-		return props.devices.find((d) => d.uniqueId === deviceId);
-	};
+	const onIconChange = React.useCallback(
+		(
+			_event: unknown,
+			newValue: {
+				icon: IncludedIconNames;
+				label: string;
+			} | null
+		) => {
+			if (newValue) {
+				setSelectedIcon(newValue.icon);
+			}
+		},
+		[]
+	);
+
+	const renderIconOption = React.useCallback(
+		(
+			props: ListItemProps,
+			option: {
+				icon: IncludedIconNames;
+				label: string;
+			}
+		) => {
+			return (
+				<Box component="li" {...props} sx={{ display: 'flex', gap: 1 }}>
+					<IconComponent iconName={option.icon} />
+					<Typography>{option.label}</Typography>
+				</Box>
+			);
+		},
+		[]
+	);
+
+	const renderIconInput = React.useCallback((params: TextFieldProps) => {
+		return <TextField {...params} label="Icon" />;
+	}, []);
+
+	const getIconOptionLabel = React.useCallback(
+		(option: { icon: IncludedIconNames; label: string }) => {
+			return option.label;
+		},
+		[]
+	);
 
 	return (
 		<Dialog
@@ -351,24 +400,13 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 
 					<Autocomplete
 						options={SCENE_ICONS}
-						getOptionLabel={(option) => option.label}
+						getOptionLabel={getIconOptionLabel}
 						value={
 							SCENE_ICONS.find((item) => item.icon === selectedIcon) ?? SCENE_ICONS[0]
 						}
-						onChange={(_e, newValue) => {
-							if (newValue) {
-								setSelectedIcon(newValue.icon);
-							}
-						}}
-						renderOption={(props, option) => {
-							return (
-								<Box component="li" {...props} sx={{ display: 'flex', gap: 1 }}>
-									<IconComponent iconName={option.icon} />
-									<Typography>{option.label}</Typography>
-								</Box>
-							);
-						}}
-						renderInput={(params) => <TextField {...params} label="Icon" />}
+						onChange={onIconChange}
+						renderOption={renderIconOption}
+						renderInput={renderIconInput}
 					/>
 
 					{/* Device Actions */}
@@ -381,25 +419,13 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 								const group = action.groupId
 									? groups.find((g) => g.id === action.groupId)
 									: undefined;
-								const devices: DeviceListWithValuesResponse[number][] = [];
-								if (group) {
-									devices.push(
-										...group.deviceIds
-											.map(getDeviceById)
-											.filter((d) => d !== undefined)
-									);
-								} else {
-									const device = getDeviceById(action.deviceId || '');
-									if (device) {
-										devices.push(device);
-									}
-								}
+
 								return (
 									<ActionConfig
 										action={action}
 										key={action.key}
 										index={index}
-										devices={devices}
+										devices={props.devices}
 										group={group}
 										availableDevices={availableDevices}
 										availableGroups={groups}
@@ -554,7 +580,7 @@ export const SceneCreateModal = (props: SceneCreateModalProps): JSX.Element => {
 			</DialogActions>
 		</Dialog>
 	);
-};
+});
 
 interface ActionConfigProps {
 	action: DeviceActionEntry;
@@ -569,7 +595,7 @@ interface ActionConfigProps {
 	handleRemoveAction: (key: string) => void;
 }
 
-const ActionConfig = (props: ActionConfigProps) => {
+const ActionConfig = React.memo((props: ActionConfigProps) => {
 	const targetType = props.action.targetType || 'device';
 	const [colorMode, setColorMode] = React.useState<'manual' | 'palette'>(
 		props.action.cluster === DeviceClusterName.COLOR_CONTROL &&
@@ -578,6 +604,25 @@ const ActionConfig = (props: ActionConfigProps) => {
 			: 'manual'
 	);
 	const isGroup = targetType === 'group';
+
+	const devices = React.useMemo(() => {
+		const getDeviceById = (deviceId: string) => {
+			return props.devices.find((d) => d.uniqueId === deviceId);
+		};
+
+		const devices: DeviceListWithValuesResponse[number][] = [];
+		if (props.group) {
+			devices.push(
+				...props.group.deviceIds.map(getDeviceById).filter((d) => d !== undefined)
+			);
+		} else {
+			const device = getDeviceById(props.action.deviceId || '');
+			if (device) {
+				devices.push(device);
+			}
+		}
+		return devices;
+	}, [props.group, props.action.deviceId]);
 
 	// Get available clusters based on whether it's a device or group
 	const availableClusters: DashboardDeviceClusterWithStateMap<
@@ -589,7 +634,7 @@ const ActionConfig = (props: ActionConfigProps) => {
 
 	if (!isGroup) {
 		// For devices, get clusters from the device
-		for (const device of props.devices) {
+		for (const device of devices) {
 			for (const cluster of device.mergedAllClusters ?? []) {
 				if (cluster.name === DeviceClusterName.COLOR_CONTROL) {
 					// @ts-ignore
@@ -624,7 +669,7 @@ const ActionConfig = (props: ActionConfigProps) => {
 				DashboardDeviceClusterWithState[]
 			>
 		> = {};
-		for (const device of props.devices) {
+		for (const device of devices) {
 			for (const cluster of device.mergedAllClusters ?? []) {
 				if (cluster.name === DeviceClusterName.COLOR_CONTROL) {
 					clusterMap[cluster.name] ??= [];
@@ -653,9 +698,7 @@ const ActionConfig = (props: ActionConfigProps) => {
 		}
 
 		for (const clusterName in clusterMap) {
-			if (
-				clusterMap[clusterName as keyof typeof clusterMap]!.length === props.devices.length
-			) {
+			if (clusterMap[clusterName as keyof typeof clusterMap]!.length === devices.length) {
 				availableClusters[clusterName as keyof typeof clusterMap] = clusterMap[
 					clusterName as keyof typeof clusterMap
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -709,7 +752,7 @@ const ActionConfig = (props: ActionConfigProps) => {
 							<Autocomplete
 								options={props.availableDevices}
 								getOptionLabel={(option) => option.name}
-								value={props.devices[0] ?? null}
+								value={devices[0] ?? null}
 								onChange={(_e, newValue) => {
 									if (newValue) {
 										props.handleActionChange(props.action.key, {
@@ -752,7 +795,7 @@ const ActionConfig = (props: ActionConfigProps) => {
 
 					{/* Show cluster selection if device is selected or if group is selected */}
 					{((!isGroup &&
-						props.devices.length > 0 &&
+						devices.length > 0 &&
 						Object.keys(availableClusters).length > 0) ||
 						(isGroup && props.group)) && (
 						<>
@@ -1220,4 +1263,4 @@ const ActionConfig = (props: ActionConfigProps) => {
 			</CardContent>
 		</Card>
 	);
-};
+});

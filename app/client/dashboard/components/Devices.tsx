@@ -50,7 +50,7 @@ interface EndpointVisualizationProps {
 	title?: string;
 }
 
-const EndpointVisualization: React.FC<EndpointVisualizationProps> = (props) => {
+const EndpointVisualization = React.memo<EndpointVisualizationProps>((props) => {
 	const hasContent =
 		props.endpoint.childClusters.length > 0 || props.endpoint.endpoints.length > 0;
 
@@ -108,7 +108,7 @@ const EndpointVisualization: React.FC<EndpointVisualizationProps> = (props) => {
 			)}
 		</Box>
 	);
-};
+});
 
 interface DeviceCardProps {
 	device: DeviceListWithValuesResponse[number];
@@ -125,7 +125,7 @@ interface DeviceCardProps {
 	animationIndex?: number;
 }
 
-const DeviceCard: React.FC<DeviceCardProps> = (props) => {
+const DeviceCard = React.memo<DeviceCardProps>((props) => {
 	// Helper to get battery percentage from all device clusters (including nested endpoints)
 	const getBatteryPercentage = (): number | undefined => {
 		const findBatteryInClusters = (
@@ -583,7 +583,7 @@ const DeviceCard: React.FC<DeviceCardProps> = (props) => {
 			)}
 		</Card>
 	);
-};
+});
 
 export const Devices: React.FC = () => {
 	const theme = useTheme();

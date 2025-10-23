@@ -22,7 +22,39 @@ interface GroupCreateModalProps {
 	devices: DeviceListWithValuesResponse;
 }
 
-export const GroupCreateModal = (props: GroupCreateModalProps): JSX.Element => {
+interface GroupDeviceItemProps {
+	device: DeviceListWithValuesResponse[number];
+	isChecked: boolean;
+	onToggle: (deviceId: string) => void;
+}
+
+const GroupDeviceItem = React.memo((props: GroupDeviceItemProps): JSX.Element => {
+	return (
+		<FormControlLabel
+			key={props.device.uniqueId}
+			control={
+				<Checkbox
+					checked={props.isChecked}
+					onChange={() => props.onToggle(props.device.uniqueId)}
+				/>
+			}
+			label={
+				<Box>
+					<Typography variant="body2">
+						{props.device.name || props.device.uniqueId}
+					</Typography>
+					{props.device.room && (
+						<Typography variant="caption" sx={{ color: 'text.secondary' }}>
+							{props.device.room}
+						</Typography>
+					)}
+				</Box>
+			}
+		/>
+	);
+});
+
+export const GroupCreateModal = React.memo((props: GroupCreateModalProps): JSX.Element => {
 	const [name, setName] = useState('');
 	const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
 
@@ -69,7 +101,7 @@ export const GroupCreateModal = (props: GroupCreateModalProps): JSX.Element => {
 	const selectedDevices = props.devices.filter((d) => selectedDeviceIds.includes(d.uniqueId));
 	const clusterMap = new Map<string, number>();
 	for (const device of selectedDevices) {
-		for (const cluster of device.mergedAllClusters) {
+		for (const cluster of device.flatAllClusters) {
 			clusterMap.set(cluster.name, (clusterMap.get(cluster.name) || 0) + 1);
 		}
 	}
@@ -108,29 +140,11 @@ export const GroupCreateModal = (props: GroupCreateModalProps): JSX.Element => {
 						}}
 					>
 						{props.devices.map((device) => (
-							<FormControlLabel
+							<GroupDeviceItem
 								key={device.uniqueId}
-								control={
-									<Checkbox
-										checked={selectedDeviceIds.includes(device.uniqueId)}
-										onChange={() => handleToggleDevice(device.uniqueId)}
-									/>
-								}
-								label={
-									<Box>
-										<Typography variant="body2">
-											{device.name || device.uniqueId}
-										</Typography>
-										{device.room && (
-											<Typography
-												variant="caption"
-												sx={{ color: 'text.secondary' }}
-											>
-												{device.room}
-											</Typography>
-										)}
-									</Box>
-								}
+								device={device}
+								isChecked={selectedDeviceIds.includes(device.uniqueId)}
+								onToggle={handleToggleDevice}
 							/>
 						))}
 					</Box>
@@ -169,4 +183,4 @@ export const GroupCreateModal = (props: GroupCreateModalProps): JSX.Element => {
 			</DialogActions>
 		</Dialog>
 	);
-};
+});

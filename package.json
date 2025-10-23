@@ -33,6 +33,7 @@
 	"devDependencies": {
 		"@emotion/react": "^11.14.0",
 		"@emotion/styled": "^11.14.1",
+		"@eslint/compat": "^1.4.0",
 		"@matter/types": "^0.15.3",
 		"@playwright/test": "^1.56.0",
 		"@types/bun": "^1.1.14",
@@ -48,6 +49,8 @@
 		"eslint-config-prettier": "^8.3.0",
 		"eslint-plugin-node": "^11.1.0",
 		"eslint-plugin-prettier": "^4.0.0",
+		"eslint-plugin-react": "^7.37.5",
+		"eslint-plugin-react-hooks": "^5.1.0",
 		"eslint-plugin-unused-imports": "^3.2.0",
 		"gts": "^6.0.2",
 		"knip": "^5.64.1",
