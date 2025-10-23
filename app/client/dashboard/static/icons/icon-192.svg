@@ -6,14 +6,51 @@
 			<stop offset="100%" style="stop-color:#357ABD;stop-opacity:1" />
 		</linearGradient>
 	</defs>
-	<!-- House roof -->
-	<path d="M 96 24 L 24 84 L 36 84 L 36 168 L 156 168 L 156 84 L 168 84 Z" fill="url(#grad)" stroke="#2C5F8D" stroke-width="6"/>
-	<!-- Door -->
-	<rect x="78" y="120" width="36" height="48" fill="#2C5F8D" rx="3"/>
-	<!-- Window left -->
-	<rect x="48" y="96" width="24" height="24" fill="#FFE082" rx="3"/>
-	<!-- Window right -->
-	<rect x="120" y="96" width="24" height="24" fill="#FFE082" rx="3"/>
-	<!-- Door knob -->
-	<circle cx="105" cy="144" r="3" fill="#FFE082"/>
+	
+	<!-- Central hub circle -->
+	<circle cx="96" cy="96" r="30" fill="url(#grad)" stroke="#2C5F8D" stroke-width="6"/>
+	
+	<!-- Automation gear teeth inside hub -->
+	<path d="M96 78 L99 84 L105 84 L99 90 L102 96 L96 93 L90 96 L93 90 L87 84 L93 84 Z" fill="#FFE082"/>
+	
+	<!-- Top node -->
+	<circle cx="96" cy="24" r="15" fill="url(#grad)" stroke="#2C5F8D" stroke-width="4.5"/>
+	<line x1="96" y1="39" x2="96" y2="66" stroke="#4A90E2" stroke-width="6" stroke-dasharray="6,6"/>
+	<circle cx="96" cy="24" r="6" fill="#FFE082"/>
+	
+	<!-- Bottom node -->
+	<circle cx="96" cy="168" r="15" fill="url(#grad)" stroke="#2C5F8D" stroke-width="4.5"/>
+	<line x1="96" y1="153" x2="96" y2="126" stroke="#4A90E2" stroke-width="6" stroke-dasharray="6,6"/>
+	<circle cx="96" cy="168" r="6" fill="#FFE082"/>
+	
+	<!-- Left node -->
+	<circle cx="24" cy="96" r="15" fill="url(#grad)" stroke="#2C5F8D" stroke-width="4.5"/>
+	<line x1="39" y1="96" x2="66" y2="96" stroke="#4A90E2" stroke-width="6" stroke-dasharray="6,6"/>
+	<circle cx="24" cy="96" r="6" fill="#FFE082"/>
+	
+	<!-- Right node -->
+	<circle cx="168" cy="96" r="15" fill="url(#grad)" stroke="#2C5F8D" stroke-width="4.5"/>
+	<line x1="153" y1="96" x2="126" y2="96" stroke="#4A90E2" stroke-width="6" stroke-dasharray="6,6"/>
+	<circle cx="168" cy="96" r="6" fill="#FFE082"/>
+	
+	<!-- Diagonal nodes -->
+	<!-- Top-left -->
+	<circle cx="42" cy="42" r="12" fill="url(#grad)" stroke="#2C5F8D" stroke-width="4.5"/>
+	<line x1="51" y1="51" x2="75" y2="75" stroke="#4A90E2" stroke-width="6" stroke-dasharray="6,6"/>
+	<circle cx="42" cy="42" r="4.5" fill="#FFE082"/>
+	
+	<!-- Top-right -->
+	<circle cx="150" cy="42" r="12" fill="url(#grad)" stroke="#2C5F8D" stroke-width="4.5"/>
+	<line x1="141" y1="51" x2="117" y2="75" stroke="#4A90E2" stroke-width="6" stroke-dasharray="6,6"/>
+	<circle cx="150" cy="42" r="4.5" fill="#FFE082"/>
+	
+	<!-- Bottom-left -->
+	<circle cx="42" cy="150" r="12" fill="url(#grad)" stroke="#2C5F8D" stroke-width="4.5"/>
+	<line x1="51" y1="141" x2="75" y2="117" stroke="#4A90E2" stroke-width="6" stroke-dasharray="6,6"/>
+	<circle cx="42" cy="150" r="4.5" fill="#FFE082"/>
+	
+	<!-- Bottom-right -->
+	<circle cx="150" cy="150" r="12" fill="url(#grad)" stroke="#2C5F8D" stroke-width="4.5"/>
+	<line x1="141" y1="141" x2="117" y2="117" stroke="#4A90E2" stroke-width="6" stroke-dasharray="6,6"/>
+	<circle cx="150" cy="150" r="4.5" fill="#FFE082"/>
 </svg>
