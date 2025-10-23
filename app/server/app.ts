@@ -1,8 +1,8 @@
 import { logImmediate, logReady, logTag } from './lib/logging/logger';
 import { hasArg, getArg, getNumberArg, getNumberEnv } from './lib/io';
 import { createServeOptions, type ServeOptions } from './lib/routes';
-import { CLIENT_FOLDER, DB_FOLDER, ROOT } from './lib/constants';
 import { ProgressLogger } from './lib/logging/progress-logger';
+import { CLIENT_FOLDER, DB_FOLDER } from './lib/constants';
 import type { AllModules, ModuleConfig } from './modules';
 import { SettablePromise } from './lib/settable-promise';
 import { printCommands } from './modules/bot/helpers';
@@ -158,7 +158,10 @@ class WebServer {
 				const websocket = websocketsByRoute[url.pathname];
 				if (websocket) {
 					// Check authentication for WebSocket upgrade
-					const isAuthenticated = await checkAuth(req as unknown as BunRequest);
+					const isAuthenticated = await checkAuth({
+						cookies: new Bun.CookieMap(req.headers.get('cookie')!),
+						url: req.url,
+					});
 					if (!isAuthenticated) {
 						logTag('WEBSOCKET', 'yellow', 'Unauthorized WebSocket connection attempt');
 						return new Response('Unauthorized', { status: 401 });
@@ -179,8 +182,6 @@ class WebServer {
 				...createServeOptions(
 					{
 						...(await serveStatic(CLIENT_FOLDER)),
-						...(await serveStatic(path.join(ROOT, 'static'))),
-						...(await serveStatic(path.join(ROOT, 'static', 'icons'), 'icons')),
 					},
 					false
 				).routes,

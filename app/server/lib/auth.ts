@@ -1,9 +1,9 @@
 import { getClientSecret } from '../modules/auth/client-secret';
 import { verifyCookie } from '../modules/auth/cookie';
 import { Auth } from '../modules/auth';
-import type { BunRequest } from 'bun';
+import type { CookieMap } from 'bun';
 
-export async function checkAuth(req: BunRequest): Promise<boolean> {
+export async function checkAuth(req: { cookies: CookieMap; url: string }): Promise<boolean> {
 	// Check session cookie first (new auth method)
 	const sessionId = req.cookies.get('session');
 	if (sessionId) {
