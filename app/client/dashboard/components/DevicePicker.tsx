@@ -95,6 +95,7 @@ const DeviceListItem = React.memo((props: DeviceListItemProps): JSX.Element => {
 		</ListItem>
 	);
 });
+DeviceListItem.displayName = 'DeviceListItem';
 
 export const DevicePicker = React.memo<DevicePickerProps>((props) => {
 	const [selectedDevices, setSelectedDevices] = React.useState<string[]>(props.currentSelection);
@@ -264,3 +265,4 @@ export const DevicePicker = React.memo<DevicePickerProps>((props) => {
 		</Dialog>
 	);
 });
+DevicePicker.displayName = 'DevicePicker';

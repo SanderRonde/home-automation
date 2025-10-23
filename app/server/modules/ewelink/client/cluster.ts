@@ -55,9 +55,7 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 
 	private _getItemData(device: EWeLinkConfig['device']) {
 		const params = device.itemData.params;
-		return this._fromParams(params) as PARAMS & {
-			deviceid: string;
-		};
+		return this._fromParams(params);
 	}
 
 	public setConfig(config: EWeLinkConfig): void {
@@ -70,7 +68,7 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 					typeof data === 'string' ||
 					!('action' in data) ||
 					data.action !== 'update' ||
-					data.deviceid !== this._getItemData(config.device).deviceid
+					data.deviceid !== config.device.itemData.deviceid
 				) {
 					return;
 				}

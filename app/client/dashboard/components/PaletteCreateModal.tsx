@@ -75,6 +75,7 @@ const PaletteColorItem = React.memo((props: PaletteColorItemProps): JSX.Element 
 		</Box>
 	);
 });
+PaletteColorItem.displayName = 'PaletteColorItem';
 
 export const PaletteCreateModal = React.memo((props: PaletteCreateModalProps): JSX.Element => {
 	const [name, setName] = useState('');
@@ -176,3 +177,4 @@ export const PaletteCreateModal = React.memo((props: PaletteCreateModalProps): J
 		</Dialog>
 	);
 });
+PaletteCreateModal.displayName = 'PaletteCreateModal';

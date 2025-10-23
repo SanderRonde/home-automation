@@ -53,11 +53,15 @@ import {
 	bouncySpring,
 } from '../../lib/animations';
 import { DeviceClusterName, ThermostatMode } from '../../../server/modules/device/cluster';
+import { WindowCoveringVisualization } from './WindowCoveringVisualization';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import { ThermostatCircularSlider } from './ThermostatCircularSlider';
 import React, { useState, useEffect, useRef } from 'react';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { DeviceActionsCard } from './DeviceActionsCard';
 import { apiGet, apiPost } from '../../lib/fetch';
+import { ColorPresets } from './ColorPresets';
 import { Wheel } from '@uiw/react-color';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore - react-chartjs-2 is an ESM module, Bun handles it at runtime
@@ -354,6 +358,261 @@ const OccupancyDetail = (props: OccupancyDetailProps): JSX.Element => {
 																	color: event.occupied
 																		? 'success.main'
 																		: 'text.secondary',
+																}}
+																secondaryTypographyProps={{
+																	fontSize: '0.875rem',
+																}}
+															/>
+														</ListItem>
+													</motion.div>
+												))}
+											</List>
+										</motion.div>
+									)}
+								</CardContent>
+							</Card>
+						</motion.div>
+					</>
+				)}
+			</Box>
+		</motion.div>
+	);
+};
+
+interface ButtonPressEvent {
+	buttonIndex?: number;
+	timestamp: number;
+}
+
+interface SwitchDetailProps extends DeviceDetailBaseProps<DashboardDeviceClusterWithState> {}
+
+const SwitchDetail = (props: SwitchDetailProps): JSX.Element => {
+	const [history, setHistory] = useState<ButtonPressEvent[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
+	const roomColor = props.device.roomColor || '#555';
+
+	const deviceId = props.device.uniqueId;
+
+	const fetchHistory = React.useCallback(async () => {
+		if (!deviceId) {
+			setError('No device ID provided');
+			setLoading(false);
+			return;
+		}
+
+		try {
+			setLoading(true);
+
+			const response = await apiGet('device', '/button-press/:deviceId', {
+				deviceId: deviceId,
+			});
+			if (!response.ok) {
+				throw new Error('Failed to fetch button press history');
+			}
+
+			const data = (await response.json()) as { history?: ButtonPressEvent[] };
+			setHistory(data.history || []);
+		} catch (err) {
+			setError('Failed to load button press history');
+			console.error('Failed to fetch button press history:', err);
+		} finally {
+			setLoading(false);
+		}
+	}, [deviceId]);
+
+	useEffect(() => {
+		void fetchHistory();
+	}, [fetchHistory]);
+
+	const formatTimestamp = (timestamp: number): string => {
+		const date = new Date(timestamp);
+		const now = new Date();
+		const isToday = date.toDateString() === now.toDateString();
+		const isYesterday =
+			date.toDateString() === new Date(now.getTime() - 86400000).toDateString();
+
+		const timeStr = date.toLocaleTimeString('en-US', {
+			hour: '2-digit',
+			minute: '2-digit',
+		});
+
+		if (isToday) {
+			return `Today at ${timeStr}`;
+		}
+		if (isYesterday) {
+			return `Yesterday at ${timeStr}`;
+		}
+		return date.toLocaleString('en-US', {
+			month: 'short',
+			day: 'numeric',
+			hour: '2-digit',
+			minute: '2-digit',
+		});
+	};
+
+	const formatButtonLabel = (buttonIndex?: number): string => {
+		if (buttonIndex === undefined || buttonIndex === null) {
+			return 'Pressed';
+		}
+		return `Button ${buttonIndex + 1} pressed`;
+	};
+
+	const lastPress = history.length > 0 ? history[0] : null;
+
+	return (
+		<motion.div
+			variants={pageVariants}
+			initial="initial"
+			animate="animate"
+			exit="exit"
+			style={{ height: '100%' }}
+		>
+			<Box
+				sx={{
+					backgroundColor: roomColor,
+					py: 1.5,
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
+					position: 'relative',
+					boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+				}}
+			>
+				<IconButton style={{ position: 'absolute', left: 0 }} onClick={props.onExit}>
+					<ArrowBackIcon style={{ fill: '#2f2f2f' }} />
+				</IconButton>
+				<Typography
+					style={{ color: '#2f2f2f', fontWeight: 600, letterSpacing: '-0.02em' }}
+					variant="h6"
+				>
+					Switch
+				</Typography>
+			</Box>
+
+			<Box sx={{ p: { xs: 2, sm: 3 } }}>
+				{loading && (
+					<Box
+						sx={{
+							display: 'flex',
+							justifyContent: 'center',
+							py: 4,
+						}}
+					>
+						<CircularProgress />
+					</Box>
+				)}
+
+				{error && (
+					<Card>
+						<CardContent>
+							<Typography color="error">{error}</Typography>
+						</CardContent>
+					</Card>
+				)}
+
+				{!loading && !error && (
+					<>
+						<motion.div variants={cardVariants} initial="initial" animate="animate">
+							<Card
+								sx={{
+									mb: 3,
+									borderRadius: 3,
+									boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+									background: 'linear-gradient(135deg, #2a2a2a 0%, #353535 100%)',
+								}}
+							>
+								<CardContent sx={{ p: 3 }}>
+									<Typography
+										variant="h6"
+										gutterBottom
+										sx={{ fontWeight: 600, letterSpacing: '-0.01em' }}
+									>
+										{props.device.name}
+									</Typography>
+									{lastPress && (
+										<Typography
+											variant="body2"
+											color="text.secondary"
+											sx={{ mt: 1.5, fontSize: '0.875rem' }}
+										>
+											Last pressed: {formatTimestamp(lastPress.timestamp)}
+										</Typography>
+									)}
+									{!lastPress && (
+										<Typography
+											variant="body2"
+											color="text.secondary"
+											sx={{ mt: 1.5, fontSize: '0.875rem' }}
+										>
+											No press events recorded
+										</Typography>
+									)}
+								</CardContent>
+							</Card>
+						</motion.div>
+
+						<motion.div
+							variants={cardVariants}
+							initial="initial"
+							animate="animate"
+							transition={{ delay: 0.1 }}
+						>
+							<Card
+								sx={{
+									borderRadius: 3,
+									boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+									background: 'linear-gradient(135deg, #2a2a2a 0%, #353535 100%)',
+								}}
+							>
+								<CardContent sx={{ p: 3 }}>
+									<Typography
+										variant="h6"
+										gutterBottom
+										sx={{ fontWeight: 600, letterSpacing: '-0.01em' }}
+									>
+										History
+									</Typography>
+									{history.length === 0 ? (
+										<Typography color="text.secondary">
+											No history available
+										</Typography>
+									) : (
+										<motion.div
+											variants={staggerContainer}
+											initial="initial"
+											animate="animate"
+										>
+											<List sx={{ py: 1 }}>
+												{history.map((event, index) => (
+													<motion.div key={index} variants={staggerItem}>
+														<ListItem
+															sx={{
+																borderLeft: 4,
+																borderColor: 'primary.main',
+																mb: 1.5,
+																bgcolor: 'background.paper',
+																borderRadius: 2,
+																boxShadow:
+																	'0 2px 8px rgba(0,0,0,0.06)',
+																transition: 'all 0.2s',
+																'&:hover': {
+																	boxShadow:
+																		'0 4px 12px rgba(0,0,0,0.1)',
+																	transform: 'translateX(4px)',
+																},
+															}}
+														>
+															<ListItemText
+																primary={formatButtonLabel(
+																	event.buttonIndex
+																)}
+																secondary={formatTimestamp(
+																	event.timestamp
+																)}
+																primaryTypographyProps={{
+																	fontWeight: 600,
+																	color: 'primary.main',
 																}}
 																secondaryTypographyProps={{
 																	fontSize: '0.875rem',
@@ -1775,90 +2034,10 @@ const WindowCoveringDetail = (props: WindowCoveringDetailProps): JSX.Element => 
 							</Typography>
 
 							{/* Animated blind visualization */}
-							<Box
-								sx={{
-									position: 'relative',
-									width: '100%',
-									height: 300,
-									border: '3px solid #4b5563',
-									borderRadius: 2,
-									overflow: 'hidden',
-									backgroundColor: '#e5e7eb',
-									my: 3,
-								}}
-							>
-								{/* Window frame */}
-								<Box
-									sx={{
-										position: 'absolute',
-										top: 0,
-										left: 0,
-										right: 0,
-										bottom: 0,
-										background:
-											'linear-gradient(180deg, #87ceeb 0%, #87ceeb 70%, #90ee90 70%, #90ee90 100%)',
-									}}
-								/>
-								{/* Sun icon */}
-								<Box
-									sx={{
-										position: 'absolute',
-										top: '15%',
-										right: '15%',
-										width: 50,
-										height: 50,
-										borderRadius: '50%',
-										background:
-											'radial-gradient(circle, #ffd700 0%, #ffed4e 100%)',
-										boxShadow: '0 0 20px rgba(255, 215, 0, 0.6)',
-										'&::before': {
-											content: '""',
-											position: 'absolute',
-											top: '50%',
-											left: '50%',
-											width: '70px',
-											height: '70px',
-											transform: 'translate(-50%, -50%)',
-											borderRadius: '50%',
-											background:
-												'radial-gradient(circle, rgba(255, 215, 0, 0.3) 0%, transparent 70%)',
-										},
-									}}
-								/>
-								{/* Blind */}
-								<Box
-									sx={{
-										position: 'absolute',
-										top: 0,
-										left: 0,
-										right: 0,
-										height: `${displayPosition}%`,
-										background:
-											'repeating-linear-gradient(0deg, #9ca3af 0px, #9ca3af 10px, #6b7280 10px, #6b7280 11px)',
-										boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
-										transition: userHasInteracted
-											? 'height 0.5s ease-in-out'
-											: 'none',
-									}}
-								/>
-								{/* Position indicator */}
-								<Box
-									sx={{
-										position: 'absolute',
-										top: `${Math.max(8, Math.min(92, displayPosition))}%`,
-										left: '50%',
-										transform: 'translate(-50%, -50%)',
-										backgroundColor: 'rgba(0, 0, 0, 0.7)',
-										color: 'white',
-										padding: '4px 12px',
-										borderRadius: 1,
-										fontWeight: 'bold',
-										fontSize: '1.2rem',
-									}}
-								>
-									{Math.round(displayPosition)}%
-								</Box>
-							</Box>
+							<WindowCoveringVisualization
+								displayPosition={displayPosition}
+								userHasInteracted={userHasInteracted}
+							/>
 
 							{/* Slider control */}
 							<Box sx={{ px: 2 }}>
@@ -2106,17 +2285,6 @@ const ThermostatDetail = (props: ThermostatDetailProps): JSX.Element => {
 		}
 	};
 
-	// Calculate angle for temperature position on arc
-	const tempToAngle = (temp: number): number => {
-		const { minTemperature, maxTemperature } = props.cluster;
-		const tempRange = maxTemperature - minTemperature;
-		const percentage = (temp - minTemperature) / tempRange;
-		return 135 + percentage * 270; // Start at 135° (bottom-left), go 270° clockwise
-	};
-
-	const targetAngle = tempToAngle(displayTemp);
-	const currentAngle = tempToAngle(props.cluster.currentTemperature);
-
 	const accentColor = getModeColor(mode);
 
 	return (
@@ -2165,146 +2333,19 @@ const ThermostatDetail = (props: ThermostatDetailProps): JSX.Element => {
 							</Typography>
 
 							{/* Circular Slider */}
-							<Box
-								sx={{
-									display: 'flex',
-									justifyContent: 'center',
-									alignItems: 'center',
-									my: 4,
-								}}
-							>
-								<Box
-									ref={circleRef}
-									sx={{
-										position: 'relative',
-										width: 280,
-										height: 280,
-										cursor: isDragging ? 'grabbing' : 'pointer',
-										touchAction: 'none',
-									}}
-									onPointerDown={handlePointerDown}
-									onPointerMove={isDragging ? handlePointerMove : undefined}
-									onPointerUp={handlePointerUp}
-								>
-									{/* Background circle */}
-									<svg
-										width="280"
-										height="280"
-										style={{ position: 'absolute', top: 0, left: 0 }}
-									>
-										{/* Background arc */}
-										<circle
-											cx="140"
-											cy="140"
-											r="120"
-											fill="none"
-											stroke="#e5e7eb"
-											strokeWidth="20"
-											strokeDasharray="753"
-											strokeDashoffset="188"
-											style={{
-												transform: 'rotate(135deg)',
-												transformOrigin: 'center',
-											}}
-										/>
-
-										{/* Active arc (from min to target) */}
-										<circle
-											cx="140"
-											cy="140"
-											r="120"
-											fill="none"
-											stroke={accentColor}
-											strokeWidth="20"
-											strokeLinecap="round"
-											strokeDasharray="753"
-											strokeDashoffset={
-												188 + 753 * (1 - (targetAngle - 135) / 270)
-											}
-											style={{
-												transform: 'rotate(135deg)',
-												transformOrigin: 'center',
-												transition: isDragging
-													? 'none'
-													: 'stroke-dashoffset 0.3s ease',
-											}}
-										/>
-
-										{/* Handle for target temperature */}
-										<circle
-											cx={
-												140 +
-												120 * Math.cos(((targetAngle - 90) * Math.PI) / 180)
-											}
-											cy={
-												140 +
-												120 * Math.sin(((targetAngle - 90) * Math.PI) / 180)
-											}
-											r="16"
-											fill="white"
-											stroke={accentColor}
-											strokeWidth="3"
-										/>
-
-										{/* Current temperature indicator */}
-										<circle
-											cx={
-												140 +
-												100 *
-													Math.cos(((currentAngle - 90) * Math.PI) / 180)
-											}
-											cy={
-												140 +
-												100 *
-													Math.sin(((currentAngle - 90) * Math.PI) / 180)
-											}
-											r="6"
-											fill="#6b7280"
-										/>
-									</svg>
-
-									{/* Center content */}
-									<Box
-										sx={{
-											position: 'absolute',
-											top: '50%',
-											left: '50%',
-											transform: 'translate(-50%, -50%)',
-											textAlign: 'center',
-										}}
-									>
-										<Typography
-											variant="h2"
-											sx={{
-												fontWeight: 'bold',
-												color: accentColor,
-												mb: 1,
-											}}
-										>
-											{displayTemp.toFixed(1)}°
-										</Typography>
-										<Typography
-											variant="body2"
-											sx={{
-												color: 'text.secondary',
-											}}
-										>
-											Current: {props.cluster.currentTemperature.toFixed(1)}°C
-										</Typography>
-										{props.cluster.isHeating && (
-											<Chip
-												label="Heating"
-												size="small"
-												sx={{
-													mt: 1,
-													backgroundColor: accentColor,
-													color: 'white',
-												}}
-											/>
-										)}
-									</Box>
-								</Box>
-							</Box>
+							<ThermostatCircularSlider
+								displayTemp={displayTemp}
+								currentTemp={props.cluster.currentTemperature}
+								minTemp={props.cluster.minTemperature}
+								maxTemp={props.cluster.maxTemperature}
+								accentColor={accentColor}
+								isHeating={props.cluster.isHeating}
+								isDragging={isDragging}
+								circleRef={circleRef}
+								onPointerDown={handlePointerDown}
+								onPointerMove={handlePointerMove}
+								onPointerUp={handlePointerUp}
+							/>
 
 							{/* Mode Toggle Buttons */}
 							<Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
@@ -2797,20 +2838,6 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 	const displayBrightness = hasLevelControl ? brightness : value;
 	const currentColor = hsvToHex(hue, saturation, displayBrightness);
 
-	// Define color presets
-	const colorPresets = [
-		{ name: 'Warm White', hue: 30, saturation: 20 },
-		{ name: 'Cool White', hue: 200, saturation: 10 },
-		{ name: 'Red', hue: 0, saturation: 100 },
-		{ name: 'Orange', hue: 30, saturation: 100 },
-		{ name: 'Yellow', hue: 60, saturation: 100 },
-		{ name: 'Green', hue: 120, saturation: 100 },
-		{ name: 'Cyan', hue: 180, saturation: 100 },
-		{ name: 'Blue', hue: 240, saturation: 100 },
-		{ name: 'Purple', hue: 270, saturation: 100 },
-		{ name: 'Pink', hue: 330, saturation: 100 },
-	];
-
 	return (
 		<motion.div
 			variants={pageVariants}
@@ -3043,92 +3070,10 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 							</motion.div>
 
 							{/* Color presets */}
-							<motion.div
-								variants={staggerContainer}
-								initial="initial"
-								animate="animate"
-							>
-								<Box sx={{ mb: 4, px: 2 }}>
-									<Typography
-										sx={{
-											fontSize: '0.875rem',
-											fontWeight: 600,
-											color: 'text.primary',
-											mb: 2,
-											letterSpacing: '0.02em',
-											textTransform: 'uppercase',
-											opacity: 0.8,
-											textAlign: 'center',
-										}}
-									>
-										Quick Colors
-									</Typography>
-									<Box
-										sx={{
-											display: 'flex',
-											gap: 2,
-											flexWrap: 'wrap',
-											justifyContent: 'center',
-										}}
-									>
-										{colorPresets.map((preset) => {
-											const presetColor = hsvToHex(
-												preset.hue,
-												preset.saturation,
-												100
-											);
-											return (
-												<motion.div
-													key={preset.name}
-													variants={staggerItem}
-													whileHover={{ scale: 1.15, y: -4 }}
-													whileTap={{ scale: 0.9 }}
-													transition={bouncySpring}
-												>
-													<Box
-														onClick={() =>
-															void handlePresetColor(
-																preset.hue,
-																preset.saturation
-															)
-														}
-														sx={{
-															width: 52,
-															height: 52,
-															borderRadius: '50%',
-															backgroundColor: presetColor,
-															cursor: isUpdating
-																? 'default'
-																: 'pointer',
-															opacity: isUpdating ? 0.5 : 1,
-															boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
-															border: '3px solid white',
-															position: 'relative',
-															'&::after': {
-																content: '""',
-																position: 'absolute',
-																inset: -2,
-																borderRadius: '50%',
-																padding: 2,
-																background: `linear-gradient(135deg, ${presetColor}, ${presetColor})`,
-																WebkitMask:
-																	'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-																WebkitMaskComposite: 'xor',
-																maskComposite: 'exclude',
-																opacity: 0,
-																transition: 'opacity 0.2s',
-															},
-															'&:hover::after': {
-																opacity: isUpdating ? 0 : 0.5,
-															},
-														}}
-													/>
-												</motion.div>
-											);
-										})}
-									</Box>
-								</Box>
-							</motion.div>
+							<ColorPresets
+								isUpdating={isUpdating}
+								onPresetClick={handlePresetColor}
+							/>
 
 							{/* Preview */}
 							<motion.div
@@ -3197,131 +3142,11 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 
 				{/* Actions Section */}
 				{actionsCluster && actionsCluster.actions.length > 0 && (
-					<motion.div
-						variants={cardVariants}
-						initial="initial"
-						animate="animate"
-						transition={{ delay: 0.5 }}
-					>
-						<Card
-							sx={{
-								mt: 3,
-								borderRadius: 3,
-								boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-								background: 'linear-gradient(135deg, #2a2a2a 0%, #353535 100%)',
-							}}
-						>
-							<CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-								<Typography
-									variant="h6"
-									gutterBottom
-									sx={{
-										fontWeight: 600,
-										letterSpacing: '-0.01em',
-									}}
-								>
-									Actions
-								</Typography>
-								<motion.div
-									variants={staggerContainer}
-									initial="initial"
-									animate="animate"
-								>
-									<Box
-										sx={{
-											display: 'flex',
-											flexDirection: 'column',
-											gap: 2,
-											mt: 2,
-										}}
-									>
-										{actionsCluster.actions.map((action) => {
-											const isActive =
-												action.id === actionsCluster.activeActionId;
-											const isExecuting = action.id === executingActionId;
-
-											return (
-												<motion.div
-													key={action.id}
-													variants={staggerItem}
-													whileHover={
-														isExecuting ? {} : { scale: 1.02, x: 4 }
-													}
-													whileTap={isExecuting ? {} : { scale: 0.98 }}
-													transition={smoothSpring}
-												>
-													<Box
-														onClick={() =>
-															!isExecuting &&
-															void handleExecuteAction(action.id)
-														}
-														sx={{
-															p: 2.5,
-															borderRadius: 2,
-															border: '2px solid',
-															borderColor: isActive
-																? 'primary.main'
-																: 'divider',
-															backgroundColor: isActive
-																? 'rgba(25, 118, 210, 0.08)'
-																: 'background.paper',
-															cursor: isExecuting
-																? 'wait'
-																: 'pointer',
-															boxShadow: isActive
-																? '0 2px 8px rgba(25, 118, 210, 0.2)'
-																: '0 1px 3px rgba(0,0,0,0.05)',
-															transition: 'all 0.2s',
-															'&:hover': {
-																backgroundColor: isActive
-																	? 'rgba(25, 118, 210, 0.12)'
-																	: 'rgba(0, 0, 0, 0.04)',
-																borderColor: 'primary.main',
-																boxShadow:
-																	'0 4px 12px rgba(0,0,0,0.1)',
-															},
-														}}
-													>
-														<Box
-															sx={{
-																display: 'flex',
-																alignItems: 'center',
-																justifyContent: 'space-between',
-															}}
-														>
-															<Typography
-																variant="body1"
-																sx={{
-																	fontWeight: isActive
-																		? 600
-																		: 500,
-																}}
-															>
-																{action.name}
-															</Typography>
-															{isActive && (
-																<Chip
-																	label="Active"
-																	color="primary"
-																	size="small"
-																	sx={{
-																		fontWeight: 600,
-																	}}
-																/>
-															)}
-															{isExecuting && (
-																<CircularProgress size={20} />
-															)}
-														</Box>
-													</Box>
-												</motion.div>
-											);
-										})}
-									</Box>
-								</motion.div>
-							</CardContent>
-						</Card>
-					</motion.div>
+					<DeviceActionsCard
+						actionsCluster={actionsCluster}
+						executingActionId={executingActionId}
+						onExecuteAction={handleExecuteAction}
+					/>
 				)}
 			</Box>
 		</motion.div>
@@ -3358,6 +3183,9 @@ export const DeviceDetail = (
 	}
 	if (props.cluster.name === DeviceClusterName.THERMOSTAT) {
 		return <ThermostatDetail {...props} cluster={props.cluster} />;
+	}
+	if (props.cluster.name === DeviceClusterName.SWITCH) {
+		return <SwitchDetail {...props} cluster={props.cluster} />;
 	}
 	return null;
 };

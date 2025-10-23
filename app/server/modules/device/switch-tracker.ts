@@ -1,5 +1,6 @@
 import type { Device as DeviceInterface } from './device';
-import { DeviceSwitchCluster } from './cluster';
+import type { DeviceSwitchCluster } from './cluster';
+import { DeviceClusterName } from './cluster';
 import type { SceneAPI } from './scene-api';
 import type { SQL } from 'bun';
 
@@ -23,7 +24,7 @@ export class SwitchTracker {
 			// Find all switch clusters across all endpoints
 			const allClusters = device.allClusters;
 			const switchClusters = allClusters
-				.filter(({ cluster }) => cluster instanceof DeviceSwitchCluster)
+				.filter(({ cluster }) => cluster.getName() === DeviceClusterName.SWITCH)
 				.map(({ cluster }) => cluster as DeviceSwitchCluster);
 
 			if (!switchClusters.length) {

@@ -109,12 +109,12 @@ const EndpointVisualization = React.memo<EndpointVisualizationProps>((props) => 
 		</Box>
 	);
 });
+EndpointVisualization.displayName = 'EndpointVisualization';
 
 interface DeviceCardProps {
 	device: DeviceListWithValuesResponse[number];
 	isExpanded: boolean;
-	isEditing: boolean;
-	editedName: string;
+	editedName: string | undefined;
 	onToggleExpansion: (deviceId: string) => void;
 	onStartEdit: (deviceId: string, currentName: string) => void;
 	onSaveEdit: (deviceId: string) => void;
@@ -174,7 +174,7 @@ const DeviceCard = React.memo<DeviceCardProps>((props) => {
 					borderColor: 'divider',
 				}}
 			>
-				{props.isEditing && !props.isMobile ? (
+				{props.editedName !== undefined && !props.isMobile ? (
 					/* Inline edit for desktop */
 					<Box
 						sx={{
@@ -361,10 +361,10 @@ const DeviceCard = React.memo<DeviceCardProps>((props) => {
 								)}
 							</Box>
 						</Tooltip>
-						{props.isEditing && props.isMobile ? (
+						{props.editedName !== undefined && props.isMobile ? (
 							/* Edit dialog for mobile */
 							<Dialog
-								open={props.isEditing}
+								open={props.editedName !== undefined}
 								onClose={props.onCancelEdit}
 								maxWidth="sm"
 								fullWidth
@@ -438,7 +438,7 @@ const DeviceCard = React.memo<DeviceCardProps>((props) => {
 			{/* Bottom bar with device info and expand */}
 			<CardActionArea
 				onClick={() => props.onToggleExpansion(props.device.uniqueId)}
-				disabled={props.isEditing}
+				disabled={props.editedName !== undefined}
 			>
 				<CardContent sx={{ px: 0, pt: 1.5 }}>
 					<Box
@@ -584,6 +584,7 @@ const DeviceCard = React.memo<DeviceCardProps>((props) => {
 		</Card>
 	);
 });
+DeviceCard.displayName = 'DeviceCard';
 
 export const Devices: React.FC = () => {
 	const theme = useTheme();
@@ -647,7 +648,7 @@ export const Devices: React.FC = () => {
 		}
 	};
 
-	const toggleDeviceExpansion = (deviceId: string) => {
+	const toggleDeviceExpansion = React.useCallback((deviceId: string) => {
 		setExpandedDevices((prev) => {
 			const newSet = new Set(prev);
 			if (newSet.has(deviceId)) {
@@ -657,60 +658,69 @@ export const Devices: React.FC = () => {
 			}
 			return newSet;
 		});
-	};
+	}, []);
 
-	const handleOpenRoomDialog = (deviceId: string, deviceName: string, room?: string) => {
-		setRoomDialogFor({ id: deviceId, name: deviceName, room });
-	};
+	const handleOpenRoomDialog = React.useCallback(
+		(deviceId: string, deviceName: string, room?: string) =>
+			setRoomDialogFor({ id: deviceId, name: deviceName, room }),
+		[]
+	);
 
-	const handleCloseRoomDialog = () => {
+	const handleCloseRoomDialog = React.useCallback(() => {
 		setRoomDialogFor(null);
-	};
+	}, []);
 
-	const handleRoomAssigned = () => {
+	const handleRoomAssigned = React.useCallback(() => {
 		void refresh();
-	};
+	}, [refresh]);
 
-	const handleStartEdit = (deviceId: string, currentName: string) => {
+	const handleStartEdit = React.useCallback((deviceId: string, currentName: string) => {
 		setEditingDeviceId(deviceId);
 		setEditedName(currentName);
-	};
+	}, []);
 
-	const handleCancelEdit = () => {
+	const handleCancelEdit = React.useCallback(() => {
 		setEditingDeviceId(null);
 		setEditedName('');
-	};
+	}, []);
 
-	const handleSaveEdit = async (deviceId: string) => {
-		if (
-			!editedName.trim() ||
-			editedName === devices.find((d) => d.uniqueId === deviceId)?.name
-		) {
-			handleCancelEdit();
-			return;
-		}
+	const editedNameRef = React.useRef<string | undefined>(undefined);
+	editedNameRef.current = editedName;
 
-		try {
-			const response = await apiPost(
-				'device',
-				'/updateName',
-				{},
-				{
-					deviceId,
-					name: editedName.trim(),
-				}
-			);
-
-			if (response.ok) {
-				refresh();
+	const handleSaveEdit = React.useCallback(
+		async (deviceId: string) => {
+			const editedName = editedNameRef.current;
+			if (
+				!editedName?.trim() ||
+				editedName === devices.find((d) => d.uniqueId === deviceId)?.name
+			) {
 				handleCancelEdit();
-			} else {
-				console.error('Failed to update device name');
+				return;
 			}
-		} catch (error) {
-			console.error('Failed to update device name:', error);
-		}
-	};
+
+			try {
+				const response = await apiPost(
+					'device',
+					'/updateName',
+					{},
+					{
+						deviceId,
+						name: editedName.trim(),
+					}
+				);
+
+				if (response.ok) {
+					refresh();
+					handleCancelEdit();
+				} else {
+					console.error('Failed to update device name');
+				}
+			} catch (error) {
+				console.error('Failed to update device name:', error);
+			}
+		},
+		[devices, handleCancelEdit, refresh]
+	);
 
 	return (
 		<Box sx={{ p: { xs: 2, sm: 3 } }}>
@@ -755,8 +765,9 @@ export const Devices: React.FC = () => {
 									key={device.uniqueId}
 									device={device}
 									isExpanded={expandedDevices.has(device.uniqueId)}
-									isEditing={editingDeviceId === device.uniqueId}
-									editedName={editedName}
+									editedName={
+										editingDeviceId === device.uniqueId ? editedName : undefined
+									}
 									onToggleExpansion={toggleDeviceExpansion}
 									onStartEdit={handleStartEdit}
 									onSaveEdit={handleSaveEdit}
@@ -895,12 +906,15 @@ export function useDevices(): {
 
 	return {
 		open,
-		refresh: (showSpinner = false) => {
-			if (showSpinner) {
-				setLoading(true);
-			}
-			sendMessage({ type: 'refreshDevices' });
-		},
+		refresh: React.useCallback(
+			(showSpinner = false) => {
+				if (showSpinner) {
+					setLoading(true);
+				}
+				sendMessage({ type: 'refreshDevices' });
+			},
+			[sendMessage]
+		),
 		devices,
 		loading,
 	};

@@ -8,8 +8,6 @@ import {
 	Box,
 	IconButton,
 	Typography,
-	Switch,
-	Slider,
 	FormControlLabel,
 	Checkbox,
 	Autocomplete,
@@ -20,8 +18,8 @@ import {
 	CardContent,
 	ToggleButtonGroup,
 	ToggleButton,
-	ListItemProps,
-	TextFieldProps,
+	type ListItemProps,
+	type TextFieldProps,
 } from '@mui/material';
 import type {
 	DashboardDeviceClusterOnOff,
@@ -35,6 +33,7 @@ import type {
 import { Delete as DeleteIcon, Add as AddIcon, Close as CloseIcon } from '@mui/icons-material';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import type { Scene, SceneDeviceAction } from '../../../../types/scene';
+import { ClusterActionControls } from './ClusterActionControls';
 import type { DeviceGroup } from '../../../../types/group';
 import type { Palette } from '../../../../types/palette';
 import type { IncludedIconNames } from './icon';
@@ -581,6 +580,7 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 		</Dialog>
 	);
 });
+SceneCreateModal.displayName = 'SceneCreateModal';
 
 interface ActionConfigProps {
 	action: DeviceActionEntry;
@@ -597,12 +597,6 @@ interface ActionConfigProps {
 
 const ActionConfig = React.memo((props: ActionConfigProps) => {
 	const targetType = props.action.targetType || 'device';
-	const [colorMode, setColorMode] = React.useState<'manual' | 'palette'>(
-		props.action.cluster === DeviceClusterName.COLOR_CONTROL &&
-			'paletteId' in props.action.action
-			? 'palette'
-			: 'manual'
-	);
 	const isGroup = targetType === 'group';
 
 	const devices = React.useMemo(() => {
@@ -622,7 +616,7 @@ const ActionConfig = React.memo((props: ActionConfigProps) => {
 			}
 		}
 		return devices;
-	}, [props.group, props.action.deviceId]);
+	}, [props.group, props.action.deviceId, props.devices]);
 
 	// Get available clusters based on whether it's a device or group
 	const availableClusters: DashboardDeviceClusterWithStateMap<
@@ -841,422 +835,14 @@ const ActionConfig = React.memo((props: ActionConfigProps) => {
 							)}
 
 							{/* Action Configuration */}
-							{props.action.cluster === DeviceClusterName.ON_OFF && (
-								<FormControlLabel
-									control={
-										<Switch
-											checked={
-												(
-													props.action.action as {
-														isOn: boolean;
-													}
-												).isOn
-											}
-											onChange={(e) =>
-												props.handleActionChange(props.action.key, {
-													action: {
-														isOn: e.target.checked,
-													},
-												})
-											}
-										/>
-									}
-									label={props.action.action.isOn ? 'Turn On' : 'Turn Off'}
-								/>
-							)}
-
-							{props.action.cluster === DeviceClusterName.WINDOW_COVERING && (
-								<Box>
-									<Typography variant="body2" gutterBottom>
-										Position:{' '}
-										{
-											(
-												props.action.action as {
-													targetPositionLiftPercentage: number;
-												}
-											).targetPositionLiftPercentage
-										}
-										%
-									</Typography>
-									<Slider
-										value={props.action.action.targetPositionLiftPercentage}
-										onChange={(_e, value) =>
-											props.handleActionChange(props.action.key, {
-												action: {
-													targetPositionLiftPercentage: value,
-												},
-											})
-										}
-										min={0}
-										max={100}
-										marks={[
-											{
-												value: 0,
-												label: '0%',
-											},
-											{
-												value: 50,
-												label: '50%',
-											},
-											{
-												value: 100,
-												label: '100%',
-											},
-										]}
-									/>
-								</Box>
-							)}
-
-							{props.action.cluster === DeviceClusterName.LEVEL_CONTROL && (
-								<Box>
-									<Typography variant="body2" gutterBottom>
-										Level:{' '}
-										{
-											(
-												props.action.action as {
-													level: number;
-												}
-											).level
-										}
-										%
-									</Typography>
-									<Slider
-										value={props.action.action.level}
-										onChange={(_e, value) =>
-											props.handleActionChange(props.action.key, {
-												action: {
-													level: value,
-												},
-											})
-										}
-										min={0}
-										max={100}
-										marks={[
-											{
-												value: 0,
-												label: '0%',
-											},
-											{
-												value: 50,
-												label: '50%',
-											},
-											{
-												value: 100,
-												label: '100%',
-											},
-										]}
-									/>
-								</Box>
-							)}
-
-							{((props.action.cluster === DeviceClusterName.COLOR_CONTROL &&
-								availableClusters[DeviceClusterName.COLOR_CONTROL]
-									?.mergedClusters?.[DeviceClusterName.ON_OFF]) ||
-								props.action.cluster === DeviceClusterName.ON_OFF) && (
-								<Box
-									sx={{
-										display: 'flex',
-										flexDirection: 'column',
-										gap: 2,
-									}}
-								>
-									<ToggleButtonGroup
-										value={
-											props.action.cluster === DeviceClusterName.ON_OFF
-												? props.action.action.isOn
-													? 'on'
-													: 'off'
-												: 'color'
-										}
-										exclusive
-										onChange={(_e, value) => {
-											if (value === 'off') {
-												props.handleActionChange(props.action.key, {
-													cluster: DeviceClusterName.ON_OFF,
-													action: {
-														isOn: false,
-													},
-												});
-											} else if (value === 'on') {
-												props.handleActionChange(props.action.key, {
-													cluster: DeviceClusterName.ON_OFF,
-													action: {
-														isOn: true,
-													},
-												});
-											} else if (value === 'color') {
-												props.handleActionChange(props.action.key, {
-													cluster: DeviceClusterName.COLOR_CONTROL,
-													action: {
-														hue: 0,
-														saturation: 100,
-														value: 100,
-													},
-												});
-											}
-										}}
-										fullWidth
-									>
-										<ToggleButton value="off">Off</ToggleButton>
-										<ToggleButton value="on">On</ToggleButton>
-										<ToggleButton value="color">Color</ToggleButton>
-									</ToggleButtonGroup>
-								</Box>
-							)}
-
-							{props.action.cluster === DeviceClusterName.COLOR_CONTROL && (
-								<Box
-									sx={{
-										display: 'flex',
-										flexDirection: 'column',
-										gap: 2,
-									}}
-								>
-									{/* Color Mode Selector (only for groups) */}
-									{isGroup && (
-										<ToggleButtonGroup
-											value={colorMode}
-											exclusive
-											onChange={(_e, value) => {
-												if (value) {
-													setColorMode(value);
-													// Clear action data when switching modes
-													if (value === 'manual') {
-														props.handleActionChange(props.action.key, {
-															action: {
-																hue: 0,
-																saturation: 100,
-																value: 100,
-															},
-														});
-													} else {
-														props.handleActionChange(props.action.key, {
-															action: {
-																paletteId: '',
-															},
-														});
-													}
-												}
-											}}
-											fullWidth
-										>
-											<ToggleButton value="manual">Manual Color</ToggleButton>
-											<ToggleButton value="palette">Palette</ToggleButton>
-										</ToggleButtonGroup>
-									)}
-
-									{/* Color Preview (only for manual mode) */}
-									{colorMode === 'manual' && 'hue' in props.action.action && (
-										<Box
-											sx={{
-												width: '100%',
-												height: 60,
-												borderRadius: 2,
-												border: '1px solid',
-												borderColor: 'divider',
-												backgroundColor: `hsl(${props.action.action.hue ?? 0}, ${props.action.action.saturation ?? 100}%, ${(props.action.action.value ?? 100) / 2}%)`,
-											}}
-										/>
-									)}
-
-									{/* Palette Selector */}
-									{colorMode === 'palette' && (
-										<Box>
-											<Autocomplete
-												options={props.availablePalettes}
-												getOptionLabel={(option) => option.name}
-												value={(() => {
-													if ('paletteId' in props.action.action) {
-														const paletteId = (
-															props.action.action as {
-																paletteId: string;
-															}
-														).paletteId;
-														return (
-															props.availablePalettes.find(
-																(p) => p.id === paletteId
-															) ?? null
-														);
-													}
-													return null;
-												})()}
-												onChange={(_e, newValue) => {
-													props.handleActionChange(props.action.key, {
-														action: {
-															paletteId: newValue?.id ?? '',
-														},
-													});
-												}}
-												renderInput={(params) => (
-													<TextField
-														{...params}
-														label="Select Palette"
-														size="small"
-													/>
-												)}
-												renderOption={(props, option) => (
-													<li {...props}>
-														<Box
-															sx={{
-																display: 'flex',
-																alignItems: 'center',
-																gap: 1,
-																width: '100%',
-															}}
-														>
-															<Typography sx={{ flex: 1 }}>
-																{option.name}
-															</Typography>
-															<Box
-																sx={{
-																	display: 'flex',
-																	gap: 0.5,
-																}}
-															>
-																{option.colors.map((color, idx) => (
-																	<Box
-																		key={idx}
-																		sx={{
-																			width: 20,
-																			height: 20,
-																			backgroundColor: color,
-																			borderRadius: '50%',
-																			border: '1px solid rgba(0,0,0,0.2)',
-																		}}
-																	/>
-																))}
-															</Box>
-														</Box>
-													</li>
-												)}
-											/>
-										</Box>
-									)}
-
-									{colorMode === 'manual' && 'hue' in props.action.action && (
-										<>
-											<Box>
-												<Typography variant="body2" gutterBottom>
-													Hue: {props.action.action.hue}°
-												</Typography>
-												<Slider
-													value={props.action.action.hue}
-													onChange={(_e, value) =>
-														props.handleActionChange(props.action.key, {
-															action: {
-																...(props.action.action as {
-																	hue: number;
-																	saturation: number;
-																	value: number;
-																}),
-																hue: value,
-															},
-														})
-													}
-													min={0}
-													max={360}
-													marks={[
-														{
-															value: 0,
-															label: '0°',
-														},
-														{
-															value: 180,
-															label: '180°',
-														},
-														{
-															value: 360,
-															label: '360°',
-														},
-													]}
-												/>
-											</Box>
-											<Box>
-												<Typography variant="body2" gutterBottom>
-													Saturation: {props.action.action.saturation}%
-												</Typography>
-												<Slider
-													value={props.action.action.saturation}
-													onChange={(_e, value) =>
-														props.handleActionChange(props.action.key, {
-															action: {
-																...(props.action.action as {
-																	hue: number;
-																	saturation: number;
-																	value: number;
-																}),
-																saturation: value,
-															},
-														})
-													}
-													min={0}
-													max={100}
-													marks={[
-														{
-															value: 0,
-															label: '0%',
-														},
-														{
-															value: 50,
-															label: '50%',
-														},
-														{
-															value: 100,
-															label: '100%',
-														},
-													]}
-												/>
-											</Box>
-											{'value' in props.action.action &&
-												!availableClusters[DeviceClusterName.COLOR_CONTROL]
-													?.mergedClusters[
-													DeviceClusterName.LEVEL_CONTROL
-												] && (
-													<Box>
-														<Typography variant="body2" gutterBottom>
-															Brightness: {props.action.action.value}%
-														</Typography>
-														<Slider
-															value={props.action.action.value}
-															onChange={(_e, value) =>
-																props.handleActionChange(
-																	props.action.key,
-																	{
-																		action: {
-																			...(props.action
-																				.action as {
-																				hue: number;
-																				saturation: number;
-																				value: number;
-																			}),
-																			value: value,
-																		},
-																	}
-																)
-															}
-															min={0}
-															max={100}
-															marks={[
-																{
-																	value: 0,
-																	label: '0%',
-																},
-																{
-																	value: 50,
-																	label: '50%',
-																},
-																{
-																	value: 100,
-																	label: '100%',
-																},
-															]}
-														/>
-													</Box>
-												)}
-										</>
-									)}
-								</Box>
-							)}
+							<ClusterActionControls
+								action={props.action}
+								actionKey={props.action.key}
+								isGroup={isGroup}
+								availableClusters={availableClusters}
+								availablePalettes={props.availablePalettes}
+								onActionChange={props.handleActionChange}
+							/>
 						</>
 					)}
 				</Box>
@@ -1264,3 +850,4 @@ const ActionConfig = React.memo((props: ActionConfigProps) => {
 		</Card>
 	);
 });
+ActionConfig.displayName = 'ActionConfig';

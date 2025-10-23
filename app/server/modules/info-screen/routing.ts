@@ -1,10 +1,10 @@
 import { createServeOptions, staticResponse, withRequestBody } from '../../lib/routes';
+import { authCode, authenticateURL, getEvents, getCalendar } from './calendar';
 import infoScreenHtml from '../../../client/info-screen/index.html';
 import { serveStatic } from '../../lib/serve-static';
 import { CLIENT_FOLDER } from '../../lib/constants';
 import { ExternalWeatherTimePeriod } from './types';
 import { logTag } from '../../lib/logging/logger';
-import { authCode, getEvents } from './calendar';
 import { get } from './temperature/external';
 import type { ModuleConfig } from '..';
 import type { BunRequest } from 'bun';
@@ -76,18 +76,24 @@ export async function initRouting(moduleConfig: ModuleConfig): Promise<void> {
 						const { temperature } = response;
 
 						return json({
+							success: true,
 							...response,
 							temperature: `${Math.round(temperature * 10) / 10}°`,
 						});
 					}
 				),
 				'/calendar': async (_req, _server, { json }) => {
-					try {
-						const events = await getEvents(7);
-						return json({ events });
-					} catch (e) {
-						return json({ error: 'calendar API not authenticated' }, { status: 500 });
+					const calendar = getCalendar();
+					if (!calendar) {
+						return json({
+							success: false,
+							error: 'Not authenticated',
+							redirect: await authenticateURL(),
+						});
 					}
+
+					const events = await getEvents(calendar, 7);
+					return json({ success: true, events });
 				},
 			},
 			false

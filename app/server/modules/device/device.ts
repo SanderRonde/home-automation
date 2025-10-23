@@ -39,13 +39,7 @@ export abstract class DeviceEndpoint implements Disposable {
 		},
 	>(type: T): InstanceType<T> | null {
 		for (const cluster of this.clusters) {
-			if (
-				(
-					cluster.constructor as unknown as {
-						clusterName: DeviceClusterName;
-					}
-				).clusterName === type.clusterName
-			) {
+			if (cluster.getName() === type.clusterName) {
 				return cluster as unknown as InstanceType<T>;
 			}
 		}

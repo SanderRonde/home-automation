@@ -11,6 +11,7 @@ import type {
 	DashboardDeviceClusterActions,
 	DashboardDeviceClusterSensorGroup,
 	DashboardDeviceClusterThermostat,
+	DashboardDeviceClusterSwitch,
 	DeviceListWithValuesResponse,
 } from '../../../server/modules/device/routing';
 import { DeviceClusterName, ThermostatMode } from '../../../server/modules/device/cluster';
@@ -329,6 +330,66 @@ const OccupancySensingCard = (
 						}}
 					/>
 				)}
+			</Box>
+		</DeviceClusterCardSkeleton>
+	);
+};
+
+const SwitchCard = (
+	props: DeviceClusterCardBaseProps<DashboardDeviceClusterSwitch>
+): JSX.Element => {
+	return (
+		<DeviceClusterCardSkeleton
+			{...props}
+			cardBackground="#2f2f2f"
+			onPress={() => {
+				props.pushDetailView({
+					type: 'device',
+					device: props.device,
+					cluster: props.cluster,
+				});
+			}}
+		>
+			<Box
+				sx={{
+					display: 'flex',
+					alignItems: 'center',
+					gap: 2,
+				}}
+			>
+				<Box
+					sx={{
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						background: 'rgba(0, 0, 0, 0.08)',
+						borderRadius: '50%',
+						width: 48,
+						height: 48,
+						fontSize: '1.5rem',
+						color: 'text.secondary',
+					}}
+				>
+					<IconOrNull icon={props.cluster.icon} />
+				</Box>
+				<Box sx={{ flexGrow: 1 }}>
+					<Typography
+						variant="body1"
+						sx={{
+							fontWeight: 500,
+						}}
+					>
+						{props.device.name}
+					</Typography>
+					<Typography
+						variant="caption"
+						sx={{
+							color: 'text.secondary',
+						}}
+					>
+						Tap to view all button press history
+					</Typography>
+				</Box>
 			</Box>
 		</DeviceClusterCardSkeleton>
 	);
@@ -1096,6 +1157,9 @@ export const DeviceClusterCard = (
 	}
 	if (props.cluster.name === DeviceClusterName.THERMOSTAT) {
 		return <ThermostatCard {...props} cluster={props.cluster} />;
+	}
+	if (props.cluster.name === DeviceClusterName.SWITCH) {
+		return <SwitchCard {...props} cluster={props.cluster} />;
 	}
 	return null;
 };

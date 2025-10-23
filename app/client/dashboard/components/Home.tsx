@@ -312,13 +312,31 @@ const RoomDetail = (props: RoomDetailProps) => {
 	// Create entries for each device-cluster combination
 	const deviceClusterEntries = React.useMemo(() => {
 		const entries = [];
+		const switchDevicesProcessed = new Set<string>();
 
 		for (const device of props.devices) {
-			for (const cluster of device.mergedAllClusters) {
+			// Group SWITCH clusters by device - only add one entry per device
+			const switchClusters = device.mergedAllClusters.filter(
+				(c) => c.name === DeviceClusterName.SWITCH
+			);
+
+			if (switchClusters.length > 0 && !switchDevicesProcessed.has(device.uniqueId)) {
+				// Use the first switch cluster as representative
 				entries.push({
 					device,
-					cluster,
+					cluster: switchClusters[0],
 				});
+				switchDevicesProcessed.add(device.uniqueId);
+			}
+
+			// Add all non-SWITCH clusters normally
+			for (const cluster of device.mergedAllClusters) {
+				if (cluster.name !== DeviceClusterName.SWITCH) {
+					entries.push({
+						device,
+						cluster,
+					});
+				}
 			}
 		}
 

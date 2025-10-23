@@ -53,6 +53,7 @@ const GroupDeviceItem = React.memo((props: GroupDeviceItemProps): JSX.Element =>
 		/>
 	);
 });
+GroupDeviceItem.displayName = 'GroupDeviceItem';
 
 export const GroupCreateModal = React.memo((props: GroupCreateModalProps): JSX.Element => {
 	const [name, setName] = useState('');
@@ -184,3 +185,4 @@ export const GroupCreateModal = React.memo((props: GroupCreateModalProps): JSX.E
 		</Dialog>
 	);
 });
+GroupCreateModal.displayName = 'GroupCreateModal';

@@ -340,3 +340,4 @@ export const RoomAssignmentDialog = React.memo<RoomAssignmentDialogProps>((props
 		</Dialog>
 	);
 });
+RoomAssignmentDialog.displayName = 'RoomAssignmentDialog';

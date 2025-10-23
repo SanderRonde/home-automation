@@ -1,4 +1,11 @@
 import {
+	Add as AddIcon,
+	Delete as DeleteIcon,
+	PlayArrow as PlayArrowIcon,
+	Sensors as SensorsIcon,
+	TouchApp as TouchAppIcon,
+} from '@mui/icons-material';
+import {
 	Box,
 	Card,
 	CardContent,
@@ -6,16 +13,12 @@ import {
 	IconButton,
 	Button,
 	CircularProgress,
-	Chip,
+	Tooltip,
 } from '@mui/material';
-import {
-	Add as AddIcon,
-	Delete as DeleteIcon,
-	PlayArrow as PlayArrowIcon,
-} from '@mui/icons-material';
 import type { DeviceGroup } from '../../../../types/group';
 import type { Palette } from '../../../../types/palette';
 import { SceneCreateModal } from './SceneCreateModal';
+import { SceneActionChips } from './SceneActionChips';
 import type { Scene } from '../../../../types/scene';
 import React, { useState, useEffect } from 'react';
 import { apiGet, apiPost } from '../../lib/fetch';
@@ -151,6 +154,43 @@ export const Scenes = (): JSX.Element => {
 		return groups.find((g) => g.id === groupId);
 	};
 
+	const getTriggerIcon = (scene: Scene) => {
+		if (!scene.trigger) {
+			return null;
+		}
+
+		const device = getDeviceById(scene.trigger.deviceId);
+		const deviceName = device?.name || 'Unknown Device';
+
+		if (scene.trigger.type === 'occupancy') {
+			return (
+				<Tooltip title={`Occupancy: ${deviceName}`}>
+					<SensorsIcon
+						sx={{
+							fontSize: 20,
+							color: 'text.secondary',
+						}}
+					/>
+				</Tooltip>
+			);
+		}
+
+		if (scene.trigger.type === 'button-press') {
+			return (
+				<Tooltip title={`Button ${scene.trigger.buttonIndex + 1}: ${deviceName}`}>
+					<TouchAppIcon
+						sx={{
+							fontSize: 20,
+							color: 'text.secondary',
+						}}
+					/>
+				</Tooltip>
+			);
+		}
+
+		return null;
+	};
+
 	if (loading || devicesLoading) {
 		return (
 			<Box
@@ -263,204 +303,29 @@ export const Scenes = (): JSX.Element => {
 													/>
 												</Box>
 												<Box sx={{ flex: 1, minWidth: 0 }}>
-													<Typography
-														variant="h6"
-														sx={{ fontWeight: 500 }}
-													>
-														{scene.title}
-													</Typography>
 													<Box
 														sx={{
 															display: 'flex',
-															flexWrap: 'wrap',
-															gap: 0.5,
-															mt: 1,
+															alignItems: 'center',
+															gap: 1,
 														}}
 													>
-														{scene.actions.map((action, index) => {
-															// Handle group actions
-															if (action.groupId) {
-																const group = getGroupById(
-																	action.groupId
-																);
-																if (!group) {
-																	return null;
-																}
-
-																let cluster = null;
-																for (const device of devices) {
-																	cluster =
-																		device.flatAllClusters.find(
-																			(c) =>
-																				c.name ===
-																				action.cluster
-																		);
-																	if (cluster) {
-																		break;
-																	}
-																}
-
-																// Check if this is a palette action
-																const isPaletteAction =
-																	'paletteId' in action.action;
-																const palette = isPaletteAction
-																	? palettes.find(
-																			(p) =>
-																				p.id ===
-																				(
-																					action.action as {
-																						paletteId: string;
-																					}
-																				).paletteId
-																		)
-																	: null;
-
-																return (
-																	<Box
-																		key={`${action.groupId}-${action.cluster}-${index}`}
-																		sx={{
-																			display: 'flex',
-																			gap: 0.5,
-																			alignItems: 'center',
-																		}}
-																	>
-																		<Chip
-																			icon={
-																				cluster?.icon ? (
-																					<IconComponent
-																						iconName={
-																							cluster.icon
-																						}
-																						sx={{
-																							fontSize: 18,
-																						}}
-																					/>
-																				) : undefined
-																			}
-																			label={
-																				<div
-																					style={{
-																						display:
-																							'flex',
-																						alignItems:
-																							'center',
-																						gap: 4,
-																						color: 'white',
-																					}}
-																				>
-																					{group.name}
-																					{palette && (
-																						<Box
-																							sx={{
-																								display:
-																									'flex',
-																								gap: 0.25,
-																								alignItems:
-																									'center',
-																							}}
-																						>
-																							{palette.colors.map(
-																								(
-																									color,
-																									idx
-																								) => (
-																									<Box
-																										key={
-																											idx
-																										}
-																										sx={{
-																											width: 12,
-																											height: 12,
-																											backgroundColor:
-																												color,
-																											borderRadius:
-																												'50%',
-																											border: '1px solid black',
-																										}}
-																									/>
-																								)
-																							)}
-																						</Box>
-																					)}
-																				</div>
-																			}
-																			size="small"
-																			sx={{
-																				paddingLeft: '4px',
-																				paddingRight: '4px',
-																				backgroundColor:
-																					'primary.light',
-																				'& .MuiChip-label':
-																					{
-																						color: 'rgba(0, 0, 0, 0.87)',
-																					},
-																				'& .MuiChip-icon': {
-																					color: 'rgba(0, 0, 0, 0.6)',
-																				},
-																			}}
-																		/>
-																	</Box>
-																);
-															}
-
-															// Handle device actions
-															const device = getDeviceById(
-																action.deviceId || ''
-															);
-															if (!device) {
-																return null;
-															}
-
-															const cluster =
-																device.flatAllClusters.find(
-																	(c) => c.name === action.cluster
-																);
-
-															return (
-																<Chip
-																	key={`${action.deviceId}-${action.cluster}-${index}`}
-																	icon={
-																		cluster?.icon ? (
-																			<IconComponent
-																				iconName={
-																					cluster.icon
-																				}
-																				sx={{
-																					fontSize: 18,
-																				}}
-																			/>
-																		) : undefined
-																	}
-																	label={
-																		<div
-																			style={{
-																				color: 'white',
-																				display: 'flex',
-																				alignItems:
-																					'center',
-																			}}
-																		>
-																			{device.name}
-																		</div>
-																	}
-																	size="small"
-																	sx={{
-																		paddingLeft: '4px',
-																		paddingRight: '4px',
-																		backgroundColor:
-																			device.roomColor ??
-																			'action.hover',
-																		'& .MuiChip-label': {
-																			color: 'rgba(0, 0, 0, 0.87)',
-																		},
-																		'& .MuiChip-icon': {
-																			color: 'rgba(0, 0, 0, 0.6)',
-																		},
-																	}}
-																/>
-															);
-														})}
+														<Typography
+															variant="h6"
+															sx={{ fontWeight: 500 }}
+														>
+															{scene.title}
+														</Typography>
+														{getTriggerIcon(scene)}
 													</Box>
+													<SceneActionChips
+														actions={scene.actions}
+														devices={devices}
+														groups={groups}
+														palettes={palettes}
+														getDeviceById={getDeviceById}
+														getGroupById={getGroupById}
+													/>
 												</Box>
 											</Box>
 

@@ -5,6 +5,7 @@ import { logTag } from '../../lib/logging/logger';
 import type { calendar_v3 } from 'googleapis';
 import { flatten } from '../../lib/array';
 import { getEnv } from '../../lib/io';
+import { SCOPES } from './constants';
 import { google } from 'googleapis';
 import * as fs from 'fs-extra';
 import * as path from 'path';
@@ -45,6 +46,10 @@ function createClient(): void {
 
 const client = new SettablePromise<InstanceType<typeof google.auth.OAuth2>>();
 let calendar: calendar_v3.Calendar | null = null;
+
+export function getCalendar(): calendar_v3.Calendar | null {
+	return calendar;
+}
 
 async function authTokens(tokens: Credentials, reAuth: boolean) {
 	createClient();
@@ -87,11 +92,14 @@ type CalendarEvent = calendar_v3.Schema$Event & {
 	color: calendar_v3.Schema$ColorDefinition;
 };
 
-export async function getEvents(days: number): Promise<CalendarEvent[]> {
-	const listResponse = await calendar!.calendarList.list();
+export async function getEvents(
+	calendar: calendar_v3.Calendar,
+	days: number
+): Promise<CalendarEvent[]> {
+	const listResponse = await calendar.calendarList.list();
 	const calendars = listResponse.data.items || [];
 
-	const colors = await calendar!.colors.get();
+	const colors = await calendar.colors.get();
 
 	const startTime = getDay(0);
 	startTime.setHours(0, 0, 0);
@@ -132,4 +140,17 @@ export async function getEvents(days: number): Promise<CalendarEvent[]> {
 		});
 	}
 	return flatEvents;
+}
+
+export async function authenticateURL(): Promise<string | null> {
+	createClient();
+
+	if (client) {
+		const url = (await client.value).generateAuthUrl({
+			access_type: 'offline',
+			scope: SCOPES,
+		});
+		return url;
+	}
+	return null;
 }

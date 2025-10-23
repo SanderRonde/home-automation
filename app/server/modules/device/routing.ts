@@ -277,6 +277,10 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 				const history = await api.occupancyTracker.getHistory(req.params.deviceId, 100);
 				return json({ history });
 			},
+			'/button-press/:deviceId': async (req, _server, { json }) => {
+				const history = await api.buttonPressTracker.getHistory(req.params.deviceId, 100);
+				return json({ history });
+			},
 			'/temperature/:deviceId/:timeframe': async (req, _server, { json }) => {
 				const timeframe = parseInt(req.params.timeframe, 10);
 				const history = await api.temperatureTracker.getHistory(

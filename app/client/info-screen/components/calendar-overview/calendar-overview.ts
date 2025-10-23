@@ -277,11 +277,28 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 
 	public async updateCalendar(): Promise<void> {
 		const response = await this.request(`${location.origin}/calendar`, {});
-		if (!response) {
+		if (!response || !response.ok) {
 			return;
 		}
-		const { events } = await response.json();
-		this.props.events = events;
+
+		const json = (await response.json()) as
+			| {
+					success: true;
+					events: ExtendedEvent[];
+			  }
+			| {
+					success: false;
+					error: string;
+					redirect: string;
+			  };
+
+		if (!json.success) {
+			debugger;
+			window.location.href = json.redirect;
+			return;
+		}
+
+		this.props.events = json.events;
 	}
 
 	public async setup(): Promise<void> {

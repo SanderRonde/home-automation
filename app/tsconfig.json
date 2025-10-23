@@ -24,9 +24,12 @@
 		"jsx": "react",
 		"skipLibCheck": true,
 		"noEmit": true,
-		"allowSyntheticDefaultImports": true
+		"allowSyntheticDefaultImports": true,
+		"allowJs": true,
+		"incremental": true,
+		"tsBuildInfoFile": ".tsbuildinfo"
 	},
 	"compileOnSave": true,
-	"allowJs": true,
-	"include": ["./**/*.ts", "./**/*.tsx", "../types/*", "../scripts/*"]
+	"include": ["./**/*.ts", "./**/*.tsx", "../types/*", "../scripts/*"],
+	"exclude": ["node_modules"]
 }
