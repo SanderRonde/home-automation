@@ -138,26 +138,6 @@ export class MatterDevice extends MatterEndpoint implements Device {
 	}
 
 	public getManagementUrl(): string | undefined {
-		// Try to generate a deep link for Philips Hue bridges
-		// Hue Matter vendor ID is 0x100B (4107)
-		const basicInfo = this.#endpoint.getClusterClient(BasicInformationCluster);
-		if (basicInfo) {
-			try {
-				// Attempt to get vendor ID synchronously from cached attributes
-				// This is a best-effort approach for Hue deep linking
-				const vendorId = (
-					basicInfo.attributes as unknown as { vendorId: { _value: number } }
-				).vendorId?._value;
-				if (vendorId === 0x100b || vendorId === 4107) {
-					// Generate Philips Hue app deep link
-					// Format: philips-hue://local/{bridgeId}
-					// Using node ID as a proxy for bridge ID
-					return `philips-hue://local/${this.#node.nodeId}`;
-				}
-			} catch (error) {
-				// Silently fail if we can't determine vendor ID
-			}
-		}
 		return undefined;
 	}
 }
