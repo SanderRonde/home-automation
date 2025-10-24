@@ -86,16 +86,20 @@ export async function applyPaletteToDevices(devices: Device[], palette: Palette)
 			}
 
 			try {
-				const hexColor = selectColorForDevice(device.getUniqueId(), palette);
-				const hsv = hexToHSV(hexColor);
-				const color = Color.fromHSV(hsv.hue, hsv.saturation, hsv.value);
+				const segmentCount = colorControlCluster.getSegmentCount();
+				for (let i = 0; i < segmentCount; i++) {
+					const hexColor = selectColorForDevice(`${device.getUniqueId()}:${i}`, palette);
+					const hsv = hexToHSV(hexColor);
+					const color = Color.fromHSV(hsv.hue, hsv.saturation, hsv.value);
+					await colorControlCluster.setColor({ color, index: i });
 
-				await colorControlCluster.setColor({ color });
-				logTag(
-					'palette',
-					'green',
-					`Applied color ${hexColor} to device ${device.getUniqueId()}`
-				);
+					logTag(
+						'palette',
+						'green',
+						`Applied color ${hexColor} to device ${device.getUniqueId()} segment ${i}`
+					);
+				}
+
 				return true;
 			} catch (error) {
 				logTag(

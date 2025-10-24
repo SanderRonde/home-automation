@@ -128,6 +128,8 @@ export class HexLEDColorControlCluster
 			},
 		});
 	};
+
+	public getSegmentCount = (): number => 1;
 }
 
 export class HexLEDActionsCluster extends ConfigurableCluster implements DeviceActionsCluster {

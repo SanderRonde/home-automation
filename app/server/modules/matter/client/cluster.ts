@@ -537,6 +537,8 @@ class MatterColorControlCluster
 			};
 		},
 	});
+
+	public getSegmentCount = () => 1;
 }
 
 class MatterActionsCluster
