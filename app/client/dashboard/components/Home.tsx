@@ -52,6 +52,71 @@ type HomeDetailViewWithFrom = HomeDetailView & {
 	from: HomeDetailViewWithFrom | null;
 };
 
+// Helper function to parse detail view from URL hash
+function parseDetailViewFromHash(hash: string, devices: DeviceType[]): HomeDetailView | null {
+	// Extract query string from hash (e.g., "#home?view=room&name=Living%20Room")
+	const hashParts = hash.split('?');
+	if (hashParts.length < 2) {
+		return null;
+	}
+
+	const params = new URLSearchParams(hashParts[1]);
+	const viewType = params.get('view');
+
+	if (viewType === 'room') {
+		const roomName = params.get('name');
+		const clusterName = params.get('cluster') as DeviceClusterName | null;
+		if (roomName) {
+			return {
+				type: 'room',
+				roomName: decodeURIComponent(roomName),
+				clustersName: clusterName || undefined,
+			};
+		}
+	} else if (viewType === 'device') {
+		const deviceId = params.get('deviceId');
+		const clusterName = params.get('cluster') as DeviceClusterName;
+		if (deviceId && clusterName) {
+			const device = devices.find((d) => d.uniqueId === deviceId);
+			const cluster = device?.mergedAllClusters.find((c) => c.name === clusterName);
+			if (device && cluster) {
+				return {
+					type: 'device',
+					device,
+					cluster,
+				};
+			}
+		}
+	}
+
+	return null;
+}
+
+// Helper function to serialize detail view to URL hash
+function serializeDetailViewToHash(view: HomeDetailView | null): string {
+	if (!view) {
+		return 'home';
+	}
+
+	if (view.type === 'room') {
+		const params = new URLSearchParams();
+		params.set('view', 'room');
+		params.set('name', view.roomName);
+		if (view.clustersName) {
+			params.set('cluster', view.clustersName);
+		}
+		return `home?${params.toString()}`;
+	} else if (view.type === 'device') {
+		const params = new URLSearchParams();
+		params.set('view', 'device');
+		params.set('deviceId', view.device.uniqueId);
+		params.set('cluster', view.cluster.name);
+		return `home?${params.toString()}`;
+	}
+
+	return 'home';
+}
+
 export const Home = (): JSX.Element => {
 	const { loading, devices, refresh } = useDevices();
 	const [scenes, setScenes] = React.useState<Scene[]>([]);
@@ -100,15 +165,71 @@ export const Home = (): JSX.Element => {
 	}, [devices]);
 
 	const [detailView, setDetailView] = React.useState<HomeDetailViewWithFrom | null>(null);
+
+	// Initialize detail view from URL on mount
+	React.useEffect(() => {
+		if (!loading && devices.length > 0) {
+			const parsedView = parseDetailViewFromHash(window.location.hash, devices);
+			if (parsedView) {
+				setDetailView({ ...parsedView, from: null });
+			}
+		}
+	}, [loading, devices]);
+
 	const pushDetailView = React.useCallback((newDetailView: HomeDetailView) => {
-		setDetailView((oldDetailView) => ({
-			...newDetailView,
-			from: oldDetailView,
-		}));
+		setDetailView((oldDetailView) => {
+			const newView = {
+				...newDetailView,
+				from: oldDetailView,
+			};
+			// Update URL to reflect the new view
+			const newHash = serializeDetailViewToHash(newDetailView);
+			const currentHash = window.location.hash.slice(1); // Remove # for comparison
+			if (currentHash !== newHash) {
+				window.location.hash = newHash;
+			}
+			return newView;
+		});
 	}, []);
+
 	const popDetailView = React.useCallback(() => {
-		setDetailView((oldDetailView) => oldDetailView?.from ?? null);
+		// Use browser back instead of directly manipulating state
+		window.history.back();
 	}, []);
+
+	// Listen for browser navigation (back/forward buttons)
+	React.useEffect(() => {
+		const handleHashChange = () => {
+			const hash = window.location.hash;
+
+			// Check if we're at the main home view
+			if (hash === '#home' || !hash.includes('?')) {
+				setDetailView(null);
+			} else {
+				// Parse the URL and update state
+				const parsedView = parseDetailViewFromHash(hash, devices);
+				if (parsedView) {
+					// Try to preserve the "from" chain if possible
+					setDetailView((currentView) => {
+						// If we have a current view and it matches what the "from" should be,
+						// we can preserve the chain
+						if (currentView?.from) {
+							return {
+								...parsedView,
+								from: currentView.from,
+							};
+						}
+						return { ...parsedView, from: null };
+					});
+				} else {
+					setDetailView(null);
+				}
+			}
+		};
+
+		window.addEventListener('hashchange', handleHashChange);
+		return () => window.removeEventListener('hashchange', handleHashChange);
+	}, [devices]);
 
 	const handleTriggerScene = async (sceneId: string) => {
 		setTriggeringSceneId(sceneId);

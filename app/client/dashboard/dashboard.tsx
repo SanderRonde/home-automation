@@ -54,26 +54,37 @@ function DashboardApp() {
 	// Get initial tab from URL hash or default to home
 	const [currentTab, setCurrentTab] = useState<string | SidebarTab>(() => {
 		const hash = window.location.hash.slice(1); // Remove the # symbol
-		return hash || SidebarTab.HOME;
+		// Extract only the base tab name (before any query parameters)
+		const baseTab = hash.split('?')[0];
+		return baseTab || SidebarTab.HOME;
 	});
 
 	// Update URL when tab changes
 	useEffect(() => {
-		window.location.hash = currentTab;
+		// Preserve query parameters if staying on the same tab
+		const currentHash = window.location.hash.slice(1);
+		const currentBaseTab = currentHash.split('?')[0];
+
+		// Only update if the base tab has changed
+		if (currentBaseTab !== currentTab) {
+			window.location.hash = currentTab;
+		}
 	}, [currentTab]);
 
 	// Listen for URL changes (back/forward navigation)
 	useEffect(() => {
 		const handleHashChange = () => {
 			const hash = window.location.hash.slice(1);
-			if (hash) {
-				setCurrentTab(hash);
+			// Extract only the base tab name (before any query parameters)
+			const baseTab = hash.split('?')[0];
+			if (baseTab && baseTab !== currentTab) {
+				setCurrentTab(baseTab);
 			}
 		};
 
 		window.addEventListener('hashchange', handleHashChange);
 		return () => window.removeEventListener('hashchange', handleHashChange);
-	}, []);
+	}, [currentTab]);
 
 	// Don't render anything while checking authentication
 	if (isAuthenticated === null) {
