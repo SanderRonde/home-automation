@@ -7,15 +7,6 @@ interface Params {
 	lock: 0 | 1;
 }
 
-export class EwelinkBooleanStateDoorSensorCluster extends EwelinkBooleanStateCluster {
-	protected override getProxy = EwelinkClusterProxy.createGetter<{
-		state: boolean;
-	}>({
-		fromParams: (state: Params) => ({
-			state: state.lock === 0,
-		}),
-		toParams: (state): Params => ({
-			lock: state.state ? 0 : 1,
-		}),
-	});
+export class EwelinkBooleanStateDoorSensorCluster extends EwelinkBooleanStateCluster<Params> {
+	public state = this.getProxy().attributeGetter((value) => value?.lock === 0);
 }

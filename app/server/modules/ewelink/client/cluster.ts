@@ -14,6 +14,7 @@ import type { EWeLinkWebSocketMessage } from './clusters/shared';
 import { SettablePromise } from '../../../lib/settable-promise';
 import { EventEmitter } from '../../../lib/event-emitter';
 import type { EWeLinkConfig } from './clusters/shared';
+import { logDev } from '../../../lib/logging/log-dev';
 import { MappedData } from '../../../lib/data';
 import { Data } from '../../../lib/data';
 import util from 'util';
@@ -21,41 +22,19 @@ import util from 'util';
 export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 	private _disposables: (() => void)[] = [];
 	private _config = new SettablePromise<EWeLinkConfig>();
-	private readonly _fromParams: (state: object) => PARAMS = (s) => s as PARAMS;
-	private readonly _toParams: (state: PARAMS) => object = (s) => s;
 	private _lastParams: PARAMS | null = null;
-	protected readonly _eventEmitters = new Set<Data<unknown>>();
+	protected readonly _listeners = new Set<(data: PARAMS, isNew: boolean) => void>();
 	private _online: SettablePromise<boolean> = new SettablePromise();
 	public onChange: EventEmitter<void> = new EventEmitter();
 
-	private constructor(mappers?: {
-		fromParams: (state: object) => PARAMS;
-		toParams: (state: PARAMS) => object;
-	}) {
-		if (mappers) {
-			this._fromParams = mappers.fromParams;
-			this._toParams = mappers.toParams;
-		}
-	}
-
-	public static createGetter<PARAMS extends object>(mappers?: {
-		fromParams: (state: object) => PARAMS;
-		toParams: (state: PARAMS) => object;
-	}): () => EwelinkClusterProxy<PARAMS> {
-		const proxy = new EwelinkClusterProxy<PARAMS>(
-			mappers
-				? {
-						fromParams: mappers.fromParams,
-						toParams: mappers.toParams,
-					}
-				: undefined
-		);
+	public static createGetter<PARAMS extends object>(): () => EwelinkClusterProxy<PARAMS> {
+		const proxy = new EwelinkClusterProxy<PARAMS>();
 		return () => proxy;
 	}
 
 	private _getItemData(device: EWeLinkConfig['device']) {
 		const params = device.itemData.params;
-		return this._fromParams(params);
+		return params as PARAMS;
 	}
 
 	public setConfig(config: EWeLinkConfig): void {
@@ -77,8 +56,8 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 					...this._lastParams,
 					...data.params,
 				};
-				for (const eventEmitter of this._eventEmitters) {
-					void eventEmitter.set(this._lastParams);
+				for (const eventEmitter of this._listeners) {
+					eventEmitter(this._lastParams, true);
 				}
 			})
 		);
@@ -97,9 +76,9 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 				} else {
 					this._online = new SettablePromise();
 				}
-				for (const eventEmitter of this._eventEmitters) {
-					this._lastParams = this._fromParams(data.itemData.params);
-					void eventEmitter.set(this._lastParams);
+				for (const eventEmitter of this._listeners) {
+					this._lastParams = data.itemData.params as PARAMS;
+					eventEmitter(this._lastParams, false);
 				}
 			})
 		);
@@ -108,77 +87,58 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 	public eventListener<R>(shouldTrigger: (value: PARAMS) => false | R): EventEmitter<R> {
 		const eventEmitter = new EventEmitter<R>();
 
-		const wsListener = new Data<PARAMS | undefined>(undefined);
-		wsListener.subscribe((value) => {
-			if (value !== undefined) {
-				const result = shouldTrigger(value);
+		this._listeners.add((data, isNew) => {
+			if (isNew) {
+				const result = shouldTrigger(data);
 				if (result !== false) {
 					eventEmitter.emit(result);
 				}
 			}
 		});
-		this._eventEmitters.add(wsListener);
 		return eventEmitter;
 	}
 
 	public attributeGetter<R>(mapper: (value: PARAMS | undefined) => R | undefined): Data<R> {
-		const emitter = (() => {
-			class cls extends Data<PARAMS | undefined> {
-				private _initialized = false;
+		class cls extends Data<PARAMS | undefined> {
+			private _initialized = false;
 
-				public constructor(
-					private readonly getInitialValue: () => Promise<PARAMS | undefined>
-				) {
-					super(undefined);
-				}
-
-				protected override create(): void {
-					if (!this._initialized) {
-						this._initialized = true;
-						void this.getInitialValue().then((value) => this.set(value));
-					}
-				}
+			public constructor(
+				private readonly getInitialValue: () => Promise<PARAMS | undefined>
+			) {
+				super(undefined);
 			}
 
-			const emitter = new cls(() =>
-				this._config.value.then((config) => this._getItemData(config.device))
-			);
-			if (mapper) {
-				return new MappedData<R | undefined, PARAMS | undefined>(emitter, mapper);
+			protected override create(): void {
+				if (!this._initialized) {
+					this._initialized = true;
+					void this.getInitialValue().then((value) => this.set(value));
+				}
 			}
-			return emitter;
-		})();
-		emitter.subscribe(() => this.onChange.emit(undefined));
-		this._eventEmitters.add(emitter);
-		return emitter as Data<R>;
+		}
+
+		const emitter = new cls(() =>
+			this._config.value.then((config) => this._getItemData(config.device))
+		);
+		const data = new MappedData<R | undefined, PARAMS | undefined>(emitter, mapper);
+		data.subscribe(() => this.onChange.emit(undefined));
+		this._listeners.add((data) => emitter.set(data));
+		return data as Data<R>;
 	}
 
-	public attributeSetter<M extends keyof PARAMS, A = void>(
-		attribute: M,
-		mapper: (args: A) => PARAMS[M]
-	): (args: A) => Promise<void>;
-	public attributeSetter<M extends keyof PARAMS>(
-		attribute: M
-	): (args: PARAMS[M]) => Promise<void>;
-	public attributeSetter<M extends Extract<keyof PARAMS, string>, A = void>(
-		attribute: M,
-		mapper?: (args: A) => PARAMS[M]
+	public attributeSetter<A>(
+		mapper: (args: A, previous: PARAMS | null) => PARAMS
 	): (args: A) => Promise<void> {
 		return async (args: A) => {
-			const mappedInput = mapper ? mapper(args) : args;
+			const mappedInput = mapper(args, this._lastParams);
 
 			await this._online.value;
 
 			const config = await this._config.value;
-			const newParams = {
-				...this._lastParams,
-				[attribute]: mappedInput,
-			} as PARAMS;
-			this._lastParams = newParams;
+			this._lastParams = mappedInput;
 			await config.connection.setThingStatus({
 				id: config.device.itemData.deviceid,
 				type: 1,
-				params: this._toParams(newParams),
+				params: mappedInput,
 			});
 		};
 	}
@@ -214,17 +174,17 @@ class ConfigurableCluster<T extends object> {
 	}
 }
 
-export abstract class EwelinkOnOffCluster
-	extends ConfigurableCluster<EwelinkOnOffClusterState>
+export abstract class EwelinkOnOffCluster<S extends object>
+	extends ConfigurableCluster<S>
 	implements DeviceOnOffCluster
 {
 	public getName(): DeviceClusterName {
 		return DeviceOnOffCluster.clusterName;
 	}
 
-	public isOn = this.getProxy().attributeGetter((value) => value?.enabled ?? false);
+	public abstract isOn: Data<boolean>;
 
-	public setOn = this.getProxy().attributeSetter('enabled', (enabled: boolean) => enabled);
+	public abstract setOn(enabled: boolean): Promise<void>;
 
 	public toggle = async (): Promise<void> => {
 		const current = await this.isOn.get();
@@ -235,19 +195,15 @@ export abstract class EwelinkOnOffCluster
 	};
 }
 
-export interface EwelinkLevelControlClusterState {
-	level: number;
-}
-
-export abstract class EwelinkLevelControlCluster
-	extends ConfigurableCluster<EwelinkLevelControlClusterState>
+export abstract class EwelinkLevelControlCluster<S extends object>
+	extends ConfigurableCluster<S>
 	implements DeviceLevelControlCluster
 {
 	public getName(): DeviceClusterName {
 		return DeviceLevelControlCluster.clusterName;
 	}
 
-	public currentLevel = this.getProxy().attributeGetter((value) => value?.level ?? 0);
+	public abstract currentLevel: Data<number>;
 
 	// Does not exist, noop
 	public startupLevel = this.getProxy().attributeGetter(() => 1.0);
@@ -255,10 +211,7 @@ export abstract class EwelinkLevelControlCluster
 	// Does not exist, noop
 	public setStartupLevel = (): Promise<void> => Promise.resolve();
 
-	public setLevel = this.getProxy().attributeSetter(
-		'level',
-		(args: { level: number; transitionTimeDs?: number }) => args.level
-	);
+	public abstract setLevel(args: { level: number; transitionTimeDs?: number }): Promise<void>;
 
 	// Noop
 	public stop = (): Promise<void> => Promise.resolve();
@@ -309,17 +262,15 @@ export class EwelinkPowerSourceCluster
 	);
 }
 
-export abstract class EwelinkBooleanStateCluster
-	extends ConfigurableCluster<{
-		state: boolean;
-	}>
+export abstract class EwelinkBooleanStateCluster<S extends object>
+	extends ConfigurableCluster<S>
 	implements DeviceBooleanStateCluster<boolean>
 {
 	public getName(): DeviceClusterName {
 		return DeviceBooleanStateCluster.clusterName;
 	}
 
-	public state = this.getProxy().attributeGetter((value) => value?.state ?? false);
+	public abstract state: Data<boolean>;
 
 	public override [Symbol.dispose](): void {
 		this.getProxy()[Symbol.dispose]();
@@ -388,9 +339,10 @@ export class EwelinkOutletSwitchCluster
 	public getTotalCount = (): number => this._outletCount;
 	public getIndex = (): number => this._outlet;
 
-	public onPress = this.getProxy().eventListener(
-		(value) => value.key === 0 && value.outlet === this._outlet
-	) as unknown as EventEmitter<void>;
+	public onPress = this.getProxy().eventListener((value) => {
+		logDev('ewelink', 'onPress', value);
+		return value.key === 0 && value.outlet === this._outlet;
+	}) as unknown as EventEmitter<void>;
 	public onMultiPress = this.getProxy().eventListener((value) =>
 		value.key === 1 && value.outlet === this._outlet ? { pressCount: 2 } : false
 	);

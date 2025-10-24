@@ -1,5 +1,4 @@
-import { EwelinkClusterProxy, EwelinkLevelControlCluster } from '../../cluster';
-import type { EwelinkLevelControlClusterState } from '../../cluster';
+import { EwelinkLevelControlCluster } from '../../cluster';
 
 type EwelinkLightPowerPowerParams = {
 	ltype?: string;
@@ -9,25 +8,22 @@ type EwelinkLightPowerPowerParams = {
 	};
 };
 
-export class EwelinkLevelControlClusterLightbulb extends EwelinkLevelControlCluster {
-	protected override getProxy = EwelinkClusterProxy.createGetter<EwelinkLevelControlClusterState>(
-		{
-			fromParams: (state: EwelinkLightPowerPowerParams) => ({
-				level: state.ltype ? state[state.ltype].br : 0,
-			}),
-			toParams: (state): EwelinkLightPowerPowerParams => {
-				const currentState = this._eWeLinkConfig.device.itemData
-					.params as EwelinkLightPowerPowerParams;
-				if (!currentState.ltype) {
-					return {} as EwelinkLightPowerPowerParams;
-				}
-				return {
-					ltype: currentState.ltype,
-					[currentState.ltype]: {
-						br: state.level,
-					},
-				} as EwelinkLightPowerPowerParams;
-			},
+export class EwelinkLevelControlClusterLightbulb extends EwelinkLevelControlCluster<EwelinkLightPowerPowerParams> {
+	public currentLevel = this.getProxy().attributeGetter((value) =>
+		value?.ltype ? value[value.ltype].br : 0
+	);
+
+	public setLevel = this.getProxy().attributeSetter(
+		(args: { level: number; transitionTimeDs?: number }, currentState) => {
+			if (!currentState?.ltype) {
+				return {} as EwelinkLightPowerPowerParams;
+			}
+			return {
+				ltype: currentState.ltype,
+				[currentState.ltype]: {
+					br: args.level,
+				},
+			} as EwelinkLightPowerPowerParams;
 		}
 	);
 }

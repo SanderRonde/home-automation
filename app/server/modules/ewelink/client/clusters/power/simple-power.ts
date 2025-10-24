@@ -1,20 +1,17 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 
-import type { EwelinkOnOffClusterState } from '../../cluster';
-import { EwelinkClusterProxy } from '../../cluster';
 import { EwelinkOnOffCluster } from '../../cluster';
 
 interface Params {
 	switch?: 'on' | 'off';
 }
 
-export class EwelinkOnOffClusterSimplePower extends EwelinkOnOffCluster {
-	protected override getProxy = EwelinkClusterProxy.createGetter<EwelinkOnOffClusterState>({
-		fromParams: (state: Params) => ({
-			enabled: state.switch === 'on',
-		}),
-		toParams: (state): Params => ({
-			switch: state.enabled ? 'on' : 'off',
-		}),
+export class EwelinkOnOffClusterSimplePower extends EwelinkOnOffCluster<Params> {
+	public isOn = this.getProxy().attributeGetter((value) => value?.switch === 'on');
+
+	public setOn = this.getProxy().attributeSetter((enabled: boolean) => {
+		return {
+			switch: enabled ? 'on' : 'off',
+		};
 	});
 }
