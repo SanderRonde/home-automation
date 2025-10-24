@@ -15,10 +15,12 @@ import {
 	Divider,
 } from '@mui/material';
 import type { ReturnTypeForApi } from '../../lib/fetch';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import DeleteIcon from '@mui/icons-material/Delete';
 import React, { useState, useEffect } from 'react';
 import { apiGet, apiPost } from '../../lib/fetch';
 import AddIcon from '@mui/icons-material/Add';
+import { useDevices } from './Devices';
 
 export const LEDSourcesConfig = (): JSX.Element => {
 	// WLED State
@@ -27,6 +29,8 @@ export const LEDSourcesConfig = (): JSX.Element => {
 	const [wledLoading, setWledLoading] = useState(false);
 	const [wledError, setWledError] = useState<string | null>(null);
 	const [wledSuccess, setWledSuccess] = useState(false);
+
+	const { devices } = useDevices();
 
 	// Hex-LED State
 	const [hexLedConfig, setHexLedConfig] = useState<{ devices: string[] }>({ devices: [] });
@@ -219,29 +223,127 @@ export const LEDSourcesConfig = (): JSX.Element => {
 									</Typography>
 								) : (
 									<List sx={{ bgcolor: 'background.default', borderRadius: 1 }}>
-										{wledConfig.devices.map((ip, index) => (
-											<React.Fragment key={ip}>
-												{index > 0 && <Divider />}
-												<ListItem>
-													<ListItemText
-														primary={ip}
-														secondary={`http://${ip}`}
-													/>
-													<ListItemSecondaryAction>
-														<IconButton
-															edge="end"
-															aria-label="delete"
-															onClick={() =>
-																void removeWledDevice(ip)
+										{wledConfig.devices.map((ip, index) => {
+											const isOnline = devices.some(
+												(device) =>
+													device.source.name === 'wled' &&
+													device.managementUrl === `http://${ip}`
+											);
+											return (
+												<React.Fragment key={ip}>
+													{index > 0 && <Divider />}
+													<ListItem>
+														<ListItemText
+															primary={
+																<Box
+																	display="flex"
+																	alignItems="center"
+																	gap={1}
+																>
+																	{ip}
+																	{isOnline ? (
+																		<Typography
+																			component="span"
+																			variant="caption"
+																			color="success.main"
+																			sx={{
+																				display: 'flex',
+																				alignItems:
+																					'center',
+																				ml: 1,
+																			}}
+																		>
+																			<Box
+																				component="span"
+																				sx={{
+																					width: 10,
+																					height: 10,
+																					borderRadius:
+																						'50%',
+																					backgroundColor:
+																						'success.main',
+																					display:
+																						'inline-block',
+																					mr: 0.5,
+																				}}
+																			/>
+																			Online
+																		</Typography>
+																	) : (
+																		<Typography
+																			component="span"
+																			variant="caption"
+																			color="text.secondary"
+																			sx={{
+																				display: 'flex',
+																				alignItems:
+																					'center',
+																				ml: 1,
+																			}}
+																		>
+																			<Box
+																				component="span"
+																				sx={{
+																					width: 10,
+																					height: 10,
+																					borderRadius:
+																						'50%',
+																					backgroundColor:
+																						(theme) =>
+																							theme
+																								.palette
+																								.mode ===
+																							'dark'
+																								? theme
+																										.palette
+																										.grey[700]
+																								: theme
+																										.palette
+																										.grey[300],
+																					display:
+																						'inline-block',
+																					mr: 0.5,
+																				}}
+																			/>
+																			Offline
+																		</Typography>
+																	)}
+																</Box>
 															}
-															disabled={wledLoading}
-														>
-															<DeleteIcon />
-														</IconButton>
-													</ListItemSecondaryAction>
-												</ListItem>
-											</React.Fragment>
-										))}
+															secondary={`http://${ip}`}
+														/>
+														<ListItemSecondaryAction>
+															{!isOnline && (
+																<IconButton
+																	edge="end"
+																	aria-label="refresh"
+																	onClick={() =>
+																		void apiPost(
+																			'wled',
+																			'/refresh',
+																			{}
+																		)
+																	}
+																	disabled={wledLoading}
+																>
+																	<RefreshIcon />
+																</IconButton>
+															)}
+															<IconButton
+																edge="end"
+																aria-label="delete"
+																onClick={() =>
+																	void removeWledDevice(ip)
+																}
+																disabled={wledLoading}
+															>
+																<DeleteIcon />
+															</IconButton>
+														</ListItemSecondaryAction>
+													</ListItem>
+												</React.Fragment>
+											);
+										})}
 									</List>
 								)}
 							</Stack>
@@ -308,26 +410,110 @@ export const LEDSourcesConfig = (): JSX.Element => {
 									</Typography>
 								) : (
 									<List sx={{ bgcolor: 'background.default', borderRadius: 1 }}>
-										{hexLedConfig.devices.map((url, index) => (
-											<React.Fragment key={url}>
-												{index > 0 && <Divider />}
-												<ListItem>
-													<ListItemText primary={url} />
-													<ListItemSecondaryAction>
-														<IconButton
-															edge="end"
-															aria-label="delete"
-															onClick={() =>
-																void removeHexLedDevice(url)
+										{hexLedConfig.devices.map((url, index) => {
+											const isOnline = devices.some(
+												(device) =>
+													device.source.name === 'hex-led' &&
+													device.managementUrl === url
+											);
+											return (
+												<React.Fragment key={url}>
+													{index > 0 && <Divider />}
+													<ListItem>
+														<ListItemText
+															primary={
+																<Box
+																	display="flex"
+																	alignItems="center"
+																	gap={1}
+																>
+																	{url}
+																	{isOnline ? (
+																		<Typography
+																			component="span"
+																			variant="caption"
+																			color="success.main"
+																			sx={{
+																				display: 'flex',
+																				alignItems:
+																					'center',
+																				ml: 1,
+																			}}
+																		>
+																			<Box
+																				component="span"
+																				sx={{
+																					width: 10,
+																					height: 10,
+																					borderRadius:
+																						'50%',
+																					backgroundColor:
+																						'success.main',
+																					display:
+																						'inline-block',
+																					mr: 0.5,
+																				}}
+																			/>
+																			Online
+																		</Typography>
+																	) : (
+																		<Typography
+																			component="span"
+																			variant="caption"
+																			color="text.secondary"
+																			sx={{
+																				display: 'flex',
+																				alignItems:
+																					'center',
+																				ml: 1,
+																			}}
+																		>
+																			<Box
+																				component="span"
+																				sx={{
+																					width: 10,
+																					height: 10,
+																					borderRadius:
+																						'50%',
+																					backgroundColor:
+																						(theme) =>
+																							theme
+																								.palette
+																								.mode ===
+																							'dark'
+																								? theme
+																										.palette
+																										.grey[700]
+																								: theme
+																										.palette
+																										.grey[400],
+																					display:
+																						'inline-block',
+																					mr: 0.5,
+																				}}
+																			/>
+																			Offline
+																		</Typography>
+																	)}
+																</Box>
 															}
-															disabled={hexLedLoading}
-														>
-															<DeleteIcon />
-														</IconButton>
-													</ListItemSecondaryAction>
-												</ListItem>
-											</React.Fragment>
-										))}
+														/>
+														<ListItemSecondaryAction>
+															<IconButton
+																edge="end"
+																aria-label="delete"
+																onClick={() =>
+																	void removeHexLedDevice(url)
+																}
+																disabled={hexLedLoading}
+															>
+																<DeleteIcon />
+															</IconButton>
+														</ListItemSecondaryAction>
+													</ListItem>
+												</React.Fragment>
+											);
+										})}
 									</List>
 								)}
 							</Stack>

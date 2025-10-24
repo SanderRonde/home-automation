@@ -39,6 +39,13 @@ function _initRouting(db: Database<WLEDDB>) {
 					}
 				}),
 			},
+			'/refresh': {
+				POST: (_req, _server, { json }) => {
+					// Queue an empty update
+					db.update((old) => ({ ...old }));
+					return json({ success: true });
+				},
+			},
 		},
 		true
 	);

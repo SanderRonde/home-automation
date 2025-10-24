@@ -80,7 +80,7 @@ export interface Device extends DeviceEndpoint {
 	getManagementUrl?(): string | undefined;
 }
 
-export class DeviceSource extends ClassEnum {
+export class DeviceSource extends ClassEnum<'matter' | 'ewelink' | 'wled' | 'hex-led' | 'tuya'> {
 	public static readonly MATTER = new DeviceSource('matter');
 	public static readonly EWELINK = new DeviceSource('ewelink');
 	public static readonly WLED = new DeviceSource('wled');

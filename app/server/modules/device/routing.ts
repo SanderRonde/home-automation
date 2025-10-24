@@ -22,10 +22,11 @@ import {
 import type { IncludedIconNames } from '../../../client/dashboard/components/icon';
 import type { BrandedRouteHandlerResponse, ServeOptions } from '../../lib/routes';
 import { createServeOptions, withRequestBody } from '../../lib/routes';
+import type { Device, DeviceEndpoint, DeviceSource } from './device';
 import { applyPaletteToDevices } from './palette-executor';
-import type { Device, DeviceEndpoint } from './device';
 import type { AllModules, ModuleConfig } from '..';
 import { Actions } from '@matter/main/clusters';
+import type { ClassEnum } from '../../lib/enum';
 import { Color } from '../../lib/color';
 import type { DeviceAPI } from './api';
 import { wait } from '../../lib/time';
@@ -184,7 +185,7 @@ interface DashboardDeviceResponse extends DashboardDeviceEndpointResponse {
 	uniqueId: string;
 	name: string;
 	source: {
-		name: string;
+		name: DeviceSource extends ClassEnum<infer T> ? T : never;
 		emoji: string;
 	};
 	childClusters: DashboardDeviceClusterWithState[];
