@@ -20,6 +20,7 @@ async function _getRoutes(userManagement: UserManagement) {
 				if (authenticate(req.params.key)) {
 					req.cookies.set('key', genCookie(), {
 						// Expires in quite a few years
+						path: '/',
 						expires: new Date(2147483647000),
 					});
 					return json('Success', { status: 200 });
@@ -52,6 +53,7 @@ async function _getRoutes(userManagement: UserManagement) {
 								httpOnly: true,
 								secure: false, // Set to true if using HTTPS
 								sameSite: 'lax',
+								path: '/',
 								expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
 							});
 
