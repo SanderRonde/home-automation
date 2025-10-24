@@ -62,7 +62,6 @@ export class MatterEndpoint extends DeviceEndpoint {
 			}
 		}
 
-		// TODO:(sander) keep track of other clusters?
 		this.clusters = [];
 		const clusterClients = this.#endpoint.getAllClusterClients();
 		for (const clusterClient of clusterClients) {
