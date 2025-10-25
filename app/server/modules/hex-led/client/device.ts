@@ -53,8 +53,8 @@ export class HexLEDDevice extends DeviceEndpoint implements Device {
 		return [];
 	}
 
-	public getManagementUrl(): string {
-		return this._url;
+	public getManagementUrl(): Promise<string | undefined> {
+		return Promise.resolve(this._url);
 	}
 
 	public override [Symbol.dispose](): void {

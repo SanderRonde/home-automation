@@ -38,7 +38,7 @@ export abstract class TuyaDevice extends TuyaDeviceEndpoint implements Device {
 		return DeviceSource.TUYA;
 	}
 
-	public getManagementUrl(): string | undefined {
-		return undefined;
+	public getManagementUrl(): Promise<string | undefined> {
+		return Promise.resolve(undefined);
 	}
 }

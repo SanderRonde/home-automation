@@ -126,6 +126,10 @@ export class MockDevice implements DeviceInterface {
 		return this._source;
 	}
 
+	public getManagementUrl(): Promise<string | undefined> {
+		return Promise.resolve(undefined);
+	}
+
 	public async getDeviceName(): Promise<string> {
 		return Promise.resolve(this._name);
 	}

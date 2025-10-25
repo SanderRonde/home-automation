@@ -67,6 +67,10 @@ export abstract class EwelinkDevice extends EwelinkEndpoint implements Device, D
 		}
 		return new device(eWeLinkConfig);
 	}
+
+	public getManagementUrl(): Promise<string | undefined> {
+		return Promise.resolve(undefined);
+	}
 }
 
 class EwelinkM51CDevice extends EwelinkDevice {

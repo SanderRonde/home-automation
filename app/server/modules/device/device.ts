@@ -72,7 +72,7 @@ export interface Device extends DeviceEndpoint {
 	getUniqueId(): string;
 	getSource(): DeviceSource;
 	onChange: EventEmitter<void>;
-	getManagementUrl?(): string | undefined;
+	getManagementUrl(): Promise<string | undefined>;
 }
 
 export class DeviceSource extends ClassEnum<'matter' | 'ewelink' | 'wled' | 'hex-led' | 'tuya'> {

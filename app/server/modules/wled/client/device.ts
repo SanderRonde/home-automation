@@ -43,7 +43,7 @@ export class WLEDDevice extends DeviceEndpoint implements Device {
 		return [];
 	}
 
-	public getManagementUrl(): string {
-		return `http://${this._ip}`;
+	public getManagementUrl(): Promise<string | undefined> {
+		return Promise.resolve(`http://${this._ip}`);
 	}
 }

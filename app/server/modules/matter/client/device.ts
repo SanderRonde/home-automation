@@ -106,10 +106,31 @@ export class MatterEndpoint extends DeviceEndpoint {
 
 export class MatterDevice extends MatterEndpoint implements Device {
 	private uniqueId: string;
+	readonly #managementUrl: Promise<string | undefined>;
 
 	private constructor(node: PairedNode, endpoint: Endpoint, uniqueId: string | undefined) {
 		super(node, endpoint);
 		this.uniqueId = uniqueId ?? `${node.nodeId}:${endpoint.number ?? EndpointNumber(0)}`;
+		this.#managementUrl = (async () => {
+			const info =
+				endpoint.getClusterClient(BasicInformationCluster) ??
+				endpoint.getClusterClient(BridgedDeviceBasicInformationCluster);
+			if (!info) {
+				return undefined;
+			}
+			const vendorId = await info.attributes.vendorId?.get?.();
+			if (!vendorId) {
+				return undefined;
+			}
+			// If Philips Hue, return custom hue URL scheme
+			// Philips Hue vendorId is 4107 decimal (0x100B)
+			if (vendorId === 4107 || vendorId === 0x100b) {
+				// This instantly redirects to the home page. There is no direct link
+				// there so we use this.
+				return 'hue://show_test_settings/';
+			}
+			return undefined;
+		})();
 	}
 
 	public static async createDevice(
@@ -133,7 +154,7 @@ export class MatterDevice extends MatterEndpoint implements Device {
 		return DeviceSource.MATTER;
 	}
 
-	public getManagementUrl(): string | undefined {
-		return undefined;
+	public getManagementUrl(): Promise<string | undefined> {
+		return this.#managementUrl;
 	}
 }

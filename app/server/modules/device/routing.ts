@@ -1274,7 +1274,7 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 				roomIcon: roomInfo?.icon,
 				...endpointResponse,
 				name: storedDevice?.name ?? endpointResponse.name,
-				managementUrl: device.getManagementUrl?.(),
+				managementUrl: await device.getManagementUrl(),
 			};
 			responseDevices.push(responseDevice);
 		})
