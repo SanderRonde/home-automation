@@ -1,3 +1,4 @@
+import * as ColorConverter from 'cie-rgb-color-converter';
 import type { Color as MagicHomeColor } from 'magic-home';
 
 interface IColor {
@@ -41,7 +42,7 @@ export class Color implements Color {
 	}
 
 	public static fromCieXy(x: number, y: number): Color {
-		const { r, g, b } = cieXyToRgb(x, y);
+		const { r, g, b } = ColorConverter.xyBriToRgb(x, y, 255);
 		return new Color(r, g, b);
 	}
 
@@ -103,7 +104,7 @@ export class Color implements Color {
 	}
 
 	public toCieXy(): { x: number; y: number } {
-		const { x, y } = rgbToCieXy(this.r, this.g, this.b);
+		const { x, y } = ColorConverter.rgbToXy(this.r, this.g, this.b);
 		return { x, y };
 	}
 }
@@ -203,82 +204,4 @@ function RGBToHSV(
 		s: percentRoundFn(s * 100),
 		v: percentRoundFn(value * 100),
 	};
-}
-
-/**
- * Converts an RGB color to CIE 1931 x, y coordinates.
- * This is based on the sRGB color space and D65 white point.
- */
-function rgbToCieXy(r: number, g: number, b: number): { x: number; y: number } {
-	// Step 1: Normalize R, G, and B values to a 0-1 range.
-	let red = r / 255;
-	let green = g / 255;
-	let blue = b / 255;
-
-	// Step 2: Apply a gamma correction (sRGB to linear RGB).
-	red = red > 0.04045 ? Math.pow((red + 0.055) / 1.055, 2.4) : red / 12.92;
-	green = green > 0.04045 ? Math.pow((green + 0.055) / 1.055, 2.4) : green / 12.92;
-	blue = blue > 0.04045 ? Math.pow((blue + 0.055) / 1.055, 2.4) : blue / 12.92;
-
-	// Step 3: Convert from linear RGB to CIE XYZ using the sRGB D65 matrix.
-	const X = red * 0.4124 + green * 0.3576 + blue * 0.1805;
-	const Y = red * 0.2126 + green * 0.7152 + blue * 0.0722;
-	const Z = red * 0.0193 + green * 0.1192 + blue * 0.9505;
-
-	// Step 4: Convert from XYZ to xyY.
-	let x = X / (X + Y + Z);
-	let y = Y / (X + Y + Z);
-
-	// Handle a case where X+Y+Z is zero, to avoid division by zero.
-	if (isNaN(x)) {
-		x = 0;
-	}
-	if (isNaN(y)) {
-		y = 0;
-	}
-
-	return { x, y };
-}
-
-/**
- * Converts CIE 1931 x, y coordinates to an sRGB color.
- * This is the inverse of the rgbToCieXy function.
- * @param {number} x The CIE x coordinate (0-1).
- * @param {number} y The CIE y coordinate (0-1).
- * @returns {object} An object with r, g, and b properties (0-255).
- */
-function cieXyToRgb(x: number, y: number): { r: number; g: number; b: number } {
-	// Handle a case where y is zero to avoid division by zero.
-	if (y === 0) {
-		y = 0.0001;
-	}
-
-	const X = x / y;
-	const Z = (1 - x - y) / y;
-
-	// Step 2: Convert from XYZ to linear RGB using the sRGB D65 inverse matrix.
-	let r_linear = X * 3.240479 - Z * 0.498535;
-	let g_linear = X * -0.969256 + Z * 0.041556;
-	let b_linear = X * 0.055648 + Z * 1.057311;
-
-	// Step 3: Handle out-of-gamut colors by clamping.
-	r_linear = Math.max(0, Math.min(1, r_linear));
-	g_linear = Math.max(0, Math.min(1, g_linear));
-	b_linear = Math.max(0, Math.min(1, b_linear));
-
-	// Step 4: Apply inverse gamma correction (linear RGB to sRGB).
-	const inverseGamma = (val: number) => {
-		return val > 0.0031308 ? 1.055 * Math.pow(val, 1 / 2.4) - 0.055 : val * 12.92;
-	};
-
-	const r_srgb = inverseGamma(r_linear);
-	const g_srgb = inverseGamma(g_linear);
-	const b_srgb = inverseGamma(b_linear);
-
-	// Step 5: Denormalize to 0-255 and round.
-	const r = Math.round(r_srgb * 255);
-	const g = Math.round(g_srgb * 255);
-	const b = Math.round(b_srgb * 255);
-
-	return { r, g, b };
 }

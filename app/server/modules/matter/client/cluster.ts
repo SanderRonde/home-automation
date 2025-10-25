@@ -530,9 +530,9 @@ class MatterColorControlCluster
 	private _currentY = this._proxy.attributeGetter('currentY', (value) =>
 		value ? value / MatterColorControlCluster.MAX_COLOR_VALUE : undefined
 	);
-	public color = new MappedData(new CombinedData([this._currentX, this._currentY]), ([x, y]) =>
-		x === undefined || y === undefined ? undefined : Color.fromCieXy(x, y)
-	);
+	public color = new MappedData(new CombinedData([this._currentX, this._currentY]), ([x, y]) => {
+		return x === undefined || y === undefined ? undefined : Color.fromCieXy(x, y);
+	});
 
 	public setColor = this._proxy.command('moveToColor', {
 		input: ({ color, overDurationMs }: { color: Color; overDurationMs?: number }) => {

@@ -74,6 +74,7 @@
 		"@uiw/react-color": "^2.9.0",
 		"chalk": "^2.4.2",
 		"chart.js": "^4.5.1",
+		"cie-rgb-color-converter": "^1.0.6",
 		"dotenv": "^17.2.1",
 		"ewelink-api-next": "^1.0.4",
 		"framer-motion": "^12.23.24",

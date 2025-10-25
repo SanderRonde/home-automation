@@ -6,7 +6,6 @@ import {
 import type { WLEDClient, WLEDClientState } from 'wled-client';
 import type { DeviceClusterName } from '../../device/cluster';
 import { EventEmitter } from '../../../lib/event-emitter';
-import { logDev } from '../../../lib/logging/log-dev';
 import { Data, MappedData } from '../../../lib/data';
 import type { Mapper } from '../../../lib/data';
 import { Color } from '../../../lib/color';
@@ -135,18 +134,28 @@ export class WLEDColorControlCluster
 	});
 
 	public setColor = ({ color, index }: { color: Color; index?: number }): Promise<void> => {
-		if (index === undefined || !this.client.state.segments) {
+		if (!this.client.state.segments) {
 			return this.client.setColor([color.r, color.g, color.b]);
-		} else {
-			logDev(this.client.state.segments);
-			const segments = [...this.client.state.segments];
-			segments[index] = {
-				...segments[index],
-				colors: [[color.r, color.g, color.b], ...(segments[index].colors?.slice(1) ?? [])],
-			};
-			logDev(segments);
-			return this.client.setSegments(segments);
 		}
+
+		const segments = this.client.state.segments;
+		const segmentIds = (() => {
+			if (!index) {
+				if (segments.every((segment) => segment.id !== undefined)) {
+					return segments.map((segment) => segment.id!);
+				}
+				return undefined;
+			}
+			const segment = segments[index];
+			if (!segment.id) {
+				return undefined;
+			}
+			return [segment.id];
+		})();
+
+		return this.client.setColor([color.r, color.g, color.b], {
+			segmentId: segmentIds,
+		});
 	};
 
 	public getSegmentCount = (): number => this.client.state.segments.length;
