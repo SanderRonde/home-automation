@@ -24,6 +24,7 @@ import type { IncludedIconNames } from '../../../client/dashboard/components/ico
 import type { BrandedRouteHandlerResponse, ServeOptions } from '../../lib/routes';
 import { createServeOptions, withRequestBody } from '../../lib/routes';
 import type { Device, DeviceEndpoint, DeviceSource } from './device';
+import type { DeviceGroup } from '../../../../types/group';
 import { applyPaletteToDevices } from './palette-executor';
 import type { AllModules, ModuleConfig } from '..';
 import { logTag } from '../../lib/logging/logger';
@@ -731,10 +732,12 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 				z.object({
 					name: z.string(),
 					deviceIds: z.array(z.string()),
+					icon: z.string().optional(),
+					showOnHome: z.boolean().optional(),
 				}),
 				(body, _req, _server, { json }) => {
 					try {
-						const groupId = api.groupAPI.createGroup(body);
+						const groupId = api.groupAPI.createGroup(body as Omit<DeviceGroup, 'id'>);
 						return json({ success: true, groupId });
 					} catch (error) {
 						return json(
@@ -753,10 +756,15 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 				z.object({
 					name: z.string(),
 					deviceIds: z.array(z.string()),
+					icon: z.string().optional(),
+					showOnHome: z.boolean().optional(),
 				}),
 				(body, req, _server, { json }) => {
 					try {
-						const success = api.groupAPI.updateGroup(req.params.groupId, body);
+						const success = api.groupAPI.updateGroup(
+							req.params.groupId,
+							body as Omit<DeviceGroup, 'id'>
+						);
 						if (!success) {
 							return json({ error: 'Group not found' }, { status: 404 });
 						}

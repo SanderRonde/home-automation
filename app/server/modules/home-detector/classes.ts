@@ -24,6 +24,7 @@ class Pinger {
 	public joinedAt: Date = new Date(1970, 0, 0, 0, 0, 0, 0);
 	private _awayDetectedAt: Date | null = null;
 	private _inGracePeriod: boolean = false;
+	private _initialStateConfirmed: boolean = false;
 
 	public get state() {
 		return this._state!;
@@ -147,8 +148,9 @@ class Pinger {
 					this._awayDetectedAt = null;
 					this._inGracePeriod = false;
 					this.joinedAt = new Date();
-					const shouldUpdate = this._state !== null;
+					const shouldUpdate = this._initialStateConfirmed;
 					this._state = HOME_STATE.HOME;
+					this._initialStateConfirmed = true;
 					if (shouldUpdate) {
 						await this._onChange(HOME_STATE.HOME);
 					}
@@ -167,6 +169,7 @@ class Pinger {
 						await wait(CHANGE_PING_INTERVAL * 1000);
 					} else if (finalState === HOME_STATE.AWAY && this._state === HOME_STATE.AWAY) {
 						// Already away, no grace period needed
+						this._initialStateConfirmed = true;
 						await wait(AWAY_PING_INTERVAL * 1000);
 					}
 				}
@@ -179,12 +182,16 @@ class Pinger {
 						// Grace period expired, mark as away
 						this._inGracePeriod = false;
 						this.leftAt = new Date();
+						const shouldUpdate = this._initialStateConfirmed;
 						this._state = HOME_STATE.AWAY;
+						this._initialStateConfirmed = true;
 						this._db.update((old) => ({
 							...old,
 							[this._config.name]: HOME_STATE.AWAY,
 						}));
-						await this._onChange(HOME_STATE.AWAY);
+						if (shouldUpdate) {
+							await this._onChange(HOME_STATE.AWAY);
+						}
 						await wait(CHANGE_PING_INTERVAL * 1000);
 					} else {
 						// Still in grace period, keep checking frequently
@@ -192,6 +199,7 @@ class Pinger {
 					}
 				} else {
 					// Normal operation, no grace period
+					this._initialStateConfirmed = true;
 					await wait(
 						(this._state === HOME_STATE.HOME
 							? HOME_PING_INTERVAL

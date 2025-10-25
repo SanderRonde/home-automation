@@ -61,6 +61,7 @@ export const AppLayout = (props: AppLayoutProps): JSX.Element => {
 	const theme = useTheme();
 	const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 	const { isOnline } = useOffline();
+	const mainContentRef = React.useRef<HTMLDivElement>(null);
 
 	// Start with sidebar closed on mobile, open on desktop
 	const [open, setOpen] = React.useState(!isMobile);
@@ -69,6 +70,13 @@ export const AppLayout = (props: AppLayoutProps): JSX.Element => {
 	React.useEffect(() => {
 		setOpen(!isMobile);
 	}, [isMobile]);
+
+	// Reset scroll position when tab changes
+	React.useEffect(() => {
+		if (mainContentRef.current) {
+			mainContentRef.current.scrollTop = 0;
+		}
+	}, [props.currentTab]);
 
 	return (
 		<ThemeProvider theme={darkTheme}>
@@ -89,6 +97,7 @@ export const AppLayout = (props: AppLayoutProps): JSX.Element => {
 					onTabChange={props.onTabChange}
 				/>
 				<Box
+					ref={mainContentRef}
 					component="main"
 					sx={{
 						flexGrow: 1,
@@ -104,6 +113,10 @@ export const AppLayout = (props: AppLayoutProps): JSX.Element => {
 							}),
 						// Only shift content on desktop when sidebar is open
 						marginLeft: !isMobile && open ? '240px' : 0,
+						// Ensure scroll works during transitions
+						willChange: 'margin',
+						// Use GPU acceleration for smoother transitions
+						transform: 'translateZ(0)',
 					}}
 				>
 					{/* Offline indicator banner */}
@@ -112,7 +125,7 @@ export const AppLayout = (props: AppLayoutProps): JSX.Element => {
 							You're offline - viewing cached data. Device controls are disabled.
 						</Alert>
 					</Collapse>
-					{props.children}
+					<Box key={props.currentTab}>{props.children}</Box>
 				</Box>
 			</Box>
 		</ThemeProvider>

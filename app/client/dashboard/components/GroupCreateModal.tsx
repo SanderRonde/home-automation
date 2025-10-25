@@ -9,10 +9,13 @@ import {
 	FormControlLabel,
 	TextField,
 	Typography,
+	Autocomplete,
 } from '@mui/material';
 import type { DeviceListWithValuesResponse } from '../../../server/modules/device/routing';
 import type { DeviceGroup } from '../../../../types/group';
 import React, { useState, useEffect } from 'react';
+import type { IncludedIconNames } from './icon';
+import { IconComponent } from './icon';
 
 interface GroupCreateModalProps {
 	open: boolean;
@@ -21,6 +24,23 @@ interface GroupCreateModalProps {
 	group?: DeviceGroup;
 	devices: DeviceListWithValuesResponse;
 }
+
+// Popular MUI icons for groups
+const GROUP_ICONS: Array<{ icon: IncludedIconNames; label: string }> = [
+	{ icon: 'Group', label: 'Group' },
+	{ icon: 'Lightbulb', label: 'Lights' },
+	{ icon: 'Palette', label: 'Colors' },
+	{ icon: 'Home', label: 'Home' },
+	{ icon: 'Bed', label: 'Bedroom' },
+	{ icon: 'Weekend', label: 'Living Room' },
+	{ icon: 'Kitchen', label: 'Kitchen' },
+	{ icon: 'Yard', label: 'Outdoor' },
+	{ icon: 'Garage', label: 'Garage' },
+	{ icon: 'Star', label: 'Favorite' },
+	{ icon: 'Window', label: 'Windows' },
+	{ icon: 'Sensors', label: 'Sensors' },
+	{ icon: 'DeviceThermostat', label: 'Climate' },
+];
 
 interface GroupDeviceItemProps {
 	device: DeviceListWithValuesResponse[number];
@@ -58,15 +78,21 @@ GroupDeviceItem.displayName = 'GroupDeviceItem';
 export const GroupCreateModal = React.memo((props: GroupCreateModalProps): JSX.Element => {
 	const [name, setName] = useState('');
 	const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
+	const [selectedIcon, setSelectedIcon] = useState<IncludedIconNames>('Group');
+	const [showOnHome, setShowOnHome] = useState(false);
 
 	useEffect(() => {
 		if (props.open) {
 			if (props.group) {
 				setName(props.group.name);
 				setSelectedDeviceIds(props.group.deviceIds);
+				setSelectedIcon(props.group.icon || 'Group');
+				setShowOnHome(props.group.showOnHome || false);
 			} else {
 				setName('');
 				setSelectedDeviceIds([]);
+				setSelectedIcon('Group');
+				setShowOnHome(false);
 			}
 		}
 	}, [props.open, props.group]);
@@ -85,6 +111,8 @@ export const GroupCreateModal = React.memo((props: GroupCreateModalProps): JSX.E
 		await props.onSave({
 			name: name.trim(),
 			deviceIds: selectedDeviceIds,
+			icon: selectedIcon,
+			showOnHome,
 		});
 	};
 
@@ -127,6 +155,64 @@ export const GroupCreateModal = React.memo((props: GroupCreateModalProps): JSX.E
 						onChange={(e) => setName(e.target.value)}
 						fullWidth
 						required
+					/>
+
+					{/* Icon Selector */}
+					<Box>
+						<Typography variant="subtitle2" gutterBottom>
+							Icon
+						</Typography>
+						<Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+							<Box
+								sx={{
+									width: 48,
+									height: 48,
+									display: 'flex',
+									alignItems: 'center',
+									justifyContent: 'center',
+									borderRadius: 2,
+									backgroundColor: 'action.hover',
+									flexShrink: 0,
+								}}
+							>
+								<IconComponent iconName={selectedIcon} sx={{ fontSize: 32 }} />
+							</Box>
+						</Box>
+						<Autocomplete
+							options={GROUP_ICONS}
+							getOptionLabel={(option) => option.label}
+							value={
+								GROUP_ICONS.find((item) => item.icon === selectedIcon) ??
+								GROUP_ICONS[0]
+							}
+							onChange={(_, newValue) => {
+								if (newValue) {
+									setSelectedIcon(newValue.icon);
+								}
+							}}
+							renderOption={(props, option) => (
+								<li {...props} key={option.icon}>
+									<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+										<IconComponent iconName={option.icon} />
+										<span>{option.label}</span>
+									</Box>
+								</li>
+							)}
+							renderInput={(params) => (
+								<TextField {...params} placeholder="Select icon" />
+							)}
+						/>
+					</Box>
+
+					{/* Show on Home Checkbox */}
+					<FormControlLabel
+						control={
+							<Checkbox
+								checked={showOnHome}
+								onChange={(e) => setShowOnHome(e.target.checked)}
+							/>
+						}
+						label="Show on Home Screen"
 					/>
 
 					<Typography variant="subtitle2" sx={{ mt: 1 }}>

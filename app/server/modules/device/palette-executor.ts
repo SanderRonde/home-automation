@@ -72,46 +72,48 @@ function hexToHSV(hex: string): { hue: number; saturation: number; value: number
  * Apply a palette to a collection of devices
  */
 export async function applyPaletteToDevices(devices: Device[], palette: Palette): Promise<boolean> {
-	const results = await Promise.all(
-		devices.map(async (device) => {
-			const colorControlCluster = device.getClusterByType(DeviceColorControlCluster);
-			if (!colorControlCluster) {
+	const results: boolean[] = [];
+	for (const device of devices) {
+		const colorControlCluster = device.getClusterByType(DeviceColorControlCluster);
+		if (!colorControlCluster) {
+			logTag(
+				'palette',
+				'yellow',
+				'Device has no ColorControl cluster:',
+				device.getUniqueId()
+			);
+			results.push(false);
+			await new Promise((resolve) => setTimeout(resolve, 50));
+			continue;
+		}
+
+		try {
+			const segmentCount = colorControlCluster.getSegmentCount();
+			for (let i = 0; i < segmentCount; i++) {
+				const hexColor = selectColorForDevice(`${device.getUniqueId()}:${i}`, palette);
+				const hsv = hexToHSV(hexColor);
+				const color = Color.fromHSV(hsv.hue, hsv.saturation, hsv.value);
+				await colorControlCluster.setColor({ color, index: i });
+
 				logTag(
 					'palette',
-					'yellow',
-					'Device has no ColorControl cluster:',
-					device.getUniqueId()
+					'green',
+					`Applied color ${hexColor} to device ${device.getUniqueId()} segment ${i}`
 				);
-				return false;
 			}
 
-			try {
-				const segmentCount = colorControlCluster.getSegmentCount();
-				for (let i = 0; i < segmentCount; i++) {
-					const hexColor = selectColorForDevice(`${device.getUniqueId()}:${i}`, palette);
-					const hsv = hexToHSV(hexColor);
-					const color = Color.fromHSV(hsv.hue, hsv.saturation, hsv.value);
-					await colorControlCluster.setColor({ color, index: i });
-
-					logTag(
-						'palette',
-						'green',
-						`Applied color ${hexColor} to device ${device.getUniqueId()} segment ${i}`
-					);
-				}
-
-				return true;
-			} catch (error) {
-				logTag(
-					'palette',
-					'red',
-					`Failed to apply color to device ${device.getUniqueId()}:`,
-					error
-				);
-				return false;
-			}
-		})
-	);
+			results.push(true);
+		} catch (error) {
+			logTag(
+				'palette',
+				'red',
+				`Failed to apply color to device ${device.getUniqueId()}:`,
+				error
+			);
+			results.push(false);
+		}
+		await new Promise((resolve) => setTimeout(resolve, 50));
+	}
 
 	return results.every((success) => success);
 }

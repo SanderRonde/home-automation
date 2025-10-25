@@ -29,7 +29,8 @@ export const fadeInUp: SxProps<Theme> = {
 
 /**
  * Staggered fade-in with upward slide animation (legacy CSS)
- * Duration: 300ms with index-based delay (50ms per index)
+ * Duration: 150ms with index-based delay (15ms per index)
+ * Optimized for faster initial render and better scroll calculation
  *
  * @param index - The index of the element in the list (0-based)
  * @returns SxProps with staggered animation
@@ -39,9 +40,10 @@ export const fadeInUpStaggered = (index: number): SxProps<Theme> => ({
 		from: { opacity: 0, transform: 'translateY(10px)' },
 		to: { opacity: 1, transform: 'translateY(0)' },
 	},
-	animation: 'fadeInUp 300ms ease-out',
-	animationDelay: `${index * 50}ms`,
+	animation: 'fadeInUp 150ms ease-out',
+	animationDelay: `${index * 15}ms`,
 	animationFillMode: 'both',
+	willChange: 'opacity, transform',
 });
 
 // Framer Motion Variants and Transitions
