@@ -308,6 +308,7 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 			icon: selectedIcon,
 			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			actions: actions.map(
+				// eslint-disable-next-line @typescript-eslint/no-unused-vars
 				({ key: _key, targetType: _targetType, ...action }) =>
 					action as Scene['actions'][number]
 			),

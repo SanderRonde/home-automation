@@ -26,6 +26,7 @@ import { createServeOptions, withRequestBody } from '../../lib/routes';
 import type { Device, DeviceEndpoint, DeviceSource } from './device';
 import { applyPaletteToDevices } from './palette-executor';
 import type { AllModules, ModuleConfig } from '..';
+import { logTag } from '../../lib/logging/logger';
 import { Actions } from '@matter/main/clusters';
 import type { ClassEnum } from '../../lib/enum';
 import { Color } from '../../lib/color';
@@ -1326,14 +1327,19 @@ async function performActionForDeviceCluster<
 	if (clusters.some((c) => !c)) {
 		return res.error({ error: 'Cluster not found' }, 404);
 	}
-	const success = await Promise.race([
-		Promise.all(clusters.map((c) => callback(c))).then(() => true),
-		wait(10000).then(() => false),
-	]);
-	if (!success) {
-		return res.error({ error: 'Cluster operation timed out' }, 500);
+	try {
+		const success = await Promise.race([
+			Promise.all(clusters.map((c) => callback(c))).then(() => true),
+			wait(10000).then(() => false),
+		]);
+		if (!success) {
+			return res.error({ error: 'Cluster operation timed out' }, 500);
+		}
+		return res.json({ success: true });
+	} catch (error) {
+		logTag('device', 'red', 'Cluster operation error:', error);
+		return res.error({ error: 'Cluster operation failed', details: String(error) }, 500);
 	}
-	return res.json({ success: true });
 }
 
 function validateClusterRoute<T extends `/cluster/${DeviceClusterName}`>(route: T): T {

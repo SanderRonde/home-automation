@@ -293,7 +293,6 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 			  };
 
 		if (!json.success) {
-			debugger;
 			window.location.href = json.redirect;
 			return;
 		}

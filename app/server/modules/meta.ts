@@ -54,7 +54,7 @@ export abstract class ModuleMeta {
 	public notifyModulesFromExternal(modules: AllModules): void {
 		this._modules.set(modules);
 		let initialSelfChangeDone: boolean = false;
-		modules.homeDetector.onUpdate(async (homeState, name) => {
+		void modules.homeDetector.onUpdate(async (homeState, name) => {
 			if (name !== 'self') {
 				return;
 			}

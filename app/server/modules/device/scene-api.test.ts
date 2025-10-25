@@ -27,7 +27,7 @@ describe('SceneAPI', () => {
 		// Mock modules for SceneAPI
 		const mockModules = Promise.resolve({
 			homeDetector: {
-				getDetector: async () => ({
+				getDetector: () => ({
 					get: () => '?',
 				}),
 			},

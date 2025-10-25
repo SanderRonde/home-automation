@@ -124,6 +124,7 @@ export const Device = new (class Device extends ModuleMeta {
 			`;
 		}
 
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 		const api = new DeviceAPI(config.db, config.sqlDB, (this as any).modules);
 		this.api.set(api);
 
