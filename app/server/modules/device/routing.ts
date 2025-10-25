@@ -850,7 +850,7 @@ const getClusterState = async (
 		return {
 			name: clusterName,
 			icon: getClusterIconName(clusterName),
-			targetPositionLiftPercentage: await cluster.targetPositionLiftPercentage.get(),
+			targetPositionLiftPercentage: (await cluster.targetPositionLiftPercentage.get()) ?? 0,
 		};
 	}
 	if (clusterName === DeviceClusterName.POWER_SOURCE) {

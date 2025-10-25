@@ -66,7 +66,7 @@ export abstract class DeviceWindowCoveringCluster extends Cluster {
 	/**
 	 * A lift percentage of 0 means the cover is opened (to the top) and 100 means the cover is closed (to the bottom)
 	 */
-	public abstract targetPositionLiftPercentage: Data<number>;
+	public abstract targetPositionLiftPercentage: Data<number | undefined>;
 	public abstract close(): Promise<void>;
 	public abstract open(): Promise<void>;
 	public abstract goToLiftPercentage(args: { percentage: number }): Promise<void>;

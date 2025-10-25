@@ -306,7 +306,7 @@ class MatterWindowCoveringCluster
 
 	public targetPositionLiftPercentage = this._proxy.attributeGetter(
 		'targetPositionLiftPercent100ths',
-		(num) => (num ? num / 100 : 0)
+		(num) => (num ? num / 100 : undefined)
 	);
 	public operationalStatus = this._proxy.attributeGetter('operationalStatus');
 
@@ -314,7 +314,7 @@ class MatterWindowCoveringCluster
 
 	public open = this._proxy.command('upOrOpen');
 
-	public goToLiftPercentage = this._proxy.command<
+	public _goToLiftPercentage = this._proxy.command<
 		'goToLiftPercentage',
 		{
 			percentage: number;
@@ -324,6 +324,15 @@ class MatterWindowCoveringCluster
 			liftPercent100thsValue: percentage * 100,
 		}),
 	});
+	public goToLiftPercentage = ({ percentage }: { percentage: number }) => {
+		if (this.targetPositionLiftPercentage.current() === percentage) {
+			// If already at the target position, do nothing.
+			// This fixes a bug where ikea blinds will try to move to the
+			// position even if they're already there.
+			return Promise.resolve();
+		}
+		return this._goToLiftPercentage({ percentage });
+	};
 }
 
 class MatterLevelControlCluster
