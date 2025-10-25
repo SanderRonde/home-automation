@@ -126,7 +126,7 @@ export class WLEDColorControlCluster
 	}
 
 	public color = new WLEDMapper(this, (state) => {
-		const color = state.segments[0].colors?.[0];
+		const color = state.segments?.[0]?.colors?.[0];
 		if (!color) {
 			return new Color(0, 0, 0);
 		}

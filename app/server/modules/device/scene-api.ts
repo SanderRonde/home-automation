@@ -97,13 +97,27 @@ export class SceneAPI {
 				continue;
 			}
 
-			if (scene.trigger.deviceId !== trigger.deviceId) {
-				continue;
-			}
-
-			// For button press triggers, also match buttonIndex if specified
-			if (trigger.type === 'button-press' && scene.trigger.type === 'button-press') {
+			// Match based on trigger type
+			if (trigger.type === 'occupancy' && scene.trigger.type === 'occupancy') {
+				if (scene.trigger.deviceId !== trigger.deviceId) {
+					continue;
+				}
+			} else if (trigger.type === 'button-press' && scene.trigger.type === 'button-press') {
+				if (scene.trigger.deviceId !== trigger.deviceId) {
+					continue;
+				}
 				if (scene.trigger.buttonIndex !== trigger.buttonIndex) {
+					continue;
+				}
+			} else if (trigger.type === 'host-arrival' && scene.trigger.type === 'host-arrival') {
+				if (scene.trigger.hostId !== trigger.hostId) {
+					continue;
+				}
+			} else if (
+				trigger.type === 'host-departure' &&
+				scene.trigger.type === 'host-departure'
+			) {
+				if (scene.trigger.hostId !== trigger.hostId) {
 					continue;
 				}
 			}

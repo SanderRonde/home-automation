@@ -8,6 +8,7 @@ import {
 	MovieFilter as MovieFilterIcon,
 	GroupWork as GroupWorkIcon,
 	Palette as PaletteIcon,
+	Sensors as SensorsIcon,
 } from '@mui/icons-material';
 import {
 	Drawer,
@@ -50,6 +51,7 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 		{ text: 'Scenes', icon: <MovieFilterIcon />, id: SidebarTab.SCENES },
 		{ text: 'Groups', icon: <GroupWorkIcon />, id: SidebarTab.GROUPS },
 		{ text: 'Palettes', icon: <PaletteIcon />, id: SidebarTab.PALETTES },
+		{ text: 'Home Detection', icon: <SensorsIcon />, id: SidebarTab.HOME_DETECTOR },
 		{ text: 'Settings', icon: <SettingsIcon />, id: SidebarTab.SETTINGS },
 		{ text: 'Devices', icon: <DeviceHubIcon />, id: SidebarTab.DEVICES }, // Updated icon for Matter
 		{ text: 'eWeLink', icon: <CloudIcon />, id: SidebarTab.EWELINK },
@@ -100,6 +102,7 @@ export enum SidebarTab {
 	SCENES = 'scenes',
 	GROUPS = 'groups',
 	PALETTES = 'palettes',
+	HOME_DETECTOR = 'home-detector',
 	SETTINGS = 'settings',
 	DEVICES = 'devices',
 	EWELINK = 'ewelink',

@@ -3,6 +3,7 @@ import { EweLinkConfig } from './components/EweLinkConfig';
 import { AppLayout } from './components/layout/AppLayout';
 import { SidebarTab } from './components/layout/Sidebar';
 import { NotFoundPage } from './components/NotFoundPage';
+import { HomeDetector } from './components/HomeDetector';
 import { OfflineProvider } from '../lib/offline-context';
 import { WelcomePage } from './components/WelcomePage';
 import { TuyaConfig } from './components/TuyaConfig';
@@ -110,6 +111,8 @@ function DashboardApp() {
 				return <Groups />;
 			case SidebarTab.PALETTES:
 				return <Palettes />;
+			case SidebarTab.HOME_DETECTOR:
+				return <HomeDetector />;
 			case SidebarTab.SETTINGS:
 				return <WelcomePage />;
 			case SidebarTab.DEVICES:

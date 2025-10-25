@@ -1,9 +1,9 @@
 import { SettablePromise } from '../../lib/settable-promise';
-import { LogObj } from '../../lib/logging/lob-obj';
 import { logTag } from '../../lib/logging/logger';
-import type { Database } from '../../lib/db';
+import type { HostsConfigDB } from './classes';
+import { Database } from '../../lib/db';
+import { initRouting } from './routing';
 import type { ModuleConfig } from '..';
-import { handleHooks } from './hooks';
 import { Detector } from './classes';
 import { HOME_STATE } from './types';
 import { ModuleMeta } from '../meta';
@@ -21,8 +21,18 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 		return Bot;
 	}
 
-	private _initListeners() {
-		Detector.addListener(null, (newState, name) => {
+	public init(config: ModuleConfig) {
+		const hostsDb = new Database<HostsConfigDB>('home-detector-hosts.json');
+		const detector = new Detector({
+			db: config.db as Database<HomeDetectorDB>,
+			hostsDb,
+		});
+		Bot.init({
+			detector,
+		});
+		this._detector.set(detector);
+
+		detector.addListener(null, (newState, name) => {
 			logTag(
 				`device:${name}`,
 				'cyan',
@@ -31,28 +41,15 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 					: chalk.blue('just left')
 			);
 		});
-		Detector.addListener(null, async (newState, name) => {
-			await handleHooks(newState, name, LogObj.fromFixture(chalk.cyan('[hook]'), name));
-		});
-	}
-
-	public init(config: ModuleConfig) {
-		const detector = new Detector({
-			db: config.db as Database<HomeDetectorDB>,
-		});
-		Bot.init({
-			detector,
-		});
-		this._detector.set(detector);
-
-		this._initListeners();
 
 		return {
-			serve: {},
+			serve: initRouting(detector, config),
 		};
 	}
 
-	public onUpdate(handler: (newState: HOME_STATE, name: string) => void | Promise<void>): void {
-		Detector.addListener(null, handler);
+	public async onUpdate(
+		handler: (newState: HOME_STATE, name: string) => void | Promise<void>
+	): Promise<void> {
+		(await this._detector.value).addListener(null, handler);
 	}
 })();

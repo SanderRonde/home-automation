@@ -160,10 +160,9 @@ export const Scenes = (): JSX.Element => {
 			return null;
 		}
 
-		const device = getDeviceById(scene.trigger.deviceId);
-		const deviceName = device?.name || 'Unknown Device';
-
 		if (scene.trigger.type === 'occupancy') {
+			const device = getDeviceById(scene.trigger.deviceId);
+			const deviceName = device?.name || 'Unknown Device';
 			return (
 				<Tooltip title={`Occupancy: ${deviceName}`}>
 					<SensorsIcon
@@ -177,6 +176,8 @@ export const Scenes = (): JSX.Element => {
 		}
 
 		if (scene.trigger.type === 'button-press') {
+			const device = getDeviceById(scene.trigger.deviceId);
+			const deviceName = device?.name || 'Unknown Device';
 			return (
 				<Tooltip title={`Button ${scene.trigger.buttonIndex + 1}: ${deviceName}`}>
 					<TouchAppIcon

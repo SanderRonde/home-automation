@@ -534,6 +534,14 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 								deviceId: z.string(),
 								buttonIndex: z.number(),
 							}),
+							z.object({
+								type: z.literal('host-arrival'),
+								hostId: z.string(),
+							}),
+							z.object({
+								type: z.literal('host-departure'),
+								hostId: z.string(),
+							}),
 						])
 						.optional(),
 					showOnHome: z.boolean().optional(),
@@ -603,6 +611,14 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 								type: z.literal('button-press'),
 								deviceId: z.string(),
 								buttonIndex: z.number(),
+							}),
+							z.object({
+								type: z.literal('host-arrival'),
+								hostId: z.string(),
+							}),
+							z.object({
+								type: z.literal('host-departure'),
+								hostId: z.string(),
 							}),
 						])
 						.optional(),

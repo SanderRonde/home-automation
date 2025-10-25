@@ -126,6 +126,24 @@ export const Device = new (class Device extends ModuleMeta {
 
 		const api = new DeviceAPI(config.db, config.sqlDB);
 		this.api.set(api);
+
+		// Subscribe to home-detector state changes to trigger scenes
+		const modules = await this.modules;
+		modules.homeDetector.onUpdate(async (newState, hostId) => {
+			const { HOME_STATE } = await import('../home-detector/types.js');
+			if (newState === HOME_STATE.HOME) {
+				await api.sceneAPI.onTrigger({
+					type: 'host-arrival',
+					hostId,
+				});
+			} else {
+				await api.sceneAPI.onTrigger({
+					type: 'host-departure',
+					hostId,
+				});
+			}
+		});
+
 		return {
 			serve: initRouting(config, api),
 		};

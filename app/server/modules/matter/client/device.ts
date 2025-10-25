@@ -106,13 +106,9 @@ export class MatterEndpoint extends DeviceEndpoint {
 
 export class MatterDevice extends MatterEndpoint implements Device {
 	private uniqueId: string;
-	readonly #node: PairedNode;
-	readonly #endpoint: Endpoint;
 
 	private constructor(node: PairedNode, endpoint: Endpoint, uniqueId: string | undefined) {
 		super(node, endpoint);
-		this.#node = node;
-		this.#endpoint = endpoint;
 		this.uniqueId = uniqueId ?? `${node.nodeId}:${endpoint.number ?? EndpointNumber(0)}`;
 	}
 

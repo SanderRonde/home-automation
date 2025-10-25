@@ -121,11 +121,20 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 		}
 	}, [props.open]);
 	const [enableTrigger, setEnableTrigger] = useState(!!props.existingScene?.trigger);
-	const [triggerType, setTriggerType] = useState<'occupancy' | 'button-press'>(
-		props.existingScene?.trigger?.type ?? 'occupancy'
-	);
+	const [triggerType, setTriggerType] = useState<
+		'occupancy' | 'button-press' | 'host-arrival' | 'host-departure'
+	>(props.existingScene?.trigger?.type ?? 'occupancy');
 	const [triggerDeviceId, setTriggerDeviceId] = useState<string | null>(
-		props.existingScene?.trigger?.deviceId ?? null
+		(props.existingScene?.trigger?.type === 'occupancy' ||
+		props.existingScene?.trigger?.type === 'button-press'
+			? props.existingScene.trigger.deviceId
+			: null) ?? null
+	);
+	const [triggerHostId, setTriggerHostId] = useState<string | null>(
+		(props.existingScene?.trigger?.type === 'host-arrival' ||
+		props.existingScene?.trigger?.type === 'host-departure'
+			? props.existingScene.trigger.hostId
+			: null) ?? null
 	);
 	const [triggerButtonIndex, setTriggerButtonIndex] = useState<number | undefined>(
 		props.existingScene?.trigger?.type === 'button-press'
@@ -176,6 +185,25 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 			(cluster) => cluster.name === DeviceClusterName.SWITCH
 		).length;
 	}, [triggerDeviceId, triggerType, buttonDevices]);
+
+	// Load hosts for home detection triggers
+	const [hosts, setHosts] = useState<Array<{ id: string; name: string }>>([]);
+	React.useEffect(() => {
+		if (props.open) {
+			const loadHosts = async () => {
+				try {
+					const response = await apiGet('home-detector', '/list', {});
+					if (response.ok) {
+						const data = await response.json();
+						setHosts(data.hosts);
+					}
+				} catch (error) {
+					console.error('Failed to load hosts:', error);
+				}
+			};
+			void loadHosts();
+		}
+	}, [props.open]);
 
 	const handleAddAction = () => {
 		const newAction: DeviceActionEntry = {
@@ -282,15 +310,19 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 		}
 
 		let trigger: Scene['trigger'] = undefined;
-		if (enableTrigger && triggerDeviceId) {
-			if (triggerType === 'occupancy') {
+		if (enableTrigger) {
+			if (triggerType === 'occupancy' && triggerDeviceId) {
 				trigger = { type: 'occupancy', deviceId: triggerDeviceId };
-			} else if (triggerType === 'button-press') {
+			} else if (triggerType === 'button-press' && triggerDeviceId) {
 				trigger = {
 					type: 'button-press',
 					deviceId: triggerDeviceId,
 					buttonIndex: triggerButtonIndex!,
 				};
+			} else if (triggerType === 'host-arrival' && triggerHostId) {
+				trigger = { type: 'host-arrival', hostId: triggerHostId };
+			} else if (triggerType === 'host-departure' && triggerHostId) {
+				trigger = { type: 'host-departure', hostId: triggerHostId };
 			}
 		}
 
@@ -500,13 +532,17 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 										if (value) {
 											setTriggerType(value);
 											setTriggerDeviceId(null);
+											setTriggerHostId(null);
 											setTriggerButtonIndex(undefined);
 										}
 									}}
 									fullWidth
+									size="small"
 								>
 									<ToggleButton value="occupancy">Occupancy</ToggleButton>
-									<ToggleButton value="button-press">Button Press</ToggleButton>
+									<ToggleButton value="button-press">Button</ToggleButton>
+									<ToggleButton value="host-arrival">Arrival</ToggleButton>
+									<ToggleButton value="host-departure">Departure</ToggleButton>
 								</ToggleButtonGroup>
 
 								{triggerType === 'occupancy' && (
@@ -576,6 +612,48 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 
 										<Typography variant="caption" color="text.secondary">
 											Scene will trigger when the button is pressed
+										</Typography>
+									</>
+								)}
+
+								{triggerType === 'host-arrival' && (
+									<>
+										<Autocomplete
+											options={hosts}
+											getOptionLabel={(option) => option.name}
+											value={
+												hosts.find((h) => h.id === triggerHostId) ?? null
+											}
+											onChange={(_e, newValue) => {
+												setTriggerHostId(newValue?.id ?? null);
+											}}
+											renderInput={(params) => (
+												<TextField {...params} label="Host" />
+											)}
+										/>
+										<Typography variant="caption" color="text.secondary">
+											Scene will trigger when this host arrives home
+										</Typography>
+									</>
+								)}
+
+								{triggerType === 'host-departure' && (
+									<>
+										<Autocomplete
+											options={hosts}
+											getOptionLabel={(option) => option.name}
+											value={
+												hosts.find((h) => h.id === triggerHostId) ?? null
+											}
+											onChange={(_e, newValue) => {
+												setTriggerHostId(newValue?.id ?? null);
+											}}
+											renderInput={(params) => (
+												<TextField {...params} label="Host" />
+											)}
+										/>
+										<Typography variant="caption" color="text.secondary">
+											Scene will trigger when this host leaves home
 										</Typography>
 									</>
 								)}

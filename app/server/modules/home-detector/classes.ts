@@ -4,10 +4,10 @@ import {
 	HOME_PING_INTERVAL,
 	AWAY_PING_INTERVAL,
 } from './constants';
+import { logDev } from '../../lib/logging/log-dev';
 import type { Database } from '../../lib/db';
-import homeIps from '../../config/home-ips';
 import type { HomeDetectorDB } from '.';
-import { getEnv } from '../../lib/io';
+import type { Host } from './routing';
 import { HOME_STATE } from './types';
 import * as ping from 'ping';
 
@@ -19,11 +19,20 @@ function wait(time: number) {
 
 class Pinger {
 	private _state: HOME_STATE | null = null;
+	private _stopped: boolean = false;
 	public leftAt: Date = new Date(1970, 0, 0, 0, 0, 0, 0);
 	public joinedAt: Date = new Date(1970, 0, 0, 0, 0, 0, 0);
 
 	public get state() {
 		return this._state!;
+	}
+
+	public get name() {
+		return this._config.name;
+	}
+
+	public get ips() {
+		return this._config.ips;
 	}
 
 	public constructor(
@@ -35,6 +44,10 @@ class Pinger {
 		private readonly _onChange: (newState: HOME_STATE) => void | Promise<void>
 	) {
 		void this._init();
+	}
+
+	public stop(): void {
+		this._stopped = true;
 	}
 
 	private async _ping(ip: string) {
@@ -122,7 +135,7 @@ class Pinger {
 	}
 
 	private async _pingLoop() {
-		for (;;) {
+		while (!this._stopped) {
 			const newState = await this._pingAll();
 			if (newState.state !== this._state) {
 				let finalState: HOME_STATE = newState.state;
@@ -131,15 +144,16 @@ class Pinger {
 				} else {
 					// A ping definitely landed, device is home
 				}
-				if (finalState !== this._state && this._state !== null) {
-					await this._onChange(finalState);
-				}
+				const shouldUpdate = finalState !== this._state && this._state !== null;
 				if (finalState === HOME_STATE.AWAY) {
 					this.leftAt = new Date();
 				} else {
 					this.joinedAt = new Date();
 				}
 				this._state = finalState;
+				if (shouldUpdate) {
+					await this._onChange(finalState);
+				}
 				await wait(CHANGE_PING_INTERVAL);
 			} else {
 				await wait(
@@ -156,22 +170,47 @@ class Pinger {
 	}
 }
 
+export interface HostConfig {
+	name: string;
+	ips: string[];
+}
+
+export interface HostsConfigDB {
+	hosts: Record<string, HostConfig>;
+}
+
 export class Detector {
-	private static _listeners: {
+	private _listeners: {
 		name: string | null;
-		callback: (newState: HOME_STATE, name: string) => void | Promise<void>;
+		callback: (
+			newState: HOME_STATE,
+			name: string,
+			fullState: Record<string, HOME_STATE>
+		) => void | Promise<void>;
 	}[] = [];
 	private readonly _db: Database<HomeDetectorDB>;
+	private readonly _hostsDb: Database<HostsConfigDB>;
 	private _pingers: Map<string, Pinger> = new Map();
 
-	public constructor({ db }: { db: Database<HomeDetectorDB> }) {
+	public constructor({
+		db,
+		hostsDb,
+	}: {
+		db: Database<HomeDetectorDB>;
+		hostsDb: Database<HostsConfigDB>;
+	}) {
 		this._db = db;
+		this._hostsDb = hostsDb;
 		this._initPingers();
 	}
 
-	public static addListener(
+	public addListener(
 		name: string | null,
-		callback: (newState: HOME_STATE, name: string) => void | Promise<void>
+		callback: (
+			newState: HOME_STATE,
+			name: string,
+			fullState: Record<string, HOME_STATE>
+		) => void | Promise<void>
 	): void {
 		this._listeners.push({
 			name,
@@ -180,42 +219,33 @@ export class Detector {
 	}
 
 	private async _onChange(changeName: string, newState: HOME_STATE) {
-		for (const { name, callback } of Detector._listeners) {
+		for (const { name, callback } of this._listeners) {
 			if (name === null || changeName === name) {
-				await callback(newState, changeName);
+				await callback(newState, changeName, this.getAll());
 			}
 		}
 	}
 
 	private _initPingers() {
-		const config = {
-			...homeIps,
-			base: {
-				...homeIps.base,
-				self: [getEnv('SELF_IP', true)],
-			},
-		} as {
-			base: {
-				[key: string]: string[];
-			};
-		};
-		for (const { key, data } of (Object.keys(config.base ?? {}) || []).map((n) => ({
-			key: n,
-			data: config.base[n],
-		}))) {
-			this._pingers.set(
-				key,
-				new Pinger(
-					{
-						name: key,
-						ips: data,
-					},
-					this._db,
-					async (newState) => {
-						await this._onChange(key, newState);
-					}
-				)
-			);
+		// Load hosts from database
+		const hostsDb = this._hostsDb.current();
+		for (const hostConfig of Object.values(hostsDb.hosts ?? {})) {
+			logDev(hostsDb);
+			if (hostConfig) {
+				this._pingers.set(
+					hostConfig.name,
+					new Pinger(
+						{
+							name: hostConfig.name,
+							ips: hostConfig.ips,
+						},
+						this._db,
+						async (newState) => {
+							await this._onChange(hostConfig.name, newState);
+						}
+					)
+				);
+			}
 		}
 	}
 
@@ -239,5 +269,129 @@ export class Detector {
 			return '?';
 		}
 		return pinger.state;
+	}
+
+	public listHosts(): Host[] {
+		const hostsConfig = this._hostsDb.current();
+		const hosts: Host[] = [];
+
+		for (const hostConfig of Object.values(hostsConfig.hosts ?? {})) {
+			if (hostConfig) {
+				const pinger = this._pingers.get(hostConfig.name);
+				hosts.push({
+					name: hostConfig.name,
+					ips: hostConfig.ips,
+					lastSeen: pinger?.state === HOME_STATE.HOME ? pinger.joinedAt : pinger?.leftAt,
+				});
+			}
+		}
+
+		return hosts;
+	}
+
+	public addHost(name: string, ips: string[]): string {
+		if (ips.length === 0) {
+			throw new Error('At least one IP address is required');
+		}
+
+		const hostConfig: HostConfig = {
+			name,
+			ips,
+		};
+
+		// Save to database
+		this._hostsDb.update((old) => ({
+			...old,
+			hosts: {
+				...old.hosts,
+				[name]: hostConfig,
+			},
+		}));
+
+		// Create pinger
+		const pinger = new Pinger(
+			{
+				name,
+				ips,
+			},
+			this._db,
+			async (newState) => {
+				await this._onChange(name, newState);
+			}
+		);
+		this._pingers.set(name, pinger);
+
+		return name;
+	}
+
+	public updateHost(name: string, ips: string[]): boolean {
+		const hostsConfig = this._hostsDb.current();
+		if (!hostsConfig.hosts?.[name]) {
+			return false;
+		}
+
+		if (ips.length === 0) {
+			throw new Error('At least one IP address is required');
+		}
+
+		// Update database
+		this._hostsDb.update((old) => ({
+			...old,
+			[name]: {
+				name,
+				ips,
+			},
+		}));
+
+		// Stop old pinger
+		const oldPinger = this._pingers.get(name);
+		if (oldPinger) {
+			oldPinger.stop();
+		}
+
+		// Create new pinger with updated config
+		const pinger = new Pinger(
+			{
+				name,
+				ips,
+			},
+			this._db,
+			async (newState) => {
+				await this._onChange(name, newState);
+			}
+		);
+		this._pingers.set(name, pinger);
+
+		return true;
+	}
+
+	public removeHost(name: string): boolean {
+		const hostsConfig = this._hostsDb.current();
+		if (!hostsConfig.hosts?.[name]) {
+			return false;
+		}
+
+		// Remove from database
+		this._hostsDb.update((old) => {
+			const newConfig = { ...old };
+			delete newConfig.hosts?.[name];
+			return newConfig;
+		});
+
+		// Stop and remove pinger
+		const pinger = this._pingers.get(name);
+		if (pinger) {
+			pinger.stop();
+			this._pingers.delete(name);
+		}
+
+		// Clean up state database
+		this._db.update((old) => {
+			const newState = { ...old };
+			delete newState[name];
+			return newState;
+		});
+
+		return true;
 	}
 }

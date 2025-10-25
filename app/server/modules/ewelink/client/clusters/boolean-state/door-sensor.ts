@@ -1,4 +1,4 @@
-import { EwelinkBooleanStateCluster, EwelinkClusterProxy } from '../../cluster';
+import { EwelinkBooleanStateCluster } from '../../cluster';
 
 interface Params {
 	/**

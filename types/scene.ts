@@ -12,6 +12,14 @@ export type SceneTrigger =
 			type: 'button-press';
 			deviceId: string;
 			buttonIndex: number;
+	  }
+	| {
+			type: 'host-arrival';
+			hostId: string;
+	  }
+	| {
+			type: 'host-departure';
+			hostId: string;
 	  };
 
 export type SceneDeviceActionOnOff = {

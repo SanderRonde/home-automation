@@ -1,3 +1,4 @@
+import type { HomeDetectorRoutes } from '../../server/modules/home-detector/routing';
 import type { TemperatureRoutes } from '../../server/modules/temperature/routing';
 import type { BrandedResponse, RouteBodyBrand } from '../../server/lib/routes';
 import type { DashboardRoutes } from '../../server/modules/dashboard/routing';
@@ -219,6 +220,7 @@ type RoutesForModules = {
 	device: DeviceRoutes;
 	ewelink: EwelinkRoutes;
 	'hex-led': HexLedRoutes;
+	'home-detector': HomeDetectorRoutes;
 	mcp: MCPRoutes;
 	temperature: TemperatureRoutes;
 	tuya: TuyaRoutes;
