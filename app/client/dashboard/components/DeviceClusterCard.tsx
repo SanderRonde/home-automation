@@ -826,7 +826,11 @@ const ColorControlCard = (
 	props: DeviceClusterCardBaseProps<DashboardDeviceClusterColorControl>
 ): JSX.Element => {
 	// Convert HSV to RGB for display
-	const hsvToRgb = (h: number, s: number, v: number): string => {
+	const hsvToRgb = (
+		h: number,
+		s: number,
+		v: number
+	): { color: string; r: number; g: number; b: number } => {
 		const hNorm = h / 360;
 		const sNorm = s / 100;
 		const vNorm = v / 100;
@@ -875,14 +879,44 @@ const ColorControlCard = (
 				b = 0;
 		}
 
-		return `rgb(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)})`;
+		const r255 = Math.round(r * 255);
+		const g255 = Math.round(g * 255);
+		const b255 = Math.round(b * 255);
+
+		return {
+			color: `rgb(${r255}, ${g255}, ${b255})`,
+			r: r255,
+			g: g255,
+			b: b255,
+		};
+	};
+
+	// Calculate relative luminance (WCAG formula)
+	const getLuminance = (r: number, g: number, b: number): number => {
+		const [rs, gs, bs] = [r, g, b].map((c) => {
+			const channel = c / 255;
+			return channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
+		});
+		return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
 	};
 
 	// Use brightness from LevelControl if available, otherwise use HSV value
 	const brightness =
 		props.cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL]?.currentLevel ??
 		props.cluster.color.value;
-	const color = hsvToRgb(props.cluster.color.hue, props.cluster.color.saturation, brightness);
+	const { color, r, g, b } = hsvToRgb(
+		props.cluster.color.hue,
+		props.cluster.color.saturation,
+		brightness
+	);
+
+	// Calculate luminance and determine text color
+	const luminance = getLuminance(r, g, b);
+	const isLightBackground = luminance > 0.5;
+	const textColor = isLightBackground ? 'rgba(0, 0, 0, 0.87)' : 'white';
+	const iconBgColor = isLightBackground ? 'rgba(0, 0, 0, 0.08)' : 'rgba(0, 0, 0, 0.3)';
+	const iconColor = isLightBackground ? 'rgba(0, 0, 0, 0.6)' : 'white';
+	const textShadow = isLightBackground ? 'none' : '0 0 4px rgba(0,0,0,0.5)';
 
 	return (
 		<DeviceClusterCardSkeleton
@@ -908,12 +942,12 @@ const ColorControlCard = (
 						display: 'flex',
 						alignItems: 'center',
 						justifyContent: 'center',
-						background: 'rgba(0, 0, 0, 0.3)',
+						background: iconBgColor,
 						borderRadius: '50%',
 						width: 48,
 						height: 48,
 						fontSize: '1.5rem',
-						color: 'white',
+						color: iconColor,
 					}}
 				>
 					<IconOrNull icon={props.cluster.icon} />
@@ -922,8 +956,8 @@ const ColorControlCard = (
 					variant="body1"
 					sx={{
 						fontWeight: 500,
-						color: 'white',
-						textShadow: '0 0 4px rgba(0,0,0,0.5)',
+						color: textColor,
+						textShadow: textShadow,
 						flexGrow: 1,
 					}}
 				>
