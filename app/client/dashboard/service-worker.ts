@@ -89,7 +89,7 @@ sw.addEventListener('fetch', (event: FetchEvent) => {
 						await cache.put(event.request, response.clone());
 					}
 					return response;
-				} catch (error) {
+				} catch {
 					// Network failed, try cache
 					const cachedResponse = await caches.match(event.request);
 					if (cachedResponse) {
@@ -120,7 +120,7 @@ sw.addEventListener('fetch', (event: FetchEvent) => {
 						await cache.put(event.request, response.clone());
 					}
 					return response;
-				} catch (error) {
+				} catch {
 					return new Response('Offline', { status: 503 });
 				}
 			})()

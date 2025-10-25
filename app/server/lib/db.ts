@@ -31,7 +31,7 @@ class DBFileManager {
 				}) || '{}'
 			);
 			return parsed as R;
-		} catch (e) {
+		} catch {
 			throw new Error(`Failed to parse JSON in file "${filePath}"`);
 		}
 	}

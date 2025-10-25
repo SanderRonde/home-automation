@@ -185,7 +185,7 @@ export class EWeLinkAPI implements Disposable {
 						logTag('ewelink', 'blue', 'ws-message', JSON.stringify(data, null, '\t'));
 					}
 					this.wsConnectionWrapper.emit(data);
-				} catch (e) {
+				} catch {
 					logTag(
 						'ewelink',
 						'red',

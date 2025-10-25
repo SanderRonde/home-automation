@@ -754,7 +754,7 @@ const HttpActionConfig = React.memo((props: HttpActionConfigProps) => {
 			props.handleActionChange(props.action.key, {
 				action: { ...httpAction, body },
 			});
-		} catch (e) {
+		} catch {
 			// Invalid JSON, don't update
 		}
 	};

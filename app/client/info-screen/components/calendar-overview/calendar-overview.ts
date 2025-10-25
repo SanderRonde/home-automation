@@ -270,14 +270,14 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 				credentials: 'include',
 			});
 			return response;
-		} catch (e) {
+		} catch {
 			return null;
 		}
 	}
 
 	public async updateCalendar(): Promise<void> {
 		const response = await this.request(`${location.origin}/calendar`, {});
-		if (!response || !response.ok) {
+		if (!response?.ok) {
 			return;
 		}
 

@@ -53,7 +53,7 @@ function LoginPage(): JSX.Element {
 				setError('Login failed. Please try again.');
 				setLoading(false);
 			}
-		} catch (err) {
+		} catch {
 			setError('Network error. Please try again.');
 			setLoading(false);
 		}

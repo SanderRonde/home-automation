@@ -366,17 +366,19 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 						body.deviceIds,
 						DeviceOnOffCluster,
 						async (cluster) => {
-							await Promise.all([
-								new Promise<void>((resolve) => {
-									const callback = (value: boolean) => {
-										if (value === body.isOn) {
-											resolve();
-										}
-									};
-									cluster.isOn.subscribe(callback);
-								}),
-								void cluster.setOn(body.isOn),
-							]);
+							{
+								await Promise.all([
+									new Promise<void>((resolve) => {
+										const callback = (value: boolean) => {
+											if (value === body.isOn) {
+												resolve();
+											}
+										};
+										cluster.isOn.subscribe(callback);
+									}),
+								]);
+								void cluster.setOn(body.isOn);
+							}
 						}
 					)
 			),

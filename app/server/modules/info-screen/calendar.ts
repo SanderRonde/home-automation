@@ -10,7 +10,7 @@ import { google } from 'googleapis';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const optionalRequire = require('optional-require')(require) as (requirePath: string) => unknown;
 
 export async function refresh(): Promise<void> {

@@ -127,7 +127,7 @@ class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 					for (let i = 0; i < 3; i++) {
 						try {
 							return await tryGet();
-						} catch (error) {
+						} catch {
 							console.error(`Error getting attribute ${attributeName}`);
 						}
 					}

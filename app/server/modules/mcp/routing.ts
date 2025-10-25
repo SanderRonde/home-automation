@@ -34,7 +34,7 @@ async function _initRouting(config: ModuleConfig) {
 					// eslint-disable-next-line no-restricted-globals
 					const response = await fetch(forwardedReq);
 					return staticResponse(response);
-				} catch (e) {
+				} catch {
 					console.error('Error forwarding request to MCP Node.js server:', error);
 					return error('Internal server error', 500);
 				}

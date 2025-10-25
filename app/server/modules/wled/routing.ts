@@ -34,7 +34,7 @@ function _initRouting(db: Database<WLEDDB>) {
 						}));
 
 						return json({ success: true });
-					} catch (e) {
+					} catch {
 						return error({ error: 'Invalid config structure' }, 400);
 					}
 				}),

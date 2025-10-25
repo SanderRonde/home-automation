@@ -222,7 +222,7 @@ export const TuyaConfig = (): JSX.Element => {
 					[device.id]: false,
 				}));
 			}
-		} catch (err) {
+		} catch {
 			setTestResults((prev) => ({
 				...prev,
 				[device.id]: false,

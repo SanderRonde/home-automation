@@ -187,7 +187,7 @@ export abstract class Matchable extends BotUtil {
 								},
 							})
 						);
-					} catch (e) {
+					} catch {
 						resolve({
 							type: RESPONSE_TYPE.TEXT,
 							text: 'Something went wrong',

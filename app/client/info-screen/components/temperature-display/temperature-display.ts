@@ -62,7 +62,7 @@ export class TemperatureDisplay extends ConfigurableWebComponent<{
 				credentials: 'include',
 			});
 			return response;
-		} catch (e) {
+		} catch {
 			return null;
 		}
 	}

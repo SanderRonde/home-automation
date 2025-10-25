@@ -40,7 +40,7 @@ class TempControl {
 			this.lastLogTime = Date.now();
 		}
 
-		void Promise.all(this._listeners.map((listener) => listener(temp)));
+		void Promise.all(this._listeners.map(async (listener) => await listener(temp)));
 	}
 
 	public getLastTemp() {

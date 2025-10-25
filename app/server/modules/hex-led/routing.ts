@@ -27,7 +27,7 @@ function _initRouting(db: Database<HexLEDDB>) {
 						}));
 
 						return json({ success: true });
-					} catch (e) {
+					} catch {
 						return error({ error: 'Invalid config structure' }, 400);
 					}
 				}),

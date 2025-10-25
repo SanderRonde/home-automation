@@ -29,7 +29,7 @@ const getEnvironmentVariables = (() => {
 	return () => {
 		if (!loaded) {
 			dotenv.config({
-				// eslint-disable-next-line @typescript-eslint/no-var-requires
+				// eslint-disable-next-line @typescript-eslint/no-require-imports
 				path: (require('path') as typeof import('path')).join(
 					__dirname,
 					'../../../',

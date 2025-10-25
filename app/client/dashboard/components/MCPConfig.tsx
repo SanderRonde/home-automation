@@ -63,7 +63,7 @@ export const MCPConfig = (): JSX.Element => {
 				setShowNewKeyDialog(true);
 				await loadKeys();
 			}
-		} catch (err) {
+		} catch {
 			setError('Failed to generate key');
 		} finally {
 			setLoading(false);
@@ -83,7 +83,7 @@ export const MCPConfig = (): JSX.Element => {
 				await loadKeys();
 				setTimeout(() => setSuccess(null), 3000);
 			}
-		} catch (err) {
+		} catch {
 			setError('Failed to delete key');
 		} finally {
 			setLoading(false);
@@ -95,7 +95,7 @@ export const MCPConfig = (): JSX.Element => {
 			await navigator.clipboard.writeText(text);
 			setSuccess('Copied to clipboard!');
 			setTimeout(() => setSuccess(null), 2000);
-		} catch (err) {
+		} catch {
 			setError('Failed to copy to clipboard');
 		}
 	};

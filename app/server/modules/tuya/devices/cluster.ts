@@ -13,7 +13,7 @@ class TuyaThermostatClusterProxy {
 	public onChange: EventEmitter<void> = new EventEmitter();
 
 	public constructor(api: TuyaDeviceApi) {
-		// eslint-disable-next-line @typescript-eslint/ban-types
+		// eslint-disable-next-line @typescript-eslint/no-wrapper-object-types
 		const listener = (data: Object) => {
 			if (data && typeof data === 'object' && 'dps' in data) {
 				for (const listener of this._listeners) {

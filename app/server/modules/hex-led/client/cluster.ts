@@ -102,7 +102,7 @@ export class HexLEDColorControlCluster
 		// Try to extract color from SingleColorEffect
 		if (currentEffect === 'SingleColorEffect' || currentEffect === 'SingleColorRadialEffect') {
 			const params = effects.effect_parameters[currentEffect];
-			if (params?.color && params.color.type === 'color') {
+			if (params?.color?.type === 'color') {
 				const colorValue = params.color.value as RGBColor;
 				return new Color(colorValue.r, colorValue.g, colorValue.b);
 			}

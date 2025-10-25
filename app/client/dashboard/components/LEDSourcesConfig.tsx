@@ -83,7 +83,7 @@ export const LEDSourcesConfig = (): JSX.Element => {
 				const errorData = await response.json();
 				setWledError(errorData.error || 'Failed to save configuration');
 			}
-		} catch (err) {
+		} catch {
 			setWledError('Failed to save configuration');
 		} finally {
 			setWledLoading(false);
@@ -108,7 +108,7 @@ export const LEDSourcesConfig = (): JSX.Element => {
 				const errorData = await response.json();
 				setHexLedError(errorData.error || 'Failed to save configuration');
 			}
-		} catch (err) {
+		} catch {
 			setHexLedError('Failed to save configuration');
 		} finally {
 			setHexLedLoading(false);

@@ -85,7 +85,7 @@ export class AdvancedTemperatureDisplay extends ConfigurableWebComponent<{
 				credentials: 'include',
 			});
 			return response;
-		} catch (e) {
+		} catch {
 			return null;
 		}
 	}
