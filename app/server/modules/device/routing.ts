@@ -536,6 +536,7 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 							}),
 						])
 						.optional(),
+					showOnHome: z.boolean().optional(),
 				}),
 				(body, _req, _server, { json }) => {
 					const sceneId = api.sceneAPI.createScene(body);
@@ -605,6 +606,7 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 							}),
 						])
 						.optional(),
+					showOnHome: z.boolean().optional(),
 				}),
 				(body, req, _server, { json }) => {
 					const success = api.sceneAPI.updateScene(req.params.sceneId, body);

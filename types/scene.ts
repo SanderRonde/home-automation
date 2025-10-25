@@ -74,4 +74,5 @@ export interface Scene {
 	icon: IncludedIconNames;
 	actions: SceneDeviceAction[];
 	trigger?: SceneTrigger;
+	showOnHome?: boolean;
 }

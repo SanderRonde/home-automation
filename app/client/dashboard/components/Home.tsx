@@ -122,16 +122,15 @@ export const Home = (): JSX.Element => {
 	const [scenes, setScenes] = React.useState<Scene[]>([]);
 	const [triggeringSceneId, setTriggeringSceneId] = React.useState<string | null>(null);
 
-	// Load scenes with triggers
+	// Load scenes marked as favorites
 	React.useEffect(() => {
 		const loadScenes = async () => {
 			try {
 				const response = await apiGet('device', '/scenes/list', {});
 				if (response.ok) {
 					const data = await response.json();
-					// Only show scenes without triggers on home screen. If there is a trigger
-					// it will run automatically when the trigger is met.
-					setScenes(data.scenes.filter((scene: Scene) => !scene.trigger));
+					// Only show scenes marked to show on home screen
+					setScenes(data.scenes.filter((scene: Scene) => scene.showOnHome === true));
 				}
 			} catch (error) {
 				console.error('Failed to load scenes:', error);

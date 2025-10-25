@@ -3,6 +3,7 @@ import {
 	Delete as DeleteIcon,
 	PlayArrow as PlayArrowIcon,
 	Sensors as SensorsIcon,
+	Star as StarIcon,
 	TouchApp as TouchAppIcon,
 } from '@mui/icons-material';
 import {
@@ -316,6 +317,16 @@ export const Scenes = (): JSX.Element => {
 														>
 															{scene.title}
 														</Typography>
+														{scene.showOnHome && (
+															<Tooltip title="Shown on Home">
+																<StarIcon
+																	sx={{
+																		fontSize: 20,
+																		color: 'warning.main',
+																	}}
+																/>
+															</Tooltip>
+														)}
 														{getTriggerIcon(scene)}
 													</Box>
 													<SceneActionChips

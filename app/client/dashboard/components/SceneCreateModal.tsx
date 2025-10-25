@@ -132,6 +132,7 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 			? props.existingScene.trigger.buttonIndex
 			: undefined
 	);
+	const [showOnHome, setShowOnHome] = useState(props.existingScene?.showOnHome ?? false);
 
 	const availableDevices = React.useMemo(() => {
 		return props.devices.filter((device) =>
@@ -299,6 +300,7 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			actions: actions.map(({ key: _key, targetType: _targetType, ...action }) => action),
 			trigger,
+			showOnHome,
 		};
 
 		props.onSave(scene);
@@ -445,6 +447,28 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 								Add Device Action
 							</Button>
 						</Box>
+					</Box>
+
+					<Divider />
+
+					{/* Show on Home Section */}
+					<Box>
+						<FormControlLabel
+							control={
+								<Checkbox
+									checked={showOnHome}
+									onChange={(e) => setShowOnHome(e.target.checked)}
+								/>
+							}
+							label="Show on Home Screen"
+						/>
+						<Typography
+							variant="caption"
+							color="text.secondary"
+							sx={{ ml: 4, display: 'block' }}
+						>
+							Display this scene as a favorite on the home screen
+						</Typography>
 					</Box>
 
 					<Divider />
