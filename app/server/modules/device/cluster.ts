@@ -181,6 +181,7 @@ export abstract class DeviceSwitchCluster extends Cluster {
 
 	public abstract getTotalCount(): number;
 	public abstract getIndex(): number;
+	public abstract getLabel(): string;
 
 	public getName(): DeviceClusterName {
 		return DeviceSwitchCluster.clusterName;

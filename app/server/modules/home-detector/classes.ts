@@ -4,7 +4,6 @@ import {
 	HOME_PING_INTERVAL,
 	AWAY_PING_INTERVAL,
 } from './constants';
-import { logDev } from '../../lib/logging/log-dev';
 import type { Database } from '../../lib/db';
 import type { HomeDetectorDB } from '.';
 import type { Host } from './routing';
@@ -230,7 +229,6 @@ export class Detector {
 		// Load hosts from database
 		const hostsDb = this._hostsDb.current();
 		for (const hostConfig of Object.values(hostsDb.hosts ?? {})) {
-			logDev(hostsDb);
 			if (hostConfig) {
 				this._pingers.set(
 					hostConfig.name,

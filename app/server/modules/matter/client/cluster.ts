@@ -579,6 +579,7 @@ abstract class MatterSwitchClusterBase extends ConfigurableCluster<Switch.Comple
 
 	public getTotalCount = () => this._counts.totalCount;
 	public getIndex = () => this._counts.count;
+	public getLabel = () => `Button ${this._counts.count}`;
 
 	public constructor(
 		node: PairedNode,

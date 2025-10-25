@@ -1,4 +1,5 @@
 import { LEDSourcesConfig } from './components/LEDSourcesConfig';
+import { WakelightConfig } from './components/WakelightConfig';
 import { EweLinkConfig } from './components/EweLinkConfig';
 import { AppLayout } from './components/layout/AppLayout';
 import { SidebarTab } from './components/layout/Sidebar';
@@ -9,6 +10,7 @@ import { WelcomePage } from './components/WelcomePage';
 import { TuyaConfig } from './components/TuyaConfig';
 import { MCPConfig } from './components/MCPConfig';
 import React, { useState, useEffect } from 'react';
+import { Webhooks } from './components/Webhooks';
 import { Palettes } from './components/Palettes';
 import { Devices } from './components/Devices';
 import { createRoot } from 'react-dom/client';
@@ -111,8 +113,12 @@ function DashboardApp() {
 				return <Groups />;
 			case SidebarTab.PALETTES:
 				return <Palettes />;
+			case SidebarTab.WEBHOOKS:
+				return <Webhooks />;
 			case SidebarTab.HOME_DETECTOR:
 				return <HomeDetector />;
+			case SidebarTab.WAKELIGHT:
+				return <WakelightConfig />;
 			case SidebarTab.SETTINGS:
 				return <WelcomePage />;
 			case SidebarTab.DEVICES:

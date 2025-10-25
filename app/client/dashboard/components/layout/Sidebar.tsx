@@ -9,6 +9,9 @@ import {
 	GroupWork as GroupWorkIcon,
 	Palette as PaletteIcon,
 	Sensors as SensorsIcon,
+	Router as RouterIcon,
+	Webhook as WebhookIcon,
+	Alarm as AlarmIcon,
 } from '@mui/icons-material';
 import {
 	Drawer,
@@ -51,11 +54,13 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 		{ text: 'Scenes', icon: <MovieFilterIcon />, id: SidebarTab.SCENES },
 		{ text: 'Groups', icon: <GroupWorkIcon />, id: SidebarTab.GROUPS },
 		{ text: 'Palettes', icon: <PaletteIcon />, id: SidebarTab.PALETTES },
+		{ text: 'Webhooks', icon: <WebhookIcon />, id: SidebarTab.WEBHOOKS },
 		{ text: 'Home Detection', icon: <SensorsIcon />, id: SidebarTab.HOME_DETECTOR },
+		{ text: 'Wakelight', icon: <AlarmIcon />, id: SidebarTab.WAKELIGHT },
 		{ text: 'Settings', icon: <SettingsIcon />, id: SidebarTab.SETTINGS },
 		{ text: 'Devices', icon: <DeviceHubIcon />, id: SidebarTab.DEVICES }, // Updated icon for Matter
 		{ text: 'eWeLink', icon: <CloudIcon />, id: SidebarTab.EWELINK },
-		{ text: 'Tuya', icon: <CloudIcon />, id: SidebarTab.TUYA },
+		{ text: 'Tuya', icon: <RouterIcon />, id: SidebarTab.TUYA },
 		{ text: 'LED Sources', icon: <LightbulbIcon />, id: SidebarTab.LED_SOURCES },
 		{ text: 'MCP', icon: <SmartToyIcon />, id: SidebarTab.MCP },
 	];
@@ -102,7 +107,9 @@ export enum SidebarTab {
 	SCENES = 'scenes',
 	GROUPS = 'groups',
 	PALETTES = 'palettes',
+	WEBHOOKS = 'webhooks',
 	HOME_DETECTOR = 'home-detector',
+	WAKELIGHT = 'wakelight',
 	SETTINGS = 'settings',
 	DEVICES = 'devices',
 	EWELINK = 'ewelink',

@@ -24,8 +24,22 @@ describe('SceneAPI', () => {
 			scenes: {},
 		});
 		devices = new Data<{ [deviceId: string]: MockDevice }>({});
-		// @ts-expect-error - Using mocks in tests
-		api = new SceneAPI(db, devices as unknown as typeof devices);
+		// Mock modules for SceneAPI
+		const mockModules = Promise.resolve({
+			homeDetector: {
+				getDetector: async () => ({
+					get: () => '?',
+				}),
+			},
+		});
+		api = new SceneAPI(
+			// @ts-expect-error - Using mocks in tests
+			db,
+			devices as unknown as typeof devices,
+			undefined,
+			undefined,
+			mockModules
+		);
 	});
 
 	describe('listScenes', () => {
@@ -134,7 +148,7 @@ describe('SceneAPI', () => {
 			expect(id1).not.toBe(id2);
 		});
 
-		test('should create scene with trigger', () => {
+		test('should create scene with triggers', () => {
 			const trigger: SceneTrigger = {
 				type: 'occupancy',
 				deviceId: 'sensor1',
@@ -144,11 +158,11 @@ describe('SceneAPI', () => {
 				title: 'Motion Scene',
 				icon: 'Sensors',
 				actions: [],
-				trigger,
+				triggers: [{ trigger }],
 			});
 
 			const scene = api.getScene(sceneId);
-			expect(scene?.trigger).toEqual(trigger);
+			expect(scene?.triggers).toEqual([{ trigger }]);
 		});
 	});
 
@@ -387,10 +401,14 @@ describe('SceneAPI', () => {
 						action: { isOn: true },
 					},
 				],
-				trigger: {
-					type: 'occupancy',
-					deviceId: 'sensor1',
-				},
+				triggers: [
+					{
+						trigger: {
+							type: 'occupancy',
+							deviceId: 'sensor1',
+						},
+					},
+				],
 			});
 
 			await api.onTrigger({
@@ -420,10 +438,14 @@ describe('SceneAPI', () => {
 						action: { isOn: true },
 					},
 				],
-				trigger: {
-					type: 'occupancy',
-					deviceId: 'sensor1',
-				},
+				triggers: [
+					{
+						trigger: {
+							type: 'occupancy',
+							deviceId: 'sensor1',
+						},
+					},
+				],
 			});
 
 			await api.onTrigger({
@@ -458,10 +480,14 @@ describe('SceneAPI', () => {
 						action: { isOn: true },
 					},
 				],
-				trigger: {
-					type: 'occupancy',
-					deviceId: 'sensor1',
-				},
+				triggers: [
+					{
+						trigger: {
+							type: 'occupancy',
+							deviceId: 'sensor1',
+						},
+					},
+				],
 			});
 
 			api.createScene({
@@ -474,10 +500,14 @@ describe('SceneAPI', () => {
 						action: { isOn: true },
 					},
 				],
-				trigger: {
-					type: 'occupancy',
-					deviceId: 'sensor1',
-				},
+				triggers: [
+					{
+						trigger: {
+							type: 'occupancy',
+							deviceId: 'sensor1',
+						},
+					},
+				],
 			});
 
 			await api.onTrigger({
@@ -510,7 +540,7 @@ describe('SceneAPI', () => {
 						action: { isOn: true },
 					},
 				],
-				// No trigger
+				// No triggers
 			});
 
 			await api.onTrigger({
@@ -521,6 +551,160 @@ describe('SceneAPI', () => {
 			// Wait a bit to ensure it doesn't trigger
 			await new Promise((resolve) => setTimeout(resolve, 10));
 
+			expect(onOffCluster.isOn.current()).toBe(false);
+		});
+
+		test('should support multiple triggers (OR logic)', async () => {
+			const onOffCluster = new MockOnOffCluster();
+			const device = new MockDevice('light1', DeviceSource.MATTER, [onOffCluster]);
+
+			devices.set({ light1: device });
+
+			api.createScene({
+				title: 'Multi Trigger Scene',
+				icon: 'Home',
+				actions: [
+					{
+						deviceId: 'light1',
+						cluster: DeviceClusterName.ON_OFF,
+						action: { isOn: true },
+					},
+				],
+				triggers: [
+					{
+						trigger: {
+							type: 'occupancy',
+							deviceId: 'sensor1',
+						},
+					},
+					{
+						trigger: {
+							type: 'button-press',
+							deviceId: 'button1',
+							buttonIndex: 0,
+						},
+					},
+				],
+			});
+
+			// Trigger via occupancy (first trigger)
+			await api.onTrigger({
+				type: 'occupancy',
+				deviceId: 'sensor1',
+			});
+
+			await waitForCondition(() => onOffCluster.isOn.current() === true);
+			expect(onOffCluster.isOn.current()).toBe(true);
+
+			// Reset
+			onOffCluster.isOn.set(false);
+
+			// Trigger via button press (second trigger)
+			await api.onTrigger({
+				type: 'button-press',
+				deviceId: 'button1',
+				buttonIndex: 0,
+			});
+
+			await waitForCondition(() => onOffCluster.isOn.current() === true);
+			expect(onOffCluster.isOn.current()).toBe(true);
+		});
+
+		test('should evaluate conditions (AND logic)', async () => {
+			const onOffCluster = new MockOnOffCluster();
+			const device = new MockDevice('light1', DeviceSource.MATTER, [onOffCluster]);
+			const sensorDevice = new MockDevice('sensor1', DeviceSource.MATTER, [
+				new MockOnOffCluster(),
+			]);
+
+			devices.set({
+				light1: device,
+				sensor1: sensorDevice,
+			});
+
+			// Create scene with trigger and device-on condition
+			api.createScene({
+				title: 'Conditional Scene',
+				icon: 'Home',
+				actions: [
+					{
+						deviceId: 'light1',
+						cluster: DeviceClusterName.ON_OFF,
+						action: { isOn: true },
+					},
+				],
+				triggers: [
+					{
+						trigger: {
+							type: 'occupancy',
+							deviceId: 'motion1',
+						},
+						conditions: [
+							{
+								type: 'device-on',
+								deviceId: 'sensor1',
+								shouldBeOn: true,
+							},
+						],
+					},
+				],
+			});
+
+			// Trigger when condition is NOT met (sensor is off)
+			await api.onTrigger({
+				type: 'occupancy',
+				deviceId: 'motion1',
+			});
+
+			// Wait a bit
+			await new Promise((resolve) => setTimeout(resolve, 10));
+
+			// Should not have triggered
+			expect(onOffCluster.isOn.current()).toBe(false);
+
+			// Turn sensor on (condition now met)
+			(sensorDevice.getClusterByType(MockOnOffCluster) as MockOnOffCluster).isOn.set(true);
+
+			// Trigger again
+			await api.onTrigger({
+				type: 'occupancy',
+				deviceId: 'motion1',
+			});
+
+			await waitForCondition(() => onOffCluster.isOn.current() === true);
+
+			// Should have triggered this time
+			expect(onOffCluster.isOn.current()).toBe(true);
+		});
+
+		test('should handle empty triggers array as no automation', async () => {
+			const onOffCluster = new MockOnOffCluster();
+			const device = new MockDevice('light1', DeviceSource.MATTER, [onOffCluster]);
+
+			devices.set({ light1: device });
+
+			api.createScene({
+				title: 'Empty Triggers Scene',
+				icon: 'Home',
+				actions: [
+					{
+						deviceId: 'light1',
+						cluster: DeviceClusterName.ON_OFF,
+						action: { isOn: true },
+					},
+				],
+				triggers: [],
+			});
+
+			await api.onTrigger({
+				type: 'occupancy',
+				deviceId: 'sensor1',
+			});
+
+			// Wait a bit
+			await new Promise((resolve) => setTimeout(resolve, 10));
+
+			// Should not trigger
 			expect(onOffCluster.isOn.current()).toBe(false);
 		});
 	});

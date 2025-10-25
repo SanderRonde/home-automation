@@ -30,12 +30,24 @@ import type {
 	DeviceListWithValuesResponse,
 	DashboardDeviceClusterWithState,
 } from '../../../server/modules/device/routing';
-import { Delete as DeleteIcon, Add as AddIcon, Close as CloseIcon } from '@mui/icons-material';
+import type {
+	Scene,
+	SceneDeviceAction,
+	SceneTriggerWithConditions,
+	SceneCondition,
+} from '../../../../types/scene';
+import {
+	Delete as DeleteIcon,
+	Add as AddIcon,
+	Close as CloseIcon,
+	Edit as EditIcon,
+} from '@mui/icons-material';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
-import type { Scene, SceneDeviceAction } from '../../../../types/scene';
+import type { Host } from '../../../server/modules/home-detector/routing';
 import { ClusterActionControls } from './ClusterActionControls';
 import type { DeviceGroup } from '../../../../types/group';
 import type { Palette } from '../../../../types/palette';
+import { TriggerEditDialog } from './TriggerEditDialog';
 import type { IncludedIconNames } from './icon';
 import { apiGet } from '../../lib/fetch';
 import React, { useState } from 'react';
@@ -86,8 +98,9 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 	const [actions, setActions] = useState<DeviceActionEntry[]>(
 		props.existingScene?.actions.map((action, index) => ({
 			...action,
-			key: `${action.deviceId || action.groupId}-${action.cluster}-${index}`,
-			targetType: action.groupId ? ('group' as const) : ('device' as const),
+			key: `${'deviceId' in action ? action.deviceId : 'groupId' in action ? action.groupId : 'http'}-${action.cluster}-${index}`,
+			targetType:
+				'groupId' in action && action.groupId ? ('group' as const) : ('device' as const),
 		})) ?? []
 	);
 
@@ -120,28 +133,15 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 			void loadPalettes();
 		}
 	}, [props.open]);
-	const [enableTrigger, setEnableTrigger] = useState(!!props.existingScene?.trigger);
-	const [triggerType, setTriggerType] = useState<
-		'occupancy' | 'button-press' | 'host-arrival' | 'host-departure'
-	>(props.existingScene?.trigger?.type ?? 'occupancy');
-	const [triggerDeviceId, setTriggerDeviceId] = useState<string | null>(
-		(props.existingScene?.trigger?.type === 'occupancy' ||
-		props.existingScene?.trigger?.type === 'button-press'
-			? props.existingScene.trigger.deviceId
-			: null) ?? null
+	const [triggers, setTriggers] = useState<SceneTriggerWithConditions[]>(
+		props.existingScene?.triggers ?? []
 	);
-	const [triggerHostId, setTriggerHostId] = useState<string | null>(
-		(props.existingScene?.trigger?.type === 'host-arrival' ||
-		props.existingScene?.trigger?.type === 'host-departure'
-			? props.existingScene.trigger.hostId
-			: null) ?? null
-	);
-	const [triggerButtonIndex, setTriggerButtonIndex] = useState<number | undefined>(
-		props.existingScene?.trigger?.type === 'button-press'
-			? props.existingScene.trigger.buttonIndex
-			: undefined
-	);
+	const [hosts, setHosts] = useState<Host[]>([]);
 	const [showOnHome, setShowOnHome] = useState(props.existingScene?.showOnHome ?? false);
+
+	// Trigger dialog state
+	const [triggerDialogOpen, setTriggerDialogOpen] = useState(false);
+	const [editingTriggerIndex, setEditingTriggerIndex] = useState<number | null>(null);
 
 	const availableDevices = React.useMemo(() => {
 		return props.devices.filter((device) =>
@@ -155,39 +155,7 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 		);
 	}, [props.devices]);
 
-	// Get devices with occupancy sensors for triggers
-	const occupancyDevices = React.useMemo(() => {
-		return props.devices.filter((device) =>
-			device.mergedAllClusters.some(
-				(cluster) => cluster.name === DeviceClusterName.OCCUPANCY_SENSING
-			)
-		);
-	}, [props.devices]);
-
-	// Get devices with switch/button clusters for triggers
-	const buttonDevices = React.useMemo(() => {
-		return props.devices.filter((device) =>
-			device.mergedAllClusters.some((cluster) => cluster.name === DeviceClusterName.SWITCH)
-		);
-	}, [props.devices]);
-
-	// Get button count for the selected device
-	const selectedDeviceButtonCount = React.useMemo(() => {
-		if (!triggerDeviceId || triggerType !== 'button-press') {
-			return 0;
-		}
-		const device = buttonDevices.find((d) => d.uniqueId === triggerDeviceId);
-		if (!device) {
-			return 0;
-		}
-		// Count switch clusters
-		return device.mergedAllClusters.filter(
-			(cluster) => cluster.name === DeviceClusterName.SWITCH
-		).length;
-	}, [triggerDeviceId, triggerType, buttonDevices]);
-
-	// Load hosts for home detection triggers
-	const [hosts, setHosts] = useState<Array<{ id: string; name: string }>>([]);
+	// Load hosts for home detection triggers and conditions
 	React.useEffect(() => {
 		if (props.open) {
 			const loadHosts = async () => {
@@ -213,6 +181,15 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 			key: `new-${Date.now()}`,
 			targetType: 'device',
 		};
+		setActions([...actions, newAction]);
+	};
+
+	const handleAddHttpAction = () => {
+		const newAction = {
+			cluster: 'http-request' as const,
+			action: { url: '', method: 'GET' as const },
+			key: `http-${Date.now()}`,
+		} as DeviceActionEntry;
 		setActions([...actions, newAction]);
 	};
 
@@ -305,38 +282,113 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 		if (actions.length === 0) {
 			return;
 		}
-		if (actions.some((action) => !action.deviceId && !action.groupId)) {
+		// Check device/group actions have proper IDs, and HTTP actions have URLs
+		if (
+			actions.some(
+				(action) =>
+					action.cluster !== 'http-request' &&
+					!('deviceId' in action ? action.deviceId : false) &&
+					!('groupId' in action ? action.groupId : false)
+			)
+		) {
 			return;
 		}
-
-		let trigger: Scene['trigger'] = undefined;
-		if (enableTrigger) {
-			if (triggerType === 'occupancy' && triggerDeviceId) {
-				trigger = { type: 'occupancy', deviceId: triggerDeviceId };
-			} else if (triggerType === 'button-press' && triggerDeviceId) {
-				trigger = {
-					type: 'button-press',
-					deviceId: triggerDeviceId,
-					buttonIndex: triggerButtonIndex!,
-				};
-			} else if (triggerType === 'host-arrival' && triggerHostId) {
-				trigger = { type: 'host-arrival', hostId: triggerHostId };
-			} else if (triggerType === 'host-departure' && triggerHostId) {
-				trigger = { type: 'host-departure', hostId: triggerHostId };
-			}
+		if (
+			actions.some(
+				(action) =>
+					action.cluster === 'http-request' &&
+					!('url' in action.action ? action.action.url : false)
+			)
+		) {
+			return;
 		}
 
 		const scene: Omit<Scene, 'id'> = {
 			title: title.trim(),
 			icon: selectedIcon,
 			// eslint-disable-next-line @typescript-eslint/no-unused-vars
-			actions: actions.map(({ key: _key, targetType: _targetType, ...action }) => action),
-			trigger,
+			actions: actions.map(
+				({ key: _key, targetType: _targetType, ...action }) =>
+					action as Scene['actions'][number]
+			),
+			triggers: triggers.length > 0 ? triggers : undefined,
 			showOnHome,
 		};
 
 		props.onSave(scene);
 	};
+
+	const handleRemoveTrigger = React.useCallback((index: number) => {
+		setTriggers((triggers) => triggers.filter((_, i) => i !== index));
+	}, []);
+
+	const handleAddTrigger = React.useCallback(() => {
+		setEditingTriggerIndex(null);
+		setTriggerDialogOpen(true);
+	}, []);
+
+	const handleEditTrigger = React.useCallback((index: number) => {
+		setEditingTriggerIndex(index);
+		setTriggerDialogOpen(true);
+	}, []);
+
+	const handleSaveTrigger = React.useCallback(
+		(triggerWithConditions: SceneTriggerWithConditions) => {
+			if (editingTriggerIndex !== null) {
+				// Edit existing
+				setTriggers(
+					triggers.map((t, i) => (i === editingTriggerIndex ? triggerWithConditions : t))
+				);
+			} else {
+				// Add new
+				setTriggers([...triggers, triggerWithConditions]);
+			}
+			setTriggerDialogOpen(false);
+			setEditingTriggerIndex(null);
+		},
+		[editingTriggerIndex, triggers]
+	);
+
+	const getTriggerLabel = React.useCallback(
+		(triggerWithConditions: SceneTriggerWithConditions): string => {
+			const trigger = triggerWithConditions.trigger;
+			let label = '';
+
+			if (trigger.type === 'occupancy') {
+				const device = props.devices.find((d) => d.uniqueId === trigger.deviceId);
+				label = `Motion detected: ${device?.name || trigger.deviceId}`;
+			} else if (trigger.type === 'button-press') {
+				const device = props.devices.find((d) => d.uniqueId === trigger.deviceId);
+				label = `Button pressed: ${device?.name || trigger.deviceId}`;
+				if (trigger.buttonIndex !== undefined) {
+					label += ` (Button ${trigger.buttonIndex + 1})`;
+				}
+			} else if (trigger.type === 'host-arrival') {
+				const host = hosts.find((h) => h.name === trigger.hostId);
+				label = `${host?.name || trigger.hostId} arrives home`;
+			} else if (trigger.type === 'host-departure') {
+				const host = hosts.find((h) => h.name === trigger.hostId);
+				label = `${host?.name || trigger.hostId} leaves home`;
+			}
+
+			return label;
+		},
+		[props.devices, hosts]
+	);
+
+	const getConditionLabel = React.useCallback(
+		(condition: SceneCondition): string => {
+			if (condition.type === 'host-home') {
+				const host = hosts.find((h) => h.name === condition.hostId);
+				return `${host?.name || condition.hostId} is ${condition.shouldBeHome ? 'home' : 'away'}`;
+			} else if (condition.type === 'device-on') {
+				const device = props.devices.find((d) => d.uniqueId === condition.deviceId);
+				return `${device?.name || condition.deviceId} is ${condition.shouldBeOn ? 'on' : 'off'}`;
+			}
+			return '';
+		},
+		[props.devices, hosts]
+	);
 
 	const onIconChange = React.useCallback(
 		(
@@ -445,10 +497,22 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 					{/* Device Actions */}
 					<Box>
 						<Typography variant="subtitle1" gutterBottom>
-							Device Actions
+							Actions
 						</Typography>
 						<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
 							{actions.map((action, index) => {
+								// Render HTTP request action separately
+								if (action.cluster === 'http-request') {
+									return (
+										<HttpActionConfig
+											action={action}
+											key={action.key}
+											handleActionChange={handleActionChange}
+											handleRemoveAction={handleRemoveAction}
+										/>
+									);
+								}
+
 								const group = action.groupId
 									? groups.find((g) => g.id === action.groupId)
 									: undefined;
@@ -470,14 +534,24 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 								);
 							})}
 
-							<Button
-								variant="outlined"
-								startIcon={<AddIcon />}
-								onClick={handleAddAction}
-								fullWidth
-							>
-								Add Device Action
-							</Button>
+							<Box sx={{ display: 'flex', gap: 1 }}>
+								<Button
+									variant="outlined"
+									startIcon={<AddIcon />}
+									onClick={handleAddAction}
+									fullWidth
+								>
+									Add Device Action
+								</Button>
+								<Button
+									variant="outlined"
+									startIcon={<AddIcon />}
+									onClick={handleAddHttpAction}
+									fullWidth
+								>
+									Add HTTP Request
+								</Button>
+							</Box>
 						</Box>
 					</Box>
 
@@ -505,160 +579,100 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 
 					<Divider />
 
-					{/* Trigger Section */}
+					{/* Triggers Section */}
 					<Box>
-						<FormControlLabel
-							control={
-								<Checkbox
-									checked={enableTrigger}
-									onChange={(e) => {
-										setEnableTrigger(e.target.checked);
-										if (!e.target.checked) {
-											setTriggerDeviceId(null);
-											setTriggerButtonIndex(undefined);
-										}
-									}}
-								/>
-							}
-							label="Enable Trigger"
-						/>
+						<Typography variant="subtitle2" gutterBottom>
+							Automation Triggers
+						</Typography>
+						<Typography
+							variant="caption"
+							color="text.secondary"
+							sx={{ mb: 2, display: 'block' }}
+						>
+							Any trigger can fire the scene (OR logic). All conditions within a
+							trigger must be met (AND logic).
+						</Typography>
 
-						{enableTrigger && (
-							<Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-								<ToggleButtonGroup
-									value={triggerType}
-									exclusive
-									onChange={(_e, value) => {
-										if (value) {
-											setTriggerType(value);
-											setTriggerDeviceId(null);
-											setTriggerHostId(null);
-											setTriggerButtonIndex(undefined);
-										}
-									}}
-									fullWidth
-									size="small"
-								>
-									<ToggleButton value="occupancy">Occupancy</ToggleButton>
-									<ToggleButton value="button-press">Button</ToggleButton>
-									<ToggleButton value="host-arrival">Arrival</ToggleButton>
-									<ToggleButton value="host-departure">Departure</ToggleButton>
-								</ToggleButtonGroup>
-
-								{triggerType === 'occupancy' && (
-									<>
-										<Autocomplete
-											options={occupancyDevices}
-											getOptionLabel={(option) => option.name}
-											value={
-												occupancyDevices.find(
-													(d) => d.uniqueId === triggerDeviceId
-												) ?? null
-											}
-											onChange={(_e, newValue) => {
-												setTriggerDeviceId(newValue?.uniqueId ?? null);
+						{triggers.length === 0 ? (
+							<Typography
+								variant="body2"
+								color="text.secondary"
+								sx={{ fontStyle: 'italic', mb: 2 }}
+							>
+								No triggers configured. Scene can only be triggered manually.
+							</Typography>
+						) : (
+							<Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2 }}>
+								{triggers.map((triggerWithConditions, index) => (
+									<Card key={index} variant="outlined" sx={{ p: 2 }}>
+										<Box
+											sx={{
+												display: 'flex',
+												justifyContent: 'space-between',
+												alignItems: 'flex-start',
 											}}
-											renderInput={(params) => (
-												<TextField {...params} label="Occupancy Sensor" />
-											)}
-										/>
-										<Typography variant="caption" color="text.secondary">
-											Scene will trigger when occupancy is detected
-										</Typography>
-									</>
-								)}
-
-								{triggerType === 'button-press' && (
-									<>
-										<Autocomplete
-											options={buttonDevices}
-											getOptionLabel={(option) => option.name}
-											value={
-												buttonDevices.find(
-													(d) => d.uniqueId === triggerDeviceId
-												) ?? null
-											}
-											onChange={(_e, newValue) => {
-												setTriggerDeviceId(newValue?.uniqueId ?? null);
-												setTriggerButtonIndex(undefined);
-											}}
-											renderInput={(params) => (
-												<TextField {...params} label="Button Device" />
-											)}
-										/>
-
-										{triggerDeviceId && selectedDeviceButtonCount > 1 && (
-											<Autocomplete
-												options={Array.from(
-													{ length: selectedDeviceButtonCount },
-													(_, i) => i
-												)}
-												getOptionLabel={(option) => `Button ${option + 1}`}
-												value={triggerButtonIndex ?? null}
-												onChange={(_e, newValue) => {
-													setTriggerButtonIndex(
-														newValue !== null ? newValue : undefined
-													);
-												}}
-												renderInput={(params) => (
-													<TextField
-														{...params}
-														label="Button Index"
-														helperText="Leave empty to trigger on any button"
-													/>
-												)}
-											/>
-										)}
-
-										<Typography variant="caption" color="text.secondary">
-											Scene will trigger when the button is pressed
-										</Typography>
-									</>
-								)}
-
-								{triggerType === 'host-arrival' && (
-									<>
-										<Autocomplete
-											options={hosts}
-											getOptionLabel={(option) => option.name}
-											value={
-												hosts.find((h) => h.id === triggerHostId) ?? null
-											}
-											onChange={(_e, newValue) => {
-												setTriggerHostId(newValue?.id ?? null);
-											}}
-											renderInput={(params) => (
-												<TextField {...params} label="Host" />
-											)}
-										/>
-										<Typography variant="caption" color="text.secondary">
-											Scene will trigger when this host arrives home
-										</Typography>
-									</>
-								)}
-
-								{triggerType === 'host-departure' && (
-									<>
-										<Autocomplete
-											options={hosts}
-											getOptionLabel={(option) => option.name}
-											value={
-												hosts.find((h) => h.id === triggerHostId) ?? null
-											}
-											onChange={(_e, newValue) => {
-												setTriggerHostId(newValue?.id ?? null);
-											}}
-											renderInput={(params) => (
-												<TextField {...params} label="Host" />
-											)}
-										/>
-										<Typography variant="caption" color="text.secondary">
-											Scene will trigger when this host leaves home
-										</Typography>
-									</>
-								)}
+										>
+											<Box sx={{ flexGrow: 1 }}>
+												<Typography variant="body2" fontWeight="medium">
+													{getTriggerLabel(triggerWithConditions)}
+												</Typography>
+												{triggerWithConditions.conditions &&
+													triggerWithConditions.conditions.length > 0 && (
+														<Box sx={{ mt: 1, pl: 2 }}>
+															<Typography
+																variant="caption"
+																color="text.secondary"
+															>
+																Conditions (all must be true):
+															</Typography>
+															{triggerWithConditions.conditions.map(
+																(condition, condIndex) => (
+																	<Typography
+																		key={condIndex}
+																		variant="caption"
+																		display="block"
+																		sx={{ pl: 1 }}
+																	>
+																		•{' '}
+																		{getConditionLabel(
+																			condition
+																		)}
+																	</Typography>
+																)
+															)}
+														</Box>
+													)}
+											</Box>
+											<Box sx={{ display: 'flex', gap: 0.5 }}>
+												<IconButton
+													size="small"
+													onClick={() => handleEditTrigger(index)}
+													aria-label="Edit trigger"
+												>
+													<EditIcon fontSize="small" />
+												</IconButton>
+												<IconButton
+													size="small"
+													onClick={() => handleRemoveTrigger(index)}
+													aria-label="Remove trigger"
+												>
+													<DeleteIcon fontSize="small" />
+												</IconButton>
+											</Box>
+										</Box>
+									</Card>
+								))}
 							</Box>
 						)}
+
+						<Button
+							variant="outlined"
+							startIcon={<AddIcon />}
+							onClick={handleAddTrigger}
+							fullWidth
+						>
+							Add Trigger
+						</Button>
 					</Box>
 				</Box>
 			</DialogContent>
@@ -673,16 +687,143 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 					disabled={
 						!title.trim() ||
 						actions.length === 0 ||
-						actions.some((a) => !a.deviceId && !a.groupId)
+						actions.some(
+							(a) =>
+								a.cluster !== 'http-request' &&
+								!('deviceId' in a ? a.deviceId : false) &&
+								!('groupId' in a ? a.groupId : false)
+						) ||
+						actions.some(
+							(a) =>
+								a.cluster === 'http-request' &&
+								!('url' in a.action ? a.action.url : false)
+						)
 					}
 				>
 					{props.existingScene ? 'Save' : 'Create'}
 				</Button>
 			</DialogActions>
+
+			{/* Trigger Edit Dialog */}
+			<TriggerEditDialog
+				open={triggerDialogOpen}
+				onClose={() => setTriggerDialogOpen(false)}
+				onSave={handleSaveTrigger}
+				trigger={editingTriggerIndex !== null ? triggers[editingTriggerIndex] : undefined}
+				devices={props.devices}
+				hosts={hosts}
+			/>
 		</Dialog>
 	);
 });
 SceneCreateModal.displayName = 'SceneCreateModal';
+
+// HTTP Action Config Component
+interface HttpActionConfigProps {
+	action: DeviceActionEntry;
+	handleActionChange: (key: string, updates: Partial<DeviceActionEntry>) => void;
+	handleRemoveAction: (key: string) => void;
+}
+
+const HttpActionConfig = React.memo((props: HttpActionConfigProps) => {
+	const httpAction = props.action.action as {
+		url: string;
+		method: 'GET' | 'POST';
+		body?: Record<string, unknown>;
+		headers?: Record<string, string>;
+	};
+
+	const handleUrlChange = (url: string) => {
+		props.handleActionChange(props.action.key, {
+			action: { ...httpAction, url },
+		});
+	};
+
+	const handleMethodChange = (_e: React.MouseEvent, method: 'GET' | 'POST' | null) => {
+		if (method) {
+			props.handleActionChange(props.action.key, {
+				action: { ...httpAction, method },
+			});
+		}
+	};
+
+	const handleBodyChange = (bodyJson: string) => {
+		try {
+			const body = JSON.parse(bodyJson);
+			props.handleActionChange(props.action.key, {
+				action: { ...httpAction, body },
+			});
+		} catch (e) {
+			// Invalid JSON, don't update
+		}
+	};
+
+	return (
+		<Card variant="outlined">
+			<CardContent>
+				<Box
+					sx={{
+						display: 'flex',
+						justifyContent: 'space-between',
+						alignItems: 'flex-start',
+					}}
+				>
+					<Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+						<Typography variant="subtitle2" color="primary">
+							HTTP Request
+						</Typography>
+
+						<TextField
+							label="URL"
+							value={httpAction.url}
+							onChange={(e) => handleUrlChange(e.target.value)}
+							placeholder="https://example.com/api/endpoint"
+							fullWidth
+							size="small"
+							required
+						/>
+
+						<ToggleButtonGroup
+							value={httpAction.method}
+							exclusive
+							onChange={handleMethodChange}
+							size="small"
+							fullWidth
+						>
+							<ToggleButton value="GET">GET</ToggleButton>
+							<ToggleButton value="POST">POST</ToggleButton>
+						</ToggleButtonGroup>
+
+						{httpAction.method === 'POST' && (
+							<TextField
+								label="Request Body (JSON)"
+								value={
+									httpAction.body
+										? JSON.stringify(httpAction.body, null, 2)
+										: '{}'
+								}
+								onChange={(e) => handleBodyChange(e.target.value)}
+								placeholder='{"key": "value"}'
+								fullWidth
+								multiline
+								rows={3}
+								size="small"
+							/>
+						)}
+					</Box>
+					<IconButton
+						size="small"
+						onClick={() => props.handleRemoveAction(props.action.key)}
+						sx={{ ml: 1 }}
+					>
+						<DeleteIcon />
+					</IconButton>
+				</Box>
+			</CardContent>
+		</Card>
+	);
+});
+HttpActionConfig.displayName = 'HttpActionConfig';
 
 interface ActionConfigProps {
 	action: DeviceActionEntry;
@@ -712,13 +853,14 @@ const ActionConfig = React.memo((props: ActionConfigProps) => {
 				...props.group.deviceIds.map(getDeviceById).filter((d) => d !== undefined)
 			);
 		} else {
-			const device = getDeviceById(props.action.deviceId || '');
+			const deviceId = 'deviceId' in props.action ? props.action.deviceId : undefined;
+			const device = getDeviceById(deviceId || '');
 			if (device) {
 				devices.push(device);
 			}
 		}
 		return devices;
-	}, [props.group, props.action.deviceId, props.devices]);
+	}, [props.group, props.action, props.devices]);
 
 	// Get available clusters based on whether it's a device or group
 	const availableClusters: DashboardDeviceClusterWithStateMap<
@@ -727,6 +869,11 @@ const ActionConfig = React.memo((props: ActionConfigProps) => {
 		| DeviceClusterName.COLOR_CONTROL
 		| DeviceClusterName.LEVEL_CONTROL
 	> = {};
+
+	// Handle HTTP request cluster separately (not a device cluster)
+	if (props.action.cluster === 'http-request') {
+		return null;
+	}
 
 	if (!isGroup) {
 		// For devices, get clusters from the device

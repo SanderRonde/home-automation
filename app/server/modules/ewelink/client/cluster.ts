@@ -14,7 +14,6 @@ import type { EWeLinkWebSocketMessage } from './clusters/shared';
 import { SettablePromise } from '../../../lib/settable-promise';
 import { EventEmitter } from '../../../lib/event-emitter';
 import type { EWeLinkConfig } from './clusters/shared';
-import { logDev } from '../../../lib/logging/log-dev';
 import { MappedData } from '../../../lib/data';
 import { Data } from '../../../lib/data';
 import util from 'util';
@@ -315,6 +314,7 @@ export class EwelinkSwitchCluster
 
 	public getTotalCount = (): number => 1;
 	public getIndex = (): number => 1;
+	public getLabel = (): string => 'Button';
 }
 
 export class EwelinkOutletSwitchCluster
@@ -331,19 +331,19 @@ export class EwelinkOutletSwitchCluster
 	public constructor(
 		protected override readonly _eWeLinkConfig: EWeLinkConfig,
 		private readonly _outletCount: number,
-		private readonly _outlet: number
+		private readonly _outlet: { index: number; label: string }
 	) {
 		super(_eWeLinkConfig);
 	}
 
 	public getTotalCount = (): number => this._outletCount;
-	public getIndex = (): number => this._outlet;
+	public getIndex = (): number => this._outlet.index;
+	public getLabel = (): string => this._outlet.label;
 
 	public onPress = this.getProxy().eventListener((value) => {
-		logDev('ewelink', 'onPress', value);
-		return value.key === 0 && value.outlet === this._outlet;
+		return value.key === 0 && value.outlet === this._outlet.index;
 	}) as unknown as EventEmitter<void>;
 	public onMultiPress = this.getProxy().eventListener((value) =>
-		value.key === 1 && value.outlet === this._outlet ? { pressCount: 2 } : false
+		value.key === 1 && value.outlet === this._outlet.index ? { pressCount: 2 } : false
 	);
 }

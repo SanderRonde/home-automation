@@ -35,9 +35,9 @@ export const HexLed = new (class HexLed extends ModuleMeta {
 					const client = new LEDClient(url);
 					await client.connect();
 					newDevices[url] = new HexLEDDevice(url, client);
-					logTag('HEX-LED', 'magenta', 'Device initialized:', url);
+					logTag('hex-led', 'magenta', 'Device initialized:', url);
 				} catch (error) {
-					warning('Failed to initialize HEX-LED device:', url, error);
+					warning('Failed to initialize hex-led device:', url, error);
 				}
 			}
 

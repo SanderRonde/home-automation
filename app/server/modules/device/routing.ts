@@ -8,6 +8,7 @@ import type {
 	DeviceRelativeHumidityMeasurementCluster,
 	DeviceIlluminanceMeasurementCluster,
 	DeviceBooleanStateCluster,
+	DeviceSwitchCluster,
 } from './cluster';
 import {
 	DeviceOnOffCluster,
@@ -97,6 +98,9 @@ export type DashboardDeviceClusterBooleanState = DashboardDeviceClusterBase & {
 
 export type DashboardDeviceClusterSwitch = DashboardDeviceClusterBase & {
 	name: DeviceClusterName.SWITCH;
+	label: string;
+	index: number;
+	totalCount: number;
 };
 
 export type DashboardDeviceClusterLevelControl = DashboardDeviceClusterBase & {
@@ -246,10 +250,14 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 				}
 
 				// Create response with all known devices
-				const devices: DeviceInfo[] = Object.values(knownDevices).map((device) => ({
-					...device,
-					status: currentDeviceIds.includes(device.id) ? 'online' : 'offline',
-				}));
+				const currentDevices = api.devices.current();
+				const devices: DeviceInfo[] = await Promise.all(
+					Object.values(knownDevices).map(async (device) => ({
+						...device,
+						name: device.name ?? (await currentDevices[device.id]?.getDeviceName()),
+						status: currentDeviceIds.includes(device.id) ? 'online' : 'offline',
+					}))
+				);
 
 				// Sort by status (online first) then by ID
 				devices.sort((a, b) => {
@@ -521,28 +529,61 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 									level: z.number(),
 								}),
 							}),
+							z.object({
+								cluster: z.literal('http-request'),
+								action: z.object({
+									url: z.string(),
+									method: z.enum(['GET', 'POST']),
+									body: z.record(z.string(), z.unknown()).optional(),
+									headers: z.record(z.string(), z.string()).optional(),
+								}),
+							}),
 						])
 					),
-					trigger: z
-						.union([
+					triggers: z
+						.array(
 							z.object({
-								type: z.literal('occupancy'),
-								deviceId: z.string(),
-							}),
-							z.object({
-								type: z.literal('button-press'),
-								deviceId: z.string(),
-								buttonIndex: z.number(),
-							}),
-							z.object({
-								type: z.literal('host-arrival'),
-								hostId: z.string(),
-							}),
-							z.object({
-								type: z.literal('host-departure'),
-								hostId: z.string(),
-							}),
-						])
+								trigger: z.union([
+									z.object({
+										type: z.literal('occupancy'),
+										deviceId: z.string(),
+									}),
+									z.object({
+										type: z.literal('button-press'),
+										deviceId: z.string(),
+										buttonIndex: z.number(),
+									}),
+									z.object({
+										type: z.literal('host-arrival'),
+										hostId: z.string(),
+									}),
+									z.object({
+										type: z.literal('host-departure'),
+										hostId: z.string(),
+									}),
+									z.object({
+										type: z.literal('webhook'),
+										webhookName: z.string(),
+									}),
+								]),
+								conditions: z
+									.array(
+										z.union([
+											z.object({
+												type: z.literal('host-home'),
+												hostId: z.string(),
+												shouldBeHome: z.boolean(),
+											}),
+											z.object({
+												type: z.literal('device-on'),
+												deviceId: z.string(),
+												shouldBeOn: z.boolean(),
+											}),
+										])
+									)
+									.optional(),
+							})
+						)
 						.optional(),
 					showOnHome: z.boolean().optional(),
 				}),
@@ -599,28 +640,63 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 									level: z.number(),
 								}),
 							}),
+							z.object({
+								deviceId: z.string().optional(),
+								groupId: z.string().optional(),
+								cluster: z.literal('http-request'),
+								action: z.object({
+									url: z.string(),
+									method: z.enum(['GET', 'POST']),
+									body: z.record(z.string(), z.unknown()).optional(),
+									headers: z.record(z.string(), z.string()).optional(),
+								}),
+							}),
 						])
 					),
-					trigger: z
-						.union([
+					triggers: z
+						.array(
 							z.object({
-								type: z.literal('occupancy'),
-								deviceId: z.string(),
-							}),
-							z.object({
-								type: z.literal('button-press'),
-								deviceId: z.string(),
-								buttonIndex: z.number(),
-							}),
-							z.object({
-								type: z.literal('host-arrival'),
-								hostId: z.string(),
-							}),
-							z.object({
-								type: z.literal('host-departure'),
-								hostId: z.string(),
-							}),
-						])
+								trigger: z.union([
+									z.object({
+										type: z.literal('occupancy'),
+										deviceId: z.string(),
+									}),
+									z.object({
+										type: z.literal('button-press'),
+										deviceId: z.string(),
+										buttonIndex: z.number(),
+									}),
+									z.object({
+										type: z.literal('host-arrival'),
+										hostId: z.string(),
+									}),
+									z.object({
+										type: z.literal('host-departure'),
+										hostId: z.string(),
+									}),
+									z.object({
+										type: z.literal('webhook'),
+										webhookName: z.string(),
+									}),
+								]),
+								conditions: z
+									.array(
+										z.union([
+											z.object({
+												type: z.literal('host-home'),
+												hostId: z.string(),
+												shouldBeHome: z.boolean(),
+											}),
+											z.object({
+												type: z.literal('device-on'),
+												deviceId: z.string(),
+												shouldBeOn: z.boolean(),
+											}),
+										])
+									)
+									.optional(),
+							})
+						)
 						.optional(),
 					showOnHome: z.boolean().optional(),
 				}),
@@ -912,9 +988,13 @@ const getClusterState = async (
 		};
 	}
 	if (clusterName === DeviceClusterName.SWITCH) {
+		const cluster = _cluster as DeviceSwitchCluster;
 		return {
 			name: clusterName,
 			icon: getClusterIconName(clusterName),
+			label: cluster.getLabel(),
+			index: cluster.getIndex(),
+			totalCount: cluster.getTotalCount(),
 		};
 	}
 	if (clusterName === DeviceClusterName.COLOR_CONTROL) {

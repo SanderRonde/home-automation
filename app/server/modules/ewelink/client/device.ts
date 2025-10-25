@@ -150,14 +150,23 @@ class EwelinkR5SceneControllerDevice extends EwelinkDevice {
 	public static readonly modelName = 'NON-OTA-GL(174)';
 
 	public constructor(eWeLinkConfig: EWeLinkConfig) {
-		const endpoints = new Array(6)
-			.fill(0)
-			.map(
-				(_, i, arr) =>
-					new EwelinkEndpoint(eWeLinkConfig, [
-						new EwelinkOutletSwitchCluster(eWeLinkConfig, arr.length, i),
-					])
-			);
+		const outletNames = [
+			'Top left',
+			'Bottom left',
+			'Top middle',
+			'Bottom middle',
+			'Top right',
+			'Bottom right',
+		];
+		const endpoints = new Array(6).fill(0).map(
+			(_, i, arr) =>
+				new EwelinkEndpoint(eWeLinkConfig, [
+					new EwelinkOutletSwitchCluster(eWeLinkConfig, arr.length, {
+						index: i,
+						label: outletNames[i],
+					}),
+				])
+		);
 		super(eWeLinkConfig, [new EwelinkPowerSourceCluster(eWeLinkConfig)], endpoints);
 	}
 }

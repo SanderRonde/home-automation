@@ -5,11 +5,12 @@ import {
 	DeviceOnOffCluster,
 	DeviceWindowCoveringCluster,
 } from './cluster';
-import type { Scene, SceneId, SceneTrigger } from '../../../../types/scene';
+import type { Scene, SceneCondition, SceneId, SceneTrigger } from '../../../../types/scene';
 import { assertUnreachable } from '../../lib/assert';
 import { logTag } from '../../lib/logging/logger';
 import type { PaletteAPI } from './palette-api';
 import type { Database } from '../../lib/db';
+import type { AllModules } from '../modules';
 import type { GroupAPI } from './group-api';
 import type { Data } from '../../lib/data';
 import { Color } from '../../lib/color';
@@ -23,7 +24,8 @@ export class SceneAPI {
 			[deviceId: string]: Device;
 		}>,
 		private readonly _groupAPI: GroupAPI,
-		private readonly _paletteAPI: PaletteAPI
+		private readonly _paletteAPI: PaletteAPI,
+		private readonly _modules: unknown
 	) {}
 
 	public listScenes(): Scene[] {
@@ -91,38 +93,109 @@ export class SceneAPI {
 		return true;
 	}
 
+	private async _evaluateConditions(conditions: SceneCondition[] | undefined): Promise<boolean> {
+		if (!conditions || conditions.length === 0) {
+			return true;
+		}
+
+		const modules = (await this._modules) as AllModules;
+
+		for (const condition of conditions) {
+			if (condition.type === 'host-home') {
+				const { HOME_STATE } = await import('../home-detector/types.js');
+				const detector = await modules.homeDetector.getDetector();
+				const hostState = detector.get(condition.hostId);
+
+				if (hostState === '?') {
+					logTag('scene', 'yellow', 'Host not found:', condition.hostId);
+					return false;
+				}
+
+				const isHome = hostState === HOME_STATE.HOME;
+				if (isHome !== condition.shouldBeHome) {
+					return false;
+				}
+			} else if (condition.type === 'device-on') {
+				const device = this._devices.current()[condition.deviceId];
+				if (!device) {
+					logTag('scene', 'yellow', 'Device not found:', condition.deviceId);
+					return false;
+				}
+
+				const onOffCluster = device.getClusterByType(DeviceOnOffCluster);
+				if (!onOffCluster) {
+					logTag('scene', 'yellow', 'OnOffCluster not found:', condition.deviceId);
+					return false;
+				}
+
+				const isOn = (await onOffCluster.isOn.get()) ?? false;
+				if (isOn !== condition.shouldBeOn) {
+					return false;
+				}
+			} else {
+				assertUnreachable(condition);
+			}
+		}
+
+		return true;
+	}
+
 	public async onTrigger(trigger: SceneTrigger): Promise<void> {
 		for (const scene of this.listScenes()) {
-			if (!scene.trigger || scene.trigger.type !== trigger.type) {
+			const triggers = scene.triggers;
+			if (!triggers || triggers.length === 0) {
 				continue;
 			}
 
-			// Match based on trigger type
-			if (trigger.type === 'occupancy' && scene.trigger.type === 'occupancy') {
-				if (scene.trigger.deviceId !== trigger.deviceId) {
+			// Check each trigger (OR logic - any trigger can fire the scene)
+			for (const triggerWithConditions of triggers) {
+				const sceneTrigger = triggerWithConditions.trigger;
+
+				// Check if trigger type matches
+				if (sceneTrigger.type !== trigger.type) {
 					continue;
 				}
-			} else if (trigger.type === 'button-press' && scene.trigger.type === 'button-press') {
-				if (scene.trigger.deviceId !== trigger.deviceId) {
+
+				// Match based on trigger type
+				let triggerMatches = false;
+				if (trigger.type === 'occupancy' && sceneTrigger.type === 'occupancy') {
+					triggerMatches = sceneTrigger.deviceId === trigger.deviceId;
+				} else if (
+					trigger.type === 'button-press' &&
+					sceneTrigger.type === 'button-press'
+				) {
+					triggerMatches =
+						sceneTrigger.deviceId === trigger.deviceId &&
+						sceneTrigger.buttonIndex === trigger.buttonIndex;
+				} else if (
+					trigger.type === 'host-arrival' &&
+					sceneTrigger.type === 'host-arrival'
+				) {
+					triggerMatches = sceneTrigger.hostId === trigger.hostId;
+				} else if (
+					trigger.type === 'host-departure' &&
+					sceneTrigger.type === 'host-departure'
+				) {
+					triggerMatches = sceneTrigger.hostId === trigger.hostId;
+				} else if (trigger.type === 'webhook' && sceneTrigger.type === 'webhook') {
+					triggerMatches = sceneTrigger.webhookName === trigger.webhookName;
+				}
+
+				if (!triggerMatches) {
 					continue;
 				}
-				if (scene.trigger.buttonIndex !== trigger.buttonIndex) {
-					continue;
-				}
-			} else if (trigger.type === 'host-arrival' && scene.trigger.type === 'host-arrival') {
-				if (scene.trigger.hostId !== trigger.hostId) {
-					continue;
-				}
-			} else if (
-				trigger.type === 'host-departure' &&
-				scene.trigger.type === 'host-departure'
-			) {
-				if (scene.trigger.hostId !== trigger.hostId) {
-					continue;
+
+				// Evaluate conditions (AND logic - all must pass)
+				const conditionsPassed = await this._evaluateConditions(
+					triggerWithConditions.conditions
+				);
+
+				if (conditionsPassed) {
+					await this.triggerScene(scene.id);
+					// Break after first matching trigger fires the scene
+					break;
 				}
 			}
-
-			await this.triggerScene(scene.id);
 		}
 	}
 
@@ -135,6 +208,39 @@ export class SceneAPI {
 		const success = (
 			await Promise.all(
 				scene.actions.map(async (sceneAction) => {
+					// Handle HTTP request actions (no device/group needed)
+					if (sceneAction.cluster === 'http-request') {
+						try {
+							const { url, method, body, headers } = sceneAction.action;
+							logTag('scene', 'blue', `HTTP ${method} ${url}`);
+
+							// eslint-disable-next-line no-restricted-globals
+							const response = await fetch(url, {
+								method,
+								headers: {
+									'Content-Type': 'application/json',
+									...headers,
+								},
+								body: body && method === 'POST' ? JSON.stringify(body) : undefined,
+							});
+
+							if (!response.ok) {
+								logTag(
+									'scene',
+									'red',
+									`HTTP request failed: ${response.status} ${response.statusText}`
+								);
+								return false;
+							}
+
+							logTag('scene', 'green', `HTTP request successful: ${response.status}`);
+							return true;
+						} catch (error) {
+							logTag('scene', 'red', 'HTTP request error:', error);
+							return false;
+						}
+					}
+
 					// Resolve devices: either single device or group of devices
 					const devices: Device[] = [];
 

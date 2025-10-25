@@ -9,3 +9,13 @@ export type WebHookConfig = {
 		params: Record<string, unknown>
 	) => PossiblePromise<void>;
 };
+
+export interface Webhook {
+	name: string;
+	createdAt: number;
+	description?: string;
+}
+
+export interface WebhookDB {
+	webhooks?: Record<string, Webhook>;
+}

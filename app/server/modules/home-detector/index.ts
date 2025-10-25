@@ -52,4 +52,8 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 	): Promise<void> {
 		(await this._detector.value).addListener(null, handler);
 	}
+
+	public async getDetector(): Promise<Detector> {
+		return await this._detector.value;
+	}
 })();

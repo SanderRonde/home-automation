@@ -39,9 +39,11 @@ const DeviceListItem = React.memo((props: DeviceListItemProps): JSX.Element => {
 			onClick={() => props.onToggle(props.device.id)}
 			sx={{
 				'&:hover': {
-					bgcolor: 'action.hover',
+					bgcolor: 'grey.100',
 				},
+				bgcolor: 'transparent',
 				opacity: props.device.status === 'offline' ? 0.6 : 1,
+				transition: 'background-color 0.15s',
 			}}
 		>
 			<Checkbox
@@ -62,6 +64,7 @@ const DeviceListItem = React.memo((props: DeviceListItemProps): JSX.Element => {
 							sx={{
 								fontFamily: 'monospace',
 								fontSize: '0.9rem',
+								color: 'text.primary',
 							}}
 						>
 							{props.device.name || props.device.id}

@@ -78,14 +78,14 @@ export class LEDClient implements Disposable {
 			let didDisconnect = false;
 			this._socket.on('connect', () => {
 				if (didDisconnect) {
-					logTag('HEX-LED', 'magenta', 'Connected to LED server:', this._url);
+					logTag('hex-led', 'magenta', 'Connected to LED server:', this._url);
 					didDisconnect = false;
 				}
 				this._connected = true;
 			});
 
 			this._socket.on('disconnect', (reason) => {
-				logTag('HEX-LED', 'yellow', 'Disconnected from LED server:', reason);
+				logTag('hex-led', 'yellow', 'Disconnected from LED server:', reason);
 				this._connected = false;
 				didDisconnect = true;
 			});

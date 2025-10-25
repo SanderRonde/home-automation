@@ -32,11 +32,11 @@ export class TuyaAPI {
 	public async init(): Promise<void> {
 		const config = this._db.current();
 		if (!config?.devices || config.devices.length === 0) {
-			logTag('TUYA', 'yellow', 'No Tuya devices configured');
+			logTag('tuya', 'yellow', 'No Tuya devices configured');
 			return;
 		}
 
-		logTag('TUYA', 'blue', `Initializing ${config.devices.length} Tuya device(s)`);
+		logTag('tuya', 'blue', `Initializing ${config.devices.length} Tuya device(s)`);
 
 		for (const deviceConfig of config.devices) {
 			await this.connectDevice(deviceConfig);
@@ -59,7 +59,7 @@ export class TuyaAPI {
 			// Connect to device
 			await device.connect();
 
-			logTag('TUYA', 'green', `Connected to device: ${config.name}`);
+			logTag('tuya', 'green', `Connected to device: ${config.name}`);
 
 			this._devices.set(config.id, device);
 
@@ -82,7 +82,7 @@ export class TuyaAPI {
 
 			// Handle disconnections
 			device.on('disconnected', () => {
-				logTag('TUYA', 'red', `Device disconnected: ${config.name}`);
+				logTag('tuya', 'red', `Device disconnected: ${config.name}`);
 				this._devices.delete(config.id);
 				this._tuyaDevices.delete(config.id);
 				this.publishDevices();
@@ -114,7 +114,7 @@ export class TuyaAPI {
 		for (const [id, device] of this._devices.entries()) {
 			try {
 				device.disconnect();
-				logTag('TUYA', 'blue', `Disconnected device: ${id}`);
+				logTag('tuya', 'blue', `Disconnected device: ${id}`);
 			} catch (error) {
 				warning('Failed to disconnect Tuya device:', id, error);
 			}
@@ -180,7 +180,7 @@ export class TuyaAPI {
 			const status = await device.get({ schema: true });
 			device.disconnect();
 
-			logTag('TUYA', 'green', `Test connection successful: ${config.name}`);
+			logTag('tuya', 'green', `Test connection successful: ${config.name}`);
 			return status !== null;
 		} catch (error) {
 			warning(
@@ -214,6 +214,6 @@ export class TuyaAPI {
 			apiSecret,
 			apiRegion,
 		});
-		logTag('TUYA', 'green', 'Tuya credentials updated');
+		logTag('tuya', 'green', 'Tuya credentials updated');
 	}
 }

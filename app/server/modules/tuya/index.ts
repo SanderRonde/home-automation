@@ -22,7 +22,7 @@ export const Tuya = new (class Tuya extends ModuleMeta {
 		// Connect to configured devices
 		try {
 			await this.api.init();
-			logTag('TUYA', 'green', 'Tuya module initialized');
+			logTag('tuya', 'green', 'Tuya module initialized');
 		} catch (e) {
 			logTag(
 				'TUYA',

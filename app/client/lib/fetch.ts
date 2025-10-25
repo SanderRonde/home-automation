@@ -1,6 +1,7 @@
 import type { HomeDetectorRoutes } from '../../server/modules/home-detector/routing';
 import type { TemperatureRoutes } from '../../server/modules/temperature/routing';
 import type { BrandedResponse, RouteBodyBrand } from '../../server/lib/routes';
+import type { WakelightRoutes } from '../../server/modules/wakelight/routing';
 import type { DashboardRoutes } from '../../server/modules/dashboard/routing';
 import type { WebhookRoutes } from '../../server/modules/webhook/routing';
 import type { EwelinkRoutes } from '../../server/modules/ewelink/routing';
@@ -224,6 +225,7 @@ type RoutesForModules = {
 	mcp: MCPRoutes;
 	temperature: TemperatureRoutes;
 	tuya: TuyaRoutes;
+	wakelight: WakelightRoutes;
 	webhook: WebhookRoutes;
 	wled: WledRoutes;
 };

@@ -1,6 +1,5 @@
 import { DeviceTemperatureMeasurementCluster } from './cluster';
 import type { Device as DeviceInterface } from './device';
-import { logDev } from '../../lib/logging/log-dev';
 import type { SQL } from 'bun';
 
 export class TemperatureTracker {
@@ -74,8 +73,6 @@ export class TemperatureTracker {
 				const temperature = await temperatureCluster.temperature.get();
 				if (temperature !== undefined) {
 					void this.logEvent(deviceId, temperature);
-				} else {
-					logDev('temperature-tracker', 'temperature is undefined');
 				}
 			}
 		}

@@ -156,41 +156,42 @@ export const Scenes = (): JSX.Element => {
 	};
 
 	const getTriggerIcon = (scene: Scene) => {
-		if (!scene.trigger) {
+		if (!scene.triggers) {
 			return null;
 		}
 
-		if (scene.trigger.type === 'occupancy') {
-			const device = getDeviceById(scene.trigger.deviceId);
-			const deviceName = device?.name || 'Unknown Device';
-			return (
-				<Tooltip title={`Occupancy: ${deviceName}`}>
-					<SensorsIcon
-						sx={{
-							fontSize: 20,
-							color: 'text.secondary',
-						}}
-					/>
-				</Tooltip>
-			);
-		}
+		return scene.triggers.map(({ trigger }, index) => {
+			if (trigger.type === 'occupancy') {
+				const device = getDeviceById(trigger.deviceId);
+				const deviceName = device?.name || 'Unknown Device';
+				return (
+					<Tooltip title={`Occupancy: ${deviceName}`} key={index}>
+						<SensorsIcon
+							sx={{
+								fontSize: 20,
+								color: 'text.secondary',
+							}}
+						/>
+					</Tooltip>
+				);
+			}
 
-		if (scene.trigger.type === 'button-press') {
-			const device = getDeviceById(scene.trigger.deviceId);
-			const deviceName = device?.name || 'Unknown Device';
-			return (
-				<Tooltip title={`Button ${scene.trigger.buttonIndex + 1}: ${deviceName}`}>
-					<TouchAppIcon
-						sx={{
-							fontSize: 20,
-							color: 'text.secondary',
-						}}
-					/>
-				</Tooltip>
-			);
-		}
-
-		return null;
+			if (trigger.type === 'button-press') {
+				const device = getDeviceById(trigger.deviceId);
+				const deviceName = device?.name || 'Unknown Device';
+				return (
+					<Tooltip title={`Button ${trigger.buttonIndex + 1}: ${deviceName}`} key={index}>
+						<TouchAppIcon
+							sx={{
+								fontSize: 20,
+								color: 'text.secondary',
+							}}
+						/>
+					</Tooltip>
+				);
+			}
+			return null;
+		});
 	};
 
 	if (loading || devicesLoading) {

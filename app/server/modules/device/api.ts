@@ -26,11 +26,13 @@ export class DeviceAPI {
 
 	public constructor(
 		private readonly _db: Database<DeviceDB>,
-		sqlDB: SQL
+		sqlDB: SQL,
+		// Fixes circular dependency
+		modules: unknown
 	) {
 		this.groupAPI = new GroupAPI(_db);
 		this.paletteAPI = new PaletteAPI(_db);
-		this.sceneAPI = new SceneAPI(_db, this.devices, this.groupAPI, this.paletteAPI);
+		this.sceneAPI = new SceneAPI(_db, this.devices, this.groupAPI, this.paletteAPI, modules);
 		this.occupancyTracker = new OccupancyTracker(sqlDB, this.sceneAPI);
 		this.temperatureTracker = new TemperatureTracker(sqlDB);
 		this.humidityTracker = new HumidityTracker(sqlDB);

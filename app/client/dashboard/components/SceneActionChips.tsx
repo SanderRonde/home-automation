@@ -1,6 +1,7 @@
 import type { DeviceListWithValuesResponse } from '../../../server/modules/device/routing';
 import type { DeviceGroup } from '../../../../types/group';
 import type { Palette } from '../../../../types/palette';
+import { Http as HttpIcon } from '@mui/icons-material';
 import type { Scene } from '../../../../types/scene';
 import { Box, Chip } from '@mui/material';
 import { IconComponent } from './icon';
@@ -26,6 +27,35 @@ export const SceneActionChips = (props: SceneActionChipsProps): JSX.Element => {
 			}}
 		>
 			{props.actions.map((action, index) => {
+				// Handle HTTP request actions
+				if (action.cluster === 'http-request') {
+					const httpAction = action.action as { url: string; method: 'GET' | 'POST' };
+					const urlDisplay =
+						httpAction.url.length > 30
+							? `${httpAction.url.substring(0, 30)}...`
+							: httpAction.url;
+
+					return (
+						<Chip
+							key={`http-${index}`}
+							icon={<HttpIcon sx={{ fontSize: 18 }} />}
+							label={`HTTP ${httpAction.method}: ${urlDisplay}`}
+							size="small"
+							sx={{
+								paddingLeft: '4px',
+								paddingRight: '4px',
+								backgroundColor: 'info.light',
+								'& .MuiChip-label': {
+									color: 'rgba(0, 0, 0, 0.87)',
+								},
+								'& .MuiChip-icon': {
+									color: 'rgba(0, 0, 0, 0.6)',
+								},
+							}}
+						/>
+					);
+				}
+
 				// Handle group actions
 				if (action.groupId) {
 					const group = props.getGroupById(action.groupId);

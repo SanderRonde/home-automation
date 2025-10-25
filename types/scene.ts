@@ -20,7 +20,28 @@ export type SceneTrigger =
 	| {
 			type: 'host-departure';
 			hostId: string;
+	  }
+	| {
+			type: 'webhook';
+			webhookName: string;
 	  };
+
+export type SceneCondition =
+	| {
+			type: 'host-home';
+			hostId: string;
+			shouldBeHome: boolean;
+	  }
+	| {
+			type: 'device-on';
+			deviceId: string;
+			shouldBeOn: boolean;
+	  };
+
+export interface SceneTriggerWithConditions {
+	trigger: SceneTrigger;
+	conditions?: SceneCondition[];
+}
 
 export type SceneDeviceActionOnOff = {
 	deviceId?: string;
@@ -69,18 +90,29 @@ export type SceneDeviceActionColorControlPalette = {
 	};
 };
 
+export type SceneDeviceActionHttpRequest = {
+	cluster: 'http-request';
+	action: {
+		url: string;
+		method: 'GET' | 'POST';
+		body?: Record<string, unknown>;
+		headers?: Record<string, string>;
+	};
+};
+
 export type SceneDeviceAction =
 	| SceneDeviceActionOnOff
 	| SceneDeviceActionWindowCovering
 	| SceneDeviceActionLevelControl
 	| SceneDeviceActionColorControl
-	| SceneDeviceActionColorControlPalette;
+	| SceneDeviceActionColorControlPalette
+	| SceneDeviceActionHttpRequest;
 
 export interface Scene {
 	id: SceneId;
 	title: string;
 	icon: IncludedIconNames;
 	actions: SceneDeviceAction[];
-	trigger?: SceneTrigger;
+	triggers?: SceneTriggerWithConditions[];
 	showOnHome?: boolean;
 }
