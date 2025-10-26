@@ -276,10 +276,13 @@ export class SceneAPI {
 							return false;
 						}
 						// Resolve group to devices that support the cluster
+						const excludeSet = new Set(sceneAction.excludeDeviceIds || []);
 						for (const deviceId of group.deviceIds) {
-							const device = this._devices.current()[deviceId];
-							if (device) {
-								devices.push(device);
+							if (!excludeSet.has(deviceId)) {
+								const device = this._devices.current()[deviceId];
+								if (device) {
+									devices.push(device);
+								}
 							}
 						}
 					} else {

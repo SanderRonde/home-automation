@@ -1085,6 +1085,37 @@ const ActionConfig = React.memo((props: ActionConfigProps) => {
 								/>
 							)}
 
+							{/* Device Exclusions for Groups */}
+							{isGroup && props.group && props.action.cluster && (
+								<Autocomplete
+									multiple
+									options={props.group.deviceIds
+										.map((id) => props.devices.find((d) => d.uniqueId === id))
+										.filter((d) => d !== undefined)}
+									getOptionLabel={(option) => option.name}
+									value={
+										props.action.excludeDeviceIds
+											?.map((id) =>
+												props.devices.find((d) => d.uniqueId === id)
+											)
+											.filter((d) => d !== undefined) ?? []
+									}
+									onChange={(_e, newValue) => {
+										props.handleActionChange(props.action.key, {
+											excludeDeviceIds: newValue.map((d) => d.uniqueId),
+										});
+									}}
+									renderInput={(params) => (
+										<TextField
+											{...params}
+											label="Exclude Devices (Optional)"
+											size="small"
+										/>
+									)}
+									sx={{ mt: 1 }}
+								/>
+							)}
+
 							{/* Action Configuration */}
 							<ClusterActionControls
 								action={props.action}

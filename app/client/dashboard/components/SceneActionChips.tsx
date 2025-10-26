@@ -79,6 +79,11 @@ export const SceneActionChips = (props: SceneActionChipsProps): JSX.Element => {
 							)
 						: null;
 
+					const exclusionCount =
+						'excludeDeviceIds' in action && action.excludeDeviceIds?.length
+							? action.excludeDeviceIds.length
+							: 0;
+
 					return (
 						<Box
 							key={`${action.groupId}-${action.cluster}-${index}`}
@@ -109,6 +114,16 @@ export const SceneActionChips = (props: SceneActionChipsProps): JSX.Element => {
 										}}
 									>
 										{group.name}
+										{exclusionCount > 0 && (
+											<span
+												style={{
+													fontSize: '0.75em',
+													opacity: 0.8,
+												}}
+											>
+												({exclusionCount} excluded)
+											</span>
+										)}
 										{palette && (
 											<Box
 												sx={{

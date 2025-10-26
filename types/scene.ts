@@ -59,6 +59,7 @@ export interface SceneTriggerWithConditions {
 export type SceneDeviceActionOnOff = {
 	deviceId?: string;
 	groupId?: string;
+	excludeDeviceIds?: string[];
 	cluster: DeviceClusterName.ON_OFF;
 	action: {
 		isOn: boolean;
@@ -68,6 +69,7 @@ export type SceneDeviceActionOnOff = {
 export type SceneDeviceActionWindowCovering = {
 	deviceId?: string;
 	groupId?: string;
+	excludeDeviceIds?: string[];
 	cluster: DeviceClusterName.WINDOW_COVERING;
 	action: {
 		targetPositionLiftPercentage: number;
@@ -77,6 +79,7 @@ export type SceneDeviceActionWindowCovering = {
 export type SceneDeviceActionLevelControl = {
 	deviceId?: string;
 	groupId?: string;
+	excludeDeviceIds?: string[];
 	cluster: DeviceClusterName.LEVEL_CONTROL;
 	action: {
 		level: number;
@@ -86,6 +89,7 @@ export type SceneDeviceActionLevelControl = {
 export type SceneDeviceActionColorControl = {
 	deviceId?: string;
 	groupId?: string;
+	excludeDeviceIds?: string[];
 	cluster: DeviceClusterName.COLOR_CONTROL;
 	action: {
 		hue: number;
@@ -97,6 +101,7 @@ export type SceneDeviceActionColorControl = {
 export type SceneDeviceActionColorControlPalette = {
 	deviceId?: string;
 	groupId?: string;
+	excludeDeviceIds?: string[];
 	cluster: DeviceClusterName.COLOR_CONTROL;
 	action: {
 		paletteId: string;
