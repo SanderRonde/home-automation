@@ -921,7 +921,12 @@ const ColorControlCard = (
 	return (
 		<DeviceClusterCardSkeleton
 			{...props}
-			cardBackground={color}
+			cardBackground={
+				!props.cluster.mergedClusters[DeviceClusterName.ON_OFF] ||
+				props.cluster.mergedClusters[DeviceClusterName.ON_OFF].isOn
+					? color
+					: '#2f2f2f'
+			}
 			onPress={() => {
 				props.pushDetailView({
 					type: 'device',
