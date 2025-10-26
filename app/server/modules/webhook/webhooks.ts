@@ -24,9 +24,10 @@ export async function triggerWebhooks(
 	// If webhook exists in database, trigger associated scenes
 	if (webhookExists) {
 		const modules = await Webhook.modules;
+		const { SceneTriggerType } = await import('../../../../types/scene.js');
 		const deviceAPI = await modules.device.api.value;
 		await deviceAPI.sceneAPI.onTrigger({
-			type: 'webhook',
+			type: SceneTriggerType.WEBHOOK,
 			webhookName: name,
 		});
 	}

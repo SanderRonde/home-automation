@@ -6,6 +6,7 @@ import {
 	DeviceWindowCoveringCluster,
 } from './cluster';
 import type { Scene, SceneCondition, SceneId, SceneTrigger } from '../../../../types/scene';
+import { SceneTriggerType, SceneConditionType } from '../../../../types/scene';
 import { assertUnreachable } from '../../lib/assert';
 import { logTag } from '../../lib/logging/logger';
 import type { PaletteAPI } from './palette-api';
@@ -101,7 +102,7 @@ export class SceneAPI {
 		const modules = (await this._modules) as AllModules;
 
 		for (const condition of conditions) {
-			if (condition.type === 'host-home') {
+			if (condition.type === SceneConditionType.HOST_HOME) {
 				const { HOME_STATE } = await import('../home-detector/types.js');
 				const detector = await modules.homeDetector.getDetector();
 				const hostState = detector.get(condition.hostId);
@@ -115,7 +116,7 @@ export class SceneAPI {
 				if (isHome !== condition.shouldBeHome) {
 					return false;
 				}
-			} else if (condition.type === 'device-on') {
+			} else if (condition.type === SceneConditionType.DEVICE_ON) {
 				const device = this._devices.current()[condition.deviceId];
 				if (!device) {
 					logTag('scene', 'yellow', 'Device not found:', condition.deviceId);
@@ -169,26 +170,32 @@ export class SceneAPI {
 
 				// Match based on trigger type
 				let triggerMatches = false;
-				if (trigger.type === 'occupancy' && sceneTrigger.type === 'occupancy') {
+				if (
+					trigger.type === SceneTriggerType.OCCUPANCY &&
+					sceneTrigger.type === SceneTriggerType.OCCUPANCY
+				) {
 					triggerMatches = sceneTrigger.deviceId === trigger.deviceId;
 				} else if (
-					trigger.type === 'button-press' &&
-					sceneTrigger.type === 'button-press'
+					trigger.type === SceneTriggerType.BUTTON_PRESS &&
+					sceneTrigger.type === SceneTriggerType.BUTTON_PRESS
 				) {
 					triggerMatches =
 						sceneTrigger.deviceId === trigger.deviceId &&
 						sceneTrigger.buttonIndex === trigger.buttonIndex;
 				} else if (
-					trigger.type === 'host-arrival' &&
-					sceneTrigger.type === 'host-arrival'
+					trigger.type === SceneTriggerType.HOST_ARRIVAL &&
+					sceneTrigger.type === SceneTriggerType.HOST_ARRIVAL
 				) {
 					triggerMatches = sceneTrigger.hostId === trigger.hostId;
 				} else if (
-					trigger.type === 'host-departure' &&
-					sceneTrigger.type === 'host-departure'
+					trigger.type === SceneTriggerType.HOST_DEPARTURE &&
+					sceneTrigger.type === SceneTriggerType.HOST_DEPARTURE
 				) {
 					triggerMatches = sceneTrigger.hostId === trigger.hostId;
-				} else if (trigger.type === 'webhook' && sceneTrigger.type === 'webhook') {
+				} else if (
+					trigger.type === SceneTriggerType.WEBHOOK &&
+					sceneTrigger.type === SceneTriggerType.WEBHOOK
+				) {
 					triggerMatches = sceneTrigger.webhookName === trigger.webhookName;
 				}
 

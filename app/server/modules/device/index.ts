@@ -130,16 +130,17 @@ export const Device = new (class Device extends ModuleMeta {
 
 		// Subscribe to home-detector state changes to trigger scenes
 		const modules = await this.modules;
+		const { SceneTriggerType } = await import('../../../../types/scene.js');
 		void modules.homeDetector.onUpdate(async (newState, hostId) => {
 			const { HOME_STATE } = await import('../home-detector/types.js');
 			if (newState === HOME_STATE.HOME) {
 				await api.sceneAPI.onTrigger({
-					type: 'host-arrival',
+					type: SceneTriggerType.HOST_ARRIVAL,
 					hostId,
 				});
 			} else {
 				await api.sceneAPI.onTrigger({
-					type: 'host-departure',
+					type: SceneTriggerType.HOST_DEPARTURE,
 					hostId,
 				});
 			}

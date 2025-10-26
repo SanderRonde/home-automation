@@ -5,6 +5,7 @@ import {
 	MockWindowCoveringCluster,
 	waitForCondition,
 } from '../../lib/test-utils';
+import { SceneTriggerType, SceneConditionType } from '../../../../types/scene';
 import type { Scene, SceneTrigger } from '../../../../types/scene';
 import { describe, test, expect, beforeEach } from 'bun:test';
 import { DeviceClusterName } from './cluster';
@@ -150,7 +151,7 @@ describe('SceneAPI', () => {
 
 		test('should create scene with triggers', () => {
 			const trigger: SceneTrigger = {
-				type: 'occupancy',
+				type: SceneTriggerType.OCCUPANCY,
 				deviceId: 'sensor1',
 			};
 
@@ -404,7 +405,7 @@ describe('SceneAPI', () => {
 				triggers: [
 					{
 						trigger: {
-							type: 'occupancy',
+							type: SceneTriggerType.OCCUPANCY,
 							deviceId: 'sensor1',
 						},
 					},
@@ -412,7 +413,7 @@ describe('SceneAPI', () => {
 			});
 
 			await api.onTrigger({
-				type: 'occupancy',
+				type: SceneTriggerType.OCCUPANCY,
 				deviceId: 'sensor1',
 			});
 
@@ -441,7 +442,7 @@ describe('SceneAPI', () => {
 				triggers: [
 					{
 						trigger: {
-							type: 'occupancy',
+							type: SceneTriggerType.OCCUPANCY,
 							deviceId: 'sensor1',
 						},
 					},
@@ -449,7 +450,7 @@ describe('SceneAPI', () => {
 			});
 
 			await api.onTrigger({
-				type: 'occupancy',
+				type: SceneTriggerType.OCCUPANCY,
 				deviceId: 'sensor2', // Different sensor
 			});
 
@@ -483,7 +484,7 @@ describe('SceneAPI', () => {
 				triggers: [
 					{
 						trigger: {
-							type: 'occupancy',
+							type: SceneTriggerType.OCCUPANCY,
 							deviceId: 'sensor1',
 						},
 					},
@@ -503,7 +504,7 @@ describe('SceneAPI', () => {
 				triggers: [
 					{
 						trigger: {
-							type: 'occupancy',
+							type: SceneTriggerType.OCCUPANCY,
 							deviceId: 'sensor1',
 						},
 					},
@@ -511,7 +512,7 @@ describe('SceneAPI', () => {
 			});
 
 			await api.onTrigger({
-				type: 'occupancy',
+				type: SceneTriggerType.OCCUPANCY,
 				deviceId: 'sensor1',
 			});
 
@@ -544,7 +545,7 @@ describe('SceneAPI', () => {
 			});
 
 			await api.onTrigger({
-				type: 'occupancy',
+				type: SceneTriggerType.OCCUPANCY,
 				deviceId: 'sensor1',
 			});
 
@@ -573,13 +574,13 @@ describe('SceneAPI', () => {
 				triggers: [
 					{
 						trigger: {
-							type: 'occupancy',
+							type: SceneTriggerType.OCCUPANCY,
 							deviceId: 'sensor1',
 						},
 					},
 					{
 						trigger: {
-							type: 'button-press',
+							type: SceneTriggerType.BUTTON_PRESS,
 							deviceId: 'button1',
 							buttonIndex: 0,
 						},
@@ -589,7 +590,7 @@ describe('SceneAPI', () => {
 
 			// Trigger via occupancy (first trigger)
 			await api.onTrigger({
-				type: 'occupancy',
+				type: SceneTriggerType.OCCUPANCY,
 				deviceId: 'sensor1',
 			});
 
@@ -601,7 +602,7 @@ describe('SceneAPI', () => {
 
 			// Trigger via button press (second trigger)
 			await api.onTrigger({
-				type: 'button-press',
+				type: SceneTriggerType.BUTTON_PRESS,
 				deviceId: 'button1',
 				buttonIndex: 0,
 			});
@@ -636,12 +637,12 @@ describe('SceneAPI', () => {
 				triggers: [
 					{
 						trigger: {
-							type: 'occupancy',
+							type: SceneTriggerType.OCCUPANCY,
 							deviceId: 'motion1',
 						},
 						conditions: [
 							{
-								type: 'device-on',
+								type: SceneConditionType.DEVICE_ON,
 								deviceId: 'sensor1',
 								shouldBeOn: true,
 							},
@@ -652,7 +653,7 @@ describe('SceneAPI', () => {
 
 			// Trigger when condition is NOT met (sensor is off)
 			await api.onTrigger({
-				type: 'occupancy',
+				type: SceneTriggerType.OCCUPANCY,
 				deviceId: 'motion1',
 			});
 
@@ -667,7 +668,7 @@ describe('SceneAPI', () => {
 
 			// Trigger again
 			await api.onTrigger({
-				type: 'occupancy',
+				type: SceneTriggerType.OCCUPANCY,
 				deviceId: 'motion1',
 			});
 
@@ -697,7 +698,7 @@ describe('SceneAPI', () => {
 			});
 
 			await api.onTrigger({
-				type: 'occupancy',
+				type: SceneTriggerType.OCCUPANCY,
 				deviceId: 'sensor1',
 			});
 

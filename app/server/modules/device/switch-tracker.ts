@@ -1,3 +1,4 @@
+import { SceneTriggerType } from '../../../../types/scene';
 import type { Device as DeviceInterface } from './device';
 import type { DeviceSwitchCluster } from './cluster';
 import { DeviceClusterName } from './cluster';
@@ -40,7 +41,7 @@ export class SwitchTracker {
 				const unsubscribe = switchCluster.onPress.listen(() => {
 					void this.logEvent(deviceId, buttonIndex);
 					void this._sceneAPI.onTrigger({
-						type: 'button-press',
+						type: SceneTriggerType.BUTTON_PRESS,
 						deviceId,
 						buttonIndex,
 					});

@@ -111,7 +111,7 @@ class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 		R = AT | undefined,
 	>(attributeName: A, mapper?: (value: AT | undefined) => R): Data<R> {
 		const emitter = (() => {
-			const { cluster } = this;
+			const { cluster, endpoint } = this;
 			class cls extends Data<AT | undefined> {
 				public override async get(): Promise<AT> {
 					const attribute = cluster.attributes[attributeName];
@@ -128,7 +128,9 @@ class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 						try {
 							return await tryGet();
 						} catch {
-							console.error(`Error getting attribute ${attributeName}`);
+							console.error(
+								`Error getting attribute ${attributeName} for endpoint ${endpoint.number ?? '<unknown>'}`
+							);
 						}
 					}
 

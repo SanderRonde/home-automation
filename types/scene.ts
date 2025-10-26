@@ -3,37 +3,50 @@ import type { DeviceClusterName } from '../app/server/modules/device/cluster';
 
 export type SceneId = string;
 
+export enum SceneTriggerType {
+	OCCUPANCY = 'occupancy',
+	BUTTON_PRESS = 'button-press',
+	HOST_ARRIVAL = 'host-arrival',
+	HOST_DEPARTURE = 'host-departure',
+	WEBHOOK = 'webhook',
+}
+
 export type SceneTrigger =
 	| {
-			type: 'occupancy';
+			type: SceneTriggerType.OCCUPANCY;
 			deviceId: string;
 	  }
 	| {
-			type: 'button-press';
+			type: SceneTriggerType.BUTTON_PRESS;
 			deviceId: string;
 			buttonIndex: number;
 	  }
 	| {
-			type: 'host-arrival';
+			type: SceneTriggerType.HOST_ARRIVAL;
 			hostId: string;
 	  }
 	| {
-			type: 'host-departure';
+			type: SceneTriggerType.HOST_DEPARTURE;
 			hostId: string;
 	  }
 	| {
-			type: 'webhook';
+			type: SceneTriggerType.WEBHOOK;
 			webhookName: string;
 	  };
 
+export enum SceneConditionType {
+	HOST_HOME = 'host-home',
+	DEVICE_ON = 'device-on',
+}
+
 export type SceneCondition =
 	| {
-			type: 'host-home';
+			type: SceneConditionType.HOST_HOME;
 			hostId: string;
 			shouldBeHome: boolean;
 	  }
 	| {
-			type: 'device-on';
+			type: SceneConditionType.DEVICE_ON;
 			deviceId: string;
 			shouldBeOn: boolean;
 	  };

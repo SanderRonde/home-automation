@@ -29,6 +29,7 @@ import type {
 	SceneCondition,
 } from '../../../../types/scene';
 import { Delete as DeleteIcon, Add as AddIcon, Close as CloseIcon } from '@mui/icons-material';
+import { SceneTriggerType, SceneConditionType } from '../../../../types/scene';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import type { Host } from '../../../server/modules/home-detector/routing';
 import type { Webhook } from '../../../server/modules/webhook/types';
@@ -44,8 +45,8 @@ interface TriggerEditDialogProps {
 	hosts: Host[];
 }
 
-type TriggerType = 'occupancy' | 'button-press' | 'host-arrival' | 'host-departure' | 'webhook';
-type ConditionType = 'host-home' | 'device-on';
+type TriggerType = SceneTriggerType;
+type ConditionType = SceneConditionType;
 
 export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element => {
 	const theme = useTheme();
@@ -53,7 +54,7 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 	const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
 
 	// Trigger state
-	const [triggerType, setTriggerType] = useState<TriggerType>('occupancy');
+	const [triggerType, setTriggerType] = useState<TriggerType>(SceneTriggerType.OCCUPANCY);
 	const [triggerDeviceId, setTriggerDeviceId] = useState<string>('');
 	const [triggerButtonIndex, setTriggerButtonIndex] = useState<number | undefined>(undefined);
 	const [triggerHostId, setTriggerHostId] = useState<string>('');
@@ -67,7 +68,7 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 
 	// Condition editor state
 	const [addingCondition, setAddingCondition] = useState(false);
-	const [conditionType, setConditionType] = useState<ConditionType>('host-home');
+	const [conditionType, setConditionType] = useState<ConditionType>(SceneConditionType.HOST_HOME);
 	const [conditionHostId, setConditionHostId] = useState<string>('');
 	const [conditionDeviceId, setConditionDeviceId] = useState<string>('');
 	const [conditionShouldBeHome, setConditionShouldBeHome] = useState(true);
@@ -82,23 +83,23 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 			const trigger = props.trigger.trigger;
 			setTriggerType(trigger.type);
 
-			if (trigger.type === 'occupancy') {
+			if (trigger.type === SceneTriggerType.OCCUPANCY) {
 				setTriggerDeviceId(trigger.deviceId);
-			} else if (trigger.type === 'button-press') {
+			} else if (trigger.type === SceneTriggerType.BUTTON_PRESS) {
 				setTriggerDeviceId(trigger.deviceId);
 				setTriggerButtonIndex(trigger.buttonIndex);
-			} else if (trigger.type === 'host-arrival') {
+			} else if (trigger.type === SceneTriggerType.HOST_ARRIVAL) {
 				setTriggerHostId(trigger.hostId);
-			} else if (trigger.type === 'host-departure') {
+			} else if (trigger.type === SceneTriggerType.HOST_DEPARTURE) {
 				setTriggerHostId(trigger.hostId);
-			} else if (trigger.type === 'webhook') {
+			} else if (trigger.type === SceneTriggerType.WEBHOOK) {
 				setTriggerWebhookName(trigger.webhookName);
 			}
 
 			setConditions(props.trigger.conditions || []);
 		} else if (props.open) {
 			// Reset for new trigger
-			setTriggerType('occupancy');
+			setTriggerType(SceneTriggerType.OCCUPANCY);
 			setTriggerDeviceId('');
 			setTriggerButtonIndex(undefined);
 			setTriggerHostId('');
@@ -195,14 +196,14 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 
 	const handleAddCondition = () => {
 		const newCondition: SceneCondition =
-			conditionType === 'host-home'
+			conditionType === SceneConditionType.HOST_HOME
 				? {
-						type: 'host-home',
+						type: SceneConditionType.HOST_HOME,
 						hostId: conditionHostId,
 						shouldBeHome: conditionShouldBeHome,
 					}
 				: {
-						type: 'device-on',
+						type: SceneConditionType.DEVICE_ON,
 						deviceId: conditionDeviceId,
 						shouldBeOn: conditionShouldBeOn,
 					};
@@ -220,10 +221,10 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 	};
 
 	const getConditionLabel = (condition: SceneCondition): string => {
-		if (condition.type === 'host-home') {
+		if (condition.type === SceneConditionType.HOST_HOME) {
 			const host = props.hosts.find((h) => h.name === condition.hostId);
 			return `${host?.name || condition.hostId} is ${condition.shouldBeHome ? 'home' : 'away'}`;
-		} else if (condition.type === 'device-on') {
+		} else if (condition.type === SceneConditionType.DEVICE_ON) {
 			const device = props.devices.find((d) => d.uniqueId === condition.deviceId);
 			return `${device?.name || condition.deviceId} is ${condition.shouldBeOn ? 'on' : 'off'}`;
 		}
@@ -234,15 +235,21 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 		const newErrors: string[] = [];
 
 		// Validate trigger
-		if (triggerType === 'occupancy' || triggerType === 'button-press') {
+		if (
+			triggerType === SceneTriggerType.OCCUPANCY ||
+			triggerType === SceneTriggerType.BUTTON_PRESS
+		) {
 			if (!triggerDeviceId) {
 				newErrors.push('Please select a device for the trigger');
 			}
-		} else if (triggerType === 'host-arrival' || triggerType === 'host-departure') {
+		} else if (
+			triggerType === SceneTriggerType.HOST_ARRIVAL ||
+			triggerType === SceneTriggerType.HOST_DEPARTURE
+		) {
 			if (!triggerHostId) {
 				newErrors.push('Please select a host for the trigger');
 			}
-		} else if (triggerType === 'webhook') {
+		} else if (triggerType === SceneTriggerType.WEBHOOK) {
 			if (!triggerWebhookName) {
 				newErrors.push('Please select a webhook for the trigger');
 			}
@@ -259,30 +266,30 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 
 		let trigger: SceneTrigger;
 
-		if (triggerType === 'occupancy') {
+		if (triggerType === SceneTriggerType.OCCUPANCY) {
 			trigger = {
-				type: 'occupancy',
+				type: SceneTriggerType.OCCUPANCY,
 				deviceId: triggerDeviceId,
 			};
-		} else if (triggerType === 'button-press') {
+		} else if (triggerType === SceneTriggerType.BUTTON_PRESS) {
 			trigger = {
-				type: 'button-press',
+				type: SceneTriggerType.BUTTON_PRESS,
 				deviceId: triggerDeviceId,
 				buttonIndex: triggerButtonIndex ?? 0,
 			};
-		} else if (triggerType === 'host-arrival') {
+		} else if (triggerType === SceneTriggerType.HOST_ARRIVAL) {
 			trigger = {
-				type: 'host-arrival',
+				type: SceneTriggerType.HOST_ARRIVAL,
 				hostId: triggerHostId,
 			};
-		} else if (triggerType === 'host-departure') {
+		} else if (triggerType === SceneTriggerType.HOST_DEPARTURE) {
 			trigger = {
-				type: 'host-departure',
+				type: SceneTriggerType.HOST_DEPARTURE,
 				hostId: triggerHostId,
 			};
 		} else {
 			trigger = {
-				type: 'webhook',
+				type: SceneTriggerType.WEBHOOK,
 				webhookName: triggerWebhookName,
 			};
 		}
@@ -296,8 +303,8 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 	};
 
 	const canAddCondition =
-		(conditionType === 'host-home' && conditionHostId) ||
-		(conditionType === 'device-on' && conditionDeviceId);
+		(conditionType === SceneConditionType.HOST_HOME && conditionHostId) ||
+		(conditionType === SceneConditionType.DEVICE_ON && conditionDeviceId);
 
 	return (
 		<Dialog
@@ -354,15 +361,23 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 							size="small"
 							sx={{ mb: 2 }}
 						>
-							<ToggleButton value="occupancy">Occupancy</ToggleButton>
-							<ToggleButton value="button-press">Button</ToggleButton>
-							<ToggleButton value="webhook">Webhook</ToggleButton>
-							<ToggleButton value="host-arrival">Arrival</ToggleButton>
-							<ToggleButton value="host-departure">Departure</ToggleButton>
+							<ToggleButton value={SceneTriggerType.OCCUPANCY}>
+								Occupancy
+							</ToggleButton>
+							<ToggleButton value={SceneTriggerType.BUTTON_PRESS}>
+								Button
+							</ToggleButton>
+							<ToggleButton value={SceneTriggerType.WEBHOOK}>Webhook</ToggleButton>
+							<ToggleButton value={SceneTriggerType.HOST_ARRIVAL}>
+								Arrival
+							</ToggleButton>
+							<ToggleButton value={SceneTriggerType.HOST_DEPARTURE}>
+								Departure
+							</ToggleButton>
 						</ToggleButtonGroup>
 
 						{/* Occupancy trigger */}
-						{triggerType === 'occupancy' && (
+						{triggerType === SceneTriggerType.OCCUPANCY && (
 							<Autocomplete
 								options={occupancyDevices}
 								getOptionLabel={(option) => option.name}
@@ -380,7 +395,7 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 						)}
 
 						{/* Button press trigger */}
-						{triggerType === 'button-press' && (
+						{triggerType === SceneTriggerType.BUTTON_PRESS && (
 							<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
 								<Autocomplete
 									options={buttonDevices}
@@ -424,7 +439,7 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 						)}
 
 						{/* Host arrival trigger */}
-						{triggerType === 'host-arrival' && (
+						{triggerType === SceneTriggerType.HOST_ARRIVAL && (
 							<Autocomplete
 								options={props.hosts}
 								getOptionLabel={(option) => option.name}
@@ -439,7 +454,7 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 						)}
 
 						{/* Host departure trigger */}
-						{triggerType === 'host-departure' && (
+						{triggerType === SceneTriggerType.HOST_DEPARTURE && (
 							<Autocomplete
 								options={props.hosts}
 								getOptionLabel={(option) => option.name}
@@ -454,7 +469,7 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 						)}
 
 						{/* Webhook trigger */}
-						{triggerType === 'webhook' && (
+						{triggerType === SceneTriggerType.WEBHOOK && (
 							<Autocomplete<Webhook>
 								options={webhooks}
 								getOptionLabel={(option) => option.name}
@@ -537,13 +552,15 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 										fullWidth
 										size="small"
 									>
-										<ToggleButton value="host-home">
+										<ToggleButton value={SceneConditionType.HOST_HOME}>
 											Host Home/Away
 										</ToggleButton>
-										<ToggleButton value="device-on">Device On/Off</ToggleButton>
+										<ToggleButton value={SceneConditionType.DEVICE_ON}>
+											Device On/Off
+										</ToggleButton>
 									</ToggleButtonGroup>
 
-									{conditionType === 'host-home' && (
+									{conditionType === SceneConditionType.HOST_HOME && (
 										<>
 											<Autocomplete
 												options={props.hosts}
@@ -580,7 +597,7 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 										</>
 									)}
 
-									{conditionType === 'device-on' && (
+									{conditionType === SceneConditionType.DEVICE_ON && (
 										<>
 											<Autocomplete
 												options={onOffDevices}

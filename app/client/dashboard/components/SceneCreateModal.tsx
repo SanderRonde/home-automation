@@ -42,6 +42,7 @@ import {
 	Close as CloseIcon,
 	Edit as EditIcon,
 } from '@mui/icons-material';
+import { SceneTriggerType, SceneConditionType } from '../../../../types/scene';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import type { Host } from '../../../server/modules/home-detector/routing';
 import { ClusterActionControls } from './ClusterActionControls';
@@ -355,19 +356,19 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 			const trigger = triggerWithConditions.trigger;
 			let label = '';
 
-			if (trigger.type === 'occupancy') {
+			if (trigger.type === SceneTriggerType.OCCUPANCY) {
 				const device = props.devices.find((d) => d.uniqueId === trigger.deviceId);
 				label = `Motion detected: ${device?.name || trigger.deviceId}`;
-			} else if (trigger.type === 'button-press') {
+			} else if (trigger.type === SceneTriggerType.BUTTON_PRESS) {
 				const device = props.devices.find((d) => d.uniqueId === trigger.deviceId);
 				label = `Button pressed: ${device?.name || trigger.deviceId}`;
 				if (trigger.buttonIndex !== undefined) {
 					label += ` (Button ${trigger.buttonIndex + 1})`;
 				}
-			} else if (trigger.type === 'host-arrival') {
+			} else if (trigger.type === SceneTriggerType.HOST_ARRIVAL) {
 				const host = hosts.find((h) => h.name === trigger.hostId);
 				label = `${host?.name || trigger.hostId} arrives home`;
-			} else if (trigger.type === 'host-departure') {
+			} else if (trigger.type === SceneTriggerType.HOST_DEPARTURE) {
 				const host = hosts.find((h) => h.name === trigger.hostId);
 				label = `${host?.name || trigger.hostId} leaves home`;
 			}
@@ -379,10 +380,10 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 
 	const getConditionLabel = React.useCallback(
 		(condition: SceneCondition): string => {
-			if (condition.type === 'host-home') {
+			if (condition.type === SceneConditionType.HOST_HOME) {
 				const host = hosts.find((h) => h.name === condition.hostId);
 				return `${host?.name || condition.hostId} is ${condition.shouldBeHome ? 'home' : 'away'}`;
-			} else if (condition.type === 'device-on') {
+			} else if (condition.type === SceneConditionType.DEVICE_ON) {
 				const device = props.devices.find((d) => d.uniqueId === condition.deviceId);
 				return `${device?.name || condition.deviceId} is ${condition.shouldBeOn ? 'on' : 'off'}`;
 			}

@@ -22,6 +22,7 @@ import {
 } from './cluster';
 import type { IncludedIconNames } from '../../../client/dashboard/components/icon';
 import type { BrandedRouteHandlerResponse, ServeOptions } from '../../lib/routes';
+import { SceneTriggerType, SceneConditionType } from '../../../../types/scene';
 import { createServeOptions, withRequestBody } from '../../lib/routes';
 import type { Device, DeviceEndpoint, DeviceSource } from './device';
 import type { DeviceGroup } from '../../../../types/group';
@@ -548,24 +549,24 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 							z.object({
 								trigger: z.union([
 									z.object({
-										type: z.literal('occupancy'),
+										type: z.literal(SceneTriggerType.OCCUPANCY),
 										deviceId: z.string(),
 									}),
 									z.object({
-										type: z.literal('button-press'),
+										type: z.literal(SceneTriggerType.BUTTON_PRESS),
 										deviceId: z.string(),
 										buttonIndex: z.number(),
 									}),
 									z.object({
-										type: z.literal('host-arrival'),
+										type: z.literal(SceneTriggerType.HOST_ARRIVAL),
 										hostId: z.string(),
 									}),
 									z.object({
-										type: z.literal('host-departure'),
+										type: z.literal(SceneTriggerType.HOST_DEPARTURE),
 										hostId: z.string(),
 									}),
 									z.object({
-										type: z.literal('webhook'),
+										type: z.literal(SceneTriggerType.WEBHOOK),
 										webhookName: z.string(),
 									}),
 								]),
@@ -573,12 +574,12 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 									.array(
 										z.union([
 											z.object({
-												type: z.literal('host-home'),
+												type: z.literal(SceneConditionType.HOST_HOME),
 												hostId: z.string(),
 												shouldBeHome: z.boolean(),
 											}),
 											z.object({
-												type: z.literal('device-on'),
+												type: z.literal(SceneConditionType.DEVICE_ON),
 												deviceId: z.string(),
 												shouldBeOn: z.boolean(),
 											}),
@@ -661,24 +662,24 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 							z.object({
 								trigger: z.union([
 									z.object({
-										type: z.literal('occupancy'),
+										type: z.literal(SceneTriggerType.OCCUPANCY),
 										deviceId: z.string(),
 									}),
 									z.object({
-										type: z.literal('button-press'),
+										type: z.literal(SceneTriggerType.BUTTON_PRESS),
 										deviceId: z.string(),
 										buttonIndex: z.number(),
 									}),
 									z.object({
-										type: z.literal('host-arrival'),
+										type: z.literal(SceneTriggerType.HOST_ARRIVAL),
 										hostId: z.string(),
 									}),
 									z.object({
-										type: z.literal('host-departure'),
+										type: z.literal(SceneTriggerType.HOST_DEPARTURE),
 										hostId: z.string(),
 									}),
 									z.object({
-										type: z.literal('webhook'),
+										type: z.literal(SceneTriggerType.WEBHOOK),
 										webhookName: z.string(),
 									}),
 								]),
@@ -686,12 +687,12 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 									.array(
 										z.union([
 											z.object({
-												type: z.literal('host-home'),
+												type: z.literal(SceneConditionType.HOST_HOME),
 												hostId: z.string(),
 												shouldBeHome: z.boolean(),
 											}),
 											z.object({
-												type: z.literal('device-on'),
+												type: z.literal(SceneConditionType.DEVICE_ON),
 												deviceId: z.string(),
 												shouldBeOn: z.boolean(),
 											}),

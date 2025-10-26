@@ -5,6 +5,7 @@ import {
 	waitForCondition,
 } from '../../lib/test-utils';
 import { describe, test, expect, beforeEach, mock } from 'bun:test';
+import { SceneTriggerType } from '../../../../types/scene';
 import { OccupancyTracker } from './occupancy-tracker';
 import type { MockSQL } from '../../lib/test-utils';
 import type { SceneAPI } from './scene-api';
@@ -95,7 +96,7 @@ describe('OccupancyTracker', () => {
 
 			// Check that scene was triggered
 			expect(sceneAPI.onTrigger).toHaveBeenCalledWith({
-				type: 'occupancy',
+				type: SceneTriggerType.OCCUPANCY,
 				deviceId: 'sensor1',
 			});
 		});

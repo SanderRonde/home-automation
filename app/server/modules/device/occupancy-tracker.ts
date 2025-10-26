@@ -1,3 +1,4 @@
+import { SceneTriggerType } from '../../../../types/scene';
 import { DeviceOccupancySensingCluster } from './cluster';
 import type { Device as DeviceInterface } from './device';
 import type { SceneAPI } from './scene-api';
@@ -34,7 +35,10 @@ export class OccupancyTracker {
 					if (lastState !== occupied) {
 						lastState = occupied;
 						void this.logEvent(deviceId, occupied);
-						void this._sceneAPI.onTrigger({ type: 'occupancy', deviceId });
+						void this._sceneAPI.onTrigger({
+							type: SceneTriggerType.OCCUPANCY,
+							deviceId,
+						});
 					}
 				});
 

@@ -52,7 +52,7 @@ describe('Data', () => {
 		});
 
 		test('should notify if object has different keys', () => {
-			const data = new Data({ a: 1, b: 2 });
+			const data = new Data<{ a: number; b: number; c?: number }>({ a: 1, b: 2 });
 			const callback = mock(() => {});
 
 			data.subscribe(callback);
