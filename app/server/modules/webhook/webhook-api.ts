@@ -1,4 +1,4 @@
-import type { Webhook, WebhookDB } from './types';
+import type { Webhook, WebhookDB, WebhookTrigger } from './types';
 import type { Database } from '../../lib/db';
 
 export class WebhookAPI {
@@ -46,9 +46,14 @@ export class WebhookAPI {
 		const newWebhooks = { ...webhooks };
 		delete newWebhooks[name];
 
+		// Also delete triggers for this webhook
+		const newTriggers = { ...(this._db.current().triggers ?? {}) };
+		delete newTriggers[name];
+
 		this._db.update((old) => ({
 			...old,
 			webhooks: newWebhooks,
+			triggers: newTriggers,
 		}));
 
 		return true;
@@ -57,5 +62,46 @@ export class WebhookAPI {
 	public webhookExists(name: string): boolean {
 		const webhooks = this._db.current().webhooks ?? {};
 		return !!webhooks[name];
+	}
+
+	public recordTrigger(name: string, trigger: Omit<WebhookTrigger, 'id'>): void {
+		const triggers = this._db.current().triggers ?? {};
+		const webhookTriggers = triggers[name] ?? [];
+
+		const newTrigger: WebhookTrigger = {
+			...trigger,
+			id: `${name}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+		};
+
+		this._db.update((old) => ({
+			...old,
+			webhooks: {
+				...(old.webhooks ?? {}),
+				[name]: {
+					...(old.webhooks?.[name] ?? {
+						name,
+						createdAt: Date.now(),
+					}),
+					lastTriggeredAt: trigger.timestamp,
+				},
+			},
+			triggers: {
+				...(old.triggers ?? {}),
+				[name]: [...webhookTriggers, newTrigger],
+			},
+		}));
+	}
+
+	public getTriggers(name: string, limit = 100): WebhookTrigger[] {
+		const triggers = this._db.current().triggers ?? {};
+		const webhookTriggers = triggers[name] ?? [];
+
+		// Return last N triggers in reverse chronological order
+		return webhookTriggers.slice(-limit).reverse();
+	}
+
+	public getLastTrigger(name: string): number | undefined {
+		const webhook = this.getWebhook(name);
+		return webhook?.lastTriggeredAt;
 	}
 }

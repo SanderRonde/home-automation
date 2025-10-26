@@ -377,6 +377,8 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 			} else if (trigger.type === SceneTriggerType.HOST_DEPARTURE) {
 				const host = hosts.find((h) => h.name === trigger.hostId);
 				label = `${host?.name || trigger.hostId} leaves home`;
+			} else if (trigger.type === SceneTriggerType.WEBHOOK) {
+				label = `Webhook ${trigger.webhookName} triggers`;
 			}
 
 			return label;
@@ -392,6 +394,12 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 			} else if (condition.type === SceneConditionType.DEVICE_ON) {
 				const device = props.devices.find((d) => d.uniqueId === condition.deviceId);
 				return `${device?.name || condition.deviceId} is ${condition.shouldBeOn ? 'on' : 'off'}`;
+			} else if (condition.type === SceneConditionType.TIME_WINDOW) {
+				const windows = condition.windows;
+				const entries = Object.entries(windows);
+				return entries
+					.map(([day, window]) => `${day} ${window.start} - ${window.end}`)
+					.join(', ');
 			}
 			return '';
 		},

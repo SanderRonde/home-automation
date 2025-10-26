@@ -144,6 +144,43 @@ export class SceneAPI {
 					);
 					return false;
 				}
+			} else if (condition.type === SceneConditionType.TIME_WINDOW) {
+				const now = new Date();
+				const currentDay = [
+					'sunday',
+					'monday',
+					'tuesday',
+					'wednesday',
+					'thursday',
+					'friday',
+					'saturday',
+				][now.getDay()] as keyof typeof condition.windows;
+				const currentTime = now.getHours() * 60 + now.getMinutes(); // Minutes since midnight
+
+				const window = condition.windows[currentDay];
+				if (!window) {
+					// No window for this day → condition passes (all-day)
+					continue;
+				}
+
+				// Parse start and end times (HH:MM format)
+				const [startHour, startMinute] = window.start.split(':').map(Number);
+				const [endHour, endMinute] = window.end.split(':').map(Number);
+				const startTime = startHour * 60 + startMinute;
+				const endTime = endHour * 60 + endMinute;
+
+				// Check if current time is within the window
+				if (startTime <= endTime) {
+					// Normal window (e.g., 09:00-17:00)
+					if (currentTime < startTime || currentTime > endTime) {
+						return false;
+					}
+				} else {
+					// Overnight window (e.g., 22:00-06:00)
+					if (currentTime < startTime && currentTime > endTime) {
+						return false;
+					}
+				}
 			} else {
 				assertUnreachable(condition);
 			}

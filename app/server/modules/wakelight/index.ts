@@ -10,7 +10,7 @@ export const Wakelight = new (class Wakelight extends ModuleMeta {
 	public init(config: ModuleConfig) {
 		this._logic = new WakelightLogic(
 			config.db,
-			this.modules.then((modules) => modules.device.api.value)
+			this.modules.then((modules) => modules.device.api.value) as unknown
 		);
 
 		return {

@@ -587,6 +587,53 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 												deviceId: z.string(),
 												shouldBeOn: z.boolean(),
 											}),
+											z.object({
+												type: z.literal(SceneConditionType.TIME_WINDOW),
+												windows: z.object({
+													monday: z
+														.object({
+															start: z.string(),
+															end: z.string(),
+														})
+														.optional(),
+													tuesday: z
+														.object({
+															start: z.string(),
+															end: z.string(),
+														})
+														.optional(),
+													wednesday: z
+														.object({
+															start: z.string(),
+															end: z.string(),
+														})
+														.optional(),
+													thursday: z
+														.object({
+															start: z.string(),
+															end: z.string(),
+														})
+														.optional(),
+													friday: z
+														.object({
+															start: z.string(),
+															end: z.string(),
+														})
+														.optional(),
+													saturday: z
+														.object({
+															start: z.string(),
+															end: z.string(),
+														})
+														.optional(),
+													sunday: z
+														.object({
+															start: z.string(),
+															end: z.string(),
+														})
+														.optional(),
+												}),
+											}),
 										])
 									)
 									.optional(),
@@ -699,6 +746,53 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 												type: z.literal(SceneConditionType.DEVICE_ON),
 												deviceId: z.string(),
 												shouldBeOn: z.boolean(),
+											}),
+											z.object({
+												type: z.literal(SceneConditionType.TIME_WINDOW),
+												windows: z.object({
+													monday: z
+														.object({
+															start: z.string(),
+															end: z.string(),
+														})
+														.optional(),
+													tuesday: z
+														.object({
+															start: z.string(),
+															end: z.string(),
+														})
+														.optional(),
+													wednesday: z
+														.object({
+															start: z.string(),
+															end: z.string(),
+														})
+														.optional(),
+													thursday: z
+														.object({
+															start: z.string(),
+															end: z.string(),
+														})
+														.optional(),
+													friday: z
+														.object({
+															start: z.string(),
+															end: z.string(),
+														})
+														.optional(),
+													saturday: z
+														.object({
+															start: z.string(),
+															end: z.string(),
+														})
+														.optional(),
+													sunday: z
+														.object({
+															start: z.string(),
+															end: z.string(),
+														})
+														.optional(),
+												}),
 											}),
 										])
 									)

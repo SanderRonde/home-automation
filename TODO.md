@@ -29,5 +29,6 @@
 - [x] Improve performance
 - [x] Button presses don't work anymore
 - [x] WLED on/off does not work from UI or from scene
-- [ ] Phone charge webhook does not work
+- [x] Phone charge webhook does not work
+- [ ] Get rid of dynamic imports
 - [ ] 3D house overview

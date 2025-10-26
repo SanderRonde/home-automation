@@ -14,9 +14,19 @@ import {
 	Alert,
 	Tooltip,
 	Snackbar,
+	Accordion,
+	AccordionSummary,
+	AccordionDetails,
+	Chip,
 } from '@mui/material';
-import { Add as AddIcon, Delete as DeleteIcon, ContentCopy as CopyIcon } from '@mui/icons-material';
-import type { Webhook } from '../../../server/modules/webhook/types';
+import {
+	Add as AddIcon,
+	Delete as DeleteIcon,
+	ContentCopy as CopyIcon,
+	History as HistoryIcon,
+	ExpandMore as ExpandMoreIcon,
+} from '@mui/icons-material';
+import type { Webhook, WebhookTrigger } from '../../../server/modules/webhook/types';
 import { apiGet, apiPost, apiDelete } from '../../lib/fetch';
 import React, { useState, useEffect } from 'react';
 
@@ -29,6 +39,10 @@ export function Webhooks(): JSX.Element {
 	const [error, setError] = useState<string | null>(null);
 	const [snackbarOpen, setSnackbarOpen] = useState(false);
 	const [snackbarMessage, setSnackbarMessage] = useState('');
+	const [triggersDialogOpen, setTriggersDialogOpen] = useState(false);
+	const [selectedWebhookName, setSelectedWebhookName] = useState<string>('');
+	const [triggers, setTriggers] = useState<WebhookTrigger[]>([]);
+	const [triggersLoading, setTriggersLoading] = useState(false);
 
 	const loadWebhooks = async () => {
 		try {
@@ -119,6 +133,35 @@ export function Webhooks(): JSX.Element {
 		setNewWebhookDescription('');
 	};
 
+	const handleOpenTriggersDialog = async (name: string) => {
+		setSelectedWebhookName(name);
+		setTriggersDialogOpen(true);
+		setTriggersLoading(true);
+
+		try {
+			const response = await apiGet('webhook', '/:name/triggers', { name });
+			if (response.ok) {
+				const data = await response.json();
+				setTriggers(data.triggers);
+			}
+		} catch (error) {
+			console.error('Failed to load triggers:', error);
+		} finally {
+			setTriggersLoading(false);
+		}
+	};
+
+	const handleCloseTriggersDialog = () => {
+		setTriggersDialogOpen(false);
+		setTriggers([]);
+		setSelectedWebhookName('');
+	};
+
+	const formatTimestamp = (timestamp: number): string => {
+		const date = new Date(timestamp);
+		return date.toLocaleString();
+	};
+
 	if (loading) {
 		return (
 			<Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
@@ -202,14 +245,33 @@ export function Webhooks(): JSX.Element {
 												</IconButton>
 											</Tooltip>
 										</Box>
-										<Typography
-											variant="caption"
-											color="text.secondary"
-											sx={{ mt: 1, display: 'block' }}
+										<Box
+											sx={{
+												display: 'flex',
+												gap: 2,
+												mt: 1,
+												alignItems: 'center',
+											}}
 										>
-											Created:{' '}
-											{new Date(webhook.createdAt).toLocaleDateString()}
-										</Typography>
+											<Typography variant="caption" color="text.secondary">
+												Created:{' '}
+												{new Date(webhook.createdAt).toLocaleDateString()}
+											</Typography>
+											<Typography variant="caption" color="text.secondary">
+												Last triggered:{' '}
+												{webhook.lastTriggeredAt
+													? formatTimestamp(webhook.lastTriggeredAt)
+													: 'Never'}
+											</Typography>
+										</Box>
+										<Button
+											size="small"
+											startIcon={<HistoryIcon />}
+											onClick={() => handleOpenTriggersDialog(webhook.name)}
+											sx={{ mt: 1 }}
+										>
+											View History
+										</Button>
 									</Box>
 									<IconButton
 										color="error"
@@ -268,6 +330,120 @@ export function Webhooks(): JSX.Element {
 				onClose={() => setSnackbarOpen(false)}
 				message={snackbarMessage}
 			/>
+
+			{/* Triggers History Dialog */}
+			<Dialog
+				open={triggersDialogOpen}
+				onClose={handleCloseTriggersDialog}
+				maxWidth="md"
+				fullWidth
+			>
+				<DialogTitle>Webhook Trigger History: {selectedWebhookName}</DialogTitle>
+				<DialogContent>
+					{triggersLoading ? (
+						<Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+							<CircularProgress />
+						</Box>
+					) : triggers.length === 0 ? (
+						<Typography variant="body1" color="text.secondary" sx={{ py: 2 }}>
+							No triggers recorded yet.
+						</Typography>
+					) : (
+						<Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
+							{triggers.map((trigger) => (
+								<Accordion key={trigger.id}>
+									<AccordionSummary expandIcon={<ExpandMoreIcon />}>
+										<Box
+											sx={{
+												display: 'flex',
+												alignItems: 'center',
+												gap: 2,
+												width: '100%',
+											}}
+										>
+											<Chip
+												label={trigger.method}
+												size="small"
+												color="primary"
+											/>
+											<Typography variant="body2" sx={{ flex: 1 }}>
+												{formatTimestamp(trigger.timestamp)}
+											</Typography>
+											<Typography variant="caption" color="text.secondary">
+												{trigger.ip}
+											</Typography>
+										</Box>
+									</AccordionSummary>
+									<AccordionDetails>
+										<Box
+											sx={{
+												display: 'flex',
+												flexDirection: 'column',
+												gap: 2,
+											}}
+										>
+											{/* Request Body */}
+											<Box>
+												<Typography
+													variant="subtitle2"
+													gutterBottom
+													sx={{ fontWeight: 'bold' }}
+												>
+													Request Body
+												</Typography>
+												<Box
+													sx={{
+														bgcolor: 'action.hover',
+														p: 1.5,
+														borderRadius: 1,
+														fontFamily: 'monospace',
+														fontSize: '0.875rem',
+														overflow: 'auto',
+														maxHeight: 200,
+													}}
+												>
+													<pre style={{ margin: 0 }}>
+														{JSON.stringify(trigger.body, null, 2)}
+													</pre>
+												</Box>
+											</Box>
+
+											{/* Request Headers */}
+											<Box>
+												<Typography
+													variant="subtitle2"
+													gutterBottom
+													sx={{ fontWeight: 'bold' }}
+												>
+													Request Headers
+												</Typography>
+												<Box
+													sx={{
+														bgcolor: 'action.hover',
+														p: 1.5,
+														borderRadius: 1,
+														fontFamily: 'monospace',
+														fontSize: '0.875rem',
+														overflow: 'auto',
+														maxHeight: 200,
+													}}
+												>
+													<pre style={{ margin: 0 }}>
+														{JSON.stringify(trigger.headers, null, 2)}
+													</pre>
+												</Box>
+											</Box>
+										</Box>
+									</AccordionDetails>
+								</Accordion>
+							))}
+						</Box>
+					)}
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={handleCloseTriggersDialog}>Close</Button>
+				</DialogActions>
+			</Dialog>
 		</Box>
 	);
 }

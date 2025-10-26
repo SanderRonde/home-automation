@@ -37,7 +37,13 @@ export type SceneTrigger =
 export enum SceneConditionType {
 	HOST_HOME = 'host-home',
 	DEVICE_ON = 'device-on',
+	TIME_WINDOW = 'time-window',
 }
+
+export type TimeWindow = {
+	start: string; // HH:MM format
+	end: string; // HH:MM format
+};
 
 export type SceneCondition =
 	| {
@@ -49,6 +55,18 @@ export type SceneCondition =
 			type: SceneConditionType.DEVICE_ON;
 			deviceId: string;
 			shouldBeOn: boolean;
+	  }
+	| {
+			type: SceneConditionType.TIME_WINDOW;
+			windows: {
+				monday?: TimeWindow;
+				tuesday?: TimeWindow;
+				wednesday?: TimeWindow;
+				thursday?: TimeWindow;
+				friday?: TimeWindow;
+				saturday?: TimeWindow;
+				sunday?: TimeWindow;
+			};
 	  };
 
 export interface SceneTriggerWithConditions {

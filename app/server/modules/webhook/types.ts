@@ -14,8 +14,19 @@ export interface Webhook {
 	name: string;
 	createdAt: number;
 	description?: string;
+	lastTriggeredAt?: number;
+}
+
+export interface WebhookTrigger {
+	id: string;
+	timestamp: number;
+	method: string;
+	body: unknown;
+	headers: Record<string, string>;
+	ip: string;
 }
 
 export interface WebhookDB {
 	webhooks?: Record<string, Webhook>;
+	triggers?: Record<string, WebhookTrigger[]>;
 }

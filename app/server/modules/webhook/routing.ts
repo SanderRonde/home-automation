@@ -1,9 +1,8 @@
-import { createServeOptions, untypedRequestJson, withRequestBody } from '../../lib/routes';
+import { createServeOptions, withRequestBody } from '../../lib/routes';
 import type { ServeOptions } from '../../lib/routes';
-import { LogObj } from '../../lib/logging/lob-obj';
+import { logTag } from '../../lib/logging/logger';
 import type { WebhookAPI } from './webhook-api';
 import type { ModuleConfig } from '../modules';
-import { triggerWebhooks } from './webhooks';
 import * as z from 'zod';
 
 function _initRouting(_config: ModuleConfig, api: WebhookAPI) {
@@ -43,15 +42,72 @@ function _initRouting(_config: ModuleConfig, api: WebhookAPI) {
 					return json({ success: true });
 				},
 			},
-			'/:name': async (req, _server, { text }) => {
+			'/:name/triggers': {
+				GET: (req, _server, { json, error }) => {
+					const name = req.params.name;
+					if (!api.webhookExists(name)) {
+						return error('Webhook not found', 404);
+					}
+					const triggers = api.getTriggers(name);
+					return json({ triggers });
+				},
+			},
+			'/:name': async (req, _server, { text, error }) => {
 				const name = req.params.name;
-				const params = (await untypedRequestJson(req)) as Record<string, unknown>;
-				await triggerWebhooks(
-					name,
-					params,
-					LogObj.fromReqRes(req).attachMessage(`Webhook ${name}`),
-					api
-				);
+				// Check if webhook exists in database
+				const webhookExists = api.webhookExists(name);
+
+				if (!webhookExists) {
+					logTag('webhook', 'red', `Webhook ${name} not found`);
+					return error('Webhook not found', 404);
+				}
+
+				// Record trigger details
+				const filteredHeaders: Record<string, string> = {};
+				const sensitiveHeaders = [
+					'authorization',
+					'cookie',
+					'set-cookie',
+					'x-api-key',
+					'x-auth-token',
+				];
+
+				for (const [key, value] of Object.entries(req.headers)) {
+					if (
+						!sensitiveHeaders.includes(key.toLowerCase()) &&
+						typeof value === 'string'
+					) {
+						filteredHeaders[key] = value;
+					}
+				}
+
+				let body: unknown;
+				try {
+					const rawBody = await req.text();
+					body = rawBody ? JSON.parse(rawBody) : {};
+				} catch {
+					body = {};
+				}
+
+				const ip =
+					filteredHeaders['x-forwarded-for'] || filteredHeaders['x-real-ip'] || 'unknown';
+
+				api.recordTrigger(name, {
+					timestamp: Date.now(),
+					method: req.method,
+					body,
+					headers: filteredHeaders,
+					ip,
+				});
+
+				// If webhook exists in database, trigger associated scenes
+				// const { SceneTriggerType } = await import('../../../../types/scene.js');
+				// const deviceAPI = await config.modules.device.api.value;
+				logTag('webhook', 'blue', `Triggering webhook ${name}`);
+				// await deviceAPI.sceneAPI.onTrigger({
+				// 	type: SceneTriggerType.WEBHOOK,
+				// 	webhookName: name,
+				// });
 				return text('OK', 200);
 			},
 		},

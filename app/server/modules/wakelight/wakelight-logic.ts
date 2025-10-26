@@ -18,7 +18,7 @@ export class WakelightLogic {
 
 	public constructor(
 		private readonly _db: Database<WakelightDB>,
-		private readonly _deviceAPI: Promise<DeviceAPI>
+		private readonly _deviceAPI: unknown
 	) {}
 
 	public getAlarmState(): AlarmState | null {
@@ -165,7 +165,7 @@ export class WakelightLogic {
 	}
 
 	private async _getValidDevices(deviceIds: string[]) {
-		const allDevices = (await this._deviceAPI).devices.current();
+		const allDevices = ((await this._deviceAPI) as DeviceAPI).devices.current();
 		const validDevices = [];
 
 		for (const deviceId of deviceIds) {
