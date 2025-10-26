@@ -1,7 +1,9 @@
 import type { IncludedIconNames } from '../../../client/dashboard/components/icon';
+import { SceneTriggerType } from '../../../../types/scene.js';
 import { SettablePromise } from '../../lib/settable-promise';
 import type { DeviceGroup } from '../../../../types/group';
 import type { Palette } from '../../../../types/palette';
+import { HOME_STATE } from '../home-detector/types.js';
 import type { Scene } from '../../../../types/scene';
 import type { Database } from '../../lib/db';
 import type { DeviceInfo } from './routing';
@@ -130,9 +132,7 @@ export const Device = new (class Device extends ModuleMeta {
 
 		// Subscribe to home-detector state changes to trigger scenes
 		const modules = await this.modules;
-		const { SceneTriggerType } = await import('../../../../types/scene.js');
-		void modules.homeDetector.onUpdate(async (newState, hostId) => {
-			const { HOME_STATE } = await import('../home-detector/types.js');
+		void modules.homeDetector.onUpdate(async (newState: HOME_STATE, hostId: string) => {
 			if (newState === HOME_STATE.HOME) {
 				await api.sceneAPI.onTrigger({
 					type: SceneTriggerType.HOST_ARRIVAL,

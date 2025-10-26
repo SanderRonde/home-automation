@@ -7,6 +7,8 @@ import {
 } from './cluster';
 import type { Scene, SceneCondition, SceneId, SceneTrigger } from '../../../../types/scene';
 import { SceneTriggerType, SceneConditionType } from '../../../../types/scene';
+import { applyPaletteToDevices } from './palette-executor.js';
+import { HOME_STATE } from '../home-detector/types.js';
 import { assertUnreachable } from '../../lib/assert';
 import { logTag } from '../../lib/logging/logger';
 import type { PaletteAPI } from './palette-api';
@@ -103,7 +105,6 @@ export class SceneAPI {
 
 		for (const condition of conditions) {
 			if (condition.type === SceneConditionType.HOST_HOME) {
-				const { HOME_STATE } = await import('../home-detector/types.js');
 				const detector = await modules.homeDetector.getDetector();
 				const hostState = detector.get(condition.hostId);
 
@@ -344,8 +345,7 @@ export class SceneAPI {
 							return false;
 						}
 
-						// Import and use palette executor
-						const { applyPaletteToDevices } = await import('./palette-executor.js');
+						// Use palette executor
 						const success = await applyPaletteToDevices(devices, palette);
 						return success;
 					}

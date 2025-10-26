@@ -5,6 +5,7 @@ import { DeviceOnOffCluster } from '../device/cluster';
 import type { AlarmState, WakelightDB } from './types';
 import type { DeviceAPI } from '../device/api';
 import type { Database } from '../../lib/db';
+import { Color } from '../../lib/color.js';
 
 const UPDATE_INTERVAL_SECONDS = 5;
 
@@ -222,7 +223,6 @@ export class WakelightLogic {
 								const currentColor = await colorControlCluster.color.get();
 								if (currentColor) {
 									// Keep current hue/saturation but update brightness
-									const { Color } = await import('../../lib/color.js');
 									const hsv = currentColor.toHSV();
 									const updatedColor = Color.fromHSV(
 										hsv.hue / 360,

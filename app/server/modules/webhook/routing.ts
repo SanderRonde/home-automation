@@ -1,11 +1,12 @@
 import { createServeOptions, withRequestBody } from '../../lib/routes';
+import { SceneTriggerType } from '../../../../types/scene';
 import type { ServeOptions } from '../../lib/routes';
 import { logTag } from '../../lib/logging/logger';
 import type { WebhookAPI } from './webhook-api';
 import type { ModuleConfig } from '../modules';
 import * as z from 'zod';
 
-function _initRouting(_config: ModuleConfig, api: WebhookAPI) {
+function _initRouting(config: ModuleConfig, api: WebhookAPI) {
 	return createServeOptions(
 		{
 			'/list': {
@@ -101,13 +102,12 @@ function _initRouting(_config: ModuleConfig, api: WebhookAPI) {
 				});
 
 				// If webhook exists in database, trigger associated scenes
-				// const { SceneTriggerType } = await import('../../../../types/scene.js');
-				// const deviceAPI = await config.modules.device.api.value;
+				const deviceAPI = await config.modules.device.api.value;
 				logTag('webhook', 'blue', `Triggering webhook ${name}`);
-				// await deviceAPI.sceneAPI.onTrigger({
-				// 	type: SceneTriggerType.WEBHOOK,
-				// 	webhookName: name,
-				// });
+				await deviceAPI.sceneAPI.onTrigger({
+					type: SceneTriggerType.WEBHOOK,
+					webhookName: name,
+				});
 				return text('OK', 200);
 			},
 		},
