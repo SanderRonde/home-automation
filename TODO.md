@@ -27,7 +27,7 @@
 - [x] Actions cluster
 - [x] Tuya support
 - [x] Improve performance
-- [ ] 3D house overview
 - [x] Button presses don't work anymore
 - [x] WLED on/off does not work from UI or from scene
 - [ ] Phone charge webhook does not work
+- [ ] 3D house overview
