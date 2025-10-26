@@ -19,6 +19,8 @@ import {
 	ListItemButton,
 	ListItemIcon,
 	ListItemText,
+	ListSubheader,
+	Divider,
 	styled,
 	Toolbar,
 } from '@mui/material';
@@ -49,20 +51,43 @@ export interface SidebarProps {
 }
 
 export const Sidebar = (props: SidebarProps): JSX.Element => {
-	const menuItems = [
-		{ text: 'Home', icon: <HomeIcon />, id: SidebarTab.HOME },
-		{ text: 'Scenes', icon: <MovieFilterIcon />, id: SidebarTab.SCENES },
-		{ text: 'Groups', icon: <GroupWorkIcon />, id: SidebarTab.GROUPS },
-		{ text: 'Palettes', icon: <PaletteIcon />, id: SidebarTab.PALETTES },
-		{ text: 'Webhooks', icon: <WebhookIcon />, id: SidebarTab.WEBHOOKS },
-		{ text: 'Home Detection', icon: <SensorsIcon />, id: SidebarTab.HOME_DETECTOR },
-		{ text: 'Wakelight', icon: <AlarmIcon />, id: SidebarTab.WAKELIGHT },
-		{ text: 'Settings', icon: <SettingsIcon />, id: SidebarTab.SETTINGS },
-		{ text: 'Devices', icon: <DeviceHubIcon />, id: SidebarTab.DEVICES }, // Updated icon for Matter
-		{ text: 'eWeLink', icon: <CloudIcon />, id: SidebarTab.EWELINK },
-		{ text: 'Tuya', icon: <RouterIcon />, id: SidebarTab.TUYA },
-		{ text: 'LED Sources', icon: <LightbulbIcon />, id: SidebarTab.LED_SOURCES },
-		{ text: 'MCP', icon: <SmartToyIcon />, id: SidebarTab.MCP },
+	const menuCategories = [
+		{
+			label: 'Dashboard',
+			items: [{ text: 'Home', icon: <HomeIcon />, id: SidebarTab.HOME }],
+		},
+		{
+			label: 'Scene Management',
+			items: [
+				{ text: 'Scenes', icon: <MovieFilterIcon />, id: SidebarTab.SCENES },
+				{ text: 'Groups', icon: <GroupWorkIcon />, id: SidebarTab.GROUPS },
+				{ text: 'Palettes', icon: <PaletteIcon />, id: SidebarTab.PALETTES },
+			],
+		},
+		{
+			label: 'Automation',
+			items: [
+				{ text: 'Webhooks', icon: <WebhookIcon />, id: SidebarTab.WEBHOOKS },
+				{ text: 'Home Detection', icon: <SensorsIcon />, id: SidebarTab.HOME_DETECTOR },
+				{ text: 'Wakelight', icon: <AlarmIcon />, id: SidebarTab.WAKELIGHT },
+			],
+		},
+		{
+			label: 'Devices',
+			items: [
+				{ text: 'Devices', icon: <DeviceHubIcon />, id: SidebarTab.DEVICES },
+				{ text: 'eWeLink', icon: <CloudIcon />, id: SidebarTab.EWELINK },
+				{ text: 'Tuya', icon: <RouterIcon />, id: SidebarTab.TUYA },
+				{ text: 'LED Sources', icon: <LightbulbIcon />, id: SidebarTab.LED_SOURCES },
+			],
+		},
+		{
+			label: 'Advanced',
+			items: [
+				{ text: 'MCP', icon: <SmartToyIcon />, id: SidebarTab.MCP },
+				{ text: 'Settings', icon: <SettingsIcon />, id: SidebarTab.SETTINGS },
+			],
+		},
 	];
 
 	const handleTabChange = (tab: SidebarTab) => {
@@ -85,17 +110,35 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 		>
 			<Toolbar /> {/* Spacer for TopBar */}
 			<List>
-				{menuItems.map((item) => (
-					<ListItemButton
-						key={item.id}
-						// eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
-						selected={props.currentTab === item.id}
-						onClick={() => handleTabChange(item.id)}
-						sx={{ cursor: 'pointer' }}
-					>
-						<ListItemIcon>{item.icon}</ListItemIcon>
-						<ListItemText primary={item.text} />
-					</ListItemButton>
+				{menuCategories.map((category, categoryIndex) => (
+					<React.Fragment key={category.label}>
+						<ListSubheader
+							sx={{
+								backgroundColor: 'transparent',
+								fontSize: '0.75rem',
+								fontWeight: 600,
+								color: 'text.secondary',
+								lineHeight: '32px',
+								textTransform: 'uppercase',
+								letterSpacing: '0.5px',
+							}}
+						>
+							{category.label}
+						</ListSubheader>
+						{category.items.map((item) => (
+							<ListItemButton
+								key={item.id}
+								// eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
+								selected={props.currentTab === item.id}
+								onClick={() => handleTabChange(item.id)}
+								sx={{ cursor: 'pointer' }}
+							>
+								<ListItemIcon>{item.icon}</ListItemIcon>
+								<ListItemText primary={item.text} />
+							</ListItemButton>
+						))}
+						{categoryIndex < menuCategories.length - 1 && <Divider sx={{ my: 1 }} />}
+					</React.Fragment>
 				))}
 			</List>
 		</StyledDrawer>
