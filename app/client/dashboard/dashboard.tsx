@@ -146,8 +146,4 @@ function DashboardApp() {
 }
 
 const root = createRoot(document.getElementById('root')!);
-root.render(
-	<React.StrictMode>
-		<DashboardApp />
-	</React.StrictMode>
-);
+root.render(<DashboardApp />);

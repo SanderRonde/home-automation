@@ -367,17 +367,16 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 						DeviceOnOffCluster,
 						async (cluster) => {
 							{
-								await Promise.all([
-									new Promise<void>((resolve) => {
-										const callback = (value: boolean) => {
-											if (value === body.isOn) {
-												resolve();
-											}
-										};
-										cluster.isOn.subscribe(callback);
-									}),
-								]);
+								const onDone = new Promise<void>((resolve) => {
+									const callback = (value: boolean) => {
+										if (value === body.isOn) {
+											resolve();
+										}
+									};
+									cluster.isOn.subscribe(callback);
+								});
 								void cluster.setOn(body.isOn);
+								await onDone;
 							}
 						}
 					)

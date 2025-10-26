@@ -1,8 +1,8 @@
 export class EventEmitter<V> implements Disposable {
-	protected _handlers = new Map<(value: V) => void, boolean>();
+	protected _handlers = new Set<(value: V) => void>();
 
 	public listen(handler: (value: NonNullable<V>) => void): () => void {
-		this._handlers.set(handler, true);
+		this._handlers.add(handler);
 		return () => this.removeListener(handler);
 	}
 
@@ -10,12 +10,8 @@ export class EventEmitter<V> implements Disposable {
 		this._handlers.delete(handler);
 	}
 
-	public emit(value: V | null | undefined): void {
-		if (value === null || value === undefined) {
-			return;
-		}
-
-		for (const handler of this._handlers.keys()) {
+	public emit(value: V): void {
+		for (const handler of this._handlers.values()) {
 			handler(value);
 		}
 	}

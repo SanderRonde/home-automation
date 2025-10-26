@@ -23,7 +23,11 @@ class HexLEDMapper<S, M> extends MappedData<M, S> {
 		alwaysTrack?: boolean
 	) {
 		super(source, mapper, alwaysTrack);
-		this.subscribe(() => self.onChange.emit(undefined));
+		this.subscribe((_value, isInitial) => {
+			if (!isInitial) {
+				return self.onChange.emit(undefined);
+			}
+		});
 	}
 
 	public override async get(): Promise<Exclude<M, undefined>> {

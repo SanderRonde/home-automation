@@ -26,7 +26,11 @@ class WLEDMapper<M> extends MappedData<M, WLEDClientState> {
 		alwaysTrack?: boolean
 	) {
 		super(self.proxy.state, mapper, alwaysTrack);
-		this.subscribe(() => self.onChange.emit(undefined));
+		this.subscribe((_value, isInitial) => {
+			if (!isInitial) {
+				return self.onChange.emit(undefined);
+			}
+		});
 	}
 }
 

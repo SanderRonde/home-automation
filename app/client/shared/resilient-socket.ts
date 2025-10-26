@@ -1,5 +1,13 @@
 import * as React from 'react';
 
+declare const window: Window & {
+	__ws: {
+		[url: string]: {
+			messages: unknown[];
+		};
+	};
+};
+
 interface Options<IN = unknown> {
 	url: string;
 	onOpen: (this: ResilientSocket) => void;
@@ -20,6 +28,7 @@ class ResilientSocket<OUT = unknown, IN = unknown> {
 	// Time after which a reconnect should be attempted
 	private _reconnectTime: number = 1000;
 	private _connectT: ReturnType<typeof setTimeout> | undefined = undefined;
+	private _messages: IN[] = [];
 
 	public constructor(private readonly _options: Options<IN>) {}
 
@@ -76,6 +85,16 @@ class ResilientSocket<OUT = unknown, IN = unknown> {
 		ws.onclose = this.#onClose;
 		ws.onmessage = this.#onMessage;
 		this._ws = ws;
+
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
+		const self = this;
+		// For debugging
+		window.__ws ??= {};
+		window.__ws[this._options.url] ??= {
+			get messages() {
+				return self._messages;
+			},
+		};
 	};
 
 	readonly #onOpen = () => {
@@ -115,6 +134,7 @@ class ResilientSocket<OUT = unknown, IN = unknown> {
 		}
 		// Assume JSON data
 		const message = JSON.parse(data);
+		this._messages.push(message as IN);
 
 		if (this._options.onMessage) {
 			this._options.onMessage.call(this, message);

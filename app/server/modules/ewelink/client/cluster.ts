@@ -119,7 +119,11 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 			this._config.value.then((config) => this._getItemData(config.device))
 		);
 		const data = new MappedData<R | undefined, PARAMS | undefined>(emitter, mapper);
-		data.subscribe(() => this.onChange.emit(undefined));
+		data.subscribe((_value, isInitial) => {
+			if (!isInitial) {
+				return this.onChange.emit(undefined);
+			}
+		});
 		this._listeners.add((data) => emitter.set(data));
 		return data as Data<R>;
 	}

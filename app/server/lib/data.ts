@@ -1,3 +1,7 @@
+type DataCallback<T> = {
+	bivarianceHack(value: T | undefined, isInitial?: boolean): void;
+}['bivarianceHack'];
+
 export class Data<T> {
 	protected readonly _subscribers: Set<DataCallback<T>> = new Set();
 	protected _setN: number = 0;
@@ -6,6 +10,47 @@ export class Data<T> {
 
 	protected create(): void {}
 	protected destroy(): void {}
+
+	private static deepEqual(a: unknown, b: unknown): boolean {
+		if (a === b) {
+			return true;
+		}
+
+		if (typeof a !== typeof b || typeof a !== 'object' || typeof b !== 'object') {
+			return false;
+		}
+
+		// Arrays
+		if (Array.isArray(a) && Array.isArray(b)) {
+			if (a.length !== b.length) {
+				return false;
+			}
+			for (let i = 0; i < a.length; i++) {
+				if (!Data.deepEqual(a[i], b[i])) {
+					return false;
+				}
+			}
+			return true;
+		}
+
+		// Objects, but not null
+		if (a !== null && b !== null && a !== undefined && b !== undefined) {
+			const aKeys = Object.keys(a);
+			const bKeys = Object.keys(b);
+			if (aKeys.length !== bKeys.length) {
+				return false;
+			}
+			for (const key of aKeys) {
+				// @ts-ignore
+				if (!bKeys.includes(key) || !Data.deepEqual(a[key], b[key])) {
+					return false;
+				}
+			}
+			return true;
+		}
+
+		return false;
+	}
 
 	public subscribe(callback: DataCallback<T>): () => void {
 		if (!this._subscribers.size) {
@@ -32,7 +77,7 @@ export class Data<T> {
 	}
 
 	public set(value: T): void {
-		if (this._value === value) {
+		if (Data.deepEqual(this._value, value)) {
 			return;
 		}
 
@@ -59,12 +104,8 @@ export class Data<T> {
 	}
 }
 
-type DataCallback<T> = {
-	bivarianceHack(value: T | undefined, isInitial?: boolean): void;
-}['bivarianceHack'];
 // Subset of `Data` that allows us to also map on data object that don't
 // expose the full Data interface.
-
 export class MappedData<Type, UpstreamType> extends Data<Type> {
 	protected readonly upstream: Data<UpstreamType>;
 	protected readonly mapper: Mapper<UpstreamType, Type>;

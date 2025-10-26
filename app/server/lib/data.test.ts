@@ -2,6 +2,152 @@ import { describe, expect, test, mock } from 'bun:test';
 import { CombinedData, Data, MappedData } from './data';
 
 describe('Data', () => {
+	describe('equality checks', () => {
+		test('should not notify if primitive value is the same', () => {
+			const data = new Data(5);
+			const callback = mock(() => {});
+
+			data.subscribe(callback);
+			callback.mockClear();
+
+			data.set(5);
+
+			expect(callback).toHaveBeenCalledTimes(0);
+		});
+
+		test('should not notify if string value is the same', () => {
+			const data = new Data('hello');
+			const callback = mock(() => {});
+
+			data.subscribe(callback);
+			callback.mockClear();
+
+			data.set('hello');
+
+			expect(callback).toHaveBeenCalledTimes(0);
+		});
+
+		test('should not notify if object with same properties is set', () => {
+			const data = new Data({ a: 1, b: 2 });
+			const callback = mock(() => {});
+
+			data.subscribe(callback);
+			callback.mockClear();
+
+			data.set({ a: 1, b: 2 });
+
+			expect(callback).toHaveBeenCalledTimes(0);
+		});
+
+		test('should notify if object has different values', () => {
+			const data = new Data({ a: 1, b: 2 });
+			const callback = mock(() => {});
+
+			data.subscribe(callback);
+			callback.mockClear();
+
+			data.set({ a: 1, b: 3 });
+
+			expect(callback).toHaveBeenCalledTimes(1);
+		});
+
+		test('should notify if object has different keys', () => {
+			const data = new Data({ a: 1, b: 2 });
+			const callback = mock(() => {});
+
+			data.subscribe(callback);
+			callback.mockClear();
+
+			data.set({ a: 1, b: 2, c: 3 });
+
+			expect(callback).toHaveBeenCalledTimes(1);
+		});
+
+		test('should not notify if array with same elements is set', () => {
+			const data = new Data([1, 2, 3]);
+			const callback = mock(() => {});
+
+			data.subscribe(callback);
+			callback.mockClear();
+
+			data.set([1, 2, 3]);
+
+			expect(callback).toHaveBeenCalledTimes(0);
+		});
+
+		test('should notify if array has different elements', () => {
+			const data = new Data([1, 2, 3]);
+			const callback = mock(() => {});
+
+			data.subscribe(callback);
+			callback.mockClear();
+
+			data.set([1, 2, 4]);
+
+			expect(callback).toHaveBeenCalledTimes(1);
+		});
+
+		test('should notify if array has different length', () => {
+			const data = new Data([1, 2, 3]);
+			const callback = mock(() => {});
+
+			data.subscribe(callback);
+			callback.mockClear();
+
+			data.set([1, 2, 3, 4]);
+
+			expect(callback).toHaveBeenCalledTimes(1);
+		});
+
+		test('should not notify if nested object is the same', () => {
+			const data = new Data({ outer: { inner: { value: 42 } }, list: [1, 2] });
+			const callback = mock(() => {});
+
+			data.subscribe(callback);
+			callback.mockClear();
+
+			data.set({ outer: { inner: { value: 42 } }, list: [1, 2] });
+
+			expect(callback).toHaveBeenCalledTimes(0);
+		});
+
+		test('should notify if nested object has changed', () => {
+			const data = new Data({ outer: { inner: { value: 42 } }, list: [1, 2] });
+			const callback = mock(() => {});
+
+			data.subscribe(callback);
+			callback.mockClear();
+
+			data.set({ outer: { inner: { value: 43 } }, list: [1, 2] });
+
+			expect(callback).toHaveBeenCalledTimes(1);
+		});
+
+		test('should handle null values correctly', () => {
+			const data = new Data<{ a: number } | null>(null);
+			const callback = mock(() => {});
+
+			data.subscribe(callback);
+			callback.mockClear();
+
+			data.set(null);
+
+			expect(callback).toHaveBeenCalledTimes(0);
+		});
+
+		test('should handle undefined values correctly', () => {
+			const data = new Data<{ a: number } | undefined>(undefined);
+			const callback = mock(() => {});
+
+			data.subscribe(callback);
+			callback.mockClear();
+
+			data.set(undefined);
+
+			expect(callback).toHaveBeenCalledTimes(0);
+		});
+	});
+
 	test('should store and retrieve current value', () => {
 		const data = new Data(42);
 		expect(data.current()).toBe(42);
@@ -20,18 +166,6 @@ describe('Data', () => {
 
 		expect(callback).toHaveBeenCalledTimes(2);
 		expect(callback).toHaveBeenNthCalledWith(2, 10, false);
-	});
-
-	test('should not notify if value is the same', () => {
-		const data = new Data(5);
-		const callback = mock(() => {});
-
-		data.subscribe(callback);
-		callback.mockClear();
-
-		data.set(5);
-
-		expect(callback).toHaveBeenCalledTimes(0);
 	});
 
 	test('should call create when first subscriber is added', () => {

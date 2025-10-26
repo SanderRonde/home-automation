@@ -28,3 +28,6 @@
 - [x] Tuya support
 - [x] Improve performance
 - [ ] 3D house overview
+- [ ] Button presses don't work anymore
+- [ ] WLED on/off does not work from UI or from scene
+- [ ] Phone charge webhook does not work
