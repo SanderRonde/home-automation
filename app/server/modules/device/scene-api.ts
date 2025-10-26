@@ -308,9 +308,9 @@ export class SceneAPI {
 						devices.map(async (device) => {
 							try {
 								if (sceneAction.cluster === DeviceClusterName.ON_OFF) {
-									const onOffCluster =
-										device.getClusterByType(DeviceOnOffCluster);
-									if (!onOffCluster) {
+									const onOffClusters =
+										device.getAllClustersByType(DeviceOnOffCluster);
+									if (onOffClusters.length === 0) {
 										logTag(
 											'scene',
 											'yellow',
@@ -319,14 +319,16 @@ export class SceneAPI {
 										);
 										return false;
 									}
-									await onOffCluster.setOn(sceneAction.action.isOn);
+									for (const onOffCluster of onOffClusters) {
+										await onOffCluster.setOn(sceneAction.action.isOn);
+									}
 								} else if (
 									sceneAction.cluster === DeviceClusterName.WINDOW_COVERING
 								) {
-									const windowCoveringCluster = device.getClusterByType(
+									const windowCoveringClusters = device.getAllClustersByType(
 										DeviceWindowCoveringCluster
 									);
-									if (!windowCoveringCluster) {
+									if (windowCoveringClusters.length === 0) {
 										logTag(
 											'scene',
 											'yellow',
@@ -335,9 +337,12 @@ export class SceneAPI {
 										);
 										return false;
 									}
-									await windowCoveringCluster.goToLiftPercentage({
-										percentage: sceneAction.action.targetPositionLiftPercentage,
-									});
+									for (const windowCoveringCluster of windowCoveringClusters) {
+										await windowCoveringCluster.goToLiftPercentage({
+											percentage:
+												sceneAction.action.targetPositionLiftPercentage,
+										});
+									}
 								} else if (
 									sceneAction.cluster === DeviceClusterName.COLOR_CONTROL
 								) {
@@ -358,9 +363,9 @@ export class SceneAPI {
 									}
 
 									// Handle manual HSV color
-									const colorControlCluster =
-										device.getClusterByType(DeviceColorControlCluster);
-									if (!colorControlCluster) {
+									const colorControlClusters =
+										device.getAllClustersByType(DeviceColorControlCluster);
+									if (colorControlClusters.length === 0) {
 										logTag(
 											'scene',
 											'yellow',
@@ -374,13 +379,15 @@ export class SceneAPI {
 										sceneAction.action.saturation / 100,
 										sceneAction.action.value / 100
 									);
-									await colorControlCluster.setColor({ color });
+									for (const colorControlCluster of colorControlClusters) {
+										await colorControlCluster.setColor({ color });
+									}
 								} else if (
 									sceneAction.cluster === DeviceClusterName.LEVEL_CONTROL
 								) {
-									const levelControlCluster =
-										device.getClusterByType(DeviceLevelControlCluster);
-									if (!levelControlCluster) {
+									const levelControlClusters =
+										device.getAllClustersByType(DeviceLevelControlCluster);
+									if (levelControlClusters.length === 0) {
 										logTag(
 											'scene',
 											'yellow',
@@ -389,9 +396,11 @@ export class SceneAPI {
 										);
 										return false;
 									}
-									await levelControlCluster.setLevel({
-										level: sceneAction.action.level / 100,
-									});
+									for (const levelControlCluster of levelControlClusters) {
+										await levelControlCluster.setLevel({
+											level: sceneAction.action.level / 100,
+										});
+									}
 								} else {
 									assertUnreachable(sceneAction);
 								}
