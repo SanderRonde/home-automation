@@ -7,6 +7,8 @@ import type { Device } from '../../device/device';
 
 export class WLEDDevice extends DeviceEndpoint implements Device {
 	public readonly onChange: EventEmitter<void> = new EventEmitter();
+	public clusters: Cluster[];
+	public endpoints: DeviceEndpoint[];
 
 	public constructor(
 		private readonly _ip: string,
@@ -14,6 +16,12 @@ export class WLEDDevice extends DeviceEndpoint implements Device {
 		protected readonly _client: WLEDClient
 	) {
 		super();
+		this.clusters = [
+			new WLEDOnOffCluster(this._client),
+			new WLEDColorControlCluster(this._client),
+			new WLEDLevelControlCluster(this._client),
+		];
+		this.endpoints = [];
 		for (const cluster of this.clusters) {
 			cluster.onChange.listen(() => this.onChange.emit(undefined));
 		}
@@ -29,18 +37,6 @@ export class WLEDDevice extends DeviceEndpoint implements Device {
 
 	public getDeviceName(): Promise<string> {
 		return Promise.resolve(this._info.name ?? this._ip);
-	}
-
-	public get clusters(): Cluster[] {
-		return [
-			new WLEDOnOffCluster(this._client),
-			new WLEDColorControlCluster(this._client),
-			new WLEDLevelControlCluster(this._client),
-		];
-	}
-
-	public get endpoints(): DeviceEndpoint[] {
-		return [];
 	}
 
 	public getManagementUrl(): Promise<string | undefined> {
