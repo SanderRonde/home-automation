@@ -1,3 +1,13 @@
+import type {
+	DashboardDeviceClusterOnOff,
+	DashboardDeviceClusterLevelControl,
+	DashboardDeviceClusterColorControl,
+	DashboardDeviceClusterWindowCovering,
+	DashboardDeviceClusterWithStateMap,
+	DeviceListWithValuesResponse,
+	DashboardDeviceClusterWithState,
+	DashboardDeviceClusterSwitch,
+} from '../../../server/modules/device/routing';
 import {
 	Dialog,
 	DialogTitle,
@@ -21,15 +31,6 @@ import {
 	type ListItemProps,
 	type TextFieldProps,
 } from '@mui/material';
-import type {
-	DashboardDeviceClusterOnOff,
-	DashboardDeviceClusterLevelControl,
-	DashboardDeviceClusterColorControl,
-	DashboardDeviceClusterWindowCovering,
-	DashboardDeviceClusterWithStateMap,
-	DeviceListWithValuesResponse,
-	DashboardDeviceClusterWithState,
-} from '../../../server/modules/device/routing';
 import type {
 	Scene,
 	SceneDeviceAction,
@@ -363,7 +364,12 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 				const device = props.devices.find((d) => d.uniqueId === trigger.deviceId);
 				label = `Button pressed: ${device?.name || trigger.deviceId}`;
 				if (trigger.buttonIndex !== undefined) {
-					label += ` (Button ${trigger.buttonIndex + 1})`;
+					const switchCluster = device?.flatAllClusters.find(
+						(cluster): cluster is DashboardDeviceClusterSwitch =>
+							cluster.name === DeviceClusterName.SWITCH &&
+							cluster.index === trigger.buttonIndex
+					);
+					label += ` (${switchCluster?.label || `Button ${trigger.buttonIndex + 1}`})`;
 				}
 			} else if (trigger.type === SceneTriggerType.HOST_ARRIVAL) {
 				const host = hosts.find((h) => h.name === trigger.hostId);

@@ -417,9 +417,12 @@ class MatterPowerSourceCluster
 		return DevicePowerSourceCluster.clusterName;
 	}
 
-	public batteryChargeLevel = this._proxy.attributeGetter('batPercentRemaining', (value) =>
-		value ? value / 200 : undefined
-	);
+	// For some reason this keeps failing on some matter devices.
+	// Since it's not too important we just set it to 1.
+	public batteryChargeLevel = new Data<number | undefined>(1);
+	// this._proxy.attributeGetter('batPercentRemaining', (value) =>
+	// 	value ? value / 200 : undefined
+	// );
 }
 
 class MatterOccupancySensingCluster

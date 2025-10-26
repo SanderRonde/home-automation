@@ -290,7 +290,11 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 				return json({ history });
 			},
 			'/button-press/:deviceId': async (req, _server, { json }) => {
-				const history = await api.buttonPressTracker.getHistory(req.params.deviceId, 100);
+				const history = await api.buttonPressTracker.getHistory(
+					req.params.deviceId,
+					undefined,
+					100
+				);
 				return json({ history });
 			},
 			'/temperature/:deviceId/:timeframe': async (req, _server, { json }) => {

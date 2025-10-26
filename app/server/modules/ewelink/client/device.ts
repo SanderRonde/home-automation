@@ -156,10 +156,10 @@ class EwelinkR5SceneControllerDevice extends EwelinkDevice {
 	public constructor(eWeLinkConfig: EWeLinkConfig) {
 		const outletNames = [
 			'Top left',
-			'Bottom left',
 			'Top middle',
-			'Bottom middle',
 			'Top right',
+			'Bottom left',
+			'Bottom middle',
 			'Bottom right',
 		];
 		const endpoints = new Array(6).fill(0).map(

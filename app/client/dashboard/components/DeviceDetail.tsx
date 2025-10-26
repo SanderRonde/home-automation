@@ -10,6 +10,7 @@ import type {
 	DashboardDeviceClusterSensorGroup,
 	DashboardDeviceClusterThermostat,
 	DeviceListWithValuesResponse,
+	DashboardDeviceClusterSwitch,
 } from '../../../server/modules/device/routing';
 import {
 	Chart as ChartJS,
@@ -455,10 +456,18 @@ const SwitchDetail = (props: SwitchDetailProps): JSX.Element => {
 		if (buttonIndex === undefined || buttonIndex === null) {
 			return 'Pressed';
 		}
-		return `Button ${buttonIndex + 1} pressed`;
+		return `${buttonIndexLabels[buttonIndex] || `Button ${buttonIndex + 1}`} pressed`;
 	};
 
 	const lastPress = history.length > 0 ? history[0] : null;
+	const switchClusters = props.device.flatAllClusters.filter(
+		(cluster): cluster is DashboardDeviceClusterSwitch =>
+			cluster.name === DeviceClusterName.SWITCH
+	);
+	const buttonIndexLabels: Record<number, string> = {};
+	for (const cluster of switchClusters) {
+		buttonIndexLabels[cluster.index] = cluster.label;
+	}
 
 	return (
 		<motion.div
