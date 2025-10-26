@@ -1,9 +1,9 @@
 import { Box, Paper, TextField, Button, Typography, Alert, Container } from '@mui/material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import React, { useState, useEffect } from 'react';
+import { apiGet, apiPost } from '../lib/fetch';
 import { createRoot } from 'react-dom/client';
-import React, { useState } from 'react';
-import { apiPost } from '../lib/fetch';
 
 const darkTheme = createTheme({
 	palette: {
@@ -16,6 +16,27 @@ function LoginPage(): JSX.Element {
 	const [password, setPassword] = useState<string>('');
 	const [error, setError] = useState<string>('');
 	const [loading, setLoading] = useState<boolean>(false);
+
+	// Check if user is already authenticated
+	useEffect(() => {
+		const checkAuthentication = async () => {
+			try {
+				const response = await apiGet('auth', '/me', {});
+				if (response.ok) {
+					// User is already authenticated, redirect them
+					const params = new URLSearchParams(window.location.search);
+					const redirect = params.get('redirect') || '/dashboard';
+					window.location.href = redirect;
+				}
+				// If not authenticated (response.ok is false), do nothing - show login form
+			} catch (error) {
+				// On error, show login form normally
+				console.error('Authentication check failed:', error);
+			}
+		};
+
+		void checkAuthentication();
+	}, []);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
