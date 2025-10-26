@@ -4,7 +4,7 @@ import {
 	DeviceLevelControlCluster,
 	DeviceOnOffCluster,
 } from '../../device/cluster';
-import type { ActionStruct, DeviceClusterName } from '../../device/cluster';
+import type { DeviceAction, DeviceClusterName } from '../../device/cluster';
 import { CombinedData, Data, MappedData } from '../../../lib/data';
 import { EventEmitter } from '../../../lib/event-emitter';
 import type { LEDClient, RGBColor } from './led-client';
@@ -146,7 +146,7 @@ export class HexLEDActionsCluster extends ConfigurableCluster implements DeviceA
 		new CombinedData([this.client.presets, this.client.state]),
 		([presets, state]) => {
 			return presets.map(
-				(preset): ActionStruct => ({
+				(preset): DeviceAction => ({
 					id: preset.id,
 					name: preset.name,
 					type: Actions.ActionType.Other,

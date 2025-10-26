@@ -229,7 +229,7 @@ export abstract class DeviceColorControlCluster extends Cluster {
 	public abstract getSegmentCount(): number;
 }
 
-export interface ActionStruct {
+export interface DeviceAction {
 	id: number;
 	name: string;
 	type: Actions.ActionType;
@@ -243,7 +243,7 @@ export abstract class DeviceActionsCluster extends Cluster {
 		return DeviceActionsCluster.clusterName;
 	}
 
-	public abstract actionList: Data<ActionStruct[]>;
+	public abstract actionList: Data<DeviceAction[]>;
 	public abstract executeAction(args: { actionId: number }): Promise<void>;
 }
 

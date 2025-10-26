@@ -1,4 +1,9 @@
-import { WLEDColorControlCluster, WLEDLevelControlCluster, WLEDOnOffCluster } from './cluster';
+import {
+	WLEDColorControlCluster,
+	WLEDLevelControlCluster,
+	WLEDOnOffCluster,
+	WLEDActionsCluster,
+} from './cluster';
 import { DeviceEndpoint, DeviceSource } from '../../device/device';
 import type { WLEDClient, WLEDClientInfo } from 'wled-client';
 import { EventEmitter } from '../../../lib/event-emitter';
@@ -20,6 +25,7 @@ export class WLEDDevice extends DeviceEndpoint implements Device {
 			new WLEDOnOffCluster(this._client),
 			new WLEDColorControlCluster(this._client),
 			new WLEDLevelControlCluster(this._client),
+			new WLEDActionsCluster(this._client),
 		];
 		this.endpoints = [];
 		for (const cluster of this.clusters) {

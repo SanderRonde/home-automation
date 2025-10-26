@@ -3,29 +3,23 @@ import {
 	DeviceLevelControlCluster,
 	DeviceOnOffCluster,
 } from '../../device/cluster';
-import type { WLEDClient, WLEDClientState } from 'wled-client';
-import type { DeviceClusterName } from '../../device/cluster';
+import type { WLEDClient, WLEDClientPresets, WLEDClientState } from 'wled-client';
+import type { DeviceAction, DeviceClusterName } from '../../device/cluster';
+import { DeviceActionsCluster } from '../../device/cluster';
 import { EventEmitter } from '../../../lib/event-emitter';
 import { Data, MappedData } from '../../../lib/data';
+import { CombinedData } from '../../../lib/data';
+import { Actions } from '@matter/main/clusters';
 import type { Mapper } from '../../../lib/data';
 import { Color } from '../../../lib/color';
 
-class WLEDState extends Data<WLEDClientState> {
-	public constructor(client: WLEDClient) {
-		super(client.state);
-	}
-}
-
-class WLEDMapper<M> extends MappedData<M, WLEDClientState> {
+class WLEDMapper<D, M> extends MappedData<M, D> {
 	public constructor(
-		self: {
-			proxy: WLEDProxy;
-			onChange: EventEmitter<void>;
-		},
-		mapper: Mapper<WLEDClientState, M>,
-		alwaysTrack?: boolean
+		self: { onChange: EventEmitter<void> },
+		data: Data<D>,
+		mapper: Mapper<D, M>
 	) {
-		super(self.proxy.state, mapper, alwaysTrack);
+		super(data, mapper, false);
 		this.subscribe((_value, isInitial) => {
 			if (!isInitial) {
 				return self.onChange.emit(undefined);
@@ -35,11 +29,17 @@ class WLEDMapper<M> extends MappedData<M, WLEDClientState> {
 }
 
 class WLEDProxy implements Disposable {
-	public state: WLEDState;
+	public state: Data<WLEDClientState>;
+	public presets: Data<WLEDClientPresets>;
 
-	public constructor(private readonly _client: WLEDClient) {
+	public constructor(
+		private readonly _client: WLEDClient,
+		public readonly onChange: EventEmitter<void>
+	) {
 		this._client = _client;
-		this.state = new WLEDState(this._client);
+		this.state = new Data(this._client.state);
+		this.presets = new Data(this._client.presets);
+
 		this._client.on('update:state', this._stateChange);
 		this._client.on('update:context', this._stateChange);
 		this._client.on('update:effects', this._stateChange);
@@ -51,6 +51,7 @@ class WLEDProxy implements Disposable {
 
 	private readonly _stateChange = () => {
 		this.state.set(this._client.state);
+		this.presets.set(this._client.presets);
 	};
 
 	public [Symbol.dispose](): void {
@@ -69,7 +70,7 @@ class ConfigurableCluster {
 	public onChange: EventEmitter<void> = new EventEmitter();
 
 	public constructor(public readonly client: WLEDClient) {
-		this.proxy = new WLEDProxy(client);
+		this.proxy = new WLEDProxy(client, this.onChange);
 	}
 
 	public [Symbol.dispose](): void {
@@ -78,7 +79,7 @@ class ConfigurableCluster {
 }
 
 export class WLEDOnOffCluster extends ConfigurableCluster implements DeviceOnOffCluster {
-	public isOn = new WLEDMapper(this, (state) => state?.on ?? false);
+	public isOn = new WLEDMapper(this, this.proxy.state, (state) => state?.on ?? false);
 
 	public getName(): DeviceClusterName {
 		return DeviceOnOffCluster.clusterName;
@@ -101,7 +102,11 @@ export class WLEDLevelControlCluster
 	extends ConfigurableCluster
 	implements DeviceLevelControlCluster
 {
-	public currentLevel = new WLEDMapper(this, (state) => (state?.brightness ?? 0) / 255);
+	public currentLevel = new WLEDMapper(
+		this,
+		this.proxy.state,
+		(state) => (state?.brightness ?? 0) / 255
+	);
 
 	public getName(): DeviceClusterName {
 		return DeviceLevelControlCluster.clusterName;
@@ -129,7 +134,7 @@ export class WLEDColorControlCluster
 		return DeviceColorControlCluster.clusterName;
 	}
 
-	public color = new WLEDMapper(this, (state) => {
+	public color = new WLEDMapper(this, this.proxy.state, (state) => {
 		const color = state.segments?.[0]?.colors?.[0];
 		if (!color) {
 			return new Color(0, 0, 0);
@@ -172,4 +177,35 @@ export class WLEDColorControlCluster
 		}
 		return this.client.setSegments(segments);
 	};
+}
+
+export class WLEDActionsCluster extends ConfigurableCluster implements DeviceActionsCluster {
+	public getName(): DeviceClusterName {
+		return DeviceActionsCluster.clusterName;
+	}
+
+	public executeAction = async (args: { actionId: number }): Promise<void> => {
+		await this.client.setPreset(args.actionId);
+	};
+
+	public actionList = new WLEDMapper(
+		this,
+		new CombinedData([this.proxy.state, this.proxy.presets]),
+		([state, presets]) => {
+			const actions: DeviceAction[] = [];
+			for (const id in presets) {
+				const preset = presets[id];
+				actions.push({
+					id: Number(id),
+					name: preset.name || `Preset ${id}`,
+					type: Actions.ActionType.Scene,
+					state:
+						state.presetId === Number(id)
+							? Actions.ActionState.Active
+							: Actions.ActionState.Inactive,
+				});
+			}
+			return actions;
+		}
+	);
 }
