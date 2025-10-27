@@ -3,9 +3,12 @@ import {
 	CHANGE_PING_INTERVAL,
 	HOME_PING_INTERVAL,
 	AWAY_PING_INTERVAL,
-	AWAY_GRACE_PERIOD,
+	GRACE_PERIOD_PINGS,
 } from './constants';
+import type { Device as DeviceInterface } from '../device/device';
+import { DeviceBooleanStateCluster } from '../device/cluster';
 import { logDev } from '../../lib/logging/log-dev';
+import { logTag } from '../../lib/logging/logger';
 import type { Database } from '../../lib/db';
 import type { HomeDetectorDB } from '.';
 import type { Host } from './routing';
@@ -20,11 +23,10 @@ function wait(time: number) {
 
 class Pinger {
 	private _state: HOME_STATE | null = null;
+	private _lastState: HOME_STATE | null = null;
 	private _stopped: boolean = false;
 	public leftAt: Date = new Date(1970, 0, 0, 0, 0, 0, 0);
 	public joinedAt: Date = new Date(1970, 0, 0, 0, 0, 0, 0);
-	private _awayDetectedAt: Date | null = null;
-	private _inGracePeriod: boolean = false;
 	private _initialStateConfirmed: boolean = false;
 
 	public get state() {
@@ -54,16 +56,10 @@ class Pinger {
 		this._stopped = true;
 	}
 
-	private async _ping(ip: string) {
-		const { alive } = await ping.promise.probe(ip, {
-			timeout: 5,
-		});
-		return {
-			state: alive ? HOME_STATE.HOME : HOME_STATE.AWAY,
-		};
-	}
-
-	private async _pingAll(): Promise<
+	private async _pingAll(
+		multiPing: boolean,
+		pingOnly?: string
+	): Promise<
 		| {
 				ip: string;
 				state: HOME_STATE.HOME;
@@ -74,18 +70,30 @@ class Pinger {
 		  }
 	> {
 		const pings = await Promise.all(
-			this._config.ips.map((ip) => {
-				return ping.promise.probe(ip, {
-					timeout: 5,
-				});
+			this._config.ips.flatMap(async (ip) => {
+				if (pingOnly && ip !== pingOnly) {
+					return Promise.resolve([]);
+				}
+				const ipPings = [];
+				for (let i = 0; i < (multiPing ? AWAY_MIN_CONSECUTIVE_PINGS : 1); i++) {
+					await wait(CHANGE_PING_INTERVAL);
+					ipPings.push(
+						await ping.promise.probe(ip, {
+							timeout: 5,
+						})
+					);
+				}
+				return ipPings;
 			})
 		);
-		for (const ping of pings) {
-			if (ping.alive) {
-				return {
-					ip: ping.host,
-					state: HOME_STATE.HOME,
-				};
+		for (const ipPings of pings) {
+			for (const ping of ipPings) {
+				if (ping.alive) {
+					return {
+						ip: ping.host,
+						state: HOME_STATE.HOME,
+					};
+				}
 			}
 		}
 		return {
@@ -93,143 +101,70 @@ class Pinger {
 		};
 	}
 
-	private async _fastPing(ip: string) {
-		const pings: Promise<{
-			ip?: string;
-			state: HOME_STATE;
-		}>[] = [];
-
-		for (let i = 0; i < AWAY_MIN_CONSECUTIVE_PINGS; i++) {
-			pings.push(this._ping(ip));
-			await wait(CHANGE_PING_INTERVAL * 1000);
-		}
-
-		const results = await Promise.all(pings);
-		logDev('device', this.name, 'fast ping results:', results);
-		return results.some((v) => v.state === HOME_STATE.HOME) ? HOME_STATE.HOME : HOME_STATE.AWAY;
-	}
-
-	private async _stateChange(
-		newState:
-			| {
-					ip: string;
-					state: HOME_STATE.HOME;
-			  }
-			| {
-					ip?: string | undefined;
-					state: HOME_STATE.AWAY;
-			  }
-	) {
-		this._db.update((old) => ({
-			...old,
-			[this._config.name]: newState.state,
-		}));
-		if (newState.state === HOME_STATE.HOME) {
-			return this._fastPing(newState.ip);
-		} else {
-			return (
-				await Promise.all(
-					this._config.ips.map((ip) => {
-						return this._fastPing(ip);
-					})
-				)
-			).some((v) => v === HOME_STATE.HOME)
-				? HOME_STATE.HOME
-				: HOME_STATE.AWAY;
-		}
-	}
-
 	private async _pingLoop() {
 		while (!this._stopped) {
-			const newState = await this._pingAll();
+			let newState = await this._pingAll(false);
 			logDev('device', this.name, 'ping loop started (new state:', newState, ')');
 
-			// Handle state transitions
-			if (newState.state !== this._state) {
-				if (newState.state === HOME_STATE.HOME) {
-					logDev('device', this.name, 'is home');
-					// Device came back home - cancel any grace period and update immediately
-					this._awayDetectedAt = null;
-					this._inGracePeriod = false;
-					this.joinedAt = new Date();
-					const shouldUpdate = this._initialStateConfirmed;
-					this._state = HOME_STATE.HOME;
-					this._initialStateConfirmed = true;
-					// Save HOME state to database
-					this._db.update((old) => ({
-						...old,
-						[this._config.name]: HOME_STATE.HOME,
-					}));
-					if (shouldUpdate) {
-						await this._onChange(HOME_STATE.HOME);
-					}
-					await wait(CHANGE_PING_INTERVAL);
-				} else {
-					logDev('device', this.name, 'is away');
-					// Device appears to be away
-					const finalState: HOME_STATE = await this._stateChange(newState);
-					logDev('device', this.name, 'is away (final state:', finalState, ')');
+			if (newState.state === this._lastState) {
+				await wait(
+					newState.state === HOME_STATE.HOME ? HOME_PING_INTERVAL : AWAY_PING_INTERVAL
+				);
+				continue;
+			}
 
-					if (finalState === HOME_STATE.AWAY && this._state === HOME_STATE.HOME) {
-						// Start grace period - device went away from home
-						if (!this._inGracePeriod) {
-							logDev('device', this.name, 'is away (grace period started)');
-							this._awayDetectedAt = new Date();
-							this._inGracePeriod = true;
-						} else {
-							logDev('device', this.name, 'is away (grace period already started)');
-						}
-						// Don't update state yet, keep checking
-						await wait(CHANGE_PING_INTERVAL * 1000);
-					} else if (finalState === HOME_STATE.AWAY && this._state === HOME_STATE.AWAY) {
-						logDev('device', this.name, 'is away (already away)');
-						// Already away, no grace period needed
-						this._initialStateConfirmed = true;
-						await wait(AWAY_PING_INTERVAL * 1000);
-					}
+			newState = await this._pingAll(true, newState.ip);
+			logDev('device', this.name, 'ping loop pings (final state:', newState, ')');
+
+			const shouldUpdate = this._initialStateConfirmed;
+			this._initialStateConfirmed = true;
+
+			this._lastState = newState.state;
+			if (newState.state === HOME_STATE.HOME) {
+				logDev('device', this.name, 'ping loop home (joined at:', this.joinedAt, ')');
+				this.joinedAt = new Date();
+				this._state = HOME_STATE.HOME;
+				this._db.update((old) => ({
+					...old,
+					[this._config.name]: HOME_STATE.HOME,
+				}));
+				if (shouldUpdate) {
+					await this._onChange(HOME_STATE.HOME);
 				}
-			} else {
-				// State hasn't changed
-				if (this._inGracePeriod && this._awayDetectedAt) {
-					// Check if grace period has expired
-					const elapsed = (new Date().getTime() - this._awayDetectedAt.getTime()) / 1000;
-					if (elapsed >= AWAY_GRACE_PERIOD) {
-						logDev('device', this.name, 'is away (grace period expired)');
-						// Grace period expired, mark as away
-						this._inGracePeriod = false;
-						this.leftAt = new Date();
-						const shouldUpdate = this._initialStateConfirmed;
-						this._state = HOME_STATE.AWAY;
-						this._initialStateConfirmed = true;
-						this._db.update((old) => ({
-							...old,
-							[this._config.name]: HOME_STATE.AWAY,
-						}));
-						if (shouldUpdate) {
-							await this._onChange(HOME_STATE.AWAY);
-						}
-						await wait(CHANGE_PING_INTERVAL * 1000);
-					} else {
-						logDev('device', this.name, 'is normal (still in grace period)');
-						// Still in grace period, keep checking frequently
-						await wait(CHANGE_PING_INTERVAL * 1000);
-					}
-				} else {
-					logDev('device', this.name, 'is normal (state:', this._state, ')');
-					// Normal operation, no grace period
-					this._initialStateConfirmed = true;
-					await wait(
-						(this._state === HOME_STATE.HOME
-							? HOME_PING_INTERVAL
-							: AWAY_PING_INTERVAL) * 1000
-					);
+				await wait(CHANGE_PING_INTERVAL);
+				continue;
+			}
+
+			this.leftAt = new Date();
+
+			// Device appears to be away, start grace period
+			logDev('device', this.name, 'ping loop away (left at:', this.leftAt, ')');
+			for (let i = 0; i < GRACE_PERIOD_PINGS; i++) {
+				await wait(CHANGE_PING_INTERVAL);
+				newState = await this._pingAll(true, newState.ip);
+				if (newState.state === HOME_STATE.HOME) {
+					// Is home after all
+					logDev('device', this.name, 'ping loop away (home after grace period)');
+					break;
 				}
 			}
+
+			logDev('device', this.name, 'ping loop away (final state:', newState, ')');
+			this._state = HOME_STATE.AWAY;
+			this._db.update((old) => ({
+				...old,
+				[this._config.name]: HOME_STATE.AWAY,
+			}));
+			if (shouldUpdate) {
+				await this._onChange(HOME_STATE.AWAY);
+			}
+			await wait(CHANGE_PING_INTERVAL);
 		}
 	}
 
 	private async _init() {
 		this._state = this._db.current()[this._config.name] ?? HOME_STATE.AWAY;
+		this._lastState = this._state;
 		await this._pingLoop();
 	}
 }
@@ -241,6 +176,7 @@ export interface HostConfig {
 
 export interface HostsConfigDB {
 	hosts: Record<string, HostConfig>;
+	doorSensorIds?: string[];
 }
 
 export class Detector {
@@ -252,9 +188,12 @@ export class Detector {
 			fullState: Record<string, HOME_STATE>
 		) => void | Promise<void>;
 	}[] = [];
+	private _rapidPingListeners: Array<(anyoneHome: boolean) => void | Promise<void>> = [];
 	private readonly _db: Database<HomeDetectorDB>;
 	private readonly _hostsDb: Database<HostsConfigDB>;
 	private _pingers: Map<string, Pinger> = new Map();
+	private _rapidPingUntil: Date | null = null;
+	private _rapidPingStartState: Record<string, HOME_STATE> | null = null;
 
 	public constructor({
 		db,
@@ -456,5 +395,135 @@ export class Detector {
 		});
 
 		return true;
+	}
+
+	public getDoorSensorIds(): string[] {
+		return this._hostsDb.current().doorSensorIds ?? [];
+	}
+
+	public setDoorSensorIds(ids: string[]): void {
+		this._hostsDb.update((old) => ({
+			...old,
+			doorSensorIds: ids,
+		}));
+	}
+
+	public triggerRapidPing(): void {
+		const now = new Date();
+		this._rapidPingUntil = new Date(now.getTime() + 60000); // 60 seconds from now
+		this._rapidPingStartState = this.getAll();
+		logDev('home-detector', 'Rapid ping triggered until', this._rapidPingUntil);
+	}
+
+	public isRapidPingActive(): boolean {
+		if (!this._rapidPingUntil) {
+			return false;
+		}
+		return new Date() < this._rapidPingUntil;
+	}
+
+	public addRapidPingListener(callback: (anyoneHome: boolean) => void | Promise<void>): void {
+		this._rapidPingListeners.push(callback);
+	}
+
+	public checkRapidPingCompletion(): void {
+		if (!this._rapidPingUntil || !this._rapidPingStartState) {
+			return;
+		}
+
+		const now = new Date();
+		if (now >= this._rapidPingUntil) {
+			// Rapid ping window has ended
+			const currentState = this.getAll();
+			let anyoneHome = false;
+
+			// Check if anyone who was away is now home
+			for (const [name, currentHomeState] of Object.entries(currentState)) {
+				const startState = this._rapidPingStartState[name];
+				if (startState === HOME_STATE.AWAY && currentHomeState === HOME_STATE.HOME) {
+					anyoneHome = true;
+					break;
+				}
+			}
+
+			logDev('home-detector', 'Rapid ping completed. Anyone came home:', anyoneHome);
+
+			// Notify listeners
+			for (const listener of this._rapidPingListeners) {
+				void listener(anyoneHome);
+			}
+
+			// Reset rapid ping state
+			this._rapidPingUntil = null;
+			this._rapidPingStartState = null;
+		}
+	}
+}
+
+export class DoorSensorMonitor {
+	private _subscriptions = new Map<string, () => void>();
+
+	public constructor(
+		private readonly _detector: Detector,
+		private readonly _hostsDb: Database<HostsConfigDB>
+	) {}
+
+	public trackDevices(devices: DeviceInterface[]): void {
+		// Get currently configured door sensor IDs
+		const doorSensorIds = this._hostsDb.current().doorSensorIds ?? [];
+		const doorSensorIdSet = new Set(doorSensorIds);
+
+		// Clean up old subscriptions
+		for (const [deviceId, unsubscribe] of this._subscriptions.entries()) {
+			if (!doorSensorIdSet.has(deviceId)) {
+				unsubscribe();
+				this._subscriptions.delete(deviceId);
+			}
+		}
+
+		// Subscribe to new door sensors
+		for (const device of devices) {
+			const deviceId = device.getUniqueId();
+
+			// Only track devices that are in the configured list
+			if (!doorSensorIdSet.has(deviceId)) {
+				continue;
+			}
+
+			// Skip if already tracking
+			if (this._subscriptions.has(deviceId)) {
+				continue;
+			}
+
+			// Find boolean state cluster (door sensors)
+			const booleanStateClusters = device.getAllClustersByType(DeviceBooleanStateCluster);
+			if (!booleanStateClusters.length) {
+				continue;
+			}
+
+			for (const booleanStateCluster of booleanStateClusters) {
+				// Subscribe to door state changes
+				const unsubscribe = booleanStateCluster.onStateChange.listen(({ state }) => {
+					// Door opened (state changed to true/open)
+					if (state) {
+						logTag(
+							'home-detector',
+							'yellow',
+							`Door sensor ${deviceId} triggered - starting rapid ping`
+						);
+						this._detector.triggerRapidPing();
+					}
+				});
+
+				this._subscriptions.set(deviceId, unsubscribe);
+			}
+		}
+	}
+
+	public destroy(): void {
+		for (const unsubscribe of this._subscriptions.values()) {
+			unsubscribe();
+		}
+		this._subscriptions.clear();
 	}
 }

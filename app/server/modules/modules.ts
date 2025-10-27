@@ -1,4 +1,5 @@
 import { HomeDetector } from './home-detector';
+import { Notification } from './notification';
 import { Temperature } from './temperature';
 import { HexLed } from './hex-led/hex-led';
 import { InfoScreen } from './info-screen';
@@ -44,6 +45,7 @@ const getModuleObj = () => ({
 	infoScreen: InfoScreen,
 	temperature: Temperature,
 	homeDetector: HomeDetector,
+	notification: Notification,
 	mcp: MCP,
 	tuya: Tuya,
 });

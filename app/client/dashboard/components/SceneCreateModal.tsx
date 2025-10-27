@@ -748,6 +748,10 @@ const HttpActionConfig = React.memo((props: HttpActionConfigProps) => {
 		body?: Record<string, unknown>;
 		headers?: Record<string, string>;
 	};
+	const [bodyJson, setBodyJson] = React.useState<string | undefined>(
+		httpAction.body ? JSON.stringify(httpAction.body, null, 2) : '{}'
+	);
+	const [bodyJsonError, setBodyJsonError] = React.useState<string | null>(null);
 
 	const handleUrlChange = (url: string) => {
 		props.handleActionChange(props.action.key, {
@@ -763,14 +767,17 @@ const HttpActionConfig = React.memo((props: HttpActionConfigProps) => {
 		}
 	};
 
-	const handleBodyChange = (bodyJson: string) => {
+	// When user edits JSON text field, update value and validate
+	const handleBodyFieldChange = (bodyJson: string) => {
+		setBodyJson(bodyJson);
 		try {
 			const body = JSON.parse(bodyJson);
 			props.handleActionChange(props.action.key, {
 				action: { ...httpAction, body },
 			});
-		} catch {
-			// Invalid JSON, don't update
+			setBodyJsonError(null);
+		} catch (e) {
+			setBodyJsonError('Invalid JSON');
 		}
 	};
 
@@ -811,20 +818,20 @@ const HttpActionConfig = React.memo((props: HttpActionConfigProps) => {
 						</ToggleButtonGroup>
 
 						{httpAction.method === 'POST' && (
-							<TextField
-								label="Request Body (JSON)"
-								value={
-									httpAction.body
-										? JSON.stringify(httpAction.body, null, 2)
-										: '{}'
-								}
-								onChange={(e) => handleBodyChange(e.target.value)}
-								placeholder='{"key": "value"}'
-								fullWidth
-								multiline
-								rows={3}
-								size="small"
-							/>
+							<>
+								<TextField
+									label="Request Body (JSON)"
+									value={bodyJson}
+									onChange={(e) => handleBodyFieldChange(e.target.value)}
+									placeholder='{"key": "value"}'
+									fullWidth
+									multiline
+									rows={3}
+									size="small"
+									error={!!bodyJsonError}
+									helperText={bodyJsonError ? bodyJsonError : undefined}
+								/>
+							</>
 						)}
 					</Box>
 					<IconButton

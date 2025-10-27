@@ -1,12 +1,12 @@
 import { LEDSourcesConfig } from './components/LEDSourcesConfig';
 import { WakelightConfig } from './components/WakelightConfig';
+import { Notifications } from './components/Notifications';
 import { EweLinkConfig } from './components/EweLinkConfig';
 import { AppLayout } from './components/layout/AppLayout';
 import { SidebarTab } from './components/layout/Sidebar';
 import { NotFoundPage } from './components/NotFoundPage';
 import { HomeDetector } from './components/HomeDetector';
 import { OfflineProvider } from '../lib/offline-context';
-import { WelcomePage } from './components/WelcomePage';
 import { TuyaConfig } from './components/TuyaConfig';
 import { MCPConfig } from './components/MCPConfig';
 import React, { useState, useEffect } from 'react';
@@ -100,7 +100,7 @@ function DashboardApp() {
 	}
 
 	const handleReturnToSettings = () => {
-		setCurrentTab(SidebarTab.SETTINGS);
+		setCurrentTab(SidebarTab.HOME);
 	};
 
 	const renderContent = () => {
@@ -119,8 +119,8 @@ function DashboardApp() {
 				return <HomeDetector />;
 			case SidebarTab.WAKELIGHT:
 				return <WakelightConfig />;
-			case SidebarTab.SETTINGS:
-				return <WelcomePage />;
+			case SidebarTab.NOTIFICATIONS:
+				return <Notifications />;
 			case SidebarTab.DEVICES:
 				return <Devices />;
 			case SidebarTab.EWELINK:

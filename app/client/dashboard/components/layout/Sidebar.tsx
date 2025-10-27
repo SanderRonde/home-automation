@@ -1,6 +1,5 @@
 import {
 	DeviceHub as DeviceHubIcon,
-	Settings as SettingsIcon,
 	Cloud as CloudIcon,
 	Lightbulb as LightbulbIcon,
 	Home as HomeIcon,
@@ -12,6 +11,7 @@ import {
 	Router as RouterIcon,
 	Webhook as WebhookIcon,
 	Alarm as AlarmIcon,
+	Notifications as NotificationsIcon,
 } from '@mui/icons-material';
 import {
 	Drawer,
@@ -70,6 +70,11 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 				{ text: 'Webhooks', icon: <WebhookIcon />, id: SidebarTab.WEBHOOKS },
 				{ text: 'Home Detection', icon: <SensorsIcon />, id: SidebarTab.HOME_DETECTOR },
 				{ text: 'Wakelight', icon: <AlarmIcon />, id: SidebarTab.WAKELIGHT },
+				{
+					text: 'Notifications',
+					icon: <NotificationsIcon />,
+					id: SidebarTab.NOTIFICATIONS,
+				},
 			],
 		},
 		{
@@ -83,10 +88,7 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 		},
 		{
 			label: 'Advanced',
-			items: [
-				{ text: 'MCP', icon: <SmartToyIcon />, id: SidebarTab.MCP },
-				{ text: 'Settings', icon: <SettingsIcon />, id: SidebarTab.SETTINGS },
-			],
+			items: [{ text: 'MCP', icon: <SmartToyIcon />, id: SidebarTab.MCP }],
 		},
 	];
 
@@ -153,10 +155,10 @@ export enum SidebarTab {
 	WEBHOOKS = 'webhooks',
 	HOME_DETECTOR = 'home-detector',
 	WAKELIGHT = 'wakelight',
-	SETTINGS = 'settings',
 	DEVICES = 'devices',
 	EWELINK = 'ewelink',
 	TUYA = 'tuya',
 	LED_SOURCES = 'led-sources',
 	MCP = 'mcp',
+	NOTIFICATIONS = 'notifications',
 }

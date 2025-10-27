@@ -81,6 +81,19 @@ function _initRouting(detector: Detector, config: ModuleConfig) {
 				}
 				return json({ success: true });
 			},
+			'/door-sensors/list': (_req, _server, { json }) => {
+				const doorSensorIds = detector.getDoorSensorIds();
+				return json({ doorSensorIds });
+			},
+			'/door-sensors/update': withRequestBody(
+				z.object({
+					doorSensorIds: z.array(z.string()),
+				}),
+				(body, _req, _server, { json }) => {
+					detector.setDoorSensorIds(body.doorSensorIds);
+					return json({ success: true });
+				}
+			),
 		},
 		true,
 		{

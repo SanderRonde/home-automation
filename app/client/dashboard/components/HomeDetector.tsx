@@ -1,10 +1,4 @@
 import {
-	Add as AddIcon,
-	Delete as DeleteIcon,
-	Edit as EditIcon,
-	Router as RouterIcon,
-} from '@mui/icons-material';
-import {
 	Box,
 	Card,
 	CardContent,
@@ -13,21 +7,43 @@ import {
 	Button,
 	CircularProgress,
 	Chip,
+	Tabs,
+	Tab,
+	List,
+	ListItem,
+	ListItemText,
+	ListItemSecondaryAction,
+	Checkbox,
 } from '@mui/material';
+import {
+	Add as AddIcon,
+	Delete as DeleteIcon,
+	Edit as EditIcon,
+	Router as RouterIcon,
+	Sensors as SensorsIcon,
+} from '@mui/icons-material';
 import type { HomeDetectorWebsocketServerMessage } from '../../../server/modules/home-detector/routing';
+import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import type { Host } from '../../../server/modules/home-detector/routing';
 import { HOME_STATE } from '../../../server/modules/home-detector/types';
 import useWebsocket from '../../shared/resilient-socket';
+import { Device } from '../../../server/modules/device';
 import { HomeDetectorModal } from './HomeDetectorModal';
 import React, { useState, useEffect } from 'react';
 import { apiGet, apiPost } from '../../lib/fetch';
+import { useDevices } from './Devices';
 
 export const HomeDetector = (): JSX.Element => {
+	const [currentTab, setCurrentTab] = useState(0);
 	const [hosts, setHosts] = useState<Host[]>([]);
 	const [hostsState, setHostsState] = useState<Record<string, HOME_STATE>>({});
 	const [loading, setLoading] = useState(true);
 	const [modalOpen, setModalOpen] = useState(false);
 	const [editingHost, setEditingHost] = useState<Host | undefined>(undefined);
+	const [doorSensorIds, setDoorSensorIds] = useState<string[]>([]);
+	const [savingDoorSensors, setSavingDoorSensors] = useState(false);
+
+	const { devices } = useDevices();
 
 	const loadHosts = async () => {
 		try {
@@ -45,6 +61,7 @@ export const HomeDetector = (): JSX.Element => {
 
 	useEffect(() => {
 		void loadHosts();
+		void loadDoorSensors();
 	}, []);
 
 	// WebSocket for real-time updates
@@ -103,6 +120,51 @@ export const HomeDetector = (): JSX.Element => {
 		await loadHosts();
 	};
 
+	const loadDoorSensors = async () => {
+		try {
+			const response = await apiGet('home-detector', '/door-sensors/list', {});
+			if (response.ok) {
+				const data = await response.json();
+				setDoorSensorIds(data.doorSensorIds || []);
+			}
+		} catch (error) {
+			console.error('Failed to load door sensors:', error);
+		}
+	};
+
+	const handleToggleDoorSensor = (deviceId: string) => {
+		setDoorSensorIds((prev) => {
+			if (prev.includes(deviceId)) {
+				return prev.filter((id) => id !== deviceId);
+			} else {
+				return [...prev, deviceId];
+			}
+		});
+	};
+
+	const handleSaveDoorSensors = async () => {
+		try {
+			setSavingDoorSensors(true);
+			const response = await apiPost(
+				'home-detector',
+				'/door-sensors/update',
+				{},
+				{ doorSensorIds }
+			);
+			if (response.ok) {
+				// Success - could show a snackbar here
+			}
+		} catch (error) {
+			console.error('Failed to save door sensors:', error);
+		} finally {
+			setSavingDoorSensors(false);
+		}
+	};
+
+	const booleanStateDevices = devices.filter((device) =>
+		device.flatAllClusters.some((cluster) => cluster.name === DeviceClusterName.BOOLEAN_STATE)
+	);
+
 	if (loading) {
 		return (
 			<Box
@@ -120,124 +182,195 @@ export const HomeDetector = (): JSX.Element => {
 
 	return (
 		<Box sx={{ p: { xs: 2, sm: 3 } }}>
-			<Box
-				sx={{
-					display: 'flex',
-					justifyContent: 'space-between',
-					alignItems: 'center',
-					mb: 3,
-				}}
-			>
-				<Typography variant="h4">Home Detection</Typography>
-				<Button
-					variant="contained"
-					startIcon={<AddIcon />}
-					onClick={handleCreateHost}
-					sx={{ borderRadius: 2 }}
-				>
-					Add Host
-				</Button>
-			</Box>
+			<Typography variant="h4" sx={{ mb: 3 }}>
+				Home Detection
+			</Typography>
 
-			<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-				{hosts.map((host) => (
-					<Card key={host.name} sx={{ borderRadius: 2 }}>
-						<CardContent>
-							<Box
-								sx={{
-									display: 'flex',
-									justifyContent: 'space-between',
-									alignItems: 'flex-start',
-								}}
+			<Tabs value={currentTab} onChange={(_e, value) => setCurrentTab(value)} sx={{ mb: 3 }}>
+				<Tab label="Devices" />
+				<Tab label="Door Sensors" />
+			</Tabs>
+
+			{currentTab === 0 && (
+				<Box>
+					<Box
+						sx={{
+							display: 'flex',
+							justifyContent: 'space-between',
+							alignItems: 'center',
+							mb: 3,
+						}}
+					>
+						<Typography variant="h6">Tracked Devices</Typography>
+						<Button
+							variant="contained"
+							startIcon={<AddIcon />}
+							onClick={handleCreateHost}
+							sx={{ borderRadius: 2 }}
+						>
+							Add Host
+						</Button>
+					</Box>
+
+					<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+						{hosts.map((host) => (
+							<Card key={host.name} sx={{ borderRadius: 2 }}>
+								<CardContent>
+									<Box
+										sx={{
+											display: 'flex',
+											justifyContent: 'space-between',
+											alignItems: 'flex-start',
+										}}
+									>
+										<Box sx={{ flexGrow: 1 }}>
+											<Box
+												sx={{
+													display: 'flex',
+													alignItems: 'center',
+													gap: 2,
+													mb: 1,
+												}}
+											>
+												<Typography variant="h6">{host.name}</Typography>
+												<Chip
+													label={
+														hostsState[host.name] === HOME_STATE.HOME
+															? 'Home'
+															: 'Away'
+													}
+													color={
+														hostsState[host.name] === HOME_STATE.HOME
+															? 'success'
+															: 'default'
+													}
+													size="small"
+												/>
+											</Box>
+											<Box
+												sx={{
+													display: 'flex',
+													alignItems: 'center',
+													gap: 1,
+													mb: 1,
+												}}
+											>
+												<RouterIcon
+													sx={{ fontSize: 16, color: 'text.secondary' }}
+												/>
+												<Typography
+													variant="body2"
+													sx={{ color: 'text.secondary' }}
+												>
+													{host.ips.join(', ')}
+												</Typography>
+											</Box>
+											{host.lastSeen && (
+												<Typography
+													variant="caption"
+													sx={{ color: 'text.secondary' }}
+												>
+													Last seen:{' '}
+													{new Date(host.lastSeen).toLocaleString()}
+												</Typography>
+											)}
+										</Box>
+										<Box sx={{ display: 'flex', gap: 1 }}>
+											<IconButton
+												size="small"
+												onClick={() => handleEditHost(host)}
+												sx={{ color: 'primary.main' }}
+											>
+												<EditIcon />
+											</IconButton>
+											<IconButton
+												size="small"
+												onClick={(e) => handleDeleteHost(host.name, e)}
+												sx={{ color: 'error.main' }}
+											>
+												<DeleteIcon />
+											</IconButton>
+										</Box>
+									</Box>
+								</CardContent>
+							</Card>
+						))}
+
+						{hosts.length === 0 && (
+							<Typography
+								variant="body1"
+								sx={{ color: 'text.secondary', textAlign: 'center', mt: 4 }}
 							>
-								<Box sx={{ flexGrow: 1 }}>
-									<Box
-										sx={{
-											display: 'flex',
-											alignItems: 'center',
-											gap: 2,
-											mb: 1,
-										}}
-									>
-										<Typography variant="h6">{host.name}</Typography>
-										<Chip
-											label={
-												hostsState[host.name] === HOME_STATE.HOME
-													? 'Home'
-													: 'Away'
-											}
-											color={
-												hostsState[host.name] === HOME_STATE.HOME
-													? 'success'
-													: 'default'
-											}
-											size="small"
-										/>
-									</Box>
-									<Box
-										sx={{
-											display: 'flex',
-											alignItems: 'center',
-											gap: 1,
-											mb: 1,
-										}}
-									>
-										<RouterIcon
-											sx={{ fontSize: 16, color: 'text.secondary' }}
-										/>
-										<Typography
-											variant="body2"
-											sx={{ color: 'text.secondary' }}
-										>
-											{host.ips.join(', ')}
-										</Typography>
-									</Box>
-									{host.lastSeen && (
-										<Typography
-											variant="caption"
-											sx={{ color: 'text.secondary' }}
-										>
-											Last seen: {new Date(host.lastSeen).toLocaleString()}
-										</Typography>
-									)}
-								</Box>
-								<Box sx={{ display: 'flex', gap: 1 }}>
-									<IconButton
-										size="small"
-										onClick={() => handleEditHost(host)}
-										sx={{ color: 'primary.main' }}
-									>
-										<EditIcon />
-									</IconButton>
-									<IconButton
-										size="small"
-										onClick={(e) => handleDeleteHost(host.name, e)}
-										sx={{ color: 'error.main' }}
-									>
-										<DeleteIcon />
-									</IconButton>
-								</Box>
+								No hosts configured yet. Add a host to start tracking presence.
+							</Typography>
+						)}
+					</Box>
+
+					<HomeDetectorModal
+						open={modalOpen}
+						onClose={() => setModalOpen(false)}
+						onSave={handleSaveHost}
+						host={editingHost}
+					/>
+				</Box>
+			)}
+
+			{currentTab === 1 && (
+				<Box>
+					<Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+						<Typography variant="h6">Door Sensors</Typography>
+						<Button
+							variant="contained"
+							onClick={handleSaveDoorSensors}
+							disabled={savingDoorSensors}
+						>
+							{savingDoorSensors ? 'Saving...' : 'Save Changes'}
+						</Button>
+					</Box>
+
+					<Card sx={{ borderRadius: 2 }}>
+						<CardContent>
+							<Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+								<SensorsIcon sx={{ color: 'text.secondary' }} />
+								<Typography variant="body2" color="text.secondary">
+									Select door sensors to trigger rapid device re-ping. When
+									triggered, all devices will be pinged rapidly for 60 seconds to
+									detect if someone comes home.
+								</Typography>
 							</Box>
+
+							{booleanStateDevices.length === 0 ? (
+								<Typography variant="body2" color="text.secondary">
+									No door sensors found. Make sure your door sensors are connected
+									and have a BooleanState cluster.
+								</Typography>
+							) : (
+								<List>
+									{booleanStateDevices.map((device) => (
+										<ListItem key={device.uniqueId} divider>
+											<ListItemText
+												primary={device.name || device.uniqueId}
+												secondary={device.room || 'No room assigned'}
+											/>
+											<ListItemSecondaryAction>
+												<Checkbox
+													edge="end"
+													checked={doorSensorIds.includes(
+														device.uniqueId
+													)}
+													onChange={() =>
+														handleToggleDoorSensor(device.uniqueId)
+													}
+												/>
+											</ListItemSecondaryAction>
+										</ListItem>
+									))}
+								</List>
+							)}
 						</CardContent>
 					</Card>
-				))}
-
-				{hosts.length === 0 && (
-					<Typography
-						variant="body1"
-						sx={{ color: 'text.secondary', textAlign: 'center', mt: 4 }}
-					>
-						No hosts configured yet. Add a host to start tracking presence.
-					</Typography>
-				)}
-			</Box>
-
-			<HomeDetectorModal
-				open={modalOpen}
-				onClose={() => setModalOpen(false)}
-				onSave={handleSaveHost}
-				host={editingHost}
-			/>
+				</Box>
+			)}
 		</Box>
 	);
 };

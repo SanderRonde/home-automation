@@ -1,4 +1,5 @@
 import type { HomeDetectorRoutes } from '../../server/modules/home-detector/routing';
+import type { NotificationRoutes } from '../../server/modules/notification/routing';
 import type { TemperatureRoutes } from '../../server/modules/temperature/routing';
 import type { BrandedResponse, RouteBodyBrand } from '../../server/lib/routes';
 import type { WakelightRoutes } from '../../server/modules/wakelight/routing';
@@ -223,6 +224,7 @@ type RoutesForModules = {
 	'hex-led': HexLedRoutes;
 	'home-detector': HomeDetectorRoutes;
 	mcp: MCPRoutes;
+	notification: NotificationRoutes;
 	temperature: TemperatureRoutes;
 	tuya: TuyaRoutes;
 	wakelight: WakelightRoutes;

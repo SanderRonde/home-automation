@@ -6,16 +6,12 @@ const API_CACHE = `api-${CACHE_VERSION}`;
 
 // Assets to cache immediately on install
 const STATIC_ASSETS = [
-	'/',
-	'/manifest.json',
-	'/static/favicon.svg',
-	'/static/favicon.ico',
-	'/static/icons/icon-192.png',
-	'/static/icons/icon-512.png',
+	'/app/client/dashboard/manifest.json',
+	'/dashboard/static/favicon.svg',
+	'/dashboard/static/favicon.ico',
+	'/dashboard/static/icons/icon-192.png',
+	'/dashboard/static/icons/icon-512.png',
 ];
-
-// API endpoints to cache for offline access (Home page essentials)
-const CACHEABLE_API_ENDPOINTS = ['/device/list', '/device/scenes/list', '/device/palettes/list'];
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
 
@@ -72,58 +68,25 @@ sw.addEventListener('fetch', (event: FetchEvent) => {
 		return;
 	}
 
-	// Check if this is a cacheable API endpoint
-	const isCacheableAPI = CACHEABLE_API_ENDPOINTS.some((endpoint) =>
-		url.pathname.startsWith(endpoint)
+	// Static assets: Cache-first, fallback to network
+	event.respondWith(
+		(async () => {
+			const cachedResponse = await caches.match(event.request);
+			if (cachedResponse) {
+				return cachedResponse;
+			}
+
+			try {
+				// eslint-disable-next-line no-restricted-globals
+				const response = await fetch(event.request);
+				if (response.ok && url.pathname.startsWith('/static/')) {
+					const cache = await caches.open(STATIC_CACHE);
+					await cache.put(event.request, response.clone());
+				}
+				return response;
+			} catch {
+				return new Response('Offline', { status: 503 });
+			}
+		})()
 	);
-
-	if (isCacheableAPI) {
-		// API: Network-first, fallback to cache
-		event.respondWith(
-			(async () => {
-				try {
-					// eslint-disable-next-line no-restricted-globals
-					const response = await fetch(event.request);
-					if (response.ok) {
-						const cache = await caches.open(API_CACHE);
-						await cache.put(event.request, response.clone());
-					}
-					return response;
-				} catch {
-					// Network failed, try cache
-					const cachedResponse = await caches.match(event.request);
-					if (cachedResponse) {
-						return cachedResponse;
-					}
-					// Return a basic error response
-					return new Response(JSON.stringify({ error: 'Offline' }), {
-						status: 503,
-						headers: { 'Content-Type': 'application/json' },
-					});
-				}
-			})()
-		);
-	} else {
-		// Static assets: Cache-first, fallback to network
-		event.respondWith(
-			(async () => {
-				const cachedResponse = await caches.match(event.request);
-				if (cachedResponse) {
-					return cachedResponse;
-				}
-
-				try {
-					// eslint-disable-next-line no-restricted-globals
-					const response = await fetch(event.request);
-					if (response.ok && url.pathname.startsWith('/static/')) {
-						const cache = await caches.open(STATIC_CACHE);
-						await cache.put(event.request, response.clone());
-					}
-					return response;
-				} catch {
-					return new Response('Offline', { status: 503 });
-				}
-			})()
-		);
-	}
 });

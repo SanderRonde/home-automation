@@ -1,6 +1,6 @@
+import { createServeOptions, staticResponse, type ServeOptions } from './lib/routes';
 import { logImmediate, logReady, logTag } from './lib/logging/logger';
 import { hasArg, getArg, getNumberArg, getNumberEnv } from './lib/io';
-import { createServeOptions, type ServeOptions } from './lib/routes';
 import { ProgressLogger } from './lib/logging/progress-logger';
 import { CLIENT_FOLDER, DB_FOLDER } from './lib/constants';
 import type { AllModules, ModuleConfig } from './modules';
@@ -181,6 +181,12 @@ class WebServer {
 				...createServeOptions(
 					{
 						...(await serveStatic(CLIENT_FOLDER)),
+						// Bun quirk where it rewrites the path but doesn't actually bundle it...
+						'/app/client/dashboard/manifest.json': staticResponse(
+							new Response(
+								Bun.file(path.join(CLIENT_FOLDER, 'dashboard', 'manifest.json'))
+							)
+						),
 					},
 					false
 				).routes,

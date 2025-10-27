@@ -1,10 +1,10 @@
 import { SettablePromise } from '../../lib/settable-promise';
+import { DoorSensorMonitor, Detector } from './classes';
 import { logTag } from '../../lib/logging/logger';
 import type { HostsConfigDB } from './classes';
 import { Database } from '../../lib/db';
 import { initRouting } from './routing';
 import type { ModuleConfig } from '..';
-import { Detector } from './classes';
 import { HOME_STATE } from './types';
 import { ModuleMeta } from '../meta';
 import { Bot } from './bot';
@@ -14,6 +14,7 @@ export type HomeDetectorDB = Record<string, HOME_STATE>;
 
 export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 	private readonly _detector: SettablePromise<Detector> = new SettablePromise();
+	private _doorSensorMonitor: DoorSensorMonitor | null = null;
 
 	public name = 'home-detector';
 
@@ -21,7 +22,7 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 		return Bot;
 	}
 
-	public init(config: ModuleConfig) {
+	public async init(config: ModuleConfig) {
 		const hostsDb = new Database<HostsConfigDB>('home-detector-hosts.json');
 		const detector = new Detector({
 			db: config.db as Database<HomeDetectorDB>,
@@ -42,6 +43,37 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 			);
 		});
 
+		// Initialize door sensor monitoring
+		this._doorSensorMonitor = new DoorSensorMonitor(detector, hostsDb);
+
+		// Wait for modules to be available, then subscribe to device updates
+		const modules = await this.modules;
+		const deviceAPI = await modules.device.api.value;
+
+		// Track devices initially
+		deviceAPI.devices.subscribe((devices) => {
+			if (this._doorSensorMonitor) {
+				this._doorSensorMonitor.trackDevices(Object.values(devices));
+			}
+		});
+
+		// Set up notification when rapid ping completes without any arrivals
+		detector.addRapidPingListener(async (anyoneHome) => {
+			if (!anyoneHome) {
+				logTag(
+					'home-detector',
+					'yellow',
+					'Door triggered but no one came home - sending notification'
+				);
+				try {
+					const pushManager = await modules.notification.getPushManager();
+					await pushManager.sendDoorSensorAlert();
+				} catch (error) {
+					logTag('home-detector', 'red', 'Failed to send door sensor alert:', error);
+				}
+			}
+		});
+
 		return {
 			serve: initRouting(detector, config),
 		};
@@ -55,5 +87,9 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 
 	public async getDetector(): Promise<Detector> {
 		return await this._detector.value;
+	}
+
+	public getDoorSensorMonitor(): DoorSensorMonitor | null {
+		return this._doorSensorMonitor;
 	}
 })();
