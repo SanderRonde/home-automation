@@ -30,5 +30,5 @@
 - [x] Button presses don't work anymore
 - [x] WLED on/off does not work from UI or from scene
 - [x] Phone charge webhook does not work
-- [ ] Get rid of dynamic imports
+- [x] Get rid of dynamic imports
 - [ ] 3D house overview
