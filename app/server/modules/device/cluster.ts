@@ -1,5 +1,5 @@
 import type { EventEmitter } from '../../lib/event-emitter';
-import type { Actions } from '@matter/main/clusters';
+import { type Actions } from '@matter/main/clusters';
 import type { Color } from '../../lib/color';
 import type { Data } from '../../lib/data';
 
@@ -174,6 +174,7 @@ export abstract class DeviceBooleanStateCluster<S extends boolean> extends Clust
 	}
 
 	public abstract state: Data<S>;
+	public abstract onStateChange: EventEmitter<{ state: S }>;
 }
 
 export abstract class DeviceSwitchCluster extends Cluster {
