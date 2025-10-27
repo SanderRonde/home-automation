@@ -910,9 +910,14 @@ const ColorControlCard = (
 		brightness
 	);
 
+	// Check if device is on or off
+	const isDeviceOn =
+		!props.cluster.mergedClusters[DeviceClusterName.ON_OFF] ||
+		props.cluster.mergedClusters[DeviceClusterName.ON_OFF].isOn;
+
 	// Calculate luminance and determine text color
 	const luminance = getLuminance(r, g, b);
-	const isLightBackground = luminance > 0.5;
+	const isLightBackground = isDeviceOn && luminance > 0.5;
 	const textColor = isLightBackground ? 'rgba(0, 0, 0, 0.87)' : 'white';
 	const iconBgColor = isLightBackground ? 'rgba(0, 0, 0, 0.08)' : 'rgba(0, 0, 0, 0.3)';
 	const iconColor = isLightBackground ? 'rgba(0, 0, 0, 0.6)' : 'white';
@@ -921,12 +926,7 @@ const ColorControlCard = (
 	return (
 		<DeviceClusterCardSkeleton
 			{...props}
-			cardBackground={
-				!props.cluster.mergedClusters[DeviceClusterName.ON_OFF] ||
-				props.cluster.mergedClusters[DeviceClusterName.ON_OFF].isOn
-					? color
-					: '#2f2f2f'
-			}
+			cardBackground={isDeviceOn ? color : '#2f2f2f'}
 			onPress={() => {
 				props.pushDetailView({
 					type: 'device',
