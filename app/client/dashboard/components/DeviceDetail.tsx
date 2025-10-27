@@ -11,6 +11,7 @@ import type {
 	DashboardDeviceClusterThermostat,
 	DeviceListWithValuesResponse,
 	DashboardDeviceClusterSwitch,
+	DashboardDeviceClusterBooleanState,
 } from '../../../server/modules/device/routing';
 import {
 	Chart as ChartJS,
@@ -146,6 +147,15 @@ const OccupancyDetail = (props: OccupancyDetailProps): JSX.Element => {
 	useEffect(() => {
 		void fetchHistory();
 	}, [fetchHistory]);
+
+	// Refetch history when occupancy state changes (WebSocket update)
+	const prevOccupiedRef = React.useRef(props.cluster.occupied);
+	React.useEffect(() => {
+		if (prevOccupiedRef.current !== props.cluster.occupied) {
+			prevOccupiedRef.current = props.cluster.occupied;
+			void fetchHistory();
+		}
+	}, [props.cluster.occupied, fetchHistory]);
 
 	const formatTimestamp = (timestamp: number): string => {
 		const date = new Date(timestamp);
@@ -380,6 +390,310 @@ const OccupancyDetail = (props: OccupancyDetailProps): JSX.Element => {
 	);
 };
 
+interface BooleanStateEvent {
+	state: boolean;
+	timestamp: number;
+}
+
+interface BooleanStateDetailProps
+	extends DeviceDetailBaseProps<DashboardDeviceClusterBooleanState> {}
+
+const BooleanStateDetail = (props: BooleanStateDetailProps): JSX.Element => {
+	const [history, setHistory] = useState<BooleanStateEvent[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
+	const roomColor = props.device.roomColor || '#555';
+
+	const deviceId = props.device.uniqueId;
+	const fetchHistory = React.useCallback(async () => {
+		if (!deviceId) {
+			setError('No device ID provided');
+			setLoading(false);
+			return;
+		}
+
+		try {
+			setLoading(true);
+
+			// Fetch history
+			const response = await apiGet('device', '/boolean-state/:deviceId', {
+				deviceId: deviceId,
+			});
+			if (!response.ok) {
+				throw new Error('Failed to fetch boolean state history');
+			}
+
+			const data = (await response.json()) as { history?: BooleanStateEvent[] };
+			setHistory(data.history || []);
+		} catch (err) {
+			setError('Failed to load door sensor history');
+			console.error('Failed to fetch boolean state history:', err);
+		} finally {
+			setLoading(false);
+		}
+	}, [deviceId]);
+
+	useEffect(() => {
+		void fetchHistory();
+	}, [fetchHistory]);
+
+	// Refetch history when state changes (WebSocket update)
+	const prevStateRef = React.useRef(props.cluster.state);
+	React.useEffect(() => {
+		if (prevStateRef.current !== props.cluster.state) {
+			prevStateRef.current = props.cluster.state;
+			void fetchHistory();
+		}
+	}, [props.cluster.state, fetchHistory]);
+
+	const formatTimestamp = (timestamp: number): string => {
+		const date = new Date(timestamp);
+		const now = new Date();
+		const isToday = date.toDateString() === now.toDateString();
+		const isYesterday =
+			date.toDateString() === new Date(now.getTime() - 86400000).toDateString();
+
+		const timeStr = date.toLocaleTimeString('en-US', {
+			hour: '2-digit',
+			minute: '2-digit',
+		});
+
+		if (isToday) {
+			return `Today at ${timeStr}`;
+		}
+		if (isYesterday) {
+			return `Yesterday at ${timeStr}`;
+		}
+		return date.toLocaleString('en-US', {
+			month: 'short',
+			day: 'numeric',
+			hour: '2-digit',
+			minute: '2-digit',
+		});
+	};
+
+	const currentState = history.length > 0 ? history[0].state : props.cluster.state;
+	const isOpen = !currentState;
+
+	return (
+		<motion.div
+			variants={pageVariants}
+			initial="initial"
+			animate="animate"
+			exit="exit"
+			style={{ height: '100%' }}
+		>
+			<Box
+				sx={{
+					backgroundColor: roomColor,
+					py: 1.5,
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
+					position: 'relative',
+					boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+				}}
+			>
+				<IconButton style={{ position: 'absolute', left: 0 }} onClick={props.onExit}>
+					<ArrowBackIcon style={{ fill: '#2f2f2f' }} />
+				</IconButton>
+				<Typography
+					style={{ color: '#2f2f2f', fontWeight: 600, letterSpacing: '-0.02em' }}
+					variant="h6"
+				>
+					Door Sensor
+				</Typography>
+			</Box>
+
+			<Box sx={{ p: { xs: 2, sm: 3 } }}>
+				{loading && (
+					<Box
+						sx={{
+							display: 'flex',
+							justifyContent: 'center',
+							py: 4,
+						}}
+					>
+						<CircularProgress />
+					</Box>
+				)}
+
+				{error && (
+					<Card>
+						<CardContent>
+							<Typography color="error">{error}</Typography>
+						</CardContent>
+					</Card>
+				)}
+
+				{!loading && !error && (
+					<>
+						<motion.div variants={cardVariants} initial="initial" animate="animate">
+							<Card
+								sx={{
+									mb: 3,
+									borderRadius: 3,
+									boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+									background: isOpen
+										? 'linear-gradient(135deg, #7c2d12 0%, #9a3412 100%)'
+										: 'linear-gradient(135deg, #1a472a 0%, #166534 100%)',
+								}}
+							>
+								<CardContent sx={{ p: 3 }}>
+									<Typography
+										variant="h6"
+										gutterBottom
+										sx={{
+											fontWeight: 600,
+											letterSpacing: '-0.01em',
+											color: 'white',
+										}}
+									>
+										{props.device.name}
+									</Typography>
+									<Box
+										sx={{
+											display: 'flex',
+											alignItems: 'center',
+											gap: 2,
+											mt: 2,
+										}}
+									>
+										<Typography
+											variant="body1"
+											sx={{
+												fontWeight: 500,
+												color: 'rgba(255, 255, 255, 0.9)',
+											}}
+										>
+											Current State:
+										</Typography>
+										<motion.div
+											initial={{ scale: 0.8 }}
+											animate={{ scale: 1 }}
+											transition={{ delay: 0.2, ...bouncySpring }}
+										>
+											<Chip
+												label={isOpen ? 'OPEN' : 'CLOSED'}
+												sx={{
+													fontWeight: 700,
+													px: 2,
+													fontSize: '1rem',
+													backgroundColor: isOpen
+														? 'rgba(249, 115, 22, 0.3)'
+														: 'rgba(76, 175, 80, 0.3)',
+													color: 'white',
+													border: '2px solid',
+													borderColor: isOpen ? '#f97316' : '#4caf50',
+												}}
+											/>
+										</motion.div>
+									</Box>
+									{props.cluster.lastChanged && (
+										<Typography
+											variant="body2"
+											sx={{
+												mt: 1.5,
+												fontSize: '0.875rem',
+												color: 'rgba(255, 255, 255, 0.8)',
+											}}
+										>
+											Last changed:{' '}
+											{formatTimestamp(props.cluster.lastChanged)}
+										</Typography>
+									)}
+								</CardContent>
+							</Card>
+						</motion.div>
+
+						<motion.div
+							variants={cardVariants}
+							initial="initial"
+							animate="animate"
+							transition={{ delay: 0.1 }}
+						>
+							<Card
+								sx={{
+									borderRadius: 3,
+									boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+									background: 'linear-gradient(135deg, #2a2a2a 0%, #353535 100%)',
+								}}
+							>
+								<CardContent sx={{ p: 3 }}>
+									<Typography
+										variant="h6"
+										gutterBottom
+										sx={{ fontWeight: 600, letterSpacing: '-0.01em' }}
+									>
+										History
+									</Typography>
+									{history.length === 0 ? (
+										<Typography color="text.secondary">
+											No history available
+										</Typography>
+									) : (
+										<motion.div
+											variants={staggerContainer}
+											initial="initial"
+											animate="animate"
+										>
+											<List sx={{ py: 1 }}>
+												{history.map((event, index) => (
+													<motion.div key={index} variants={staggerItem}>
+														<ListItem
+															sx={{
+																borderLeft: 4,
+																borderColor: event.state
+																	? '#4caf50'
+																	: '#f97316',
+																mb: 1.5,
+																bgcolor: 'background.paper',
+																borderRadius: 2,
+																boxShadow:
+																	'0 2px 8px rgba(0,0,0,0.06)',
+																transition: 'all 0.2s',
+																'&:hover': {
+																	boxShadow:
+																		'0 4px 12px rgba(0,0,0,0.1)',
+																	transform: 'translateX(4px)',
+																},
+															}}
+														>
+															<ListItemText
+																primary={
+																	event.state
+																		? 'Door Closed'
+																		: 'Door Opened'
+																}
+																secondary={formatTimestamp(
+																	event.timestamp
+																)}
+																primaryTypographyProps={{
+																	fontWeight: 600,
+																	color: event.state
+																		? '#4caf50'
+																		: '#f97316',
+																}}
+																secondaryTypographyProps={{
+																	fontSize: '0.875rem',
+																}}
+															/>
+														</ListItem>
+													</motion.div>
+												))}
+											</List>
+										</motion.div>
+									)}
+								</CardContent>
+							</Card>
+						</motion.div>
+					</>
+				)}
+			</Box>
+		</motion.div>
+	);
+};
+
 interface ButtonPressEvent {
 	buttonIndex?: number;
 	timestamp: number;
@@ -425,6 +739,17 @@ const SwitchDetail = (props: SwitchDetailProps): JSX.Element => {
 	useEffect(() => {
 		void fetchHistory();
 	}, [fetchHistory]);
+
+	// Refetch history when device updates (WebSocket update)
+	// We track the device's clusters as a dependency to detect any changes
+	const deviceClustersJson = JSON.stringify(props.device.flatAllClusters);
+	const prevDeviceClustersRef = React.useRef(deviceClustersJson);
+	React.useEffect(() => {
+		if (prevDeviceClustersRef.current !== deviceClustersJson) {
+			prevDeviceClustersRef.current = deviceClustersJson;
+			void fetchHistory();
+		}
+	}, [deviceClustersJson, fetchHistory]);
 
 	const formatTimestamp = (timestamp: number): string => {
 		const date = new Date(timestamp);
@@ -695,6 +1020,16 @@ const TemperatureDetail = (props: TemperatureDetailProps): JSX.Element => {
 		void fetchHistory();
 	}, [fetchHistory]);
 
+	// Refetch history when temperature changes significantly (>0.1°C)
+	const prevTempRef = React.useRef(props.cluster.temperature);
+	React.useEffect(() => {
+		const tempDiff = Math.abs(prevTempRef.current - props.cluster.temperature);
+		if (tempDiff >= 0.1) {
+			prevTempRef.current = props.cluster.temperature;
+			void fetchHistory();
+		}
+	}, [props.cluster.temperature, fetchHistory]);
+
 	const chartData = {
 		labels: history
 			.slice()
@@ -933,6 +1268,16 @@ const HumidityDetail = (props: HumidityDetailProps): JSX.Element => {
 	useEffect(() => {
 		void fetchHistory();
 	}, [fetchHistory]);
+
+	// Refetch history when humidity changes significantly (>1%)
+	const prevHumidityRef = React.useRef(props.cluster.humidity);
+	React.useEffect(() => {
+		const humidityDiff = Math.abs(prevHumidityRef.current - props.cluster.humidity);
+		if (humidityDiff >= 0.01) {
+			prevHumidityRef.current = props.cluster.humidity;
+			void fetchHistory();
+		}
+	}, [props.cluster.humidity, fetchHistory]);
 
 	const chartData = {
 		labels: history
@@ -1175,6 +1520,16 @@ const IlluminanceDetail = (props: IlluminanceDetailProps): JSX.Element => {
 		void fetchHistory();
 	}, [fetchHistory]);
 
+	// Refetch history when illuminance changes significantly (>10 lux)
+	const prevIlluminanceRef = React.useRef(props.cluster.illuminance);
+	React.useEffect(() => {
+		const illuminanceDiff = Math.abs(prevIlluminanceRef.current - props.cluster.illuminance);
+		if (illuminanceDiff >= 10) {
+			prevIlluminanceRef.current = props.cluster.illuminance;
+			void fetchHistory();
+		}
+	}, [props.cluster.illuminance, fetchHistory]);
+
 	const chartData = {
 		labels: history
 			.slice()
@@ -1395,6 +1750,12 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 	const hasOccupancy = !!occupancy;
 	const hasTemperature = !!temperature;
 
+	// Track previous values to detect changes
+	const prevOccupiedRef = React.useRef(occupancy?.occupied);
+	const prevTempRef = React.useRef(temperature?.temperature);
+	const prevHumidityRef = React.useRef(humidity?.humidity);
+	const prevIlluminanceRef = React.useRef(illuminance?.illuminance);
+
 	const fetchHistory = React.useCallback(async () => {
 		try {
 			setLoading(true);
@@ -1455,6 +1816,60 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 	useEffect(() => {
 		void fetchHistory();
 	}, [fetchHistory]);
+
+	// Refetch history when any sensor value changes significantly
+	React.useEffect(() => {
+		let shouldRefetch = false;
+
+		// Check occupancy
+		if (hasOccupancy && prevOccupiedRef.current !== occupancy?.occupied) {
+			prevOccupiedRef.current = occupancy?.occupied;
+			shouldRefetch = true;
+		}
+
+		// Check temperature (>0.1°C change)
+		if (hasTemperature && temperature?.temperature !== undefined) {
+			const tempDiff = Math.abs((prevTempRef.current ?? 0) - temperature.temperature);
+			if (tempDiff >= 0.1) {
+				prevTempRef.current = temperature.temperature;
+				shouldRefetch = true;
+			}
+		}
+
+		// Check humidity (>1% change)
+		if (hasHumidity && humidity?.humidity !== undefined) {
+			const humidityDiff = Math.abs((prevHumidityRef.current ?? 0) - humidity.humidity);
+			if (humidityDiff >= 0.01) {
+				prevHumidityRef.current = humidity.humidity;
+				shouldRefetch = true;
+			}
+		}
+
+		// Check illuminance (>10 lux change)
+		if (hasIlluminance && illuminance?.illuminance !== undefined) {
+			const illuminanceDiff = Math.abs(
+				(prevIlluminanceRef.current ?? 0) - illuminance.illuminance
+			);
+			if (illuminanceDiff >= 10) {
+				prevIlluminanceRef.current = illuminance.illuminance;
+				shouldRefetch = true;
+			}
+		}
+
+		if (shouldRefetch) {
+			void fetchHistory();
+		}
+	}, [
+		occupancy?.occupied,
+		temperature?.temperature,
+		humidity?.humidity,
+		illuminance?.illuminance,
+		hasOccupancy,
+		hasTemperature,
+		hasHumidity,
+		hasIlluminance,
+		fetchHistory,
+	]);
 
 	const formatTimestamp = (timestamp: number): string => {
 		const date = new Date(timestamp);
@@ -3171,6 +3586,9 @@ export const DeviceDetail = (
 			return <SensorGroupDetail {...props} cluster={props.cluster} />;
 		}
 		return <OccupancyDetail {...props} cluster={props.cluster} />;
+	}
+	if (props.cluster.name === DeviceClusterName.BOOLEAN_STATE) {
+		return <BooleanStateDetail {...props} cluster={props.cluster} />;
 	}
 	if (props.cluster.name === DeviceClusterName.TEMPERATURE_MEASUREMENT) {
 		return <TemperatureDetail {...props} cluster={props.cluster} />;

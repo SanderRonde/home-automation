@@ -126,6 +126,25 @@ export const Device = new (class Device extends ModuleMeta {
 			`;
 		}
 
+		// Initialize SQL table for boolean state events
+		const booleanStateTableExists = await config.sqlDB<{ name: string }[]>`
+			SELECT name FROM sqlite_master WHERE type='table' AND name='boolean_state_events'
+		`;
+
+		if (!booleanStateTableExists.length) {
+			await config.sqlDB`
+				CREATE TABLE boolean_state_events (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					device_id TEXT NOT NULL,
+					state BOOLEAN NOT NULL,
+					timestamp INTEGER NOT NULL
+				)
+			`;
+			await config.sqlDB`
+				CREATE INDEX idx_boolean_state_device_time ON boolean_state_events(device_id, timestamp DESC)
+			`;
+		}
+
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
 		const api = new DeviceAPI(config.db, config.sqlDB, (this as any).modules);
 		this.api.set(api);

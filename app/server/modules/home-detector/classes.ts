@@ -5,6 +5,7 @@ import {
 	AWAY_PING_INTERVAL,
 	AWAY_GRACE_PERIOD,
 } from './constants';
+import { logDev } from '../../lib/logging/log-dev';
 import type { Database } from '../../lib/db';
 import type { HomeDetectorDB } from '.';
 import type { Host } from './routing';
@@ -104,6 +105,7 @@ class Pinger {
 		}
 
 		const results = await Promise.all(pings);
+		logDev('device', this.name, 'fast ping results:', results);
 		return results.some((v) => v.state === HOME_STATE.HOME) ? HOME_STATE.HOME : HOME_STATE.AWAY;
 	}
 
@@ -140,10 +142,12 @@ class Pinger {
 	private async _pingLoop() {
 		while (!this._stopped) {
 			const newState = await this._pingAll();
+			logDev('device', this.name, 'ping loop started (new state:', newState, ')');
 
 			// Handle state transitions
 			if (newState.state !== this._state) {
 				if (newState.state === HOME_STATE.HOME) {
+					logDev('device', this.name, 'is home');
 					// Device came back home - cancel any grace period and update immediately
 					this._awayDetectedAt = null;
 					this._inGracePeriod = false;
@@ -161,18 +165,24 @@ class Pinger {
 					}
 					await wait(CHANGE_PING_INTERVAL);
 				} else {
+					logDev('device', this.name, 'is away');
 					// Device appears to be away
 					const finalState: HOME_STATE = await this._stateChange(newState);
+					logDev('device', this.name, 'is away (final state:', finalState, ')');
 
 					if (finalState === HOME_STATE.AWAY && this._state === HOME_STATE.HOME) {
 						// Start grace period - device went away from home
 						if (!this._inGracePeriod) {
+							logDev('device', this.name, 'is away (grace period started)');
 							this._awayDetectedAt = new Date();
 							this._inGracePeriod = true;
+						} else {
+							logDev('device', this.name, 'is away (grace period already started)');
 						}
 						// Don't update state yet, keep checking
 						await wait(CHANGE_PING_INTERVAL * 1000);
 					} else if (finalState === HOME_STATE.AWAY && this._state === HOME_STATE.AWAY) {
+						logDev('device', this.name, 'is away (already away)');
 						// Already away, no grace period needed
 						this._initialStateConfirmed = true;
 						await wait(AWAY_PING_INTERVAL * 1000);
@@ -184,6 +194,7 @@ class Pinger {
 					// Check if grace period has expired
 					const elapsed = (new Date().getTime() - this._awayDetectedAt.getTime()) / 1000;
 					if (elapsed >= AWAY_GRACE_PERIOD) {
+						logDev('device', this.name, 'is away (grace period expired)');
 						// Grace period expired, mark as away
 						this._inGracePeriod = false;
 						this.leftAt = new Date();
@@ -199,10 +210,12 @@ class Pinger {
 						}
 						await wait(CHANGE_PING_INTERVAL * 1000);
 					} else {
+						logDev('device', this.name, 'is normal (still in grace period)');
 						// Still in grace period, keep checking frequently
 						await wait(CHANGE_PING_INTERVAL * 1000);
 					}
 				} else {
+					logDev('device', this.name, 'is normal (state:', this._state, ')');
 					// Normal operation, no grace period
 					this._initialStateConfirmed = true;
 					await wait(

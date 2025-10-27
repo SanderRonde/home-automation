@@ -28,6 +28,29 @@ const IconOrNull = ({ icon }: { icon: IncludedIconNames | undefined }) => {
 	return icon ? <IconComponent iconName={icon} /> : null;
 };
 
+const getTimeSince = (timestamp?: number): string => {
+	if (!timestamp) {
+		return 'Never';
+	}
+	const now = Date.now();
+	const diff = now - timestamp;
+	const seconds = Math.floor(diff / 1000);
+	const minutes = Math.floor(seconds / 60);
+	const hours = Math.floor(minutes / 60);
+	const days = Math.floor(hours / 24);
+
+	if (days > 0) {
+		return `${days}d ago`;
+	}
+	if (hours > 0) {
+		return `${hours}h ago`;
+	}
+	if (minutes > 0) {
+		return `${minutes}m ago`;
+	}
+	return `${seconds}s ago`;
+};
+
 export interface DeviceClusterCardBaseProps<C extends DashboardDeviceClusterWithState> {
 	device: DeviceListWithValuesResponse[number];
 	cluster: C;
@@ -201,6 +224,127 @@ const WindowCoveringCard = (
 	return (
 		<DeviceClusterCardSkeleton
 			{...props}
+			cardRef={cardRef}
+			cardBackground={`linear-gradient(to right, #0053a6 ${currentPosition}%, #3f3f3f ${currentPosition}%)`}
+			onPointerDown={handlePointerDown}
+			onPointerMove={handlePointerMove}
+			onPointerUp={handlePointerUp}
+		/>
+	);
+};
+
+interface GroupedWindowCoveringCardProps {
+	devices: DeviceListWithValuesResponse;
+	cluster: DashboardDeviceClusterWindowCovering;
+	invalidate: () => void;
+	pushDetailView: (detailView: HomeDetailView) => void;
+	animationIndex: number;
+	roomName: string;
+}
+
+const GroupedWindowCoveringCard = (props: GroupedWindowCoveringCardProps): JSX.Element => {
+	const [dragPosition, setDragPosition] = React.useState<number | null>(null);
+	const [isDragging, setIsDragging] = React.useState(false);
+	const [hasMoved, setHasMoved] = React.useState(false);
+	const cardRef = React.useRef<HTMLDivElement>(null);
+	const dragStartX = React.useRef<number>(0);
+	const dragStartPosition = React.useRef<number>(0);
+
+	// Calculate average position across all window coverings
+	const averagePosition = React.useMemo(() => {
+		const positions = props.devices
+			.flatMap((device) => device.mergedAllClusters)
+			.filter(
+				(cluster): cluster is DashboardDeviceClusterWindowCovering =>
+					cluster.name === DeviceClusterName.WINDOW_COVERING
+			)
+			.map((cluster) => cluster.targetPositionLiftPercentage);
+
+		if (positions.length === 0) {
+			return 0;
+		}
+
+		const sum = positions.reduce((acc, pos) => acc + pos, 0);
+		return Math.round(sum / positions.length);
+	}, [props.devices]);
+
+	const currentPosition = dragPosition !== null ? dragPosition : averagePosition;
+
+	const handlePointerDown = (e: React.PointerEvent) => {
+		setIsDragging(true);
+		setHasMoved(false);
+		e.currentTarget.setPointerCapture(e.pointerId);
+		dragStartX.current = e.clientX;
+		dragStartPosition.current = averagePosition;
+	};
+
+	const handlePointerMove = (e: React.PointerEvent) => {
+		if (!isDragging || !cardRef.current) {
+			return;
+		}
+
+		const deltaX = Math.abs(e.clientX - dragStartX.current);
+		// Only consider it a drag if moved more than 5 pixels
+		if (deltaX > 5) {
+			setHasMoved(true);
+		}
+
+		const rect = cardRef.current.getBoundingClientRect();
+		const fullDeltaX = e.clientX - dragStartX.current;
+		const deltaPercentage = (fullDeltaX / rect.width) * 100 * 2; // 2x sensitivity
+		const newPosition = dragStartPosition.current + deltaPercentage;
+		const clampedPosition = Math.max(0, Math.min(100, newPosition));
+		setDragPosition(Math.round(clampedPosition));
+	};
+
+	const handlePointerUp = async (e: React.PointerEvent) => {
+		if (!isDragging) {
+			return;
+		}
+		setIsDragging(false);
+		e.currentTarget.releasePointerCapture(e.pointerId);
+
+		// If user didn't drag, open grouped detail view
+		if (!hasMoved) {
+			props.pushDetailView({
+				type: 'room-grouped-cluster',
+				roomName: props.roomName,
+				clusterName: DeviceClusterName.WINDOW_COVERING,
+				devices: props.devices,
+			});
+			return;
+		}
+
+		// Otherwise, update the position for all devices
+		if (dragPosition !== null) {
+			const deviceIds = props.devices.map((device) => device.uniqueId);
+			await apiPost(
+				'device',
+				'/cluster/WindowCovering',
+				{},
+				{
+					deviceIds,
+					targetPositionLiftPercentage: dragPosition,
+				}
+			);
+			setDragPosition(null);
+			props.invalidate();
+		}
+	};
+
+	// Create a pseudo-device for the skeleton
+	const pseudoDevice = {
+		...props.devices[0],
+		name: `Window Coverings (${props.devices.length})`,
+	};
+
+	return (
+		<DeviceClusterCardSkeleton
+			device={pseudoDevice}
+			cluster={props.cluster}
+			invalidate={props.invalidate}
+			pushDetailView={props.pushDetailView}
+			animationIndex={props.animationIndex}
 			cardRef={cardRef}
 			cardBackground={`linear-gradient(to right, #0053a6 ${currentPosition}%, #3f3f3f ${currentPosition}%)`}
 			onPointerDown={handlePointerDown}
@@ -814,11 +958,96 @@ const SensorGroupCard = (
 const BooleanStateCard = (
 	props: DeviceClusterCardBaseProps<DashboardDeviceClusterBooleanState>
 ): JSX.Element => {
+	// Door state: false = open (alert), true = closed (safe)
+	const isOpen = !props.cluster.state;
+	const backgroundColor = isOpen ? '#7c2d12' : '#1a472a';
+	const accentColor = isOpen ? '#f97316' : '#4caf50';
+
 	return (
 		<DeviceClusterCardSkeleton
 			{...props}
-			cardBackground={props.cluster.state ? '#1a472a' : '#2f2f2f'}
-		/>
+			cardBackground={backgroundColor}
+			onPress={() => {
+				props.pushDetailView({
+					type: 'device',
+					device: props.device,
+					cluster: props.cluster,
+				});
+			}}
+		>
+			<Box
+				sx={{
+					display: 'flex',
+					alignItems: 'center',
+					gap: 2,
+				}}
+			>
+				<Box
+					sx={{
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						background: isOpen ? 'rgba(249, 115, 22, 0.2)' : 'rgba(76, 175, 80, 0.2)',
+						borderRadius: '50%',
+						width: 48,
+						height: 48,
+						fontSize: '1.5rem',
+						color: 'white',
+					}}
+				>
+					<IconOrNull icon={props.cluster.icon} />
+				</Box>
+				<Box sx={{ flexGrow: 1 }}>
+					<Typography
+						variant="body1"
+						sx={{
+							fontWeight: 500,
+							color: 'white',
+						}}
+					>
+						{props.device.name}
+					</Typography>
+					<Typography
+						variant="body2"
+						sx={{
+							color: 'rgba(255, 255, 255, 0.9)',
+							fontWeight: 'bold',
+						}}
+					>
+						{isOpen ? 'Open' : 'Closed'}
+					</Typography>
+					{props.cluster.lastChanged && (
+						<Typography
+							variant="caption"
+							sx={{
+								color: 'rgba(255, 255, 255, 0.7)',
+							}}
+						>
+							Last changed: {getTimeSince(props.cluster.lastChanged)}
+						</Typography>
+					)}
+				</Box>
+				{isOpen && (
+					<Box
+						sx={{
+							width: 12,
+							height: 12,
+							borderRadius: '50%',
+							backgroundColor: accentColor,
+							animation: 'pulse 2s infinite',
+							'@keyframes pulse': {
+								'0%, 100%': {
+									opacity: 1,
+								},
+								'50%': {
+									opacity: 0.5,
+								},
+							},
+						}}
+					/>
+				)}
+			</Box>
+		</DeviceClusterCardSkeleton>
 	);
 };
 
@@ -1161,44 +1390,57 @@ const ActionsCard = (
 };
 
 export const DeviceClusterCard = (
-	props: DeviceClusterCardBaseProps<DashboardDeviceClusterWithState>
+	props:
+		| DeviceClusterCardBaseProps<DashboardDeviceClusterWithState>
+		| GroupedWindowCoveringCardProps
 ): JSX.Element | null => {
-	if (props.cluster.name === DeviceClusterName.ON_OFF) {
-		return <OnOffCard {...props} cluster={props.cluster} />;
-	}
-	if (props.cluster.name === DeviceClusterName.WINDOW_COVERING) {
-		return <WindowCoveringCard {...props} cluster={props.cluster} />;
-	}
-	if (props.cluster.name === DeviceClusterName.OCCUPANCY_SENSING) {
-		// Check if it's a sensor group or standalone occupancy sensor
-		if ('mergedClusters' in props.cluster) {
-			return <SensorGroupCard {...props} cluster={props.cluster} />;
+	// Check if this is a grouped cluster card
+	if ('devices' in props && 'roomName' in props) {
+		if (props.cluster.name === DeviceClusterName.WINDOW_COVERING) {
+			return <GroupedWindowCoveringCard {...props} />;
 		}
-		return <OccupancySensingCard {...props} cluster={props.cluster} />;
+		return null;
 	}
-	if (props.cluster.name === DeviceClusterName.TEMPERATURE_MEASUREMENT) {
-		return <TemperatureMeasurementCard {...props} cluster={props.cluster} />;
+
+	// At this point, props is DeviceClusterCardBaseProps
+	const regularProps = props;
+
+	if (regularProps.cluster.name === DeviceClusterName.ON_OFF) {
+		return <OnOffCard {...regularProps} cluster={regularProps.cluster} />;
 	}
-	if (props.cluster.name === DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT) {
-		return <RelativeHumidityMeasurementCard {...props} cluster={props.cluster} />;
+	if (regularProps.cluster.name === DeviceClusterName.WINDOW_COVERING) {
+		return <WindowCoveringCard {...regularProps} cluster={regularProps.cluster} />;
 	}
-	if (props.cluster.name === DeviceClusterName.ILLUMINANCE_MEASUREMENT) {
-		return <IlluminanceMeasurementCard {...props} cluster={props.cluster} />;
+	if (regularProps.cluster.name === DeviceClusterName.OCCUPANCY_SENSING) {
+		// Check if it's a sensor group or standalone occupancy sensor
+		if ('mergedClusters' in regularProps.cluster) {
+			return <SensorGroupCard {...regularProps} cluster={regularProps.cluster} />;
+		}
+		return <OccupancySensingCard {...regularProps} cluster={regularProps.cluster} />;
 	}
-	if (props.cluster.name === DeviceClusterName.BOOLEAN_STATE) {
-		return <BooleanStateCard {...props} cluster={props.cluster} />;
+	if (regularProps.cluster.name === DeviceClusterName.TEMPERATURE_MEASUREMENT) {
+		return <TemperatureMeasurementCard {...regularProps} cluster={regularProps.cluster} />;
 	}
-	if (props.cluster.name === DeviceClusterName.COLOR_CONTROL) {
-		return <ColorControlCard {...props} cluster={props.cluster} />;
+	if (regularProps.cluster.name === DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT) {
+		return <RelativeHumidityMeasurementCard {...regularProps} cluster={regularProps.cluster} />;
 	}
-	if (props.cluster.name === DeviceClusterName.ACTIONS) {
-		return <ActionsCard {...props} cluster={props.cluster} />;
+	if (regularProps.cluster.name === DeviceClusterName.ILLUMINANCE_MEASUREMENT) {
+		return <IlluminanceMeasurementCard {...regularProps} cluster={regularProps.cluster} />;
 	}
-	if (props.cluster.name === DeviceClusterName.THERMOSTAT) {
-		return <ThermostatCard {...props} cluster={props.cluster} />;
+	if (regularProps.cluster.name === DeviceClusterName.BOOLEAN_STATE) {
+		return <BooleanStateCard {...regularProps} cluster={regularProps.cluster} />;
 	}
-	if (props.cluster.name === DeviceClusterName.SWITCH) {
-		return <SwitchCard {...props} cluster={props.cluster} />;
+	if (regularProps.cluster.name === DeviceClusterName.COLOR_CONTROL) {
+		return <ColorControlCard {...regularProps} cluster={regularProps.cluster} />;
+	}
+	if (regularProps.cluster.name === DeviceClusterName.ACTIONS) {
+		return <ActionsCard {...regularProps} cluster={regularProps.cluster} />;
+	}
+	if (regularProps.cluster.name === DeviceClusterName.THERMOSTAT) {
+		return <ThermostatCard {...regularProps} cluster={regularProps.cluster} />;
+	}
+	if (regularProps.cluster.name === DeviceClusterName.SWITCH) {
+		return <SwitchCard {...regularProps} cluster={regularProps.cluster} />;
 	}
 	return null;
 };

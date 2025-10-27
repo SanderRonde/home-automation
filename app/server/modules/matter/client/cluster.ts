@@ -45,6 +45,7 @@ import { DeviceClusterName } from '../../device/cluster';
 import type { ClusterClientObj } from '@matter/protocol';
 import type { Observable, Observer } from '@matter/main';
 import type { WritableAttribute } from '@matter/types';
+import { logDev } from '../../../lib/logging/log-dev';
 import { DeviceStatus } from '../../device/cluster';
 import { CombinedData } from '../../../lib/data';
 import { MappedData } from '../../../lib/data';
@@ -327,6 +328,12 @@ class MatterWindowCoveringCluster
 		}),
 	});
 	public goToLiftPercentage = ({ percentage }: { percentage: number }) => {
+		logDev(
+			'matter goToLiftPercentage',
+			percentage,
+			'current is',
+			this.targetPositionLiftPercentage.current()
+		);
 		if (this.targetPositionLiftPercentage.current() === percentage) {
 			// If already at the target position, do nothing.
 			// This fixes a bug where ikea blinds will try to move to the

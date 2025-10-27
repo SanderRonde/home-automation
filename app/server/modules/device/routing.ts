@@ -97,6 +97,7 @@ export type DashboardDeviceClusterIlluminanceMeasurement = DashboardDeviceCluste
 export type DashboardDeviceClusterBooleanState = DashboardDeviceClusterBase & {
 	name: DeviceClusterName.BOOLEAN_STATE;
 	state: boolean;
+	lastChanged?: number;
 };
 
 export type DashboardDeviceClusterSwitch = DashboardDeviceClusterBase & {
@@ -295,6 +296,10 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 					undefined,
 					100
 				);
+				return json({ history });
+			},
+			'/boolean-state/:deviceId': async (req, _server, { json }) => {
+				const history = await api.booleanStateTracker.getHistory(req.params.deviceId, 100);
 				return json({ history });
 			},
 			'/temperature/:deviceId/:timeframe': async (req, _server, { json }) => {
@@ -1090,10 +1095,12 @@ const getClusterState = async (
 	if (clusterName === DeviceClusterName.BOOLEAN_STATE) {
 		const cluster = _cluster as DeviceBooleanStateCluster<boolean>;
 		const state = await cluster.state.get();
+		const lastEvent = await api.booleanStateTracker.getLastChanged(deviceId);
 		return {
 			name: clusterName,
 			icon: getClusterIconName(clusterName),
-			state,
+			state: state ?? false,
+			lastChanged: lastEvent?.timestamp,
 		};
 	}
 	if (clusterName === DeviceClusterName.SWITCH) {

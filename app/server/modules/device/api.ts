@@ -1,5 +1,6 @@
 import type { IncludedIconNames } from '../../../client/dashboard/components/icon';
 import type { Device as DeviceInterface, DeviceSource } from './device';
+import { BooleanStateTracker } from './boolean-state-tracker';
 import { TemperatureTracker } from './temperature-tracker';
 import { IlluminanceTracker } from './illuminance-tracker';
 import { OccupancyTracker } from './occupancy-tracker';
@@ -20,6 +21,7 @@ export class DeviceAPI {
 	public readonly humidityTracker: HumidityTracker;
 	public readonly illuminanceTracker: IlluminanceTracker;
 	public readonly buttonPressTracker: SwitchTracker;
+	public readonly booleanStateTracker: BooleanStateTracker;
 	public readonly paletteAPI: PaletteAPI;
 	public readonly sceneAPI: SceneAPI;
 	public readonly groupAPI: GroupAPI;
@@ -38,6 +40,7 @@ export class DeviceAPI {
 		this.humidityTracker = new HumidityTracker(sqlDB);
 		this.illuminanceTracker = new IlluminanceTracker(sqlDB);
 		this.buttonPressTracker = new SwitchTracker(sqlDB, this.sceneAPI);
+		this.booleanStateTracker = new BooleanStateTracker(sqlDB);
 	}
 
 	public readonly devices = new Data<{
@@ -72,6 +75,7 @@ export class DeviceAPI {
 		this.humidityTracker.trackDevices(devices);
 		this.illuminanceTracker.trackDevices(devices);
 		this.buttonPressTracker.trackDevices(devices);
+		this.booleanStateTracker.trackDevices(devices);
 	}
 
 	public updateDeviceName(deviceId: string, name: string): boolean {

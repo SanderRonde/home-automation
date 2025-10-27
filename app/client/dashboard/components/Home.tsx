@@ -57,6 +57,12 @@ export type HomeDetailView =
 			type: 'device';
 			device: DeviceType;
 			cluster: DashboardDeviceClusterWithState;
+	  }
+	| {
+			type: 'room-grouped-cluster';
+			roomName: string;
+			clusterName: DeviceClusterName;
+			devices: DeviceType[];
 	  };
 
 type HomeDetailViewWithFrom = HomeDetailView & {
@@ -108,6 +114,22 @@ function parseDetailViewFromHash(hash: string, devices: DeviceType[]): HomeDetai
 				};
 			}
 		}
+	} else if (viewType === 'room-grouped-cluster') {
+		const roomName = params.get('name');
+		const clusterName = params.get('cluster') as DeviceClusterName;
+		const deviceIdsParam = params.get('deviceIds');
+		if (roomName && clusterName && deviceIdsParam) {
+			const deviceIds = deviceIdsParam.split(',');
+			const groupedDevices = devices.filter((d) => deviceIds.includes(d.uniqueId));
+			if (groupedDevices.length > 0) {
+				return {
+					type: 'room-grouped-cluster',
+					roomName: decodeURIComponent(roomName),
+					clusterName,
+					devices: groupedDevices,
+				};
+			}
+		}
 	}
 
 	return null;
@@ -141,6 +163,13 @@ function serializeDetailViewToHash(view: HomeDetailView | null): string {
 		params.set('deviceId', view.device.uniqueId);
 		params.set('cluster', view.cluster.name);
 		return `home?${params.toString()}`;
+	} else if (view.type === 'room-grouped-cluster') {
+		const params = new URLSearchParams();
+		params.set('view', 'room-grouped-cluster');
+		params.set('name', view.roomName);
+		params.set('cluster', view.clusterName);
+		params.set('deviceIds', view.devices.map((d) => d.uniqueId).join(','));
+		return `home?${params.toString()}`;
 	}
 
 	return 'home';
@@ -169,17 +198,14 @@ export const Home = (): JSX.Element => {
 		void loadScenes();
 	}, []);
 
-	// Load groups marked to show on home
+	// Load all groups (for navigation purposes)
 	React.useEffect(() => {
 		const loadGroups = async () => {
 			try {
 				const response = await apiGet('device', '/groups/list', {});
 				if (response.ok) {
 					const data = await response.json();
-					// Only show groups marked to show on home screen
-					setGroups(
-						data.groups.filter((group: DeviceGroup) => group.showOnHome === true)
-					);
+					setGroups(data.groups);
 				}
 			} catch (error) {
 				console.error('Failed to load groups:', error);
@@ -212,13 +238,18 @@ export const Home = (): JSX.Element => {
 		return Array.from(roomMap.values()).sort((a, b) => a.room.localeCompare(b.room));
 	}, [devices]);
 
-	// Create group devices array
+	// Create group devices array (all groups for navigation)
 	const groupDevices: GroupDevices[] = React.useMemo(() => {
 		return groups.map((group) => ({
 			group,
 			devices: devices.filter((device) => group.deviceIds.includes(device.uniqueId)),
 		}));
 	}, [groups, devices]);
+
+	// Filter groups to show on home page
+	const homePageGroups: GroupDevices[] = React.useMemo(() => {
+		return groupDevices.filter((groupData) => groupData.group.showOnHome === true);
+	}, [groupDevices]);
 
 	const [detailView, setDetailView] = React.useState<HomeDetailViewWithFrom | null>(null);
 
@@ -400,6 +431,20 @@ export const Home = (): JSX.Element => {
 			);
 		}
 	}
+	if (detailView && detailView.type === 'room-grouped-cluster') {
+		const room = roomDevices.find((r) => r.room === detailView.roomName);
+		return (
+			<RoomGroupedClusterDetail
+				roomName={detailView.roomName}
+				roomColor={room?.roomColor}
+				clusterName={detailView.clusterName}
+				devices={detailView.devices}
+				onExit={popDetailView}
+				invalidate={() => refresh(false)}
+				pushDetailView={pushDetailView}
+			/>
+		);
+	}
 	if (detailView && detailView.type === 'device') {
 		return (
 			<DeviceDetail
@@ -458,7 +503,7 @@ export const Home = (): JSX.Element => {
 				)}
 
 				{/* Group Cards */}
-				{groupDevices.map((groupData, index) => {
+				{homePageGroups.map((groupData, index) => {
 					return (
 						<GroupCard
 							groupData={groupData}
@@ -531,12 +576,70 @@ interface RoomDetailProps {
 }
 
 const RoomDetail = (props: RoomDetailProps) => {
-	// Create entries for each device-cluster combination
+	// Load all groups
+	const [groups, setGroups] = React.useState<DeviceGroup[]>([]);
+
+	React.useEffect(() => {
+		const loadGroups = async () => {
+			try {
+				const response = await apiGet('device', '/groups/list', {});
+				if (response.ok) {
+					const data = await response.json();
+					setGroups(data.groups);
+				}
+			} catch (error) {
+				console.error('Failed to load groups:', error);
+			}
+		};
+		void loadGroups();
+	}, []);
+
+	// Calculate valid groups - groups where ALL devices are in this room
+	const validGroups = React.useMemo(() => {
+		const roomDeviceIds = new Set(props.devices.map((d) => d.uniqueId));
+		return groups.filter((group) =>
+			group.deviceIds.every((deviceId) => roomDeviceIds.has(deviceId))
+		);
+	}, [groups, props.devices]);
+
+	// Get device IDs covered by valid groups
+	const coveredDeviceIds = React.useMemo(() => {
+		return new Set(validGroups.flatMap((g) => g.deviceIds));
+	}, [validGroups]);
+
+	// Create entries for each device-cluster combination (excluding covered devices)
 	const deviceClusterEntries = React.useMemo(() => {
 		const entries = [];
 		const switchDevicesProcessed = new Set<string>();
 
+		// Collect all devices with WindowCovering clusters (excluding those in groups)
+		const windowCoveringDevices = props.devices.filter(
+			(device) =>
+				!coveredDeviceIds.has(device.uniqueId) &&
+				device.mergedAllClusters.some((c) => c.name === DeviceClusterName.WINDOW_COVERING)
+		);
+
+		// If there are multiple WindowCovering devices, group them
+		if (windowCoveringDevices.length > 1) {
+			// Add a grouped entry for window coverings
+			const firstWindowCoveringCluster = windowCoveringDevices[0].mergedAllClusters.find(
+				(c) => c.name === DeviceClusterName.WINDOW_COVERING
+			);
+			if (firstWindowCoveringCluster) {
+				entries.push({
+					devices: windowCoveringDevices,
+					cluster: firstWindowCoveringCluster,
+					isGrouped: true,
+				});
+			}
+		}
+
 		for (const device of props.devices) {
+			// Skip devices that are covered by valid groups
+			if (coveredDeviceIds.has(device.uniqueId)) {
+				continue;
+			}
+
 			// Group SWITCH clusters by device - only add one entry per device
 			const switchClusters = device.mergedAllClusters.filter(
 				(c) => c.name === DeviceClusterName.SWITCH
@@ -551,9 +654,17 @@ const RoomDetail = (props: RoomDetailProps) => {
 				switchDevicesProcessed.add(device.uniqueId);
 			}
 
-			// Add all non-SWITCH clusters normally
+			// Add all non-SWITCH and non-WINDOW_COVERING clusters normally
+			// Skip WINDOW_COVERING if there are multiple (already grouped)
 			for (const cluster of device.mergedAllClusters) {
 				if (cluster.name !== DeviceClusterName.SWITCH) {
+					if (
+						cluster.name === DeviceClusterName.WINDOW_COVERING &&
+						windowCoveringDevices.length > 1
+					) {
+						// Skip individual window coverings if grouped
+						continue;
+					}
 					entries.push({
 						device,
 						cluster,
@@ -568,9 +679,18 @@ const RoomDetail = (props: RoomDetailProps) => {
 			if (clusterCompare !== 0) {
 				return clusterCompare;
 			}
+			if ('devices' in a && 'devices' in b) {
+				return 0;
+			}
+			if ('devices' in a) {
+				return -1;
+			}
+			if ('devices' in b) {
+				return 1;
+			}
 			return a.device.name.localeCompare(b.device.name);
 		});
-	}, [props.devices]);
+	}, [props.devices, coveredDeviceIds]);
 
 	return (
 		<Box>
@@ -622,21 +742,73 @@ const RoomDetail = (props: RoomDetailProps) => {
 				>
 					{(() => {
 						let animationIndex = 0;
-						return deviceClusterEntries.map((entry) => {
+						const components = [];
+
+						// Render group cards first
+						for (const group of validGroups) {
+							const groupDevices = props.devices.filter((device) =>
+								group.deviceIds.includes(device.uniqueId)
+							);
+							components.push(
+								<GroupCard
+									key={group.id}
+									groupData={{ group, devices: groupDevices }}
+									setGroup={() =>
+										props.pushDetailView({
+											type: 'group',
+											groupId: group.id,
+										})
+									}
+									pushDetailView={(clusterName) =>
+										props.pushDetailView({
+											type: 'group',
+											groupId: group.id,
+											clustersName: clusterName,
+										})
+									}
+									invalidate={props.invalidate}
+									animationIndex={animationIndex}
+								/>
+							);
+							animationIndex++;
+						}
+
+						// Render device cluster cards for non-grouped devices
+						for (const entry of deviceClusterEntries) {
 							const currentAnimationIndex = animationIndex;
-							const Component = DeviceClusterCard({
-								key: `${entry.device.uniqueId}-${entry.cluster.name}`,
-								device: entry.device,
-								cluster: entry.cluster,
-								invalidate: props.invalidate,
-								pushDetailView: props.pushDetailView,
-								animationIndex: currentAnimationIndex,
-							} as DeviceClusterCardBaseProps<DashboardDeviceClusterWithState>);
+							let Component;
+
+							if ('isGrouped' in entry && entry.isGrouped && 'devices' in entry) {
+								// Render grouped cluster card
+								Component = DeviceClusterCard({
+									key: `grouped-${entry.cluster.name}`,
+									devices: entry.devices,
+									cluster: entry.cluster,
+									invalidate: props.invalidate,
+									pushDetailView: props.pushDetailView,
+									animationIndex: currentAnimationIndex,
+									roomName: props.room.room,
+									// eslint-disable-next-line @typescript-eslint/no-explicit-any
+								} as any);
+							} else if ('device' in entry) {
+								// Render regular device cluster card
+								Component = DeviceClusterCard({
+									key: `${entry.device?.uniqueId}-${entry.cluster.name}`,
+									device: entry.device,
+									cluster: entry.cluster,
+									invalidate: props.invalidate,
+									pushDetailView: props.pushDetailView,
+									animationIndex: currentAnimationIndex,
+								} as DeviceClusterCardBaseProps<DashboardDeviceClusterWithState>);
+							}
+
 							if (Component !== null) {
+								components.push(Component);
 								animationIndex++;
 							}
-							return Component;
-						});
+						}
+
+						return components;
 					})()}
 				</Box>
 			</Box>
@@ -699,6 +871,88 @@ const ColorControlRoomDetail = (props: RoomDetailProps): JSX.Element => {
 					/>
 				</Box>
 			)}
+		</Box>
+	);
+};
+
+interface RoomGroupedClusterDetailProps {
+	roomName: string;
+	roomColor?: string;
+	clusterName: DeviceClusterName;
+	devices: DeviceType[];
+	onExit: () => void;
+	invalidate: () => void;
+	pushDetailView: (detailView: HomeDetailView) => void;
+}
+
+const RoomGroupedClusterDetail = (props: RoomGroupedClusterDetailProps): JSX.Element => {
+	// Get cluster display name
+	const getClusterDisplayName = (clusterName: DeviceClusterName): string => {
+		switch (clusterName) {
+			case DeviceClusterName.WINDOW_COVERING:
+				return 'Window Coverings';
+			default:
+				return clusterName;
+		}
+	};
+
+	return (
+		<Box>
+			<Box
+				sx={{
+					backgroundColor: props.roomColor,
+					py: 1,
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
+					position: 'relative',
+				}}
+			>
+				<IconButton sx={{ position: 'absolute', left: 0 }} onClick={() => props.onExit()}>
+					<ArrowBackIcon sx={{ fill: 'black' }} />
+				</IconButton>
+				<Box
+					style={{
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						width: '100%',
+					}}
+				>
+					<Typography style={{ color: 'black', fontWeight: 'bold' }} variant="h6">
+						{props.roomName} - {getClusterDisplayName(props.clusterName)}
+					</Typography>
+				</Box>
+			</Box>
+
+			<Box sx={{ p: { xs: 2, sm: 3 } }}>
+				<Box
+					sx={{
+						display: 'flex',
+						flexDirection: 'column',
+						gap: 2,
+					}}
+				>
+					{props.devices.map((device, index) => {
+						// Find the specific cluster for this device
+						const cluster = device.mergedAllClusters.find(
+							(c) => c.name === props.clusterName
+						);
+						if (!cluster) {
+							return null;
+						}
+
+						return DeviceClusterCard({
+							key: `${device.uniqueId}-${cluster.name}`,
+							device,
+							cluster,
+							invalidate: props.invalidate,
+							pushDetailView: props.pushDetailView,
+							animationIndex: index,
+						} as DeviceClusterCardBaseProps<DashboardDeviceClusterWithState>);
+					})}
+				</Box>
+			</Box>
 		</Box>
 	);
 };
