@@ -275,6 +275,8 @@ export abstract class EwelinkBooleanStateCluster<S extends object>
 
 	public abstract state: Data<boolean>;
 
+	public abstract onStateChange: EventEmitter<{ state: boolean }>;
+
 	public override [Symbol.dispose](): void {
 		this.getProxy()[Symbol.dispose]();
 	}
@@ -282,7 +284,7 @@ export abstract class EwelinkBooleanStateCluster<S extends object>
 
 export class EwelinkOccupancySensingCluster
 	extends ConfigurableCluster<{
-		motion: 0 | 1;
+		motion?: 0 | 1;
 	}>
 	implements DeviceOccupancySensingCluster
 {
@@ -291,12 +293,17 @@ export class EwelinkOccupancySensingCluster
 	}
 
 	public occupancy = this.getProxy().attributeGetter((value) =>
-		value ? value.motion === 1 : false
+		value?.motion !== undefined ? value.motion === 1 : false
 	);
 
-	public onOccupied = this.getProxy().eventListener((value) => ({
-		occupied: value.motion === 1,
-	}));
+	public onOccupied = this.getProxy().eventListener((value) => {
+		if (value.motion === undefined) {
+			return false;
+		}
+		return {
+			occupied: value.motion === 1,
+		};
+	});
 }
 
 export class EwelinkSwitchCluster
