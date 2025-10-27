@@ -151,6 +151,11 @@ class Pinger {
 					const shouldUpdate = this._initialStateConfirmed;
 					this._state = HOME_STATE.HOME;
 					this._initialStateConfirmed = true;
+					// Save HOME state to database
+					this._db.update((old) => ({
+						...old,
+						[this._config.name]: HOME_STATE.HOME,
+					}));
 					if (shouldUpdate) {
 						await this._onChange(HOME_STATE.HOME);
 					}
