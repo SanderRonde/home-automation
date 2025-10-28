@@ -30,19 +30,6 @@ async function _initRouting({ modules }: ModuleConfig) {
 					}
 				: {
 						'/': dashboardHtml,
-						// Bun quirk where it bundles all but the manifest.json...
-						'/service-worker.js': async () => {
-							await Bun.build({
-								entrypoints: [
-									path.join(CLIENT_FOLDER, 'dashboard', 'service-worker.ts'),
-								],
-								outdir: BUILD_FOLDER,
-								naming: 'service-worker.js',
-							});
-							return new Response(
-								Bun.file(path.join(BUILD_FOLDER, 'service-worker.js'))
-							);
-						},
 						...(await serveStatic(
 							path.join(CLIENT_FOLDER, 'dashboard'),
 							'app/client/dashboard'

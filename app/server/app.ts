@@ -1,8 +1,8 @@
 import { createServeOptions, staticResponse, type ServeOptions } from './lib/routes';
 import { logImmediate, logReady, logTag } from './lib/logging/logger';
 import { hasArg, getArg, getNumberArg, getNumberEnv } from './lib/io';
+import { CLIENT_FOLDER, DB_FOLDER, ROOT } from './lib/constants';
 import { ProgressLogger } from './lib/logging/progress-logger';
-import { CLIENT_FOLDER, DB_FOLDER } from './lib/constants';
 import type { AllModules, ModuleConfig } from './modules';
 import { SettablePromise } from './lib/settable-promise';
 import { printCommands } from './modules/bot/helpers';
@@ -187,6 +187,31 @@ class WebServer {
 								Bun.file(path.join(CLIENT_FOLDER, 'dashboard', 'manifest.json'))
 							)
 						),
+						// @ts-ignore
+						'/service-worker.js': this._config.debug
+							? async () => {
+									await Bun.build({
+										entrypoints: [
+											path.join(
+												CLIENT_FOLDER,
+												'dashboard',
+												'service-worker.ts'
+											),
+										],
+										outdir: path.join(ROOT, 'build'),
+										naming: 'service-worker.js',
+									});
+									return new Response(
+										Bun.file(path.join(ROOT, 'build', 'service-worker.js'))
+									);
+								}
+							: staticResponse(
+									new Response(
+										Bun.file(
+											path.join(ROOT, 'build/dashboard/service-worker.js')
+										)
+									)
+								),
 						'/app/client/dashboard/manifest.json': staticResponse(
 							new Response(
 								Bun.file(path.join(CLIENT_FOLDER, 'dashboard', 'manifest.json'))
