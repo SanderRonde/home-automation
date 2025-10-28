@@ -328,14 +328,14 @@ class MatterWindowCoveringCluster
 			liftPercent100thsValue: percentage * 100,
 		}),
 	});
-	public goToLiftPercentage = ({ percentage }: { percentage: number }) => {
+	public goToLiftPercentage = async ({ percentage }: { percentage: number }) => {
 		logDev(
 			'matter goToLiftPercentage',
 			percentage,
 			'current is',
-			this.targetPositionLiftPercentage.current()
+			await this.targetPositionLiftPercentage.get()
 		);
-		if (this.targetPositionLiftPercentage.current() === percentage) {
+		if ((await this.targetPositionLiftPercentage.get()) === percentage) {
 			// If already at the target position, do nothing.
 			// This fixes a bug where ikea blinds will try to move to the
 			// position even if they're already there.
