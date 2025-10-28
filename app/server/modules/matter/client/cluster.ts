@@ -28,6 +28,7 @@ import type {
 	PowerSource,
 	TemperatureMeasurement,
 	WindowCovering,
+	BooleanState,
 } from '@matter/main/clusters';
 import {
 	GroupId,
@@ -38,6 +39,7 @@ import {
 	type Event,
 } from '@matter/types';
 import type { PairedNode, Endpoint } from '@project-chip/matter.js/device';
+import { DeviceBooleanStateCluster } from '../../device/cluster';
 import type { Switch } from '@matter/types/clusters/switch';
 import { EventEmitter } from '../../../lib/event-emitter';
 import type { LevelControl } from '@matter/main/clusters';
@@ -645,6 +647,23 @@ class MatterSwitchWithLongPressAndMultiPressCluster
 	});
 }
 
+class MatterBooleanStateCluster
+	extends ConfigurableCluster<BooleanState.Cluster>
+	implements DeviceBooleanStateCluster<boolean>
+{
+	public getName(): DeviceClusterName {
+		return DeviceBooleanStateCluster.clusterName;
+	}
+
+	public state = this._proxy.attributeGetter('stateValue', (value) => value ?? false);
+
+	public onStateChange = this._proxy.event('stateChange', {
+		output: ({ stateValue }) => {
+			return { state: stateValue ?? false };
+		},
+	});
+}
+
 function fromMatterStatus(status: Status): DeviceStatus {
 	switch (status) {
 		case Status.Success:
@@ -716,6 +735,11 @@ export const MATTER_CLUSTERS = {
 		cluster: ClusterClientObj
 	): MatterTemperatureMeasurementCluster =>
 		new MatterTemperatureMeasurementCluster(node, endpoint, cluster),
+	[DeviceClusterName.BOOLEAN_STATE]: (
+		node: PairedNode,
+		endpoint: Endpoint,
+		cluster: ClusterClientObj
+	): MatterBooleanStateCluster => new MatterBooleanStateCluster(node, endpoint, cluster),
 	[DeviceClusterName.SWITCH]: async (
 		node: PairedNode,
 		endpoint: Endpoint,

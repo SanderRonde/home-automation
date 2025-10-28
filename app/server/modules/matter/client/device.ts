@@ -70,7 +70,7 @@ export class MatterEndpoint extends DeviceEndpoint {
 			if (!clusterWithName) {
 				if (!IGNORED_MATTER_CLUSTERS.includes(clusterClient.name)) {
 					console.error(
-						`${this.#node.nodeId}/${this.#endpoint.number}: Cluster ${clusterClient.name} not found`
+						`${this.#node.nodeId}/${this.#endpoint.number}/${await this.#name}: Cluster ${clusterClient.name} not found`
 					);
 				}
 				continue;
