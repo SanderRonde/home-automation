@@ -119,6 +119,7 @@ class ClusterProxy<C extends MatterClusterInterface> implements Disposable {
 
 					const tryGet = async () => {
 						const result = await attribute.get();
+						this.set(result);
 						if (mapper) {
 							return mapper(result);
 						}
