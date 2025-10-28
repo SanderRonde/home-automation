@@ -116,6 +116,13 @@ class Pinger {
 			newState = await this._pingAll(true, newState.ip);
 			logDev('device', this.name, 'ping loop pings (final state:', newState, ')');
 
+			if (newState.state === this._lastState) {
+				await wait(
+					newState.state === HOME_STATE.HOME ? HOME_PING_INTERVAL : AWAY_PING_INTERVAL
+				);
+				continue;
+			}
+
 			const shouldUpdate = this._initialStateConfirmed;
 			this._initialStateConfirmed = true;
 
