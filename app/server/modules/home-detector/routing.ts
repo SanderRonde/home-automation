@@ -94,6 +94,10 @@ function _initRouting(detector: Detector, config: ModuleConfig) {
 					return json({ success: true });
 				}
 			),
+			'/events/history': async (_req, _server, { json }) => {
+				const events = await detector.getEventHistory(100);
+				return json({ events });
+			},
 		},
 		true,
 		{

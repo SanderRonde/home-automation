@@ -27,11 +27,19 @@ import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import type { Host } from '../../../server/modules/home-detector/routing';
 import { HOME_STATE } from '../../../server/modules/home-detector/types';
 import useWebsocket from '../../shared/resilient-socket';
-import { Device } from '../../../server/modules/device';
 import { HomeDetectorModal } from './HomeDetectorModal';
 import React, { useState, useEffect } from 'react';
 import { apiGet, apiPost } from '../../lib/fetch';
 import { useDevices } from './Devices';
+
+interface EventHistoryItem {
+	id: number;
+	host_name: string;
+	state: string;
+	timestamp: number;
+	trigger_type?: string | null;
+	scenes_triggered?: string | null;
+}
 
 export const HomeDetector = (): JSX.Element => {
 	const [currentTab, setCurrentTab] = useState(0);
@@ -42,6 +50,8 @@ export const HomeDetector = (): JSX.Element => {
 	const [editingHost, setEditingHost] = useState<Host | undefined>(undefined);
 	const [doorSensorIds, setDoorSensorIds] = useState<string[]>([]);
 	const [savingDoorSensors, setSavingDoorSensors] = useState(false);
+	const [eventHistory, setEventHistory] = useState<EventHistoryItem[]>([]);
+	const [loadingEvents, setLoadingEvents] = useState(false);
 
 	const { devices } = useDevices();
 
@@ -62,7 +72,15 @@ export const HomeDetector = (): JSX.Element => {
 	useEffect(() => {
 		void loadHosts();
 		void loadDoorSensors();
+		void loadEventHistory();
 	}, []);
+
+	// Reload events when switching to the Event History tab
+	useEffect(() => {
+		if (currentTab === 2) {
+			void loadEventHistory();
+		}
+	}, [currentTab]);
 
 	// WebSocket for real-time updates
 	useWebsocket<HomeDetectorWebsocketServerMessage, never>('/home-detector/ws', {
@@ -132,6 +150,21 @@ export const HomeDetector = (): JSX.Element => {
 		}
 	};
 
+	const loadEventHistory = async () => {
+		setLoadingEvents(true);
+		try {
+			const response = await apiGet('home-detector', '/events/history', {});
+			if (response.ok) {
+				const data = await response.json();
+				setEventHistory(data.events || []);
+			}
+		} catch (error) {
+			console.error('Failed to load event history:', error);
+		} finally {
+			setLoadingEvents(false);
+		}
+	};
+
 	const handleToggleDoorSensor = (deviceId: string) => {
 		setDoorSensorIds((prev) => {
 			if (prev.includes(deviceId)) {
@@ -189,6 +222,7 @@ export const HomeDetector = (): JSX.Element => {
 			<Tabs value={currentTab} onChange={(_e, value) => setCurrentTab(value)} sx={{ mb: 3 }}>
 				<Tab label="Devices" />
 				<Tab label="Door Sensors" />
+				<Tab label="Event History" />
 			</Tabs>
 
 			{currentTab === 0 && (
@@ -369,6 +403,110 @@ export const HomeDetector = (): JSX.Element => {
 							)}
 						</CardContent>
 					</Card>
+				</Box>
+			)}
+
+			{currentTab === 2 && (
+				<Box>
+					<Box sx={{ mb: 3 }}>
+						<Typography variant="h6">Recent Events</Typography>
+						<Typography variant="body2" color="text.secondary">
+							History of home state changes and scene triggers
+						</Typography>
+					</Box>
+
+					{loadingEvents ? (
+						<Box
+							sx={{
+								display: 'flex',
+								justifyContent: 'center',
+								alignItems: 'center',
+								height: '200px',
+							}}
+						>
+							<CircularProgress />
+						</Box>
+					) : eventHistory.length === 0 ? (
+						<Card sx={{ borderRadius: 2 }}>
+							<CardContent>
+								<Typography
+									variant="body2"
+									color="text.secondary"
+									textAlign="center"
+								>
+									No events yet. Events will appear here when devices change state
+									or scenes are triggered.
+								</Typography>
+							</CardContent>
+						</Card>
+					) : (
+						<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+							{eventHistory.map((event) => {
+								const date = new Date(event.timestamp);
+								return (
+									<Card key={event.id} sx={{ borderRadius: 2 }}>
+										<CardContent>
+											<Box
+												sx={{
+													display: 'flex',
+													justifyContent: 'space-between',
+													alignItems: 'flex-start',
+													mb: 1,
+												}}
+											>
+												<Box sx={{ flexGrow: 1 }}>
+													<Box
+														sx={{
+															display: 'flex',
+															alignItems: 'center',
+															gap: 1,
+															mb: 1,
+														}}
+													>
+														<Typography
+															variant="subtitle1"
+															fontWeight={500}
+														>
+															{event.host_name}
+														</Typography>
+														<Chip
+															label={
+																event.state === 'HOME'
+																	? 'Home'
+																	: 'Away'
+															}
+															color={
+																event.state === 'HOME'
+																	? 'success'
+																	: 'default'
+															}
+															size="small"
+														/>
+													</Box>
+													<Typography
+														variant="body2"
+														color="text.secondary"
+													>
+														{date.toLocaleString()}
+													</Typography>
+													{event.trigger_type && (
+														<Typography
+															variant="caption"
+															color="text.secondary"
+															sx={{ display: 'block', mt: 0.5 }}
+														>
+															Trigger:{' '}
+															{event.trigger_type.replace('-', ' ')}
+														</Typography>
+													)}
+												</Box>
+											</Box>
+										</CardContent>
+									</Card>
+								);
+							})}
+						</Box>
+					)}
 				</Box>
 			)}
 		</Box>

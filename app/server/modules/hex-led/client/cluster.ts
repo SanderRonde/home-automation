@@ -160,6 +160,12 @@ export class HexLEDActionsCluster extends ConfigurableCluster implements DeviceA
 	);
 
 	public executeAction = async (args: { actionId: number }): Promise<void> => {
+		const actionList = await this.actionList.get();
+		const action = actionList.find((a) => a.id === args.actionId);
+		if (action?.state === Actions.ActionState.Active) {
+			// Already active
+			return;
+		}
 		const presets = this.client.presets.current();
 		const preset = presets.find((p) => p.id === args.actionId);
 		if (!preset) {

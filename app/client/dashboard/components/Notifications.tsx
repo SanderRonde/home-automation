@@ -51,26 +51,20 @@ export const Notifications = (): JSX.Element => {
 
 	const loadData = async () => {
 		try {
-			console.log('loadData');
 			setLoading(true);
 			setError(null);
 
 			// Load subscriptions
-			console.log('loadData subscriptions');
 			const subsResponse = await apiGet('notification', '/subscriptions', {});
-			console.log('loadData subscriptions response', subsResponse);
 			if (subsResponse.ok) {
 				const data = await subsResponse.json();
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 				setSubscriptions(data.subscriptions || []);
 
 				// Check if current browser is subscribed
-				console.log('loadData check if current browser is subscribed');
 				if ('serviceWorker' in navigator) {
-					console.log('loadData get service worker');
 					const registration = await navigator.serviceWorker.ready;
-					console.log('loadData get service worker done');
 					const subscription = await registration.pushManager.getSubscription();
-					console.log('loadData get subscription done');
 					if (subscription) {
 						// Find matching subscription
 						const match = data.subscriptions.find(
@@ -79,22 +73,18 @@ export const Notifications = (): JSX.Element => {
 						setCurrentSubscription(match || null);
 					}
 				}
-				console.log('loadData check if current browser is subscribed done');
 			}
 
-			console.log('loadData settings');
 			// Load settings
 			const settingsResponse = await apiGet('notification', '/settings', {});
 			if (settingsResponse.ok) {
 				const data = await settingsResponse.json();
 				setSettings(data.settings);
 			}
-			console.log('loadData settings done');
 		} catch (err) {
 			console.error('Failed to load notifications data:', err);
 			setError('Failed to load notification settings');
 		} finally {
-			console.log('loadData finally');
 			setLoading(false);
 		}
 	};
@@ -139,7 +129,8 @@ export const Notifications = (): JSX.Element => {
 			// Subscribe to push
 			const subscription = await registration.pushManager.subscribe({
 				userVisibleOnly: true,
-				applicationServerKey: urlBase64ToUint8Array(keyData.publicKey),
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				applicationServerKey: urlBase64ToUint8Array(keyData.publicKey) as any,
 			});
 
 			// Send subscription to server
@@ -151,8 +142,8 @@ export const Notifications = (): JSX.Element => {
 				{
 					endpoint: subscriptionObject.endpoint!,
 					keys: {
-						p256dh: subscriptionObject.keys!.p256dh!,
-						auth: subscriptionObject.keys!.auth!,
+						p256dh: subscriptionObject.keys!.p256dh,
+						auth: subscriptionObject.keys!.auth,
 					},
 					userAgent: navigator.userAgent,
 				}

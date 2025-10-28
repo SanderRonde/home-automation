@@ -13,6 +13,7 @@ import type { Database } from '../../lib/db';
 import type { HomeDetectorDB } from '.';
 import type { Host } from './routing';
 import { HOME_STATE } from './types';
+import type { SQL } from 'bun';
 import * as ping from 'ping';
 
 function wait(time: number) {
@@ -47,7 +48,8 @@ class Pinger {
 			ips: string[];
 		},
 		private readonly _db: Database<HomeDetectorDB>,
-		private readonly _onChange: (newState: HOME_STATE) => void | Promise<void>
+		private readonly _onChange: (newState: HOME_STATE) => void | Promise<void>,
+		private readonly _sqlDB?: SQL
 	) {
 		void this._init();
 	}
@@ -137,6 +139,7 @@ class Pinger {
 				}));
 				if (shouldUpdate) {
 					await this._onChange(HOME_STATE.HOME);
+					await this._logEvent(HOME_STATE.HOME);
 				}
 				await wait(CHANGE_PING_INTERVAL);
 				continue;
@@ -164,8 +167,24 @@ class Pinger {
 			}));
 			if (shouldUpdate) {
 				await this._onChange(HOME_STATE.AWAY);
+				await this._logEvent(HOME_STATE.AWAY);
 			}
 			await wait(CHANGE_PING_INTERVAL);
+		}
+	}
+
+	private async _logEvent(state: HOME_STATE): Promise<void> {
+		if (!this._sqlDB) {
+			return;
+		}
+
+		try {
+			await this._sqlDB`
+				INSERT INTO home_detection_events (host_name, state, timestamp, trigger_type)
+				VALUES (${this._config.name}, ${state}, ${Date.now()}, 'ping')
+			`;
+		} catch (error) {
+			logTag('home-detector', 'red', 'Failed to log event:', error);
 		}
 	}
 
@@ -198,6 +217,7 @@ export class Detector {
 	private _rapidPingListeners: Array<(anyoneHome: boolean) => void | Promise<void>> = [];
 	private readonly _db: Database<HomeDetectorDB>;
 	private readonly _hostsDb: Database<HostsConfigDB>;
+	private readonly _sqlDB?: SQL;
 	private _pingers: Map<string, Pinger> = new Map();
 	private _rapidPingUntil: Date | null = null;
 	private _rapidPingStartState: Record<string, HOME_STATE> | null = null;
@@ -205,12 +225,15 @@ export class Detector {
 	public constructor({
 		db,
 		hostsDb,
+		sqlDB,
 	}: {
 		db: Database<HomeDetectorDB>;
 		hostsDb: Database<HostsConfigDB>;
+		sqlDB?: SQL;
 	}) {
 		this._db = db;
 		this._hostsDb = hostsDb;
+		this._sqlDB = sqlDB;
 		this._initPingers();
 	}
 
@@ -251,7 +274,8 @@ export class Detector {
 						this._db,
 						async (newState) => {
 							await this._onChange(hostConfig.name, newState);
-						}
+						},
+						this._sqlDB
 					)
 				);
 			}
@@ -326,7 +350,8 @@ export class Detector {
 			this._db,
 			async (newState) => {
 				await this._onChange(name, newState);
-			}
+			},
+			this._sqlDB
 		);
 		this._pingers.set(name, pinger);
 
@@ -367,7 +392,8 @@ export class Detector {
 			this._db,
 			async (newState) => {
 				await this._onChange(name, newState);
-			}
+			},
+			this._sqlDB
 		);
 		this._pingers.set(name, pinger);
 
@@ -402,6 +428,57 @@ export class Detector {
 		});
 
 		return true;
+	}
+
+	public async getEventHistory(limit = 100): Promise<
+		Array<{
+			id: number;
+			host_name: string;
+			state: string;
+			timestamp: number;
+			trigger_type?: string | null;
+			scenes_triggered?: string | null;
+		}>
+	> {
+		if (!this._sqlDB) {
+			return [];
+		}
+
+		try {
+			return await this._sqlDB<
+				Array<{
+					id: number;
+					host_name: string;
+					state: string;
+					timestamp: number;
+					trigger_type: string | null;
+					scenes_triggered: string | null;
+				}>
+			>`
+				SELECT id, host_name, state, timestamp, trigger_type, scenes_triggered
+				FROM home_detection_events
+				ORDER BY timestamp DESC
+				LIMIT ${limit}
+			`;
+		} catch (error) {
+			logTag('home-detector', 'red', 'Failed to get event history:', error);
+			return [];
+		}
+	}
+
+	public async logDoorSensorTrigger(): Promise<void> {
+		if (!this._sqlDB) {
+			return;
+		}
+
+		try {
+			await this._sqlDB`
+				INSERT INTO home_detection_events (host_name, state, timestamp, trigger_type)
+				VALUES ('system', 'AWAY', ${Date.now()}, 'door-sensor')
+			`;
+		} catch (error) {
+			logTag('home-detector', 'red', 'Failed to log door sensor trigger:', error);
+		}
 	}
 
 	public getDoorSensorIds(): string[] {
@@ -510,7 +587,7 @@ export class DoorSensorMonitor {
 
 			for (const booleanStateCluster of booleanStateClusters) {
 				// Subscribe to door state changes
-				const unsubscribe = booleanStateCluster.onStateChange.listen(({ state }) => {
+				const unsubscribe = booleanStateCluster.onStateChange.listen(async ({ state }) => {
 					// Door opened (state changed to true/open)
 					if (state) {
 						logTag(
@@ -519,6 +596,7 @@ export class DoorSensorMonitor {
 							`Door sensor ${deviceId} triggered - starting rapid ping`
 						);
 						this._detector.triggerRapidPing();
+						await this._detector.logDoorSensorTrigger();
 					}
 				});
 

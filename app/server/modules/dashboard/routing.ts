@@ -1,4 +1,3 @@
-import serviceWorker from '../../../client/dashboard/service-worker.ts';
 import { createServeOptions, staticResponse } from '../../lib/routes';
 import dashboardHtml from '../../../client/dashboard/index.html';
 import { CLIENT_FOLDER, ROOT } from '../../lib/constants';

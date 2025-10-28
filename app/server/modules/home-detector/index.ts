@@ -23,10 +23,32 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 	}
 
 	public async init(config: ModuleConfig) {
+		// Initialize SQL table for home detection events
+		const eventsTableExists = await config.sqlDB<{ name: string }[]>`
+			SELECT name FROM sqlite_master WHERE type='table' AND name='home_detection_events'
+		`;
+
+		if (!eventsTableExists.length) {
+			await config.sqlDB`
+				CREATE TABLE home_detection_events (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					host_name TEXT NOT NULL,
+					state TEXT NOT NULL,
+					timestamp INTEGER NOT NULL,
+					trigger_type TEXT,
+					scenes_triggered TEXT
+				)
+			`;
+			await config.sqlDB`
+				CREATE INDEX idx_home_detection_host_time ON home_detection_events(host_name, timestamp DESC)
+			`;
+		}
+
 		const hostsDb = new Database<HostsConfigDB>('home-detector-hosts.json');
 		const detector = new Detector({
 			db: config.db as Database<HomeDetectorDB>,
 			hostsDb,
+			sqlDB: config.sqlDB,
 		});
 		Bot.init({
 			detector,
@@ -51,8 +73,10 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 		const deviceAPI = await modules.device.api.value;
 
 		// Track devices initially
-		deviceAPI.devices.subscribe((devices) => {
-			if (this._doorSensorMonitor) {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		deviceAPI.devices.subscribe((devices: any) => {
+			if (this._doorSensorMonitor && devices) {
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 				this._doorSensorMonitor.trackDevices(Object.values(devices));
 			}
 		});

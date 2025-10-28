@@ -153,7 +153,13 @@ export function withRequestBody<
 	S
 > {
 	return (async (req, server, response) => {
-		const body = shape.safeParse(await req.json());
+		let json;
+		try {
+			json = await req.json();
+		} catch {
+			return response.error('Invalid JSON', 400);
+		}
+		const body = shape.safeParse(json);
 		if (!body.success) {
 			return response.error(body.error.message, 400);
 		}

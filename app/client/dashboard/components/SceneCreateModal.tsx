@@ -776,7 +776,7 @@ const HttpActionConfig = React.memo((props: HttpActionConfigProps) => {
 				action: { ...httpAction, body },
 			});
 			setBodyJsonError(null);
-		} catch (e) {
+		} catch {
 			setBodyJsonError('Invalid JSON');
 		}
 	};
