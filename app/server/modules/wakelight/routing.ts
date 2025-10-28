@@ -9,15 +9,13 @@ import * as z from 'zod';
 function _initRouting(db: Database<WakelightDB>, logic: WakelightLogic) {
 	return createServeOptions(
 		{
-			'/set/:minutesToAlarm': (req, _server, { json, error }) => {
-				try {
-					logic.scheduleAlarm(Number(req.params.minutesToAlarm));
+			'/set': withRequestBody(
+				z.object({ minutesToAlarm: z.number().positive().min(1) }),
+				(body, _req, _server, { json }) => {
+					logic.scheduleAlarm(body.minutesToAlarm);
 					return json({ success: true });
-				} catch (err) {
-					logTag('wakelight', 'red', 'Failed to set alarm:', err);
-					return error('Failed to set alarm', 500);
 				}
-			},
+			),
 			'/clear': {
 				POST: (_req, _server, { json }) => {
 					logic.cancelWakelight();
@@ -54,7 +52,7 @@ function _initRouting(db: Database<WakelightDB>, logic: WakelightLogic) {
 				POST: withRequestBody(
 					z.object({
 						deviceIds: z.array(z.string()),
-						durationMinutes: z.number().positive().min(1).max(60),
+						durationMinutes: z.number().positive().min(1),
 					}),
 					(body, _req, _server, { json, error }) => {
 						try {
