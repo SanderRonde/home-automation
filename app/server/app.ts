@@ -182,6 +182,11 @@ class WebServer {
 					{
 						...(await serveStatic(CLIENT_FOLDER)),
 						// Bun quirk where it rewrites the path but doesn't actually bundle it...
+						'/manifest.json': staticResponse(
+							new Response(
+								Bun.file(path.join(CLIENT_FOLDER, 'dashboard', 'manifest.json'))
+							)
+						),
 						'/app/client/dashboard/manifest.json': staticResponse(
 							new Response(
 								Bun.file(path.join(CLIENT_FOLDER, 'dashboard', 'manifest.json'))
