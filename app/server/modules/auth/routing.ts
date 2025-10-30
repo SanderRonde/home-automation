@@ -54,7 +54,7 @@ async function _getRoutes(userManagement: UserManagement) {
 								secure: false, // Set to true if using HTTPS
 								sameSite: 'lax',
 								path: '/',
-								expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+								maxAge: 12 * 30 * 24 * 60 * 60, // 12 months in seconds
 							});
 
 							return json({
