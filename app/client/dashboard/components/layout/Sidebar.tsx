@@ -8,7 +8,6 @@ import {
 	GroupWork as GroupWorkIcon,
 	Palette as PaletteIcon,
 	Sensors as SensorsIcon,
-	Router as RouterIcon,
 	Webhook as WebhookIcon,
 	Alarm as AlarmIcon,
 	Notifications as NotificationsIcon,
@@ -82,7 +81,6 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 			items: [
 				{ text: 'Devices', icon: <DeviceHubIcon />, id: SidebarTab.DEVICES },
 				{ text: 'eWeLink', icon: <CloudIcon />, id: SidebarTab.EWELINK },
-				{ text: 'Tuya', icon: <RouterIcon />, id: SidebarTab.TUYA },
 				{ text: 'LED Sources', icon: <LightbulbIcon />, id: SidebarTab.LED_SOURCES },
 			],
 		},
@@ -157,7 +155,6 @@ export enum SidebarTab {
 	WAKELIGHT = 'wakelight',
 	DEVICES = 'devices',
 	EWELINK = 'ewelink',
-	TUYA = 'tuya',
 	LED_SOURCES = 'led-sources',
 	MCP = 'mcp',
 	NOTIFICATIONS = 'notifications',

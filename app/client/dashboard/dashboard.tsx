@@ -7,7 +7,6 @@ import { SidebarTab } from './components/layout/Sidebar';
 import { NotFoundPage } from './components/NotFoundPage';
 import { HomeDetector } from './components/HomeDetector';
 import { OfflineProvider } from '../lib/offline-context';
-import { TuyaConfig } from './components/TuyaConfig';
 import { MCPConfig } from './components/MCPConfig';
 import React, { useState, useEffect } from 'react';
 import { Webhooks } from './components/Webhooks';
@@ -125,8 +124,6 @@ function DashboardApp() {
 				return <Devices />;
 			case SidebarTab.EWELINK:
 				return <EweLinkConfig />;
-			case SidebarTab.TUYA:
-				return <TuyaConfig />;
 			case SidebarTab.LED_SOURCES:
 				return <LEDSourcesConfig />;
 			case SidebarTab.MCP:

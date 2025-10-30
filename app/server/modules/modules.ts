@@ -11,7 +11,6 @@ import { Secret } from './secret/';
 import { Matter } from './matter';
 import { Device } from './device';
 import { WLed } from './wled';
-import { Tuya } from './tuya';
 import { Auth } from './auth';
 import { MCP } from './mcp';
 import { Bot } from './bot';
@@ -47,7 +46,6 @@ const getModuleObj = () => ({
 	homeDetector: HomeDetector,
 	notification: Notification,
 	mcp: MCP,
-	tuya: Tuya,
 });
 
 let notified = false;
