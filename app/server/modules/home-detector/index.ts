@@ -1,5 +1,5 @@
 import { SettablePromise } from '../../lib/settable-promise';
-import { DoorSensorMonitor, Detector } from './classes';
+import { DoorSensorMonitor, MovementSensorMonitor, Detector } from './classes';
 import { logTag } from '../../lib/logging/logger';
 import type { HostsConfigDB } from './classes';
 import { Database } from '../../lib/db';
@@ -15,6 +15,7 @@ export type HomeDetectorDB = Record<string, HOME_STATE>;
 export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 	private readonly _detector: SettablePromise<Detector> = new SettablePromise();
 	private _doorSensorMonitor: DoorSensorMonitor | null = null;
+	private _movementSensorMonitor: MovementSensorMonitor | null = null;
 
 	public name = 'home-detector';
 
@@ -68,6 +69,9 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 		// Initialize door sensor monitoring
 		this._doorSensorMonitor = new DoorSensorMonitor(detector, hostsDb);
 
+		// Initialize movement sensor monitoring
+		this._movementSensorMonitor = new MovementSensorMonitor(detector, hostsDb);
+
 		// Wait for modules to be available, then subscribe to device updates
 		const modules = await this.modules;
 		const deviceAPI = await modules.device.api.value;
@@ -78,6 +82,10 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 			if (this._doorSensorMonitor && devices) {
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 				this._doorSensorMonitor.trackDevices(Object.values(devices));
+			}
+			if (this._movementSensorMonitor && devices) {
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+				this._movementSensorMonitor.trackDevices(Object.values(devices));
 			}
 		});
 

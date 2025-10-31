@@ -50,6 +50,8 @@ export const HomeDetector = (): JSX.Element => {
 	const [editingHost, setEditingHost] = useState<Host | undefined>(undefined);
 	const [doorSensorIds, setDoorSensorIds] = useState<string[]>([]);
 	const [savingDoorSensors, setSavingDoorSensors] = useState(false);
+	const [movementSensorIds, setMovementSensorIds] = useState<string[]>([]);
+	const [savingMovementSensors, setSavingMovementSensors] = useState(false);
 	const [eventHistory, setEventHistory] = useState<EventHistoryItem[]>([]);
 	const [loadingEvents, setLoadingEvents] = useState(false);
 
@@ -72,6 +74,7 @@ export const HomeDetector = (): JSX.Element => {
 	useEffect(() => {
 		void loadHosts();
 		void loadDoorSensors();
+		void loadMovementSensors();
 		void loadEventHistory();
 	}, []);
 
@@ -150,6 +153,18 @@ export const HomeDetector = (): JSX.Element => {
 		}
 	};
 
+	const loadMovementSensors = async () => {
+		try {
+			const response = await apiGet('home-detector', '/movement-sensors/list', {});
+			if (response.ok) {
+				const data = await response.json();
+				setMovementSensorIds(data.movementSensorIds || []);
+			}
+		} catch (error) {
+			console.error('Failed to load movement sensors:', error);
+		}
+	};
+
 	const loadEventHistory = async () => {
 		setLoadingEvents(true);
 		try {
@@ -167,6 +182,16 @@ export const HomeDetector = (): JSX.Element => {
 
 	const handleToggleDoorSensor = (deviceId: string) => {
 		setDoorSensorIds((prev) => {
+			if (prev.includes(deviceId)) {
+				return prev.filter((id) => id !== deviceId);
+			} else {
+				return [...prev, deviceId];
+			}
+		});
+	};
+
+	const handleToggleMovementSensor = (deviceId: string) => {
+		setMovementSensorIds((prev) => {
 			if (prev.includes(deviceId)) {
 				return prev.filter((id) => id !== deviceId);
 			} else {
@@ -194,8 +219,33 @@ export const HomeDetector = (): JSX.Element => {
 		}
 	};
 
+	const handleSaveMovementSensors = async () => {
+		try {
+			setSavingMovementSensors(true);
+			const response = await apiPost(
+				'home-detector',
+				'/movement-sensors/update',
+				{},
+				{ movementSensorIds }
+			);
+			if (response.ok) {
+				// Success - could show a snackbar here
+			}
+		} catch (error) {
+			console.error('Failed to save movement sensors:', error);
+		} finally {
+			setSavingMovementSensors(false);
+		}
+	};
+
 	const booleanStateDevices = devices.filter((device) =>
 		device.flatAllClusters.some((cluster) => cluster.name === DeviceClusterName.BOOLEAN_STATE)
+	);
+
+	const occupancyDevices = devices.filter((device) =>
+		device.flatAllClusters.some(
+			(cluster) => cluster.name === DeviceClusterName.OCCUPANCY_SENSING
+		)
 	);
 
 	if (loading) {
@@ -221,7 +271,7 @@ export const HomeDetector = (): JSX.Element => {
 
 			<Tabs value={currentTab} onChange={(_e, value) => setCurrentTab(value)} sx={{ mb: 3 }}>
 				<Tab label="Devices" />
-				<Tab label="Door Sensors" />
+				<Tab label="Sensors" />
 				<Tab label="Event History" />
 			</Tabs>
 
@@ -352,57 +402,110 @@ export const HomeDetector = (): JSX.Element => {
 			{currentTab === 1 && (
 				<Box>
 					<Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-						<Typography variant="h6">Door Sensors</Typography>
+						<Typography variant="h6">Sensors</Typography>
 						<Button
 							variant="contained"
-							onClick={handleSaveDoorSensors}
-							disabled={savingDoorSensors}
+							onClick={() => {
+								void handleSaveDoorSensors();
+								void handleSaveMovementSensors();
+							}}
+							disabled={savingDoorSensors || savingMovementSensors}
 						>
-							{savingDoorSensors ? 'Saving...' : 'Save Changes'}
+							{savingDoorSensors || savingMovementSensors
+								? 'Saving...'
+								: 'Save Changes'}
 						</Button>
 					</Box>
 
-					<Card sx={{ borderRadius: 2 }}>
-						<CardContent>
-							<Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-								<SensorsIcon sx={{ color: 'text.secondary' }} />
-								<Typography variant="body2" color="text.secondary">
-									Select door sensors to trigger rapid device re-ping. When
-									triggered, all devices will be pinged rapidly for 60 seconds to
-									detect if someone comes home.
+					<Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+						<Card sx={{ borderRadius: 2 }}>
+							<CardContent>
+								<Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 500 }}>
+									Door Sensors
 								</Typography>
-							</Box>
+								<Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+									<SensorsIcon sx={{ color: 'text.secondary' }} />
+									<Typography variant="body2" color="text.secondary">
+										Select door sensors to trigger rapid device re-ping. When
+										triggered, all devices will be pinged rapidly for 60 seconds to
+										detect if someone comes home.
+									</Typography>
+								</Box>
 
-							{booleanStateDevices.length === 0 ? (
-								<Typography variant="body2" color="text.secondary">
-									No door sensors found. Make sure your door sensors are connected
-									and have a BooleanState cluster.
-								</Typography>
-							) : (
-								<List>
-									{booleanStateDevices.map((device) => (
-										<ListItem key={device.uniqueId} divider>
-											<ListItemText
-												primary={device.name || device.uniqueId}
-												secondary={device.room || 'No room assigned'}
-											/>
-											<ListItemSecondaryAction>
-												<Checkbox
-													edge="end"
-													checked={doorSensorIds.includes(
-														device.uniqueId
-													)}
-													onChange={() =>
-														handleToggleDoorSensor(device.uniqueId)
-													}
+								{booleanStateDevices.length === 0 ? (
+									<Typography variant="body2" color="text.secondary">
+										No door sensors found. Make sure your door sensors are
+										connected and have a BooleanState cluster.
+									</Typography>
+								) : (
+									<List>
+										{booleanStateDevices.map((device) => (
+											<ListItem key={device.uniqueId} divider>
+												<ListItemText
+													primary={device.name || device.uniqueId}
+													secondary={device.room || 'No room assigned'}
 												/>
-											</ListItemSecondaryAction>
-										</ListItem>
-									))}
-								</List>
-							)}
-						</CardContent>
-					</Card>
+												<ListItemSecondaryAction>
+													<Checkbox
+														edge="end"
+														checked={doorSensorIds.includes(device.uniqueId)}
+														onChange={() =>
+															handleToggleDoorSensor(device.uniqueId)
+														}
+													/>
+												</ListItemSecondaryAction>
+											</ListItem>
+										))}
+									</List>
+								)}
+							</CardContent>
+						</Card>
+
+						<Card sx={{ borderRadius: 2 }}>
+							<CardContent>
+								<Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 500 }}>
+									Movement Sensors
+								</Typography>
+								<Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+									<SensorsIcon sx={{ color: 'text.secondary' }} />
+									<Typography variant="body2" color="text.secondary">
+										Select movement sensors to trigger rapid device re-ping. When
+										triggered, all devices will be pinged rapidly for 60 seconds to
+										detect if someone comes home.
+									</Typography>
+								</Box>
+
+								{occupancyDevices.length === 0 ? (
+									<Typography variant="body2" color="text.secondary">
+										No movement sensors found. Make sure your movement sensors are
+										connected and have an OccupancySensing cluster.
+									</Typography>
+								) : (
+									<List>
+										{occupancyDevices.map((device) => (
+											<ListItem key={device.uniqueId} divider>
+												<ListItemText
+													primary={device.name || device.uniqueId}
+													secondary={device.room || 'No room assigned'}
+												/>
+												<ListItemSecondaryAction>
+													<Checkbox
+														edge="end"
+														checked={movementSensorIds.includes(
+															device.uniqueId
+														)}
+														onChange={() =>
+															handleToggleMovementSensor(device.uniqueId)
+														}
+													/>
+												</ListItemSecondaryAction>
+											</ListItem>
+										))}
+									</List>
+								)}
+							</CardContent>
+						</Card>
+					</Box>
 				</Box>
 			)}
 

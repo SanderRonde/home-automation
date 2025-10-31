@@ -94,6 +94,19 @@ function _initRouting(detector: Detector, config: ModuleConfig) {
 					return json({ success: true });
 				}
 			),
+			'/movement-sensors/list': (_req, _server, { json }) => {
+				const movementSensorIds = detector.getMovementSensorIds();
+				return json({ movementSensorIds });
+			},
+			'/movement-sensors/update': withRequestBody(
+				z.object({
+					movementSensorIds: z.array(z.string()),
+				}),
+				(body, _req, _server, { json }) => {
+					detector.setMovementSensorIds(body.movementSensorIds);
+					return json({ success: true });
+				}
+			),
 			'/events/history': async (_req, _server, { json }) => {
 				const events = await detector.getEventHistory(100);
 				return json({ events });

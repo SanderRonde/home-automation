@@ -5,9 +5,8 @@ import {
 	AWAY_PING_INTERVAL,
 	GRACE_PERIOD_PINGS,
 } from './constants';
+import { DeviceBooleanStateCluster, DeviceOccupancySensingCluster } from '../device/cluster';
 import type { Device as DeviceInterface } from '../device/device';
-import { DeviceBooleanStateCluster } from '../device/cluster';
-import { logDev } from '../../lib/logging/log-dev';
 import { logTag } from '../../lib/logging/logger';
 import type { Database } from '../../lib/db';
 import type { HomeDetectorDB } from '.';
@@ -106,7 +105,6 @@ class Pinger {
 	private async _pingLoop() {
 		while (!this._stopped) {
 			let newState = await this._pingAll(false);
-			logDev('device', this.name, 'ping loop started (new state:', newState, ')');
 
 			if (newState.state === this._lastState) {
 				await wait(
@@ -116,7 +114,6 @@ class Pinger {
 			}
 
 			newState = await this._pingAll(true, newState.ip);
-			logDev('device', this.name, 'ping loop pings (final state:', newState, ')');
 
 			if (newState.state === this._lastState) {
 				await wait(
@@ -130,7 +127,6 @@ class Pinger {
 
 			this._lastState = newState.state;
 			if (newState.state === HOME_STATE.HOME) {
-				logDev('device', this.name, 'ping loop home (joined at:', this.joinedAt, ')');
 				this.joinedAt = new Date();
 				this._state = HOME_STATE.HOME;
 				this._db.update((old) => ({
@@ -148,18 +144,15 @@ class Pinger {
 			this.leftAt = new Date();
 
 			// Device appears to be away, start grace period
-			logDev('device', this.name, 'ping loop away (left at:', this.leftAt, ')');
 			for (let i = 0; i < GRACE_PERIOD_PINGS; i++) {
 				await wait(CHANGE_PING_INTERVAL);
 				newState = await this._pingAll(true, newState.ip);
 				if (newState.state === HOME_STATE.HOME) {
 					// Is home after all
-					logDev('device', this.name, 'ping loop away (home after grace period)');
 					break;
 				}
 			}
 
-			logDev('device', this.name, 'ping loop away (final state:', newState, ')');
 			this._state = HOME_STATE.AWAY;
 			this._db.update((old) => ({
 				...old,
@@ -203,6 +196,7 @@ export interface HostConfig {
 export interface HostsConfigDB {
 	hosts: Record<string, HostConfig>;
 	doorSensorIds?: string[];
+	movementSensorIds?: string[];
 }
 
 export class Detector {
@@ -481,6 +475,21 @@ export class Detector {
 		}
 	}
 
+	public async logMovementSensorTrigger(): Promise<void> {
+		if (!this._sqlDB) {
+			return;
+		}
+
+		try {
+			await this._sqlDB`
+				INSERT INTO home_detection_events (host_name, state, timestamp, trigger_type)
+				VALUES ('system', 'AWAY', ${Date.now()}, 'movement-sensor')
+			`;
+		} catch (error) {
+			logTag('home-detector', 'red', 'Failed to log movement sensor trigger:', error);
+		}
+	}
+
 	public getDoorSensorIds(): string[] {
 		return this._hostsDb.current().doorSensorIds ?? [];
 	}
@@ -492,11 +501,28 @@ export class Detector {
 		}));
 	}
 
+	public getMovementSensorIds(): string[] {
+		return this._hostsDb.current().movementSensorIds ?? [];
+	}
+
+	public setMovementSensorIds(ids: string[]): void {
+		this._hostsDb.update((old) => ({
+			...old,
+			movementSensorIds: ids,
+		}));
+	}
+
 	public triggerRapidPing(): void {
+		const allStates = this.getAll();
+		const allHome = Object.values(allStates).every((state) => state === HOME_STATE.HOME);
+
+		if (allHome) {
+			return;
+		}
+
 		const now = new Date();
 		this._rapidPingUntil = new Date(now.getTime() + 60000); // 60 seconds from now
-		this._rapidPingStartState = this.getAll();
-		logDev('home-detector', 'Rapid ping triggered until', this._rapidPingUntil);
+		this._rapidPingStartState = allStates;
 	}
 
 	public isRapidPingActive(): boolean {
@@ -529,8 +555,6 @@ export class Detector {
 					break;
 				}
 			}
-
-			logDev('home-detector', 'Rapid ping completed. Anyone came home:', anyoneHome);
 
 			// Notify listeners
 			for (const listener of this._rapidPingListeners) {
@@ -597,6 +621,75 @@ export class DoorSensorMonitor {
 						);
 						this._detector.triggerRapidPing();
 						await this._detector.logDoorSensorTrigger();
+					}
+				});
+
+				this._subscriptions.set(deviceId, unsubscribe);
+			}
+		}
+	}
+
+	public destroy(): void {
+		for (const unsubscribe of this._subscriptions.values()) {
+			unsubscribe();
+		}
+		this._subscriptions.clear();
+	}
+}
+
+export class MovementSensorMonitor {
+	private _subscriptions = new Map<string, () => void>();
+
+	public constructor(
+		private readonly _detector: Detector,
+		private readonly _hostsDb: Database<HostsConfigDB>
+	) {}
+
+	public trackDevices(devices: DeviceInterface[]): void {
+		// Get currently configured movement sensor IDs
+		const movementSensorIds = this._hostsDb.current().movementSensorIds ?? [];
+		const movementSensorIdSet = new Set(movementSensorIds);
+
+		// Clean up old subscriptions
+		for (const [deviceId, unsubscribe] of this._subscriptions.entries()) {
+			if (!movementSensorIdSet.has(deviceId)) {
+				unsubscribe();
+				this._subscriptions.delete(deviceId);
+			}
+		}
+
+		// Subscribe to new movement sensors
+		for (const device of devices) {
+			const deviceId = device.getUniqueId();
+
+			// Only track devices that are in the configured list
+			if (!movementSensorIdSet.has(deviceId)) {
+				continue;
+			}
+
+			// Skip if already tracking
+			if (this._subscriptions.has(deviceId)) {
+				continue;
+			}
+
+			// Find occupancy sensing cluster (movement sensors)
+			const occupancyClusters = device.getAllClustersByType(DeviceOccupancySensingCluster);
+			if (!occupancyClusters.length) {
+				continue;
+			}
+
+			for (const occupancyCluster of occupancyClusters) {
+				// Subscribe to occupancy changes
+				const unsubscribe = occupancyCluster.onOccupied.listen(async ({ occupied }) => {
+					// Movement detected (occupied changed to true)
+					if (occupied) {
+						logTag(
+							'home-detector',
+							'yellow',
+							`Movement sensor ${deviceId} triggered - starting rapid ping`
+						);
+						this._detector.triggerRapidPing();
+						await this._detector.logMovementSensorTrigger();
 					}
 				});
 
