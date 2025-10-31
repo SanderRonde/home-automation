@@ -521,7 +521,7 @@ export class Detector {
 		}
 
 		const now = new Date();
-		this._rapidPingUntil = new Date(now.getTime() + 60000); // 60 seconds from now
+		this._rapidPingUntil = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes from now
 		this._rapidPingStartState = allStates;
 	}
 

@@ -1,5 +1,6 @@
-import { SettablePromise } from '../../lib/settable-promise';
 import { DoorSensorMonitor, MovementSensorMonitor, Detector } from './classes';
+import { SettablePromise } from '../../lib/settable-promise';
+import { SceneTriggerType } from '../../../../types/scene';
 import { logTag } from '../../lib/logging/logger';
 import type { HostsConfigDB } from './classes';
 import { Database } from '../../lib/db';
@@ -56,7 +57,9 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 		});
 		this._detector.set(detector);
 
-		detector.addListener(null, (newState, name) => {
+		let _prevAnyoneHome: boolean | null = null;
+
+		detector.addListener(null, async (newState, name) => {
 			logTag(
 				`device:${name}`,
 				'cyan',
@@ -64,6 +67,26 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 					? chalk.bold(chalk.blue('now home'))
 					: chalk.blue('just left')
 			);
+
+			const anyHomeNow = Object.values(detector.getAll()).some((s) => s === HOME_STATE.HOME);
+			if (_prevAnyoneHome === null) {
+				_prevAnyoneHome = anyHomeNow;
+				return;
+			}
+			if (!_prevAnyoneHome && anyHomeNow) {
+				try {
+					await deviceAPI.sceneAPI.onTrigger({ type: SceneTriggerType.ANYBODY_HOME });
+				} catch (error) {
+					logTag('home-detector', 'red', 'Failed to trigger anybody-home scenes:', error);
+				}
+			} else if (_prevAnyoneHome && !anyHomeNow) {
+				try {
+					await deviceAPI.sceneAPI.onTrigger({ type: SceneTriggerType.NOBODY_HOME });
+				} catch (error) {
+					logTag('home-detector', 'red', 'Failed to trigger nobody-home scenes:', error);
+				}
+			}
+			_prevAnyoneHome = anyHomeNow;
 		});
 
 		// Initialize door sensor monitoring
@@ -75,6 +98,11 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 		// Wait for modules to be available, then subscribe to device updates
 		const modules = await this.modules;
 		const deviceAPI = await modules.device.api.value;
+
+		// Periodically check rapid ping completion
+		setInterval(() => {
+			detector.checkRapidPingCompletion();
+		}, 1000);
 
 		// Track devices initially
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -89,7 +117,7 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 			}
 		});
 
-		// Set up notification when rapid ping completes without any arrivals
+		// Set up notification and scene trigger when rapid ping completes without any arrivals
 		detector.addRapidPingListener(async (anyoneHome) => {
 			if (!anyoneHome) {
 				logTag(
@@ -102,6 +130,18 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 					await pushManager.sendDoorSensorAlert();
 				} catch (error) {
 					logTag('home-detector', 'red', 'Failed to send door sensor alert:', error);
+				}
+				try {
+					await deviceAPI.sceneAPI.onTrigger({
+						type: SceneTriggerType.NOBODY_HOME_TIMEOUT,
+					});
+				} catch (error) {
+					logTag(
+						'home-detector',
+						'red',
+						'Failed to trigger nobody-home-timeout scenes:',
+						error
+					);
 				}
 			}
 		});

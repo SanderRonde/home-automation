@@ -390,6 +390,8 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 			if (!triggerWebhookName) {
 				newErrors.push('Please select a webhook for the trigger');
 			}
+		} else {
+			// ANYBODY_HOME, NOBODY_HOME, NOBODY_HOME_TIMEOUT require no extra fields
 		}
 
 		setErrors(newErrors);
@@ -424,11 +426,17 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 				type: SceneTriggerType.HOST_DEPARTURE,
 				hostId: triggerHostId,
 			};
-		} else {
+		} else if (triggerType === SceneTriggerType.WEBHOOK) {
 			trigger = {
 				type: SceneTriggerType.WEBHOOK,
 				webhookName: triggerWebhookName,
 			};
+		} else if (triggerType === SceneTriggerType.ANYBODY_HOME) {
+			trigger = { type: SceneTriggerType.ANYBODY_HOME };
+		} else if (triggerType === SceneTriggerType.NOBODY_HOME) {
+			trigger = { type: SceneTriggerType.NOBODY_HOME };
+		} else {
+			trigger = { type: SceneTriggerType.NOBODY_HOME_TIMEOUT };
 		}
 
 		const triggerWithConditions: SceneTriggerWithConditions = {
@@ -519,6 +527,15 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 								</ToggleButton>
 								<ToggleButton value={SceneTriggerType.HOST_DEPARTURE}>
 									Departure
+								</ToggleButton>
+								<ToggleButton value={SceneTriggerType.ANYBODY_HOME}>
+									Anybody Home
+								</ToggleButton>
+								<ToggleButton value={SceneTriggerType.NOBODY_HOME}>
+									Nobody Home
+								</ToggleButton>
+								<ToggleButton value={SceneTriggerType.NOBODY_HOME_TIMEOUT}>
+									Nobody Home Timeout
 								</ToggleButton>
 							</ToggleButtonGroup>
 
@@ -716,6 +733,9 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 											</ToggleButton>
 											<ToggleButton value={SceneConditionType.TIME_WINDOW}>
 												Time Window
+											</ToggleButton>
+											<ToggleButton value={SceneConditionType.ANYONE_HOME}>
+												Someone Home/Away
 											</ToggleButton>
 										</ToggleButtonGroup>
 
@@ -931,6 +951,28 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 													);
 												})}
 											</Box>
+										)}
+
+										{conditionType === SceneConditionType.ANYONE_HOME && (
+											<>
+												<FormControlLabel
+													control={
+														<Switch
+															checked={conditionShouldBeHome}
+															onChange={(e) =>
+																setConditionShouldBeHome(
+																	e.target.checked
+																)
+															}
+														/>
+													}
+													label={
+														conditionShouldBeHome
+															? 'Someone must be home'
+															: 'Everyone must be away'
+													}
+												/>
+											</>
 										)}
 
 										<Box

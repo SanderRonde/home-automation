@@ -578,6 +578,15 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 										type: z.literal(SceneTriggerType.WEBHOOK),
 										webhookName: z.string(),
 									}),
+									z.object({
+										type: z.literal(SceneTriggerType.ANYBODY_HOME),
+									}),
+									z.object({
+										type: z.literal(SceneTriggerType.NOBODY_HOME),
+									}),
+									z.object({
+										type: z.literal(SceneTriggerType.NOBODY_HOME_TIMEOUT),
+									}),
 								]),
 								conditions: z
 									.array(
@@ -638,6 +647,10 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 														})
 														.optional(),
 												}),
+											}),
+											z.object({
+												type: z.literal(SceneConditionType.ANYONE_HOME),
+												shouldBeHome: z.boolean(),
 											}),
 										])
 									)
@@ -738,6 +751,15 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 										type: z.literal(SceneTriggerType.WEBHOOK),
 										webhookName: z.string(),
 									}),
+									z.object({
+										type: z.literal(SceneTriggerType.ANYBODY_HOME),
+									}),
+									z.object({
+										type: z.literal(SceneTriggerType.NOBODY_HOME),
+									}),
+									z.object({
+										type: z.literal(SceneTriggerType.NOBODY_HOME_TIMEOUT),
+									}),
 								]),
 								conditions: z
 									.array(
@@ -798,6 +820,10 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 														})
 														.optional(),
 												}),
+											}),
+											z.object({
+												type: z.literal(SceneConditionType.ANYONE_HOME),
+												shouldBeHome: z.boolean(),
 											}),
 										])
 									)

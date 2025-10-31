@@ -9,6 +9,9 @@ export enum SceneTriggerType {
 	HOST_ARRIVAL = 'host-arrival',
 	HOST_DEPARTURE = 'host-departure',
 	WEBHOOK = 'webhook',
+	ANYBODY_HOME = 'anybody-home',
+	NOBODY_HOME = 'nobody-home',
+	NOBODY_HOME_TIMEOUT = 'nobody-home-timeout',
 }
 
 export type SceneTrigger =
@@ -32,12 +35,22 @@ export type SceneTrigger =
 	| {
 			type: SceneTriggerType.WEBHOOK;
 			webhookName: string;
+	  }
+	| {
+			type: SceneTriggerType.ANYBODY_HOME;
+	  }
+	| {
+			type: SceneTriggerType.NOBODY_HOME;
+	  }
+	| {
+			type: SceneTriggerType.NOBODY_HOME_TIMEOUT;
 	  };
 
 export enum SceneConditionType {
 	HOST_HOME = 'host-home',
 	DEVICE_ON = 'device-on',
 	TIME_WINDOW = 'time-window',
+	ANYONE_HOME = 'anyone-home',
 }
 
 export type TimeWindow = {
@@ -67,6 +80,10 @@ export type SceneCondition =
 				saturday?: TimeWindow;
 				sunday?: TimeWindow;
 			};
+	  }
+	| {
+			type: SceneConditionType.ANYONE_HOME;
+			shouldBeHome: boolean;
 	  };
 
 export interface SceneTriggerWithConditions {

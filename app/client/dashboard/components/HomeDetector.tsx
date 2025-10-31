@@ -427,8 +427,8 @@ export const HomeDetector = (): JSX.Element => {
 									<SensorsIcon sx={{ color: 'text.secondary' }} />
 									<Typography variant="body2" color="text.secondary">
 										Select door sensors to trigger rapid device re-ping. When
-										triggered, all devices will be pinged rapidly for 60 seconds to
-										detect if someone comes home.
+										triggered, all devices will be pinged rapidly for 60 seconds
+										to detect if someone comes home.
 									</Typography>
 								</Box>
 
@@ -448,7 +448,9 @@ export const HomeDetector = (): JSX.Element => {
 												<ListItemSecondaryAction>
 													<Checkbox
 														edge="end"
-														checked={doorSensorIds.includes(device.uniqueId)}
+														checked={doorSensorIds.includes(
+															device.uniqueId
+														)}
 														onChange={() =>
 															handleToggleDoorSensor(device.uniqueId)
 														}
@@ -469,16 +471,16 @@ export const HomeDetector = (): JSX.Element => {
 								<Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
 									<SensorsIcon sx={{ color: 'text.secondary' }} />
 									<Typography variant="body2" color="text.secondary">
-										Select movement sensors to trigger rapid device re-ping. When
-										triggered, all devices will be pinged rapidly for 60 seconds to
-										detect if someone comes home.
+										Select movement sensors to trigger rapid device re-ping.
+										When triggered, all devices will be pinged rapidly for 60
+										seconds to detect if someone comes home.
 									</Typography>
 								</Box>
 
 								{occupancyDevices.length === 0 ? (
 									<Typography variant="body2" color="text.secondary">
-										No movement sensors found. Make sure your movement sensors are
-										connected and have an OccupancySensing cluster.
+										No movement sensors found. Make sure your movement sensors
+										are connected and have an OccupancySensing cluster.
 									</Typography>
 								) : (
 									<List>
@@ -495,7 +497,9 @@ export const HomeDetector = (): JSX.Element => {
 															device.uniqueId
 														)}
 														onChange={() =>
-															handleToggleMovementSensor(device.uniqueId)
+															handleToggleMovementSensor(
+																device.uniqueId
+															)
 														}
 													/>
 												</ListItemSecondaryAction>

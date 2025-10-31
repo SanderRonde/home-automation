@@ -379,6 +379,12 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 				label = `${host?.name || trigger.hostId} leaves home`;
 			} else if (trigger.type === SceneTriggerType.WEBHOOK) {
 				label = `Webhook ${trigger.webhookName} triggers`;
+			} else if (trigger.type === SceneTriggerType.ANYBODY_HOME) {
+				label = 'Anybody becomes home';
+			} else if (trigger.type === SceneTriggerType.NOBODY_HOME) {
+				label = 'Everybody left';
+			} else if (trigger.type === SceneTriggerType.NOBODY_HOME_TIMEOUT) {
+				label = 'Nobody arrived after timeout';
 			}
 
 			return label;
@@ -400,6 +406,8 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 				return entries
 					.map(([day, window]) => `${day} ${window.start} - ${window.end}`)
 					.join(', ');
+			} else if (condition.type === SceneConditionType.ANYONE_HOME) {
+				return condition.shouldBeHome ? 'Someone is home' : 'Everyone is away';
 			}
 			return '';
 		},

@@ -182,6 +182,13 @@ export class SceneAPI {
 						return false;
 					}
 				}
+			} else if (condition.type === SceneConditionType.ANYONE_HOME) {
+				const detector = await modules.homeDetector.getDetector();
+				const anyHome = Object.values(detector.getAll()).some((s) => s === HOME_STATE.HOME);
+				const passes = anyHome || detector.isRapidPingActive();
+				if (passes !== condition.shouldBeHome) {
+					return false;
+				}
 			} else {
 				assertUnreachable(condition);
 			}
@@ -235,6 +242,21 @@ export class SceneAPI {
 					sceneTrigger.type === SceneTriggerType.WEBHOOK
 				) {
 					triggerMatches = sceneTrigger.webhookName === trigger.webhookName;
+				} else if (
+					trigger.type === SceneTriggerType.ANYBODY_HOME &&
+					sceneTrigger.type === SceneTriggerType.ANYBODY_HOME
+				) {
+					triggerMatches = true;
+				} else if (
+					trigger.type === SceneTriggerType.NOBODY_HOME &&
+					sceneTrigger.type === SceneTriggerType.NOBODY_HOME
+				) {
+					triggerMatches = true;
+				} else if (
+					trigger.type === SceneTriggerType.NOBODY_HOME_TIMEOUT &&
+					sceneTrigger.type === SceneTriggerType.NOBODY_HOME_TIMEOUT
+				) {
+					triggerMatches = true;
 				}
 
 				if (!triggerMatches) {
