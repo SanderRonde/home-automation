@@ -1,4 +1,14 @@
 import {
+	Add as AddIcon,
+	Delete as DeleteIcon,
+	Edit as EditIcon,
+	Router as RouterIcon,
+	Sensors as SensorsIcon,
+	Refresh as RefreshIcon,
+	CheckCircle as CheckCircleIcon,
+	Cancel as CancelIcon,
+} from '@mui/icons-material';
+import {
 	Box,
 	Card,
 	CardContent,
@@ -15,16 +25,6 @@ import {
 	ListItemSecondaryAction,
 	Checkbox,
 } from '@mui/material';
-import {
-	Add as AddIcon,
-	Delete as DeleteIcon,
-	Edit as EditIcon,
-	Router as RouterIcon,
-	Sensors as SensorsIcon,
-	Refresh as RefreshIcon,
-	CheckCircle as CheckCircleIcon,
-	Cancel as CancelIcon,
-} from '@mui/icons-material';
 import type { HomeDetectorWebsocketServerMessage } from '../../../server/modules/home-detector/routing';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import type { Host } from '../../../server/modules/home-detector/routing';
@@ -258,7 +258,7 @@ export const HomeDetector = (): JSX.Element => {
 		setCheckingDevices(true);
 		setDeviceCheckResults([]);
 		try {
-			const response = await apiPost('home-detector', '/check-all', {}, {});
+			const response = await apiPost('home-detector', '/check-all', {});
 			if (response.ok) {
 				const data = await response.json();
 				setDeviceCheckResults(data.results || []);
@@ -453,26 +453,35 @@ export const HomeDetector = (): JSX.Element => {
 												}}
 											>
 												{checkResult.result.success ? (
-													checkResult.result.state === HOME_STATE.HOME ? (
-														<CheckCircleIcon sx={{ color: 'success.main' }} />
+													checkResult.result.state.toLowerCase() ===
+													HOME_STATE.HOME.toLowerCase() ? (
+														<CheckCircleIcon
+															sx={{ color: 'success.main' }}
+														/>
 													) : (
-														<CheckCircleIcon sx={{ color: 'text.secondary' }} />
+														<CheckCircleIcon
+															sx={{ color: 'text.secondary' }}
+														/>
 													)
 												) : (
 													<CancelIcon sx={{ color: 'error.main' }} />
 												)}
-												<Typography variant="h6">{checkResult.name}</Typography>
+												<Typography variant="h6">
+													{checkResult.name}
+												</Typography>
 												<Chip
 													label={
 														checkResult.result.success
-															? checkResult.result.state === HOME_STATE.HOME
+															? checkResult.result.state.toLowerCase() ===
+																HOME_STATE.HOME.toLowerCase()
 																? 'Home'
 																: 'Away'
 															: 'Error'
 													}
 													color={
 														checkResult.result.success
-															? checkResult.result.state === HOME_STATE.HOME
+															? checkResult.result.state.toLowerCase() ===
+																HOME_STATE.HOME.toLowerCase()
 																? 'success'
 																: 'default'
 															: 'error'
@@ -498,14 +507,18 @@ export const HomeDetector = (): JSX.Element => {
 													{checkResult.ips.join(', ')}
 												</Typography>
 											</Box>
-											{checkResult.result.success && checkResult.result.ip && (
-												<Typography
-													variant="caption"
-													sx={{ color: 'text.secondary', display: 'block' }}
-												>
-													Responding IP: {checkResult.result.ip}
-												</Typography>
-											)}
+											{checkResult.result.success &&
+												checkResult.result.ip && (
+													<Typography
+														variant="caption"
+														sx={{
+															color: 'text.secondary',
+															display: 'block',
+														}}
+													>
+														Responding IP: {checkResult.result.ip}
+													</Typography>
+												)}
 											{checkResult.result.error && (
 												<Typography
 													variant="caption"
@@ -709,12 +722,14 @@ export const HomeDetector = (): JSX.Element => {
 														</Typography>
 														<Chip
 															label={
-																event.state === 'HOME'
+																event.state.toLowerCase() ===
+																HOME_STATE.HOME.toLowerCase()
 																	? 'Home'
 																	: 'Away'
 															}
 															color={
-																event.state === 'HOME'
+																event.state.toLowerCase() ===
+																HOME_STATE.HOME.toLowerCase()
 																	? 'success'
 																	: 'default'
 															}
