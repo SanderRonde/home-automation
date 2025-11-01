@@ -1,56 +1,64 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
 	<defs>
-		<linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-			<stop offset="0%" style="stop-color:#4A90E2;stop-opacity:1" />
-			<stop offset="100%" style="stop-color:#357ABD;stop-opacity:1" />
+		<radialGradient id="bgGradient" cx="50%" cy="45%" r="75%">
+			<stop offset="0%" stop-color="#262c3a" />
+			<stop offset="70%" stop-color="#151a24" />
+			<stop offset="100%" stop-color="#0f131c" />
+		</radialGradient>
+		<linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+			<stop offset="0%" stop-color="#8B9FDE" stop-opacity="0.85" />
+			<stop offset="100%" stop-color="#73D1B8" stop-opacity="0.8" />
+		</linearGradient>
+		<linearGradient id="roofGradient" x1="30%" y1="0%" x2="70%" y2="100%">
+			<stop offset="0%" stop-color="#8B9FDE" />
+			<stop offset="100%" stop-color="#8FB5D6" />
+		</linearGradient>
+		<linearGradient id="bodyGradient" x1="50%" y1="0%" x2="50%" y2="100%">
+			<stop offset="0%" stop-color="#7DD4A8" />
+			<stop offset="100%" stop-color="#6ECEB2" />
+		</linearGradient>
+		<linearGradient id="doorGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+			<stop offset="0%" stop-color="#E8B563" />
+			<stop offset="100%" stop-color="#E07A5F" />
 		</linearGradient>
 	</defs>
-	
-	<!-- Central hub circle -->
-	<circle cx="256" cy="256" r="80" fill="url(#grad)" stroke="#2C5F8D" stroke-width="16"/>
-	
-	<!-- Automation gear teeth inside hub -->
-	<path d="M256 208 L264 224 L280 224 L264 240 L272 256 L256 248 L240 256 L248 240 L232 224 L248 224 Z" fill="#FFE082"/>
-	
-	<!-- Top node -->
-	<circle cx="256" cy="64" r="40" fill="url(#grad)" stroke="#2C5F8D" stroke-width="12"/>
-	<line x1="256" y1="104" x2="256" y2="176" stroke="#4A90E2" stroke-width="16" stroke-dasharray="16,16"/>
-	<circle cx="256" cy="64" r="16" fill="#FFE082"/>
-	
-	<!-- Bottom node -->
-	<circle cx="256" cy="448" r="40" fill="url(#grad)" stroke="#2C5F8D" stroke-width="12"/>
-	<line x1="256" y1="408" x2="256" y2="336" stroke="#4A90E2" stroke-width="16" stroke-dasharray="16,16"/>
-	<circle cx="256" cy="448" r="16" fill="#FFE082"/>
-	
-	<!-- Left node -->
-	<circle cx="64" cy="256" r="40" fill="url(#grad)" stroke="#2C5F8D" stroke-width="12"/>
-	<line x1="104" y1="256" x2="176" y2="256" stroke="#4A90E2" stroke-width="16" stroke-dasharray="16,16"/>
-	<circle cx="64" cy="256" r="16" fill="#FFE082"/>
-	
-	<!-- Right node -->
-	<circle cx="448" cy="256" r="40" fill="url(#grad)" stroke="#2C5F8D" stroke-width="12"/>
-	<line x1="408" y1="256" x2="336" y2="256" stroke="#4A90E2" stroke-width="16" stroke-dasharray="16,16"/>
-	<circle cx="448" cy="256" r="16" fill="#FFE082"/>
-	
-	<!-- Diagonal nodes -->
-	<!-- Top-left -->
-	<circle cx="112" cy="112" r="32" fill="url(#grad)" stroke="#2C5F8D" stroke-width="12"/>
-	<line x1="136" y1="136" x2="200" y2="200" stroke="#4A90E2" stroke-width="16" stroke-dasharray="16,16"/>
-	<circle cx="112" cy="112" r="12" fill="#FFE082"/>
-	
-	<!-- Top-right -->
-	<circle cx="400" cy="112" r="32" fill="url(#grad)" stroke="#2C5F8D" stroke-width="12"/>
-	<line x1="376" y1="136" x2="312" y2="200" stroke="#4A90E2" stroke-width="16" stroke-dasharray="16,16"/>
-	<circle cx="400" cy="112" r="12" fill="#FFE082"/>
-	
-	<!-- Bottom-left -->
-	<circle cx="112" cy="400" r="32" fill="url(#grad)" stroke="#2C5F8D" stroke-width="12"/>
-	<line x1="136" y1="376" x2="200" y2="312" stroke="#4A90E2" stroke-width="16" stroke-dasharray="16,16"/>
-	<circle cx="112" cy="400" r="12" fill="#FFE082"/>
-	
-	<!-- Bottom-right -->
-	<circle cx="400" cy="400" r="32" fill="url(#grad)" stroke="#2C5F8D" stroke-width="12"/>
-	<line x1="376" y1="376" x2="312" y2="312" stroke="#4A90E2" stroke-width="16" stroke-dasharray="16,16"/>
-	<circle cx="400" cy="400" r="12" fill="#FFE082"/>
+
+	<rect width="512" height="512" fill="url(#bgGradient)" rx="128" ry="128" />
+	<circle cx="256" cy="256" r="208" fill="none" stroke="url(#ringGradient)" stroke-width="36" opacity="0.85" />
+	<circle cx="256" cy="256" r="164" fill="rgba(16, 20, 30, 0.65)" />
+
+	<!-- signal arcs -->
+	<g fill="none" stroke-linecap="round" stroke-width="18">
+		<path d="M166 188c36-44 96-72 90-68" stroke="#8FB5D6" opacity="0.9" />
+		<path d="M346 188c-36-44-96-72-90-68" stroke="#73D1B8" opacity="0.8" />
+		<path d="M166 324c36 44 96 72 90 68" stroke="#A4CD76" opacity="0.8" />
+		<path d="M346 324c-36 44-96 72-90 68" stroke="#D4A5A5" opacity="0.85" />
+	</g>
+
+	<!-- connection orbs -->
+	<g>
+		<circle cx="146" cy="176" r="28" fill="#8FB5D6" />
+		<circle cx="366" cy="176" r="28" fill="#73D1B8" />
+		<circle cx="146" cy="336" r="28" fill="#A4CD76" />
+		<circle cx="366" cy="336" r="28" fill="#F4A261" />
+	</g>
+
+	<!-- home silhouette -->
+	<g>
+		<path
+			d="M256 148 L152 236 Q144 243 152 252 L180 280 V350 Q180 368 198 368 H314 Q332 368 332 350 V280 L360 252 Q368 243 360 236 L256 148 Z"
+			fill="url(#roofGradient)"
+			opacity="0.94"
+		/>
+		<path
+			d="M204 260 H308 Q326 260 326 278 V350 Q326 370 306 370 H206 Q186 370 186 350 V278 Q186 260 204 260 Z"
+			fill="url(#bodyGradient)"
+		/>
+		<rect x="228" y="292" width="56" height="88" rx="12" fill="url(#doorGradient)" />
+		<circle cx="268" cy="336" r="6" fill="#3A2F2F" opacity="0.75" />
+	</g>
+
+	<!-- status spark -->
+	<circle cx="256" cy="212" r="16" fill="#E8B563" opacity="0.9" />
 </svg>
