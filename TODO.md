@@ -33,4 +33,3 @@
 - [x] Get rid of dynamic imports
 - [x] Notifications don't work yet
 - [ ] 3D house overview
-- [ ] Tuya does not work yet. Use link etc and replicate behavior of CLI (https://github.dev/TuyaAPI/cli) to make it work.
