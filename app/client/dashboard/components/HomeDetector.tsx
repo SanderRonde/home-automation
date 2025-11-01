@@ -21,6 +21,9 @@ import {
 	Edit as EditIcon,
 	Router as RouterIcon,
 	Sensors as SensorsIcon,
+	Refresh as RefreshIcon,
+	CheckCircle as CheckCircleIcon,
+	Cancel as CancelIcon,
 } from '@mui/icons-material';
 import type { HomeDetectorWebsocketServerMessage } from '../../../server/modules/home-detector/routing';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
@@ -54,6 +57,19 @@ export const HomeDetector = (): JSX.Element => {
 	const [savingMovementSensors, setSavingMovementSensors] = useState(false);
 	const [eventHistory, setEventHistory] = useState<EventHistoryItem[]>([]);
 	const [loadingEvents, setLoadingEvents] = useState(false);
+	const [checkingDevices, setCheckingDevices] = useState(false);
+	const [deviceCheckResults, setDeviceCheckResults] = useState<
+		Array<{
+			name: string;
+			ips: string[];
+			result: {
+				success: boolean;
+				state: HOME_STATE;
+				ip?: string;
+				error?: string;
+			};
+		}>
+	>([]);
 
 	const { devices } = useDevices();
 
@@ -238,6 +254,24 @@ export const HomeDetector = (): JSX.Element => {
 		}
 	};
 
+	const handleCheckAllDevices = async () => {
+		setCheckingDevices(true);
+		setDeviceCheckResults([]);
+		try {
+			const response = await apiPost('home-detector', '/check-all', {}, {});
+			if (response.ok) {
+				const data = await response.json();
+				setDeviceCheckResults(data.results || []);
+			} else {
+				console.error('Failed to check devices');
+			}
+		} catch (error) {
+			console.error('Failed to check devices:', error);
+		} finally {
+			setCheckingDevices(false);
+		}
+	};
+
 	const booleanStateDevices = devices.filter((device) =>
 		device.flatAllClusters.some((cluster) => cluster.name === DeviceClusterName.BOOLEAN_STATE)
 	);
@@ -286,14 +320,25 @@ export const HomeDetector = (): JSX.Element => {
 						}}
 					>
 						<Typography variant="h6">Tracked Devices</Typography>
-						<Button
-							variant="contained"
-							startIcon={<AddIcon />}
-							onClick={handleCreateHost}
-							sx={{ borderRadius: 2 }}
-						>
-							Add Host
-						</Button>
+						<Box sx={{ display: 'flex', gap: 2 }}>
+							<Button
+								variant="outlined"
+								startIcon={<RefreshIcon />}
+								onClick={handleCheckAllDevices}
+								disabled={checkingDevices}
+								sx={{ borderRadius: 2 }}
+							>
+								{checkingDevices ? 'Checking...' : 'Check All Devices'}
+							</Button>
+							<Button
+								variant="contained"
+								startIcon={<AddIcon />}
+								onClick={handleCreateHost}
+								sx={{ borderRadius: 2 }}
+							>
+								Add Host
+							</Button>
+						</Box>
 					</Box>
 
 					<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -389,6 +434,92 @@ export const HomeDetector = (): JSX.Element => {
 							</Typography>
 						)}
 					</Box>
+
+					{deviceCheckResults.length > 0 && (
+						<Box sx={{ mt: 4 }}>
+							<Typography variant="h6" sx={{ mb: 2 }}>
+								Check Results
+							</Typography>
+							<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+								{deviceCheckResults.map((checkResult) => (
+									<Card key={checkResult.name} sx={{ borderRadius: 2 }}>
+										<CardContent>
+											<Box
+												sx={{
+													display: 'flex',
+													alignItems: 'center',
+													gap: 2,
+													mb: 1,
+												}}
+											>
+												{checkResult.result.success ? (
+													checkResult.result.state === HOME_STATE.HOME ? (
+														<CheckCircleIcon sx={{ color: 'success.main' }} />
+													) : (
+														<CheckCircleIcon sx={{ color: 'text.secondary' }} />
+													)
+												) : (
+													<CancelIcon sx={{ color: 'error.main' }} />
+												)}
+												<Typography variant="h6">{checkResult.name}</Typography>
+												<Chip
+													label={
+														checkResult.result.success
+															? checkResult.result.state === HOME_STATE.HOME
+																? 'Home'
+																: 'Away'
+															: 'Error'
+													}
+													color={
+														checkResult.result.success
+															? checkResult.result.state === HOME_STATE.HOME
+																? 'success'
+																: 'default'
+															: 'error'
+													}
+													size="small"
+												/>
+											</Box>
+											<Box
+												sx={{
+													display: 'flex',
+													alignItems: 'center',
+													gap: 1,
+													mb: 1,
+												}}
+											>
+												<RouterIcon
+													sx={{ fontSize: 16, color: 'text.secondary' }}
+												/>
+												<Typography
+													variant="body2"
+													sx={{ color: 'text.secondary' }}
+												>
+													{checkResult.ips.join(', ')}
+												</Typography>
+											</Box>
+											{checkResult.result.success && checkResult.result.ip && (
+												<Typography
+													variant="caption"
+													sx={{ color: 'text.secondary', display: 'block' }}
+												>
+													Responding IP: {checkResult.result.ip}
+												</Typography>
+											)}
+											{checkResult.result.error && (
+												<Typography
+													variant="caption"
+													sx={{ color: 'error.main', display: 'block' }}
+												>
+													Error: {checkResult.result.error}
+												</Typography>
+											)}
+										</CardContent>
+									</Card>
+								))}
+							</Box>
+						</Box>
+					)}
 
 					<HomeDetectorModal
 						open={modalOpen}

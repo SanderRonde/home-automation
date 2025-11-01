@@ -111,6 +111,10 @@ function _initRouting(detector: Detector, config: ModuleConfig) {
 				const events = await detector.getEventHistory(100);
 				return json({ events });
 			},
+			'/check-all': async (_req, _server, { json }) => {
+				const results = await detector.checkAllHosts();
+				return json({ results });
+			},
 		},
 		true,
 		{

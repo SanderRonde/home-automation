@@ -57,6 +57,28 @@ class Pinger {
 		this._stopped = true;
 	}
 
+	public async manualCheck(): Promise<{
+		success: boolean;
+		state: HOME_STATE;
+		ip?: string;
+		error?: string;
+	}> {
+		try {
+			const result = await this._pingAll(false);
+			return {
+				success: true,
+				state: result.state,
+				ip: result.ip,
+			};
+		} catch (error) {
+			return {
+				success: false,
+				state: HOME_STATE.AWAY,
+				error: error instanceof Error ? error.message : 'Unknown error',
+			};
+		}
+	}
+
 	private async _pingAll(
 		multiPing: boolean,
 		pingOnly?: string
@@ -565,6 +587,41 @@ export class Detector {
 			this._rapidPingUntil = null;
 			this._rapidPingStartState = null;
 		}
+	}
+
+	public async checkAllHosts(): Promise<
+		Array<{
+			name: string;
+			ips: string[];
+			result: {
+				success: boolean;
+				state: HOME_STATE;
+				ip?: string;
+				error?: string;
+			};
+		}>
+	> {
+		const results: Array<{
+			name: string;
+			ips: string[];
+			result: {
+				success: boolean;
+				state: HOME_STATE;
+				ip?: string;
+				error?: string;
+			};
+		}> = [];
+
+		for (const [name, pinger] of this._pingers.entries()) {
+			const result = await pinger.manualCheck();
+			results.push({
+				name,
+				ips: pinger.ips,
+				result,
+			});
+		}
+
+		return results;
 	}
 }
 
