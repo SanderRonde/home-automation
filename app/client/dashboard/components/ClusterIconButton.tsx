@@ -60,7 +60,7 @@ const WindowCoveringIconButton = (props: ClusterIconButtonProps) => {
 	const anyEnabled = devices
 		.flatMap((d) => d.mergedAllClusters)
 		.filter((c) => c.name === DeviceClusterName.WINDOW_COVERING)
-		.some((d) => d.targetPositionLiftPercentage === 0);
+		.some((d) => d.targetPositionLiftPercentage < 5);
 	const icon = props.devices
 		.flatMap((d) => d.mergedAllClusters)
 		.filter((c) => c.name === props.clusterName)[0]?.icon;
