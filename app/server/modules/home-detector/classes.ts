@@ -174,7 +174,7 @@ class Pinger {
 		try {
 			await this._sqlDB`
 				INSERT INTO home_detection_events (host_name, state, timestamp, trigger_type)
-				VALUES (${this._config.name}, ${state}, ${Date.now()}, 'ping')
+				VALUES (${this._config.name}, ${state.toUpperCase()}, ${Date.now()}, 'ping')
 			`;
 		} catch (error) {
 			logTag('home-detector', 'red', 'Failed to log event:', error);
@@ -468,7 +468,7 @@ export class Detector {
 		try {
 			await this._sqlDB`
 				INSERT INTO home_detection_events (host_name, state, timestamp, trigger_type)
-				VALUES ('system', 'AWAY', ${Date.now()}, 'door-sensor')
+				VALUES ('system', ${HOME_STATE.AWAY.toUpperCase()}, ${Date.now()}, 'door-sensor')
 			`;
 		} catch (error) {
 			logTag('home-detector', 'red', 'Failed to log door sensor trigger:', error);
@@ -483,7 +483,7 @@ export class Detector {
 		try {
 			await this._sqlDB`
 				INSERT INTO home_detection_events (host_name, state, timestamp, trigger_type)
-				VALUES ('system', 'AWAY', ${Date.now()}, 'movement-sensor')
+				VALUES ('system', ${HOME_STATE.AWAY.toUpperCase()}, ${Date.now()}, 'movement-sensor')
 			`;
 		} catch (error) {
 			logTag('home-detector', 'red', 'Failed to log movement sensor trigger:', error);
