@@ -266,6 +266,11 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 				deviceId: conditionDeviceId,
 				shouldBeOn: conditionShouldBeOn,
 			};
+		} else if (conditionType === SceneConditionType.ANYONE_HOME) {
+			newCondition = {
+				type: SceneConditionType.ANYONE_HOME,
+				shouldBeHome: conditionShouldBeHome,
+			};
 		} else {
 			// TIME_WINDOW
 			const windows: Record<string, { start: string; end: string }> = {};
@@ -321,6 +326,8 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 		} else if (condition.type === SceneConditionType.DEVICE_ON) {
 			const device = props.devices.find((d) => d.uniqueId === condition.deviceId);
 			return `${device?.name || condition.deviceId} is ${condition.shouldBeOn ? 'on' : 'off'}`;
+		} else if (condition.type === SceneConditionType.ANYONE_HOME) {
+			return condition.shouldBeHome ? 'Someone must be home' : 'Everyone must be away';
 		} else if (condition.type === SceneConditionType.TIME_WINDOW) {
 			const dayAbbr: Record<string, string> = {
 				monday: 'Mon',
@@ -450,6 +457,7 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 	const canAddCondition =
 		(conditionType === SceneConditionType.HOST_HOME && conditionHostId) ||
 		(conditionType === SceneConditionType.DEVICE_ON && conditionDeviceId) ||
+		(conditionType === SceneConditionType.ANYONE_HOME) ||
 		(conditionType === SceneConditionType.TIME_WINDOW &&
 			Object.values(timeWindowDays).some((enabled) => enabled));
 

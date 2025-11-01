@@ -6,6 +6,7 @@ import {
 	ToggleButton,
 	FormControlLabel,
 	Switch,
+	TextField,
 } from '@mui/material';
 import type { DashboardDeviceClusterWithStateMap } from '../../../server/modules/device/routing';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
@@ -106,6 +107,7 @@ export const ClusterActionControls = (props: ClusterActionControlsProps): JSX.El
 							(
 								props.action.action as {
 									level: number;
+									durationSeconds?: number;
 								}
 							).level
 						}
@@ -117,6 +119,12 @@ export const ClusterActionControls = (props: ClusterActionControlsProps): JSX.El
 							props.onActionChange(props.actionKey, {
 								action: {
 									level: value,
+									durationSeconds: (
+										props.action.action as {
+											level: number;
+											durationSeconds?: number;
+										}
+									).durationSeconds,
 								},
 							})
 						}
@@ -136,6 +144,37 @@ export const ClusterActionControls = (props: ClusterActionControlsProps): JSX.El
 								label: '100%',
 							},
 						]}
+					/>
+					<TextField
+						label="Duration (seconds, optional)"
+						type="number"
+						value={
+							(
+								props.action.action as {
+									level: number;
+									durationSeconds?: number;
+								}
+							).durationSeconds || ''
+						}
+						onChange={(e) => {
+							const value = e.target.value;
+							const levelAction = props.action.action as {
+								level: number;
+								durationSeconds?: number;
+							};
+							props.onActionChange(props.actionKey, {
+								action: {
+									level: levelAction.level,
+									durationSeconds:
+										value === '' ? undefined : Math.max(0, parseInt(value, 10)),
+								},
+							});
+						}}
+						inputProps={{ min: 0, step: 1 }}
+						fullWidth
+						margin="normal"
+						size="small"
+						helperText="Leave empty for immediate change. Set duration to gradually increase level over time."
 					/>
 				</Box>
 			)}

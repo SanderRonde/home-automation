@@ -20,7 +20,13 @@ import { Color } from '../../lib/color';
 import type { Device } from './device';
 import type { DeviceDB } from '.';
 
+const UPDATE_INTERVAL_SECONDS = 5;
+
 export class SceneAPI {
+	private _gradualLevelIntervals: Map<string, Timer> = new Map();
+	private _gradualLevelSubscriptions: Map<string, Array<() => void>> = new Map();
+	private _isUpdatingGradualLevels: Set<string> = new Set();
+
 	public constructor(
 		private readonly _db: Database<DeviceDB>,
 		private readonly _devices: Data<{
@@ -451,25 +457,38 @@ export class SceneAPI {
 									for (const colorControlCluster of colorControlClusters) {
 										await colorControlCluster.setColor({ color });
 									}
-								} else if (
-									sceneAction.cluster === DeviceClusterName.LEVEL_CONTROL
-								) {
-									const levelControlClusters =
-										device.getAllClustersByType(DeviceLevelControlCluster);
-									if (levelControlClusters.length === 0) {
-										logTag(
-											'scene',
-											'yellow',
-											'LevelControlCluster not found:',
-											device.getUniqueId()
-										);
-										return false;
-									}
-									for (const levelControlCluster of levelControlClusters) {
-										await levelControlCluster.setLevel({
-											level: sceneAction.action.level / 100,
-										});
-									}
+					} else if (
+						sceneAction.cluster === DeviceClusterName.LEVEL_CONTROL
+					) {
+						const levelControlClusters =
+							device.getAllClustersByType(DeviceLevelControlCluster);
+						if (levelControlClusters.length === 0) {
+							logTag(
+								'scene',
+								'yellow',
+								'LevelControlCluster not found:',
+								device.getUniqueId()
+							);
+							return false;
+						}
+
+						// Check if gradual level increase is requested
+						if (sceneAction.action.durationSeconds && sceneAction.action.durationSeconds > 0) {
+							// Use gradual level increase
+							await this._startGradualLevelIncrease(
+								device,
+								levelControlClusters,
+								sceneAction.action.level / 100,
+								sceneAction.action.durationSeconds
+							);
+						} else {
+							// Immediate level set
+							for (const levelControlCluster of levelControlClusters) {
+								await levelControlCluster.setLevel({
+									level: sceneAction.action.level / 100,
+								});
+							}
+						}
 								} else {
 									assertUnreachable(sceneAction);
 								}
@@ -500,5 +519,153 @@ export class SceneAPI {
 		}
 
 		return true;
+	}
+
+	private async _startGradualLevelIncrease(
+		device: Device,
+		levelControlClusters: DeviceLevelControlCluster[],
+		targetLevel: number,
+		durationSeconds: number
+	): Promise<void> {
+		const deviceId = device.getUniqueId();
+
+		// Cancel any existing gradual level increase for this device
+		this._cancelGradualLevelIncrease(deviceId);
+
+		// Get current level
+		let startLevel = 0;
+		try {
+			const currentLevel = await levelControlClusters[0].currentLevel.get();
+			if (currentLevel !== null && currentLevel !== undefined) {
+				startLevel = currentLevel;
+			}
+		} catch (error) {
+			logTag('scene', 'yellow', `Failed to get current level for ${deviceId}:`, error);
+		}
+
+		// Ensure device is on if it has OnOff cluster
+		const onOffCluster = device.getClusterByType(DeviceOnOffCluster);
+		if (onOffCluster) {
+			try {
+				const isOn = await onOffCluster.isOn.get();
+				if (!isOn) {
+					await onOffCluster.setOn(true);
+				}
+			} catch (error) {
+				logTag('scene', 'yellow', `Failed to turn on device ${deviceId}:`, error);
+			}
+		}
+
+		const startTime = Date.now();
+		const totalDurationMs = durationSeconds * 1000;
+		const updateIntervalMs = UPDATE_INTERVAL_SECONDS * 1000;
+
+		// Subscribe to device changes to detect manual intervention
+		this._subscribeToGradualLevelChanges(device, deviceId, () => {
+			// Only cancel if the change wasn't triggered by our own updates
+			if (!this._isUpdatingGradualLevels.has(deviceId)) {
+				logTag(
+					'scene',
+					'yellow',
+					`Manual device change detected for ${deviceId}, cancelling gradual level increase`
+				);
+				this._cancelGradualLevelIncrease(deviceId);
+			}
+		});
+
+		// Set up interval to update level
+		const intervalId = setInterval(() => {
+			const elapsed = Date.now() - startTime;
+			const progress = Math.min(elapsed / totalDurationMs, 1.0);
+
+			// Linear interpolation from startLevel to targetLevel
+			const currentLevel = startLevel + (targetLevel - startLevel) * progress;
+
+			void this._updateGradualLevel(deviceId, levelControlClusters, currentLevel);
+
+			// Stop when complete
+			if (progress >= 1.0) {
+				logTag('scene', 'green', `Gradual level increase complete for ${deviceId}`);
+				this._cancelGradualLevelIncrease(deviceId);
+			}
+		}, updateIntervalMs);
+
+		this._gradualLevelIntervals.set(deviceId, intervalId);
+
+		// Set initial level
+		await this._updateGradualLevel(deviceId, levelControlClusters, startLevel);
+	}
+
+	private async _updateGradualLevel(
+		deviceId: string,
+		levelControlClusters: DeviceLevelControlCluster[],
+		level: number
+	): Promise<void> {
+		// Set flag to prevent self-cancellation
+		this._isUpdatingGradualLevels.add(deviceId);
+
+		try {
+			await Promise.all(
+				levelControlClusters.map(async (levelControlCluster) => {
+					try {
+						await levelControlCluster.setLevel({ level });
+					} catch (error) {
+						logTag('scene', 'yellow', `Failed to update level for ${deviceId}:`, error);
+					}
+				})
+			);
+		} finally {
+			// Reset flag after updates complete
+			this._isUpdatingGradualLevels.delete(deviceId);
+		}
+	}
+
+	private _subscribeToGradualLevelChanges(
+		device: Device,
+		deviceId: string,
+		onChangeCallback: () => void
+	): void {
+		const subscriptions: Array<() => void> = [];
+
+		// Subscribe to OnOff changes
+		const onOffCluster = device.getClusterByType(DeviceOnOffCluster);
+		if (onOffCluster) {
+			const unsubscribe = onOffCluster.isOn.subscribe(() => {
+				onChangeCallback();
+			});
+			subscriptions.push(unsubscribe);
+		}
+
+		// Subscribe to LevelControl changes
+		const levelControlClusters = device.getAllClustersByType(DeviceLevelControlCluster);
+		for (const levelControlCluster of levelControlClusters) {
+			const unsubscribe = levelControlCluster.currentLevel.subscribe(() => {
+				onChangeCallback();
+			});
+			subscriptions.push(unsubscribe);
+		}
+
+		this._gradualLevelSubscriptions.set(deviceId, subscriptions);
+	}
+
+	private _cancelGradualLevelIncrease(deviceId: string): void {
+		// Clear interval
+		const intervalId = this._gradualLevelIntervals.get(deviceId);
+		if (intervalId !== undefined) {
+			clearInterval(intervalId);
+			this._gradualLevelIntervals.delete(deviceId);
+		}
+
+		// Unsubscribe from device changes
+		const subscriptions = this._gradualLevelSubscriptions.get(deviceId);
+		if (subscriptions) {
+			for (const unsubscribe of subscriptions) {
+				unsubscribe();
+			}
+			this._gradualLevelSubscriptions.delete(deviceId);
+		}
+
+		// Clear update flag
+		this._isUpdatingGradualLevels.delete(deviceId);
 	}
 }

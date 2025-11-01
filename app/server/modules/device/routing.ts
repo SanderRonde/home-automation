@@ -678,6 +678,7 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 								action: z.object({
 									isOn: z.boolean(),
 								}),
+								excludeDeviceIds: z.array(z.string()).optional(),
 							}),
 							z.object({
 								deviceId: z.string().optional(),
@@ -686,6 +687,7 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 								action: z.object({
 									targetPositionLiftPercentage: z.number(),
 								}),
+								excludeDeviceIds: z.array(z.string()).optional(),
 							}),
 							z.object({
 								deviceId: z.string().optional(),
@@ -696,6 +698,7 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 									saturation: z.number(),
 									value: z.number(),
 								}),
+								excludeDeviceIds: z.array(z.string()).optional(),
 							}),
 							z.object({
 								deviceId: z.string().optional(),
@@ -704,6 +707,7 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 								action: z.object({
 									paletteId: z.string(),
 								}),
+								excludeDeviceIds: z.array(z.string()).optional(),
 							}),
 							z.object({
 								deviceId: z.string().optional(),
@@ -712,6 +716,7 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 								action: z.object({
 									level: z.number(),
 								}),
+								excludeDeviceIds: z.array(z.string()).optional(),
 							}),
 							z.object({
 								deviceId: z.string().optional(),
@@ -723,6 +728,7 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 									body: z.record(z.string(), z.unknown()).optional(),
 									headers: z.record(z.string(), z.string()).optional(),
 								}),
+								excludeDeviceIds: z.array(z.string()).optional(),
 							}),
 						])
 					),

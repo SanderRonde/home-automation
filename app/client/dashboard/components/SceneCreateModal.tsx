@@ -244,28 +244,48 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 					if (action.key === key) {
 						// When cluster changes, reset action to appropriate default
 						if (updates.cluster && updates.cluster !== action.cluster) {
+							// Preserve groupId, deviceId, excludeDeviceIds when cluster changes
+							const preservedFields: Record<string, unknown> = {};
+							if ('groupId' in action) {
+								preservedFields.groupId = action.groupId;
+							}
+							if ('deviceId' in action) {
+								preservedFields.deviceId = action.deviceId;
+							}
+							if ('excludeDeviceIds' in action) {
+								preservedFields.excludeDeviceIds = action.excludeDeviceIds;
+							}
 							if (updates.cluster === DeviceClusterName.ON_OFF) {
-								return { ...action, ...updates, action: { isOn: true } };
+								return {
+									...action,
+									...preservedFields,
+									...updates,
+									action: { isOn: true },
+								};
 							} else if (updates.cluster === DeviceClusterName.WINDOW_COVERING) {
 								return {
 									...action,
+									...preservedFields,
 									...updates,
 									action: { targetPositionLiftPercentage: 0 },
 								};
 							} else if (updates.cluster === DeviceClusterName.COLOR_CONTROL) {
 								return {
 									...action,
+									...preservedFields,
 									...updates,
 									action: { hue: 0, saturation: 100, value: 100 },
 								};
 							} else if (updates.cluster === DeviceClusterName.LEVEL_CONTROL) {
 								return {
 									...action,
+									...preservedFields,
 									...updates,
 									action: { level: 100 },
 								};
 							}
 						}
+						// Merge updates, preserving existing fields like excludeDeviceIds
 						return { ...action, ...updates };
 					}
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -657,7 +677,7 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 																		display="block"
 																		sx={{ pl: 1 }}
 																	>
-																		•{' '}
+																		?{' '}
 																		{getConditionLabel(
 																			condition
 																		)}

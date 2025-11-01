@@ -118,6 +118,7 @@ export type SceneDeviceActionLevelControl = {
 	cluster: DeviceClusterName.LEVEL_CONTROL;
 	action: {
 		level: number;
+		durationSeconds?: number; // Optional: gradually increase level over this duration
 	};
 };
 
