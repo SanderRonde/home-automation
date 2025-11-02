@@ -25,8 +25,8 @@ class Pinger {
 	private _state: HOME_STATE | null = null;
 	private _lastState: HOME_STATE | null = null;
 	private _stopped: boolean = false;
-	public leftAt: Date = new Date(1970, 0, 0, 0, 0, 0, 0);
-	public joinedAt: Date = new Date(1970, 0, 0, 0, 0, 0, 0);
+	public leftAt: Date | undefined = undefined;
+	public joinedAt: Date | undefined = undefined;
 	private _initialStateConfirmed: boolean = false;
 
 	public get state() {
@@ -490,7 +490,7 @@ export class Detector {
 		try {
 			await this._sqlDB`
 				INSERT INTO home_detection_events (host_name, state, timestamp, trigger_type)
-				VALUES ('system', ${HOME_STATE.AWAY.toUpperCase()}, ${Date.now()}, 'door-sensor')
+				VALUES ('system', 'change', ${Date.now()}, 'door-sensor')
 			`;
 		} catch (error) {
 			logTag('home-detector', 'red', 'Failed to log door sensor trigger:', error);
@@ -505,7 +505,7 @@ export class Detector {
 		try {
 			await this._sqlDB`
 				INSERT INTO home_detection_events (host_name, state, timestamp, trigger_type)
-				VALUES ('system', ${HOME_STATE.AWAY.toUpperCase()}, ${Date.now()}, 'movement-sensor')
+				VALUES ('system', 'change', ${Date.now()}, 'movement-sensor')
 			`;
 		} catch (error) {
 			logTag('home-detector', 'red', 'Failed to log movement sensor trigger:', error);
