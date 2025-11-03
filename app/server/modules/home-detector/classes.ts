@@ -560,7 +560,7 @@ export class Detector {
 		}
 
 		const results = await Promise.all(
-			Object.values(this._pingers.values()).map(async (pinger: Pinger) => {
+			[...this._pingers.values()].map(async (pinger: Pinger) => {
 				for (let i = 0; i < 5 * 60; i++) {
 					const result = await pinger.manualCheck();
 					if (result.state === HOME_STATE.HOME) {
@@ -572,7 +572,7 @@ export class Detector {
 			})
 		);
 
-		if (results.some((result) => result)) {
+		if (results.length === 0 || results.some((result) => result)) {
 			return;
 		}
 
