@@ -356,7 +356,7 @@ export const LEDSourcesConfig = (): JSX.Element => {
 				{/* LED Art Section */}
 				<Box>
 					<Typography variant="h5" gutterBottom sx={{ mb: 2 }}>
-						Hexagon LED Panels
+						LED Arts
 					</Typography>
 
 					{hexLedError && (
@@ -375,8 +375,8 @@ export const LEDSourcesConfig = (): JSX.Element => {
 						<CardContent>
 							<Stack spacing={3}>
 								<Typography variant="body2" color="text.secondary">
-									Hexagon LED panels are modular LED light panels. Add devices by
-									their full URL (including http:// and port if needed).
+									LED Arts are LED light panels. Add devices by their full URL
+									(including http:// and port if needed).
 								</Typography>
 
 								<Box display="flex" gap={2} alignItems="flex-start">
