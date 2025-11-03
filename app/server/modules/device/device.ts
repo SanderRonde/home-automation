@@ -75,11 +75,11 @@ export interface Device extends DeviceEndpoint {
 	getManagementUrl(): Promise<string | undefined>;
 }
 
-export class DeviceSource extends ClassEnum<'matter' | 'ewelink' | 'wled' | 'hex-led'> {
+export class DeviceSource extends ClassEnum<'matter' | 'ewelink' | 'wled' | 'led-art'> {
 	public static readonly MATTER = new DeviceSource('matter');
 	public static readonly EWELINK = new DeviceSource('ewelink');
 	public static readonly WLED = new DeviceSource('wled');
-	public static readonly HEX_LED = new DeviceSource('hex-led');
+	public static readonly LED_ART = new DeviceSource('led-art');
 
 	public toEmoji(): string {
 		switch (this) {
@@ -89,7 +89,7 @@ export class DeviceSource extends ClassEnum<'matter' | 'ewelink' | 'wled' | 'hex
 				return '🔗';
 			case DeviceSource.WLED:
 				return '💡';
-			case DeviceSource.HEX_LED:
+			case DeviceSource.LED_ART:
 				return '🔷';
 			default:
 				throw new Error('Invalid DeviceSource');

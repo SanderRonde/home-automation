@@ -1,8 +1,8 @@
 import {
-	HexLEDActionsCluster,
-	HexLEDColorControlCluster,
-	HexLEDLevelControlCluster,
-	HexLEDOnOffCluster,
+	LEDArtActionsCluster,
+	LEDArtColorControlCluster,
+	LEDArtLevelControlCluster,
+	LEDArtOnOffCluster,
 } from './cluster';
 import { DeviceEndpoint, DeviceSource } from '../../device/device';
 import { EventEmitter } from '../../../lib/event-emitter';
@@ -10,7 +10,7 @@ import type { Cluster } from '../../device/cluster';
 import type { Device } from '../../device/device';
 import type { LEDClient } from './led-client';
 
-export class HexLEDDevice extends DeviceEndpoint implements Device {
+export class LEDArtDevice extends DeviceEndpoint implements Device {
 	public readonly onChange: EventEmitter<void> = new EventEmitter();
 
 	public readonly clusters: Cluster[];
@@ -23,10 +23,10 @@ export class HexLEDDevice extends DeviceEndpoint implements Device {
 		super();
 
 		this.clusters = [
-			new HexLEDOnOffCluster(this._client),
-			new HexLEDLevelControlCluster(this._client),
-			new HexLEDColorControlCluster(this._client),
-			new HexLEDActionsCluster(this._client),
+			new LEDArtOnOffCluster(this._client),
+			new LEDArtLevelControlCluster(this._client),
+			new LEDArtColorControlCluster(this._client),
+			new LEDArtActionsCluster(this._client),
 		];
 
 		for (const cluster of this.clusters) {
@@ -41,11 +41,11 @@ export class HexLEDDevice extends DeviceEndpoint implements Device {
 	}
 
 	public getSource(): DeviceSource {
-		return DeviceSource.HEX_LED;
+		return DeviceSource.LED_ART;
 	}
 
 	public getDeviceName(): Promise<string> {
-		return Promise.resolve('Hexagon LED Panel');
+		return Promise.resolve('LED Art Panel');
 	}
 
 	public getManagementUrl(): Promise<string | undefined> {

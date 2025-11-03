@@ -1,16 +1,16 @@
 import { createServeOptions, withRequestBody } from '../../lib/routes';
 import type { ServeOptions } from '../../lib/routes';
 import type { Database } from '../../lib/db';
-import type { HexLEDDB } from './hex-led';
+import type { LEDArtDB } from './led-art';
 import * as z from 'zod';
 
-const HexLEDConfig = z.object({
+const LEDArtConfig = z.object({
 	devices: z.array(z.string().url('Invalid URL')),
 });
 
-export type HexLEDConfig = z.infer<typeof HexLEDConfig>;
+export type LEDArtConfig = z.infer<typeof LEDArtConfig>;
 
-function _initRouting(db: Database<HexLEDDB>) {
+function _initRouting(db: Database<LEDArtDB>) {
 	return createServeOptions(
 		{
 			'/config': {
@@ -18,7 +18,7 @@ function _initRouting(db: Database<HexLEDDB>) {
 					const configJson = db.current().devices ?? [];
 					return json({ devices: configJson });
 				},
-				POST: withRequestBody(HexLEDConfig, (body, _req, _server, { error, json }) => {
+				POST: withRequestBody(LEDArtConfig, (body, _req, _server, { error, json }) => {
 					try {
 						// Store the config
 						db.update((old) => ({
@@ -37,7 +37,7 @@ function _initRouting(db: Database<HexLEDDB>) {
 	);
 }
 
-export const initRouting = _initRouting as (db: Database<HexLEDDB>) => ServeOptions<unknown>;
+export const initRouting = _initRouting as (db: Database<LEDArtDB>) => ServeOptions<unknown>;
 
-export type HexLedRoutes =
+export type LedArtRoutes =
 	ReturnType<typeof _initRouting> extends ServeOptions<infer R> ? R : never;

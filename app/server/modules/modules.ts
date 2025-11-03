@@ -1,7 +1,7 @@
 import { HomeDetector } from './home-detector';
 import { Notification } from './notification';
 import { Temperature } from './temperature';
-import { HexLed } from './hex-led/hex-led';
+import { LedArt } from './led-art/led-art';
 import { InfoScreen } from './info-screen';
 import { Wakelight } from './wakelight';
 import { Dashboard } from './dashboard';
@@ -33,7 +33,7 @@ const getModuleObj = () => ({
 	bot: Bot,
 	auth: Auth,
 	wled: WLed,
-	hexLed: HexLed,
+	ledArt: LedArt,
 	device: Device,
 	matter: Matter,
 	dashboard: Dashboard,

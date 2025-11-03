@@ -32,7 +32,7 @@ export const LEDSourcesConfig = (): JSX.Element => {
 
 	const { devices } = useDevices();
 
-	// Hex-LED State
+	// LED Art State
 	const [hexLedConfig, setHexLedConfig] = useState<{ devices: string[] }>({ devices: [] });
 	const [newHexLedUrl, setNewHexLedUrl] = useState('');
 	const [hexLedLoading, setHexLedLoading] = useState(false);
@@ -58,12 +58,12 @@ export const LEDSourcesConfig = (): JSX.Element => {
 
 	const loadHexLedConfig = async () => {
 		try {
-			const response = await apiGet('hex-led', '/config', {});
+			const response = await apiGet('led-art', '/config', {});
 			if (response.ok) {
 				setHexLedConfig(await response.json());
 			}
 		} catch (err) {
-			console.error('Failed to load Hex-LED config:', err);
+			console.error('Failed to load LED Art config:', err);
 		}
 	};
 
@@ -91,14 +91,14 @@ export const LEDSourcesConfig = (): JSX.Element => {
 	};
 
 	const saveHexLedConfig = async (
-		newConfig: ReturnTypeForApi<'hex-led', '/config', 'GET'>['ok']
+		newConfig: ReturnTypeForApi<'led-art', '/config', 'GET'>['ok']
 	) => {
 		setHexLedLoading(true);
 		setHexLedError(null);
 		setHexLedSuccess(false);
 
 		try {
-			const response = await apiPost('hex-led', '/config', {}, newConfig);
+			const response = await apiPost('led-art', '/config', {}, newConfig);
 
 			if (response.ok) {
 				setHexLedConfig(newConfig);
@@ -353,7 +353,7 @@ export const LEDSourcesConfig = (): JSX.Element => {
 
 				<Divider />
 
-				{/* Hex-LED Section */}
+				{/* LED Art Section */}
 				<Box>
 					<Typography variant="h5" gutterBottom sx={{ mb: 2 }}>
 						Hexagon LED Panels
@@ -367,7 +367,7 @@ export const LEDSourcesConfig = (): JSX.Element => {
 
 					{hexLedSuccess && (
 						<Alert severity="success" sx={{ mb: 2 }}>
-							Hex-LED configuration saved successfully!
+							LED Art configuration saved successfully!
 						</Alert>
 					)}
 
@@ -406,14 +406,14 @@ export const LEDSourcesConfig = (): JSX.Element => {
 										color="text.secondary"
 										sx={{ py: 2 }}
 									>
-										No Hex-LED devices configured
+										No LED Art devices configured
 									</Typography>
 								) : (
 									<List sx={{ bgcolor: 'background.default', borderRadius: 1 }}>
 										{hexLedConfig.devices.map((url, index) => {
 											const isOnline = devices.some(
 												(device) =>
-													device.source.name === 'hex-led' &&
+													device.source.name === 'led-art' &&
 													device.managementUrl === url
 											);
 											return (

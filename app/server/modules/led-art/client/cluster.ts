@@ -12,7 +12,7 @@ import { Actions } from '@matter/main/clusters';
 import type { Mapper } from '../../../lib/data';
 import { Color } from '../../../lib/color';
 
-class HexLEDMapper<S, M> extends MappedData<M, S> {
+class LEDArtMapper<S, M> extends MappedData<M, S> {
 	public constructor(
 		self: {
 			client: LEDClient;
@@ -47,8 +47,8 @@ class ConfigurableCluster {
 	}
 }
 
-export class HexLEDOnOffCluster extends ConfigurableCluster implements DeviceOnOffCluster {
-	public isOn = new HexLEDMapper(this, this.client.state, (state) => state?.power_state ?? false);
+export class LEDArtOnOffCluster extends ConfigurableCluster implements DeviceOnOffCluster {
+	public isOn = new LEDArtMapper(this, this.client.state, (state) => state?.power_state ?? false);
 
 	public getName(): DeviceClusterName {
 		return DeviceOnOffCluster.clusterName;
@@ -64,7 +64,7 @@ export class HexLEDOnOffCluster extends ConfigurableCluster implements DeviceOnO
 	};
 }
 
-export class HexLEDLevelControlCluster
+export class LEDArtLevelControlCluster
 	extends ConfigurableCluster
 	implements DeviceLevelControlCluster
 {
@@ -72,7 +72,7 @@ export class HexLEDLevelControlCluster
 		return DeviceLevelControlCluster.clusterName;
 	}
 
-	public currentLevel = new HexLEDMapper(
+	public currentLevel = new LEDArtMapper(
 		this,
 		this.client.state,
 		(state) => state?.brightness ?? 1.0
@@ -92,7 +92,7 @@ export class HexLEDLevelControlCluster
 	public stop = (): Promise<void> => Promise.resolve();
 }
 
-export class HexLEDColorControlCluster
+export class LEDArtColorControlCluster
 	extends ConfigurableCluster
 	implements DeviceColorControlCluster
 {
@@ -100,7 +100,7 @@ export class HexLEDColorControlCluster
 		return DeviceColorControlCluster.clusterName;
 	}
 
-	public color = new HexLEDMapper(this, this.client.effects, (effects) => {
+	public color = new LEDArtMapper(this, this.client.effects, (effects) => {
 		const currentEffect = effects.current_effect;
 
 		// Try to extract color from SingleColorEffect
@@ -136,12 +136,12 @@ export class HexLEDColorControlCluster
 	public getSegmentCount = (): number => 1;
 }
 
-export class HexLEDActionsCluster extends ConfigurableCluster implements DeviceActionsCluster {
+export class LEDArtActionsCluster extends ConfigurableCluster implements DeviceActionsCluster {
 	public getName(): DeviceClusterName {
 		return DeviceActionsCluster.clusterName;
 	}
 
-	public actionList = new HexLEDMapper(
+	public actionList = new LEDArtMapper(
 		this,
 		new CombinedData([this.client.presets, this.client.state]),
 		([presets, state]) => {
