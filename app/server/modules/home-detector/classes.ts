@@ -7,8 +7,10 @@ import {
 } from './constants';
 import { DeviceBooleanStateCluster, DeviceOccupancySensingCluster } from '../device/cluster';
 import type { Device as DeviceInterface } from '../device/device';
+import { SceneTriggerType } from '../../../../types/scene';
 import { logTag } from '../../lib/logging/logger';
 import type { Database } from '../../lib/db';
+import type { AllModules } from '../modules';
 import type { HomeDetectorDB } from '.';
 import type { Host } from './routing';
 import { HOME_STATE } from './types';
@@ -64,7 +66,7 @@ class Pinger {
 		error?: string;
 	}> {
 		try {
-			const result = await this._pingAll(false);
+			const result = await this._pingLoopSingle(false);
 			return {
 				success: true,
 				state: result.state,
@@ -124,48 +126,52 @@ class Pinger {
 		};
 	}
 
-	private async _pingLoop() {
-		while (!this._stopped) {
-			let newState = await this._pingAll(false);
+	private async _pingLoopSingle(withGracePeriod: boolean) {
+		let newState = await this._pingAll(false);
 
-			if (newState.state === this._lastState) {
-				await wait(
-					newState.state === HOME_STATE.HOME ? HOME_PING_INTERVAL : AWAY_PING_INTERVAL
-				);
-				continue;
+		if (newState.state === this._lastState) {
+			return {
+				...newState,
+				waitFor:
+					newState.state === HOME_STATE.HOME ? HOME_PING_INTERVAL : AWAY_PING_INTERVAL,
+			};
+		}
+
+		newState = await this._pingAll(true, newState.ip);
+
+		if (newState.state === this._lastState) {
+			return {
+				...newState,
+				waitFor:
+					newState.state === HOME_STATE.HOME ? HOME_PING_INTERVAL : AWAY_PING_INTERVAL,
+			};
+		}
+
+		const shouldUpdate = this._initialStateConfirmed;
+		this._initialStateConfirmed = true;
+
+		this._lastState = newState.state;
+		if (newState.state === HOME_STATE.HOME) {
+			this.joinedAt = new Date();
+			this._state = HOME_STATE.HOME;
+			this._db.update((old) => ({
+				...old,
+				[this._config.name]: HOME_STATE.HOME,
+			}));
+			if (shouldUpdate) {
+				await this._onChange(HOME_STATE.HOME);
+				await this._logEvent(HOME_STATE.HOME);
 			}
+			return {
+				...newState,
+				waitFor: CHANGE_PING_INTERVAL,
+			};
+		}
 
-			newState = await this._pingAll(true, newState.ip);
+		this.leftAt = new Date();
 
-			if (newState.state === this._lastState) {
-				await wait(
-					newState.state === HOME_STATE.HOME ? HOME_PING_INTERVAL : AWAY_PING_INTERVAL
-				);
-				continue;
-			}
-
-			const shouldUpdate = this._initialStateConfirmed;
-			this._initialStateConfirmed = true;
-
-			this._lastState = newState.state;
-			if (newState.state === HOME_STATE.HOME) {
-				this.joinedAt = new Date();
-				this._state = HOME_STATE.HOME;
-				this._db.update((old) => ({
-					...old,
-					[this._config.name]: HOME_STATE.HOME,
-				}));
-				if (shouldUpdate) {
-					await this._onChange(HOME_STATE.HOME);
-					await this._logEvent(HOME_STATE.HOME);
-				}
-				await wait(CHANGE_PING_INTERVAL);
-				continue;
-			}
-
-			this.leftAt = new Date();
-
-			// Device appears to be away, start grace period
+		// Device appears to be away, start grace period
+		if (withGracePeriod) {
 			for (let i = 0; i < GRACE_PERIOD_PINGS; i++) {
 				await wait(CHANGE_PING_INTERVAL);
 				newState = await this._pingAll(true, newState.ip);
@@ -174,17 +180,27 @@ class Pinger {
 					break;
 				}
 			}
+		}
 
-			this._state = HOME_STATE.AWAY;
-			this._db.update((old) => ({
-				...old,
-				[this._config.name]: HOME_STATE.AWAY,
-			}));
-			if (shouldUpdate) {
-				await this._onChange(HOME_STATE.AWAY);
-				await this._logEvent(HOME_STATE.AWAY);
-			}
-			await wait(CHANGE_PING_INTERVAL);
+		this._state = HOME_STATE.AWAY;
+		this._db.update((old) => ({
+			...old,
+			[this._config.name]: HOME_STATE.AWAY,
+		}));
+		if (shouldUpdate) {
+			await this._onChange(HOME_STATE.AWAY);
+			await this._logEvent(HOME_STATE.AWAY);
+		}
+		return {
+			...newState,
+			waitFor: CHANGE_PING_INTERVAL,
+		};
+	}
+
+	private async _pingLoop() {
+		while (!this._stopped) {
+			const result = await this._pingLoopSingle(true);
+			await wait(result.waitFor);
 		}
 	}
 
@@ -230,26 +246,27 @@ export class Detector {
 			fullState: Record<string, HOME_STATE>
 		) => void | Promise<void>;
 	}[] = [];
-	private _rapidPingListeners: Array<(anyoneHome: boolean) => void | Promise<void>> = [];
 	private readonly _db: Database<HomeDetectorDB>;
 	private readonly _hostsDb: Database<HostsConfigDB>;
 	private readonly _sqlDB?: SQL;
+	private readonly _modules: unknown;
 	private _pingers: Map<string, Pinger> = new Map();
-	private _rapidPingUntil: Date | null = null;
-	private _rapidPingStartState: Record<string, HOME_STATE> | null = null;
 
 	public constructor({
 		db,
 		hostsDb,
 		sqlDB,
+		modules,
 	}: {
 		db: Database<HomeDetectorDB>;
 		hostsDb: Database<HostsConfigDB>;
 		sqlDB?: SQL;
+		modules: unknown;
 	}) {
 		this._db = db;
 		this._hostsDb = hostsDb;
 		this._sqlDB = sqlDB;
+		this._modules = modules;
 		this._initPingers();
 	}
 
@@ -534,7 +551,7 @@ export class Detector {
 		}));
 	}
 
-	public triggerRapidPing(): void {
+	public async triggerRapidPing(): Promise<void> {
 		const allStates = this.getAll();
 		const allHome = Object.values(allStates).every((state) => state === HOME_STATE.HOME);
 
@@ -542,50 +559,41 @@ export class Detector {
 			return;
 		}
 
-		const now = new Date();
-		this._rapidPingUntil = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes from now
-		this._rapidPingStartState = allStates;
-	}
+		const results = await Promise.all(
+			Object.values(this._pingers.values()).map(async (pinger: Pinger) => {
+				for (let i = 0; i < 5 * 60; i++) {
+					const result = await pinger.manualCheck();
+					if (result.state === HOME_STATE.HOME) {
+						return true;
+					}
+					await wait(1000);
+				}
+				return false;
+			})
+		);
 
-	public isRapidPingActive(): boolean {
-		if (!this._rapidPingUntil) {
-			return false;
-		}
-		return new Date() < this._rapidPingUntil;
-	}
-
-	public addRapidPingListener(callback: (anyoneHome: boolean) => void | Promise<void>): void {
-		this._rapidPingListeners.push(callback);
-	}
-
-	public checkRapidPingCompletion(): void {
-		if (!this._rapidPingUntil || !this._rapidPingStartState) {
+		if (results.some((result) => result)) {
 			return;
 		}
 
-		const now = new Date();
-		if (now >= this._rapidPingUntil) {
-			// Rapid ping window has ended
-			const currentState = this.getAll();
-			let anyoneHome = false;
-
-			// Check if anyone who was away is now home
-			for (const [name, currentHomeState] of Object.entries(currentState)) {
-				const startState = this._rapidPingStartState[name];
-				if (startState === HOME_STATE.AWAY && currentHomeState === HOME_STATE.HOME) {
-					anyoneHome = true;
-					break;
-				}
-			}
-
-			// Notify listeners
-			for (const listener of this._rapidPingListeners) {
-				void listener(anyoneHome);
-			}
-
-			// Reset rapid ping state
-			this._rapidPingUntil = null;
-			this._rapidPingStartState = null;
+		logTag(
+			'home-detector',
+			'yellow',
+			'Door triggered but no one came home - sending notification'
+		);
+		try {
+			const pushManager = await (this._modules as AllModules).notification.getPushManager();
+			await pushManager.sendDoorSensorAlert();
+		} catch (error) {
+			logTag('home-detector', 'red', 'Failed to send door sensor alert:', error);
+		}
+		const deviceAPI = await (this._modules as AllModules).device.api.value;
+		try {
+			await deviceAPI.sceneAPI.onTrigger({
+				type: SceneTriggerType.NOBODY_HOME_TIMEOUT,
+			});
+		} catch (error) {
+			logTag('home-detector', 'red', 'Failed to trigger nobody-home-timeout scenes:', error);
 		}
 	}
 
@@ -676,7 +684,7 @@ export class DoorSensorMonitor {
 							'yellow',
 							`Door sensor ${deviceId} triggered - starting rapid ping`
 						);
-						this._detector.triggerRapidPing();
+						void this._detector.triggerRapidPing();
 						await this._detector.logDoorSensorTrigger();
 					}
 				});
@@ -745,7 +753,7 @@ export class MovementSensorMonitor {
 							'yellow',
 							`Movement sensor ${deviceId} triggered - starting rapid ping`
 						);
-						this._detector.triggerRapidPing();
+						void this._detector.triggerRapidPing();
 						await this._detector.logMovementSensorTrigger();
 					}
 				});

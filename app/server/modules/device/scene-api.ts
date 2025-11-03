@@ -199,8 +199,7 @@ export class SceneAPI {
 			} else if (condition.type === SceneConditionType.ANYONE_HOME) {
 				const detector = await modules.homeDetector.getDetector();
 				const anyHome = Object.values(detector.getAll()).some((s) => s === HOME_STATE.HOME);
-				const passes = anyHome || detector.isRapidPingActive();
-				if (passes !== condition.shouldBeHome) {
+				if (anyHome !== condition.shouldBeHome) {
 					return false;
 				}
 			} else {

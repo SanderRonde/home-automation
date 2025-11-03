@@ -51,6 +51,7 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 			db: config.db as Database<HomeDetectorDB>,
 			hostsDb,
 			sqlDB: config.sqlDB,
+			modules: await this.getModules<AllModules>(),
 		});
 		Bot.init({
 			detector,
@@ -99,11 +100,6 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 		const modules = await this.getModules<AllModules>();
 		const deviceAPI = await modules.device.api.value;
 
-		// Periodically check rapid ping completion
-		setInterval(() => {
-			detector.checkRapidPingCompletion();
-		}, 1000);
-
 		// Track devices initially
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		deviceAPI.devices.subscribe((devices: any) => {
@@ -114,35 +110,6 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 			if (this._movementSensorMonitor && devices) {
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 				this._movementSensorMonitor.trackDevices(Object.values(devices));
-			}
-		});
-
-		// Set up notification and scene trigger when rapid ping completes without any arrivals
-		detector.addRapidPingListener(async (anyoneHome) => {
-			if (!anyoneHome) {
-				logTag(
-					'home-detector',
-					'yellow',
-					'Door triggered but no one came home - sending notification'
-				);
-				try {
-					const pushManager = await modules.notification.getPushManager();
-					await pushManager.sendDoorSensorAlert();
-				} catch (error) {
-					logTag('home-detector', 'red', 'Failed to send door sensor alert:', error);
-				}
-				try {
-					await deviceAPI.sceneAPI.onTrigger({
-						type: SceneTriggerType.NOBODY_HOME_TIMEOUT,
-					});
-				} catch (error) {
-					logTag(
-						'home-detector',
-						'red',
-						'Failed to trigger nobody-home-timeout scenes:',
-						error
-					);
-				}
 			}
 		});
 
