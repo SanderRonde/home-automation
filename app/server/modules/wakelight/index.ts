@@ -1,6 +1,6 @@
 import { WakelightLogic } from './wakelight-logic';
+import type { AllModules, ModuleConfig } from '..';
 import { initRouting } from './routing';
-import type { ModuleConfig } from '..';
 import { ModuleMeta } from '../meta';
 
 export const Wakelight = new (class Wakelight extends ModuleMeta {
@@ -10,7 +10,7 @@ export const Wakelight = new (class Wakelight extends ModuleMeta {
 	public init(config: ModuleConfig) {
 		this._logic = new WakelightLogic(
 			config.db,
-			this.modules.then((modules) => modules.device.api.value) as unknown
+			this.getModules<AllModules>().then((modules) => modules.device.api.value) as unknown
 		);
 
 		return {

@@ -1,4 +1,5 @@
 import {
+	createMockSQL,
 	MockDatabase,
 	MockDevice,
 	MockOnOffCluster,
@@ -33,13 +34,15 @@ describe('SceneAPI', () => {
 				}),
 			},
 		});
+		const mockSQL = createMockSQL();
 		api = new SceneAPI(
 			// @ts-expect-error - Using mocks in tests
 			db,
 			devices as unknown as typeof devices,
 			undefined,
 			undefined,
-			mockModules
+			mockModules,
+			mockSQL
 		);
 	});
 

@@ -170,3 +170,13 @@ export interface Scene {
 	triggers?: SceneTriggerWithConditions[];
 	showOnHome?: boolean;
 }
+
+export interface SceneExecution {
+	id: number;
+	scene_id: SceneId;
+	scene_title: string;
+	timestamp: number;
+	trigger_type: 'manual' | SceneTriggerType;
+	trigger_source?: string | null;
+	success: boolean;
+}

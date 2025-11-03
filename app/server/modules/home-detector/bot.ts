@@ -83,8 +83,8 @@ export class Bot extends BotStateBase {
 				(state.states.homeDetector as unknown as State).lastSubjects = [target];
 
 				return checkTarget === HOME_STATE.HOME
-					? pinger.joinedAt.toLocaleString()
-					: pinger.leftAt.toLocaleString();
+					? (pinger.joinedAt?.toLocaleString() ?? 'Unknown')
+					: (pinger.leftAt?.toLocaleString() ?? 'Unknown');
 			});
 
 			conditional(
@@ -120,8 +120,8 @@ export class Bot extends BotStateBase {
 
 							const timeMsg =
 								checkTarget === HOME_STATE.HOME
-									? pinger.joinedAt.toLocaleString()
-									: pinger.leftAt.toLocaleString();
+									? (pinger.joinedAt?.toLocaleString() ?? 'Unknown')
+									: (pinger.leftAt?.toLocaleString() ?? 'Unknown');
 							table.contents.push([Bot.capitalize(target), timeMsg]);
 						}
 

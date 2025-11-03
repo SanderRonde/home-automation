@@ -19,7 +19,7 @@ export class BotBase extends BotStateBase {
 
 export abstract class ModuleMeta {
 	public abstract name: string;
-	public _modules = new SettablePromise<AllModules>();
+	public _modules = new SettablePromise<unknown>();
 	public _sqlDB = new SettablePromise<SQL>();
 
 	public _dbName: string | null = null;
@@ -29,8 +29,8 @@ export abstract class ModuleMeta {
 		return BotBase;
 	}
 
-	public get modules(): Promise<AllModules> {
-		return this._modules.value;
+	public getModules<T = unknown>(): Promise<T> {
+		return this._modules.value as Promise<T>;
 	}
 
 	public get dbName(): string {
@@ -51,7 +51,8 @@ export abstract class ModuleMeta {
 		return Promise.resolve(void 0);
 	}
 
-	public notifyModulesFromExternal(modules: AllModules): void {
+	public notifyModulesFromExternal(_modules: unknown): void {
+		const modules = _modules as AllModules;
 		this._modules.set(modules);
 		let initialSelfChangeDone: boolean = false;
 		void modules.homeDetector.onUpdate(async (homeState, name) => {

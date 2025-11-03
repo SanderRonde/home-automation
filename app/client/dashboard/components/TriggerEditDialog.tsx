@@ -457,7 +457,7 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 	const canAddCondition =
 		(conditionType === SceneConditionType.HOST_HOME && conditionHostId) ||
 		(conditionType === SceneConditionType.DEVICE_ON && conditionDeviceId) ||
-		(conditionType === SceneConditionType.ANYONE_HOME) ||
+		conditionType === SceneConditionType.ANYONE_HOME ||
 		(conditionType === SceneConditionType.TIME_WINDOW &&
 			Object.values(timeWindowDays).some((enabled) => enabled));
 

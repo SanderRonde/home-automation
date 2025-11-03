@@ -1,11 +1,11 @@
 import { DoorSensorMonitor, MovementSensorMonitor, Detector } from './classes';
 import { SettablePromise } from '../../lib/settable-promise';
 import { SceneTriggerType } from '../../../../types/scene';
+import type { AllModules, ModuleConfig } from '..';
 import { logTag } from '../../lib/logging/logger';
 import type { HostsConfigDB } from './classes';
 import { Database } from '../../lib/db';
 import { initRouting } from './routing';
-import type { ModuleConfig } from '..';
 import { HOME_STATE } from './types';
 import { ModuleMeta } from '../meta';
 import { Bot } from './bot';
@@ -96,7 +96,7 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 		this._movementSensorMonitor = new MovementSensorMonitor(detector, hostsDb);
 
 		// Wait for modules to be available, then subscribe to device updates
-		const modules = await this.modules;
+		const modules = await this.getModules<AllModules>();
 		const deviceAPI = await modules.device.api.value;
 
 		// Periodically check rapid ping completion

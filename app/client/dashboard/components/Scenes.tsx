@@ -5,6 +5,14 @@ import {
 	Sensors as SensorsIcon,
 	Star as StarIcon,
 	TouchApp as TouchAppIcon,
+	History as HistoryIcon,
+	Refresh as RefreshIcon,
+	CheckCircle as CheckCircleIcon,
+	Error as ErrorIcon,
+	Person as PersonIcon,
+	Home as HomeIcon,
+	ExitToApp as ExitToAppIcon,
+	Webhook as WebhookIcon,
 } from '@mui/icons-material';
 import {
 	Box,
@@ -15,12 +23,16 @@ import {
 	Button,
 	CircularProgress,
 	Tooltip,
+	Tabs,
+	Tab,
+	Chip,
 } from '@mui/material';
+import type { Scene, SceneExecution } from '../../../../types/scene';
+import { SceneTriggerType } from '../../../../types/scene';
 import type { DeviceGroup } from '../../../../types/group';
 import type { Palette } from '../../../../types/palette';
 import { SceneCreateModal } from './SceneCreateModal';
 import { SceneActionChips } from './SceneActionChips';
-import type { Scene } from '../../../../types/scene';
 import React, { useState, useEffect } from 'react';
 import { apiGet, apiPost } from '../../lib/fetch';
 import { useDevices } from './Devices';
@@ -28,6 +40,7 @@ import { IconComponent } from './icon';
 
 export const Scenes = (): JSX.Element => {
 	const { devices, loading: devicesLoading } = useDevices();
+	const [currentTab, setCurrentTab] = useState(0);
 	const [scenes, setScenes] = useState<Scene[]>([]);
 	const [groups, setGroups] = useState<DeviceGroup[]>([]);
 	const [palettes, setPalettes] = useState<Palette[]>([]);
@@ -35,6 +48,8 @@ export const Scenes = (): JSX.Element => {
 	const [modalOpen, setModalOpen] = useState(false);
 	const [editingScene, setEditingScene] = useState<Scene | undefined>(undefined);
 	const [triggeringSceneId, setTriggeringSceneId] = useState<string | null>(null);
+	const [history, setHistory] = useState<SceneExecution[]>([]);
+	const [loadingHistory, setLoadingHistory] = useState(false);
 
 	const loadScenes = async () => {
 		try {
@@ -47,6 +62,21 @@ export const Scenes = (): JSX.Element => {
 			console.error('Failed to load scenes:', error);
 		} finally {
 			setLoading(false);
+		}
+	};
+
+	const loadHistory = async () => {
+		setLoadingHistory(true);
+		try {
+			const response = await apiGet('device', '/scenes/history', {});
+			if (response.ok) {
+				const data = await response.json();
+				setHistory(data.history);
+			}
+		} catch (error) {
+			console.error('Failed to load scene history:', error);
+		} finally {
+			setLoadingHistory(false);
 		}
 	};
 
@@ -77,6 +107,12 @@ export const Scenes = (): JSX.Element => {
 		void loadGroups();
 		void loadPalettes();
 	}, []);
+
+	useEffect(() => {
+		if (currentTab === 1) {
+			void loadHistory();
+		}
+	}, [currentTab]);
 
 	const handleCreateScene = () => {
 		setEditingScene(undefined);
@@ -194,6 +230,92 @@ export const Scenes = (): JSX.Element => {
 		});
 	};
 
+	const getTriggerDescription = (execution: SceneExecution): string => {
+		if (execution.trigger_type === 'manual') {
+			return 'Manual trigger';
+		}
+
+		switch (execution.trigger_type) {
+			case SceneTriggerType.OCCUPANCY: {
+				const device = execution.trigger_source
+					? getDeviceById(execution.trigger_source)
+					: null;
+				const deviceName = device?.name || execution.trigger_source || 'Unknown';
+				return `Motion sensor: ${deviceName}`;
+			}
+			case SceneTriggerType.BUTTON_PRESS: {
+				const parts = execution.trigger_source?.split(':') || [];
+				const device = parts[0] ? getDeviceById(parts[0]) : null;
+				const deviceName = device?.name || parts[0] || 'Unknown';
+				const buttonIndex = parts[1] ? parseInt(parts[1], 10) + 1 : '?';
+				return `Button ${buttonIndex}: ${deviceName}`;
+			}
+			case SceneTriggerType.HOST_ARRIVAL:
+				return `Host arrival: ${execution.trigger_source || 'Unknown'}`;
+			case SceneTriggerType.HOST_DEPARTURE:
+				return `Host departure: ${execution.trigger_source || 'Unknown'}`;
+			case SceneTriggerType.WEBHOOK:
+				return `Webhook: ${execution.trigger_source || 'Unknown'}`;
+			case SceneTriggerType.ANYBODY_HOME:
+				return 'Anybody home';
+			case SceneTriggerType.NOBODY_HOME:
+				return 'Nobody home';
+			case SceneTriggerType.NOBODY_HOME_TIMEOUT:
+				return 'Nobody home timeout';
+			default:
+				return execution.trigger_type;
+		}
+	};
+
+	const getTriggerIconForExecution = (execution: SceneExecution) => {
+		if (execution.trigger_type === 'manual') {
+			return <PlayArrowIcon sx={{ fontSize: 20 }} />;
+		}
+
+		switch (execution.trigger_type) {
+			case SceneTriggerType.OCCUPANCY:
+				return <SensorsIcon sx={{ fontSize: 20 }} />;
+			case SceneTriggerType.BUTTON_PRESS:
+				return <TouchAppIcon sx={{ fontSize: 20 }} />;
+			case SceneTriggerType.HOST_ARRIVAL:
+				return <HomeIcon sx={{ fontSize: 20 }} />;
+			case SceneTriggerType.HOST_DEPARTURE:
+				return <ExitToAppIcon sx={{ fontSize: 20 }} />;
+			case SceneTriggerType.WEBHOOK:
+				return <WebhookIcon sx={{ fontSize: 20 }} />;
+			case SceneTriggerType.ANYBODY_HOME:
+				return <PersonIcon sx={{ fontSize: 20 }} />;
+			case SceneTriggerType.NOBODY_HOME:
+			case SceneTriggerType.NOBODY_HOME_TIMEOUT:
+				return <ExitToAppIcon sx={{ fontSize: 20 }} />;
+			default:
+				return <HistoryIcon sx={{ fontSize: 20 }} />;
+		}
+	};
+
+	const formatTimestamp = (timestamp: number): string => {
+		const date = new Date(timestamp);
+		const now = new Date();
+		const diffMs = now.getTime() - date.getTime();
+		const diffMins = Math.floor(diffMs / 60000);
+		const diffHours = Math.floor(diffMs / 3600000);
+		const diffDays = Math.floor(diffMs / 86400000);
+
+		if (diffMins < 1) {
+			return 'Just now';
+		}
+		if (diffMins < 60) {
+			return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+		}
+		if (diffHours < 24) {
+			return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+		}
+		if (diffDays < 7) {
+			return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+		}
+		return date.toLocaleString();
+	};
+
 	if (loading || devicesLoading) {
 		return (
 			<Box
@@ -227,8 +349,14 @@ export const Scenes = (): JSX.Element => {
 					</Button>
 				</Box>
 
-				{/* Scenes List */}
-				{scenes.length === 0 ? (
+				{/* Tabs */}
+				<Tabs value={currentTab} onChange={(_e, newValue) => setCurrentTab(newValue)}>
+					<Tab label="Scenes" />
+					<Tab label="History" />
+				</Tabs>
+
+				{/* Scenes Tab */}
+				{currentTab === 0 && scenes.length === 0 ? (
 					<Card sx={{ mt: 4 }}>
 						<CardContent
 							sx={{
@@ -255,7 +383,7 @@ export const Scenes = (): JSX.Element => {
 							</Button>
 						</CardContent>
 					</Card>
-				) : (
+				) : currentTab === 0 ? (
 					<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
 						{scenes.map((scene) => {
 							return (
@@ -388,6 +516,146 @@ export const Scenes = (): JSX.Element => {
 								</Card>
 							);
 						})}
+					</Box>
+				) : null}
+
+				{/* History Tab */}
+				{currentTab === 1 && (
+					<Box>
+						<Box
+							sx={{
+								display: 'flex',
+								justifyContent: 'space-between',
+								alignItems: 'center',
+								mb: 2,
+							}}
+						>
+							<Typography variant="h6">Scene Execution History</Typography>
+							<IconButton
+								onClick={() => void loadHistory()}
+								disabled={loadingHistory}
+							>
+								<RefreshIcon />
+							</IconButton>
+						</Box>
+
+						{loadingHistory ? (
+							<Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+								<CircularProgress />
+							</Box>
+						) : history.length === 0 ? (
+							<Card sx={{ borderRadius: 2 }}>
+								<CardContent>
+									<Typography
+										variant="body2"
+										color="text.secondary"
+										textAlign="center"
+									>
+										No scene executions yet
+									</Typography>
+								</CardContent>
+							</Card>
+						) : (
+							<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+								{history.map((execution) => {
+									const scene = scenes.find((s) => s.id === execution.scene_id);
+									return (
+										<Card key={execution.id} sx={{ borderRadius: 2 }}>
+											<CardContent>
+												<Box
+													sx={{
+														display: 'flex',
+														alignItems: 'center',
+														gap: 2,
+													}}
+												>
+													<Box
+														sx={{
+															display: 'flex',
+															alignItems: 'center',
+															justifyContent: 'center',
+															width: 48,
+															height: 48,
+															borderRadius: 2,
+															backgroundColor: 'action.hover',
+															flexShrink: 0,
+														}}
+													>
+														{scene ? (
+															<IconComponent
+																iconName={scene.icon}
+																sx={{ fontSize: 28 }}
+															/>
+														) : (
+															<HistoryIcon sx={{ fontSize: 28 }} />
+														)}
+													</Box>
+													<Box sx={{ flex: 1, minWidth: 0 }}>
+														<Box
+															sx={{
+																display: 'flex',
+																alignItems: 'center',
+																gap: 1,
+																mb: 0.5,
+															}}
+														>
+															<Typography
+																variant="subtitle1"
+																fontWeight={500}
+															>
+																{execution.scene_title}
+															</Typography>
+															{execution.success ? (
+																<CheckCircleIcon
+																	sx={{
+																		fontSize: 18,
+																		color: 'success.main',
+																	}}
+																/>
+															) : (
+																<ErrorIcon
+																	sx={{
+																		fontSize: 18,
+																		color: 'error.main',
+																	}}
+																/>
+															)}
+														</Box>
+														<Box
+															sx={{
+																display: 'flex',
+																alignItems: 'center',
+																gap: 1,
+																flexWrap: 'wrap',
+															}}
+														>
+															<Chip
+																icon={getTriggerIconForExecution(
+																	execution
+																)}
+																label={getTriggerDescription(
+																	execution
+																)}
+																size="small"
+																variant="outlined"
+															/>
+															<Typography
+																variant="caption"
+																color="text.secondary"
+															>
+																{formatTimestamp(
+																	execution.timestamp
+																)}
+															</Typography>
+														</Box>
+													</Box>
+												</Box>
+											</CardContent>
+										</Card>
+									);
+								})}
+							</Box>
+						)}
 					</Box>
 				)}
 			</Box>

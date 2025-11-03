@@ -722,16 +722,20 @@ export const HomeDetector = (): JSX.Element => {
 														</Typography>
 														<Chip
 															label={
-																event.state.toLowerCase() === HOME_STATE.HOME.toLowerCase()
+																event.state.toLowerCase() ===
+																HOME_STATE.HOME.toLowerCase()
 																	? 'Home'
-																	: event.state.toLowerCase() === HOME_STATE.AWAY.toLowerCase()
+																	: event.state.toLowerCase() ===
+																		  HOME_STATE.AWAY.toLowerCase()
 																		? 'Away'
 																		: event.state
 															}
 															color={
-																event.state.toLowerCase() === HOME_STATE.HOME.toLowerCase()
+																event.state.toLowerCase() ===
+																HOME_STATE.HOME.toLowerCase()
 																	? 'success'
-																	: event.state.toLowerCase() === HOME_STATE.AWAY.toLowerCase()
+																	: event.state.toLowerCase() ===
+																		  HOME_STATE.AWAY.toLowerCase()
 																		? 'default'
 																		: 'info'
 															}

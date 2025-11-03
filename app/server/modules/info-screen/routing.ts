@@ -4,9 +4,9 @@ import infoScreenHtml from '../../../client/info-screen/index.html';
 import { serveStatic } from '../../lib/serve-static';
 import { CLIENT_FOLDER } from '../../lib/constants';
 import { ExternalWeatherTimePeriod } from './types';
+import type { AllModules, ModuleConfig } from '..';
 import { logTag } from '../../lib/logging/logger';
 import { get } from './temperature/external';
-import type { ModuleConfig } from '..';
 import type { BunRequest } from 'bun';
 import { InfoScreen } from '.';
 import * as path from 'path';
@@ -40,7 +40,7 @@ export async function initRouting(moduleConfig: ModuleConfig): Promise<void> {
 							if (type === 'inside') {
 								// Use temperature module
 								const temp = await (
-									await InfoScreen.modules
+									await InfoScreen.getModules<AllModules>()
 								).temperature.getTemp('room');
 								return {
 									temperature: temp,
@@ -48,7 +48,7 @@ export async function initRouting(moduleConfig: ModuleConfig): Promise<void> {
 								};
 							} else if (type === 'server') {
 								const temp = await (
-									await InfoScreen.modules
+									await InfoScreen.getModules<AllModules>()
 								).temperature.getTemp('server');
 								return {
 									temperature: temp,

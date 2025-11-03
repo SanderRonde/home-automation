@@ -5,6 +5,7 @@ import { TELEGRAM_API } from '../../../lib/constants';
 import { logTag } from '../../../lib/logging/logger';
 import type { ChatState } from './state-keeping';
 import type { Database } from '../../../lib/db';
+import type { AllModules } from '../../modules';
 import { StateKeeper } from './state-keeping';
 import { RESPONSE_TYPE } from '../types';
 import { BOT_NAME } from '../constants';
@@ -116,7 +117,7 @@ export class MessageHandler extends BotStateBase {
 		return this._matchMatchables(
 			config,
 			await this._matchSelf(config),
-			...Object.values(await Bot.modules).map((meta) => {
+			...Object.values(await Bot.getModules<AllModules>()).map((meta) => {
 				return meta.Bot;
 			})
 		);

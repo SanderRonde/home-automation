@@ -5,7 +5,13 @@ import {
 	DeviceOnOffCluster,
 	DeviceWindowCoveringCluster,
 } from './cluster';
-import type { Scene, SceneCondition, SceneId, SceneTrigger } from '../../../../types/scene';
+import type {
+	Scene,
+	SceneCondition,
+	SceneId,
+	SceneTrigger,
+	SceneExecution,
+} from '../../../../types/scene';
 import { SceneTriggerType, SceneConditionType } from '../../../../types/scene';
 import { applyPaletteToDevices } from './palette-executor.js';
 import { HOME_STATE } from '../home-detector/types.js';
@@ -19,6 +25,7 @@ import type { Data } from '../../lib/data';
 import { Color } from '../../lib/color';
 import type { Device } from './device';
 import type { DeviceDB } from '.';
+import type { SQL } from 'bun';
 
 const UPDATE_INTERVAL_SECONDS = 5;
 
@@ -34,7 +41,8 @@ export class SceneAPI {
 		}>,
 		private readonly _groupAPI: GroupAPI,
 		private readonly _paletteAPI: PaletteAPI,
-		private readonly _modules: unknown
+		private readonly _modules: unknown,
+		private readonly _sqlDB: SQL
 	) {}
 
 	public listScenes(): Scene[] {
@@ -221,11 +229,13 @@ export class SceneAPI {
 
 				// Match based on trigger type
 				let triggerMatches = false;
+				let triggerSource: string | undefined;
 				if (
 					trigger.type === SceneTriggerType.OCCUPANCY &&
 					sceneTrigger.type === SceneTriggerType.OCCUPANCY
 				) {
 					triggerMatches = sceneTrigger.deviceId === trigger.deviceId;
+					triggerSource = trigger.deviceId;
 				} else if (
 					trigger.type === SceneTriggerType.BUTTON_PRESS &&
 					sceneTrigger.type === SceneTriggerType.BUTTON_PRESS
@@ -233,36 +243,43 @@ export class SceneAPI {
 					triggerMatches =
 						sceneTrigger.deviceId === trigger.deviceId &&
 						sceneTrigger.buttonIndex === trigger.buttonIndex;
+					triggerSource = `${trigger.deviceId}:${trigger.buttonIndex}`;
 				} else if (
 					trigger.type === SceneTriggerType.HOST_ARRIVAL &&
 					sceneTrigger.type === SceneTriggerType.HOST_ARRIVAL
 				) {
 					triggerMatches = sceneTrigger.hostId === trigger.hostId;
+					triggerSource = trigger.hostId;
 				} else if (
 					trigger.type === SceneTriggerType.HOST_DEPARTURE &&
 					sceneTrigger.type === SceneTriggerType.HOST_DEPARTURE
 				) {
 					triggerMatches = sceneTrigger.hostId === trigger.hostId;
+					triggerSource = trigger.hostId;
 				} else if (
 					trigger.type === SceneTriggerType.WEBHOOK &&
 					sceneTrigger.type === SceneTriggerType.WEBHOOK
 				) {
 					triggerMatches = sceneTrigger.webhookName === trigger.webhookName;
+					triggerSource = trigger.webhookName;
 				} else if (
 					trigger.type === SceneTriggerType.ANYBODY_HOME &&
 					sceneTrigger.type === SceneTriggerType.ANYBODY_HOME
 				) {
 					triggerMatches = true;
+					triggerSource = undefined;
 				} else if (
 					trigger.type === SceneTriggerType.NOBODY_HOME &&
 					sceneTrigger.type === SceneTriggerType.NOBODY_HOME
 				) {
 					triggerMatches = true;
+					triggerSource = undefined;
 				} else if (
 					trigger.type === SceneTriggerType.NOBODY_HOME_TIMEOUT &&
 					sceneTrigger.type === SceneTriggerType.NOBODY_HOME_TIMEOUT
 				) {
 					triggerMatches = true;
+					triggerSource = undefined;
 				}
 
 				if (!triggerMatches) {
@@ -275,7 +292,10 @@ export class SceneAPI {
 				);
 
 				if (conditionsPassed) {
-					await this.triggerScene(scene.id);
+					await this.triggerScene(scene.id, {
+						type: trigger.type,
+						source: triggerSource,
+					});
 					// Break after first matching trigger fires the scene
 					break;
 				}
@@ -283,7 +303,13 @@ export class SceneAPI {
 		}
 	}
 
-	public async triggerScene(id: SceneId): Promise<boolean> {
+	public async triggerScene(
+		id: SceneId,
+		triggerInfo?: {
+			type: 'manual' | SceneTriggerType;
+			source?: string;
+		}
+	): Promise<boolean> {
 		const scene = this.getScene(id);
 		if (!scene) {
 			return false;
@@ -457,38 +483,41 @@ export class SceneAPI {
 									for (const colorControlCluster of colorControlClusters) {
 										await colorControlCluster.setColor({ color });
 									}
-					} else if (
-						sceneAction.cluster === DeviceClusterName.LEVEL_CONTROL
-					) {
-						const levelControlClusters =
-							device.getAllClustersByType(DeviceLevelControlCluster);
-						if (levelControlClusters.length === 0) {
-							logTag(
-								'scene',
-								'yellow',
-								'LevelControlCluster not found:',
-								device.getUniqueId()
-							);
-							return false;
-						}
+								} else if (
+									sceneAction.cluster === DeviceClusterName.LEVEL_CONTROL
+								) {
+									const levelControlClusters =
+										device.getAllClustersByType(DeviceLevelControlCluster);
+									if (levelControlClusters.length === 0) {
+										logTag(
+											'scene',
+											'yellow',
+											'LevelControlCluster not found:',
+											device.getUniqueId()
+										);
+										return false;
+									}
 
-						// Check if gradual level increase is requested
-						if (sceneAction.action.durationSeconds && sceneAction.action.durationSeconds > 0) {
-							// Use gradual level increase
-							await this._startGradualLevelIncrease(
-								device,
-								levelControlClusters,
-								sceneAction.action.level / 100,
-								sceneAction.action.durationSeconds
-							);
-						} else {
-							// Immediate level set
-							for (const levelControlCluster of levelControlClusters) {
-								await levelControlCluster.setLevel({
-									level: sceneAction.action.level / 100,
-								});
-							}
-						}
+									// Check if gradual level increase is requested
+									if (
+										sceneAction.action.durationSeconds &&
+										sceneAction.action.durationSeconds > 0
+									) {
+										// Use gradual level increase
+										await this._startGradualLevelIncrease(
+											device,
+											levelControlClusters,
+											sceneAction.action.level / 100,
+											sceneAction.action.durationSeconds
+										);
+									} else {
+										// Immediate level set
+										for (const levelControlCluster of levelControlClusters) {
+											await levelControlCluster.setLevel({
+												level: sceneAction.action.level / 100,
+											});
+										}
+									}
 								} else {
 									assertUnreachable(sceneAction);
 								}
@@ -512,6 +541,18 @@ export class SceneAPI {
 				})
 			)
 		).every((success) => success);
+
+		// Log scene execution to database
+		try {
+			const triggerType = triggerInfo?.type ?? 'manual';
+			const triggerSource = triggerInfo?.source ?? null;
+			await this._sqlDB`
+				INSERT INTO scene_executions (scene_id, scene_title, timestamp, trigger_type, trigger_source, success)
+				VALUES (${id}, ${scene.title}, ${Date.now()}, ${triggerType}, ${triggerSource}, ${success ? 1 : 0})
+			`;
+		} catch (error) {
+			logTag('scene', 'red', 'Failed to log scene execution:', error);
+		}
 
 		if (!success) {
 			logTag('scene', 'red', 'Scene execution failed:', id);
@@ -667,5 +708,60 @@ export class SceneAPI {
 
 		// Clear update flag
 		this._isUpdatingGradualLevels.delete(deviceId);
+	}
+
+	public async getSceneHistory(limit = 100, sceneId?: SceneId): Promise<SceneExecution[]> {
+		try {
+			let results;
+			if (sceneId) {
+				results = await this._sqlDB<
+					Array<{
+						id: number;
+						scene_id: string;
+						scene_title: string;
+						timestamp: number;
+						trigger_type: string;
+						trigger_source: string | null;
+						success: number;
+					}>
+				>`
+					SELECT id, scene_id, scene_title, timestamp, trigger_type, trigger_source, success
+					FROM scene_executions
+					WHERE scene_id = ${sceneId}
+					ORDER BY timestamp DESC
+					LIMIT ${limit}
+				`;
+			} else {
+				results = await this._sqlDB<
+					Array<{
+						id: number;
+						scene_id: string;
+						scene_title: string;
+						timestamp: number;
+						trigger_type: string;
+						trigger_source: string | null;
+						success: number;
+					}>
+				>`
+					SELECT id, scene_id, scene_title, timestamp, trigger_type, trigger_source, success
+					FROM scene_executions
+					ORDER BY timestamp DESC
+					LIMIT ${limit}
+				`;
+			}
+
+			return results.map((r) => ({
+				id: r.id,
+				scene_id: r.scene_id,
+				scene_title: r.scene_title,
+				timestamp: r.timestamp,
+				trigger_type: r.trigger_type as 'manual' | SceneTriggerType,
+				trigger_source: r.trigger_source,
+				success: r.success === 1,
+			}));
+		} catch (error) {
+			logTag('scene', 'red', 'Failed to fetch scene history:', error);
+			return [];
+		}
 	}
 }

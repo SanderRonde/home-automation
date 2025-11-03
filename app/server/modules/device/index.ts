@@ -5,10 +5,10 @@ import type { DeviceGroup } from '../../../../types/group';
 import type { Palette } from '../../../../types/palette';
 import { HOME_STATE } from '../home-detector/types.js';
 import type { Scene } from '../../../../types/scene';
+import type { AllModules, ModuleConfig } from '..';
 import type { Database } from '../../lib/db';
 import type { DeviceInfo } from './routing';
 import { initRouting } from './routing';
-import type { ModuleConfig } from '..';
 import { ModuleMeta } from '../meta';
 import { DeviceAPI } from './api';
 
@@ -145,12 +145,34 @@ export const Device = new (class Device extends ModuleMeta {
 			`;
 		}
 
+		// Initialize SQL table for scene executions
+		const sceneExecutionsTableExists = await config.sqlDB<{ name: string }[]>`
+			SELECT name FROM sqlite_master WHERE type='table' AND name='scene_executions'
+		`;
+
+		if (!sceneExecutionsTableExists.length) {
+			await config.sqlDB`
+				CREATE TABLE scene_executions (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					scene_id TEXT NOT NULL,
+					scene_title TEXT NOT NULL,
+					timestamp INTEGER NOT NULL,
+					trigger_type TEXT NOT NULL,
+					trigger_source TEXT,
+					success INTEGER NOT NULL
+				)
+			`;
+			await config.sqlDB`
+				CREATE INDEX idx_scene_executions_time ON scene_executions(timestamp DESC)
+			`;
+		}
+
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
 		const api = new DeviceAPI(config.db, config.sqlDB, (this as any).modules);
 		this.api.set(api);
 
 		// Subscribe to home-detector state changes to trigger scenes
-		const modules = await this.modules;
+		const modules = await this.getModules<AllModules>();
 		void modules.homeDetector.onUpdate(async (newState: HOME_STATE, hostId: string) => {
 			if (newState === HOME_STATE.HOME) {
 				await api.sceneAPI.onTrigger({

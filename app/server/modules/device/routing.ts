@@ -861,6 +861,16 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 				}
 				return json({ success: true });
 			},
+			'/scenes/history': async (_req, _server, { json }) => {
+				const limit = 100;
+				const history = await api.sceneAPI.getSceneHistory(limit);
+				return json({ history });
+			},
+			'/scenes/:sceneId/history': async (req, _server, { json }) => {
+				const limit = 100;
+				const history = await api.sceneAPI.getSceneHistory(limit, req.params.sceneId);
+				return json({ history });
+			},
 			'/groups/list': (_req, _server, { json }) => {
 				const groups = api.groupAPI.listGroups();
 				return json({ groups });
