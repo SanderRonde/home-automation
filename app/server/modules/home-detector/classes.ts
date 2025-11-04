@@ -29,7 +29,6 @@ class Pinger {
 	private _stopped: boolean = false;
 	public leftAt: Date | undefined = undefined;
 	public joinedAt: Date | undefined = undefined;
-	private _initialStateConfirmed: boolean = false;
 
 	public get state() {
 		return this._state!;
@@ -101,7 +100,7 @@ class Pinger {
 				}
 				const ipPings = [];
 				for (let i = 0; i < (multiPing ? AWAY_MIN_CONSECUTIVE_PINGS : 1); i++) {
-					await wait(CHANGE_PING_INTERVAL);
+					await wait(1000);
 					ipPings.push(
 						await ping.promise.probe(ip, {
 							timeout: 5,
@@ -138,8 +137,8 @@ class Pinger {
 		}
 
 		newState = await this._pingAll(true, newState.ip);
-
 		if (newState.state === this._lastState) {
+			logTag('home-detector', 'yellow', this.name, 'Same state');
 			return {
 				...newState,
 				waitFor:
@@ -147,21 +146,17 @@ class Pinger {
 			};
 		}
 
-		const shouldUpdate = this._initialStateConfirmed;
-		this._initialStateConfirmed = true;
-
 		this._lastState = newState.state;
 		if (newState.state === HOME_STATE.HOME) {
+			logTag('home-detector', 'yellow', this.name, 'Now home');
 			this.joinedAt = new Date();
 			this._state = HOME_STATE.HOME;
 			this._db.update((old) => ({
 				...old,
 				[this._config.name]: HOME_STATE.HOME,
 			}));
-			if (shouldUpdate) {
-				await this._onChange(HOME_STATE.HOME);
-				await this._logEvent(HOME_STATE.HOME);
-			}
+			await this._onChange(HOME_STATE.HOME);
+			await this._logEvent(HOME_STATE.HOME);
 			return {
 				...newState,
 				waitFor: CHANGE_PING_INTERVAL,
@@ -172,14 +167,17 @@ class Pinger {
 
 		// Device appears to be away, start grace period
 		if (withGracePeriod) {
+			logTag('home-detector', 'yellow', this.name, 'Now away - starting grace period');
 			for (let i = 0; i < GRACE_PERIOD_PINGS; i++) {
-				await wait(CHANGE_PING_INTERVAL);
-				newState = await this._pingAll(true, newState.ip);
+				await wait(1000);
+				newState = await this._pingAll(false, newState.ip);
 				if (newState.state === HOME_STATE.HOME) {
 					// Is home after all
+					logTag('home-detector', 'yellow', this.name, 'Now home - ending grace period');
 					break;
 				}
 			}
+			logTag('home-detector', 'yellow', this.name, 'Now away - grace period ended');
 		}
 
 		this._state = HOME_STATE.AWAY;
@@ -187,10 +185,8 @@ class Pinger {
 			...old,
 			[this._config.name]: HOME_STATE.AWAY,
 		}));
-		if (shouldUpdate) {
-			await this._onChange(HOME_STATE.AWAY);
-			await this._logEvent(HOME_STATE.AWAY);
-		}
+		await this._onChange(HOME_STATE.AWAY);
+		await this._logEvent(HOME_STATE.AWAY);
 		return {
 			...newState,
 			waitFor: CHANGE_PING_INTERVAL,

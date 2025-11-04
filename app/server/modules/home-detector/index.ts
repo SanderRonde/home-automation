@@ -58,7 +58,9 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 		});
 		this._detector.set(detector);
 
-		let _prevAnyoneHome: boolean | null = null;
+		let _prevAnyoneHome: boolean = Object.values(detector.getAll()).some(
+			(s) => s === HOME_STATE.HOME
+		);
 
 		detector.addListener(null, async (newState, name) => {
 			logTag(
@@ -70,10 +72,7 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 			);
 
 			const anyHomeNow = Object.values(detector.getAll()).some((s) => s === HOME_STATE.HOME);
-			if (_prevAnyoneHome === null) {
-				_prevAnyoneHome = anyHomeNow;
-				return;
-			}
+			logTag('home-detector', 'yellow', 'Any home now', anyHomeNow, detector.getAll());
 			if (!_prevAnyoneHome && anyHomeNow) {
 				try {
 					await deviceAPI.sceneAPI.onTrigger({ type: SceneTriggerType.ANYBODY_HOME });
