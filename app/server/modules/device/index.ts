@@ -168,7 +168,7 @@ export const Device = new (class Device extends ModuleMeta {
 		}
 
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-		const api = new DeviceAPI(config.db, config.sqlDB, (this as any).modules);
+		const api = new DeviceAPI(config.db, config.sqlDB, this.getModules() as unknown);
 		this.api.set(api);
 
 		// Subscribe to home-detector state changes to trigger scenes
