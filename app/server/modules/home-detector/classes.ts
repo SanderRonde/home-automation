@@ -174,7 +174,10 @@ class Pinger {
 				if (newState.state === HOME_STATE.HOME) {
 					// Is home after all
 					logTag('home-detector', 'yellow', this.name, 'Now home - ending grace period');
-					break;
+					return {
+						...newState,
+						waitFor: CHANGE_PING_INTERVAL,
+					};
 				}
 			}
 			logTag('home-detector', 'yellow', this.name, 'Now away - grace period ended');
