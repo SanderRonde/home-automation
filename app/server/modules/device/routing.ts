@@ -34,6 +34,7 @@ import type { ClassEnum } from '../../lib/enum';
 import { Color } from '../../lib/color';
 import type { DeviceAPI } from './api';
 import { wait } from '../../lib/time';
+import { isLocalRequest, getRequestBaseUrl } from '../../lib/network-utils';
 import * as z from 'zod';
 
 export interface DeviceInfo {
@@ -211,6 +212,8 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 	const notifyDeviceChanges = async () => {
 		void wsPublish({
 			type: 'devices',
+			// For WebSocket updates, we don't have per-client context
+			// So we don't pass a request - defaults to local URLs
 			devices: await listDevicesWithValues(api, modules),
 		});
 	};
@@ -283,9 +286,9 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 
 				return json({ devices });
 			},
-			'/listWithValues': async (_req, _server, { json }) => {
-				return json({ devices: await listDevicesWithValues(api, modules) });
-			},
+		'/listWithValues': async (req, _server, { json }) => {
+			return json({ devices: await listDevicesWithValues(api, modules, req) });
+		},
 			'/occupancy/:deviceId': async (req, _server, { json }) => {
 				const history = await api.occupancyTracker.getHistory(req.params.deviceId, 100);
 				return json({ history });
@@ -1205,12 +1208,16 @@ const getClusterState = async (
 	} as DashboardDeviceClusterWithState;
 };
 
-async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
+async function listDevicesWithValues(api: DeviceAPI, modules: AllModules, req?: Request) {
 	const deviceApi = await modules.device.api.value;
 	const devices = [...Object.values(await deviceApi.devices.get())];
 	const storedDevices = deviceApi.getStoredDevices();
 	const rooms = deviceApi.getRooms();
 	const responseDevices: DashboardDeviceResponse[] = [];
+	
+	// Determine if request is from local network
+	const isLocal = req ? isLocalRequest(req) : true; // Default to local if no request provided
+	const baseUrl = req ? getRequestBaseUrl(req) : '';
 
 	const _getClusterState = async (cluster: Cluster, deviceId: string) => {
 		if (!clusterStateCache.has(cluster)) {
@@ -1408,24 +1415,35 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 			const room = storedDevice?.room;
 			const roomInfo = room ? rooms[room] : undefined;
 
-			const endpointResponse = await getResponseForEndpoint(device, deviceId);
+		const endpointResponse = await getResponseForEndpoint(device, deviceId);
+		
+		// Get management URL - use proxy if remote, original if local
+		let managementUrl = await device.getManagementUrl();
+		if (managementUrl && !isLocal) {
+			// Check if URL is HTTP-based (skip custom schemes like hue://)
+			if (managementUrl.startsWith('http://') || managementUrl.startsWith('https://')) {
+				// Use proxy URL for remote access
+				managementUrl = `${baseUrl}/device-proxy/proxy/${encodeURIComponent(deviceId)}/`;
+			}
+			// For custom schemes, keep original URL (it won't work remotely, but at least shows the info)
+		}
 
-			const responseDevice: DashboardDeviceResponse = {
-				uniqueId: deviceId,
-				source: {
-					name: device.getSource().value,
-					emoji: device.getSource().toEmoji(),
-				},
-				room: room,
-				roomColor: roomInfo?.color,
-				roomIcon: roomInfo?.icon,
-				...endpointResponse,
-				name: storedDevice?.name ?? endpointResponse.name,
-				managementUrl: await device.getManagementUrl(),
-			};
-			responseDevices.push(responseDevice);
-		})
-	);
+		const responseDevice: DashboardDeviceResponse = {
+			uniqueId: deviceId,
+			source: {
+				name: device.getSource().value,
+				emoji: device.getSource().toEmoji(),
+			},
+			room: room,
+			roomColor: roomInfo?.color,
+			roomIcon: roomInfo?.icon,
+			...endpointResponse,
+			name: storedDevice?.name ?? endpointResponse.name,
+			managementUrl: managementUrl,
+		};
+		responseDevices.push(responseDevice);
+	})
+);
 
 	return responseDevices;
 }

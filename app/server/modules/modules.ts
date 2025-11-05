@@ -10,6 +10,7 @@ import { EWeLink } from './ewelink';
 import { Secret } from './secret/';
 import { Matter } from './matter';
 import { Device } from './device';
+import { DeviceProxy } from './device-proxy';
 import { WLed } from './wled';
 import { Auth } from './auth';
 import { MCP } from './mcp';
@@ -35,6 +36,7 @@ const getModuleObj = () => ({
 	wled: WLed,
 	ledArt: LedArt,
 	device: Device,
+	deviceProxy: DeviceProxy,
 	matter: Matter,
 	dashboard: Dashboard,
 	secret: Secret,
