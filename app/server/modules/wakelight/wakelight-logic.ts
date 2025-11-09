@@ -3,8 +3,8 @@ import { DeviceLevelControlCluster } from '../device/cluster';
 import { logTag, warning } from '../../lib/logging/logger';
 import { DeviceOnOffCluster } from '../device/cluster';
 import type { AlarmState, WakelightDB } from './types';
-import type { DeviceAPI } from '../device/api';
 import type { Database } from '../../lib/db';
+import type { AllModules } from '../modules';
 import { Color } from '../../lib/color.js';
 
 const UPDATE_INTERVAL_SECONDS = 5;
@@ -19,7 +19,7 @@ export class WakelightLogic {
 
 	public constructor(
 		private readonly _db: Database<WakelightDB>,
-		private readonly _deviceAPI: unknown
+		private readonly _getModules: <T>() => Promise<T>
 	) {}
 
 	public getAlarmState(): AlarmState | null {
@@ -166,7 +166,8 @@ export class WakelightLogic {
 	}
 
 	private async _getValidDevices(deviceIds: string[]) {
-		const allDevices = ((await this._deviceAPI) as DeviceAPI).devices.current();
+		const modules = await this._getModules<AllModules>();
+		const allDevices = (await modules.device.api.value).devices.current();
 		const validDevices = [];
 
 		for (const deviceId of deviceIds) {
