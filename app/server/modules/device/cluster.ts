@@ -44,6 +44,8 @@ export enum DeviceClusterName {
 	COLOR_CONTROL = 'ColorControl',
 	ACTIONS = 'Actions',
 	THERMOSTAT = 'Thermostat',
+	ELECTRICAL_ENERGY_MEASUREMENT = 'ElectricalEnergyMeasurement',
+	ELECTRICAL_POWER_MEASUREMENT = 'ElectricalPowerMeasurement',
 }
 
 export abstract class DeviceOnOffCluster extends Cluster {
@@ -228,4 +230,18 @@ export abstract class DeviceThermostatCluster extends Cluster {
 
 	public abstract setTargetTemperature(temperature: number): Promise<void>;
 	public abstract setMode(mode: ThermostatMode): Promise<void>;
+}
+
+export abstract class DeviceElectricalEnergyMeasurementCluster extends Cluster {
+	public static clusterName = DeviceClusterName.ELECTRICAL_ENERGY_MEASUREMENT;
+
+	/** In Watt-hours */
+	public abstract totalEnergy: Data<bigint>;
+	public abstract totalEnergyPeriod: Data<{ from: Date; to: Date } | undefined>;
+}
+
+export abstract class DeviceElectricalPowerMeasurementCluster extends Cluster {
+	public static clusterName = DeviceClusterName.ELECTRICAL_POWER_MEASUREMENT;
+
+	public abstract activePower: Data<number | undefined>; // in Watts
 }

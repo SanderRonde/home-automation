@@ -32,6 +32,6 @@
 - [x] Phone charge webhook does not work
 - [x] Get rid of dynamic imports
 - [x] Notifications don't work yet
+- [x] Add power measuring support for ikea smart plugs
 - [ ] 3D house overview
 - [ ] Wakelight does not appear to work
-- [ ] Add power measuring support for ikea smart plugs

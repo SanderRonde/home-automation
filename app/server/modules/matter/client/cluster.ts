@@ -9,6 +9,7 @@ import {
 	DeviceTemperatureMeasurementCluster,
 	DeviceColorControlCluster,
 	DeviceActionsCluster,
+	DeviceElectricalPowerMeasurementCluster,
 } from '../../device/cluster';
 import type {
 	ColorControl,
@@ -21,6 +22,8 @@ import type {
 	TemperatureMeasurement,
 	WindowCovering,
 	BooleanState,
+	ElectricalEnergyMeasurement,
+	ElectricalPowerMeasurement,
 } from '@matter/main/clusters';
 import {
 	DeviceSwitchCluster,
@@ -36,6 +39,7 @@ import {
 	type Command,
 	type Event,
 } from '@matter/types';
+import { DeviceElectricalEnergyMeasurementCluster } from '../../device/cluster';
 import type { PairedNode, Endpoint } from '@project-chip/matter.js/device';
 import type { Cluster, DeviceGroupId } from '../../device/cluster';
 import { DeviceBooleanStateCluster } from '../../device/cluster';
@@ -675,6 +679,38 @@ class MatterBooleanStateCluster
 	});
 }
 
+class MatterElectricalEnergyCumulativePeriodicImportedMeasurementCluster
+	extends ConfigurableCluster<ElectricalEnergyMeasurement.Complete>
+	implements DeviceElectricalEnergyMeasurementCluster
+{
+	public getBaseCluster(): typeof DeviceElectricalEnergyMeasurementCluster {
+		return DeviceElectricalEnergyMeasurementCluster;
+	}
+
+	public totalEnergyPeriod = this._proxy.attributeGetter('cumulativeEnergyImported', (value) =>
+		value?.startTimestamp !== undefined && value?.endTimestamp !== undefined
+			? { from: new Date(value.startTimestamp), to: new Date(value.endTimestamp) }
+			: undefined
+	);
+	public totalEnergy = this._proxy.attributeGetter('cumulativeEnergyImported', (value) =>
+		value?.energy !== undefined ? BigInt(value.energy) : 0n
+	);
+}
+
+class MatterElectricalPowerMeasurementCluster
+	extends ConfigurableCluster<ElectricalPowerMeasurement.Complete>
+	implements DeviceElectricalPowerMeasurementCluster
+{
+	public getBaseCluster(): typeof DeviceElectricalPowerMeasurementCluster {
+		return DeviceElectricalPowerMeasurementCluster;
+	}
+
+	// Matter spec: activePower is in milliwatts (mW)
+	public activePower = this._proxy.attributeGetter('activePower', (value) =>
+		value !== null && value !== undefined ? Number(value) / 1000 : undefined
+	);
+}
+
 function fromMatterStatus(status: Status): DeviceStatus {
 	switch (status) {
 		case Status.Success:
@@ -751,6 +787,38 @@ export const MATTER_CLUSTERS = {
 		endpoint: Endpoint,
 		cluster: ClusterClientObj
 	): MatterBooleanStateCluster => new MatterBooleanStateCluster(node, endpoint, cluster),
+	[DeviceClusterName.ELECTRICAL_ENERGY_MEASUREMENT]: async (
+		node: PairedNode,
+		endpoint: Endpoint,
+		cluster: ClusterClientObj
+	): Promise<MatterElectricalEnergyCumulativePeriodicImportedMeasurementCluster | null> => {
+		const featureMap = await (
+			cluster as unknown as ClusterClientObj<ElectricalEnergyMeasurement.Complete>
+		).attributes.featureMap.get();
+		if (!featureMap) {
+			console.error(
+				`Electrical energy measurement cluster on endpoint ${endpoint.number} has no feature map`
+			);
+			return null;
+		}
+		if (!featureMap.cumulativeEnergy || !featureMap.periodicEnergy) {
+			console.error(
+				`Electrical energy measurement cluster on endpoint ${endpoint.number} is not a cumulative periodic imported measurement cluster`
+			);
+			return null;
+		}
+		return new MatterElectricalEnergyCumulativePeriodicImportedMeasurementCluster(
+			node,
+			endpoint,
+			cluster
+		);
+	},
+	[DeviceClusterName.ELECTRICAL_POWER_MEASUREMENT]: (
+		node: PairedNode,
+		endpoint: Endpoint,
+		cluster: ClusterClientObj
+	): MatterElectricalPowerMeasurementCluster =>
+		new MatterElectricalPowerMeasurementCluster(node, endpoint, cluster),
 	[DeviceClusterName.SWITCH]: async (
 		node: PairedNode,
 		endpoint: Endpoint,
@@ -814,4 +882,5 @@ export const IGNORED_MATTER_CLUSTERS = [
 	'DiagnosticLogs',
 	'PowerSourceConfiguration',
 	'AccessControl',
+	'PowerTopology',
 ];

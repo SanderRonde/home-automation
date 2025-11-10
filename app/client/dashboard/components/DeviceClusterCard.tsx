@@ -355,10 +355,38 @@ const GroupedWindowCoveringCard = (props: GroupedWindowCoveringCardProps): JSX.E
 };
 
 const OnOffCard = (props: DeviceClusterCardBaseProps<DashboardDeviceClusterOnOff>): JSX.Element => {
+	const energyCluster =
+		props.cluster.mergedClusters?.[DeviceClusterName.ELECTRICAL_ENERGY_MEASUREMENT];
+	const powerCluster =
+		props.cluster.mergedClusters?.[DeviceClusterName.ELECTRICAL_POWER_MEASUREMENT];
+
+	// Color-code based on power usage if energy data is available
+	const getBackgroundColor = (): string => {
+		if (!energyCluster || !props.cluster.isOn) {
+			return props.cluster.isOn ? '#976c00' : '#422d00';
+		}
+
+		const power = powerCluster?.activePower ?? 0;
+		if (power < 100) {
+			return '#976c00'; // Low power - gold
+		} else if (power < 1000) {
+			return '#b85c00'; // Medium power - orange
+		} else {
+			return '#c73e1d'; // High power - red-orange
+		}
+	};
+
+	const formatPower = (watts: number): string => {
+		if (watts >= 1000) {
+			return `${(watts / 1000).toFixed(1)} kW`;
+		}
+		return `${watts} W`;
+	};
+
 	return (
 		<DeviceClusterCardSkeleton
 			{...props}
-			cardBackground={props.cluster.isOn ? '#976c00' : '#422d00'}
+			cardBackground={getBackgroundColor()}
 			onPress={async () => {
 				await apiPost(
 					'device',
@@ -371,7 +399,101 @@ const OnOffCard = (props: DeviceClusterCardBaseProps<DashboardDeviceClusterOnOff
 				);
 				props.invalidate();
 			}}
-		/>
+		>
+			{energyCluster ? (
+				<Box
+					sx={{
+						display: 'flex',
+						alignItems: 'center',
+						gap: 2,
+					}}
+				>
+					<Box
+						sx={{
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							background: 'rgba(0, 0, 0, 0.08)',
+							borderRadius: '50%',
+							width: 48,
+							height: 48,
+							fontSize: '1.5rem',
+							color: 'text.secondary',
+						}}
+					>
+						<IconOrNull icon={props.cluster.icon} />
+					</Box>
+					<Box sx={{ flexGrow: 1 }}>
+						<Typography
+							variant="body1"
+							sx={{
+								fontWeight: 500,
+							}}
+						>
+							{props.device.name}
+						</Typography>
+						<Typography
+							variant="caption"
+							sx={{
+								color: 'rgba(255, 255, 255, 0.7)',
+							}}
+						>
+							Total: {energyCluster.totalEnergy} kWh
+						</Typography>
+					</Box>
+					<Box
+						sx={{
+							display: 'flex',
+							flexDirection: 'column',
+							alignItems: 'flex-end',
+						}}
+					>
+						<Typography
+							variant="h5"
+							sx={{
+								fontWeight: 'bold',
+								color: 'white',
+							}}
+						>
+							{formatPower(powerCluster?.activePower ?? 0)}
+						</Typography>
+					</Box>
+				</Box>
+			) : (
+				<Box
+					sx={{
+						display: 'flex',
+						alignItems: 'center',
+						gap: 2,
+					}}
+				>
+					<Box
+						sx={{
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							background: 'rgba(0, 0, 0, 0.08)',
+							borderRadius: '50%',
+							width: 48,
+							height: 48,
+							fontSize: '1.5rem',
+							color: 'text.secondary',
+						}}
+					>
+						<IconOrNull icon={props.cluster.icon} />
+					</Box>
+					<Typography
+						variant="body1"
+						sx={{
+							fontWeight: 500,
+							flexGrow: 1,
+						}}
+					>
+						{props.device.name}
+					</Typography>
+				</Box>
+			)}
+		</DeviceClusterCardSkeleton>
 	);
 };
 

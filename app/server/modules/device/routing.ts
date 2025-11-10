@@ -9,6 +9,8 @@ import type {
 	DeviceIlluminanceMeasurementCluster,
 	DeviceBooleanStateCluster,
 	DeviceSwitchCluster,
+	DeviceElectricalEnergyMeasurementCluster,
+	DeviceElectricalPowerMeasurementCluster,
 } from './cluster';
 import {
 	DeviceOnOffCluster,
@@ -58,6 +60,10 @@ type DashboardDeviceClusterBase = {
 export type DashboardDeviceClusterOnOff = DashboardDeviceClusterBase & {
 	name: DeviceClusterName.ON_OFF;
 	isOn: boolean;
+	mergedClusters?: {
+		[DeviceClusterName.ELECTRICAL_ENERGY_MEASUREMENT]?: DashboardDeviceClusterElectricalEnergyMeasurement;
+		[DeviceClusterName.ELECTRICAL_POWER_MEASUREMENT]?: DashboardDeviceClusterElectricalPowerMeasurement;
+	};
 };
 
 export type DashboardDeviceClusterWindowCovering = DashboardDeviceClusterBase & {
@@ -157,6 +163,20 @@ export type DashboardDeviceClusterThermostat = DashboardDeviceClusterBase & {
 	maxTemperature: number;
 };
 
+export type DashboardDeviceClusterElectricalEnergyMeasurement = DashboardDeviceClusterBase & {
+	name: DeviceClusterName.ELECTRICAL_ENERGY_MEASUREMENT;
+	totalEnergy: string; // kWh formatted
+	period?: {
+		from: Date;
+		to: Date;
+	};
+};
+
+export type DashboardDeviceClusterElectricalPowerMeasurement = DashboardDeviceClusterBase & {
+	name: DeviceClusterName.ELECTRICAL_POWER_MEASUREMENT;
+	activePower: number; // Watts
+};
+
 export type DashboardDeviceClusterWithState = DashboardDeviceClusterBase &
 	(
 		| DashboardDeviceClusterOnOff
@@ -173,6 +193,8 @@ export type DashboardDeviceClusterWithState = DashboardDeviceClusterBase &
 		| DashboardDeviceClusterActions
 		| DashboardDeviceClusterThermostat
 		| DashboardDeviceClusterSensorGroup
+		| DashboardDeviceClusterElectricalEnergyMeasurement
+		| DashboardDeviceClusterElectricalPowerMeasurement
 	);
 
 export type DashboardDeviceClusterWithStateMap<D extends DeviceClusterName = DeviceClusterName> = {
@@ -1242,6 +1264,31 @@ const getClusterState = async (
 			maxTemperature: 30.0,
 		};
 	}
+	if (clusterName === DeviceClusterName.ELECTRICAL_ENERGY_MEASUREMENT) {
+		const cluster = _cluster as DeviceElectricalEnergyMeasurementCluster;
+		const totalEnergyMwh = await cluster.totalEnergy.get();
+		const period = await cluster.totalEnergyPeriod.get();
+
+		// Convert mWh to kWh for display (1 kWh = 1,000,000 mWh)
+		const totalEnergyKwh = Number(totalEnergyMwh) / 1_000_000;
+		const totalEnergy = totalEnergyKwh.toFixed(2);
+
+		return {
+			name: clusterName,
+			icon: getClusterIconName(clusterName),
+			totalEnergy,
+			period,
+		};
+	}
+	if (clusterName === DeviceClusterName.ELECTRICAL_POWER_MEASUREMENT) {
+		const cluster = _cluster as DeviceElectricalPowerMeasurementCluster;
+		const activePower = await cluster.activePower.get();
+		return {
+			name: clusterName,
+			icon: getClusterIconName(clusterName),
+			activePower: activePower ?? 0,
+		};
+	}
 	return {
 		name: clusterName,
 		icon: getClusterIconName(clusterName),
@@ -1325,6 +1372,27 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 					delete clusters[DeviceClusterName.LEVEL_CONTROL];
 					delete clusters[DeviceClusterName.ACTIONS];
 					delete clusters[DeviceClusterName.COLOR_CONTROL];
+				}
+
+				// Merge ElectricalEnergyMeasurement/ElectricalPowerMeasurement with OnOff cluster
+				// Prefer power measurement for current power if available
+				const energyCluster = clusters[DeviceClusterName.ELECTRICAL_ENERGY_MEASUREMENT];
+				const powerCluster = clusters[DeviceClusterName.ELECTRICAL_POWER_MEASUREMENT];
+
+				if (clusters[DeviceClusterName.ON_OFF] && (energyCluster || powerCluster)) {
+					mergedClusters.push({
+						name: DeviceClusterName.ON_OFF,
+						icon: getClusterIconName(DeviceClusterName.ON_OFF),
+						isOn: clusters[DeviceClusterName.ON_OFF].isOn,
+						mergedClusters: {
+							[DeviceClusterName.ELECTRICAL_ENERGY_MEASUREMENT]: energyCluster,
+							[DeviceClusterName.ELECTRICAL_POWER_MEASUREMENT]: powerCluster,
+						},
+					});
+					// Remove merged clusters so they don't appear separately
+					delete clusters[DeviceClusterName.ON_OFF];
+					delete clusters[DeviceClusterName.ELECTRICAL_ENERGY_MEASUREMENT];
+					delete clusters[DeviceClusterName.ELECTRICAL_POWER_MEASUREMENT];
 				}
 
 				// Merge sensor clusters (OccupancySensing, TemperatureMeasurement, RelativeHumidityMeasurement, IlluminanceMeasurement)

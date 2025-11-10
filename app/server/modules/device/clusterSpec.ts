@@ -20,6 +20,8 @@ import {
 	DeviceActionsCluster,
 	DeviceThermostatCluster,
 	DeviceGroupId,
+	DeviceElectricalEnergyMeasurementCluster,
+	DeviceElectricalPowerMeasurementCluster,
 } from './cluster';
 import { EventEmitter } from '../../lib/event-emitter';
 import { zodToJsonSchema } from 'zod-to-json-schema';
@@ -431,6 +433,32 @@ class DeviceThermostatClusterSpec extends DeviceThermostatCluster {
 	public [Symbol.dispose](): void {}
 }
 
+class DeviceElectricalEnergyMeasurementClusterSpec extends DeviceElectricalEnergyMeasurementCluster {
+	public getBaseCluster(): typeof DeviceElectricalEnergyMeasurementCluster {
+		return DeviceElectricalEnergyMeasurementCluster;
+	}
+
+	@DescribeProperty(z.bigint())
+	public totalEnergy!: Data<bigint>;
+	@DescribeProperty(z.object({ from: z.date(), to: z.date() }).optional())
+	public totalEnergyPeriod!: Data<{ from: Date; to: Date } | undefined>;
+
+	public onChange!: EventEmitter<void>;
+	public [Symbol.dispose](): void {}
+}
+
+class DeviceElectricalPowerMeasurementClusterSpec extends DeviceElectricalPowerMeasurementCluster {
+	public getBaseCluster(): typeof DeviceElectricalPowerMeasurementCluster {
+		return DeviceElectricalPowerMeasurementCluster;
+	}
+
+	@DescribeProperty(z.number())
+	public activePower!: Data<number>;
+
+	public onChange!: EventEmitter<void>;
+	public [Symbol.dispose](): void {}
+}
+
 const CLUSTER_SPECS = [
 	DeviceOnOffClusterSpec,
 	DeviceWindowCoveringClusterSpec,
@@ -449,6 +477,8 @@ const CLUSTER_SPECS = [
 	DeviceColorControlClusterSpec,
 	DeviceActionsClusterSpec,
 	DeviceThermostatClusterSpec,
+	DeviceElectricalEnergyMeasurementClusterSpec,
+	DeviceElectricalPowerMeasurementClusterSpec,
 ];
 // eslint-disable-next-line @typescript-eslint/no-unused-expressions
 CLUSTER_SPECS;
