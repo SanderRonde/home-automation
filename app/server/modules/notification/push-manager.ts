@@ -14,6 +14,15 @@ export interface NotificationDB {
 	};
 }
 
+export interface NotificationData {
+	title: string;
+	body: string;
+	icon: string;
+	badge: string;
+	tag: string;
+	timestamp: number;
+}
+
 export class PushNotificationManager {
 	public constructor(private readonly _db: Database<NotificationDB>) {
 		this._initVapidKeys();
@@ -167,7 +176,7 @@ export class PushNotificationManager {
 			badge: '/icon-192.png',
 			tag: 'door-sensor-alert',
 			timestamp: Date.now(),
-		});
+		} satisfies NotificationData);
 
 		let successCount = 0;
 		let failCount = 0;
@@ -225,7 +234,6 @@ export class PushNotificationManager {
 			body: 'This is a test notification from your home automation system.',
 			icon: '/icon-192.png',
 			badge: '/icon-192.png',
-			tag: 'test-notification',
 			timestamp: Date.now(),
 		});
 
