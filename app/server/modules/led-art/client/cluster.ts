@@ -48,7 +48,11 @@ class ConfigurableCluster {
 }
 
 export class LEDArtOnOffCluster extends ConfigurableCluster implements DeviceOnOffCluster {
-	public isOn = new LEDArtMapper(this, this.client.state, (state) => state?.power_state ?? false);
+	public isOn = new LEDArtMapper(
+		this,
+		this.client.state,
+		(state) => state?.target_power_state ?? false
+	);
 
 	public getBaseCluster(): typeof DeviceOnOffCluster {
 		return DeviceOnOffCluster;
