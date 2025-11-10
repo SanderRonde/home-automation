@@ -1,7 +1,7 @@
 import type { DeviceListWithValuesResponse } from '../../../server/modules/device/routing';
+import { Http as HttpIcon, Notifications as NotificationsIcon } from '@mui/icons-material';
 import type { DeviceGroup } from '../../../../types/group';
 import type { Palette } from '../../../../types/palette';
-import { Http as HttpIcon } from '@mui/icons-material';
 import type { Scene } from '../../../../types/scene';
 import { Box, Chip } from '@mui/material';
 import { IconComponent } from './icon';
@@ -45,6 +45,30 @@ export const SceneActionChips = (props: SceneActionChipsProps): JSX.Element => {
 								paddingLeft: '4px',
 								paddingRight: '4px',
 								backgroundColor: 'info.light',
+								'& .MuiChip-label': {
+									color: 'rgba(0, 0, 0, 0.87)',
+								},
+								'& .MuiChip-icon': {
+									color: 'rgba(0, 0, 0, 0.6)',
+								},
+							}}
+						/>
+					);
+				}
+
+				// Handle notification actions
+				if (action.cluster === 'notification') {
+					const notificationAction = action.action as { title: string; body: string };
+					return (
+						<Chip
+							key={`notification-${index}`}
+							icon={<NotificationsIcon sx={{ fontSize: 18 }} />}
+							label={`Notification: ${notificationAction.title}`}
+							size="small"
+							sx={{
+								paddingLeft: '4px',
+								paddingRight: '4px',
+								backgroundColor: 'success.light',
 								'& .MuiChip-label': {
 									color: 'rgba(0, 0, 0, 0.87)',
 								},

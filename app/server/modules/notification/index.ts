@@ -35,4 +35,9 @@ export const Notification = new (class Notification extends ModuleMeta {
 	public async getPushManager(): Promise<PushNotificationManager> {
 		return await this._pushManager.value;
 	}
+
+	public async sendNotification(title: string, body: string): Promise<void> {
+		const pushManager = await this.getPushManager();
+		await pushManager.sendNotification(title, body);
+	}
 })();

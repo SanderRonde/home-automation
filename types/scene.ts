@@ -12,6 +12,7 @@ export enum SceneTriggerType {
 	ANYBODY_HOME = 'anybody-home',
 	NOBODY_HOME = 'nobody-home',
 	NOBODY_HOME_TIMEOUT = 'nobody-home-timeout',
+	CRON = 'cron',
 }
 
 export type SceneTrigger =
@@ -44,6 +45,10 @@ export type SceneTrigger =
 	  }
 	| {
 			type: SceneTriggerType.NOBODY_HOME_TIMEOUT;
+	  }
+	| {
+			type: SceneTriggerType.CRON;
+			intervalMinutes: number; // Run every X minutes
 	  };
 
 export enum SceneConditionType {
@@ -51,6 +56,7 @@ export enum SceneConditionType {
 	DEVICE_ON = 'device-on',
 	TIME_WINDOW = 'time-window',
 	ANYONE_HOME = 'anyone-home',
+	CUSTOM_JS = 'custom-js',
 }
 
 export type TimeWindow = {
@@ -63,11 +69,13 @@ export type SceneCondition =
 			type: SceneConditionType.HOST_HOME;
 			hostId: string;
 			shouldBeHome: boolean;
+			checkOnManual?: boolean; // Default false - whether to check this condition on manual trigger
 	  }
 	| {
 			type: SceneConditionType.DEVICE_ON;
 			deviceId: string;
 			shouldBeOn: boolean;
+			checkOnManual?: boolean; // Default false - whether to check this condition on manual trigger
 	  }
 	| {
 			type: SceneConditionType.TIME_WINDOW;
@@ -80,10 +88,17 @@ export type SceneCondition =
 				saturday?: TimeWindow;
 				sunday?: TimeWindow;
 			};
+			checkOnManual?: boolean; // Default false - whether to check this condition on manual trigger
 	  }
 	| {
 			type: SceneConditionType.ANYONE_HOME;
 			shouldBeHome: boolean;
+			checkOnManual?: boolean; // Default false - whether to check this condition on manual trigger
+	  }
+	| {
+			type: SceneConditionType.CUSTOM_JS;
+			code: string;
+			checkOnManual?: boolean; // Default false - whether to check this condition on manual trigger
 	  };
 
 export interface SceneTriggerWithConditions {
@@ -154,13 +169,22 @@ export type SceneDeviceActionHttpRequest = {
 	};
 };
 
+export type SceneDeviceActionNotification = {
+	cluster: 'notification';
+	action: {
+		title: string;
+		body: string;
+	};
+};
+
 export type SceneDeviceAction =
 	| SceneDeviceActionOnOff
 	| SceneDeviceActionWindowCovering
 	| SceneDeviceActionLevelControl
 	| SceneDeviceActionColorControl
 	| SceneDeviceActionColorControlPalette
-	| SceneDeviceActionHttpRequest;
+	| SceneDeviceActionHttpRequest
+	| SceneDeviceActionNotification;
 
 export interface Scene {
 	id: SceneId;

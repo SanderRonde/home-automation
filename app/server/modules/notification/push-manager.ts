@@ -1,6 +1,5 @@
 import type { PushSubscription, NotificationSettings } from '../../../../types/notification';
 import { NotificationType } from '../../../../types/notification';
-import { logDev } from '../../lib/logging/log-dev';
 import { logTag } from '../../lib/logging/logger';
 import type { Database } from '../../lib/db';
 import * as webpush from 'web-push';
@@ -19,7 +18,7 @@ export interface NotificationData {
 	body: string;
 	icon: string;
 	badge: string;
-	tag: string;
+	tag?: string;
 	timestamp: number;
 }
 
@@ -162,19 +161,34 @@ export class PushNotificationManager {
 			return;
 		}
 
-		const subscriptions = this.listSubscriptions().filter((sub) => sub.enabled);
+		await this.sendNotification(
+			'Door Sensor Triggered',
+			'Door sensor was triggered but no recognized devices came home.',
+			'door-sensor-alert'
+		);
+	}
+
+	public async sendNotification(
+		title: string,
+		body: string,
+		tag?: string,
+		subscriptionId?: string
+	): Promise<boolean> {
+		const subscriptions = this.listSubscriptions().filter(
+			(sub) => sub.enabled && (subscriptionId ? sub.id === subscriptionId : true)
+		);
 
 		if (subscriptions.length === 0) {
 			logTag('notification', 'yellow', 'No active subscriptions to send notification to');
-			return;
+			return false;
 		}
 
 		const payload = JSON.stringify({
-			title: 'Door Sensor Triggered',
-			body: 'Door sensor was triggered but no recognized devices came home.',
+			title,
+			body: body,
 			icon: '/icon-192.png',
 			badge: '/icon-192.png',
-			tag: 'door-sensor-alert',
+			tag: tag,
 			timestamp: Date.now(),
 		} satisfies NotificationData);
 
@@ -211,6 +225,7 @@ export class PushNotificationManager {
 						);
 						this.removeSubscription(subscription.id);
 					}
+					return false;
 				}
 			}
 		}
@@ -218,44 +233,18 @@ export class PushNotificationManager {
 		logTag(
 			'notification',
 			'cyan',
-			`Sent door sensor alert: ${successCount} successful, ${failCount} failed`
+			`Sent notification: ${successCount} successful, ${failCount} failed`
 		);
+
+		return true;
 	}
 
 	public async sendTestNotification(subscriptionId: string): Promise<boolean> {
-		const subscription = this.listSubscriptions().find((sub) => sub.id === subscriptionId);
-
-		if (!subscription) {
-			return false;
-		}
-
-		const payload = JSON.stringify({
-			title: 'Test Notification',
-			body: 'This is a test notification from your home automation system.',
-			icon: '/icon-192.png',
-			badge: '/icon-192.png',
-			timestamp: Date.now(),
-		});
-
-		try {
-			const result = await webpush.sendNotification(
-				{
-					endpoint: subscription.endpoint,
-					keys: subscription.keys,
-				},
-				payload
-			);
-			logTag('notification', 'green', `Test notification sent to ${subscriptionId}`);
-			logDev(result.body, result.headers, result.statusCode);
-			return true;
-		} catch (error) {
-			logTag(
-				'notification',
-				'red',
-				`Failed to send test notification to ${subscriptionId}:`,
-				error
-			);
-			return false;
-		}
+		return this.sendNotification(
+			'Test Notification',
+			'This is a test notification from your home automation system.',
+			undefined,
+			subscriptionId
+		);
 	}
 }

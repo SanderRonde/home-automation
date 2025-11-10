@@ -15,6 +15,7 @@ import {
 	Divider,
 	Switch,
 	FormControlLabel,
+	Checkbox,
 	useMediaQuery,
 	useTheme,
 	Alert,
@@ -80,6 +81,9 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 	const [triggerHostId, setTriggerHostId] = useState<string>('');
 	const [triggerWebhookName, setTriggerWebhookName] = useState<string>('');
 
+	// Interval trigger state
+	const [intervalMinutes, setIntervalMinutes] = useState<number>(60);
+
 	// Webhooks
 	const [webhooks, setWebhooks] = useState<Webhook[]>([]);
 
@@ -93,6 +97,9 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 	const [conditionDeviceId, setConditionDeviceId] = useState<string>('');
 	const [conditionShouldBeHome, setConditionShouldBeHome] = useState(true);
 	const [conditionShouldBeOn, setConditionShouldBeOn] = useState(true);
+	const [conditionCustomJsCode, setConditionCustomJsCode] = useState<string>(
+		'// Custom condition code\n// Return true to pass, false to fail\nreturn true;'
+	);
 
 	// Time window state
 	type DayOfWeek =
@@ -151,6 +158,8 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 				setTriggerHostId(trigger.hostId);
 			} else if (trigger.type === SceneTriggerType.WEBHOOK) {
 				setTriggerWebhookName(trigger.webhookName);
+			} else if (trigger.type === SceneTriggerType.CRON) {
+				setIntervalMinutes(trigger.intervalMinutes);
 			}
 
 			setConditions(props.trigger.conditions || []);
@@ -271,6 +280,11 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 				type: SceneConditionType.ANYONE_HOME,
 				shouldBeHome: conditionShouldBeHome,
 			};
+		} else if (conditionType === SceneConditionType.CUSTOM_JS) {
+			newCondition = {
+				type: SceneConditionType.CUSTOM_JS,
+				code: conditionCustomJsCode,
+			};
 		} else {
 			// TIME_WINDOW
 			const windows: Record<string, { start: string; end: string }> = {};
@@ -371,6 +385,8 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 			});
 
 			return formatted.join(', ');
+		} else if (condition.type === SceneConditionType.CUSTOM_JS) {
+			return 'Custom JavaScript condition';
 		}
 		return '';
 	};
@@ -442,6 +458,11 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 			trigger = { type: SceneTriggerType.ANYBODY_HOME };
 		} else if (triggerType === SceneTriggerType.NOBODY_HOME) {
 			trigger = { type: SceneTriggerType.NOBODY_HOME };
+		} else if (triggerType === SceneTriggerType.CRON) {
+			trigger = {
+				type: SceneTriggerType.CRON,
+				intervalMinutes: intervalMinutes,
+			};
 		} else {
 			trigger = { type: SceneTriggerType.NOBODY_HOME_TIMEOUT };
 		}
@@ -459,7 +480,8 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 		(conditionType === SceneConditionType.DEVICE_ON && conditionDeviceId) ||
 		conditionType === SceneConditionType.ANYONE_HOME ||
 		(conditionType === SceneConditionType.TIME_WINDOW &&
-			Object.values(timeWindowDays).some((enabled) => enabled));
+			Object.values(timeWindowDays).some((enabled) => enabled)) ||
+		(conditionType === SceneConditionType.CUSTOM_JS && conditionCustomJsCode.trim().length > 0);
 
 	return (
 		<LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -545,6 +567,7 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 								<ToggleButton value={SceneTriggerType.NOBODY_HOME_TIMEOUT}>
 									Nobody Home Timeout
 								</ToggleButton>
+								<ToggleButton value={SceneTriggerType.CRON}>Interval</ToggleButton>
 							</ToggleButtonGroup>
 
 							{/* Occupancy trigger */}
@@ -661,6 +684,24 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 									)}
 								/>
 							)}
+
+							{/* Interval trigger */}
+							{triggerType === SceneTriggerType.CRON && (
+								<TextField
+									type="number"
+									label="Run Every (minutes)"
+									value={intervalMinutes}
+									onChange={(e) => {
+										const val = parseInt(e.target.value);
+										if (val >= 1) {
+											setIntervalMinutes(val);
+										}
+									}}
+									inputProps={{ min: 1 }}
+									helperText="Scene will trigger every X minutes"
+									fullWidth
+								/>
+							)}
 						</Box>
 
 						<Divider />
@@ -689,12 +730,45 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 												sx={{
 													display: 'flex',
 													justifyContent: 'space-between',
-													alignItems: 'center',
+													alignItems: 'flex-start',
+													gap: 1,
 												}}
 											>
-												<Typography variant="body2">
-													{getConditionLabel(condition)}
-												</Typography>
+												<Box sx={{ flex: 1 }}>
+													<Typography variant="body2" gutterBottom>
+														{getConditionLabel(condition)}
+													</Typography>
+													<FormControlLabel
+														control={
+															<Checkbox
+																size="small"
+																checked={
+																	condition.checkOnManual ?? false
+																}
+																onChange={(e) => {
+																	const newConditions = [
+																		...conditions,
+																	];
+																	newConditions[index] = {
+																		...newConditions[index],
+																		checkOnManual:
+																			e.target.checked,
+																	};
+																	setConditions(newConditions);
+																}}
+															/>
+														}
+														label={
+															<Typography
+																variant="caption"
+																color="text.secondary"
+															>
+																Check on manual trigger
+															</Typography>
+														}
+														sx={{ mt: 0.5 }}
+													/>
+												</Box>
 												<IconButton
 													size="small"
 													onClick={() => handleRemoveCondition(index)}
@@ -744,6 +818,9 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 											</ToggleButton>
 											<ToggleButton value={SceneConditionType.ANYONE_HOME}>
 												Someone Home/Away
+											</ToggleButton>
+											<ToggleButton value={SceneConditionType.CUSTOM_JS}>
+												Custom JS
 											</ToggleButton>
 										</ToggleButtonGroup>
 
@@ -981,6 +1058,21 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 													}
 												/>
 											</>
+										)}
+
+										{conditionType === SceneConditionType.CUSTOM_JS && (
+											<TextField
+												label="JavaScript Code"
+												value={conditionCustomJsCode}
+												onChange={(e) =>
+													setConditionCustomJsCode(e.target.value)
+												}
+												multiline
+												rows={8}
+												fullWidth
+												helperText="Return true to pass, false to fail the condition"
+												sx={{ fontFamily: 'monospace' }}
+											/>
 										)}
 
 										<Box

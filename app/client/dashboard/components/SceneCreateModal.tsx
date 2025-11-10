@@ -195,6 +195,18 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 		setActions([...actions, newAction]);
 	};
 
+	const handleAddNotificationAction = () => {
+		const newAction = {
+			cluster: 'notification' as const,
+			action: {
+				title: 'Notification Title',
+				body: 'Notification message',
+			},
+			key: `notification-${Date.now()}`,
+		} as DeviceActionEntry;
+		setActions([...actions, newAction]);
+	};
+
 	// Get common clusters for a group
 	const getGroupCommonClusters = React.useCallback(
 		(groupId: string): DeviceClusterName[] => {
@@ -309,6 +321,7 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 			actions.some(
 				(action) =>
 					action.cluster !== 'http-request' &&
+					action.cluster !== 'notification' &&
 					!('deviceId' in action ? action.deviceId : false) &&
 					!('groupId' in action ? action.groupId : false)
 			)
@@ -320,6 +333,16 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 				(action) =>
 					action.cluster === 'http-request' &&
 					!('url' in action.action ? action.action.url : false)
+			)
+		) {
+			return;
+		}
+		if (
+			actions.some(
+				(action) =>
+					action.cluster === 'notification' &&
+					!('title' in action.action ? action.action.title : false) &&
+					!('body' in action.action ? action.action.body : false)
 			)
 		) {
 			return;
@@ -557,6 +580,71 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 									);
 								}
 
+								// Render notification action separately
+								if (action.cluster === 'notification') {
+									return (
+										<Card key={action.key} variant="outlined" sx={{ p: 2 }}>
+											<Box
+												sx={{
+													display: 'flex',
+													flexDirection: 'column',
+													gap: 2,
+												}}
+											>
+												<Box
+													sx={{
+														display: 'flex',
+														justifyContent: 'space-between',
+														alignItems: 'center',
+													}}
+												>
+													<Typography variant="h6">
+														Notification
+													</Typography>
+													<IconButton
+														onClick={() =>
+															handleRemoveAction(action.key)
+														}
+														size="small"
+													>
+														<DeleteIcon />
+													</IconButton>
+												</Box>
+												<TextField
+													label="Title"
+													value={action.action.title}
+													onChange={(e) =>
+														handleActionChange(action.key, {
+															...action,
+															action: {
+																...action.action,
+																title: e.target.value,
+															},
+														})
+													}
+													fullWidth
+												/>
+												<TextField
+													label="Body"
+													value={action.action.body}
+													onChange={(e) =>
+														handleActionChange(action.key, {
+															...action,
+															action: {
+																...action.action,
+																body: e.target.value,
+															},
+														})
+													}
+													multiline
+													rows={3}
+													fullWidth
+												/>
+											</Box>
+										</Card>
+									);
+								}
+
 								const group = action.groupId
 									? groups.find((g) => g.id === action.groupId)
 									: undefined;
@@ -578,12 +666,12 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 								);
 							})}
 
-							<Box sx={{ display: 'flex', gap: 1 }}>
+							<Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
 								<Button
 									variant="outlined"
 									startIcon={<AddIcon />}
 									onClick={handleAddAction}
-									fullWidth
+									sx={{ flex: 1, minWidth: '200px' }}
 								>
 									Add Device Action
 								</Button>
@@ -591,9 +679,17 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 									variant="outlined"
 									startIcon={<AddIcon />}
 									onClick={handleAddHttpAction}
-									fullWidth
+									sx={{ flex: 1, minWidth: '200px' }}
 								>
 									Add HTTP Request
+								</Button>
+								<Button
+									variant="outlined"
+									startIcon={<AddIcon />}
+									onClick={handleAddNotificationAction}
+									sx={{ flex: 1, minWidth: '200px' }}
+								>
+									Add Notification
 								</Button>
 							</Box>
 						</Box>
@@ -734,6 +830,7 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 						actions.some(
 							(a) =>
 								a.cluster !== 'http-request' &&
+								a.cluster !== 'notification' &&
 								!('deviceId' in a ? a.deviceId : false) &&
 								!('groupId' in a ? a.groupId : false)
 						) ||
@@ -741,6 +838,12 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 							(a) =>
 								a.cluster === 'http-request' &&
 								!('url' in a.action ? a.action.url : false)
+						) ||
+						actions.some(
+							(a) =>
+								a.cluster === 'notification' &&
+								!('title' in a.action ? a.action.title : false) &&
+								!('body' in a.action ? a.action.body : false)
 						)
 					}
 				>
@@ -921,8 +1024,7 @@ const ActionConfig = React.memo((props: ActionConfigProps) => {
 		| DeviceClusterName.LEVEL_CONTROL
 	> = {};
 
-	// Handle HTTP request cluster separately (not a device cluster)
-	if (props.action.cluster === 'http-request') {
+	if (props.action.cluster === 'http-request' || props.action.cluster === 'notification') {
 		return null;
 	}
 

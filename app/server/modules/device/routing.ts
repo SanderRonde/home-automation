@@ -551,6 +551,13 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 									headers: z.record(z.string(), z.string()).optional(),
 								}),
 							}),
+							z.object({
+								cluster: z.literal('notification'),
+								action: z.object({
+									title: z.string(),
+									body: z.string(),
+								}),
+							}),
 						])
 					),
 					triggers: z
@@ -587,6 +594,10 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 									z.object({
 										type: z.literal(SceneTriggerType.NOBODY_HOME_TIMEOUT),
 									}),
+									z.object({
+										type: z.literal(SceneTriggerType.CRON),
+										intervalMinutes: z.number().min(1),
+									}),
 								]),
 								conditions: z
 									.array(
@@ -595,14 +606,17 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 												type: z.literal(SceneConditionType.HOST_HOME),
 												hostId: z.string(),
 												shouldBeHome: z.boolean(),
+												checkOnManual: z.boolean().optional(),
 											}),
 											z.object({
 												type: z.literal(SceneConditionType.DEVICE_ON),
 												deviceId: z.string(),
 												shouldBeOn: z.boolean(),
+												checkOnManual: z.boolean().optional(),
 											}),
 											z.object({
 												type: z.literal(SceneConditionType.TIME_WINDOW),
+												checkOnManual: z.boolean().optional(),
 												windows: z.object({
 													monday: z
 														.object({
@@ -651,6 +665,12 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 											z.object({
 												type: z.literal(SceneConditionType.ANYONE_HOME),
 												shouldBeHome: z.boolean(),
+												checkOnManual: z.boolean().optional(),
+											}),
+											z.object({
+												type: z.literal(SceneConditionType.CUSTOM_JS),
+												code: z.string(),
+												checkOnManual: z.boolean().optional(),
 											}),
 										])
 									)
@@ -730,6 +750,13 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 								}),
 								excludeDeviceIds: z.array(z.string()).optional(),
 							}),
+							z.object({
+								cluster: z.literal('notification'),
+								action: z.object({
+									title: z.string(),
+									body: z.string(),
+								}),
+							}),
 						])
 					),
 					triggers: z
@@ -766,6 +793,10 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 									z.object({
 										type: z.literal(SceneTriggerType.NOBODY_HOME_TIMEOUT),
 									}),
+									z.object({
+										type: z.literal(SceneTriggerType.CRON),
+										intervalMinutes: z.number().min(1),
+									}),
 								]),
 								conditions: z
 									.array(
@@ -774,14 +805,17 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 												type: z.literal(SceneConditionType.HOST_HOME),
 												hostId: z.string(),
 												shouldBeHome: z.boolean(),
+												checkOnManual: z.boolean().optional(),
 											}),
 											z.object({
 												type: z.literal(SceneConditionType.DEVICE_ON),
 												deviceId: z.string(),
 												shouldBeOn: z.boolean(),
+												checkOnManual: z.boolean().optional(),
 											}),
 											z.object({
 												type: z.literal(SceneConditionType.TIME_WINDOW),
+												checkOnManual: z.boolean().optional(),
 												windows: z.object({
 													monday: z
 														.object({
@@ -830,6 +864,12 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 											z.object({
 												type: z.literal(SceneConditionType.ANYONE_HOME),
 												shouldBeHome: z.boolean(),
+												checkOnManual: z.boolean().optional(),
+											}),
+											z.object({
+												type: z.literal(SceneConditionType.CUSTOM_JS),
+												code: z.string(),
+												checkOnManual: z.boolean().optional(),
 											}),
 										])
 									)
@@ -855,7 +895,10 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 				return json({ success: true });
 			},
 			'/scenes/:sceneId/trigger': async (req, _server, { json }) => {
-				const success = await api.sceneAPI.triggerScene(req.params.sceneId);
+				const success = await api.sceneAPI.triggerScene(req.params.sceneId, {
+					type: 'manual',
+					source: 'manual',
+				});
 				if (!success) {
 					return json({ error: 'Scene not found or execution failed' }, { status: 404 });
 				}

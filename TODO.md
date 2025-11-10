@@ -33,3 +33,5 @@
 - [x] Get rid of dynamic imports
 - [x] Notifications don't work yet
 - [ ] 3D house overview
+- [ ] Wakelight does not appear to work
+- [ ] Add power measuring support for ikea smart plugs

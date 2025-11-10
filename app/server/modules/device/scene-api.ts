@@ -29,6 +29,14 @@ import type { SQL } from 'bun';
 
 const UPDATE_INTERVAL_SECONDS = 5;
 
+const sandbox = (() => {
+	// eslint-disable-next-line @typescript-eslint/require-await
+	return async (code: string): Promise<unknown> => {
+		// eslint-disable-next-line @typescript-eslint/no-implied-eval
+		return new Function(code)();
+	};
+})();
+
 export class SceneAPI {
 	private _gradualLevelIntervals: Map<string, Timer> = new Map();
 	private _gradualLevelSubscriptions: Map<string, Array<() => void>> = new Map();
@@ -110,14 +118,28 @@ export class SceneAPI {
 		return true;
 	}
 
-	private async _evaluateConditions(conditions: SceneCondition[] | undefined): Promise<boolean> {
+	private async _evaluateConditions(
+		conditions: SceneCondition[] | undefined,
+		isManualTrigger = false
+	): Promise<boolean> {
 		if (!conditions || conditions.length === 0) {
 			return true;
 		}
 
 		const modules = (await this._modules) as AllModules;
 
-		for (const condition of conditions) {
+		// Filter conditions based on manual trigger
+		const conditionsToCheck = isManualTrigger
+			? conditions.filter((c) => c.checkOnManual === true)
+			: conditions;
+
+		// If manual trigger and no conditions have checkOnManual=true, pass
+		if (isManualTrigger && conditionsToCheck.length === 0) {
+			return true;
+		}
+
+		// AND logic - all conditions must pass
+		for (const condition of conditionsToCheck) {
 			if (condition.type === SceneConditionType.HOST_HOME) {
 				const detector = await modules.homeDetector.getDetector();
 				const hostState = detector.get(condition.hostId);
@@ -202,6 +224,20 @@ export class SceneAPI {
 				if (anyHome !== condition.shouldBeHome) {
 					return false;
 				}
+			} else if (condition.type === SceneConditionType.CUSTOM_JS) {
+				try {
+					logTag('scene', 'blue', 'Evaluating custom JS condition');
+					const result = await sandbox(condition.code);
+					// The sandbox should return a boolean
+					if (result === false) {
+						logTag('scene', 'blue', 'Custom JS condition returned false');
+						return false;
+					}
+					logTag('scene', 'green', 'Custom JS condition passed');
+				} catch (error) {
+					logTag('scene', 'red', 'Custom JS condition error:', error);
+					return false;
+				}
 			} else {
 				assertUnreachable(condition);
 			}
@@ -210,7 +246,7 @@ export class SceneAPI {
 		return true;
 	}
 
-	public async onTrigger(trigger: SceneTrigger): Promise<void> {
+	public async onTrigger(trigger: SceneTrigger, skipConditions = false): Promise<void> {
 		for (const scene of this.listScenes()) {
 			const triggers = scene.triggers;
 			if (!triggers || triggers.length === 0) {
@@ -279,6 +315,13 @@ export class SceneAPI {
 				) {
 					triggerMatches = true;
 					triggerSource = undefined;
+				} else if (
+					trigger.type === SceneTriggerType.CRON &&
+					sceneTrigger.type === SceneTriggerType.CRON
+				) {
+					// For interval triggers, they match if they have the same interval
+					triggerMatches = sceneTrigger.intervalMinutes === trigger.intervalMinutes;
+					triggerSource = `Every ${trigger.intervalMinutes} min`;
 				}
 
 				if (!triggerMatches) {
@@ -286,9 +329,11 @@ export class SceneAPI {
 				}
 
 				// Evaluate conditions (AND logic - all must pass)
-				const conditionsPassed = await this._evaluateConditions(
-					triggerWithConditions.conditions
-				);
+				// Skip conditions if explicitly told to (e.g., manual triggers with checkConditionsOnManual=false)
+				const shouldCheckConditions = !skipConditions;
+				const conditionsPassed = shouldCheckConditions
+					? await this._evaluateConditions(triggerWithConditions.conditions)
+					: true;
 
 				if (conditionsPassed) {
 					await this.triggerScene(scene.id, {
@@ -312,6 +357,31 @@ export class SceneAPI {
 		const scene = this.getScene(id);
 		if (!scene) {
 			return false;
+		}
+
+		// If manually triggered, check conditions that have checkOnManual=true
+		if (triggerInfo?.type === 'manual' && scene.triggers && scene.triggers.length > 0) {
+			// Check if any trigger's conditions with checkOnManual pass
+			let anyConditionsPassed = false;
+			for (const triggerWithConditions of scene.triggers) {
+				const conditionsPassed = await this._evaluateConditions(
+					triggerWithConditions.conditions,
+					true // isManualTrigger
+				);
+				if (conditionsPassed) {
+					anyConditionsPassed = true;
+					break;
+				}
+			}
+
+			if (!anyConditionsPassed) {
+				logTag(
+					'scene',
+					'yellow',
+					`Scene "${scene.title}" conditions not met for manual trigger`
+				);
+				return false;
+			}
 		}
 
 		const success = (
@@ -346,6 +416,22 @@ export class SceneAPI {
 							return true;
 						} catch (error) {
 							logTag('scene', 'red', 'HTTP request error:', error);
+							return false;
+						}
+					}
+
+					// Handle notification action
+					if (sceneAction.cluster === 'notification') {
+						try {
+							const { title, body } = sceneAction.action;
+							logTag('scene', 'blue', 'Sending notification:', title);
+							await (
+								(await this._modules) as AllModules
+							).notification.sendNotification(title, body);
+							logTag('scene', 'green', 'Notification sent successfully');
+							return true;
+						} catch (error) {
+							logTag('scene', 'red', 'Notification send error:', error);
 							return false;
 						}
 					}
