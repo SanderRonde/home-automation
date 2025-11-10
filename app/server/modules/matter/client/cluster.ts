@@ -11,14 +11,6 @@ import {
 	DeviceActionsCluster,
 } from '../../device/cluster';
 import type {
-	Cluster,
-	DeviceGroupId,
-	DeviceSwitchCluster,
-	DeviceSwitchWithLongPressAndMultiPressCluster,
-	DeviceSwitchWithLongPressCluster,
-	DeviceSwitchWithMultiPressCluster,
-} from '../../device/cluster';
-import type {
 	ColorControl,
 	Actions,
 	Groups,
@@ -31,6 +23,12 @@ import type {
 	BooleanState,
 } from '@matter/main/clusters';
 import {
+	DeviceSwitchCluster,
+	DeviceSwitchWithLongPressAndMultiPressCluster,
+	DeviceSwitchWithLongPressCluster,
+	DeviceSwitchWithMultiPressCluster,
+} from '../../device/cluster';
+import {
 	GroupId,
 	Status,
 	type Attribute,
@@ -39,6 +37,7 @@ import {
 	type Event,
 } from '@matter/types';
 import type { PairedNode, Endpoint } from '@project-chip/matter.js/device';
+import type { Cluster, DeviceGroupId } from '../../device/cluster';
 import { DeviceBooleanStateCluster } from '../../device/cluster';
 import type { Switch } from '@matter/types/clusters/switch';
 import { EventEmitter } from '../../../lib/event-emitter';
@@ -285,8 +284,8 @@ class ConfigurableCluster<T extends MatterClusterInterface> {
 }
 
 class MatterOnOffCluster extends ConfigurableCluster<OnOffCluster> implements DeviceOnOffCluster {
-	public getName(): DeviceClusterName {
-		return DeviceOnOffCluster.clusterName;
+	public getBaseCluster(): typeof DeviceOnOffCluster {
+		return DeviceOnOffCluster;
 	}
 
 	public isOn = this._proxy.attributeGetter('onOff');
@@ -306,8 +305,8 @@ class MatterWindowCoveringCluster
 	extends ConfigurableCluster<WindowCovering.Complete>
 	implements DeviceWindowCoveringCluster
 {
-	public getName(): DeviceClusterName {
-		return DeviceWindowCoveringCluster.clusterName;
+	public getBaseCluster(): typeof DeviceWindowCoveringCluster {
+		return DeviceWindowCoveringCluster;
 	}
 
 	public targetPositionLiftPercentage = this._proxy.attributeGetter(
@@ -351,8 +350,8 @@ class MatterLevelControlCluster
 	extends ConfigurableCluster<LevelControl.Complete>
 	implements DeviceLevelControlCluster
 {
-	public getName(): DeviceClusterName {
-		return DeviceLevelControlCluster.clusterName;
+	public getBaseCluster(): typeof DeviceLevelControlCluster {
+		return DeviceLevelControlCluster;
 	}
 
 	private _minLevel = this._proxy.attributeGetter(
@@ -423,8 +422,8 @@ class MatterPowerSourceCluster
 	extends ConfigurableCluster<PowerSource.Complete>
 	implements DevicePowerSourceCluster
 {
-	public getName(): DeviceClusterName {
-		return DevicePowerSourceCluster.clusterName;
+	public getBaseCluster(): typeof DevicePowerSourceCluster {
+		return DevicePowerSourceCluster;
 	}
 
 	// For some reason this keeps failing on some matter devices.
@@ -439,8 +438,8 @@ class MatterOccupancySensingCluster
 	extends ConfigurableCluster<OccupancySensing.Complete>
 	implements DeviceOccupancySensingCluster
 {
-	public getName(): DeviceClusterName {
-		return DeviceOccupancySensingCluster.clusterName;
+	public getBaseCluster(): typeof DeviceOccupancySensingCluster {
+		return DeviceOccupancySensingCluster;
 	}
 
 	public occupancy = this._proxy.attributeGetter(
@@ -459,8 +458,8 @@ class MatterIlluminanceMeasurementCluster
 	extends ConfigurableCluster<IlluminanceMeasurement.Cluster>
 	implements DeviceIlluminanceMeasurementCluster
 {
-	public getName(): DeviceClusterName {
-		return DeviceIlluminanceMeasurementCluster.clusterName;
+	public getBaseCluster(): typeof DeviceIlluminanceMeasurementCluster {
+		return DeviceIlluminanceMeasurementCluster;
 	}
 
 	/**
@@ -473,8 +472,8 @@ class MatterTemperatureMeasurementCluster
 	extends ConfigurableCluster<TemperatureMeasurement.Cluster>
 	implements DeviceTemperatureMeasurementCluster
 {
-	public getName(): DeviceClusterName {
-		return DeviceTemperatureMeasurementCluster.clusterName;
+	public getBaseCluster(): typeof DeviceTemperatureMeasurementCluster {
+		return DeviceTemperatureMeasurementCluster;
 	}
 
 	public temperature = this._proxy.attributeGetter(
@@ -487,8 +486,8 @@ class MatterGroupsCluster
 	extends ConfigurableCluster<Groups.Cluster>
 	implements DeviceGroupsCluster
 {
-	public getName(): DeviceClusterName {
-		return DeviceGroupsCluster.clusterName;
+	public getBaseCluster(): typeof DeviceGroupsCluster {
+		return DeviceGroupsCluster;
 	}
 
 	public addGroup = this._proxy.command('addGroup', {
@@ -533,8 +532,8 @@ class MatterColorControlCluster
 	extends ConfigurableCluster<ColorControl.Complete>
 	implements DeviceColorControlCluster
 {
-	public getName(): DeviceClusterName {
-		return DeviceColorControlCluster.clusterName;
+	public getBaseCluster(): typeof DeviceColorControlCluster {
+		return DeviceColorControlCluster;
 	}
 
 	private static readonly MAX_COLOR_VALUE = 65279;
@@ -569,8 +568,8 @@ class MatterActionsCluster
 	extends ConfigurableCluster<Actions.Cluster>
 	implements DeviceActionsCluster
 {
-	public getName(): DeviceClusterName {
-		return DeviceActionsCluster.clusterName;
+	public getBaseCluster(): typeof DeviceActionsCluster {
+		return DeviceActionsCluster;
 	}
 
 	public actionList = this._proxy.attributeGetter(
@@ -588,10 +587,6 @@ class MatterActionsCluster
 }
 
 abstract class MatterSwitchClusterBase extends ConfigurableCluster<Switch.Complete> {
-	public getName(): DeviceClusterName {
-		return DeviceClusterName.SWITCH;
-	}
-
 	public getTotalCount = () => this._counts.totalCount;
 	public getIndex = () => this._counts.count;
 	public getLabel = () => `Button ${this._counts.count}`;
@@ -612,6 +607,10 @@ abstract class MatterSwitchClusterBase extends ConfigurableCluster<Switch.Comple
 const voidMapper = { output: () => void 0 };
 class MatterSwitchCluster extends MatterSwitchClusterBase implements DeviceSwitchCluster {
 	public onPress = this._proxy.event('initialPress', voidMapper);
+
+	public getBaseCluster(): typeof DeviceSwitchCluster {
+		return DeviceSwitchCluster;
+	}
 }
 
 class MatterSwitchWithLongPressCluster
@@ -620,6 +619,10 @@ class MatterSwitchWithLongPressCluster
 {
 	public onPress = this._proxy.event('initialPress', voidMapper);
 	public onLongPress = this._proxy.event('longPress', voidMapper);
+
+	public getBaseCluster(): typeof DeviceSwitchWithLongPressCluster {
+		return DeviceSwitchWithLongPressCluster;
+	}
 }
 
 class MatterSwitchWithMultiPressCluster
@@ -632,6 +635,10 @@ class MatterSwitchWithMultiPressCluster
 			return { pressCount: totalNumberOfPressesCounted ?? 0 };
 		},
 	});
+
+	public getBaseCluster(): typeof DeviceSwitchWithMultiPressCluster {
+		return DeviceSwitchWithMultiPressCluster;
+	}
 }
 
 class MatterSwitchWithLongPressAndMultiPressCluster
@@ -645,14 +652,18 @@ class MatterSwitchWithLongPressAndMultiPressCluster
 			return { pressCount: totalNumberOfPressesCounted ?? 0 };
 		},
 	});
+
+	public getBaseCluster(): typeof DeviceSwitchWithLongPressAndMultiPressCluster {
+		return DeviceSwitchWithLongPressAndMultiPressCluster;
+	}
 }
 
 class MatterBooleanStateCluster
 	extends ConfigurableCluster<BooleanState.Cluster>
 	implements DeviceBooleanStateCluster<boolean>
 {
-	public getName(): DeviceClusterName {
-		return DeviceBooleanStateCluster.clusterName;
+	public getBaseCluster(): typeof DeviceBooleanStateCluster {
+		return DeviceBooleanStateCluster;
 	}
 
 	public state = this._proxy.attributeGetter('stateValue', (value) => value ?? false);

@@ -37,7 +37,7 @@ module.exports = {
 				allowDirectConstAssertionInArrowFunctions: true,
 			},
 		],
-		'@typescript-eslint/no-explicit-any': 'warn',
+		'@typescript-eslint/no-explicit-any': 'off',
 		'@typescript-eslint/no-floating-promises': 'warn',
 		'@typescript-eslint/no-for-in-array': 'warn',
 		'@typescript-eslint/no-implied-eval': ['warn'],

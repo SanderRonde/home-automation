@@ -39,7 +39,7 @@ These rules can be fetched when needed by asking about specific topics:
 - **`database-patterns.mdc`** - JSON and SQLite database usage
 - **`websocket-communication.mdc`** - WebSocket patterns for real-time updates
 - **`matter-integration.mdc`** - Matter.js smart home integration
-- **`mcp-integration.mdc`** - Model Context Protocol (AI integration)
+- **`ai-integration.mdc`** - ChatGPT and Model Context Protocol (AI integration)
 - **`device-clusters.mdc`** - Understanding and working with device clusters
 - **`scenes-automation.mdc`** - Working with scenes and automation triggers
 - **`shared-types.mdc`** - Creating and using shared TypeScript types
@@ -68,7 +68,7 @@ These rules can be fetched when needed by asking about specific topics:
 
 ### Adding AI Integration?
 
-→ Check: `mcp-integration.mdc`
+→ Check: `ai-integration.mdc`
 
 ### Creating Shared Types?
 
@@ -130,7 +130,7 @@ Rules should be updated when:
 ✅ Logging conventions
 ✅ Testing with Bun
 ✅ Matter.js integration
-✅ MCP (AI) integration
+✅ AI integration (ChatGPT + MCP)
 ✅ Device cluster system
 ✅ Scenes and automation
 ✅ Shared type definitions

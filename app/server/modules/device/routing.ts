@@ -1067,7 +1067,7 @@ const getClusterState = async (
 	_cluster: Cluster,
 	deviceId: string
 ): Promise<DashboardDeviceClusterWithState> => {
-	const clusterName = _cluster.getName();
+	const clusterName = _cluster.getBaseCluster().clusterName;
 	if (clusterName === DeviceClusterName.ON_OFF) {
 		const cluster = _cluster as DeviceOnOffCluster;
 		const isOn = await cluster.isOn.get();

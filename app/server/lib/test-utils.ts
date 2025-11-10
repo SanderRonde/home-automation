@@ -16,6 +16,10 @@ export class MockOnOffCluster extends DeviceOnOffCluster {
 	public isOn = new Data<boolean>(false);
 	public onChange = new EventEmitter<void>();
 
+	public getBaseCluster(): typeof DeviceOnOffCluster {
+		return DeviceOnOffCluster;
+	}
+
 	private _disposed = false;
 
 	public async setOn(on: boolean): Promise<void> {
@@ -43,6 +47,10 @@ export class MockOnOffCluster extends DeviceOnOffCluster {
 export class MockWindowCoveringCluster extends DeviceWindowCoveringCluster {
 	public targetPositionLiftPercentage = new Data<number>(0);
 	public onChange = new EventEmitter<void>();
+
+	public getBaseCluster(): typeof DeviceWindowCoveringCluster {
+		return DeviceWindowCoveringCluster;
+	}
 
 	private _disposed = false;
 
@@ -80,6 +88,10 @@ export class MockOccupancySensingCluster extends DeviceOccupancySensingCluster {
 	public occupancy = new Data<boolean>(false);
 	public onOccupied = new EventEmitter<{ occupied: boolean }>();
 	public onChange = new EventEmitter<void>();
+
+	public getBaseCluster(): typeof DeviceOccupancySensingCluster {
+		return DeviceOccupancySensingCluster;
+	}
 
 	private _disposed = false;
 
@@ -130,7 +142,11 @@ export class MockDevice implements DeviceInterface {
 		return Promise.resolve(undefined);
 	}
 
-	public async getDeviceName(): Promise<string> {
+	public getBaseCluster(): typeof MockDevice {
+		return MockDevice;
+	}
+
+	public getDeviceName(): Promise<string> {
 		return Promise.resolve(this._name);
 	}
 
@@ -160,6 +176,12 @@ export class MockDevice implements DeviceInterface {
 				(cluster.constructor as unknown as { clusterName: DeviceClusterName })
 					.clusterName === type.clusterName
 		) as unknown as InstanceType<T>[];
+	}
+
+	public getAllClustersByBaseClusterName(name: string): unknown[] {
+		return this.allClusters
+			.filter(({ cluster }) => cluster.getBaseCluster().prototype.constructor.name === name)
+			.map(({ cluster }) => cluster);
 	}
 
 	public get allEndpoints(): MockDevice[] {

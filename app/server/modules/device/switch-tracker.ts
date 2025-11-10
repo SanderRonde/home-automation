@@ -25,7 +25,10 @@ export class SwitchTracker {
 			// Find all switch clusters across all endpoints
 			const allClusters = device.allClusters;
 			const switchClusters = allClusters
-				.filter(({ cluster }) => cluster.getName() === DeviceClusterName.SWITCH)
+				.filter(
+					({ cluster }) =>
+						cluster.getBaseCluster().clusterName === DeviceClusterName.SWITCH
+				)
 				.map(({ cluster }) => cluster as DeviceSwitchCluster);
 
 			if (!switchClusters.length) {

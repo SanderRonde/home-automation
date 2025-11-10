@@ -86,17 +86,24 @@
 		"google-auth-library": "^7.0.4",
 		"googleapis": "^73.0.0",
 		"happy-dom": "^20.0.0",
+		"highlight.js": "^11.11.1",
 		"lit-html": "1.1.0",
 		"magic-home": "^2.6.0",
+		"openai": "^6.8.1",
 		"optional-require": "^1.0.0",
 		"patch-package": "^8.0.1",
 		"ping": "^0.2.2",
 		"react-chartjs-2": "^5.3.0",
+		"react-markdown": "^10.1.0",
+		"reflect-metadata": "^0.2.2",
+		"rehype-highlight": "^7.0.2",
+		"remark-gfm": "^4.0.1",
 		"socket.io-client": "^4.8.1",
 		"wc-lib": "^1.2.8",
 		"web-push": "^3.6.7",
 		"wled-client": "^0.22.1",
-		"zod": "3.23.8"
+		"zod": "3.23.8",
+		"zod-to-json-schema": "^3.24.6"
 	},
 	"packageManager": "bun@4.1.0"
 }

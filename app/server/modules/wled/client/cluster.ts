@@ -4,9 +4,9 @@ import {
 	DeviceOnOffCluster,
 } from '../../device/cluster';
 import type { WLEDClient, WLEDClientPresets, WLEDClientState } from 'wled-client';
-import type { DeviceAction, DeviceClusterName } from '../../device/cluster';
 import { DeviceActionsCluster } from '../../device/cluster';
 import { EventEmitter } from '../../../lib/event-emitter';
+import type { DeviceAction } from '../../device/cluster';
 import { Data, MappedData } from '../../../lib/data';
 import { CombinedData } from '../../../lib/data';
 import { Actions } from '@matter/main/clusters';
@@ -81,8 +81,8 @@ class ConfigurableCluster {
 export class WLEDOnOffCluster extends ConfigurableCluster implements DeviceOnOffCluster {
 	public isOn = new WLEDMapper(this, this.proxy.state, (state) => state?.on ?? false);
 
-	public getName(): DeviceClusterName {
-		return DeviceOnOffCluster.clusterName;
+	public getBaseCluster(): typeof DeviceOnOffCluster {
+		return DeviceOnOffCluster;
 	}
 
 	public setOn = async (on: boolean): Promise<void> => {
@@ -108,8 +108,8 @@ export class WLEDLevelControlCluster
 		(state) => (state?.brightness ?? 0) / 255
 	);
 
-	public getName(): DeviceClusterName {
-		return DeviceLevelControlCluster.clusterName;
+	public getBaseCluster(): typeof DeviceLevelControlCluster {
+		return DeviceLevelControlCluster;
 	}
 
 	public setLevel = ({ level }: { level: number }): Promise<void> => {
@@ -130,8 +130,8 @@ export class WLEDColorControlCluster
 	extends ConfigurableCluster
 	implements DeviceColorControlCluster
 {
-	public getName(): DeviceClusterName {
-		return DeviceColorControlCluster.clusterName;
+	public getBaseCluster(): typeof DeviceColorControlCluster {
+		return DeviceColorControlCluster;
 	}
 
 	public color = new WLEDMapper(this, this.proxy.state, (state) => {
@@ -180,8 +180,8 @@ export class WLEDColorControlCluster
 }
 
 export class WLEDActionsCluster extends ConfigurableCluster implements DeviceActionsCluster {
-	public getName(): DeviceClusterName {
-		return DeviceActionsCluster.clusterName;
+	public getBaseCluster(): typeof DeviceActionsCluster {
+		return DeviceActionsCluster;
 	}
 
 	public executeAction = async (args: { actionId: number }): Promise<void> => {

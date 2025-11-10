@@ -284,7 +284,7 @@ Available modules:
 - `'auth'` - Authentication
 - `'dashboard'` - Dashboard configuration
 - `'bot'` - Telegram bot
-- `'mcp'` - Model Context Protocol
+- `'ai'` - AI integration (ChatGPT + MCP)
 - `'wled'` - WLED lights
 - `'ewelink'` - eWeLink devices
 - `'temperature'` - Temperature sensors

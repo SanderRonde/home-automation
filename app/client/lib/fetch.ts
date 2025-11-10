@@ -10,8 +10,8 @@ import type { LedArtRoutes } from '../../server/modules/led-art/routing';
 import type { DeviceRoutes } from '../../server/modules/device/routing';
 import type { WledRoutes } from '../../server/modules/wled/routing';
 import type { AuthRoutes } from '../../server/modules/auth/routing';
-import type { MCPRoutes } from '../../server/modules/mcp/routing';
 import type { BotRoutes } from '../../server/modules/bot/routing';
+import type { AIRoutes } from '../../server/modules/ai/routing';
 import type { RouterTypes } from 'bun';
 import type z from 'zod';
 
@@ -222,7 +222,7 @@ type RoutesForModules = {
 	ewelink: EwelinkRoutes;
 	'led-art': LedArtRoutes;
 	'home-detector': HomeDetectorRoutes;
-	mcp: MCPRoutes;
+	ai: AIRoutes;
 	notification: NotificationRoutes;
 	temperature: TemperatureRoutes;
 	wakelight: WakelightRoutes;

@@ -39,7 +39,7 @@ export abstract class DeviceEndpoint implements Disposable {
 		},
 	>(type: T): InstanceType<T> | null {
 		for (const cluster of this.clusters) {
-			if (cluster.getName() === type.clusterName) {
+			if (cluster.getBaseCluster().clusterName === type.clusterName) {
 				return cluster as unknown as InstanceType<T>;
 			}
 		}
@@ -52,8 +52,14 @@ export abstract class DeviceEndpoint implements Disposable {
 		},
 	>(type: T): InstanceType<T>[] {
 		return this.allClusters
-			.filter(({ cluster }) => cluster.getName() === type.clusterName)
+			.filter(({ cluster }) => cluster.getBaseCluster().clusterName === type.clusterName)
 			.map(({ cluster }) => cluster as unknown as InstanceType<T>);
+	}
+
+	public getAllClustersByBaseClusterName(name: string): unknown[] {
+		return this.allClusters
+			.filter(({ cluster }) => cluster.getBaseCluster().prototype.constructor.name === name)
+			.map(({ cluster }) => cluster);
 	}
 
 	public abstract getDeviceName(): Promise<string>;

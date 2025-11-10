@@ -1,6 +1,7 @@
 import type { EventEmitter } from '../../lib/event-emitter';
 import { type Actions } from '@matter/main/clusters';
 import type { Color } from '../../lib/color';
+
 import type { Data } from '../../lib/data';
 
 export type DeviceGroupId = number & {
@@ -22,7 +23,9 @@ export enum DeviceStatus {
 
 export abstract class Cluster implements Disposable {
 	public abstract [Symbol.dispose](): void;
-	public abstract getName(): DeviceClusterName;
+	public abstract getBaseCluster(): typeof Cluster & {
+		clusterName: DeviceClusterName;
+	};
 	public abstract onChange: EventEmitter<void>;
 }
 
@@ -46,10 +49,6 @@ export enum DeviceClusterName {
 export abstract class DeviceOnOffCluster extends Cluster {
 	public static clusterName = DeviceClusterName.ON_OFF;
 
-	public getName(): DeviceClusterName {
-		return DeviceOnOffCluster.clusterName;
-	}
-
 	public abstract isOn: Data<boolean | undefined>;
 	public abstract setOn(on: boolean): Promise<void>;
 	public abstract toggle(): Promise<void>;
@@ -57,10 +56,6 @@ export abstract class DeviceOnOffCluster extends Cluster {
 
 export abstract class DeviceWindowCoveringCluster extends Cluster {
 	public static clusterName = DeviceClusterName.WINDOW_COVERING;
-
-	public getName(): DeviceClusterName {
-		return DeviceWindowCoveringCluster.clusterName;
-	}
 
 	// public abstract currentPositionLiftPercentage: Data<number>;
 	/**
@@ -74,10 +69,6 @@ export abstract class DeviceWindowCoveringCluster extends Cluster {
 
 export abstract class DeviceLevelControlCluster extends Cluster {
 	public static clusterName = DeviceClusterName.LEVEL_CONTROL;
-
-	public getName(): DeviceClusterName {
-		return DeviceLevelControlCluster.clusterName;
-	}
 
 	/**
 	 * Float from 0 to 1
@@ -98,19 +89,11 @@ export abstract class DeviceLevelControlCluster extends Cluster {
 export abstract class DevicePowerSourceCluster extends Cluster {
 	public static clusterName = DeviceClusterName.POWER_SOURCE;
 
-	public getName(): DeviceClusterName {
-		return DevicePowerSourceCluster.clusterName;
-	}
-
 	public abstract batteryChargeLevel: Data<number | undefined>;
 }
 
 export abstract class DeviceGroupsCluster extends Cluster {
 	public static clusterName = DeviceClusterName.GROUPS;
-
-	public getName(): DeviceClusterName {
-		return DeviceGroupsCluster.clusterName;
-	}
 
 	public abstract addGroup(args: { groupId: number; groupName: string }): Promise<{
 		status: DeviceStatus;
@@ -131,10 +114,6 @@ export abstract class DeviceGroupsCluster extends Cluster {
 export abstract class DeviceOccupancySensingCluster extends Cluster {
 	public static clusterName = DeviceClusterName.OCCUPANCY_SENSING;
 
-	public getName(): DeviceClusterName {
-		return DeviceOccupancySensingCluster.clusterName;
-	}
-
 	public abstract occupancy: Data<boolean | undefined>;
 
 	public abstract onOccupied: EventEmitter<{ occupied: boolean }>;
@@ -142,10 +121,6 @@ export abstract class DeviceOccupancySensingCluster extends Cluster {
 
 export abstract class DeviceTemperatureMeasurementCluster extends Cluster {
 	public static clusterName = DeviceClusterName.TEMPERATURE_MEASUREMENT;
-
-	public getName(): DeviceClusterName {
-		return DeviceTemperatureMeasurementCluster.clusterName;
-	}
 
 	/**
 	 * Temperature in degrees Celsius
@@ -156,10 +131,6 @@ export abstract class DeviceTemperatureMeasurementCluster extends Cluster {
 export abstract class DeviceRelativeHumidityMeasurementCluster extends Cluster {
 	public static clusterName = DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT;
 
-	public getName(): DeviceClusterName {
-		return DeviceRelativeHumidityMeasurementCluster.clusterName;
-	}
-
 	/**
 	 * Relative humidity as a float from 0 to 1
 	 */
@@ -168,10 +139,6 @@ export abstract class DeviceRelativeHumidityMeasurementCluster extends Cluster {
 
 export abstract class DeviceBooleanStateCluster<S extends boolean> extends Cluster {
 	public static clusterName = DeviceClusterName.BOOLEAN_STATE;
-
-	public getName(): DeviceClusterName {
-		return DeviceBooleanStateCluster.clusterName;
-	}
 
 	public abstract state: Data<S>;
 	public abstract onStateChange: EventEmitter<{ state: S }>;
@@ -183,10 +150,6 @@ export abstract class DeviceSwitchCluster extends Cluster {
 	public abstract getTotalCount(): number;
 	public abstract getIndex(): number;
 	public abstract getLabel(): string;
-
-	public getName(): DeviceClusterName {
-		return DeviceSwitchCluster.clusterName;
-	}
 
 	public abstract onPress: EventEmitter<void>;
 }
@@ -207,19 +170,11 @@ export abstract class DeviceSwitchWithLongPressAndMultiPressCluster extends Devi
 export abstract class DeviceIlluminanceMeasurementCluster extends Cluster {
 	public static clusterName = DeviceClusterName.ILLUMINANCE_MEASUREMENT;
 
-	public getName(): DeviceClusterName {
-		return DeviceIlluminanceMeasurementCluster.clusterName;
-	}
-
 	public abstract illuminance: Data<number>;
 }
 
 export abstract class DeviceColorControlCluster extends Cluster {
 	public static clusterName = DeviceClusterName.COLOR_CONTROL;
-
-	public getName(): DeviceClusterName {
-		return DeviceColorControlCluster.clusterName;
-	}
 
 	public abstract color: Data<Color | undefined>;
 	public abstract setColor(args: {
@@ -240,10 +195,6 @@ export interface DeviceAction {
 export abstract class DeviceActionsCluster extends Cluster {
 	public static clusterName = DeviceClusterName.ACTIONS;
 
-	public getName(): DeviceClusterName {
-		return DeviceActionsCluster.clusterName;
-	}
-
 	public abstract actionList: Data<DeviceAction[]>;
 	public abstract executeAction(args: { actionId: number }): Promise<void>;
 }
@@ -257,10 +208,6 @@ export enum ThermostatMode {
 
 export abstract class DeviceThermostatCluster extends Cluster {
 	public static clusterName = DeviceClusterName.THERMOSTAT;
-
-	public getName(): DeviceClusterName {
-		return DeviceThermostatCluster.clusterName;
-	}
 
 	/**
 	 * Current temperature in degrees Celsius

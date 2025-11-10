@@ -4,9 +4,9 @@ import {
 	DeviceLevelControlCluster,
 	DeviceOnOffCluster,
 } from '../../device/cluster';
-import type { DeviceAction, DeviceClusterName } from '../../device/cluster';
 import { CombinedData, Data, MappedData } from '../../../lib/data';
 import { EventEmitter } from '../../../lib/event-emitter';
+import type { DeviceAction } from '../../device/cluster';
 import type { LEDClient, RGBColor } from './led-client';
 import { Actions } from '@matter/main/clusters';
 import type { Mapper } from '../../../lib/data';
@@ -50,8 +50,8 @@ class ConfigurableCluster {
 export class LEDArtOnOffCluster extends ConfigurableCluster implements DeviceOnOffCluster {
 	public isOn = new LEDArtMapper(this, this.client.state, (state) => state?.power_state ?? false);
 
-	public getName(): DeviceClusterName {
-		return DeviceOnOffCluster.clusterName;
+	public getBaseCluster(): typeof DeviceOnOffCluster {
+		return DeviceOnOffCluster;
 	}
 
 	public setOn = async (on: boolean): Promise<void> => {
@@ -68,8 +68,8 @@ export class LEDArtLevelControlCluster
 	extends ConfigurableCluster
 	implements DeviceLevelControlCluster
 {
-	public getName(): DeviceClusterName {
-		return DeviceLevelControlCluster.clusterName;
+	public getBaseCluster(): typeof DeviceLevelControlCluster {
+		return DeviceLevelControlCluster;
 	}
 
 	public currentLevel = new LEDArtMapper(
@@ -96,8 +96,8 @@ export class LEDArtColorControlCluster
 	extends ConfigurableCluster
 	implements DeviceColorControlCluster
 {
-	public getName(): DeviceClusterName {
-		return DeviceColorControlCluster.clusterName;
+	public getBaseCluster(): typeof DeviceColorControlCluster {
+		return DeviceColorControlCluster;
 	}
 
 	public color = new LEDArtMapper(this, this.client.effects, (effects) => {
@@ -137,8 +137,8 @@ export class LEDArtColorControlCluster
 }
 
 export class LEDArtActionsCluster extends ConfigurableCluster implements DeviceActionsCluster {
-	public getName(): DeviceClusterName {
-		return DeviceActionsCluster.clusterName;
+	public getBaseCluster(): typeof DeviceActionsCluster {
+		return DeviceActionsCluster;
 	}
 
 	public actionList = new LEDArtMapper(

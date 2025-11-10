@@ -104,7 +104,7 @@ const getModuleObj = () => ({
 - `device` - Device management
 - `switch` - Switch controls
 - `matter` - Matter protocol for smart devices
-- `mcp` - Model Context Protocol (AI integration)
+- `ai` - AI integration (ChatGPT chat + MCP server)
 - `ewelink` - eWeLink device integration
 - `homeDetector` - Home presence detection
 - `temperature` - Temperature monitoring

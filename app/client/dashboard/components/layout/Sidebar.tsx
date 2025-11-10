@@ -86,7 +86,7 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 		},
 		{
 			label: 'Advanced',
-			items: [{ text: 'MCP', icon: <SmartToyIcon />, id: SidebarTab.MCP }],
+			items: [{ text: 'AI', icon: <SmartToyIcon />, id: SidebarTab.AI }],
 		},
 	];
 
@@ -156,6 +156,6 @@ export enum SidebarTab {
 	DEVICES = 'devices',
 	EWELINK = 'ewelink',
 	LED_SOURCES = 'led-sources',
-	MCP = 'mcp',
+	AI = 'ai',
 	NOTIFICATIONS = 'notifications',
 }

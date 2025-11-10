@@ -1,0 +1,226 @@
+---
+description: AI integration with ChatGPT and Model Context Protocol (MCP)
+---
+
+# AI Integration
+
+The AI module provides integration with AI assistants for controlling the home automation system.
+
+## Overview
+
+The AI module supports two modes of operation:
+
+1. **ChatGPT Chat Interface**: A built-in chat interface using OpenAI's ChatGPT with function calling
+2. **MCP Server**: A Model Context Protocol server for external AI clients like Claude Desktop
+
+## Location
+
+- Module: [app/server/modules/ai/](mdc:app/server/modules/ai/)
+- Main module: [app/server/modules/ai/index.ts](mdc:app/server/modules/ai/index.ts)
+- Routing: [app/server/modules/ai/routing.ts](mdc:app/server/modules/ai/routing.ts)
+- ChatGPT Service: [app/server/modules/ai/chatgpt.ts](mdc:app/server/modules/ai/chatgpt.ts)
+- MCP Server: [app/server/modules/ai/server.ts](mdc:app/server/modules/ai/server.ts)
+
+## ChatGPT Integration
+
+### Configuration
+
+The ChatGPT integration requires an OpenAI API key:
+
+1. Navigate to the AI tab in the dashboard at `/dashboard#ai`
+2. Enter your OpenAI API key (get one from https://platform.openai.com/api-keys)
+3. Click "Save API Key"
+
+The API key is stored in the AI database (`ai.json`) in the `chatgptApiKey` field.
+
+### Chat Interface
+
+The chat interface component is located at:
+- Component: [app/client/dashboard/components/Chat.tsx](mdc:app/client/dashboard/components/Chat.tsx)
+- Parent: [app/client/dashboard/components/AIConfig.tsx](mdc:app/client/dashboard/components/AIConfig.tsx)
+
+Features:
+- Real-time streaming responses using Server-Sent Events (SSE)
+- Message history (in-memory, not persisted)
+- Function calling to control devices
+- Clean, modern Material-UI interface
+- Placeholder for future voice mode integration
+
+### API Endpoints
+
+**GET `/ai/api-key`**
+- Check if an API key is configured
+- Returns: `{ hasKey: boolean }`
+
+**POST `/ai/api-key`**
+- Save or update the OpenAI API key
+- Body: `{ apiKey: string }`
+- Returns: `{ success: true }`
+
+**DELETE `/ai/api-key`**
+- Remove the stored API key
+- Returns: `{ success: true }`
+
+**POST `/ai/chat`**
+- Send a chat message and receive streaming response
+- Body: `{ messages: Array<{ role: string, content: string }> }`
+- Returns: Server-Sent Events stream with content chunks
+
+### Function Calling
+
+The ChatGPT service converts available tools to OpenAI function definitions. Currently supported:
+
+- `get_devices`: Get all smart devices and their capabilities
+
+Functions are executed when ChatGPT determines they're needed, and results are fed back to generate the final response.
+
+### Model Configuration
+
+The default model is **gpt-4o** (configurable in code):
+
+```typescript
+// In app/server/modules/ai/chatgpt.ts
+const DEFAULT_MODEL = 'gpt-4o'; // Change to 'gpt-4o-mini' or other models
+```
+
+## MCP Server
+
+The MCP (Model Context Protocol) server runs separately on a dynamic port for external AI clients.
+
+### Authentication
+
+MCP uses bearer token authentication:
+
+- Tokens are stored in the AI database (`ai.json`) in the `mcpAuthKeys` field
+- Authorization header: `Authorization: Bearer <token>`
+- Generate keys through future UI or directly in the database
+
+### MCP Tools
+
+Tools are defined in [app/server/modules/ai/server.ts](mdc:app/server/modules/ai/server.ts):
+
+**get_devices**
+- Returns all smart devices with their IDs, names, sources, and cluster capabilities
+- No parameters required
+
+### Transport
+
+Uses StreamableHTTPServerTransport from `@modelcontextprotocol/sdk`:
+
+- HTTP-based transport for streaming
+- Session management
+- Standard MCP protocol compliance
+- Endpoint: `/ai/mcp` (proxied to Node.js server)
+
+## Module Integration
+
+The AI module can access all other modules via the module system:
+
+```typescript
+const modules = await this.config.modules;
+const deviceAPI = await modules.device.api.value;
+const devices = deviceAPI.devices.current();
+```
+
+## Database Schema
+
+```typescript
+interface AIDB {
+	chatgptApiKey?: string;      // OpenAI API key for ChatGPT
+	mcpAuthKeys?: string[];      // Bearer tokens for MCP server
+}
+```
+
+## Adding New Tools
+
+To add new tools that both ChatGPT and MCP can use:
+
+### 1. Add to MCP Server
+
+In [app/server/modules/ai/server.ts](mdc:app/server/modules/ai/server.ts):
+
+```typescript
+this.server.registerTool(
+	'tool_name',
+	{
+		title: 'Tool description',
+		description: 'Detailed description for AI',
+	},
+	async () => {
+		// Tool implementation
+		return {
+			content: [{ type: 'text', text: 'Result' }],
+		};
+	}
+);
+```
+
+### 2. Add to ChatGPT Service
+
+In [app/server/modules/ai/chatgpt.ts](mdc:app/server/modules/ai/chatgpt.ts):
+
+```typescript
+// Add function definition
+private async getToolDefinition(): Promise<ChatCompletionTool> {
+	return {
+		type: 'function',
+		function: {
+			name: 'tool_name',
+			description: 'Tool description for ChatGPT',
+			parameters: {
+				type: 'object',
+				properties: {
+					param1: {
+						type: 'string',
+						description: 'Parameter description',
+					},
+				},
+				required: ['param1'],
+			},
+		},
+	};
+}
+
+// Add execution handler
+private async executeFunctionCall(functionName: string, functionArgs: string): Promise<string> {
+	// ... existing code ...
+	
+	case 'tool_name':
+		const args = JSON.parse(functionArgs);
+		return await this.executeTool(args);
+	
+	// ... existing code ...
+}
+```
+
+## Future Enhancements
+
+### Voice Mode
+
+The UI includes placeholder elements for future voice mode integration:
+
+- Microphone button in chat interface (currently disabled)
+- Consider using OpenAI's real-time audio API
+- Will require additional backend endpoints and WebSocket/WebRTC integration
+
+### Persistent Chat History
+
+Currently, chat history is stored in React state (cleared on page refresh). Future enhancement:
+
+- Store conversations in database
+- Add conversation management UI
+- Export/import conversations
+
+### Additional Models
+
+- Add UI selector for choosing between gpt-4o, gpt-4o-mini, etc.
+- Support for other OpenAI models or providers
+- Model-specific configuration (temperature, max tokens, etc.)
+
+## Security Considerations
+
+- API keys are stored server-side in the database
+- Never expose API keys to the client
+- MCP authentication tokens should be generated with sufficient entropy
+- Consider rate limiting for chat endpoints
+- Validate all function call parameters before execution

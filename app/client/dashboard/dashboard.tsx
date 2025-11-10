@@ -7,10 +7,10 @@ import { SidebarTab } from './components/layout/Sidebar';
 import { NotFoundPage } from './components/NotFoundPage';
 import { HomeDetector } from './components/HomeDetector';
 import { OfflineProvider } from '../lib/offline-context';
-import { MCPConfig } from './components/MCPConfig';
 import React, { useState, useEffect } from 'react';
 import { Webhooks } from './components/Webhooks';
 import { Palettes } from './components/Palettes';
+import { AIConfig } from './components/AIConfig';
 import { Devices } from './components/Devices';
 import { createRoot } from 'react-dom/client';
 import { Scenes } from './components/Scenes';
@@ -126,8 +126,8 @@ function DashboardApp() {
 				return <EweLinkConfig />;
 			case SidebarTab.LED_SOURCES:
 				return <LEDSourcesConfig />;
-			case SidebarTab.MCP:
-				return <MCPConfig />;
+			case SidebarTab.AI:
+				return <AIConfig />;
 			default:
 				return <NotFoundPage onReturnToSettings={handleReturnToSettings} />;
 		}

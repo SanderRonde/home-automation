@@ -9,11 +9,11 @@ import {
 	DeviceOnOffCluster,
 	DeviceSwitchWithMultiPressCluster,
 } from '../../device/cluster';
-import type { Cluster, DeviceClusterName } from '../../device/cluster';
 import type { EWeLinkWebSocketMessage } from './clusters/shared';
 import { SettablePromise } from '../../../lib/settable-promise';
 import { EventEmitter } from '../../../lib/event-emitter';
 import type { EWeLinkConfig } from './clusters/shared';
+import type { Cluster } from '../../device/cluster';
 import { MappedData } from '../../../lib/data';
 import { Data } from '../../../lib/data';
 import util from 'util';
@@ -181,8 +181,8 @@ export abstract class EwelinkOnOffCluster<S extends object>
 	extends ConfigurableCluster<S>
 	implements DeviceOnOffCluster
 {
-	public getName(): DeviceClusterName {
-		return DeviceOnOffCluster.clusterName;
+	public getBaseCluster(): typeof DeviceOnOffCluster {
+		return DeviceOnOffCluster;
 	}
 
 	public abstract isOn: Data<boolean>;
@@ -202,8 +202,8 @@ export abstract class EwelinkLevelControlCluster<S extends object>
 	extends ConfigurableCluster<S>
 	implements DeviceLevelControlCluster
 {
-	public getName(): DeviceClusterName {
-		return DeviceLevelControlCluster.clusterName;
+	public getBaseCluster(): typeof DeviceLevelControlCluster {
+		return DeviceLevelControlCluster;
 	}
 
 	public abstract currentLevel: Data<number>;
@@ -226,8 +226,8 @@ export class EwelinkTemperatureMeasurementCluster
 	}>
 	implements DeviceTemperatureMeasurementCluster
 {
-	public getName(): DeviceClusterName {
-		return DeviceTemperatureMeasurementCluster.clusterName;
+	public getBaseCluster(): typeof DeviceTemperatureMeasurementCluster {
+		return DeviceTemperatureMeasurementCluster;
 	}
 
 	public temperature = this.getProxy().attributeGetter((value) =>
@@ -241,8 +241,8 @@ export class EwelinkRelativeHumidityMeasurementCluster
 	}>
 	implements DeviceRelativeHumidityMeasurementCluster
 {
-	public getName(): DeviceClusterName {
-		return DeviceRelativeHumidityMeasurementCluster.clusterName;
+	public getBaseCluster(): typeof DeviceRelativeHumidityMeasurementCluster {
+		return DeviceRelativeHumidityMeasurementCluster;
 	}
 
 	public relativeHumidity = this.getProxy().attributeGetter((value) =>
@@ -256,8 +256,8 @@ export class EwelinkPowerSourceCluster
 	}>
 	implements DevicePowerSourceCluster
 {
-	public getName(): DeviceClusterName {
-		return DevicePowerSourceCluster.clusterName;
+	public getBaseCluster(): typeof DevicePowerSourceCluster {
+		return DevicePowerSourceCluster;
 	}
 
 	public batteryChargeLevel = this.getProxy().attributeGetter((value) =>
@@ -269,8 +269,8 @@ export abstract class EwelinkBooleanStateCluster<S extends object>
 	extends ConfigurableCluster<S>
 	implements DeviceBooleanStateCluster<boolean>
 {
-	public getName(): DeviceClusterName {
-		return DeviceBooleanStateCluster.clusterName;
+	public getBaseCluster(): typeof DeviceBooleanStateCluster {
+		return DeviceBooleanStateCluster;
 	}
 
 	public abstract state: Data<boolean>;
@@ -288,8 +288,8 @@ export class EwelinkOccupancySensingCluster
 	}>
 	implements DeviceOccupancySensingCluster
 {
-	public getName(): DeviceClusterName {
-		return DeviceOccupancySensingCluster.clusterName;
+	public getBaseCluster(): typeof DeviceOccupancySensingCluster {
+		return DeviceOccupancySensingCluster;
 	}
 
 	public occupancy = this.getProxy().attributeGetter((value) =>
@@ -312,8 +312,8 @@ export class EwelinkSwitchCluster
 	}>
 	implements DeviceSwitchWithMultiPressCluster
 {
-	public getName(): DeviceClusterName {
-		return DeviceSwitchWithMultiPressCluster.clusterName;
+	public getBaseCluster(): typeof DeviceSwitchWithMultiPressCluster {
+		return DeviceSwitchWithMultiPressCluster;
 	}
 
 	public onPress = this.getProxy().eventListener(
@@ -335,8 +335,8 @@ export class EwelinkOutletSwitchCluster
 	}>
 	implements DeviceSwitchWithMultiPressCluster
 {
-	public getName(): DeviceClusterName {
-		return DeviceSwitchWithMultiPressCluster.clusterName;
+	public getBaseCluster(): typeof DeviceSwitchWithMultiPressCluster {
+		return DeviceSwitchWithMultiPressCluster;
 	}
 
 	public constructor(

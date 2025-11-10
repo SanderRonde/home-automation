@@ -41,8 +41,8 @@ logTag('DEVICE', 'blue', 'Message');
 // In matter module
 logTag('MATTER', 'magenta', 'Message');
 
-// In MCP module
-logTag('MCP', 'cyan', 'Message');
+// In AI module
+logTag('AI', 'cyan', 'Message');
 ```
 
 ## When to Log

@@ -11,7 +11,7 @@ This is a TypeScript home automation system using Bun runtime with a modular arc
 - `app/` - Main application code
     - `server/` - Backend server code
         - [app.ts](mdc:app/server/app.ts) - Entry point, initializes WebServer and all modules
-        - `modules/` - Feature modules (bot, auth, wled, device, switch, matter, mcp, etc.)
+        - `modules/` - Feature modules (bot, auth, wled, device, switch, matter, ai, etc.)
         - `lib/` - Shared server utilities
         - `config/` - Server configuration files
     - `client/` - Frontend React code with TypeScript
@@ -24,7 +24,7 @@ This is a TypeScript home automation system using Bun runtime with a modular arc
     - [tsconfig.json](mdc:app/tsconfig.json) - TypeScript configuration
 - `types/` - Shared TypeScript type definitions
 - `database/` - Database storage files
-- `scripts/` - Utility scripts (e.g., MCP key generation)
+- `scripts/` - Utility scripts
 - `static/` - Static assets served by the web server
 - [package.json](mdc:package.json) - Project dependencies and scripts
 
@@ -36,7 +36,7 @@ This is a TypeScript home automation system using Bun runtime with a modular arc
 - **Backend**: Express-style routing with Bun.serve
 - **Database**: SQLite via Bun.SQL + JSON file storage
 - **Smart Home**: Matter.js for device communication
-- **AI Integration**: Model Context Protocol (MCP) support
+- **AI Integration**: ChatGPT with function calling + MCP (Model Context Protocol) support
 - **Communication**: WebSockets for real-time updates
 - **Linting**: ESLint with Google TypeScript Style (gts)
 - **Formatting**: Prettier with import sorting

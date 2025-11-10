@@ -12,8 +12,8 @@ import { Matter } from './matter';
 import { Device } from './device';
 import { WLed } from './wled';
 import { Auth } from './auth';
-import { MCP } from './mcp';
 import { Bot } from './bot';
+import { AI } from './ai';
 
 import type { Database } from '../lib/db';
 import type { AppConfig } from '../app';
@@ -45,7 +45,7 @@ const getModuleObj = () => ({
 	temperature: Temperature,
 	homeDetector: HomeDetector,
 	notification: Notification,
-	mcp: MCP,
+	ai: AI,
 });
 
 let notified = false;
