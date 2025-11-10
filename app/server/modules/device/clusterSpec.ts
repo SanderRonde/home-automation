@@ -44,9 +44,13 @@ const typesForClasses = new Map<
 >();
 
 function zodToOpenAiSchema(zodType: z.ZodType) {
-	return zodToJsonSchema(zodType, {
+	const prevConsoleWarn = console.warn;
+	console.warn = () => {};
+	const schema = zodToJsonSchema(zodType, {
 		target: 'openAi',
 	});
+	console.warn = prevConsoleWarn;
+	return schema;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
