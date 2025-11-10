@@ -15,12 +15,23 @@ import {
 	ListItemText,
 	ListItemSecondaryAction,
 	Divider,
+	Dialog,
+	DialogTitle,
+	DialogContent,
+	DialogActions,
+	TextField,
 } from '@mui/material';
 import {
 	Notifications as NotificationsIcon,
 	Delete as DeleteIcon,
 	Send as SendIcon,
+	Edit as EditIcon,
 } from '@mui/icons-material';
+import {
+	parseUserAgent,
+	getDisplayString,
+	getDefaultDeviceName,
+} from '../../lib/user-agent-parser';
 import type { PushSubscription, NotificationSettings } from '../../../../types/notification';
 import { NotificationType } from '../../../../types/notification';
 import React, { useState, useEffect } from 'react';
@@ -35,6 +46,11 @@ export const Notifications = (): JSX.Element => {
 	const [success, setSuccess] = useState<string | null>(null);
 	const [pushSupported, setPushSupported] = useState(false);
 	const [pushPermission, setPushPermission] = useState<NotificationPermission>('default');
+	const [nameDialogOpen, setNameDialogOpen] = useState(false);
+	const [deviceName, setDeviceName] = useState('');
+	const [editDialogOpen, setEditDialogOpen] = useState(false);
+	const [editingSubscription, setEditingSubscription] = useState<PushSubscription | null>(null);
+	const [editName, setEditName] = useState('');
 
 	useEffect(() => {
 		// Check if push notifications are supported
@@ -101,7 +117,11 @@ export const Notifications = (): JSX.Element => {
 
 			if (permission === 'granted') {
 				setSuccess('Notification permission granted!');
-				await registerPush();
+				// Open dialog to set device name
+				const parsed = parseUserAgent(navigator.userAgent);
+				const defaultName = getDefaultDeviceName(parsed);
+				setDeviceName(defaultName);
+				setNameDialogOpen(true);
 			} else {
 				setError('Notification permission denied');
 			}
@@ -111,7 +131,7 @@ export const Notifications = (): JSX.Element => {
 		}
 	};
 
-	const registerPush = async () => {
+	const registerPush = async (name?: string) => {
 		try {
 			setLoading(true);
 			setError(null);
@@ -146,6 +166,7 @@ export const Notifications = (): JSX.Element => {
 						auth: subscriptionObject.keys!.auth,
 					},
 					userAgent: navigator.userAgent,
+					name: name || undefined,
 				}
 			);
 
@@ -162,6 +183,50 @@ export const Notifications = (): JSX.Element => {
 			setError('Failed to register for push notifications');
 		} finally {
 			setLoading(false);
+		}
+	};
+
+	const handleNameDialogConfirm = async () => {
+		setNameDialogOpen(false);
+		await registerPush(deviceName.trim() || undefined);
+	};
+
+	const handleNameDialogSkip = async () => {
+		setNameDialogOpen(false);
+		await registerPush();
+	};
+
+	const openEditDialog = (subscription: PushSubscription) => {
+		setEditingSubscription(subscription);
+		setEditName(subscription.name || '');
+		setEditDialogOpen(true);
+	};
+
+	const handleEditDialogConfirm = async () => {
+		if (!editingSubscription) {
+			return;
+		}
+
+		try {
+			setError(null);
+			const response = await apiPost(
+				'notification',
+				'/:id/update-name',
+				{ id: editingSubscription.id },
+				{ name: editName.trim() }
+			);
+
+			if (response.ok) {
+				setSuccess('Device name updated');
+				setEditDialogOpen(false);
+				setEditingSubscription(null);
+				await loadData();
+			} else {
+				throw new Error('Failed to update device name');
+			}
+		} catch (err) {
+			console.error('Error updating device name:', err);
+			setError('Failed to update device name');
 		}
 	};
 
@@ -347,9 +412,16 @@ export const Notifications = (): JSX.Element => {
 							</Typography>
 							<Button
 								variant="contained"
-								onClick={
-									pushPermission === 'granted' ? registerPush : requestPermission
-								}
+								onClick={() => {
+									if (pushPermission === 'granted') {
+										const parsed = parseUserAgent(navigator.userAgent);
+										const defaultName = getDefaultDeviceName(parsed);
+										setDeviceName(defaultName);
+										setNameDialogOpen(true);
+									} else {
+										void requestPermission();
+									}
+								}}
 								disabled={!pushSupported || loading}
 								startIcon={<NotificationsIcon />}
 							>
@@ -375,70 +447,108 @@ export const Notifications = (): JSX.Element => {
 						</Typography>
 					) : (
 						<List>
-							{subscriptions.map((sub, index) => (
-								<React.Fragment key={sub.id}>
-									{index > 0 && <Divider />}
-									<ListItem>
-										<ListItemText
-											primary={
-												<Box
-													sx={{
-														display: 'flex',
-														alignItems: 'center',
-														gap: 1,
-													}}
-												>
-													<Typography>
-														{sub.userAgent
-															? sub.userAgent.substring(0, 50) + '...'
-															: 'Device'}
-													</Typography>
-													{sub.id === currentSubscription?.id && (
-														<Chip
-															label="This Device"
-															size="small"
-															color="primary"
-														/>
-													)}
-												</Box>
-											}
-											secondary={`Registered ${new Date(sub.createdAt).toLocaleString()}`}
-										/>
-										<ListItemSecondaryAction
-											sx={{ display: 'flex', gap: 1, alignItems: 'center' }}
-										>
-											<FormControlLabel
-												control={
-													<Switch
-														checked={sub.enabled}
-														onChange={(e) =>
-															toggleSubscription(
-																sub.id,
-																e.target.checked
-															)
-														}
-													/>
+							{subscriptions.map((sub, index) => {
+								const parsed = sub.userAgent ? parseUserAgent(sub.userAgent) : null;
+								const displayName =
+									sub.name || (parsed ? getDefaultDeviceName(parsed) : 'Device');
+								const deviceInfo = parsed
+									? getDisplayString(parsed)
+									: 'Unknown Device';
+
+								return (
+									<React.Fragment key={sub.id}>
+										{index > 0 && <Divider />}
+										<ListItem>
+											<ListItemText
+												primary={
+													<Box
+														sx={{
+															display: 'flex',
+															alignItems: 'center',
+															gap: 1,
+														}}
+													>
+														<Typography>{displayName}</Typography>
+														{sub.id === currentSubscription?.id && (
+															<Chip
+																label="This Device"
+																size="small"
+																color="primary"
+															/>
+														)}
+													</Box>
 												}
-												label=""
+												secondary={
+													<Box>
+														<Typography
+															variant="caption"
+															component="div"
+														>
+															{deviceInfo}
+														</Typography>
+														<Typography
+															variant="caption"
+															component="div"
+															sx={{ color: 'text.secondary' }}
+														>
+															Registered{' '}
+															{new Date(
+																sub.createdAt
+															).toLocaleString()}
+														</Typography>
+													</Box>
+												}
+												secondaryTypographyProps={{ component: 'div' }}
 											/>
-											<IconButton
-												edge="end"
-												onClick={() => sendTestNotification(sub.id)}
-												disabled={!sub.enabled}
+											<ListItemSecondaryAction
+												sx={{
+													display: 'flex',
+													gap: 1,
+													alignItems: 'center',
+												}}
 											>
-												<SendIcon />
-											</IconButton>
-											<IconButton
-												edge="end"
-												onClick={() => unregisterSubscription(sub.id)}
-												sx={{ color: 'error.main' }}
-											>
-												<DeleteIcon />
-											</IconButton>
-										</ListItemSecondaryAction>
-									</ListItem>
-								</React.Fragment>
-							))}
+												<FormControlLabel
+													control={
+														<Switch
+															checked={sub.enabled}
+															onChange={(e) =>
+																toggleSubscription(
+																	sub.id,
+																	e.target.checked
+																)
+															}
+														/>
+													}
+													label=""
+												/>
+												<IconButton
+													edge="end"
+													onClick={() => openEditDialog(sub)}
+													title="Edit device name"
+												>
+													<EditIcon />
+												</IconButton>
+												<IconButton
+													edge="end"
+													onClick={() => sendTestNotification(sub.id)}
+													disabled={!sub.enabled}
+													title="Send test notification"
+												>
+													<SendIcon />
+												</IconButton>
+												<IconButton
+													edge="end"
+													onClick={() => unregisterSubscription(sub.id)}
+													sx={{ color: 'error.main' }}
+													title="Unregister device"
+												>
+													<DeleteIcon />
+												</IconButton>
+											</ListItemSecondaryAction>
+										</ListItem>
+									</React.Fragment>
+								);
+							})}
 						</List>
 					)}
 				</CardContent>
@@ -477,6 +587,67 @@ export const Notifications = (): JSX.Element => {
 					</CardContent>
 				</Card>
 			)}
+
+			{/* Name Dialog - shown during initial registration */}
+			<Dialog open={nameDialogOpen} onClose={handleNameDialogSkip} maxWidth="sm" fullWidth>
+				<DialogTitle>Name Your Device</DialogTitle>
+				<DialogContent>
+					<Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+						Give this device a friendly name to easily identify it later.
+					</Typography>
+					<TextField
+						autoFocus
+						fullWidth
+						label="Device Name"
+						value={deviceName}
+						onChange={(e) => setDeviceName(e.target.value)}
+						placeholder="e.g., My iPhone, Work Laptop"
+						onKeyPress={(e) => {
+							if (e.key === 'Enter') {
+								void handleNameDialogConfirm();
+							}
+						}}
+					/>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={handleNameDialogSkip}>Skip</Button>
+					<Button onClick={handleNameDialogConfirm} variant="contained">
+						Save
+					</Button>
+				</DialogActions>
+			</Dialog>
+
+			{/* Edit Dialog - shown when editing an existing device */}
+			<Dialog
+				open={editDialogOpen}
+				onClose={() => setEditDialogOpen(false)}
+				maxWidth="sm"
+				fullWidth
+			>
+				<DialogTitle>Edit Device Name</DialogTitle>
+				<DialogContent>
+					<TextField
+						autoFocus
+						fullWidth
+						label="Device Name"
+						value={editName}
+						onChange={(e) => setEditName(e.target.value)}
+						placeholder="e.g., My iPhone, Work Laptop"
+						sx={{ mt: 1 }}
+						onKeyPress={(e) => {
+							if (e.key === 'Enter') {
+								void handleEditDialogConfirm();
+							}
+						}}
+					/>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+					<Button onClick={handleEditDialogConfirm} variant="contained">
+						Save
+					</Button>
+				</DialogActions>
+			</Dialog>
 		</Box>
 	);
 };

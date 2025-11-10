@@ -1,5 +1,6 @@
 import type { PushSubscription, NotificationSettings } from '../../../../types/notification';
 import { NotificationType } from '../../../../types/notification';
+import { logDev } from '../../lib/logging/log-dev';
 import { logTag } from '../../lib/logging/logger';
 import type { Database } from '../../lib/db';
 import * as webpush from 'web-push';
@@ -67,6 +68,25 @@ export class PushNotificationManager {
 
 		logTag('notification', 'green', `New push subscription registered: ${id}`);
 		return newSubscription;
+	}
+
+	public updateSubscriptionName(id: string, name: string): boolean {
+		const current = this._db.current();
+		const index = (current.subscriptions || []).findIndex((sub) => sub.id === id);
+
+		if (index === -1) {
+			return false;
+		}
+
+		this._db.update((old) => ({
+			...old,
+			subscriptions: old.subscriptions?.map((sub) =>
+				sub.id === id ? { ...sub, name } : sub
+			),
+		}));
+
+		logTag('notification', 'cyan', `Updated subscription name: ${id} -> ${name}`);
+		return true;
 	}
 
 	public removeSubscription(id: string): boolean {
@@ -210,7 +230,7 @@ export class PushNotificationManager {
 		});
 
 		try {
-			await webpush.sendNotification(
+			const result = await webpush.sendNotification(
 				{
 					endpoint: subscription.endpoint,
 					keys: subscription.keys,
@@ -218,6 +238,7 @@ export class PushNotificationManager {
 				payload
 			);
 			logTag('notification', 'green', `Test notification sent to ${subscriptionId}`);
+			logDev(result.body, result.headers, result.statusCode);
 			return true;
 		} catch (error) {
 			logTag(

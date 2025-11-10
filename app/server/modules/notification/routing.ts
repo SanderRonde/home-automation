@@ -20,6 +20,7 @@ function _initRouting(pushManager: PushNotificationManager) {
 						auth: z.string(),
 					}),
 					userAgent: z.string().optional(),
+					name: z.string().optional(),
 				}),
 				(body, _req, _server, { json, error }) => {
 					try {
@@ -49,6 +50,18 @@ function _initRouting(pushManager: PushNotificationManager) {
 						req.params.id,
 						body.enabled
 					);
+					if (!success) {
+						return json({ error: 'Subscription not found' }, { status: 404 });
+					}
+					return json({ success: true });
+				}
+			),
+			'/:id/update-name': withRequestBody(
+				z.object({
+					name: z.string(),
+				}),
+				(body, req, _server, { json }) => {
+					const success = pushManager.updateSubscriptionName(req.params.id, body.name);
 					if (!success) {
 						return json({ error: 'Subscription not found' }, { status: 404 });
 					}

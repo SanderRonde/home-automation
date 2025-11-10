@@ -12,6 +12,7 @@ export interface PushSubscription {
 	enabled: boolean;
 	createdAt: number;
 	userAgent?: string;
+	name?: string;
 }
 
 export interface NotificationSettings {
