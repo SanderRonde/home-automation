@@ -11,6 +11,7 @@ import {
 	Webhook as WebhookIcon,
 	Alarm as AlarmIcon,
 	Notifications as NotificationsIcon,
+	Map as MapIcon,
 } from '@mui/icons-material';
 import {
 	Drawer,
@@ -53,7 +54,10 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 	const menuCategories = [
 		{
 			label: 'Dashboard',
-			items: [{ text: 'Home', icon: <HomeIcon />, id: SidebarTab.HOME }],
+			items: [
+				{ text: 'Home', icon: <HomeIcon />, id: SidebarTab.HOME },
+				{ text: 'Layout', icon: <MapIcon />, id: SidebarTab.LAYOUT },
+			],
 		},
 		{
 			label: 'Scene Management',
@@ -147,6 +151,7 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 
 export enum SidebarTab {
 	HOME = 'home',
+	LAYOUT = 'layout',
 	SCENES = 'scenes',
 	GROUPS = 'groups',
 	PALETTES = 'palettes',
