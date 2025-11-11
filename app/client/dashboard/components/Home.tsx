@@ -1,7 +1,3 @@
-import type {
-	DashboardDeviceClusterWithState,
-	DeviceListWithValuesResponse,
-} from '../../../server/modules/device/routing';
 import {
 	Box,
 	Card,
@@ -11,7 +7,12 @@ import {
 	IconButton,
 	Chip,
 	Fab,
+	Portal,
 } from '@mui/material';
+import type {
+	DashboardDeviceClusterWithState,
+	DeviceListWithValuesResponse,
+} from '../../../server/modules/device/routing';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import { Map as MapIcon, ViewList as ListIcon } from '@mui/icons-material';
 import type { DeviceClusterCardBaseProps } from './DeviceClusterCard';
@@ -488,18 +489,21 @@ export const Home = (): JSX.Element => {
 					invalidate={() => refresh(false)}
 				/>
 				{/* Floating Action Button to toggle back to list view */}
-				<Fab
-					color="primary"
-					aria-label="toggle view"
-					sx={{
-						position: 'fixed',
-						bottom: 24,
-						right: 24,
-					}}
-					onClick={() => setViewMode('list')}
-				>
-					<ListIcon />
-				</Fab>
+				<Portal>
+					<Fab
+						color="primary"
+						aria-label="toggle view"
+						sx={{
+							position: 'fixed',
+							bottom: 24,
+							right: 24,
+							zIndex: 1000,
+						}}
+						onClick={() => setViewMode('list')}
+					>
+						<ListIcon />
+					</Fab>
+				</Portal>
 			</Box>
 		);
 	}
@@ -615,18 +619,21 @@ export const Home = (): JSX.Element => {
 
 			{/* Floating Action Button to toggle to layout view */}
 			{hasLayout && (
-				<Fab
-					color="primary"
-					aria-label="toggle view"
-					sx={{
-						position: 'fixed',
-						bottom: 24,
-						right: 24,
-					}}
-					onClick={() => setViewMode('layout')}
-				>
-					<MapIcon />
-				</Fab>
+				<Portal>
+					<Fab
+						color="primary"
+						aria-label="toggle view"
+						sx={{
+							position: 'fixed',
+							bottom: 24,
+							right: 24,
+							zIndex: 1000,
+						}}
+						onClick={() => setViewMode('layout')}
+					>
+						<MapIcon />
+					</Fab>
+				</Portal>
 			)}
 		</Box>
 	);

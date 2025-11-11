@@ -64,12 +64,13 @@ function DashboardApp() {
 
 	// Update URL when tab changes
 	useEffect(() => {
-		// Preserve query parameters if staying on the same tab
+		// Always reset to base tab name (without query parameters) when tab changes
+		// This ensures clicking Home always goes to clean #home
 		const currentHash = window.location.hash.slice(1);
 		const currentBaseTab = currentHash.split('?')[0];
 
-		// Only update if the base tab has changed
-		if (currentBaseTab !== currentTab) {
+		// Update hash if base tab changed OR if there are query parameters to remove
+		if (currentBaseTab !== currentTab || currentHash !== currentTab) {
 			window.location.hash = currentTab;
 		}
 	}, [currentTab]);
