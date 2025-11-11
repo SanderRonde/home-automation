@@ -11,7 +11,9 @@ import { detectRooms } from '../lib/room-detection';
 import React, { useEffect, useState } from 'react';
 import { apiGet, apiPost } from '../../lib/fetch';
 import type { HomeDetailView } from './Home';
-import { Box } from '@mui/material';
+import { Box, IconButton } from '@mui/material';
+import { IconComponent } from './icon';
+import type { IncludedIconNames } from './icon';
 
 interface HomeLayoutViewProps {
 	devices: DeviceListWithValuesResponse;
@@ -19,41 +21,19 @@ interface HomeLayoutViewProps {
 	invalidate: () => void;
 }
 
-// Map icon names to emoji for canvas rendering
-const iconToEmoji: Record<string, string> = {
-	Bed: '🛏️',
-	Weekend: '🛋️',
-	Kitchen: '🍳',
-	Bathtub: '🛁',
-	Computer: '💻',
-	Garage: '🚗',
-	Yard: '🌳',
-	Foundation: '🏠',
-	Roofing: '🏠',
-	Settings: '⚙️',
-	Wc: '🚽',
-	Chair: '🪑',
-	Tv: '📺',
-	Lightbulb: '💡',
-	DoorFront: '🚪',
-	Window: '🪟',
-	Balcony: '🏠',
-	Pool: '🏊',
-	FitnessCenter: '💪',
-	MeetingRoom: '👥',
-	Shower: '🚿',
-	Deck: '🏠',
-	Cottage: '🏡',
-};
-
-// Map cluster names to emoji icons
-const clusterToEmoji: Partial<Record<DeviceClusterName, string>> = {
-	[DeviceClusterName.ON_OFF]: '💡',
-	[DeviceClusterName.COLOR_CONTROL]: '🎨',
-	[DeviceClusterName.WINDOW_COVERING]: '🪟',
-	[DeviceClusterName.SWITCH]: '🔘',
-	[DeviceClusterName.LEVEL_CONTROL]: '🔆',
-	[DeviceClusterName.THERMOSTAT]: '🌡️',
+// Helper to filter clusters like ClusterIconButton does
+const getRelevantClusters = (clusterNames: DeviceClusterName[]): DeviceClusterName[] => {
+	const relevantClusters = new Set<DeviceClusterName>();
+	for (const clusterName of clusterNames) {
+		if (
+			clusterName === DeviceClusterName.WINDOW_COVERING ||
+			clusterName === DeviceClusterName.ON_OFF ||
+			clusterName === DeviceClusterName.COLOR_CONTROL
+		) {
+			relevantClusters.add(clusterName);
+		}
+	}
+	return Array.from(relevantClusters).sort();
 };
 
 const WALL_THICKNESS = 6;
@@ -65,8 +45,10 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	const [roomMappings, setRoomMappings] = useState<Record<string, string>>({});
 	const [availableRooms, setAvailableRooms] = useState<Record<string, RoomInfo>>({});
 	const stageRef = React.useRef<StageType | null>(null);
+	const containerRef = React.useRef<HTMLDivElement | null>(null);
 	const [isDragging, setIsDragging] = React.useState(false);
 	const dragStartPos = React.useRef<{ x: number; y: number } | null>(null);
+	const [stageTransform, setStageTransform] = React.useState({ x: 0, y: 0, scale: 1 });
 
 	const width = window.innerWidth - 240;
 	const height = window.innerHeight - 64;
@@ -118,50 +100,67 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 			const scaleY = (height - padding * 2) / bbox.height;
 			const scale = Math.min(scaleX, scaleY, 1); // Don't zoom in more than 1:1
 
+			const posX = (width - bbox.width * scale) / 2 - bbox.minX * scale;
+			const posY = (height - bbox.height * scale) / 2 - bbox.minY * scale;
+
 			stageRef.current.scale({ x: scale, y: scale });
 			// Center the content
 			stageRef.current.position({
-				x: (width - bbox.width * scale) / 2 - bbox.minX * scale,
-				y: (height - bbox.height * scale) / 2 - bbox.minY * scale,
+				x: posX,
+				y: posY,
 			});
+			setStageTransform({ x: posX, y: posY, scale });
 		}
 	}, [walls, width, height]);
 
-	const handleWheel = React.useCallback((e: KonvaEventObject<WheelEvent>) => {
-		e.evt.preventDefault();
-
-		const stage = stageRef.current;
-		if (!stage) {
-			return;
+	// Update stage transform state on pan/zoom
+	const updateStageTransform = React.useCallback(() => {
+		if (stageRef.current) {
+			const pos = stageRef.current.position();
+			const scale = stageRef.current.scaleX();
+			setStageTransform({ x: pos.x, y: pos.y, scale });
 		}
-		const oldScale = stage.scaleX();
-		const pointer = stage.getPointerPosition();
-		if (!pointer) {
-			return;
-		}
-
-		const mousePointTo = {
-			x: (pointer.x - stage.x()) / oldScale,
-			y: (pointer.y - stage.y()) / oldScale,
-		};
-
-		let direction = e.evt.deltaY > 0 ? -1 : 1;
-
-		if (e.evt.ctrlKey) {
-			direction = -direction;
-		}
-
-		const scaleBy = 1.05;
-		const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
-
-		stage.scale({ x: newScale, y: newScale });
-
-		const newPos = {
-			x: pointer.x - mousePointTo.x * newScale,
-			y: pointer.y - mousePointTo.y * newScale,
-		};
-		stage.position(newPos);
 	}, []);
+
+	const handleWheel = React.useCallback(
+		(e: KonvaEventObject<WheelEvent>) => {
+			e.evt.preventDefault();
+
+			const stage = stageRef.current;
+			if (!stage) {
+				return;
+			}
+			const oldScale = stage.scaleX();
+			const pointer = stage.getPointerPosition();
+			if (!pointer) {
+				return;
+			}
+
+			const mousePointTo = {
+				x: (pointer.x - stage.x()) / oldScale,
+				y: (pointer.y - stage.y()) / oldScale,
+			};
+
+			let direction = e.evt.deltaY > 0 ? -1 : 1;
+
+			if (e.evt.ctrlKey) {
+				direction = -direction;
+			}
+
+			const scaleBy = 1.05;
+			const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
+
+			stage.scale({ x: newScale, y: newScale });
+
+			const newPos = {
+				x: pointer.x - mousePointTo.x * newScale,
+				y: pointer.y - mousePointTo.y * newScale,
+			};
+			stage.position(newPos);
+			updateStageTransform();
+		},
+		[updateStageTransform]
+	);
 
 	const cursorPointer = React.useCallback((e: KonvaEventObject<MouseEvent>) => {
 		const stage = e.target.getStage();
@@ -197,7 +196,12 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	const handleStageMouseUp = React.useCallback(() => {
 		dragStartPos.current = null;
 		setTimeout(() => setIsDragging(false), 50); // Small delay to allow click events to check drag state
-	}, []);
+		updateStageTransform();
+	}, [updateStageTransform]);
+
+	const handleStageDragEnd = React.useCallback(() => {
+		updateStageTransform();
+	}, [updateStageTransform]);
 
 	// Group devices by room and calculate cluster representations
 	const roomsWithClusters = React.useMemo(() => {
@@ -209,19 +213,49 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				const roomDevices = props.devices.filter((d) => d.room === mappedRoomName);
 
 				// Find which clusters are represented in this room
-				const representedClusters = new Set<DeviceClusterName>();
+				const allClusters = new Set<DeviceClusterName>();
 				for (const device of roomDevices) {
 					for (const cluster of device.mergedAllClusters) {
-						representedClusters.add(cluster.name);
+						allClusters.add(cluster.name);
 					}
 				}
+
+				// Filter to only relevant clusters (matching ClusterIconButton behavior)
+				const representedClusters = getRelevantClusters(Array.from(allClusters));
+
+				// Build cluster info with icons
+				const clusterInfo = representedClusters.map((clusterName) => {
+					// Find a device with this cluster to get the icon
+					let icon: IncludedIconNames | null = null;
+					for (const device of roomDevices) {
+						for (const cluster of device.mergedAllClusters) {
+							if (cluster.name === clusterName && cluster.icon) {
+								icon = cluster.icon as IncludedIconNames;
+								break;
+							}
+							// Special case for ON_OFF merged into COLOR_CONTROL
+							if (
+								clusterName === DeviceClusterName.ON_OFF &&
+								cluster.name === DeviceClusterName.COLOR_CONTROL &&
+								cluster.mergedClusters[DeviceClusterName.ON_OFF]?.icon
+							) {
+								icon = cluster.mergedClusters[DeviceClusterName.ON_OFF]
+									.icon as IncludedIconNames;
+								break;
+							}
+						}
+						if (icon) break;
+					}
+					return { clusterName, icon };
+				});
 
 				return {
 					room,
 					mappedRoomName,
 					roomInfo,
 					roomDevices,
-					representedClusters: Array.from(representedClusters).sort(),
+					representedClusters,
+					clusterInfo,
 				};
 			});
 	}, [detectedRooms, roomMappings, availableRooms, props.devices]);
@@ -304,7 +338,10 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	};
 
 	return (
-		<Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+		<Box
+			ref={containerRef}
+			sx={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}
+		>
 			<Stage
 				ref={stageRef}
 				width={width}
@@ -320,6 +357,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				onMouseDown={handleStageMouseDown}
 				onMouseMove={handleStageMouseMove}
 				onMouseUp={handleStageMouseUp}
+				onDragEnd={handleStageDragEnd}
 				draggable={true}
 			>
 				<Layer>
@@ -347,23 +385,8 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				</Layer>
 
 				<Layer>
-					{/* Rooms with cluster icons */}
+					{/* Rooms */}
 					{roomsWithClusters.map((roomData) => {
-						const iconEmoji = roomData.roomInfo?.icon
-							? iconToEmoji[roomData.roomInfo.icon] || '🏠'
-							: '🏠';
-
-						// Calculate cluster icon positions
-						const clusterIconSize = 32;
-						const clusterIconSpacing = 40;
-						const totalClusterWidth =
-							roomData.representedClusters.length * clusterIconSpacing -
-							(roomData.representedClusters.length > 0
-								? clusterIconSpacing - clusterIconSize
-								: 0);
-						const clusterStartX = roomData.room.center.x - totalClusterWidth / 2;
-						const clusterY = roomData.room.center.y + 30;
-
 						return (
 							<React.Fragment key={roomData.room.id}>
 								{/* Room polygon */}
@@ -381,186 +404,181 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 									onMouseOut={cursorDefault}
 									onClick={() => handleRoomClick(roomData.mappedRoomName)}
 								/>
-
-								{/* Room icon - same position as VIEW mode */}
-								<Text
-									x={roomData.room.center.x}
-									y={roomData.room.center.y}
-									text={iconEmoji}
-									fontSize={32}
-									offsetX={16}
-									offsetY={16}
-									listening={false}
-								/>
-
-								{/* Cluster icons */}
-								{roomData.representedClusters.map((clusterName, index) => {
-									const clusterEmoji = clusterToEmoji[clusterName] || '❓';
-									const x = clusterStartX + index * clusterIconSpacing;
-
-									// Determine if cluster is enabled
-									let isEnabled = false;
-									if (clusterName === DeviceClusterName.ON_OFF) {
-										const devices = roomData.roomDevices.filter((device) =>
-											device.mergedAllClusters.some(
-												(c) =>
-													c.name === DeviceClusterName.ON_OFF ||
-													(c.name === DeviceClusterName.COLOR_CONTROL &&
-														c.mergedClusters[DeviceClusterName.ON_OFF])
-											)
-										);
-										isEnabled = devices
-											.flatMap((d) => d.mergedAllClusters)
-											.some(
-												(d) =>
-													(d.name === DeviceClusterName.ON_OFF &&
-														d.isOn) ||
-													(d.name === DeviceClusterName.COLOR_CONTROL &&
-														d.mergedClusters[DeviceClusterName.ON_OFF]
-															?.isOn)
-											);
-									} else if (clusterName === DeviceClusterName.WINDOW_COVERING) {
-										const devices = roomData.roomDevices.filter((device) =>
-											device.mergedAllClusters.some(
-												(c) => c.name === DeviceClusterName.WINDOW_COVERING
-											)
-										);
-										isEnabled = devices
-											.flatMap((d) => d.mergedAllClusters)
-											.filter(
-												(c) => c.name === DeviceClusterName.WINDOW_COVERING
-											)
-											.some((d) => d.targetPositionLiftPercentage < 5);
-									} else if (clusterName === DeviceClusterName.COLOR_CONTROL) {
-										const devices = roomData.roomDevices.filter((device) =>
-											device.mergedAllClusters.some(
-												(c) =>
-													c.name === DeviceClusterName.ON_OFF ||
-													(c.name === DeviceClusterName.COLOR_CONTROL &&
-														c.mergedClusters[DeviceClusterName.ON_OFF])
-											)
-										);
-										isEnabled = devices
-											.flatMap((d) => d.mergedAllClusters)
-											.some(
-												(d) =>
-													(d.name === DeviceClusterName.ON_OFF &&
-														d.isOn) ||
-													(d.name === DeviceClusterName.COLOR_CONTROL &&
-														d.mergedClusters[DeviceClusterName.ON_OFF]
-															?.isOn)
-											);
-									}
-
-									return (
-										<ClusterIcon
-											key={`${roomData.room.id}-${clusterName}`}
-											x={x}
-											y={clusterY}
-											emoji={clusterEmoji}
-											isEnabled={isEnabled}
-											onShortPress={() =>
-												handleClusterAction(
-													clusterName,
-													roomData.roomDevices
-												)
-											}
-											onLongPress={() =>
-												handleClusterClick(
-													clusterName,
-													roomData.mappedRoomName
-												)
-											}
-											onMouseOver={cursorPointer}
-											onMouseOut={cursorDefault}
-										/>
-									);
-								})}
 							</React.Fragment>
 						);
 					})}
 				</Layer>
 			</Stage>
+
+			{/* Overlay for SVG icons */}
+			<Box
+				sx={{
+					position: 'absolute',
+					top: 0,
+					left: 20,
+					width: width,
+					height: height,
+					pointerEvents: 'none',
+					overflow: 'hidden',
+				}}
+			>
+				{roomsWithClusters.map((roomData) => {
+					// Calculate cluster icon positions
+					const clusterIconSize = 48;
+					const clusterIconSpacing = 56;
+					const totalClusterWidth =
+						roomData.clusterInfo.length * clusterIconSpacing -
+						(roomData.clusterInfo.length > 0 ? clusterIconSpacing - clusterIconSize : 0);
+					const clusterStartX = roomData.room.center.x - totalClusterWidth / 2;
+					const clusterY = roomData.room.center.y + 30;
+
+					return (
+						<React.Fragment key={`overlay-${roomData.room.id}`}>
+							{/* Room icon */}
+							{roomData.roomInfo?.icon && (
+								<Box
+									sx={{
+										position: 'absolute',
+										left:
+											roomData.room.center.x * stageTransform.scale +
+											stageTransform.x -
+											16,
+										top:
+											roomData.room.center.y * stageTransform.scale +
+											stageTransform.y -
+											16,
+										color: 'rgba(0, 0, 0, 0.6)',
+										fontSize: `${32 * stageTransform.scale}px`,
+										display: 'flex',
+										alignItems: 'center',
+										justifyContent: 'center',
+										pointerEvents: 'none',
+									}}
+								>
+									<IconComponent iconName={roomData.roomInfo.icon} />
+								</Box>
+							)}
+
+							{/* Cluster icons */}
+							{roomData.clusterInfo.map((clusterData, index) => {
+								const x = clusterStartX + index * clusterIconSpacing;
+
+								// Determine if cluster is enabled
+								let isEnabled = false;
+								if (clusterData.clusterName === DeviceClusterName.ON_OFF) {
+									const devices = roomData.roomDevices.filter((device) =>
+										device.mergedAllClusters.some(
+											(c) =>
+												c.name === DeviceClusterName.ON_OFF ||
+												(c.name === DeviceClusterName.COLOR_CONTROL &&
+													c.mergedClusters[DeviceClusterName.ON_OFF])
+										)
+									);
+									isEnabled = devices
+										.flatMap((d) => d.mergedAllClusters)
+										.some(
+											(d) =>
+												(d.name === DeviceClusterName.ON_OFF && d.isOn) ||
+												(d.name === DeviceClusterName.COLOR_CONTROL &&
+													d.mergedClusters[DeviceClusterName.ON_OFF]?.isOn)
+										);
+								} else if (clusterData.clusterName === DeviceClusterName.WINDOW_COVERING) {
+									const devices = roomData.roomDevices.filter((device) =>
+										device.mergedAllClusters.some(
+											(c) => c.name === DeviceClusterName.WINDOW_COVERING
+										)
+									);
+									isEnabled = devices
+										.flatMap((d) => d.mergedAllClusters)
+										.filter((c) => c.name === DeviceClusterName.WINDOW_COVERING)
+										.some((d) => d.targetPositionLiftPercentage < 5);
+								} else if (clusterData.clusterName === DeviceClusterName.COLOR_CONTROL) {
+									const devices = roomData.roomDevices.filter((device) =>
+										device.mergedAllClusters.some(
+											(c) =>
+												c.name === DeviceClusterName.ON_OFF ||
+												(c.name === DeviceClusterName.COLOR_CONTROL &&
+													c.mergedClusters[DeviceClusterName.ON_OFF])
+										)
+									);
+									isEnabled = devices
+										.flatMap((d) => d.mergedAllClusters)
+										.some(
+											(d) =>
+												(d.name === DeviceClusterName.ON_OFF && d.isOn) ||
+												(d.name === DeviceClusterName.COLOR_CONTROL &&
+													d.mergedClusters[DeviceClusterName.ON_OFF]?.isOn)
+										);
+								}
+
+								if (!clusterData.icon) {
+									return null;
+								}
+
+								return (
+									<IconButton
+										key={`${roomData.room.id}-${clusterData.clusterName}`}
+										sx={{
+											position: 'absolute',
+											left: x * stageTransform.scale + stageTransform.x,
+											top: clusterY * stageTransform.scale + stageTransform.y,
+											width: clusterIconSize * stageTransform.scale,
+											height: clusterIconSize * stageTransform.scale,
+											backgroundColor: isEnabled
+												? '#ffffff'
+												: 'rgba(255, 255, 255, 0.5)',
+											color: isEnabled
+												? '#2a2a2a'
+												: 'rgba(0, 0, 0, 0.5)',
+											pointerEvents: 'auto',
+											fontSize: `${20 * stageTransform.scale}px`,
+											'&:hover': {
+												backgroundColor: isEnabled
+													? '#f0f0f0'
+													: 'rgba(255, 255, 255, 0.7)',
+											},
+										}}
+										onPointerDown={(e) => {
+											e.stopPropagation();
+											e.preventDefault();
+											const timer = setTimeout(() => {
+												handleClusterClick(
+													clusterData.clusterName,
+													roomData.mappedRoomName
+												);
+												document.removeEventListener(
+													'pointerup',
+													handlePointerUp
+												);
+											}, 500);
+
+											const handlePointerUp = () => {
+												clearTimeout(timer);
+												void handleClusterAction(
+													clusterData.clusterName,
+													roomData.roomDevices
+												);
+												document.removeEventListener(
+													'pointerup',
+													handlePointerUp
+												);
+											};
+
+											document.addEventListener('pointerup', handlePointerUp);
+										}}
+									>
+										<IconComponent iconName={clusterData.icon} />
+									</IconButton>
+								);
+							})}
+						</React.Fragment>
+					);
+				})}
+			</Box>
 		</Box>
 	);
 };
 
-interface ClusterIconProps {
-	x: number;
-	y: number;
-	emoji: string;
-	isEnabled: boolean;
-	onShortPress: () => void;
-	onLongPress: () => void;
-	onMouseOver: (e: KonvaEventObject<MouseEvent>) => void;
-	onMouseOut: (e: KonvaEventObject<MouseEvent>) => void;
-}
-
-const ClusterIcon = (props: ClusterIconProps): JSX.Element => {
-	const [isPressed, setIsPressed] = React.useState(false);
-	const timerRef = React.useRef<number | null>(null);
-
-	const handlePointerDown = (e: KonvaEventObject<PointerEvent>) => {
-		e.cancelBubble = true;
-		setIsPressed(true);
-
-		timerRef.current = window.setTimeout(() => {
-			// Long press
-			props.onLongPress();
-			setIsPressed(false);
-			timerRef.current = null;
-		}, 500);
-	};
-
-	const handlePointerUp = (e: KonvaEventObject<PointerEvent>) => {
-		e.cancelBubble = true;
-		if (timerRef.current !== null) {
-			clearTimeout(timerRef.current);
-			timerRef.current = null;
-			// Short press
-			props.onShortPress();
-		}
-		setIsPressed(false);
-	};
-
-	const handlePointerOut = () => {
-		if (timerRef.current !== null) {
-			clearTimeout(timerRef.current);
-			timerRef.current = null;
-		}
-		setIsPressed(false);
-	};
-
-	return (
-		<Group
-			x={props.x}
-			y={props.y}
-			onPointerDown={handlePointerDown}
-			onPointerUp={handlePointerUp}
-			onPointerOut={handlePointerOut}
-			onMouseOver={props.onMouseOver}
-			onMouseOut={props.onMouseOut}
-		>
-			<Circle
-				x={16}
-				y={16}
-				radius={16}
-				fill={props.isEnabled ? '#ffffff' : 'rgba(255, 255, 255, 0.5)'}
-				stroke={isPressed ? '#2196f3' : 'rgba(0, 0, 0, 0.2)'}
-				strokeWidth={isPressed ? 2 : 1}
-			/>
-			<Text
-				x={16}
-				y={16}
-				text={props.emoji}
-				fontSize={20}
-				offsetX={10}
-				offsetY={10}
-				opacity={props.isEnabled ? 1.0 : 0.6}
-			/>
-		</Group>
-	);
-};
 
 function calculateBoundingBox(walls: WallSegment[]): {
 	minX: number;
