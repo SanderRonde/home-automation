@@ -7,6 +7,7 @@ import { SidebarTab } from './components/layout/Sidebar';
 import { NotFoundPage } from './components/NotFoundPage';
 import { HomeDetector } from './components/HomeDetector';
 import { OfflineProvider } from '../lib/offline-context';
+import { HouseLayout } from './components/HouseLayout';
 import { MCPConfig } from './components/MCPConfig';
 import React, { useState, useEffect } from 'react';
 import { Webhooks } from './components/Webhooks';
@@ -106,6 +107,8 @@ function DashboardApp() {
 		switch (currentTab) {
 			case SidebarTab.HOME:
 				return <Home />;
+			case SidebarTab.LAYOUT:
+				return <HouseLayout />;
 			case SidebarTab.SCENES:
 				return <Scenes />;
 			case SidebarTab.GROUPS:

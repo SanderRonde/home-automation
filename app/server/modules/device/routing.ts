@@ -31,9 +31,11 @@ import type { AllModules, ModuleConfig } from '..';
 import { logTag } from '../../lib/logging/logger';
 import { Actions } from '@matter/main/clusters';
 import type { ClassEnum } from '../../lib/enum';
+import type { Database } from '../../lib/db';
 import { Color } from '../../lib/color';
 import type { DeviceAPI } from './api';
 import { wait } from '../../lib/time';
+import type { HouseLayout } from '.';
 import * as z from 'zod';
 
 export interface DeviceInfo {
@@ -48,6 +50,7 @@ export interface RoomInfo {
 	name: string;
 	color: string; // Pastel color based on name hash
 	icon?: IncludedIconNames;
+	polygon?: Array<{ x: number; y: number }>;
 }
 
 type DashboardDeviceClusterBase = {
@@ -364,6 +367,48 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 				const rooms = api.getRooms();
 				return json({ rooms });
 			},
+			'/rooms/updatePolygon': withRequestBody(
+				z.object({
+					roomName: z.string(),
+					polygon: z.array(z.object({ x: z.number(), y: z.number() })),
+				}),
+				(body, _req, _server, { json }) => {
+					api.updateRoomPolygon(body.roomName, body.polygon);
+					return json({ success: true });
+				}
+			),
+			'/layout': (_req, _server, { json }) => {
+				const layout = (db as Database<{ house_layout: HouseLayout }>).current()
+					.house_layout;
+				return json({ layout: layout || null });
+			},
+			'/layout/save': withRequestBody(
+				z.object({
+					walls: z.array(
+						z.object({
+							id: z.string(),
+							start: z.object({ x: z.number(), y: z.number() }),
+							end: z.object({ x: z.number(), y: z.number() }),
+						})
+					),
+					doors: z.array(
+						z.object({
+							id: z.string(),
+							wallId: z.string(),
+							start: z.object({ x: z.number(), y: z.number() }),
+							end: z.object({ x: z.number(), y: z.number() }),
+						})
+					),
+					roomMappings: z.record(z.string()),
+				}),
+				(body, _req, _server, { json }) => {
+					(db as Database<{ house_layout: HouseLayout }>).update((old) => ({
+						...old,
+						house_layout: body,
+					}));
+					return json({ success: true });
+				}
+			),
 			[validateClusterRoute('/cluster/OnOff')]: withRequestBody(
 				z.object({
 					deviceIds: z.array(z.string()),

@@ -28,7 +28,7 @@ interface RoomAssignmentDialogProps {
 	onRoomAssigned: () => void;
 }
 
-type RoomInfo = ReturnTypeForApi<'device', '/rooms', 'GET'>['ok']['rooms'][string];
+export type RoomInfo = ReturnTypeForApi<'device', '/rooms', 'GET'>['ok']['rooms'][string];
 
 const COMMON_ROOM_ICONS = [
 	{ name: 'Bedroom', icon: 'Bed' },

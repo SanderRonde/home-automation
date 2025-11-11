@@ -10,8 +10,10 @@ import {
 	CircularProgress,
 	IconButton,
 	Chip,
+	Fab,
 } from '@mui/material';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
+import { Map as MapIcon, ViewList as ListIcon } from '@mui/icons-material';
 import type { DeviceClusterCardBaseProps } from './DeviceClusterCard';
 import type { DeviceGroup } from '../../../../types/group';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -21,6 +23,7 @@ import { DeviceClusterCard } from './DeviceClusterCard';
 import { ClusterIconButton } from './ClusterIconButton';
 import type { Scene } from '../../../../types/scene';
 import { PaletteSelector } from './PaletteSelector';
+import { HomeLayoutView } from './HomeLayoutView';
 import { apiGet, apiPost } from '../../lib/fetch';
 import type { IncludedIconNames } from './icon';
 import { DeviceDetail } from './DeviceDetail';
@@ -180,6 +183,8 @@ export const Home = (): JSX.Element => {
 	const [scenes, setScenes] = React.useState<Scene[]>([]);
 	const [groups, setGroups] = React.useState<DeviceGroup[]>([]);
 	const [triggeringSceneId, setTriggeringSceneId] = React.useState<string | null>(null);
+	const [viewMode, setViewMode] = React.useState<'list' | 'layout'>('list');
+	const [hasLayout, setHasLayout] = React.useState(false);
 
 	// Load scenes marked as favorites
 	React.useEffect(() => {
@@ -212,6 +217,24 @@ export const Home = (): JSX.Element => {
 			}
 		};
 		void loadGroups();
+	}, []);
+
+	// Check if layout exists
+	React.useEffect(() => {
+		const checkLayout = async () => {
+			try {
+				const response = await apiGet('device', '/layout', {});
+				if (response.ok) {
+					const data = await response.json();
+					if (data.layout && data.layout.walls && data.layout.walls.length > 0) {
+						setHasLayout(true);
+					}
+				}
+			} catch (error) {
+				console.error('Failed to check layout:', error);
+			}
+		};
+		void checkLayout();
 	}, []);
 
 	// Group devices by room
@@ -455,8 +478,35 @@ export const Home = (): JSX.Element => {
 		);
 	}
 
+	// Render layout view if in layout mode
+	if (viewMode === 'layout' && hasLayout) {
+		return (
+			<Box sx={{ position: 'relative', height: '100%' }}>
+				<HomeLayoutView
+					devices={devices}
+					pushDetailView={pushDetailView}
+					invalidate={() => refresh(false)}
+				/>
+				{/* Floating Action Button to toggle back to list view */}
+				<Fab
+					color="primary"
+					aria-label="toggle view"
+					sx={{
+						position: 'fixed',
+						bottom: 24,
+						right: 24,
+					}}
+					onClick={() => setViewMode('list')}
+				>
+					<ListIcon />
+				</Fab>
+			</Box>
+		);
+	}
+
+	// Render list view (default)
 	return (
-		<Box sx={{ p: { xs: 2, sm: 3 } }}>
+		<Box sx={{ p: { xs: 2, sm: 3 }, position: 'relative' }}>
 			<Box
 				sx={{
 					display: 'flex',
@@ -561,6 +611,22 @@ export const Home = (): JSX.Element => {
 					No devices assigned to rooms yet. Go to the Devices tab to assign devices to
 					rooms.
 				</Typography>
+			)}
+
+			{/* Floating Action Button to toggle to layout view */}
+			{hasLayout && (
+				<Fab
+					color="primary"
+					aria-label="toggle view"
+					sx={{
+						position: 'fixed',
+						bottom: 24,
+						right: 24,
+					}}
+					onClick={() => setViewMode('layout')}
+				>
+					<MapIcon />
+				</Fab>
 			)}
 		</Box>
 	);

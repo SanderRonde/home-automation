@@ -130,6 +130,7 @@ export class DeviceAPI {
 		const knownDevices = this.getStoredDevices();
 		const rooms: Record<string, RoomInfo> = {};
 		const roomIcons = this._db.current().room_icons || {};
+		const roomPolygons = this._db.current().room_polygons || {};
 
 		for (const device of Object.values(knownDevices)) {
 			if (device.room) {
@@ -138,12 +139,23 @@ export class DeviceAPI {
 						name: device.room,
 						color: this.generatePastelColor(device.room),
 						icon: roomIcons[device.room],
+						polygon: roomPolygons[device.room],
 					};
 				}
 			}
 		}
 
 		return rooms;
+	}
+
+	public updateRoomPolygon(roomName: string, polygon: Array<{ x: number; y: number }>): void {
+		this._db.update((old) => ({
+			...old,
+			room_polygons: {
+				...(old.room_polygons || {}),
+				[roomName]: polygon,
+			},
+		}));
 	}
 
 	private generatePastelColor(name: string): string {

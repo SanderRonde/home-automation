@@ -12,14 +12,41 @@ import type { ModuleConfig } from '..';
 import { ModuleMeta } from '../meta';
 import { DeviceAPI } from './api';
 
+export interface Point {
+	x: number;
+	y: number;
+}
+
+export interface WallSegment {
+	id: string;
+	start: Point;
+	end: Point;
+}
+
+export interface DoorSlot {
+	id: string;
+	wallId: string;
+	start: Point;
+	end: Point;
+}
+
+export interface HouseLayout {
+	bounds: { width: number; height: number };
+	walls: WallSegment[];
+	doors: DoorSlot[];
+	roomMappings: Record<string, string>;
+}
+
 export interface DeviceDB {
 	device_registry: Record<string, DeviceInfo>;
 	room_icons?: {
 		[room: string]: IncludedIconNames;
 	};
+	room_polygons?: Record<string, Array<{ x: number; y: number }>>;
 	scenes?: Record<string, Scene>;
 	groups?: Record<string, DeviceGroup>;
 	palettes?: Record<string, Palette>;
+	house_layout?: HouseLayout;
 }
 
 export const Device = new (class Device extends ModuleMeta {
@@ -31,119 +58,119 @@ export const Device = new (class Device extends ModuleMeta {
 		// Initialize routing
 		this._db.set(config.db);
 
-		// Initialize SQL table for occupancy events
-		const occupancyTableExists = await config.sqlDB<{ name: string }[]>`
-			SELECT name FROM sqlite_master WHERE type='table' AND name='occupancy_events'
-		`;
+		// // Initialize SQL table for occupancy events
+		// const occupancyTableExists = await config.sqlDB<{ name: string }[]>`
+		// 	SELECT name FROM sqlite_master WHERE type='table' AND name='occupancy_events'
+		// `;
 
-		if (!occupancyTableExists.length) {
-			await config.sqlDB`
-				CREATE TABLE occupancy_events (
-					id INTEGER PRIMARY KEY AUTOINCREMENT,
-					device_id TEXT NOT NULL,
-					occupied BOOLEAN NOT NULL,
-					timestamp INTEGER NOT NULL
-				)
-			`;
-			await config.sqlDB`
-				CREATE INDEX idx_occupancy_device_time ON occupancy_events(device_id, timestamp DESC)
-			`;
-		}
+		// if (!occupancyTableExists.length) {
+		// 	await config.sqlDB`
+		// 		CREATE TABLE occupancy_events (
+		// 			id INTEGER PRIMARY KEY AUTOINCREMENT,
+		// 			device_id TEXT NOT NULL,
+		// 			occupied BOOLEAN NOT NULL,
+		// 			timestamp INTEGER NOT NULL
+		// 		)
+		// 	`;
+		// 	await config.sqlDB`
+		// 		CREATE INDEX idx_occupancy_device_time ON occupancy_events(device_id, timestamp DESC)
+		// 	`;
+		// }
 
-		// Initialize SQL table for temperature events
-		const temperatureTableExists = await config.sqlDB<{ name: string }[]>`
-			SELECT name FROM sqlite_master WHERE type='table' AND name='temperature_events'
-		`;
+		// // Initialize SQL table for temperature events
+		// const temperatureTableExists = await config.sqlDB<{ name: string }[]>`
+		// 	SELECT name FROM sqlite_master WHERE type='table' AND name='temperature_events'
+		// `;
 
-		if (!temperatureTableExists.length) {
-			await config.sqlDB`
-				CREATE TABLE temperature_events (
-					id INTEGER PRIMARY KEY AUTOINCREMENT,
-					device_id TEXT NOT NULL,
-					temperature REAL NOT NULL,
-					timestamp INTEGER NOT NULL
-				)
-			`;
-			await config.sqlDB`
-				CREATE INDEX idx_temperature_device_time ON temperature_events(device_id, timestamp DESC)
-			`;
-		}
+		// if (!temperatureTableExists.length) {
+		// 	await config.sqlDB`
+		// 		CREATE TABLE temperature_events (
+		// 			id INTEGER PRIMARY KEY AUTOINCREMENT,
+		// 			device_id TEXT NOT NULL,
+		// 			temperature REAL NOT NULL,
+		// 			timestamp INTEGER NOT NULL
+		// 		)
+		// 	`;
+		// 	await config.sqlDB`
+		// 		CREATE INDEX idx_temperature_device_time ON temperature_events(device_id, timestamp DESC)
+		// 	`;
+		// }
 
-		// Initialize SQL table for humidity events
-		const humidityTableExists = await config.sqlDB<{ name: string }[]>`
-			SELECT name FROM sqlite_master WHERE type='table' AND name='humidity_events'
-		`;
+		// // Initialize SQL table for humidity events
+		// const humidityTableExists = await config.sqlDB<{ name: string }[]>`
+		// 	SELECT name FROM sqlite_master WHERE type='table' AND name='humidity_events'
+		// `;
 
-		if (!humidityTableExists.length) {
-			await config.sqlDB`
-				CREATE TABLE humidity_events (
-					id INTEGER PRIMARY KEY AUTOINCREMENT,
-					device_id TEXT NOT NULL,
-					humidity REAL NOT NULL,
-					timestamp INTEGER NOT NULL
-				)
-			`;
-			await config.sqlDB`
-				CREATE INDEX idx_humidity_device_time ON humidity_events(device_id, timestamp DESC)
-			`;
-		}
+		// if (!humidityTableExists.length) {
+		// 	await config.sqlDB`
+		// 		CREATE TABLE humidity_events (
+		// 			id INTEGER PRIMARY KEY AUTOINCREMENT,
+		// 			device_id TEXT NOT NULL,
+		// 			humidity REAL NOT NULL,
+		// 			timestamp INTEGER NOT NULL
+		// 		)
+		// 	`;
+		// 	await config.sqlDB`
+		// 		CREATE INDEX idx_humidity_device_time ON humidity_events(device_id, timestamp DESC)
+		// 	`;
+		// }
 
-		// Initialize SQL table for illuminance events
-		const illuminanceTableExists = await config.sqlDB<{ name: string }[]>`
-			SELECT name FROM sqlite_master WHERE type='table' AND name='illuminance_events'
-		`;
+		// // Initialize SQL table for illuminance events
+		// const illuminanceTableExists = await config.sqlDB<{ name: string }[]>`
+		// 	SELECT name FROM sqlite_master WHERE type='table' AND name='illuminance_events'
+		// `;
 
-		if (!illuminanceTableExists.length) {
-			await config.sqlDB`
-				CREATE TABLE illuminance_events (
-					id INTEGER PRIMARY KEY AUTOINCREMENT,
-					device_id TEXT NOT NULL,
-					illuminance REAL NOT NULL,
-					timestamp INTEGER NOT NULL
-				)
-			`;
-			await config.sqlDB`
-				CREATE INDEX idx_illuminance_device_time ON illuminance_events(device_id, timestamp DESC)
-			`;
-		}
+		// if (!illuminanceTableExists.length) {
+		// 	await config.sqlDB`
+		// 		CREATE TABLE illuminance_events (
+		// 			id INTEGER PRIMARY KEY AUTOINCREMENT,
+		// 			device_id TEXT NOT NULL,
+		// 			illuminance REAL NOT NULL,
+		// 			timestamp INTEGER NOT NULL
+		// 		)
+		// 	`;
+		// 	await config.sqlDB`
+		// 		CREATE INDEX idx_illuminance_device_time ON illuminance_events(device_id, timestamp DESC)
+		// 	`;
+		// }
 
-		// Initialize SQL table for button press events
-		const buttonPressTableExists = await config.sqlDB<{ name: string }[]>`
-			SELECT name FROM sqlite_master WHERE type='table' AND name='button_press_events'
-		`;
+		// // Initialize SQL table for button press events
+		// const buttonPressTableExists = await config.sqlDB<{ name: string }[]>`
+		// 	SELECT name FROM sqlite_master WHERE type='table' AND name='button_press_events'
+		// `;
 
-		if (!buttonPressTableExists.length) {
-			await config.sqlDB`
-				CREATE TABLE button_press_events (
-					id INTEGER PRIMARY KEY AUTOINCREMENT,
-					device_id TEXT NOT NULL,
-					button_index INTEGER,
-					timestamp INTEGER NOT NULL
-				)
-			`;
-			await config.sqlDB`
-				CREATE INDEX idx_button_press_device_time ON button_press_events(device_id, timestamp DESC)
-			`;
-		}
+		// if (!buttonPressTableExists.length) {
+		// 	await config.sqlDB`
+		// 		CREATE TABLE button_press_events (
+		// 			id INTEGER PRIMARY KEY AUTOINCREMENT,
+		// 			device_id TEXT NOT NULL,
+		// 			button_index INTEGER,
+		// 			timestamp INTEGER NOT NULL
+		// 		)
+		// 	`;
+		// 	await config.sqlDB`
+		// 		CREATE INDEX idx_button_press_device_time ON button_press_events(device_id, timestamp DESC)
+		// 	`;
+		// }
 
-		// Initialize SQL table for boolean state events
-		const booleanStateTableExists = await config.sqlDB<{ name: string }[]>`
-			SELECT name FROM sqlite_master WHERE type='table' AND name='boolean_state_events'
-		`;
+		// // Initialize SQL table for boolean state events
+		// const booleanStateTableExists = await config.sqlDB<{ name: string }[]>`
+		// 	SELECT name FROM sqlite_master WHERE type='table' AND name='boolean_state_events'
+		// `;
 
-		if (!booleanStateTableExists.length) {
-			await config.sqlDB`
-				CREATE TABLE boolean_state_events (
-					id INTEGER PRIMARY KEY AUTOINCREMENT,
-					device_id TEXT NOT NULL,
-					state BOOLEAN NOT NULL,
-					timestamp INTEGER NOT NULL
-				)
-			`;
-			await config.sqlDB`
-				CREATE INDEX idx_boolean_state_device_time ON boolean_state_events(device_id, timestamp DESC)
-			`;
-		}
+		// if (!booleanStateTableExists.length) {
+		// 	await config.sqlDB`
+		// 		CREATE TABLE boolean_state_events (
+		// 			id INTEGER PRIMARY KEY AUTOINCREMENT,
+		// 			device_id TEXT NOT NULL,
+		// 			state BOOLEAN NOT NULL,
+		// 			timestamp INTEGER NOT NULL
+		// 		)
+		// 	`;
+		// 	await config.sqlDB`
+		// 		CREATE INDEX idx_boolean_state_device_time ON boolean_state_events(device_id, timestamp DESC)
+		// 	`;
+		// }
 
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
 		const api = new DeviceAPI(config.db, config.sqlDB, (this as any).modules);
