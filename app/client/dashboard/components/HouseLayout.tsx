@@ -97,30 +97,7 @@ export const HouseLayout = (): JSX.Element => {
 			const response = await apiGet('device', '/rooms', {});
 			if (response.ok) {
 				const data = await response.json();
-
-				// TODO: REMOVE - Mock rooms for testing when no real rooms exist
-				if (Object.keys(data.rooms).length === 0) {
-					const mockRooms = {
-						'Living Room': {
-							name: 'Living Room',
-							color: '#FFB6C1',
-							icon: 'Weekend' as const,
-						},
-						Toilet: {
-							name: 'Toilet',
-							color: '#ADD8E6',
-							icon: 'Wc' as const,
-						},
-						Bedroom: {
-							name: 'Bedroom',
-							color: '#DDA0DD',
-							icon: 'Bed' as const,
-						},
-					};
-					setAvailableRooms(mockRooms);
-				} else {
-					setAvailableRooms(data.rooms);
-				}
+				setAvailableRooms(data.rooms);
 			}
 		} catch (error) {
 			console.error('Failed to load rooms:', error);
