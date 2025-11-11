@@ -373,7 +373,7 @@ class DeviceColorControlClusterSpec extends DeviceColorControlCluster {
 		}),
 	})
 	public setColor!: (args: {
-		color: Color;
+		colors: Color[];
 		index?: number;
 		overDurationMs?: number;
 	}) => Promise<void>;

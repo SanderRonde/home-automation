@@ -553,7 +553,8 @@ class MatterColorControlCluster
 	});
 
 	public setColor = this._proxy.command('moveToColor', {
-		input: ({ color, overDurationMs }: { color: Color; overDurationMs?: number }) => {
+		input: ({ colors, overDurationMs }: { colors: Color[]; overDurationMs?: number }) => {
+			const color = colors[0];
 			const { x, y } = color.toCieXy();
 			return {
 				colorX: Math.round(x * MatterColorControlCluster.MAX_COLOR_VALUE),

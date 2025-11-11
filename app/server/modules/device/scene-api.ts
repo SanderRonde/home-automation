@@ -566,7 +566,7 @@ export class SceneAPI {
 										sceneAction.action.value / 100
 									);
 									for (const colorControlCluster of colorControlClusters) {
-										await colorControlCluster.setColor({ color });
+										await colorControlCluster.setColor({ colors: [color] });
 									}
 								} else if (
 									sceneAction.cluster === DeviceClusterName.LEVEL_CONTROL

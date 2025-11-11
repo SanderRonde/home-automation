@@ -5,28 +5,6 @@ import { Color } from '../../lib/color';
 import type { Device } from './device';
 
 /**
- * Hash a string to a number for deterministic color selection
- */
-function hashString(str: string): number {
-	let hash = 0;
-	for (let i = 0; i < str.length; i++) {
-		const char = str.charCodeAt(i);
-		hash = (hash << 5) - hash + char;
-		hash = hash & hash; // Convert to 32-bit integer
-	}
-	return Math.abs(hash);
-}
-
-/**
- * Select a color from a palette based on device ID
- */
-function selectColorForDevice(deviceId: string, palette: Palette): string {
-	const hash = hashString(deviceId);
-	const colorIndex = hash % palette.colors.length;
-	return palette.colors[colorIndex];
-}
-
-/**
  * Convert hex color to HSV format
  */
 function hexToHSV(hex: string): { hue: number; saturation: number; value: number } {
@@ -89,18 +67,20 @@ export async function applyPaletteToDevices(devices: Device[], palette: Palette)
 
 		try {
 			const segmentCount = colorControlCluster.getSegmentCount();
+			const colors = [];
 			for (let i = 0; i < segmentCount; i++) {
-				const hexColor = selectColorForDevice(`${device.getUniqueId()}:${i}`, palette);
+				const hexColor = palette.colors[Math.floor(Math.random() * palette.colors.length)];
 				const hsv = hexToHSV(hexColor);
 				const color = Color.fromHSV(hsv.hue, hsv.saturation, hsv.value);
-				await colorControlCluster.setColor({ color, index: i });
-
-				logTag(
-					'palette',
-					'green',
-					`Applied color ${hexColor} to device ${device.getUniqueId()} segment ${i}`
-				);
+				colors.push(color);
 			}
+
+			await colorControlCluster.setColor({ colors });
+			logTag(
+				'palette',
+				'green',
+				`Applied colors ${colors.map((color) => color.toHex()).join(', ')} to device ${device.getUniqueId()}`
+			);
 
 			results.push(true);
 		} catch (error) {

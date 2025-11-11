@@ -496,7 +496,7 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 								(body.value ?? 100) / 100
 							);
 							await cluster.setColor({
-								color,
+								colors: [color],
 							});
 						}
 					)

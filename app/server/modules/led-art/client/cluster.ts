@@ -120,24 +120,46 @@ export class LEDArtColorControlCluster
 		return new Color(0, 0, 0);
 	});
 
-	public setColor = async (args: { color: Color; overDurationMs?: number }): Promise<void> => {
-		const currentEffect = this.client.effects.current().current_effect;
-		const effect = ['SingleColorEffect', 'SingleColorRadialEffect'].includes(currentEffect)
-			? 'SingleColorRadialEffect'
-			: 'SingleColorRadialEffect';
-		await this.client.setEffect({
-			effect_name: effect,
-			parameters: {
-				color: {
-					r: args.color.r,
-					g: args.color.g,
-					b: args.color.b,
+	public setColor = async (args: { colors: Color[]; overDurationMs?: number }): Promise<void> => {
+		if (args.colors.length === 1) {
+			const currentEffect = this.client.effects.current().current_effect;
+			const effect =
+				currentEffect === 'SingleColorEffect'
+					? 'SingleColorEffect'
+					: 'SingleColorRadialEffect';
+			await this.client.setEffect({
+				effect_name: effect,
+				parameters: {
+					color: {
+						r: args.colors[0].r,
+						g: args.colors[0].g,
+						b: args.colors[0].b,
+					},
 				},
-			},
-		});
+			});
+		} else {
+			const currentEffect = this.client.effects.current().current_effect;
+			const effect =
+				currentEffect === 'MultiColorEffect'
+					? 'MultiColorEffect'
+					: 'MultiColorRadialEffect';
+			await this.client.setEffect({
+				effect_name: effect,
+				parameters: {
+					colors: args.colors.map((color) => ({
+						r: color.r,
+						g: color.g,
+						b: color.b,
+					})),
+					direction: 'in',
+					interpolation: 'hsv',
+					speed: 0.4,
+				},
+			});
+		}
 	};
 
-	public getSegmentCount = (): number => 1;
+	public getSegmentCount = (): number => 3;
 }
 
 export class LEDArtActionsCluster extends ConfigurableCluster implements DeviceActionsCluster {

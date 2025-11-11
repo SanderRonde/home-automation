@@ -230,7 +230,7 @@ export class WakelightLogic {
 										hsv.saturation / 100,
 										brightness
 									);
-									await colorControlCluster.setColor({ color: updatedColor });
+									await colorControlCluster.setColor({ colors: [updatedColor] });
 								}
 							}
 						}
