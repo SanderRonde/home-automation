@@ -18,6 +18,7 @@ import { Map as MapIcon, ViewList as ListIcon } from '@mui/icons-material';
 import type { DeviceClusterCardBaseProps } from './DeviceClusterCard';
 import type { DeviceGroup } from '../../../../types/group';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { TemperatureDisplay } from './TemperatureDisplay';
 import type { Palette } from '../../../../types/palette';
 import { fadeInUpStaggered } from '../../lib/animations';
 import { DeviceClusterCard } from './DeviceClusterCard';
@@ -236,6 +237,7 @@ export const Home = (): JSX.Element => {
 		return saved === 'layout' || saved === 'list' ? saved : 'list';
 	});
 	const [hasLayout, setHasLayout] = React.useState(false);
+	const [temperatureExpanded, setTemperatureExpanded] = React.useState(false);
 
 	// Load scenes marked as favorites
 	React.useEffect(() => {
@@ -570,10 +572,16 @@ export const Home = (): JSX.Element => {
 						</Box>
 					</Box>
 				)}
+				<TemperatureDisplay
+					onExpandedChange={(expanded) => {
+						setTemperatureExpanded(expanded);
+					}}
+				/>
 				<HomeLayoutView
 					devices={devices}
 					pushDetailView={pushDetailView}
 					invalidate={() => refresh(false)}
+					temperatureExpanded={temperatureExpanded}
 				/>
 				{/* Floating Action Button to toggle back to list view */}
 				<Portal>

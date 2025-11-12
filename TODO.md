@@ -34,6 +34,6 @@
 - [x] Notifications don't work yet
 - [x] Add power measuring support for ikea smart plugs
 - [x] 3D house overview
+- [x] Inside temperature
+- [x] Scene buttons above 2D view
 - [ ] Wakelight does not appear to work
-- [ ] Inside temperature
-- [ ] Scene buttons above 2D view

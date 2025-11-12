@@ -12,6 +12,7 @@ import {
 	Alarm as AlarmIcon,
 	Notifications as NotificationsIcon,
 	Map as MapIcon,
+	DeviceThermostat as DeviceThermostatIcon,
 } from '@mui/icons-material';
 import {
 	Drawer,
@@ -78,6 +79,7 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 					icon: <NotificationsIcon />,
 					id: SidebarTab.NOTIFICATIONS,
 				},
+				{ text: 'Temperature', icon: <DeviceThermostatIcon />, id: SidebarTab.TEMPERATURE },
 			],
 		},
 		{
@@ -163,4 +165,5 @@ export enum SidebarTab {
 	LED_SOURCES = 'led-sources',
 	AI = 'ai',
 	NOTIFICATIONS = 'notifications',
+	TEMPERATURE = 'temperature',
 }

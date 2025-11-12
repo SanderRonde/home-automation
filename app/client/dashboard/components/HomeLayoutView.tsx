@@ -1,6 +1,7 @@
 import type { DeviceListWithValuesResponse } from '../../../server/modules/device/routing';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import type { WallSegment, DoorSlot } from '../types/layout';
+import { Box, IconButton, Typography } from '@mui/material';
 // @ts-expect-error - konva ESM/CommonJS type resolution issue
 import type { Stage as StageType } from 'konva/lib/Stage';
 import type { RoomInfo } from './RoomAssignmentDialog';
@@ -10,7 +11,6 @@ import { detectRooms } from '../lib/room-detection';
 import React, { useEffect, useState } from 'react';
 import { apiGet, apiPost } from '../../lib/fetch';
 import { Layer, Line, Stage } from 'react-konva';
-import { Box, IconButton } from '@mui/material';
 import type { IncludedIconNames } from './icon';
 import type { HomeDetailView } from './Home';
 import { IconComponent } from './icon';
@@ -19,6 +19,7 @@ interface HomeLayoutViewProps {
 	devices: DeviceListWithValuesResponse;
 	pushDetailView: (detailView: HomeDetailView) => void;
 	invalidate: () => void;
+	temperatureExpanded?: boolean;
 }
 
 // Helper to filter clusters like ClusterIconButton does
@@ -50,6 +51,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	const dragStartPos = React.useRef<{ x: number; y: number } | null>(null);
 	const [stageTransform, setStageTransform] = React.useState({ x: 0, y: 0, scale: 1 });
 	const [expandedRoomId, setExpandedRoomId] = React.useState<string | null>(null);
+	const [collapsingRoomId, setCollapsingRoomId] = React.useState<string | null>(null);
 	const lastDist = React.useRef<number>(0);
 	const lastCenter = React.useRef<{ x: number; y: number } | null>(null);
 
@@ -212,12 +214,16 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	const handleStageMouseUp = React.useCallback(() => {
 		if (!isDragging) {
 			// Close expanded clusters if clicking on stage background
-			setExpandedRoomId(null);
+			setCollapsingRoomId(expandedRoomId);
+			setTimeout(() => {
+				setExpandedRoomId(null);
+				setCollapsingRoomId(null);
+			}, 200);
 		}
 		dragStartPos.current = null;
 		setTimeout(() => setIsDragging(false), 50); // Small delay to allow click events to check drag state
 		updateStageTransform();
-	}, [updateStageTransform, isDragging]);
+	}, [updateStageTransform, isDragging, expandedRoomId]);
 
 	const handleStageDragEnd = React.useCallback(() => {
 		updateStageTransform();
@@ -351,6 +357,20 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 					return { clusterName, icon };
 				});
 
+				// Find temperature sensor in this room
+				let roomTemperature: number | null = null;
+				for (const device of roomDevices) {
+					for (const cluster of device.flatAllClusters) {
+						if (cluster.name === DeviceClusterName.TEMPERATURE_MEASUREMENT) {
+							roomTemperature = cluster.temperature;
+							break;
+						}
+					}
+					if (roomTemperature !== null) {
+						break;
+					}
+				}
+
 				return {
 					room,
 					mappedRoomName,
@@ -358,6 +378,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 					roomDevices,
 					representedClusters,
 					clusterInfo,
+					roomTemperature,
 				};
 			});
 	}, [detectedRooms, roomMappings, availableRooms, props.devices]);
@@ -574,13 +595,27 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 							)}
 
 							{/* Cluster expand button or cluster icons */}
-							{expandedRoomId === roomData.room.id
+							{expandedRoomId === roomData.room.id ||
+							collapsingRoomId === roomData.room.id
 								? // Show cluster icons when expanded
 									roomData.clusterInfo.map((clusterData, index) => {
 										const x = clusterStartX + index * clusterIconSpacing;
 										const screenX = x * stageTransform.scale + stageTransform.x;
 										const screenY =
 											clusterY * stageTransform.scale + stageTransform.y;
+
+										// Calculate center position (where "..." button is)
+										const centerX =
+											roomData.room.center.x * stageTransform.scale +
+											stageTransform.x;
+										const centerY =
+											(roomData.room.center.y + 30 / stageTransform.scale) *
+												stageTransform.scale +
+											stageTransform.y;
+
+										// Calculate offset from center to final position
+										const offsetX = screenX - centerX;
+										const offsetY = screenY - centerY;
 
 										// Determine if cluster is enabled
 										let isEnabled = false;
@@ -658,13 +693,14 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 											return null;
 										}
 
+										const keyframeName = `clusterExpand-${roomData.room.id}-${index}`;
 										return (
 											<IconButton
 												key={`${roomData.room.id}-${clusterData.clusterName}`}
 												sx={{
 													position: 'absolute',
-													left: screenX - clusterIconSize / 2,
-													top: screenY - clusterIconSize / 2,
+													left: centerX - clusterIconSize / 2,
+													top: centerY - clusterIconSize / 2,
 													width: clusterIconSize,
 													height: clusterIconSize,
 													backgroundColor: isEnabled
@@ -675,6 +711,20 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 														: 'rgba(0, 0, 0, 0.5)',
 													pointerEvents: 'auto',
 													fontSize: '20px',
+													opacity: 0,
+													transform: 'translate(0, 0) scale(0.8)',
+													animation: `${keyframeName} 300ms ease-out forwards`,
+													animationDelay: `${index * 40}ms`,
+													[`@keyframes ${keyframeName}`]: {
+														'0%': {
+															opacity: 0,
+															transform: 'translate(0, 0) scale(0.8)',
+														},
+														'100%': {
+															opacity: 1,
+															transform: `translate(${offsetX}px, ${offsetY}px) scale(1)`,
+														},
+													},
 													'&:hover': {
 														backgroundColor: isEnabled
 															? '#f0f0f0'
@@ -717,9 +767,9 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 											</IconButton>
 										);
 									})
-								: // Show "..." button when collapsed
+								: // Show temperature or "..." button when collapsed
 									roomData.clusterInfo.length > 0 && (
-										<IconButton
+										<Box
 											key={`${roomData.room.id}-ellipsis`}
 											sx={{
 												position: 'absolute',
@@ -735,40 +785,175 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 													24,
 												width: 48,
 												height: 48,
-												backgroundColor: 'rgba(255, 255, 255, 0.9)',
-												color: 'rgba(0, 0, 0, 0.6)',
+												display: 'flex',
+												alignItems: 'center',
+												justifyContent: 'center',
 												pointerEvents: 'auto',
-												fontSize: '20px',
-												fontWeight: 'bold',
-												'&:hover': {
-													backgroundColor: '#ffffff',
-												},
-											}}
-											onClick={(e) => {
-												e.stopPropagation();
-												if (!isDragging) {
-													setExpandedRoomId(
-														expandedRoomId === roomData.room.id
-															? null
-															: roomData.room.id
-													);
-												}
-											}}
-											onPointerDown={(e) => {
-												e.stopPropagation();
-												e.preventDefault();
-												if (!isDragging) {
-													setExpandedRoomId(
-														expandedRoomId === roomData.room.id
-															? null
-															: roomData.room.id
-													);
-												}
+												transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+												opacity:
+													props.temperatureExpanded &&
+													roomData.roomTemperature !== null
+														? 1
+														: roomData.clusterInfo.length > 0
+															? 1
+															: 0,
+												transform:
+													props.temperatureExpanded &&
+													roomData.roomTemperature !== null
+														? 'scale(1)'
+														: 'scale(0.8)',
 											}}
 										>
-											...
-										</IconButton>
+											{props.temperatureExpanded &&
+											roomData.roomTemperature !== null &&
+											expandedRoomId !== roomData.room.id ? (
+												<Box
+													sx={{
+														width: 48,
+														height: 48,
+														backgroundColor:
+															'rgba(255, 255, 255, 0.95)',
+														borderRadius: '50%',
+														display: 'flex',
+														alignItems: 'center',
+														justifyContent: 'center',
+														boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+														transition:
+															'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+														animation:
+															'fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+														'@keyframes fadeInScale': {
+															from: {
+																opacity: 0,
+																transform: 'scale(0.5)',
+															},
+															to: {
+																opacity: 1,
+																transform: 'scale(1)',
+															},
+														},
+														'&:hover': {
+															backgroundColor: '#ffffff',
+															transform: 'scale(1.1)',
+														},
+													}}
+												>
+													<Typography
+														sx={{
+															fontSize: '14px',
+															fontWeight: 600,
+															color: 'rgba(0, 0, 0, 0.87)',
+														}}
+													>
+														{Math.round(roomData.roomTemperature * 10) /
+															10}
+														°
+													</Typography>
+												</Box>
+											) : (
+												<IconButton
+													sx={{
+														width: 48,
+														height: 48,
+														backgroundColor: 'rgba(255, 255, 255, 0.9)',
+														color: 'rgba(0, 0, 0, 0.6)',
+														fontSize: '20px',
+														fontWeight: 'bold',
+														opacity: 1,
+														transform: 'scale(1)',
+														transition:
+															'opacity 200ms ease-out, transform 200ms ease-out',
+														'&:hover': {
+															backgroundColor: '#ffffff',
+															transform: 'scale(1.1)',
+														},
+													}}
+													onClick={(e) => {
+														e.stopPropagation();
+														if (!isDragging) {
+															if (
+																expandedRoomId === roomData.room.id
+															) {
+																setCollapsingRoomId(
+																	roomData.room.id
+																);
+																setTimeout(() => {
+																	setExpandedRoomId(null);
+																	setCollapsingRoomId(null);
+																}, 200);
+															} else {
+																setExpandedRoomId(roomData.room.id);
+															}
+														}
+													}}
+													onPointerDown={(e) => {
+														e.stopPropagation();
+														e.preventDefault();
+														if (!isDragging) {
+															if (
+																expandedRoomId === roomData.room.id
+															) {
+																setCollapsingRoomId(
+																	roomData.room.id
+																);
+																setTimeout(() => {
+																	setExpandedRoomId(null);
+																	setCollapsingRoomId(null);
+																}, 200);
+															} else {
+																setExpandedRoomId(roomData.room.id);
+															}
+														}
+													}}
+												>
+													...
+												</IconButton>
+											)}
+										</Box>
 									)}
+							{/* Show "..." button fading out when expanding */}
+							{expandedRoomId === roomData.room.id &&
+								!collapsingRoomId &&
+								roomData.clusterInfo.length > 0 && (
+									<IconButton
+										key={`${roomData.room.id}-ellipsis-fading`}
+										sx={{
+											position: 'absolute',
+											left:
+												roomData.room.center.x * stageTransform.scale +
+												stageTransform.x -
+												24,
+											top:
+												(roomData.room.center.y +
+													30 / stageTransform.scale) *
+													stageTransform.scale +
+												stageTransform.y -
+												24,
+											width: 48,
+											height: 48,
+											backgroundColor: 'rgba(255, 255, 255, 0.9)',
+											color: 'rgba(0, 0, 0, 0.6)',
+											pointerEvents: 'none',
+											fontSize: '20px',
+											fontWeight: 'bold',
+											opacity: 1,
+											transform: 'scale(1)',
+											animation: `ellipsisFadeOut-${roomData.room.id} 200ms ease-out forwards`,
+											[`@keyframes ellipsisFadeOut-${roomData.room.id}`]: {
+												'0%': {
+													opacity: 1,
+													transform: 'scale(1)',
+												},
+												'100%': {
+													opacity: 0,
+													transform: 'scale(0.8)',
+												},
+											},
+										}}
+									>
+										...
+									</IconButton>
+								)}
 						</React.Fragment>
 					);
 				})}

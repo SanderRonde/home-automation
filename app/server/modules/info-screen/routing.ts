@@ -36,12 +36,12 @@ export async function initRouting(moduleConfig: ModuleConfig): Promise<void> {
 					}),
 					async (body, _req, _server, { json }) => {
 						const { type, period } = body;
+						const modules = await InfoScreen.getModules<AllModules>();
 						const response = await (async () => {
 							if (type === 'inside') {
-								// Use temperature module
-								const temp = await (
-									await InfoScreen.getModules<AllModules>()
-								).temperature.getTemp('room');
+								// Request inside temperature from temperature module
+								const temp =
+									await modules.temperature.getInsideTemperature(modules);
 								return {
 									temperature: temp,
 									icon: 'inside.png',

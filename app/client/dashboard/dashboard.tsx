@@ -18,6 +18,7 @@ import { Scenes } from './components/Scenes';
 import { Groups } from './components/Groups';
 import { Home } from './components/Home';
 import { apiGet } from '../lib/fetch';
+import { TemperatureConfig } from './components/TemperatureConfig';
 
 // Register service worker for PWA functionality
 if ('serviceWorker' in navigator) {
@@ -132,6 +133,8 @@ function DashboardApp() {
 				return <LEDSourcesConfig />;
 			case SidebarTab.AI:
 				return <AIConfig />;
+			case SidebarTab.TEMPERATURE:
+				return <TemperatureConfig />;
 			default:
 				return <NotFoundPage onReturnToSettings={handleReturnToSettings} />;
 		}
