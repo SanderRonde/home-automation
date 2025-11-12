@@ -179,6 +179,56 @@ function serializeDetailViewToHash(view: HomeDetailView | null): string {
 	return 'home';
 }
 
+interface SceneQuickActionsProps {
+	scenes: Scene[];
+	triggeringSceneId: string | null;
+	onTrigger: (sceneId: string) => void;
+	centered?: boolean;
+}
+
+const SceneQuickActions = (props: SceneQuickActionsProps): JSX.Element | null => {
+	const { scenes, triggeringSceneId, onTrigger, centered } = props;
+	if (scenes.length === 0) {
+		return null;
+	}
+
+	return (
+		<Box
+			sx={{
+				display: 'flex',
+				flexWrap: 'wrap',
+				gap: 1.5,
+				justifyContent: centered ? 'center' : undefined,
+			}}
+		>
+			{scenes.map((scene) => (
+				<Chip
+					key={scene.id}
+					icon={<IconComponent iconName={scene.icon} />}
+					label={scene.title}
+					onClick={() => onTrigger(scene.id)}
+					disabled={triggeringSceneId === scene.id}
+					sx={{
+						height: 48,
+						px: 2,
+						fontSize: '0.95rem',
+						fontWeight: 500,
+						backgroundColor: 'background.paper',
+						border: '1px solid',
+						borderColor: 'divider',
+						'& .MuiChip-icon': {
+							fontSize: '1.4rem',
+						},
+						'&:hover': {
+							backgroundColor: 'action.hover',
+						},
+					}}
+				/>
+			))}
+		</Box>
+	);
+};
+
 export const Home = (): JSX.Element => {
 	const { loading, devices, refresh } = useDevices();
 	const [scenes, setScenes] = React.useState<Scene[]>([]);
@@ -491,6 +541,41 @@ export const Home = (): JSX.Element => {
 	if (viewMode === 'layout' && hasLayout) {
 		return (
 			<Box sx={{ position: 'relative', height: '100%' }}>
+				{scenes.length > 0 && (
+					<Box
+						sx={{
+							position: 'absolute',
+							top: { xs: 12, sm: 16 },
+							left: 0,
+							right: 0,
+							display: 'flex',
+							justifyContent: 'center',
+							pointerEvents: 'none',
+							zIndex: 2,
+							px: { xs: 2, sm: 3 },
+						}}
+					>
+						<Box
+							sx={{
+								pointerEvents: 'auto',
+								backgroundColor: 'background.paper',
+								borderRadius: 4,
+								boxShadow: 4,
+								px: { xs: 1.5, sm: 2 },
+								py: { xs: 1, sm: 1.5 },
+								maxWidth: { xs: 'calc(100% - 32px)', sm: 640 },
+								display: 'inline-block',
+							}}
+						>
+							<SceneQuickActions
+								scenes={scenes}
+								triggeringSceneId={triggeringSceneId}
+								onTrigger={handleTriggerScene}
+								centered
+							/>
+						</Box>
+					</Box>
+				)}
 				<HomeLayoutView
 					devices={devices}
 					pushDetailView={pushDetailView}
@@ -527,42 +612,11 @@ export const Home = (): JSX.Element => {
 				}}
 			>
 				{/* Scene Triggers */}
-				{scenes.length > 0 && (
-					<Box
-						sx={{
-							display: 'flex',
-							flexWrap: 'wrap',
-							gap: 1.5,
-						}}
-					>
-						{scenes.map((scene) => {
-							return (
-								<Chip
-									key={scene.id}
-									icon={<IconComponent iconName={scene.icon} />}
-									label={scene.title}
-									onClick={() => handleTriggerScene(scene.id)}
-									disabled={triggeringSceneId === scene.id}
-									sx={{
-										height: 48,
-										px: 2,
-										fontSize: '0.95rem',
-										fontWeight: 500,
-										backgroundColor: 'background.paper',
-										border: '1px solid',
-										borderColor: 'divider',
-										'& .MuiChip-icon': {
-											fontSize: '1.4rem',
-										},
-										'&:hover': {
-											backgroundColor: 'action.hover',
-										},
-									}}
-								/>
-							);
-						})}
-					</Box>
-				)}
+				<SceneQuickActions
+					scenes={scenes}
+					triggeringSceneId={triggeringSceneId}
+					onTrigger={handleTriggerScene}
+				/>
 
 				{/* Group Cards */}
 				{homePageGroups.map((groupData, index) => {
