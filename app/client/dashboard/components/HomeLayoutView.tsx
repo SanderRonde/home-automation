@@ -600,7 +600,11 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 								? // Show cluster icons when expanded
 									roomData.clusterInfo.map((clusterData, index) => {
 										const x = clusterStartX + index * clusterIconSpacing;
-										const screenX = x * stageTransform.scale + stageTransform.x;
+										// Calculate the center of the icon in world space, then convert to screen space
+										const iconCenterX =
+											x + clusterIconSize / stageTransform.scale / 2;
+										const screenX =
+											iconCenterX * stageTransform.scale + stageTransform.x;
 										const screenY =
 											clusterY * stageTransform.scale + stageTransform.y;
 
@@ -613,7 +617,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 												stageTransform.scale +
 											stageTransform.y;
 
-										// Calculate offset from center to final position
+										// Calculate offset from center to final position (icon center to button center)
 										const offsetX = screenX - centerX;
 										const offsetY = screenY - centerY;
 
