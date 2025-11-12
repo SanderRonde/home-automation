@@ -230,7 +230,7 @@ export const Home = (): JSX.Element => {
 				const response = await apiGet('device', '/layout', {});
 				if (response.ok) {
 					const data = await response.json();
-					if (data.layout && data.layout.walls && data.layout.walls.length > 0) {
+					if (data.layout?.walls && data.layout.walls.length > 0) {
 						setHasLayout(true);
 					}
 				}

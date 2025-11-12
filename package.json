@@ -35,7 +35,7 @@
 		"@eslint/compat": "^1.4.0",
 		"@matter/types": "^0.15.3",
 		"@playwright/test": "^1.56.0",
-		"@types/bun": "^1.1.14",
+		"@types/bun": "1.2.20",
 		"@types/fs-extra": "^7.0.0",
 		"@types/node": "^20.19.11",
 		"@types/ping": "^0.2.0",

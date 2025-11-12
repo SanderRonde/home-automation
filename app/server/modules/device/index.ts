@@ -32,7 +32,6 @@ export interface DoorSlot {
 }
 
 export interface HouseLayout {
-	bounds: { width: number; height: number };
 	walls: WallSegment[];
 	doors: DoorSlot[];
 	roomMappings: Record<string, string>;
