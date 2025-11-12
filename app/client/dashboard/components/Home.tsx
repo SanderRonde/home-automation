@@ -184,7 +184,10 @@ export const Home = (): JSX.Element => {
 	const [scenes, setScenes] = React.useState<Scene[]>([]);
 	const [groups, setGroups] = React.useState<DeviceGroup[]>([]);
 	const [triggeringSceneId, setTriggeringSceneId] = React.useState<string | null>(null);
-	const [viewMode, setViewMode] = React.useState<'list' | 'layout'>('list');
+	const [viewMode, setViewMode] = React.useState<'list' | 'layout'>(() => {
+		const saved = localStorage.getItem('homeViewMode');
+		return saved === 'layout' || saved === 'list' ? saved : 'list';
+	});
 	const [hasLayout, setHasLayout] = React.useState(false);
 
 	// Load scenes marked as favorites
@@ -237,6 +240,11 @@ export const Home = (): JSX.Element => {
 		};
 		void checkLayout();
 	}, []);
+
+	// Save view mode to localStorage
+	React.useEffect(() => {
+		localStorage.setItem('homeViewMode', viewMode);
+	}, [viewMode]);
 
 	// Group devices by room
 	const roomDevices: RoomDevices[] = React.useMemo(() => {
