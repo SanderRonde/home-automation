@@ -159,7 +159,7 @@ export class LEDArtColorControlCluster
 		}
 	};
 
-	public getSegmentCount = (): number => 3;
+	public getSegmentCount = (): number => 2;
 }
 
 export class LEDArtActionsCluster extends ConfigurableCluster implements DeviceActionsCluster {
