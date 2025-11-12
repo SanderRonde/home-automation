@@ -121,7 +121,13 @@ export class LEDArtColorControlCluster
 	});
 
 	public setColor = async (args: { colors: Color[]; overDurationMs?: number }): Promise<void> => {
-		if (args.colors.length === 1) {
+		// Convert colors to HSL, set L to 0.5, then convert back to RGB
+		const adjustedColors = args.colors.map((color) => {
+			const hsl = color.toHSL();
+			return Color.fromHSL(hsl.hue, hsl.saturation, 0.5);
+		});
+
+		if (adjustedColors.length === 1) {
 			const currentEffect = this.client.effects.current().current_effect;
 			const effect =
 				currentEffect === 'SingleColorEffect'
@@ -131,9 +137,9 @@ export class LEDArtColorControlCluster
 				effect_name: effect,
 				parameters: {
 					color: {
-						r: args.colors[0].r,
-						g: args.colors[0].g,
-						b: args.colors[0].b,
+						r: adjustedColors[0].r,
+						g: adjustedColors[0].g,
+						b: adjustedColors[0].b,
 					},
 				},
 			});
@@ -146,7 +152,7 @@ export class LEDArtColorControlCluster
 			await this.client.setEffect({
 				effect_name: effect,
 				parameters: {
-					colors: args.colors.map((color) => ({
+					colors: adjustedColors.map((color) => ({
 						r: color.r,
 						g: color.g,
 						b: color.b,
