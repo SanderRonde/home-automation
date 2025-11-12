@@ -54,6 +54,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	const [collapsingRoomId, setCollapsingRoomId] = React.useState<string | null>(null);
 	const lastDist = React.useRef<number>(0);
 	const lastCenter = React.useRef<{ x: number; y: number } | null>(null);
+	const isPinching = React.useRef<boolean>(false);
 
 	const width = window.innerWidth > 900 ? window.innerWidth - 240 : window.innerWidth;
 	const height = window.innerHeight - 64;
@@ -242,7 +243,6 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 
 	const handleTouchMove = React.useCallback(
 		(e: KonvaEventObject<TouchEvent>) => {
-			e.evt.preventDefault();
 			const stage = stageRef.current;
 			if (!stage) {
 				return;
@@ -252,7 +252,11 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 			const touch2 = e.evt.touches[1];
 
 			if (touch1 && touch2) {
-				// Pinch gesture with two touches
+				// Pinch gesture with two touches - prevent default and disable dragging
+				e.evt.preventDefault();
+				isPinching.current = true;
+				stage.draggable(false);
+
 				const p1 = { x: touch1.clientX, y: touch1.clientY };
 				const p2 = { x: touch2.clientX, y: touch2.clientY };
 
@@ -283,28 +287,58 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				lastDist.current = dist;
 				lastCenter.current = newCenter;
 				updateStageTransform();
+			} else if (isPinching.current) {
+				// If we were pinching but now only have one touch, prevent default to avoid drag
+				e.evt.preventDefault();
 			}
 		},
 		[updateStageTransform]
 	);
 
-	const handleTouchEnd = React.useCallback(() => {
-		lastDist.current = 0;
-		lastCenter.current = null;
+	const handleTouchEnd = React.useCallback((e: KonvaEventObject<TouchEvent>) => {
+		const stage = stageRef.current;
+		if (e.evt.touches.length === 0) {
+			// All touches ended - reset pinch state and re-enable dragging
+			lastDist.current = 0;
+			lastCenter.current = null;
+			isPinching.current = false;
+			if (stage) {
+				stage.draggable(true);
+			}
+		} else if (e.evt.touches.length === 1 && isPinching.current) {
+			// One finger lifted during pinch - reset pinch state and re-enable dragging
+			// so the remaining finger can drag
+			lastDist.current = 0;
+			lastCenter.current = null;
+			isPinching.current = false;
+			if (stage) {
+				stage.draggable(true);
+			}
+		}
 	}, []);
 
 	const handleTouchStart = React.useCallback(
 		(e: KonvaEventObject<TouchEvent>) => {
+			const stage = stageRef.current;
 			if (e.evt.touches.length === 2) {
 				// Two finger touch - prepare for pinch zoom
+				e.evt.preventDefault();
+				isPinching.current = true;
+				if (stage) {
+					stage.draggable(false);
+				}
 				const touch1 = e.evt.touches[0];
 				const touch2 = e.evt.touches[1];
 				const p1 = { x: touch1.clientX, y: touch1.clientY };
 				const p2 = { x: touch2.clientX, y: touch2.clientY };
 				lastDist.current = getDistance(p1, p2);
 				lastCenter.current = getCenter(p1, p2);
-			} else if (e.evt.touches.length === 1) {
+			} else if (e.evt.touches.length === 1 && !isPinching.current) {
+				// Single touch - only handle if not in pinch mode
 				handleStageMouseDown(e);
+			} else if (isPinching.current) {
+				// If we're in pinch mode, prevent default to avoid interference
+				e.evt.preventDefault();
 			}
 		},
 		[handleStageMouseDown]
