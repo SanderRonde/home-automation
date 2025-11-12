@@ -67,13 +67,16 @@ export async function applyPaletteToDevices(devices: Device[], palette: Palette)
 
 		try {
 			const segmentCount = colorControlCluster.getSegmentCount();
-			const colors = [];
-			for (let i = 0; i < segmentCount; i++) {
-				const hexColor = palette.colors[Math.floor(Math.random() * palette.colors.length)];
-				const hsv = hexToHSV(hexColor);
-				const color = Color.fromHSV(hsv.hue, hsv.saturation, hsv.value);
-				colors.push(color);
+			const randomPalettes: string[] = [];
+			for (let i = 0; i < Math.ceil(segmentCount / palette.colors.length); i++) {
+				const shuffledColors = [...palette.colors].sort(() => Math.random() - 0.5);
+				randomPalettes.push(...shuffledColors);
 			}
+
+			const colors = randomPalettes.slice(0, segmentCount).map((hexColor) => {
+				const hsv = hexToHSV(hexColor);
+				return Color.fromHSV(hsv.hue, hsv.saturation, hsv.value);
+			});
 
 			await colorControlCluster.setColor({ colors });
 			logTag(
