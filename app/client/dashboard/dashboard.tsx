@@ -19,6 +19,7 @@ import { Groups } from './components/Groups';
 import { Home } from './components/Home';
 import { apiGet } from '../lib/fetch';
 import { TemperatureConfig } from './components/TemperatureConfig';
+import { PowerUsage } from './components/PowerUsage';
 
 // Register service worker for PWA functionality
 if ('serviceWorker' in navigator) {
@@ -135,6 +136,8 @@ function DashboardApp() {
 				return <AIConfig />;
 			case SidebarTab.TEMPERATURE:
 				return <TemperatureConfig />;
+			case SidebarTab.POWER_USAGE:
+				return <PowerUsage />;
 			default:
 				return <NotFoundPage onReturnToSettings={handleReturnToSettings} />;
 		}

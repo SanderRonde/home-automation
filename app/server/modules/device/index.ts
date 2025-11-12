@@ -195,6 +195,25 @@ export const Device = new (class Device extends ModuleMeta {
 			`;
 		}
 
+		// Initialize SQL table for power events
+		const powerEventsTableExists = await config.sqlDB<{ name: string }[]>`
+			SELECT name FROM sqlite_master WHERE type='table' AND name='power_events'
+		`;
+
+		if (!powerEventsTableExists.length) {
+			await config.sqlDB`
+				CREATE TABLE power_events (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					device_id TEXT NOT NULL,
+					active_power REAL NOT NULL,
+					timestamp INTEGER NOT NULL
+				)
+			`;
+			await config.sqlDB`
+				CREATE INDEX idx_power_device_time ON power_events(device_id, timestamp DESC)
+			`;
+		}
+
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
 		const api = new DeviceAPI(config.db, config.sqlDB, this.getModules() as unknown);
 		this.api.set(api);

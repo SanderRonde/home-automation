@@ -354,6 +354,20 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 				);
 				return json({ history });
 			},
+			'/power/:deviceId/:timeframe': async (req, _server, { json }) => {
+				const timeframe = parseInt(req.params.timeframe, 10);
+				const history = await api.powerTracker.getHistory(
+					req.params.deviceId,
+					1000,
+					timeframe
+				);
+				return json({ history });
+			},
+			'/power/all/:timeframe': async (req, _server, { json }) => {
+				const timeframe = parseInt(req.params.timeframe, 10);
+				const history = await api.powerTracker.getAllDevicesHistory(1000, timeframe);
+				return json({ history });
+			},
 			'/updateName': withRequestBody(
 				z.object({
 					deviceId: z.string(),
