@@ -754,6 +754,17 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 													);
 												}
 											}}
+											onPointerDown={(e) => {
+												e.stopPropagation();
+												e.preventDefault();
+												if (!isDragging) {
+													setExpandedRoomId(
+														expandedRoomId === roomData.room.id
+															? null
+															: roomData.room.id
+													);
+												}
+											}}
 										>
 											...
 										</IconButton>
