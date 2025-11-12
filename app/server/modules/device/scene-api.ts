@@ -13,9 +13,9 @@ import type {
 	SceneExecution,
 } from '../../../../types/scene';
 import { SceneTriggerType, SceneConditionType } from '../../../../types/scene';
-import { applyPaletteToDevices } from './palette-executor.js';
-import { HOME_STATE } from '../home-detector/types.js';
+import { applyPaletteToDevices } from './palette-executor';
 import { assertUnreachable } from '../../lib/assert';
+import { HOME_STATE } from '../home-detector/types';
 import { logTag } from '../../lib/logging/logger';
 import type { PaletteAPI } from './palette-api';
 import type { Database } from '../../lib/db';
