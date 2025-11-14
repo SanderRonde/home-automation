@@ -7,6 +7,7 @@ import { OccupancyTracker } from './occupancy-tracker';
 import type { DeviceInfo, RoomInfo } from './routing';
 import { HumidityTracker } from './humidity-tracker';
 import { SwitchTracker } from './switch-tracker';
+import { PowerTracker } from './power-tracker';
 import type { Database } from '../../lib/db';
 import { PaletteAPI } from './palette-api';
 import { SceneAPI } from './scene-api';
@@ -22,6 +23,7 @@ export class DeviceAPI {
 	public readonly illuminanceTracker: IlluminanceTracker;
 	public readonly buttonPressTracker: SwitchTracker;
 	public readonly booleanStateTracker: BooleanStateTracker;
+	public readonly powerTracker: PowerTracker;
 	public readonly paletteAPI: PaletteAPI;
 	public readonly sceneAPI: SceneAPI;
 	public readonly groupAPI: GroupAPI;
@@ -48,6 +50,7 @@ export class DeviceAPI {
 		this.illuminanceTracker = new IlluminanceTracker(sqlDB);
 		this.buttonPressTracker = new SwitchTracker(sqlDB, this.sceneAPI);
 		this.booleanStateTracker = new BooleanStateTracker(sqlDB);
+		this.powerTracker = new PowerTracker(sqlDB);
 	}
 
 	public readonly devices = new Data<{
@@ -83,6 +86,7 @@ export class DeviceAPI {
 		this.illuminanceTracker.trackDevices(devices);
 		this.buttonPressTracker.trackDevices(devices);
 		this.booleanStateTracker.trackDevices(devices);
+		this.powerTracker.trackDevices(devices);
 	}
 
 	public updateDeviceName(deviceId: string, name: string): boolean {
