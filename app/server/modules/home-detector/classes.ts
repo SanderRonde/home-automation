@@ -550,9 +550,29 @@ export class Detector {
 		}));
 	}
 
-	public async triggerRapidPing(): Promise<void> {
+	public async triggerRapidPing(options?: {
+		fireAnybodyHomeFirst?: boolean;
+	}): Promise<void> {
 		const allStates = this.getAll();
+		const anyoneHome = Object.values(allStates).some((state) => state === HOME_STATE.HOME);
 		const allHome = Object.values(allStates).every((state) => state === HOME_STATE.HOME);
+
+		// If requested, fire ANYBODY_HOME first (if not already home)
+		if (options?.fireAnybodyHomeFirst && !anyoneHome) {
+			logTag(
+				'home-detector',
+				'yellow',
+				'Movement detected - firing ANYBODY_HOME before rapid ping'
+			);
+			const deviceAPI = await (this._modules as AllModules).device.api.value;
+			try {
+				await deviceAPI.sceneAPI.onTrigger({
+					type: SceneTriggerType.ANYBODY_HOME,
+				});
+			} catch (error) {
+				logTag('home-detector', 'red', 'Failed to trigger anybody-home scenes:', error);
+			}
+		}
 
 		if (allHome) {
 			return;
@@ -578,7 +598,7 @@ export class Detector {
 		logTag(
 			'home-detector',
 			'yellow',
-			'Door triggered but no one came home - sending notification'
+			'Sensor triggered but no one came home - sending notification and firing NOBODY_HOME'
 		);
 		try {
 			const pushManager = await (this._modules as AllModules).notification.getPushManager();
@@ -593,6 +613,16 @@ export class Detector {
 			});
 		} catch (error) {
 			logTag('home-detector', 'red', 'Failed to trigger nobody-home-timeout scenes:', error);
+		}
+		// Also fire NOBODY_HOME if we had fired ANYBODY_HOME earlier
+		if (options?.fireAnybodyHomeFirst && !anyoneHome) {
+			try {
+				await deviceAPI.sceneAPI.onTrigger({
+					type: SceneTriggerType.NOBODY_HOME,
+				});
+			} catch (error) {
+				logTag('home-detector', 'red', 'Failed to trigger nobody-home scenes:', error);
+			}
 		}
 	}
 
@@ -742,7 +772,7 @@ export class MovementSensorMonitor {
 				continue;
 			}
 
-			for (const occupancyCluster of occupancyClusters) {
+				for (const occupancyCluster of occupancyClusters) {
 				// Subscribe to occupancy changes
 				const unsubscribe = occupancyCluster.onOccupied.listen(async ({ occupied }) => {
 					// Movement detected (occupied changed to true)
@@ -750,9 +780,9 @@ export class MovementSensorMonitor {
 						logTag(
 							'home-detector',
 							'yellow',
-							`Movement sensor ${deviceId} triggered - starting rapid ping`
+							`Movement sensor ${deviceId} triggered - firing ANYBODY_HOME and starting rapid ping`
 						);
-						void this._detector.triggerRapidPing();
+						void this._detector.triggerRapidPing({ fireAnybodyHomeFirst: true });
 						await this._detector.logMovementSensorTrigger();
 					}
 				});
