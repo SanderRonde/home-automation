@@ -19,6 +19,7 @@ import { Groups } from './components/Groups';
 import { Home } from './components/Home';
 import { apiGet } from '../lib/fetch';
 import { TemperatureConfig } from './components/TemperatureConfig';
+import { TemperatureHistory } from './components/TemperatureHistory';
 import { PowerUsage } from './components/PowerUsage';
 
 // Register service worker for PWA functionality
@@ -112,6 +113,8 @@ function DashboardApp() {
 				return <Home />;
 			case SidebarTab.LAYOUT:
 				return <HouseLayout />;
+			case SidebarTab.TEMPERATURE_HISTORY:
+				return <TemperatureHistory />;
 			case SidebarTab.SCENES:
 				return <Scenes />;
 			case SidebarTab.GROUPS:

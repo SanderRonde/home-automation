@@ -59,6 +59,7 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 			items: [
 				{ text: 'Home', icon: <HomeIcon />, id: SidebarTab.HOME },
 				{ text: 'Layout', icon: <MapIcon />, id: SidebarTab.LAYOUT },
+				{ text: 'Temperature History', icon: <DeviceThermostatIcon />, id: SidebarTab.TEMPERATURE_HISTORY },
 				{ text: 'Power Usage', icon: <BoltIcon />, id: SidebarTab.POWER_USAGE },
 			],
 		},
@@ -156,6 +157,7 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 export enum SidebarTab {
 	HOME = 'home',
 	LAYOUT = 'layout',
+	TEMPERATURE_HISTORY = 'temperature-history',
 	SCENES = 'scenes',
 	GROUPS = 'groups',
 	PALETTES = 'palettes',

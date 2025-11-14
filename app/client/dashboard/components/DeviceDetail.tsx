@@ -968,13 +968,13 @@ const SwitchDetail = (props: SwitchDetailProps): JSX.Element => {
 	);
 };
 
-type Timeframe = 'hour' | 'day' | 'week' | 'month';
+type Timeframe = '1h' | '6h' | '24h' | '1week';
 
 const TIMEFRAME_MS: Record<Timeframe, number> = {
-	hour: 60 * 60 * 1000,
-	day: 24 * 60 * 60 * 1000,
-	week: 7 * 24 * 60 * 60 * 1000,
-	month: 30 * 24 * 60 * 60 * 1000,
+	'1h': 60 * 60 * 1000,
+	'6h': 6 * 60 * 60 * 1000,
+	'24h': 24 * 60 * 60 * 1000,
+	'1week': 7 * 24 * 60 * 60 * 1000,
 };
 
 interface TemperatureEvent {
@@ -989,7 +989,7 @@ const TemperatureDetail = (props: TemperatureDetailProps): JSX.Element => {
 	const [history, setHistory] = useState<TemperatureEvent[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
-	const [timeframe, setTimeframe] = useState<Timeframe>('day');
+	const [timeframe, setTimeframe] = useState<Timeframe>('24h');
 	const roomColor = props.device.roomColor || '#555';
 
 	const deviceId = props.device.uniqueId;
@@ -1036,13 +1036,13 @@ const TemperatureDetail = (props: TemperatureDetailProps): JSX.Element => {
 			.reverse()
 			.map((e) => {
 				const date = new Date(e.timestamp);
-				if (timeframe === 'hour') {
+				if (timeframe === '1h' || timeframe === '6h') {
 					return date.toLocaleTimeString('en-US', {
 						hour: '2-digit',
 						minute: '2-digit',
 					});
 				}
-				if (timeframe === 'day') {
+				if (timeframe === '24h') {
 					return date.toLocaleTimeString('en-US', {
 						hour: '2-digit',
 						minute: '2-digit',
@@ -1185,10 +1185,10 @@ const TemperatureDetail = (props: TemperatureDetailProps): JSX.Element => {
 											onChange={(_, value) => value && setTimeframe(value)}
 											size="small"
 										>
-											<ToggleButton value="hour">Hour</ToggleButton>
-											<ToggleButton value="day">Day</ToggleButton>
-											<ToggleButton value="week">Week</ToggleButton>
-											<ToggleButton value="month">Month</ToggleButton>
+											<ToggleButton value="1h">1h</ToggleButton>
+											<ToggleButton value="6h">6h</ToggleButton>
+											<ToggleButton value="24h">24h</ToggleButton>
+											<ToggleButton value="1week">1 week</ToggleButton>
 										</ToggleButtonGroup>
 									</Box>
 									{history.length === 0 ? (
@@ -1238,7 +1238,7 @@ const HumidityDetail = (props: HumidityDetailProps): JSX.Element => {
 	const [history, setHistory] = useState<HumidityEvent[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
-	const [timeframe, setTimeframe] = useState<Timeframe>('day');
+	const [timeframe, setTimeframe] = useState<Timeframe>('24h');
 	const roomColor = props.device.roomColor || '#555';
 
 	const deviceId = props.device.uniqueId;
@@ -1489,7 +1489,7 @@ const IlluminanceDetail = (props: IlluminanceDetailProps): JSX.Element => {
 	const [history, setHistory] = useState<IlluminanceEvent[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
-	const [timeframe, setTimeframe] = useState<Timeframe>('day');
+	const [timeframe, setTimeframe] = useState<Timeframe>('24h');
 	const roomColor = props.device.roomColor || '#555';
 
 	const deviceId = props.device.uniqueId;
@@ -1729,7 +1729,7 @@ const IlluminanceDetail = (props: IlluminanceDetailProps): JSX.Element => {
 interface SensorGroupDetailProps extends DeviceDetailBaseProps<DashboardDeviceClusterSensorGroup> {}
 
 const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
-	const [timeframe, setTimeframe] = useState<Timeframe>('day');
+	const [timeframe, setTimeframe] = useState<Timeframe>('24h');
 	const [loading, setLoading] = useState(false);
 	const roomColor = props.device.roomColor || '#555';
 
@@ -1904,7 +1904,7 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 					.reverse()
 					.map((e) => {
 						const date = new Date(e.timestamp);
-						if (timeframe === 'hour' || timeframe === 'day') {
+						if (timeframe === '1h' || timeframe === '6h' || timeframe === '24h') {
 							return date.toLocaleTimeString('en-US', {
 								hour: '2-digit',
 								minute: '2-digit',
@@ -1939,7 +1939,7 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 					.reverse()
 					.map((e) => {
 						const date = new Date(e.timestamp);
-						if (timeframe === 'hour' || timeframe === 'day') {
+						if (timeframe === '1h' || timeframe === '6h' || timeframe === '24h') {
 							return date.toLocaleTimeString('en-US', {
 								hour: '2-digit',
 								minute: '2-digit',
@@ -1974,7 +1974,7 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 					.reverse()
 					.map((e) => {
 						const date = new Date(e.timestamp);
-						if (timeframe === 'hour' || timeframe === 'day') {
+						if (timeframe === '1h' || timeframe === '6h' || timeframe === '24h') {
 							return date.toLocaleTimeString('en-US', {
 								hour: '2-digit',
 								minute: '2-digit',
@@ -2121,10 +2121,10 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 								onChange={(_, value) => value && setTimeframe(value)}
 								size="small"
 							>
-								<ToggleButton value="hour">Hour</ToggleButton>
-								<ToggleButton value="day">Day</ToggleButton>
-								<ToggleButton value="week">Week</ToggleButton>
-								<ToggleButton value="month">Month</ToggleButton>
+								<ToggleButton value="1h">1h</ToggleButton>
+								<ToggleButton value="6h">6h</ToggleButton>
+								<ToggleButton value="24h">24h</ToggleButton>
+								<ToggleButton value="1week">1 week</ToggleButton>
 							</ToggleButtonGroup>
 						</Box>
 					</motion.div>
