@@ -334,7 +334,16 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				lastDist.current = getDistance(p1, p2);
 				lastCenter.current = getCenter(p1, p2);
 			} else if (e.evt.touches.length === 1 && !isPinching.current) {
-				// Single touch - only handle if not in pinch mode
+				// Single touch - check if target is a room polygon (has onTap handler)
+				// If so, don't start drag tracking to allow tap to work
+				const target = e.target;
+				// Check if target is a Line (room polygon) - room polygons have onTap handlers
+				// We can identify them by checking if they're in the rooms layer
+				if (target && target.getType && target.getType() === 'Line') {
+					// This is likely a room polygon - don't start drag, let tap event handle it
+					return;
+				}
+				// Single touch on stage background - allow drag
 				handleStageMouseDown(e);
 			} else if (isPinching.current) {
 				// If we're in pinch mode, prevent default to avoid interference
@@ -569,6 +578,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 									onMouseOver={cursorPointer}
 									onMouseOut={cursorDefault}
 									onClick={() => handleRoomClick(roomData.mappedRoomName)}
+									onTap={() => handleRoomClick(roomData.mappedRoomName)}
 								/>
 							</React.Fragment>
 						);
@@ -927,6 +937,24 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 													onPointerDown={(e) => {
 														e.stopPropagation();
 														e.preventDefault();
+														if (!isDragging) {
+															if (
+																expandedRoomId === roomData.room.id
+															) {
+																setCollapsingRoomId(
+																	roomData.room.id
+																);
+																setTimeout(() => {
+																	setExpandedRoomId(null);
+																	setCollapsingRoomId(null);
+																}, 200);
+															} else {
+																setExpandedRoomId(roomData.room.id);
+															}
+														}
+													}}
+													onTouchStart={(e) => {
+														e.stopPropagation();
 														if (!isDragging) {
 															if (
 																expandedRoomId === roomData.room.id
