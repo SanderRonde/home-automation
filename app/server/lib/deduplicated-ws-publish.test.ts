@@ -1,15 +1,15 @@
-import { describe, it, expect } from 'bun:test';
 import {
 	createDeduplicatedWSPublish,
 	createDeduplicatedTypedWSPublish,
 } from './deduplicated-ws-publish';
+import { describe, it, expect } from 'bun:test';
 
 describe('createDeduplicatedWSPublish', () => {
 	it('should send the first message', async () => {
 		let callCount = 0;
-		const mockPublish = async (data: string) => {
+		const mockPublish = () => {
 			callCount++;
-			return callCount;
+			return Promise.resolve(callCount);
 		};
 
 		const deduplicatedPublish = createDeduplicatedWSPublish(mockPublish);
@@ -22,9 +22,9 @@ describe('createDeduplicatedWSPublish', () => {
 
 	it('should not send duplicate messages', async () => {
 		let callCount = 0;
-		const mockPublish = async (data: string) => {
+		const mockPublish = () => {
 			callCount++;
-			return callCount;
+			return Promise.resolve(callCount);
 		};
 
 		const deduplicatedPublish = createDeduplicatedWSPublish(mockPublish);
@@ -38,9 +38,9 @@ describe('createDeduplicatedWSPublish', () => {
 
 	it('should send when message changes', async () => {
 		let callCount = 0;
-		const mockPublish = async (data: string) => {
+		const mockPublish = () => {
 			callCount++;
-			return callCount;
+			return Promise.resolve(callCount);
 		};
 
 		const deduplicatedPublish = createDeduplicatedWSPublish(mockPublish);
@@ -62,9 +62,9 @@ describe('createDeduplicatedTypedWSPublish', () => {
 
 	it('should send the first typed message', async () => {
 		let callCount = 0;
-		const mockPublish = async (data: string) => {
+		const mockPublish = () => {
 			callCount++;
-			return callCount;
+			return Promise.resolve(callCount);
 		};
 
 		const deduplicatedPublish = createDeduplicatedTypedWSPublish<TestMessage>(mockPublish);
@@ -77,9 +77,9 @@ describe('createDeduplicatedTypedWSPublish', () => {
 
 	it('should not send duplicate typed messages', async () => {
 		let callCount = 0;
-		const mockPublish = async (data: string) => {
+		const mockPublish = () => {
 			callCount++;
-			return callCount;
+			return Promise.resolve(callCount);
 		};
 
 		const deduplicatedPublish = createDeduplicatedTypedWSPublish<TestMessage>(mockPublish);
@@ -93,9 +93,9 @@ describe('createDeduplicatedTypedWSPublish', () => {
 
 	it('should send when typed message changes', async () => {
 		let callCount = 0;
-		const mockPublish = async (data: string) => {
+		const mockPublish = () => {
 			callCount++;
-			return callCount;
+			return Promise.resolve(callCount);
 		};
 
 		const deduplicatedPublish = createDeduplicatedTypedWSPublish<TestMessage>(mockPublish);
@@ -118,9 +118,9 @@ describe('createDeduplicatedTypedWSPublish', () => {
 		}
 
 		let callCount = 0;
-		const mockPublish = async (data: string) => {
+		const mockPublish = () => {
 			callCount++;
-			return callCount;
+			return Promise.resolve(callCount);
 		};
 
 		const deduplicatedPublish = createDeduplicatedTypedWSPublish<ComplexMessage>(mockPublish);
@@ -151,4 +151,3 @@ describe('createDeduplicatedTypedWSPublish', () => {
 		expect(callCount).toBe(2);
 	});
 });
-

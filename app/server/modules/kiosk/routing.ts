@@ -35,5 +35,4 @@ function _initRouting() {
 
 export const initRouting = _initRouting as () => ServeOptions<unknown>;
 
-export type KioskRoutes =
-	ReturnType<typeof _initRouting> extends ServeOptions<infer R> ? R : never;
+export type KioskRoutes = ReturnType<typeof _initRouting> extends ServeOptions<infer R> ? R : never;

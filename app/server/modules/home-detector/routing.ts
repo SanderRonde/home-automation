@@ -1,9 +1,9 @@
+import { createDeduplicatedTypedWSPublish } from '../../lib/deduplicated-ws-publish';
 import { createServeOptions, withRequestBody } from '../../lib/routes';
 import type { ServeOptions } from '../../lib/routes';
 import type { ModuleConfig } from '../modules';
 import type { Detector } from './classes';
 import type { HOME_STATE } from './types';
-import { createDeduplicatedTypedWSPublish } from '../../lib/deduplicated-ws-publish';
 import * as z from 'zod';
 
 export interface Host {
