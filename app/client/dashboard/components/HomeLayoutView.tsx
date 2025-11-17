@@ -49,12 +49,16 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	const containerRef = React.useRef<HTMLDivElement | null>(null);
 	const [isDragging, setIsDragging] = React.useState(false);
 	const dragStartPos = React.useRef<{ x: number; y: number } | null>(null);
+	const touchStartPos = React.useRef<{ x: number; y: number } | null>(null);
 	const [stageTransform, setStageTransform] = React.useState({ x: 0, y: 0, scale: 1 });
 	const [expandedRoomId, setExpandedRoomId] = React.useState<string | null>(null);
 	const [collapsingRoomId, setCollapsingRoomId] = React.useState<string | null>(null);
 	const lastDist = React.useRef<number>(0);
 	const lastCenter = React.useRef<{ x: number; y: number } | null>(null);
 	const isPinching = React.useRef<boolean>(false);
+	const isPanning = React.useRef<boolean>(false);
+	const lastTouchPos = React.useRef<{ x: number; y: number } | null>(null);
+	const DRAG_THRESHOLD = 10; // pixels
 
 	const width = window.innerWidth > 900 ? window.innerWidth - 240 : window.innerWidth;
 	const height = window.innerHeight - 64;
@@ -287,6 +291,32 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				lastDist.current = dist;
 				lastCenter.current = newCenter;
 				updateStageTransform();
+			} else if (touch1 && touchStartPos.current) {
+				// Single touch - check if movement exceeds threshold before enabling drag
+				const currentPos = { x: touch1.clientX, y: touch1.clientY };
+				const distance = getDistance(touchStartPos.current, currentPos);
+
+				if (distance > DRAG_THRESHOLD) {
+					// Movement exceeds threshold - this is a drag, manually handle panning
+					e.evt.preventDefault();
+					if (!isPanning.current) {
+						// Start panning - record initial position
+						isPanning.current = true;
+						lastTouchPos.current = currentPos;
+						setIsDragging(true);
+					} else if (lastTouchPos.current) {
+						// Continue panning - calculate delta and update stage position
+						const deltaX = currentPos.x - lastTouchPos.current.x;
+						const deltaY = currentPos.y - lastTouchPos.current.y;
+						const currentPos_stage = stage.position();
+						stage.position({
+							x: currentPos_stage.x + deltaX,
+							y: currentPos_stage.y + deltaY,
+						});
+						lastTouchPos.current = currentPos;
+						updateStageTransform();
+					}
+				}
 			} else if (isPinching.current) {
 				// If we were pinching but now only have one touch, prevent default to avoid drag
 				e.evt.preventDefault();
@@ -298,19 +328,35 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	const handleTouchEnd = React.useCallback((e: KonvaEventObject<TouchEvent>) => {
 		const stage = stageRef.current;
 		if (e.evt.touches.length === 0) {
-			// All touches ended - reset pinch state and re-enable dragging
+			// All touches ended - reset all gesture states
 			lastDist.current = 0;
 			lastCenter.current = null;
 			isPinching.current = false;
+			isPanning.current = false;
+			touchStartPos.current = null;
+			lastTouchPos.current = null;
 			if (stage) {
 				stage.draggable(true);
 			}
+			// Reset dragging state after a short delay to allow tap events to check it
+			setTimeout(() => setIsDragging(false), 50);
 		} else if (e.evt.touches.length === 1 && isPinching.current) {
-			// One finger lifted during pinch - reset pinch state and re-enable dragging
-			// so the remaining finger can drag
+			// One finger lifted during pinch - reset pinch state and prepare for potential pan
 			lastDist.current = 0;
 			lastCenter.current = null;
 			isPinching.current = false;
+			// Record new touch start position for potential pan
+			const touch = e.evt.touches[0];
+			touchStartPos.current = { x: touch.clientX, y: touch.clientY };
+			lastTouchPos.current = null;
+			if (stage) {
+				stage.draggable(false);
+			}
+		} else if (e.evt.touches.length === 1 && touchStartPos.current) {
+			// Single touch ended - reset pan state
+			isPanning.current = false;
+			lastTouchPos.current = null;
+			touchStartPos.current = null;
 			if (stage) {
 				stage.draggable(true);
 			}
@@ -334,7 +380,15 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				lastDist.current = getDistance(p1, p2);
 				lastCenter.current = getCenter(p1, p2);
 			} else if (e.evt.touches.length === 1 && !isPinching.current) {
-				// Single touch - only handle if not in pinch mode
+				// Single touch - temporarily disable dragging to detect taps
+				// Dragging will be enabled in handleTouchMove if movement exceeds threshold
+				if (stage) {
+					stage.draggable(false);
+				}
+				// Record start position for drag detection
+				const touch = e.evt.touches[0];
+				touchStartPos.current = { x: touch.clientX, y: touch.clientY };
+				setIsDragging(false);
 				handleStageMouseDown(e);
 			} else if (isPinching.current) {
 				// If we're in pinch mode, prevent default to avoid interference
@@ -569,6 +623,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 									onMouseOver={cursorPointer}
 									onMouseOut={cursorDefault}
 									onClick={() => handleRoomClick(roomData.mappedRoomName)}
+									onTap={() => handleRoomClick(roomData.mappedRoomName)}
 								/>
 							</React.Fragment>
 						);
@@ -925,6 +980,25 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 														}
 													}}
 													onPointerDown={(e) => {
+														e.stopPropagation();
+														e.preventDefault();
+														if (!isDragging) {
+															if (
+																expandedRoomId === roomData.room.id
+															) {
+																setCollapsingRoomId(
+																	roomData.room.id
+																);
+																setTimeout(() => {
+																	setExpandedRoomId(null);
+																	setCollapsingRoomId(null);
+																}, 200);
+															} else {
+																setExpandedRoomId(roomData.room.id);
+															}
+														}
+													}}
+													onTouchStart={(e) => {
 														e.stopPropagation();
 														e.preventDefault();
 														if (!isDragging) {
