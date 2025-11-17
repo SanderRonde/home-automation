@@ -6,7 +6,7 @@ import { IconComponent } from './icon';
 import React from 'react';
 
 interface ClusterIconButtonSkeletonProps extends ClusterIconButtonProps {
-	onPress: () => void;
+	onPress: (() => void) | undefined;
 	enabled: boolean;
 	clusterIcon: JSX.Element | null;
 }
@@ -28,10 +28,12 @@ const ClusterIconButtonSkeleton = (props: ClusterIconButtonSkeletonProps) => {
 					document.removeEventListener('pointerup', handlePointerUp);
 				}, 1000);
 
-				const handlePointerUp = () => {
+				const handlePointerUp = (e: MouseEvent) => {
+					e.preventDefault();
+					e.stopPropagation();
 					clearTimeout(timer);
 					// Handle normal click
-					props.onPress();
+					props.onPress?.();
 					document.removeEventListener('pointerup', handlePointerUp);
 				};
 
@@ -179,7 +181,7 @@ const ColorControlIconButton = (props: ClusterIconButtonProps) => {
 			{...props}
 			enabled={anyEnabled}
 			clusterIcon={icon}
-			onPress={props.onLongPress}
+			onPress={undefined}
 		/>
 	);
 };
