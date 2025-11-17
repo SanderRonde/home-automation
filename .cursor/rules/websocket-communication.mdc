@@ -142,11 +142,30 @@ deviceState.subscribe((state) => {
 deviceState.set({ on: true });
 ```
 
+## Deduplicated WebSocket Publishing
+
+To avoid sending duplicate messages when data hasn't changed, use the deduplicated publisher:
+
+```typescript
+import { createDeduplicatedTypedWSPublish } from '../../lib/deduplicated-ws-publish';
+
+function initRouting(config: ModuleConfig) {
+	// Create deduplicated publisher - automatically skips identical messages
+	const wsPublish = createDeduplicatedTypedWSPublish<MessageType>(config.wsPublish);
+
+	// Now use wsPublish as normal - duplicate messages are automatically filtered
+	void wsPublish({ type: 'update', data: someData });
+}
+```
+
+The deduplicated publisher compares the serialized JSON of messages and only sends when the data has actually changed, reducing unnecessary network traffic.
+
 ## Best Practices
 
 - ✅ Always JSON stringify/parse messages
 - ✅ Include a `type` field for message identification
 - ✅ Handle WebSocket errors and reconnection on client side
 - ✅ Close WebSocket connections when components unmount
+- ✅ Use deduplicated publishers for frequently updated data
 - ❌ Don't send binary data (use JSON only)
 - ❌ Avoid sending very large payloads frequently

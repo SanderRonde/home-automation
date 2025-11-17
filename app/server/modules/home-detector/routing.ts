@@ -3,6 +3,7 @@ import type { ServeOptions } from '../../lib/routes';
 import type { ModuleConfig } from '../modules';
 import type { Detector } from './classes';
 import type { HOME_STATE } from './types';
+import { createDeduplicatedTypedWSPublish } from '../../lib/deduplicated-ws-publish';
 import * as z from 'zod';
 
 export interface Host {
@@ -12,14 +13,17 @@ export interface Host {
 }
 
 function _initRouting(detector: Detector, config: ModuleConfig) {
+	// Create a deduplicated WebSocket publisher to avoid sending duplicate messages
+	const wsPublish = createDeduplicatedTypedWSPublish<HomeDetectorWebsocketServerMessage>(
+		config.wsPublish
+	);
+
 	// WebSocket updates
 	detector.addListener(null, (_newState, _hostId, fullState) => {
-		void config.wsPublish(
-			JSON.stringify({
-				type: 'state-change',
-				fullState,
-			} satisfies HomeDetectorWebsocketServerMessage)
-		);
+		void wsPublish({
+			type: 'state-change',
+			fullState,
+		});
 	});
 
 	return createServeOptions(

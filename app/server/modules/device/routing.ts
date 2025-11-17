@@ -22,6 +22,7 @@ import {
 	DeviceThermostatCluster,
 	ThermostatMode,
 } from './cluster';
+import { createDeduplicatedTypedWSPublish } from '../../lib/deduplicated-ws-publish';
 import type { IncludedIconNames } from '../../../client/dashboard/components/icon';
 import type { BrandedRouteHandlerResponse, ServeOptions } from '../../lib/routes';
 import { SceneTriggerType, SceneConditionType } from '../../../../types/scene';
@@ -229,9 +230,8 @@ interface DashboardDeviceResponse extends DashboardDeviceEndpointResponse {
 }
 
 function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api: DeviceAPI) {
-	const wsPublish = (data: DeviceWebsocketServerMessage) => {
-		void _wsPublish(JSON.stringify(data));
-	};
+	// Create a deduplicated WebSocket publisher to avoid sending duplicate messages
+	const wsPublish = createDeduplicatedTypedWSPublish<DeviceWebsocketServerMessage>(_wsPublish);
 
 	const notifyDeviceChanges = async () => {
 		void wsPublish({
