@@ -13,6 +13,7 @@ import {
 	Notifications as NotificationsIcon,
 	Map as MapIcon,
 	DeviceThermostat as DeviceThermostatIcon,
+	BoltRounded as BoltRoundedIcon,
 } from '@mui/icons-material';
 import {
 	Drawer,
@@ -59,9 +60,14 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 				{ text: 'Home', icon: <HomeIcon />, id: SidebarTab.HOME },
 				{ text: 'Layout', icon: <MapIcon />, id: SidebarTab.LAYOUT },
 				{
-					text: 'Temperature History',
+					text: 'Temperature',
 					icon: <DeviceThermostatIcon />,
 					id: SidebarTab.TEMPERATURE_HISTORY,
+				},
+				{
+					text: 'Energy Usage',
+					icon: <BoltRoundedIcon />,
+					id: SidebarTab.ENERGY_USAGE,
 				},
 			],
 		},
@@ -160,6 +166,7 @@ export enum SidebarTab {
 	HOME = 'home',
 	LAYOUT = 'layout',
 	TEMPERATURE_HISTORY = 'temperature-history',
+	ENERGY_USAGE = 'energy-usage',
 	SCENES = 'scenes',
 	GROUPS = 'groups',
 	PALETTES = 'palettes',

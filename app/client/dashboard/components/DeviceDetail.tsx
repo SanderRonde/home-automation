@@ -2146,7 +2146,7 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 									gutterBottom
 									sx={{ fontWeight: 600, letterSpacing: '-0.01em' }}
 								>
-									Temperature History
+									Temperature
 								</Typography>
 								{tempHistory.length === 0 ? (
 									<Typography color="text.secondary">

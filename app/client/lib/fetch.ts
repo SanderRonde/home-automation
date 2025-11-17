@@ -1,6 +1,7 @@
 import type { HomeDetectorRoutes } from '../../server/modules/home-detector/routing';
 import type { NotificationRoutes } from '../../server/modules/notification/routing';
 import type { TemperatureRoutes } from '../../server/modules/temperature/routing';
+import type { HomeWizardRoutes } from '../../server/modules/homewizard/routing';
 import type { BrandedResponse, RouteBodyBrand } from '../../server/lib/routes';
 import type { WakelightRoutes } from '../../server/modules/wakelight/routing';
 import type { DashboardRoutes } from '../../server/modules/dashboard/routing';
@@ -228,6 +229,7 @@ type RoutesForModules = {
 	wakelight: WakelightRoutes;
 	webhook: WebhookRoutes;
 	wled: WledRoutes;
+	homewizard: HomeWizardRoutes;
 };
 
 export type ReturnTypeForApi<

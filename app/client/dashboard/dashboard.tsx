@@ -10,6 +10,7 @@ import { NotFoundPage } from './components/NotFoundPage';
 import { HomeDetector } from './components/HomeDetector';
 import { OfflineProvider } from '../lib/offline-context';
 import { HouseLayout } from './components/HouseLayout';
+import { EnergyUsage } from './components/EnergyUsage';
 import React, { useState, useEffect } from 'react';
 import { Webhooks } from './components/Webhooks';
 import { Palettes } from './components/Palettes';
@@ -114,6 +115,8 @@ function DashboardApp() {
 				return <HouseLayout />;
 			case SidebarTab.TEMPERATURE_HISTORY:
 				return <TemperatureHistory />;
+			case SidebarTab.ENERGY_USAGE:
+				return <EnergyUsage />;
 			case SidebarTab.SCENES:
 				return <Scenes />;
 			case SidebarTab.GROUPS:

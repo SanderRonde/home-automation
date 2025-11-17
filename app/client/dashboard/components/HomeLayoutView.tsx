@@ -19,7 +19,8 @@ interface HomeLayoutViewProps {
 	devices: DeviceListWithValuesResponse;
 	pushDetailView: (detailView: HomeDetailView) => void;
 	invalidate: () => void;
-	temperatureExpanded?: boolean;
+	temperatureExpanded: boolean;
+	energyExpanded: boolean;
 }
 
 // Helper to filter clusters like ClusterIconButton does
@@ -39,6 +40,487 @@ const getRelevantClusters = (clusterNames: DeviceClusterName[]): DeviceClusterNa
 
 const WALL_THICKNESS = 6;
 const WALL_COLOR = '#ccc';
+
+interface ClusterIconButtonProps {
+	clusterData: { clusterName: DeviceClusterName; icon: IncludedIconNames | null };
+	roomData: {
+		room: { id: string; center: { x: number; y: number } };
+		mappedRoomName: string;
+		roomDevices: DeviceListWithValuesResponse;
+	};
+	index: number;
+	centerX: number;
+	centerY: number;
+	offsetX: number;
+	offsetY: number;
+	clusterIconSize: number;
+	handleClusterClick: (clusterName: DeviceClusterName, roomName: string) => void;
+	handleClusterAction: (
+		clusterName: DeviceClusterName,
+		roomDevices: DeviceListWithValuesResponse
+	) => Promise<void>;
+}
+
+const ClusterIconButton = (props: ClusterIconButtonProps): JSX.Element | null => {
+	// Determine if cluster is enabled
+	let isEnabled = false;
+	if (props.clusterData.clusterName === DeviceClusterName.ON_OFF) {
+		const devices = props.roomData.roomDevices.filter((device) =>
+			device.mergedAllClusters.some(
+				(c) =>
+					c.name === DeviceClusterName.ON_OFF ||
+					(c.name === DeviceClusterName.COLOR_CONTROL &&
+						c.mergedClusters[DeviceClusterName.ON_OFF])
+			)
+		);
+		isEnabled = devices
+			.flatMap((d) => d.mergedAllClusters)
+			.some(
+				(d) =>
+					(d.name === DeviceClusterName.ON_OFF && d.isOn) ||
+					(d.name === DeviceClusterName.COLOR_CONTROL &&
+						d.mergedClusters[DeviceClusterName.ON_OFF]?.isOn)
+			);
+	} else if (props.clusterData.clusterName === DeviceClusterName.WINDOW_COVERING) {
+		const devices = props.roomData.roomDevices.filter((device) =>
+			device.mergedAllClusters.some((c) => c.name === DeviceClusterName.WINDOW_COVERING)
+		);
+		isEnabled = devices
+			.flatMap((d) => d.mergedAllClusters)
+			.filter((c) => c.name === DeviceClusterName.WINDOW_COVERING)
+			.some((d) => d.targetPositionLiftPercentage < 5);
+	} else if (props.clusterData.clusterName === DeviceClusterName.COLOR_CONTROL) {
+		const devices = props.roomData.roomDevices.filter((device) =>
+			device.mergedAllClusters.some(
+				(c) =>
+					c.name === DeviceClusterName.ON_OFF ||
+					(c.name === DeviceClusterName.COLOR_CONTROL &&
+						c.mergedClusters[DeviceClusterName.ON_OFF])
+			)
+		);
+		isEnabled = devices
+			.flatMap((d) => d.mergedAllClusters)
+			.some(
+				(d) =>
+					(d.name === DeviceClusterName.ON_OFF && d.isOn) ||
+					(d.name === DeviceClusterName.COLOR_CONTROL &&
+						d.mergedClusters[DeviceClusterName.ON_OFF]?.isOn)
+			);
+	}
+
+	if (!props.clusterData.icon) {
+		return null;
+	}
+
+	const keyframeName = `clusterExpand-${props.roomData.room.id}-${props.index}`;
+	return (
+		<IconButton
+			key={`${props.roomData.room.id}-${props.clusterData.clusterName}`}
+			sx={{
+				position: 'absolute',
+				left: props.centerX - props.clusterIconSize / 2,
+				top: props.centerY - props.clusterIconSize / 2,
+				width: props.clusterIconSize,
+				height: props.clusterIconSize,
+				backgroundColor: isEnabled ? '#ffffff' : 'rgba(255, 255, 255, 0.5)',
+				color: isEnabled ? '#2a2a2a' : 'rgba(0, 0, 0, 0.5)',
+				pointerEvents: 'auto',
+				fontSize: '20px',
+				opacity: 0,
+				transform: 'translate(0, 0) scale(0.8)',
+				animation: `${keyframeName} 300ms ease-out forwards`,
+				animationDelay: `${props.index * 40}ms`,
+				[`@keyframes ${keyframeName}`]: {
+					'0%': {
+						opacity: 0,
+						transform: 'translate(0, 0) scale(0.8)',
+					},
+					'100%': {
+						opacity: 1,
+						transform: `translate(${props.offsetX}px, ${props.offsetY}px) scale(1)`,
+					},
+				},
+				'&:hover': {
+					backgroundColor: isEnabled ? '#f0f0f0' : 'rgba(255, 255, 255, 0.7)',
+				},
+			}}
+			onPointerDown={(e) => {
+				e.stopPropagation();
+				e.preventDefault();
+				const timer = setTimeout(() => {
+					props.handleClusterClick(
+						props.clusterData.clusterName,
+						props.roomData.mappedRoomName
+					);
+					document.removeEventListener('pointerup', handlePointerUp);
+				}, 500);
+
+				const handlePointerUp = () => {
+					clearTimeout(timer);
+					void props.handleClusterAction(
+						props.clusterData.clusterName,
+						props.roomData.roomDevices
+					);
+					document.removeEventListener('pointerup', handlePointerUp);
+				};
+
+				document.addEventListener('pointerup', handlePointerUp);
+			}}
+		>
+			<IconComponent iconName={props.clusterData.icon} />
+		</IconButton>
+	);
+};
+
+interface ExpandedClusterIconsProps {
+	roomData: {
+		room: { id: string; center: { x: number; y: number } };
+		mappedRoomName: string;
+		roomDevices: DeviceListWithValuesResponse;
+		clusterInfo: Array<{ clusterName: DeviceClusterName; icon: IncludedIconNames | null }>;
+	};
+	stageTransform: { x: number; y: number; scale: number };
+	clusterIconSize: number;
+	clusterIconSpacing: number;
+	clusterStartX: number;
+	clusterY: number;
+	handleClusterClick: (clusterName: DeviceClusterName, roomName: string) => void;
+	handleClusterAction: (
+		clusterName: DeviceClusterName,
+		roomDevices: DeviceListWithValuesResponse
+	) => Promise<void>;
+}
+
+const ExpandedClusterIcons = (props: ExpandedClusterIconsProps): JSX.Element => {
+	return (
+		<>
+			{props.roomData.clusterInfo.map((clusterData, index) => {
+				const x = props.clusterStartX + index * props.clusterIconSpacing;
+				const iconCenterX = x + props.clusterIconSize / props.stageTransform.scale / 2;
+				const screenX = iconCenterX * props.stageTransform.scale + props.stageTransform.x;
+				const screenY =
+					props.clusterY * props.stageTransform.scale + props.stageTransform.y;
+
+				const centerX =
+					props.roomData.room.center.x * props.stageTransform.scale +
+					props.stageTransform.x;
+				const centerY =
+					(props.roomData.room.center.y + 30 / props.stageTransform.scale) *
+						props.stageTransform.scale +
+					props.stageTransform.y;
+
+				const offsetX = screenX - centerX;
+				const offsetY = screenY - centerY;
+
+				return (
+					<ClusterIconButton
+						key={`${props.roomData.room.id}-${clusterData.clusterName}`}
+						clusterData={clusterData}
+						roomData={props.roomData}
+						index={index}
+						centerX={centerX}
+						centerY={centerY}
+						offsetX={offsetX}
+						offsetY={offsetY}
+						clusterIconSize={props.clusterIconSize}
+						handleClusterClick={props.handleClusterClick}
+						handleClusterAction={props.handleClusterAction}
+					/>
+				);
+			})}
+		</>
+	);
+};
+
+interface RoomExpandButtonProps {
+	roomData: {
+		room: { id: string; center: { x: number; y: number } };
+		roomTemperature: number | null;
+		roomEnergy: number | null;
+		clusterInfo: Array<{ clusterName: DeviceClusterName; icon: IncludedIconNames | null }>;
+	};
+	stageTransform: { x: number; y: number; scale: number };
+	expandedRoomId: string | null;
+	isDragging: boolean;
+	temperatureExpanded: boolean;
+	energyExpanded: boolean;
+	setExpandedRoomId: (id: string | null) => void;
+	setCollapsingRoomId: (id: string | null) => void;
+}
+
+const RoomExpandButton = (props: RoomExpandButtonProps): JSX.Element | null => {
+	if (props.roomData.clusterInfo.length === 0) {
+		return null;
+	}
+
+	const handleToggle = () => {
+		if (!props.isDragging) {
+			if (props.expandedRoomId === props.roomData.room.id) {
+				props.setCollapsingRoomId(props.roomData.room.id);
+				setTimeout(() => {
+					props.setExpandedRoomId(null);
+					props.setCollapsingRoomId(null);
+				}, 200);
+			} else {
+				props.setExpandedRoomId(props.roomData.room.id);
+			}
+		}
+	};
+
+	let expandedContent = null;
+	if (props.temperatureExpanded && props.roomData.roomTemperature !== null) {
+		expandedContent = `${Math.round(props.roomData.roomTemperature * 10) / 10}°`;
+	}
+	if (props.energyExpanded && props.roomData.roomEnergy !== null) {
+		expandedContent = `${Math.round(props.roomData.roomEnergy * 10) / 10}W`;
+	}
+	return (
+		<Box
+			key={`${props.roomData.room.id}-ellipsis`}
+			sx={{
+				position: 'absolute',
+				left:
+					props.roomData.room.center.x * props.stageTransform.scale +
+					props.stageTransform.x -
+					24,
+				top:
+					(props.roomData.room.center.y + 30 / props.stageTransform.scale) *
+						props.stageTransform.scale +
+					props.stageTransform.y -
+					24,
+				width: 48,
+				height: 48,
+				display: 'flex',
+				alignItems: 'center',
+				justifyContent: 'center',
+				pointerEvents: 'auto',
+				transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+				opacity: expandedContent ? 1 : props.roomData.clusterInfo.length > 0 ? 1 : 0,
+				transform: expandedContent ? 'scale(1)' : 'scale(0.8)',
+			}}
+		>
+			{expandedContent && props.expandedRoomId !== props.roomData.room.id ? (
+				<Box
+					sx={{
+						width: 48,
+						height: 48,
+						backgroundColor: 'rgba(255, 255, 255, 0.95)',
+						borderRadius: '50%',
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+						transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+						animation: 'fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+						'@keyframes fadeInScale': {
+							from: {
+								opacity: 0,
+								transform: 'scale(0.5)',
+							},
+							to: {
+								opacity: 1,
+								transform: 'scale(1)',
+							},
+						},
+						'&:hover': {
+							backgroundColor: '#ffffff',
+							transform: 'scale(1.1)',
+						},
+					}}
+				>
+					<Typography
+						sx={{
+							fontSize: '14px',
+							fontWeight: 600,
+							color: 'rgba(0, 0, 0, 0.87)',
+						}}
+					>
+						{expandedContent}
+					</Typography>
+				</Box>
+			) : (
+				<IconButton
+					sx={{
+						width: 48,
+						height: 48,
+						backgroundColor: 'rgba(255, 255, 255, 0.9)',
+						color: 'rgba(0, 0, 0, 0.6)',
+						fontSize: '20px',
+						fontWeight: 'bold',
+						opacity: 1,
+						transform: 'scale(1)',
+						transition: 'opacity 200ms ease-out, transform 200ms ease-out',
+						'&:hover': {
+							backgroundColor: '#ffffff',
+							transform: 'scale(1.1)',
+						},
+					}}
+					onClick={(e) => {
+						e.stopPropagation();
+						handleToggle();
+					}}
+					onPointerDown={(e) => {
+						e.stopPropagation();
+						e.preventDefault();
+						handleToggle();
+					}}
+					onTouchStart={(e) => {
+						e.stopPropagation();
+						e.preventDefault();
+						handleToggle();
+					}}
+				>
+					...
+				</IconButton>
+			)}
+		</Box>
+	);
+};
+
+interface EllipsisFadeOutButtonProps {
+	roomId: string;
+	stageTransform: { x: number; y: number; scale: number };
+	roomCenter: { x: number; y: number };
+}
+
+const EllipsisFadeOutButton = (props: EllipsisFadeOutButtonProps): JSX.Element => {
+	return (
+		<IconButton
+			key={`${props.roomId}-ellipsis-fading`}
+			sx={{
+				position: 'absolute',
+				left: props.roomCenter.x * props.stageTransform.scale + props.stageTransform.x - 24,
+				top:
+					(props.roomCenter.y + 30 / props.stageTransform.scale) *
+						props.stageTransform.scale +
+					props.stageTransform.y -
+					24,
+				width: 48,
+				height: 48,
+				backgroundColor: 'rgba(255, 255, 255, 0.9)',
+				color: 'rgba(0, 0, 0, 0.6)',
+				pointerEvents: 'none',
+				fontSize: '20px',
+				fontWeight: 'bold',
+				opacity: 1,
+				transform: 'scale(1)',
+				animation: `ellipsisFadeOut-${props.roomId} 200ms ease-out forwards`,
+				[`@keyframes ellipsisFadeOut-${props.roomId}`]: {
+					'0%': {
+						opacity: 1,
+						transform: 'scale(1)',
+					},
+					'100%': {
+						opacity: 0,
+						transform: 'scale(0.8)',
+					},
+				},
+			}}
+		>
+			...
+		</IconButton>
+	);
+};
+
+interface RoomOverlayProps {
+	roomData: {
+		room: { id: string; center: { x: number; y: number } };
+		mappedRoomName: string;
+		roomInfo: RoomInfo | undefined;
+		roomDevices: DeviceListWithValuesResponse;
+		clusterInfo: Array<{ clusterName: DeviceClusterName; icon: IncludedIconNames | null }>;
+		roomTemperature: number | null;
+		roomEnergy: number | null;
+	};
+	stageTransform: { x: number; y: number; scale: number };
+	expandedRoomId: string | null;
+	collapsingRoomId: string | null;
+	isDragging: boolean;
+	temperatureExpanded: boolean;
+	energyExpanded: boolean;
+	clusterIconSize: number;
+	clusterIconSpacing: number;
+	clusterStartX: number;
+	clusterY: number;
+	handleClusterClick: (clusterName: DeviceClusterName, roomName: string) => void;
+	handleClusterAction: (
+		clusterName: DeviceClusterName,
+		roomDevices: DeviceListWithValuesResponse
+	) => Promise<void>;
+	setExpandedRoomId: (id: string | null) => void;
+	setCollapsingRoomId: (id: string | null) => void;
+}
+
+const RoomOverlay = (props: RoomOverlayProps): JSX.Element => {
+	const isExpanded =
+		props.expandedRoomId === props.roomData.room.id ||
+		props.collapsingRoomId === props.roomData.room.id;
+
+	return (
+		<React.Fragment key={`overlay-${props.roomData.room.id}`}>
+			{/* Room icon */}
+			{props.roomData.roomInfo?.icon && (
+				<Box
+					sx={{
+						position: 'absolute',
+						left:
+							props.roomData.room.center.x * props.stageTransform.scale +
+							props.stageTransform.x -
+							16,
+						top:
+							props.roomData.room.center.y * props.stageTransform.scale +
+							props.stageTransform.y -
+							16,
+						color: 'rgba(0, 0, 0, 0.6)',
+						fontSize: '32px',
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						pointerEvents: 'none',
+					}}
+				>
+					<IconComponent iconName={props.roomData.roomInfo.icon} />
+				</Box>
+			)}
+
+			{/* Cluster expand button or cluster icons */}
+			{isExpanded ? (
+				<ExpandedClusterIcons
+					roomData={props.roomData}
+					stageTransform={props.stageTransform}
+					clusterIconSize={props.clusterIconSize}
+					clusterIconSpacing={props.clusterIconSpacing}
+					clusterStartX={props.clusterStartX}
+					clusterY={props.clusterY}
+					handleClusterClick={props.handleClusterClick}
+					handleClusterAction={props.handleClusterAction}
+				/>
+			) : (
+				<RoomExpandButton
+					roomData={props.roomData}
+					stageTransform={props.stageTransform}
+					expandedRoomId={props.expandedRoomId}
+					isDragging={props.isDragging}
+					temperatureExpanded={props.temperatureExpanded}
+					energyExpanded={props.energyExpanded}
+					setExpandedRoomId={props.setExpandedRoomId}
+					setCollapsingRoomId={props.setCollapsingRoomId}
+				/>
+			)}
+
+			{/* Show "..." button fading out when expanding */}
+			{props.expandedRoomId === props.roomData.room.id &&
+				!props.collapsingRoomId &&
+				props.roomData.clusterInfo.length > 0 && (
+					<EllipsisFadeOutButton
+						roomId={props.roomData.room.id}
+						stageTransform={props.stageTransform}
+						roomCenter={props.roomData.room.center}
+					/>
+				)}
+		</React.Fragment>
+	);
+};
 
 export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	const [walls, setWalls] = useState<WallSegment[]>([]);
@@ -105,13 +587,17 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	useEffect(() => {
 		if (stageRef.current && walls.length > 0) {
 			const bbox = calculateBoundingBox(walls);
-			const padding = 40;
-			const scaleX = (width - padding * 2) / bbox.width;
-			const scaleY = (height - padding * 2) / bbox.height;
+			const paddingHorizontal = 40;
+			const paddingTop = 40;
+			const paddingBottom = 100;
+			const scaleX = (width - paddingHorizontal * 2) / bbox.width;
+			const scaleY = (height - (paddingTop + paddingBottom)) / bbox.height;
 			const scale = Math.min(scaleX, scaleY, 1); // Don't zoom in more than 1:1
 
 			const posX = (width - bbox.width * scale) / 2 - bbox.minX * scale;
-			const posY = (height - bbox.height * scale) / 2 - bbox.minY * scale;
+			const posY =
+				(height - (paddingTop + paddingBottom) - bbox.height * scale) / 2 -
+				bbox.minY * scale;
 
 			stageRef.current.scale({ x: scale, y: scale });
 			// Center the content
@@ -447,15 +933,16 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 
 				// Find temperature sensor in this room
 				let roomTemperature: number | null = null;
+				let roomEnergy: number | null = null;
 				for (const device of roomDevices) {
 					for (const cluster of device.flatAllClusters) {
 						if (cluster.name === DeviceClusterName.TEMPERATURE_MEASUREMENT) {
 							roomTemperature = cluster.temperature;
-							break;
 						}
-					}
-					if (roomTemperature !== null) {
-						break;
+						if (cluster.name === DeviceClusterName.ELECTRICAL_POWER_MEASUREMENT) {
+							roomEnergy ??= 0;
+							roomEnergy += cluster.activePower;
+						}
 					}
 				}
 
@@ -467,6 +954,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 					representedClusters,
 					clusterInfo,
 					roomTemperature,
+					roomEnergy,
 				};
 			});
 	}, [detectedRooms, roomMappings, availableRooms, props.devices]);
@@ -567,8 +1055,6 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				width={width}
 				height={height}
 				style={{
-					border: '1px solid #ccc',
-					borderRadius: 10,
 					touchAction: 'none',
 				}}
 				onWheel={handleWheel}
@@ -657,416 +1143,24 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 					const clusterY = roomData.room.center.y + 30 / stageTransform.scale;
 
 					return (
-						<React.Fragment key={`overlay-${roomData.room.id}`}>
-							{/* Room icon */}
-							{roomData.roomInfo?.icon && (
-								<Box
-									sx={{
-										position: 'absolute',
-										left:
-											roomData.room.center.x * stageTransform.scale +
-											stageTransform.x -
-											16,
-										top:
-											roomData.room.center.y * stageTransform.scale +
-											stageTransform.y -
-											16,
-										color: 'rgba(0, 0, 0, 0.6)',
-										fontSize: '32px',
-										display: 'flex',
-										alignItems: 'center',
-										justifyContent: 'center',
-										pointerEvents: 'none',
-									}}
-								>
-									<IconComponent iconName={roomData.roomInfo.icon} />
-								</Box>
-							)}
-
-							{/* Cluster expand button or cluster icons */}
-							{expandedRoomId === roomData.room.id ||
-							collapsingRoomId === roomData.room.id
-								? // Show cluster icons when expanded
-									roomData.clusterInfo.map((clusterData, index) => {
-										const x = clusterStartX + index * clusterIconSpacing;
-										// Calculate the center of the icon in world space, then convert to screen space
-										const iconCenterX =
-											x + clusterIconSize / stageTransform.scale / 2;
-										const screenX =
-											iconCenterX * stageTransform.scale + stageTransform.x;
-										const screenY =
-											clusterY * stageTransform.scale + stageTransform.y;
-
-										// Calculate center position (where "..." button is)
-										const centerX =
-											roomData.room.center.x * stageTransform.scale +
-											stageTransform.x;
-										const centerY =
-											(roomData.room.center.y + 30 / stageTransform.scale) *
-												stageTransform.scale +
-											stageTransform.y;
-
-										// Calculate offset from center to final position (icon center to button center)
-										const offsetX = screenX - centerX;
-										const offsetY = screenY - centerY;
-
-										// Determine if cluster is enabled
-										let isEnabled = false;
-										if (clusterData.clusterName === DeviceClusterName.ON_OFF) {
-											const devices = roomData.roomDevices.filter((device) =>
-												device.mergedAllClusters.some(
-													(c) =>
-														c.name === DeviceClusterName.ON_OFF ||
-														(c.name ===
-															DeviceClusterName.COLOR_CONTROL &&
-															c.mergedClusters[
-																DeviceClusterName.ON_OFF
-															])
-												)
-											);
-											isEnabled = devices
-												.flatMap((d) => d.mergedAllClusters)
-												.some(
-													(d) =>
-														(d.name === DeviceClusterName.ON_OFF &&
-															d.isOn) ||
-														(d.name ===
-															DeviceClusterName.COLOR_CONTROL &&
-															d.mergedClusters[
-																DeviceClusterName.ON_OFF
-															]?.isOn)
-												);
-										} else if (
-											clusterData.clusterName ===
-											DeviceClusterName.WINDOW_COVERING
-										) {
-											const devices = roomData.roomDevices.filter((device) =>
-												device.mergedAllClusters.some(
-													(c) =>
-														c.name === DeviceClusterName.WINDOW_COVERING
-												)
-											);
-											isEnabled = devices
-												.flatMap((d) => d.mergedAllClusters)
-												.filter(
-													(c) =>
-														c.name === DeviceClusterName.WINDOW_COVERING
-												)
-												.some((d) => d.targetPositionLiftPercentage < 5);
-										} else if (
-											clusterData.clusterName ===
-											DeviceClusterName.COLOR_CONTROL
-										) {
-											const devices = roomData.roomDevices.filter((device) =>
-												device.mergedAllClusters.some(
-													(c) =>
-														c.name === DeviceClusterName.ON_OFF ||
-														(c.name ===
-															DeviceClusterName.COLOR_CONTROL &&
-															c.mergedClusters[
-																DeviceClusterName.ON_OFF
-															])
-												)
-											);
-											isEnabled = devices
-												.flatMap((d) => d.mergedAllClusters)
-												.some(
-													(d) =>
-														(d.name === DeviceClusterName.ON_OFF &&
-															d.isOn) ||
-														(d.name ===
-															DeviceClusterName.COLOR_CONTROL &&
-															d.mergedClusters[
-																DeviceClusterName.ON_OFF
-															]?.isOn)
-												);
-										}
-
-										if (!clusterData.icon) {
-											return null;
-										}
-
-										const keyframeName = `clusterExpand-${roomData.room.id}-${index}`;
-										return (
-											<IconButton
-												key={`${roomData.room.id}-${clusterData.clusterName}`}
-												sx={{
-													position: 'absolute',
-													left: centerX - clusterIconSize / 2,
-													top: centerY - clusterIconSize / 2,
-													width: clusterIconSize,
-													height: clusterIconSize,
-													backgroundColor: isEnabled
-														? '#ffffff'
-														: 'rgba(255, 255, 255, 0.5)',
-													color: isEnabled
-														? '#2a2a2a'
-														: 'rgba(0, 0, 0, 0.5)',
-													pointerEvents: 'auto',
-													fontSize: '20px',
-													opacity: 0,
-													transform: 'translate(0, 0) scale(0.8)',
-													animation: `${keyframeName} 300ms ease-out forwards`,
-													animationDelay: `${index * 40}ms`,
-													[`@keyframes ${keyframeName}`]: {
-														'0%': {
-															opacity: 0,
-															transform: 'translate(0, 0) scale(0.8)',
-														},
-														'100%': {
-															opacity: 1,
-															transform: `translate(${offsetX}px, ${offsetY}px) scale(1)`,
-														},
-													},
-													'&:hover': {
-														backgroundColor: isEnabled
-															? '#f0f0f0'
-															: 'rgba(255, 255, 255, 0.7)',
-													},
-												}}
-												onPointerDown={(e) => {
-													e.stopPropagation();
-													e.preventDefault();
-													const timer = setTimeout(() => {
-														handleClusterClick(
-															clusterData.clusterName,
-															roomData.mappedRoomName
-														);
-														document.removeEventListener(
-															'pointerup',
-															handlePointerUp
-														);
-													}, 500);
-
-													const handlePointerUp = () => {
-														clearTimeout(timer);
-														void handleClusterAction(
-															clusterData.clusterName,
-															roomData.roomDevices
-														);
-														document.removeEventListener(
-															'pointerup',
-															handlePointerUp
-														);
-													};
-
-													document.addEventListener(
-														'pointerup',
-														handlePointerUp
-													);
-												}}
-											>
-												<IconComponent iconName={clusterData.icon} />
-											</IconButton>
-										);
-									})
-								: // Show temperature or "..." button when collapsed
-									roomData.clusterInfo.length > 0 && (
-										<Box
-											key={`${roomData.room.id}-ellipsis`}
-											sx={{
-												position: 'absolute',
-												left:
-													roomData.room.center.x * stageTransform.scale +
-													stageTransform.x -
-													24,
-												top:
-													(roomData.room.center.y +
-														30 / stageTransform.scale) *
-														stageTransform.scale +
-													stageTransform.y -
-													24,
-												width: 48,
-												height: 48,
-												display: 'flex',
-												alignItems: 'center',
-												justifyContent: 'center',
-												pointerEvents: 'auto',
-												transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-												opacity:
-													props.temperatureExpanded &&
-													roomData.roomTemperature !== null
-														? 1
-														: roomData.clusterInfo.length > 0
-															? 1
-															: 0,
-												transform:
-													props.temperatureExpanded &&
-													roomData.roomTemperature !== null
-														? 'scale(1)'
-														: 'scale(0.8)',
-											}}
-										>
-											{props.temperatureExpanded &&
-											roomData.roomTemperature !== null &&
-											expandedRoomId !== roomData.room.id ? (
-												<Box
-													sx={{
-														width: 48,
-														height: 48,
-														backgroundColor:
-															'rgba(255, 255, 255, 0.95)',
-														borderRadius: '50%',
-														display: 'flex',
-														alignItems: 'center',
-														justifyContent: 'center',
-														boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-														transition:
-															'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-														animation:
-															'fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-														'@keyframes fadeInScale': {
-															from: {
-																opacity: 0,
-																transform: 'scale(0.5)',
-															},
-															to: {
-																opacity: 1,
-																transform: 'scale(1)',
-															},
-														},
-														'&:hover': {
-															backgroundColor: '#ffffff',
-															transform: 'scale(1.1)',
-														},
-													}}
-												>
-													<Typography
-														sx={{
-															fontSize: '14px',
-															fontWeight: 600,
-															color: 'rgba(0, 0, 0, 0.87)',
-														}}
-													>
-														{Math.round(roomData.roomTemperature * 10) /
-															10}
-														°
-													</Typography>
-												</Box>
-											) : (
-												<IconButton
-													sx={{
-														width: 48,
-														height: 48,
-														backgroundColor: 'rgba(255, 255, 255, 0.9)',
-														color: 'rgba(0, 0, 0, 0.6)',
-														fontSize: '20px',
-														fontWeight: 'bold',
-														opacity: 1,
-														transform: 'scale(1)',
-														transition:
-															'opacity 200ms ease-out, transform 200ms ease-out',
-														'&:hover': {
-															backgroundColor: '#ffffff',
-															transform: 'scale(1.1)',
-														},
-													}}
-													onClick={(e) => {
-														e.stopPropagation();
-														if (!isDragging) {
-															if (
-																expandedRoomId === roomData.room.id
-															) {
-																setCollapsingRoomId(
-																	roomData.room.id
-																);
-																setTimeout(() => {
-																	setExpandedRoomId(null);
-																	setCollapsingRoomId(null);
-																}, 200);
-															} else {
-																setExpandedRoomId(roomData.room.id);
-															}
-														}
-													}}
-													onPointerDown={(e) => {
-														e.stopPropagation();
-														e.preventDefault();
-														if (!isDragging) {
-															if (
-																expandedRoomId === roomData.room.id
-															) {
-																setCollapsingRoomId(
-																	roomData.room.id
-																);
-																setTimeout(() => {
-																	setExpandedRoomId(null);
-																	setCollapsingRoomId(null);
-																}, 200);
-															} else {
-																setExpandedRoomId(roomData.room.id);
-															}
-														}
-													}}
-													onTouchStart={(e) => {
-														e.stopPropagation();
-														e.preventDefault();
-														if (!isDragging) {
-															if (
-																expandedRoomId === roomData.room.id
-															) {
-																setCollapsingRoomId(
-																	roomData.room.id
-																);
-																setTimeout(() => {
-																	setExpandedRoomId(null);
-																	setCollapsingRoomId(null);
-																}, 200);
-															} else {
-																setExpandedRoomId(roomData.room.id);
-															}
-														}
-													}}
-												>
-													...
-												</IconButton>
-											)}
-										</Box>
-									)}
-							{/* Show "..." button fading out when expanding */}
-							{expandedRoomId === roomData.room.id &&
-								!collapsingRoomId &&
-								roomData.clusterInfo.length > 0 && (
-									<IconButton
-										key={`${roomData.room.id}-ellipsis-fading`}
-										sx={{
-											position: 'absolute',
-											left:
-												roomData.room.center.x * stageTransform.scale +
-												stageTransform.x -
-												24,
-											top:
-												(roomData.room.center.y +
-													30 / stageTransform.scale) *
-													stageTransform.scale +
-												stageTransform.y -
-												24,
-											width: 48,
-											height: 48,
-											backgroundColor: 'rgba(255, 255, 255, 0.9)',
-											color: 'rgba(0, 0, 0, 0.6)',
-											pointerEvents: 'none',
-											fontSize: '20px',
-											fontWeight: 'bold',
-											opacity: 1,
-											transform: 'scale(1)',
-											animation: `ellipsisFadeOut-${roomData.room.id} 200ms ease-out forwards`,
-											[`@keyframes ellipsisFadeOut-${roomData.room.id}`]: {
-												'0%': {
-													opacity: 1,
-													transform: 'scale(1)',
-												},
-												'100%': {
-													opacity: 0,
-													transform: 'scale(0.8)',
-												},
-											},
-										}}
-									>
-										...
-									</IconButton>
-								)}
-						</React.Fragment>
+						<RoomOverlay
+							key={`overlay-${roomData.room.id}`}
+							roomData={roomData}
+							stageTransform={stageTransform}
+							expandedRoomId={expandedRoomId}
+							collapsingRoomId={collapsingRoomId}
+							isDragging={isDragging}
+							temperatureExpanded={props.temperatureExpanded}
+							energyExpanded={props.energyExpanded}
+							clusterIconSize={clusterIconSize}
+							clusterIconSpacing={clusterIconSpacing}
+							clusterStartX={clusterStartX}
+							clusterY={clusterY}
+							handleClusterClick={handleClusterClick}
+							handleClusterAction={handleClusterAction}
+							setExpandedRoomId={setExpandedRoomId}
+							setCollapsingRoomId={setCollapsingRoomId}
+						/>
 					);
 				})}
 			</Box>

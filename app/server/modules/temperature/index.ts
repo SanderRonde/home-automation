@@ -2,7 +2,6 @@ import { DeviceTemperatureMeasurementCluster } from '../device/cluster';
 import type { ModuleConfig, AllModules } from '..';
 import { logTag } from '../../lib/logging/logger';
 import { getController } from './temp-controller';
-import type { Device } from '../device/device';
 import { initRouting } from './routing';
 import { ModuleMeta } from '../meta';
 
@@ -68,7 +67,7 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 					const device = devices[sensor.deviceId];
 
 					if (device) {
-						const temperatureClusters = (device as Device).getAllClustersByType(
+						const temperatureClusters = device.getAllClustersByType(
 							DeviceTemperatureMeasurementCluster
 						);
 						if (temperatureClusters.length > 0) {
@@ -131,11 +130,11 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 				if (!device) {
 					continue;
 				}
-				const temperatureClusters = (device as Device).getAllClustersByType(
+				const temperatureClusters = device.getAllClustersByType(
 					DeviceTemperatureMeasurementCluster
 				);
 				if (temperatureClusters.length > 0) {
-					const name = await (device as Device).getDeviceName();
+					const name = await device.getDeviceName();
 					deviceSensors.push({ deviceId, name });
 				}
 			}

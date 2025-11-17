@@ -137,7 +137,17 @@ const OnOffIconButton = (props: ClusterIconButtonProps) => {
 					'/cluster/OnOff',
 					{},
 					{
-						deviceIds: devices.map((d) => d.uniqueId),
+						deviceIds: devices
+							.filter(
+								(d) =>
+									// Very hacky, don't on/off for devices that have a power measurement cluster
+									!d.flatAllClusters.some(
+										(c) =>
+											c.name ===
+											DeviceClusterName.ELECTRICAL_POWER_MEASUREMENT
+									)
+							)
+							.map((d) => d.uniqueId),
 						isOn: !anyEnabled,
 					}
 				);

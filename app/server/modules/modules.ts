@@ -3,6 +3,7 @@ import { Notification } from './notification';
 import { Temperature } from './temperature';
 import { LedArt } from './led-art/led-art';
 import { InfoScreen } from './info-screen';
+import { HomeWizard } from './homewizard';
 import { Wakelight } from './wakelight';
 import { Dashboard } from './dashboard';
 import { Webhook } from './webhook';
@@ -46,6 +47,7 @@ const getModuleObj = () => ({
 	homeDetector: HomeDetector,
 	notification: Notification,
 	ai: AI,
+	homewizard: HomeWizard,
 });
 
 let notified = false;

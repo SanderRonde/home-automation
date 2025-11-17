@@ -27,6 +27,7 @@ import type { Scene } from '../../../../types/scene';
 import { PaletteSelector } from './PaletteSelector';
 import { HomeLayoutView } from './HomeLayoutView';
 import { apiGet, apiPost } from '../../lib/fetch';
+import { EnergyDisplay } from './EnergyDisplay';
 import type { IncludedIconNames } from './icon';
 import { DeviceDetail } from './DeviceDetail';
 import { useDevices } from './Devices';
@@ -238,6 +239,7 @@ export const Home = (): JSX.Element => {
 	});
 	const [hasLayout, setHasLayout] = React.useState(false);
 	const [temperatureExpanded, setTemperatureExpanded] = React.useState(false);
+	const [energyExpanded, setEnergyExpanded] = React.useState(false);
 
 	// Load scenes marked as favorites
 	React.useEffect(() => {
@@ -572,16 +574,41 @@ export const Home = (): JSX.Element => {
 						</Box>
 					</Box>
 				)}
-				<TemperatureDisplay
-					onExpandedChange={(expanded) => {
-						setTemperatureExpanded(expanded);
+				<Box
+					sx={{
+						position: 'absolute',
+						bottom: { xs: 12, sm: 16 },
+						left: 0,
+						pointerEvents: 'none',
+						zIndex: 2,
+						px: { xs: 2, sm: 3 },
+						gap: 1.5,
+						display: 'flex',
+						flexDirection: 'column',
+						alignItems: 'flex-start',
 					}}
-				/>
+				>
+					<TemperatureDisplay
+						expanded={temperatureExpanded}
+						onExpandedChange={(expanded) => {
+							setTemperatureExpanded(expanded);
+							setEnergyExpanded(false);
+						}}
+					/>
+					<EnergyDisplay
+						expanded={energyExpanded}
+						onExpandedChange={(expanded) => {
+							setEnergyExpanded(expanded);
+							setTemperatureExpanded(false);
+						}}
+					/>
+				</Box>
 				<HomeLayoutView
 					devices={devices}
 					pushDetailView={pushDetailView}
 					invalidate={() => refresh(false)}
 					temperatureExpanded={temperatureExpanded}
+					energyExpanded={energyExpanded}
 				/>
 				{/* Floating Action Button to toggle back to list view */}
 				<Portal>

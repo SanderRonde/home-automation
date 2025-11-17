@@ -1,20 +1,19 @@
 import {
 	DeviceThermostat as DeviceThermostatIcon,
 	ExpandMore as ExpandMoreIcon,
-	ExpandLess as ExpandLessIcon,
 } from '@mui/icons-material';
 import { Box, Card, CardContent, Typography, CircularProgress, IconButton } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 import { apiGet } from '../../lib/fetch';
 
 interface TemperatureDisplayProps {
-	onExpandedChange?: (expanded: boolean) => void;
+	expanded: boolean;
+	onExpandedChange: (expanded: boolean) => void;
 }
 
 export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element => {
 	const [temperature, setTemperature] = useState<number | null>(null);
 	const [loading, setLoading] = useState(true);
-	const [expanded, setExpanded] = useState(false);
 
 	const loadTemperature = async () => {
 		try {
@@ -39,25 +38,13 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 		return () => clearInterval(interval);
 	}, []);
 
-	useEffect(() => {
-		props.onExpandedChange?.(expanded);
-	}, [expanded, props]);
-
+	const onExpandedChange = props.onExpandedChange;
 	const handleToggle = () => {
-		setExpanded((prev) => !prev);
+		onExpandedChange(!props.expanded);
 	};
 
 	return (
-		<Box
-			sx={{
-				position: 'absolute',
-				bottom: { xs: 12, sm: 16 },
-				left: 0,
-				pointerEvents: 'none',
-				zIndex: 2,
-				px: { xs: 2, sm: 3 },
-			}}
-		>
+		<Box>
 			<Card
 				sx={{
 					pointerEvents: 'auto',
@@ -65,7 +52,7 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 					minWidth: 120,
 					boxShadow: 3,
 					transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-					transform: expanded ? 'scale(1.05)' : 'scale(1)',
+					transform: props.expanded ? 'scale(1.05)' : 'scale(1)',
 				}}
 			>
 				<CardContent
@@ -85,7 +72,7 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 						sx={{
 							fontSize: { xs: 24, sm: 28 },
 							transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-							transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+							transform: props.expanded ? 'rotate(180deg)' : 'rotate(0deg)',
 						}}
 					/>
 					{loading ? (
@@ -100,10 +87,10 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 						onClick={handleToggle}
 						sx={{
 							transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-							transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+							transform: props.expanded ? 'rotate(180deg)' : 'rotate(0deg)',
 						}}
 					>
-						{expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+						<ExpandMoreIcon />
 					</IconButton>
 				</CardContent>
 			</Card>

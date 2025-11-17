@@ -1,6 +1,6 @@
 {
-  "snapshot": "snapshot-20251117-9b864826-74fc-4499-8e36-bad7585cb7e0",
-  "install": "bun install",
-  "start": "bun dev",
-  "terminals": []
+	"snapshot": "snapshot-20251117-9b864826-74fc-4499-8e36-bad7585cb7e0",
+	"install": "bun install",
+	"start": "bun dev",
+	"terminals": []
 }

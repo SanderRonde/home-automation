@@ -130,7 +130,7 @@ export class PowerTracker {
 				timestamp: r.timestamp,
 			}));
 		} catch (error) {
-			console.error(`Failed to fetch all devices power history:`, error);
+			console.error('Failed to fetch all devices power history:', error);
 			return [];
 		}
 	}
