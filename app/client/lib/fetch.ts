@@ -9,6 +9,7 @@ import type { WebhookRoutes } from '../../server/modules/webhook/routing';
 import type { EwelinkRoutes } from '../../server/modules/ewelink/routing';
 import type { LedArtRoutes } from '../../server/modules/led-art/routing';
 import type { DeviceRoutes } from '../../server/modules/device/routing';
+import type { KioskRoutes } from '../../server/modules/kiosk/routing';
 import type { WledRoutes } from '../../server/modules/wled/routing';
 import type { AuthRoutes } from '../../server/modules/auth/routing';
 import type { BotRoutes } from '../../server/modules/bot/routing';
@@ -220,6 +221,7 @@ type RoutesForModules = {
 	bot: BotRoutes;
 	dashboard: DashboardRoutes;
 	device: DeviceRoutes;
+	kiosk: KioskRoutes;
 	ewelink: EwelinkRoutes;
 	'led-art': LedArtRoutes;
 	'home-detector': HomeDetectorRoutes;

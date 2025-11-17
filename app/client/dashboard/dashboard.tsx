@@ -19,6 +19,7 @@ import { Devices } from './components/Devices';
 import { createRoot } from 'react-dom/client';
 import { Scenes } from './components/Scenes';
 import { Groups } from './components/Groups';
+import { Kiosk } from './components/Kiosk';
 import { Home } from './components/Home';
 import { apiGet } from '../lib/fetch';
 
@@ -110,7 +111,9 @@ function DashboardApp() {
 	const renderContent = () => {
 		switch (currentTab) {
 			case SidebarTab.HOME:
-				return <Home />;
+				return <Home layoutViewVerticalSpacing={64} />;
+			case SidebarTab.HOME_KIOSK:
+				return <Kiosk />;
 			case SidebarTab.LAYOUT:
 				return <HouseLayout />;
 			case SidebarTab.TEMPERATURE_HISTORY:
@@ -148,7 +151,11 @@ function DashboardApp() {
 
 	return (
 		<OfflineProvider>
-			<AppLayout currentTab={currentTab} onTabChange={setCurrentTab}>
+			<AppLayout
+				currentTab={currentTab}
+				onTabChange={setCurrentTab}
+				kiosk={currentTab === SidebarTab.HOME_KIOSK}
+			>
 				{renderContent()}
 			</AppLayout>
 		</OfflineProvider>

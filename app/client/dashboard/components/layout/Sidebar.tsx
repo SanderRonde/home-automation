@@ -164,6 +164,7 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 
 export enum SidebarTab {
 	HOME = 'home',
+	HOME_KIOSK = 'home-kiosk',
 	LAYOUT = 'layout',
 	TEMPERATURE_HISTORY = 'temperature-history',
 	ENERGY_USAGE = 'energy-usage',

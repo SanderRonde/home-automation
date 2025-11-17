@@ -18,7 +18,6 @@ This is a TypeScript home automation system using Bun runtime with a modular arc
         - `dashboard/` - Main dashboard UI (React with MUI)
         - `config/` - Configuration UI components
         - `switch/` - Switch control UI
-        - `info-screen/` - Info display UI
         - `lib/` - Shared client utilities
         - `shared/` - Shared client components
     - [tsconfig.json](mdc:app/tsconfig.json) - TypeScript configuration
@@ -53,5 +52,5 @@ This is a TypeScript home automation system using Bun runtime with a modular arc
 
 - Main entry: [app/server/app.ts](mdc:app/server/app.ts)
 - Module definitions: `app/server/modules/`
-- Client entry points: `app/client/{dashboard,config,switch,info-screen}/`
+- Client entry points: `app/client/{dashboard}/`
 - Dashboard entry: [app/client/dashboard/dashboard.tsx](mdc:app/client/dashboard/dashboard.tsx)

@@ -52,6 +52,7 @@ const darkTheme = createTheme({
 });
 
 interface AppLayoutProps {
+	kiosk: boolean;
 	children: React.ReactNode;
 	currentTab: string | SidebarTab;
 	onTabChange: (tab: SidebarTab) => void;
@@ -85,27 +86,31 @@ export const AppLayout = (props: AppLayoutProps): JSX.Element => {
 				sx={{
 					display: 'flex',
 					height: '100vh',
-					bgcolor: 'background.default',
+					bgcolor: props.kiosk ? 'black' : 'background.default',
 				}}
 			>
-				<TopBar open={open} setOpen={setOpen} currentTab={props.currentTab} />
-				<Sidebar
-					open={open}
-					isMobile={isMobile}
-					onClose={() => setOpen(false)}
-					currentTab={props.currentTab}
-					onTabChange={props.onTabChange}
-				/>
+				{!props.kiosk && (
+					<TopBar open={open} setOpen={setOpen} currentTab={props.currentTab} />
+				)}
+				{!props.kiosk && (
+					<Sidebar
+						open={open}
+						isMobile={isMobile}
+						onClose={() => setOpen(false)}
+						currentTab={props.currentTab}
+						onTabChange={props.onTabChange}
+					/>
+				)}
 				<Box
 					ref={mainContentRef}
 					component="main"
 					sx={{
 						flexGrow: 1,
 						width: '100%',
-						height: `calc(100vh - ${TOP_BAR_HEIGHT}px)`,
+						height: props.kiosk ? '100vh' : `calc(100vh - ${TOP_BAR_HEIGHT}px)`,
 						overflow: 'auto',
-						bgcolor: 'background.default',
-						marginTop: `${TOP_BAR_HEIGHT}px`,
+						bgcolor: props.kiosk ? 'black' : 'background.default',
+						marginTop: props.kiosk ? 0 : `${TOP_BAR_HEIGHT}px`,
 						transition: (theme) =>
 							theme.transitions.create('margin', {
 								easing: theme.transitions.easing.sharp,

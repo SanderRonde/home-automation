@@ -228,17 +228,25 @@ const SceneQuickActions = (props: SceneQuickActionsProps): JSX.Element | null =>
 	);
 };
 
-export const Home = (): JSX.Element => {
+interface HomeProps {
+	kiosk?: boolean;
+	layoutViewVerticalSpacing: number;
+}
+
+export const Home = React.memo((props: HomeProps): JSX.Element => {
 	const { loading, devices, refresh } = useDevices();
 	const [scenes, setScenes] = React.useState<Scene[]>([]);
 	const [groups, setGroups] = React.useState<DeviceGroup[]>([]);
 	const [triggeringSceneId, setTriggeringSceneId] = React.useState<string | null>(null);
 	const [viewMode, setViewMode] = React.useState<'list' | 'layout'>(() => {
+		if (props.kiosk) {
+			return 'layout';
+		}
 		const saved = localStorage.getItem('homeViewMode');
 		return saved === 'layout' || saved === 'list' ? saved : 'list';
 	});
 	const [hasLayout, setHasLayout] = React.useState(false);
-	const [temperatureExpanded, setTemperatureExpanded] = React.useState(false);
+	const [temperatureExpanded, setTemperatureExpanded] = React.useState(!!props.kiosk);
 	const [energyExpanded, setEnergyExpanded] = React.useState(false);
 
 	// Load scenes marked as favorites
@@ -542,7 +550,7 @@ export const Home = (): JSX.Element => {
 	if (viewMode === 'layout' && hasLayout) {
 		return (
 			<Box sx={{ position: 'relative', height: '100%' }}>
-				{scenes.length > 0 && (
+				{!props.kiosk && scenes.length > 0 && (
 					<Box
 						sx={{
 							position: 'absolute',
@@ -584,8 +592,10 @@ export const Home = (): JSX.Element => {
 						px: { xs: 2, sm: 3 },
 						gap: 1.5,
 						display: 'flex',
-						flexDirection: 'column',
+						flexDirection: props.kiosk ? 'row' : 'column',
 						alignItems: 'flex-start',
+						justifyContent: props.kiosk ? 'space-between' : 'flex-start',
+						width: props.kiosk ? '100%' : 'auto',
 					}}
 				>
 					<TemperatureDisplay
@@ -609,23 +619,27 @@ export const Home = (): JSX.Element => {
 					invalidate={() => refresh(false)}
 					temperatureExpanded={temperatureExpanded}
 					energyExpanded={energyExpanded}
+					kiosk={!!props.kiosk}
+					verticalSpacing={props.layoutViewVerticalSpacing}
 				/>
 				{/* Floating Action Button to toggle back to list view */}
-				<Portal>
-					<Fab
-						color="primary"
-						aria-label="toggle view"
-						sx={{
-							position: 'fixed',
-							bottom: 24,
-							right: 24,
-							zIndex: 1000,
-						}}
-						onClick={() => setViewMode('list')}
-					>
-						<ListIcon />
-					</Fab>
-				</Portal>
+				{!props.kiosk && (
+					<Portal>
+						<Fab
+							color="primary"
+							aria-label="toggle view"
+							sx={{
+								position: 'fixed',
+								bottom: 24,
+								right: 24,
+								zIndex: 1000,
+							}}
+							onClick={() => setViewMode('list')}
+						>
+							<ListIcon />
+						</Fab>
+					</Portal>
+				)}
 			</Box>
 		);
 	}
@@ -728,7 +742,7 @@ export const Home = (): JSX.Element => {
 			)}
 		</Box>
 	);
-};
+});
 
 interface RoomDetailProps {
 	room: RoomDevices;

@@ -36,4 +36,5 @@
 - [x] 3D house overview
 - [x] Inside temperature
 - [x] Scene buttons above 2D view
+- [x] Kiosk mode of 2D view
 - [ ] Wakelight does not appear to work

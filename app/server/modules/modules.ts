@@ -2,7 +2,7 @@ import { HomeDetector } from './home-detector';
 import { Notification } from './notification';
 import { Temperature } from './temperature';
 import { LedArt } from './led-art/led-art';
-import { InfoScreen } from './info-screen';
+import { Kiosk } from './kiosk';
 import { HomeWizard } from './homewizard';
 import { Wakelight } from './wakelight';
 import { Dashboard } from './dashboard';
@@ -42,7 +42,7 @@ const getModuleObj = () => ({
 	wakelight: Wakelight,
 	webhook: Webhook,
 	ewelink: EWeLink,
-	infoScreen: InfoScreen,
+	kiosk: Kiosk,
 	temperature: Temperature,
 	homeDetector: HomeDetector,
 	notification: Notification,

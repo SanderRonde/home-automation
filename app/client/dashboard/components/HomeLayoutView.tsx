@@ -16,11 +16,13 @@ import type { HomeDetailView } from './Home';
 import { IconComponent } from './icon';
 
 interface HomeLayoutViewProps {
+	kiosk: boolean;
 	devices: DeviceListWithValuesResponse;
 	pushDetailView: (detailView: HomeDetailView) => void;
 	invalidate: () => void;
 	temperatureExpanded: boolean;
 	energyExpanded: boolean;
+	verticalSpacing: number;
 }
 
 // Helper to filter clusters like ClusterIconButton does
@@ -543,7 +545,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	const DRAG_THRESHOLD = 10; // pixels
 
 	const width = window.innerWidth > 900 ? window.innerWidth - 240 : window.innerWidth;
-	const height = window.innerHeight - 64;
+	const height = window.innerHeight - props.verticalSpacing;
 
 	const loadLayout = async () => {
 		try {
@@ -589,7 +591,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 			const bbox = calculateBoundingBox(walls);
 			const paddingHorizontal = 40;
 			const paddingTop = 40;
-			const paddingBottom = 100;
+			const paddingBottom = props.kiosk ? 40 : 100;
 			const scaleX = (width - paddingHorizontal * 2) / bbox.width;
 			const scaleY = (height - (paddingTop + paddingBottom)) / bbox.height;
 			const scale = Math.min(scaleX, scaleY, 1); // Don't zoom in more than 1:1
@@ -607,7 +609,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 			});
 			setStageTransform({ x: posX, y: posY, scale });
 		}
-	}, [walls, width, height]);
+	}, [walls, width, height, props.kiosk]);
 
 	// Update stage transform state on pan/zoom
 	const updateStageTransform = React.useCallback(() => {

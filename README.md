@@ -26,9 +26,9 @@ The home-detector module detects who is home and who isn't. This is useful for t
 
 The temperature module allows for the setting of a target temperature of the house. The server then tells a temperature controller what to do based on the currently measured temperature, eventually reaching the target temperature. It also allows for manual turning on and off of a temperature controller (for example for when you leave home).
 
-#### Info-screen
+#### Kiosk
 
-The info-screen module powers a screen containing some basic info like the temperature outside and inside (thanks to the temperature module), as well as the upcoming calender events etc. It is basically an HTML page hosted on localhost that talks to the server via a separate entrypoint. In my case the actual screen is mounted behind some mirror foil to have a sort of smart-mirror.
+The kiosk module powers a screen containing some basic info like the temperature outside and inside (thanks to the temperature module), as well as the upcoming calender events etc. It is basically an HTML page hosted on localhost that talks to the server via a separate entrypoint. In my case the actual screen is mounted behind some mirror foil to have a sort of smart-mirror.
 
 #### Webhook
 
@@ -76,9 +76,9 @@ The code for the microcontroller measuring the temperature can be found [over at
 
 The code for the microcontroller driving it can be found [over at this repository](https://github.com/SanderRonde/board-temperature-controller-driver).
 
-#### Info-screen
+#### Kiosk
 
-The info-screen module works through some fairly simple REST API's hosted on localhost. Because it's all hosted on and only accessible from localhost, there isn't much need for complexity. Getting the temperature from inside is done through the temperature module and getting the temperature outside is done through the [openweathermap API](https://openweathermap.org/api). The upcoming calendar is fetched through google's calendar API, first requring the user to give permission to the app for their google account.
+The kiosk module works through some fairly simple REST API's hosted on localhost. Because it's all hosted on and only accessible from localhost, there isn't much need for complexity. Getting the temperature from inside is done through the temperature module and getting the temperature outside is done through the [openweathermap API](https://openweathermap.org/api). The upcoming calendar is fetched through google's calendar API, first requring the user to give permission to the app for their google account.
 
 #### Webhook
 

@@ -95,8 +95,6 @@ type Monaco = typeof monaco;
 ## Component Organization
 
 - **Config UI**: Components in `app/client/config/components/`
-- **Switch UI**: Components in `app/client/switch/`
-- **Info Screen**: Components in `app/client/info-screen/`
 - **Shared utilities**: `app/client/lib/` and `app/client/shared/`
 
 ## Examples
