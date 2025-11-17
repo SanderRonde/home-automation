@@ -18,6 +18,10 @@ const getTabDisplayName = (tab: string | SidebarTab): string => {
 	switch (tab) {
 		case 'home':
 			return 'Home';
+		case 'temperature':
+			return 'Temperature';
+		case 'energy-usage':
+			return 'Energy Usage';
 		case 'settings':
 			return 'Settings';
 		case 'devices':
@@ -26,6 +30,10 @@ const getTabDisplayName = (tab: string | SidebarTab): string => {
 			return 'eWeLink';
 		case 'wled':
 			return 'WLED';
+		case 'temperature-config':
+			return 'Temperature Config';
+		case 'homewizard':
+			return 'HomeWizard';
 		default:
 			return 'Home Automation';
 	}

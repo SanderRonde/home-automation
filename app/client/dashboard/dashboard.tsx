@@ -4,6 +4,8 @@ import { LEDSourcesConfig } from './components/LEDSourcesConfig';
 import { WakelightConfig } from './components/WakelightConfig';
 import { Notifications } from './components/Notifications';
 import { EweLinkConfig } from './components/EweLinkConfig';
+import { EnergyUsage } from './components/EnergyUsage';
+import { HomeWizardConfig } from './components/HomeWizardConfig';
 import { AppLayout } from './components/layout/AppLayout';
 import { SidebarTab } from './components/layout/Sidebar';
 import { NotFoundPage } from './components/NotFoundPage';
@@ -112,8 +114,10 @@ function DashboardApp() {
 				return <Home />;
 			case SidebarTab.LAYOUT:
 				return <HouseLayout />;
-			case SidebarTab.TEMPERATURE_HISTORY:
+			case SidebarTab.TEMPERATURE:
 				return <TemperatureHistory />;
+			case SidebarTab.ENERGY_USAGE:
+				return <EnergyUsage />;
 			case SidebarTab.SCENES:
 				return <Scenes />;
 			case SidebarTab.GROUPS:
@@ -136,8 +140,10 @@ function DashboardApp() {
 				return <LEDSourcesConfig />;
 			case SidebarTab.AI:
 				return <AIConfig />;
-			case SidebarTab.TEMPERATURE:
+			case SidebarTab.TEMPERATURE_CONFIG:
 				return <TemperatureConfig />;
+			case SidebarTab.HOMEWIZARD:
+				return <HomeWizardConfig />;
 			default:
 				return <NotFoundPage onReturnToSettings={handleReturnToSettings} />;
 		}

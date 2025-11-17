@@ -13,6 +13,7 @@ import {
 	Notifications as NotificationsIcon,
 	Map as MapIcon,
 	DeviceThermostat as DeviceThermostatIcon,
+	Bolt as BoltIcon,
 } from '@mui/icons-material';
 import {
 	Drawer,
@@ -58,11 +59,8 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 			items: [
 				{ text: 'Home', icon: <HomeIcon />, id: SidebarTab.HOME },
 				{ text: 'Layout', icon: <MapIcon />, id: SidebarTab.LAYOUT },
-				{
-					text: 'Temperature History',
-					icon: <DeviceThermostatIcon />,
-					id: SidebarTab.TEMPERATURE_HISTORY,
-				},
+				{ text: 'Temperature', icon: <DeviceThermostatIcon />, id: SidebarTab.TEMPERATURE },
+				{ text: 'Energy Usage', icon: <BoltIcon />, id: SidebarTab.ENERGY_USAGE },
 			],
 		},
 		{
@@ -84,7 +82,11 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 					icon: <NotificationsIcon />,
 					id: SidebarTab.NOTIFICATIONS,
 				},
-				{ text: 'Temperature', icon: <DeviceThermostatIcon />, id: SidebarTab.TEMPERATURE },
+				{
+					text: 'Temperature Config',
+					icon: <DeviceThermostatIcon />,
+					id: SidebarTab.TEMPERATURE_CONFIG,
+				},
 			],
 		},
 		{
@@ -93,6 +95,7 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 				{ text: 'Devices', icon: <DeviceHubIcon />, id: SidebarTab.DEVICES },
 				{ text: 'eWeLink', icon: <CloudIcon />, id: SidebarTab.EWELINK },
 				{ text: 'LED Sources', icon: <LightbulbIcon />, id: SidebarTab.LED_SOURCES },
+				{ text: 'HomeWizard', icon: <BoltIcon />, id: SidebarTab.HOMEWIZARD },
 			],
 		},
 		{
@@ -159,7 +162,8 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 export enum SidebarTab {
 	HOME = 'home',
 	LAYOUT = 'layout',
-	TEMPERATURE_HISTORY = 'temperature-history',
+	TEMPERATURE = 'temperature',
+	ENERGY_USAGE = 'energy-usage',
 	SCENES = 'scenes',
 	GROUPS = 'groups',
 	PALETTES = 'palettes',
@@ -171,5 +175,6 @@ export enum SidebarTab {
 	LED_SOURCES = 'led-sources',
 	AI = 'ai',
 	NOTIFICATIONS = 'notifications',
-	TEMPERATURE = 'temperature',
+	TEMPERATURE_CONFIG = 'temperature-config',
+	HOMEWIZARD = 'homewizard',
 }

@@ -9,6 +9,7 @@ import type { EwelinkRoutes } from '../../server/modules/ewelink/routing';
 import type { LedArtRoutes } from '../../server/modules/led-art/routing';
 import type { DeviceRoutes } from '../../server/modules/device/routing';
 import type { WledRoutes } from '../../server/modules/wled/routing';
+import type { HomeWizardRoutes } from '../../server/modules/homewizard/routing';
 import type { AuthRoutes } from '../../server/modules/auth/routing';
 import type { BotRoutes } from '../../server/modules/bot/routing';
 import type { AIRoutes } from '../../server/modules/ai/routing';
@@ -222,6 +223,7 @@ type RoutesForModules = {
 	ewelink: EwelinkRoutes;
 	'led-art': LedArtRoutes;
 	'home-detector': HomeDetectorRoutes;
+	homewizard: HomeWizardRoutes;
 	ai: AIRoutes;
 	notification: NotificationRoutes;
 	temperature: TemperatureRoutes;

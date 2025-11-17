@@ -19,6 +19,7 @@ import type { DeviceClusterCardBaseProps } from './DeviceClusterCard';
 import type { DeviceGroup } from '../../../../types/group';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { TemperatureDisplay } from './TemperatureDisplay';
+import { EnergyUsageDisplay } from './EnergyUsageDisplay';
 import type { Palette } from '../../../../types/palette';
 import { fadeInUpStaggered } from '../../lib/animations';
 import { DeviceClusterCard } from './DeviceClusterCard';
@@ -572,11 +573,36 @@ export const Home = (): JSX.Element => {
 						</Box>
 					</Box>
 				)}
-				<TemperatureDisplay
-					onExpandedChange={(expanded) => {
-						setTemperatureExpanded(expanded);
+				<Box
+					sx={{
+						position: 'absolute',
+						bottom: { xs: 12, sm: 16 },
+						left: 0,
+						pointerEvents: 'none',
+						zIndex: 2,
+						px: { xs: 2, sm: 3 },
+						width: '100%',
 					}}
-				/>
+				>
+					<Box
+						sx={{
+							display: 'flex',
+							flexDirection: { xs: 'column', sm: 'row' },
+							gap: 1.5,
+							alignItems: 'flex-start',
+							pointerEvents: 'auto',
+						}}
+					>
+						<EnergyUsageDisplay
+							expanded={temperatureExpanded}
+							onToggle={() => setTemperatureExpanded((prev) => !prev)}
+						/>
+						<TemperatureDisplay
+							expanded={temperatureExpanded}
+							onToggle={() => setTemperatureExpanded((prev) => !prev)}
+						/>
+					</Box>
+				</Box>
 				<HomeLayoutView
 					devices={devices}
 					pushDetailView={pushDetailView}
