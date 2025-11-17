@@ -239,7 +239,6 @@ export const Home = (): JSX.Element => {
 	});
 	const [hasLayout, setHasLayout] = React.useState(false);
 	const [temperatureExpanded, setTemperatureExpanded] = React.useState(false);
-	const [energyExpanded, setEnergyExpanded] = React.useState(false);
 
 	// Load scenes marked as favorites
 	React.useEffect(() => {
@@ -579,11 +578,7 @@ export const Home = (): JSX.Element => {
 						setTemperatureExpanded(expanded);
 					}}
 				/>
-				<EnergyDisplay
-					onExpandedChange={(expanded) => {
-						setEnergyExpanded(expanded);
-					}}
-				/>
+				<EnergyDisplay />
 				<HomeLayoutView
 					devices={devices}
 					pushDetailView={pushDetailView}

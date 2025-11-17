@@ -12,6 +12,7 @@ import type { WledRoutes } from '../../server/modules/wled/routing';
 import type { AuthRoutes } from '../../server/modules/auth/routing';
 import type { BotRoutes } from '../../server/modules/bot/routing';
 import type { AIRoutes } from '../../server/modules/ai/routing';
+import type { HomeWizardRoutes } from '../../server/modules/homewizard/routing';
 import type { RouterTypes } from 'bun';
 import type z from 'zod';
 
@@ -228,6 +229,7 @@ type RoutesForModules = {
 	wakelight: WakelightRoutes;
 	webhook: WebhookRoutes;
 	wled: WledRoutes;
+	homewizard: HomeWizardRoutes;
 };
 
 export type ReturnTypeForApi<

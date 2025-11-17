@@ -16,9 +16,7 @@ import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import React, { useState, useEffect } from 'react';
 import { apiGet } from '../../lib/fetch';
 
-interface EnergyDisplayProps {
-	onExpandedChange?: (expanded: boolean) => void;
-}
+interface EnergyDisplayProps {}
 
 interface Device {
 	uniqueId: string;
@@ -35,7 +33,7 @@ interface RoomEnergy {
 	power: number;
 }
 
-export const EnergyDisplay = (props: EnergyDisplayProps): JSX.Element => {
+export const EnergyDisplay = (_props: EnergyDisplayProps): JSX.Element => {
 	const [totalPower, setTotalPower] = useState<number | null>(null);
 	const [roomEnergies, setRoomEnergies] = useState<RoomEnergy[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -126,10 +124,6 @@ export const EnergyDisplay = (props: EnergyDisplayProps): JSX.Element => {
 		}, 15000);
 		return () => clearInterval(interval);
 	}, []);
-
-	useEffect(() => {
-		props.onExpandedChange?.(expanded);
-	}, [expanded, props]);
 
 	const handleToggle = () => {
 		setExpanded((prev) => !prev);

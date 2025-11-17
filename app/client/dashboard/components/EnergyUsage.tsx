@@ -1,7 +1,4 @@
 import {
-	TrendingUp as TrendingUpIcon,
-	TrendingDown as TrendingDownIcon,
-	Remove as RemoveIcon,
 	BoltRounded as BoltRoundedIcon,
 	Settings as SettingsIcon,
 } from '@mui/icons-material';
@@ -82,20 +79,14 @@ export const EnergyUsage = (): JSX.Element => {
 							setCurrentPower(powerCluster.activePower);
 						}
 
-						// Get energy measurement from device API
-						const energyResponse = await apiGet(
-							'device',
-							'/device/:uniqueId/cluster/ElectricalEnergyMeasurement',
-							{ uniqueId: homeWizardDevice.uniqueId }
+						// Get energy measurement from clusters
+						const energyCluster = homeWizardDevice.flatAllClusters?.find(
+							(c) => c.name === 'ElectricalEnergyMeasurement'
 						);
-						if (energyResponse.ok) {
-							const energyData = (await energyResponse.json()) as {
-								totalEnergy?: string;
-							};
-							if (energyData.totalEnergy) {
-								// Convert Wh to kWh
-								setTotalEnergy(Number(energyData.totalEnergy) / 1000);
-							}
+						if (energyCluster?.totalEnergy !== undefined) {
+							// Convert Wh to kWh (totalEnergy is a bigint in Wh)
+							const energyWh = Number(energyCluster.totalEnergy);
+							setTotalEnergy(energyWh / 1000);
 						}
 					}
 				}
