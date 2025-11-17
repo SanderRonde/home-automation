@@ -4,6 +4,8 @@ import { LogObj } from '../../lib/logging/lob-obj';
 import { getController } from './temp-controller';
 import type { ModuleConfig } from '..';
 import { Temperature } from './index';
+import { get } from '../kiosk/temperature/external';
+import { ExternalWeatherTimePeriod } from '../kiosk/types';
 import * as z from 'zod';
 
 function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
@@ -39,6 +41,16 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 			'/inside-temperature': async (_req, _server, { json }) => {
 				const temp = await Temperature.getInsideTemperature(modules);
 				return json({ success: true, temperature: temp });
+			},
+			'/outside-temperature': async (_req, _server, { json }) => {
+				const result = await get(ExternalWeatherTimePeriod.CURRENT);
+				if (result === null) {
+					return json({ success: false, error: 'Weather data unavailable' });
+				}
+				return json({
+					success: true,
+					temperature: Math.round(result.temp * 10) / 10,
+				});
 			},
 			'/temperature-sensors': async (_req, _server, { json }) => {
 				const sensors = await Temperature.getAvailableTemperatureSensors(modules, sqlDB);

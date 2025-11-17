@@ -2,6 +2,7 @@ import type { DeviceListWithValuesResponse } from '../../../server/modules/devic
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import type { WallSegment, DoorSlot } from '../types/layout';
 import { Box, IconButton, Typography } from '@mui/material';
+import { WbSunny } from '@mui/icons-material';
 // @ts-expect-error - konva ESM/CommonJS type resolution issue
 import type { Stage as StageType } from 'konva/lib/Stage';
 import type { RoomInfo } from './RoomAssignmentDialog';
@@ -543,6 +544,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	const isPanning = React.useRef<boolean>(false);
 	const lastTouchPos = React.useRef<{ x: number; y: number } | null>(null);
 	const DRAG_THRESHOLD = 10; // pixels
+	const [outsideTemp, setOutsideTemp] = React.useState<number | null>(null);
 
 	const width = window.innerWidth > 900 ? window.innerWidth - 240 : window.innerWidth;
 	const height = window.innerHeight - props.verticalSpacing;
@@ -581,9 +583,65 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 		void loadRooms();
 	}, [loadRooms]);
 
+	// Fetch outside temperature periodically
+	useEffect(() => {
+		const fetchOutsideTemp = async () => {
+			try {
+				const response = await apiGet('temperature', '/outside-temperature', {});
+				if (response.ok) {
+					const data = await response.json();
+					if (data.success) {
+						setOutsideTemp(data.temperature);
+					}
+				}
+			} catch (error) {
+				console.error('Failed to fetch outside temperature:', error);
+			}
+		};
+
+		void fetchOutsideTemp();
+		const interval = setInterval(() => {
+			void fetchOutsideTemp();
+		}, 600000); // Refresh every 10 minutes
+
+		return () => clearInterval(interval);
+	}, []);
+
 	const detectedRooms = React.useMemo(() => {
 		return detectRooms(walls, width, height);
 	}, [walls, width, height]);
+
+	// Calculate position for outside temperature display (center, closest edge outside)
+	const outsideTempPosition = React.useMemo(() => {
+		if (walls.length === 0) {
+			return { x: 60, y: 60 }; // Default if no walls
+		}
+
+		const bbox = calculateBoundingBox(walls);
+		const centerX = (bbox.minX + bbox.maxX) / 2;
+		const centerY = (bbox.minY + bbox.maxY) / 2;
+		const padding = 25; // Small padding outside the walls, within viewport
+
+		// Calculate distance from center to each edge
+		const distToTop = centerY - bbox.minY;
+		const distToBottom = bbox.maxY - centerY;
+		const distToLeft = centerX - bbox.minX;
+		const distToRight = bbox.maxX - centerX;
+
+		// Find the closest edge
+		const minDist = Math.min(distToTop, distToBottom, distToLeft, distToRight);
+
+		// Place temperature bubble just outside the closest edge
+		if (minDist === distToTop) {
+			return { x: centerX, y: bbox.minY - padding };
+		} else if (minDist === distToBottom) {
+			return { x: centerX, y: bbox.maxY + padding };
+		} else if (minDist === distToLeft) {
+			return { x: bbox.minX - padding, y: centerY };
+		} else {
+			return { x: bbox.maxX + padding, y: centerY };
+		}
+	}, [walls]);
 
 	// Calculate initial zoom to fit all walls with padding
 	useEffect(() => {
@@ -1165,6 +1223,64 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 						/>
 					);
 				})}
+
+				{/* Outside temperature bubble */}
+				{outsideTemp !== null && (() => {
+					// Determine background color based on temperature
+					const getTemperatureColor = (temp: number): string => {
+						if (temp < 10) return '#E3F2FD'; // Light blue - cold
+						if (temp < 18) return '#B3E5FC'; // Blue - cool
+						if (temp < 24) return '#C8E6C9'; // Light green - mild
+						if (temp < 30) return '#FFE0B2'; // Light orange - warm
+						return '#FFCDD2'; // Light red - hot
+					};
+
+					const getTemperatureTextColor = (temp: number): string => {
+						if (temp < 10) return '#0D47A1'; // Dark blue
+						if (temp < 18) return '#01579B'; // Blue
+						if (temp < 24) return '#2E7D32'; // Green
+						if (temp < 30) return '#E65100'; // Orange
+						return '#C62828'; // Red
+					};
+
+					return (
+						<Box
+							sx={{
+								position: 'absolute',
+								left: outsideTempPosition.x * stageTransform.scale + stageTransform.x - 32,
+								top: outsideTempPosition.y * stageTransform.scale + stageTransform.y - 32,
+								width: 64,
+								height: 64,
+								borderRadius: '50%',
+								backgroundColor: getTemperatureColor(outsideTemp),
+								display: 'flex',
+								flexDirection: 'column',
+								alignItems: 'center',
+								justifyContent: 'center',
+								boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+								pointerEvents: 'auto',
+								gap: '2px',
+							}}
+						>
+							<WbSunny
+								sx={{
+									fontSize: '18px',
+									color: getTemperatureTextColor(outsideTemp),
+								}}
+							/>
+							<Typography
+								sx={{
+									fontWeight: 600,
+									fontSize: '14px',
+									lineHeight: 1,
+									color: getTemperatureTextColor(outsideTemp),
+								}}
+							>
+								{outsideTemp}°
+							</Typography>
+						</Box>
+					);
+				})()}
 			</Box>
 		</Box>
 	);
