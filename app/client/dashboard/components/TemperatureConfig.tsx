@@ -126,7 +126,14 @@ export const TemperatureConfig = (): JSX.Element => {
 
 	if (loading) {
 		return (
-			<Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+			<Box
+				sx={{
+					display: 'flex',
+					justifyContent: 'center',
+					alignItems: 'center',
+					height: '100%',
+				}}
+			>
 				<CircularProgress />
 			</Box>
 		);
@@ -136,7 +143,9 @@ export const TemperatureConfig = (): JSX.Element => {
 		<Box sx={{ p: { xs: 2, sm: 3 } }}>
 			<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
 				{/* Header */}
-				<Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+				<Box
+					sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+				>
 					<Typography variant="h5">Temperature Configuration</Typography>
 					<Button
 						variant="contained"
@@ -151,8 +160,8 @@ export const TemperatureConfig = (): JSX.Element => {
 
 				{/* Description */}
 				<Typography variant="body2" color="text.secondary">
-					Select one or more temperature sensors to use for the inside temperature. When multiple
-					sensors are selected, their values will be averaged.
+					Select one or more temperature sensors to use for the inside temperature. When
+					multiple sensors are selected, their values will be averaged.
 				</Typography>
 
 				{/* Temperature Controllers */}
@@ -163,23 +172,27 @@ export const TemperatureConfig = (): JSX.Element => {
 								Temperature Controllers
 							</Typography>
 							<List>
-								{availableSensors.temperatureControllers.map((controller, index) => (
-									<React.Fragment key={controller}>
-										<ListItem>
-											<ListItemText primary={controller} />
-											<ListItemSecondaryAction>
-												<Checkbox
-													edge="end"
-													checked={isSensorSelected(controller)}
-													onChange={() => handleToggleSensor(controller)}
-												/>
-											</ListItemSecondaryAction>
-										</ListItem>
-										{index < availableSensors.temperatureControllers.length - 1 && (
-											<Divider />
-										)}
-									</React.Fragment>
-								))}
+								{availableSensors.temperatureControllers.map(
+									(controller, index) => (
+										<React.Fragment key={controller}>
+											<ListItem>
+												<ListItemText primary={controller} />
+												<ListItemSecondaryAction>
+													<Checkbox
+														edge="end"
+														checked={isSensorSelected(controller)}
+														onChange={() =>
+															handleToggleSensor(controller)
+														}
+													/>
+												</ListItemSecondaryAction>
+											</ListItem>
+											{index <
+												availableSensors.temperatureControllers.length -
+													1 && <Divider />}
+										</React.Fragment>
+									)
+								)}
 							</List>
 						</CardContent>
 					</Card>
@@ -201,16 +214,23 @@ export const TemperatureConfig = (): JSX.Element => {
 									return (
 										<React.Fragment key={sensor.deviceId}>
 											<ListItem>
-												<ListItemText primary={sensor.name} secondary={sensor.deviceId} />
+												<ListItemText
+													primary={sensor.name}
+													secondary={sensor.deviceId}
+												/>
 												<ListItemSecondaryAction>
 													<Checkbox
 														edge="end"
 														checked={isSensorSelected(sensorConfig)}
-														onChange={() => handleToggleSensor(sensorConfig)}
+														onChange={() =>
+															handleToggleSensor(sensorConfig)
+														}
 													/>
 												</ListItemSecondaryAction>
 											</ListItem>
-											{index < availableSensors.deviceSensors.length - 1 && <Divider />}
+											{index < availableSensors.deviceSensors.length - 1 && (
+												<Divider />
+											)}
 										</React.Fragment>
 									);
 								})}
@@ -236,8 +256,8 @@ export const TemperatureConfig = (): JSX.Element => {
 									No temperature sensors available
 								</Typography>
 								<Typography variant="body2" color="text.secondary">
-									Temperature controllers and device sensors will appear here once they are
-									detected.
+									Temperature controllers and device sensors will appear here once
+									they are detected.
 								</Typography>
 							</CardContent>
 						</Card>
@@ -246,4 +266,3 @@ export const TemperatureConfig = (): JSX.Element => {
 		</Box>
 	);
 };
-

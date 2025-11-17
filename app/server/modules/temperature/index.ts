@@ -1,10 +1,10 @@
-import { getController } from './temp-controller';
-import { initRouting } from './routing';
-import type { ModuleConfig, AllModules } from '..';
-import { ModuleMeta } from '../meta';
 import { DeviceTemperatureMeasurementCluster } from '../device/cluster';
-import type { Device } from '../device/device';
+import type { ModuleConfig, AllModules } from '..';
 import { logTag } from '../../lib/logging/logger';
+import { getController } from './temp-controller';
+import type { Device } from '../device/device';
+import { initRouting } from './routing';
+import { ModuleMeta } from '../meta';
 
 type TemperatureSensorConfig = string | { type: 'device'; deviceId: string };
 

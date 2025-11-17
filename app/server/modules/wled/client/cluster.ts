@@ -148,7 +148,7 @@ export class WLEDColorControlCluster
 		}
 
 		// Sort segments by ID to ensure we process them in order and don't skip any
-		const segments = [...this.client.state.segments].sort((a, b) => a.id - b.id);
+		const segments = [...this.client.state.segments].sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
 		for (const [i, segment] of segments.entries()) {
 			const color = colors[i % colors.length];
 			await this.client.setColor([color.r, color.g, color.b], {
@@ -160,7 +160,7 @@ export class WLEDColorControlCluster
 	public getSegmentCount = (): number => this.client.state.segments.length;
 	public setColorMulti = (options: { colors: Color[] }): Promise<void> => {
 		// Sort segments by ID to ensure we process them in order and don't skip any
-		const segments = [...this.client.state.segments].sort((a, b) => a.id - b.id);
+		const segments = [...this.client.state.segments].sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
 		for (const [i, segment] of segments.entries()) {
 			const color = options.colors[i % options.colors.length];
 			segment.colors = [[color.r, color.g, color.b], ...(segment.colors?.slice(1) ?? [])];

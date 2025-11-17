@@ -1,16 +1,9 @@
 import {
-	Box,
-	Card,
-	CardContent,
-	Typography,
-	CircularProgress,
-	IconButton,
-} from '@mui/material';
-import {
 	DeviceThermostat as DeviceThermostatIcon,
 	ExpandMore as ExpandMoreIcon,
 	ExpandLess as ExpandLessIcon,
 } from '@mui/icons-material';
+import { Box, Card, CardContent, Typography, CircularProgress, IconButton } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 import { apiGet } from '../../lib/fetch';
 
@@ -117,4 +110,3 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 		</Box>
 	);
 };
-

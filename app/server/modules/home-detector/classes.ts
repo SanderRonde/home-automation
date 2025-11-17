@@ -550,9 +550,7 @@ export class Detector {
 		}));
 	}
 
-	public async triggerRapidPing(options?: {
-		fireAnybodyHomeFirst?: boolean;
-	}): Promise<void> {
+	public async triggerRapidPing(options?: { fireAnybodyHomeFirst?: boolean }): Promise<void> {
 		const allStates = this.getAll();
 		const anyoneHome = Object.values(allStates).some((state) => state === HOME_STATE.HOME);
 		const allHome = Object.values(allStates).every((state) => state === HOME_STATE.HOME);
@@ -772,7 +770,7 @@ export class MovementSensorMonitor {
 				continue;
 			}
 
-				for (const occupancyCluster of occupancyClusters) {
+			for (const occupancyCluster of occupancyClusters) {
 				// Subscribe to occupancy changes
 				const unsubscribe = occupancyCluster.onOccupied.listen(async ({ occupied }) => {
 					// Movement detected (occupied changed to true)

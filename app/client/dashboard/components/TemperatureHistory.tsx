@@ -101,7 +101,10 @@ export const TemperatureHistory = (): JSX.Element => {
 						name: controllerId,
 						type: 'controller',
 						currentTemp,
-						history: historyData.history || [],
+						history: (historyData.history || []) as {
+							temperature: number;
+							timestamp: number;
+						}[],
 					});
 				}
 			}
@@ -137,12 +140,10 @@ export const TemperatureHistory = (): JSX.Element => {
 						name: deviceSensor.name,
 						type: 'device',
 						currentTemp,
-						history:
-							historyData.history ??
-							([] as {
-								temperature: number;
-								timestamp: number;
-							}[]),
+						history: (historyData.history ?? []) as {
+							temperature: number;
+							timestamp: number;
+						}[],
 					});
 				}
 			}

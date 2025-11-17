@@ -38,26 +38,21 @@ export class PowerTracker {
 				let lastPower: number | undefined = undefined;
 
 				// Subscribe to power changes
-				const unsubscribe = powerCluster.activePower.subscribe(
-					(power, isInitial) => {
-						if (power === undefined) {
-							return;
-						}
-						// Log all power readings, including initial
-						if (!isInitial || lastPower === undefined) {
-							// Only log if power changed by at least 1 watt
-							if (
-								lastPower === undefined ||
-								Math.abs(power - lastPower) >= 1
-							) {
-								lastPower = power;
-								void this.logEvent(deviceId, power);
-							}
-						} else {
-							lastPower = power;
-						}
+				const unsubscribe = powerCluster.activePower.subscribe((power, isInitial) => {
+					if (power === undefined) {
+						return;
 					}
-				);
+					// Log all power readings, including initial
+					if (!isInitial || lastPower === undefined) {
+						// Only log if power changed by at least 1 watt
+						if (lastPower === undefined || Math.abs(power - lastPower) >= 1) {
+							lastPower = power;
+							void this.logEvent(deviceId, power);
+						}
+					} else {
+						lastPower = power;
+					}
+				});
 
 				this._subscriptions.set(deviceId, unsubscribe);
 			}
