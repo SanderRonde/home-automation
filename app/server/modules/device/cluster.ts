@@ -226,6 +226,11 @@ export abstract class DeviceThermostatCluster extends Cluster {
 
 	public abstract setTargetTemperature(temperature: number): Promise<void>;
 	public abstract setMode(mode: ThermostatMode): Promise<void>;
+
+	/**
+	 * Role of the thermostat: 'master' controls the boiler/heater, 'slave' controls individual radiators
+	 */
+	public abstract readonly role: 'master' | 'slave';
 }
 
 export abstract class DeviceElectricalEnergyMeasurementCluster extends Cluster {
