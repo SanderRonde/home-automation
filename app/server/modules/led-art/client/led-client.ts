@@ -71,7 +71,7 @@ export class LEDClient implements Disposable {
 			this._socket = io(this._url, {
 				reconnection: true,
 				reconnectionDelay: 1000,
-				reconnectionDelayMax: 5000,
+				reconnectionDelayMax: 10 * 60000,
 				reconnectionAttempts: Infinity,
 			});
 
