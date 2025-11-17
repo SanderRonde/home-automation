@@ -2,7 +2,7 @@ import {
 	DeviceElectricalEnergyMeasurementCluster,
 	DeviceElectricalPowerMeasurementCluster,
 } from '../../device/cluster';
-import { createEventEmitter } from '../../../lib/event-emitter';
+import { EventEmitter } from '../../../lib/event-emitter';
 import { Data } from '../../../lib/data';
 
 export class HomeWizardElectricalEnergyMeasurementCluster extends DeviceElectricalEnergyMeasurementCluster {
@@ -10,7 +10,7 @@ export class HomeWizardElectricalEnergyMeasurementCluster extends DeviceElectric
 	public readonly totalEnergyPeriod = new Data<{ from: Date; to: Date } | undefined>(
 		undefined
 	);
-	public readonly onChange = createEventEmitter<void>();
+	public readonly onChange = new EventEmitter<void>();
 
 	public getBaseCluster(): typeof DeviceElectricalEnergyMeasurementCluster {
 		return DeviceElectricalEnergyMeasurementCluster;
@@ -30,7 +30,7 @@ export class HomeWizardElectricalEnergyMeasurementCluster extends DeviceElectric
 
 export class HomeWizardElectricalPowerMeasurementCluster extends DeviceElectricalPowerMeasurementCluster {
 	public readonly activePower = new Data<number | undefined>(undefined);
-	public readonly onChange = createEventEmitter<void>();
+	public readonly onChange = new EventEmitter<void>();
 
 	public getBaseCluster(): typeof DeviceElectricalPowerMeasurementCluster {
 		return DeviceElectricalPowerMeasurementCluster;
