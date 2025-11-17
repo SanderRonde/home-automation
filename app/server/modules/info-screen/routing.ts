@@ -39,9 +39,9 @@ export async function initRouting(moduleConfig: ModuleConfig): Promise<void> {
 						const modules = await InfoScreen.getModules<AllModules>();
 						const response = await (async () => {
 							if (type === 'inside') {
-								// Request inside temperature from temperature module
+								// Request average of all device temperatures
 								const temp =
-									await modules.temperature.getInsideTemperature(modules);
+									await modules.temperature.getAllDeviceTemperaturesAverage(modules);
 								return {
 									temperature: temp,
 									icon: 'inside.png',

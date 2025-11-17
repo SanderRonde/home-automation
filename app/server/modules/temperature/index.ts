@@ -100,6 +100,58 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 	}
 
 	/**
+	 * Get average temperature from ALL devices with temperature sensors in the house
+	 */
+	public async getAllDeviceTemperaturesAverage(modules: AllModules): Promise<number> {
+		const temperatures: number[] = [];
+
+		try {
+			const deviceApi = await modules.device.api.value;
+			const devices = deviceApi.devices.current();
+
+			// Iterate through all devices to find temperature sensors
+			for (const [deviceId, deviceValue] of Object.entries(devices)) {
+				if (!deviceValue) {
+					continue;
+				}
+				const device = deviceValue;
+
+				try {
+					const temperatureClusters = device.getAllClustersByType(
+						DeviceTemperatureMeasurementCluster
+					);
+
+					for (const cluster of temperatureClusters) {
+						const temperature = await cluster.temperature.get();
+						if (temperature !== undefined && !Number.isNaN(temperature)) {
+							temperatures.push(temperature);
+						}
+					}
+				} catch (error) {
+					// Skip devices that fail to read temperature
+					logTag(
+						'temperature',
+						'yellow',
+						`Failed to get temperature from device: ${deviceId}`,
+						error
+					);
+				}
+			}
+		} catch (error) {
+			logTag('temperature', 'red', 'Failed to get devices for temperature averaging:', error);
+		}
+
+		// If no valid temperatures found, fallback to 'room'
+		if (temperatures.length === 0) {
+			return await this.getTemp('room');
+		}
+
+		// Calculate average
+		const sum = temperatures.reduce((acc, temp) => acc + temp, 0);
+		return sum / temperatures.length;
+	}
+
+	/**
 	 * Get list of available temperature sensors
 	 */
 	public async getAvailableTemperatureSensors(
@@ -126,10 +178,11 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 			const deviceApi = await modules.device.api.value;
 			const devices = deviceApi.devices.current();
 
-			for (const [deviceId, device] of Object.entries(devices)) {
-				if (!device) {
+			for (const [deviceId, deviceValue] of Object.entries(devices)) {
+				if (!deviceValue) {
 					continue;
 				}
+				const device = deviceValue;
 				const temperatureClusters = device.getAllClustersByType(
 					DeviceTemperatureMeasurementCluster
 				);
