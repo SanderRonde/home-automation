@@ -19,6 +19,7 @@ import type { DeviceClusterCardBaseProps } from './DeviceClusterCard';
 import type { DeviceGroup } from '../../../../types/group';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { TemperatureDisplay } from './TemperatureDisplay';
+import { EnergyDisplay } from './EnergyDisplay';
 import type { Palette } from '../../../../types/palette';
 import { fadeInUpStaggered } from '../../lib/animations';
 import { DeviceClusterCard } from './DeviceClusterCard';
@@ -238,6 +239,7 @@ export const Home = (): JSX.Element => {
 	});
 	const [hasLayout, setHasLayout] = React.useState(false);
 	const [temperatureExpanded, setTemperatureExpanded] = React.useState(false);
+	const [energyExpanded, setEnergyExpanded] = React.useState(false);
 
 	// Load scenes marked as favorites
 	React.useEffect(() => {
@@ -575,6 +577,11 @@ export const Home = (): JSX.Element => {
 				<TemperatureDisplay
 					onExpandedChange={(expanded) => {
 						setTemperatureExpanded(expanded);
+					}}
+				/>
+				<EnergyDisplay
+					onExpandedChange={(expanded) => {
+						setEnergyExpanded(expanded);
 					}}
 				/>
 				<HomeLayoutView

@@ -14,6 +14,7 @@ import { WLed } from './wled';
 import { Auth } from './auth';
 import { Bot } from './bot';
 import { AI } from './ai';
+import { HomeWizard } from './homewizard';
 
 import type { Database } from '../lib/db';
 import type { AppConfig } from '../app';
@@ -46,6 +47,7 @@ const getModuleObj = () => ({
 	homeDetector: HomeDetector,
 	notification: Notification,
 	ai: AI,
+	homewizard: HomeWizard,
 });
 
 let notified = false;

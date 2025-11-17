@@ -20,6 +20,7 @@ import { Scenes } from './components/Scenes';
 import { Groups } from './components/Groups';
 import { Home } from './components/Home';
 import { apiGet } from '../lib/fetch';
+import { EnergyUsage } from './components/EnergyUsage';
 
 // Register service worker for PWA functionality
 if ('serviceWorker' in navigator) {
@@ -114,6 +115,8 @@ function DashboardApp() {
 				return <HouseLayout />;
 			case SidebarTab.TEMPERATURE_HISTORY:
 				return <TemperatureHistory />;
+			case SidebarTab.ENERGY_USAGE:
+				return <EnergyUsage />;
 			case SidebarTab.SCENES:
 				return <Scenes />;
 			case SidebarTab.GROUPS:
