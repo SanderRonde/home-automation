@@ -2,6 +2,7 @@ import type { Database } from '../../../lib/db';
 import type { BotBase } from '../../meta';
 import type { AllModules } from '../..';
 import { getAllModules } from '../..';
+import type { BotDB } from '..';
 
 type ChatStateType = {
 	[K in keyof AllModules]: BotBase;
@@ -12,9 +13,7 @@ type ChatStateInitJSON = Record<keyof AllModules, unknown>;
 export class ChatState {
 	public states!: ChatStateType;
 
-	public init(
-		json: ChatStateInitJSON = {} as Record<keyof AllModules, unknown>
-	): this {
+	public init(json: ChatStateInitJSON = {} as Record<keyof AllModules, unknown>): this {
 		this.states = {} as ChatStateType;
 
 		const modules = getAllModules();
@@ -44,10 +43,12 @@ export class ChatState {
 export class StateKeeper {
 	public chatIds: Map<number, ChatState> = new Map();
 
-	public constructor(private readonly _db: Database) {}
+	public constructor(private readonly _db: Database<BotDB>) {
+		this._restoreFromDB();
+	}
 
-	private async _restoreFromDB() {
-		const data = await this._db.data();
+	private _restoreFromDB() {
+		const data = this._db.current();
 		for (const requestId in data) {
 			this.chatIds.set(
 				parseInt(requestId, 10),
@@ -57,15 +58,10 @@ export class StateKeeper {
 	}
 
 	private _saveChat(chatId: number) {
-		this._db.setVal(
-			String(chatId),
-			JSON.stringify(this.chatIds.get(chatId)!)
-		);
-	}
-
-	public async init(): Promise<this> {
-		await this._restoreFromDB();
-		return this;
+		this._db.update((old) => ({
+			...old,
+			[String(chatId)]: this.chatIds.get(chatId)!.toJSON(),
+		}));
 	}
 
 	public getState(chatId: number): ChatState {

@@ -1,0 +1,342 @@
+---
+globs: app/client/**/*.tsx,app/client/**/*.ts
+---
+
+# API Communication (Client-Side)
+
+Client-side API communication patterns for React components.
+
+## API Utilities
+
+Use the **type-safe** fetch utilities from [app/client/lib/fetch.ts](mdc:app/client/lib/fetch.ts):
+
+```typescript
+import { apiGet, apiPost, apiDelete } from '../../lib/fetch';
+
+// GET request with automatic type inference
+const response = await apiGet('device', '/list', {});
+if (response.ok) {
+	const data = await response.json(); // Fully typed based on route!
+}
+
+// POST request with path params and body
+const response = await apiPost(
+	'device',
+	'/scenes/:sceneId/update',
+	{ sceneId: 'scene_123' }, // Path params
+	{ title: 'New Scene', actions: [] } // Body (validated against route schema)
+);
+
+// DELETE request
+const response = await apiDelete('device', '/scenes/:sceneId/delete', {
+	sceneId: 'scene_123',
+});
+```
+
+## Type-Safe API System
+
+The API system provides **full type safety** from server routes to client calls:
+
+### Server-Side Route Definition
+
+Routes define their types using Zod schemas and response helpers:
+
+```typescript
+import { createServeOptions, withRequestBody } from '../../lib/routes';
+import * as z from 'zod';
+
+export const routes = createServeOptions({
+	'/scenes/:sceneId/update': withRequestBody(
+		z.object({
+			title: z.string(),
+			actions: z.array(/* ... */),
+		}),
+		async (body, req, server, { json }) => {
+			// body is typed as { title: string, actions: ... }
+			return json({ success: true });
+		}
+	),
+});
+
+export type DeviceRoutes = typeof routes;
+```
+
+### Client-Side Type Inference
+
+The client automatically infers types:
+
+```typescript
+// Module name, endpoint, and path params are type-checked
+const response = await apiGet('device', '/list', {});
+
+// Response type is inferred from server route definition
+if (response.ok) {
+	const data = await response.json(); // Type: { devices: Device[] }
+} else {
+	const error = await response.json(); // Type: error response
+}
+
+// Request body is validated against Zod schema
+await apiPost(
+	'device',
+	'/scenes/create',
+	{},
+	{
+		title: 'Scene', // ✅ Type-checked
+		actions: [], // ✅ Type-checked
+		invalidField: true, // ❌ Type error!
+	}
+);
+```
+
+### Path Parameters
+
+Path parameters are type-checked:
+
+```typescript
+// Route: '/scenes/:sceneId/update'
+await apiPost(
+	'device',
+	'/scenes/:sceneId/update',
+	{ sceneId: 'scene_123' }, // ✅ sceneId is required
+	bodyData
+);
+
+await apiPost(
+	'device',
+	'/scenes/:sceneId/update',
+	{}, // ❌ Type error: sceneId is missing!
+	bodyData
+);
+```
+
+## Error Handling
+
+Check `response.ok` to handle errors:
+
+```typescript
+const [error, setError] = React.useState<string | null>(null);
+
+const fetchData = async () => {
+	try {
+		const response = await apiGet('device', '/list', {});
+		if (response.ok) {
+			const data = await response.json();
+			setData(data);
+			setError(null);
+		} else {
+			const errorData = await response.json();
+			setError(errorData.error || 'Failed to load data');
+		}
+	} catch (error) {
+		console.error('API error:', error);
+		setError('Network error');
+	}
+};
+```
+
+## Loading States
+
+Track loading states for better UX:
+
+```typescript
+const [loading, setLoading] = React.useState<boolean>(false);
+const [data, setData] = React.useState<DataType | null>(null);
+
+const fetchData = async () => {
+	setLoading(true);
+	try {
+		const response = await apiGet('module', '/endpoint', {});
+		if (response.ok) {
+			const result = await response.json();
+			setData(result);
+		}
+	} catch (error) {
+		console.error('Error:', error);
+	} finally {
+		setLoading(false);
+	}
+};
+```
+
+## useEffect for Data Fetching
+
+```typescript
+React.useEffect(() => {
+	let cancelled = false;
+
+	const fetchData = async () => {
+		try {
+			const response = await apiGet('module', '/endpoint', {});
+			if (response.ok && !cancelled) {
+				const result = await response.json();
+				setData(result);
+			}
+		} catch (error) {
+			if (!cancelled) {
+				console.error('Error:', error);
+			}
+		}
+	};
+
+	void fetchData();
+
+	return () => {
+		cancelled = true;
+	};
+}, [dependencies]);
+```
+
+## Debouncing API Calls
+
+For search or input-triggered API calls:
+
+```typescript
+const [searchTerm, setSearchTerm] = React.useState('');
+
+React.useEffect(() => {
+	const timeoutId = setTimeout(async () => {
+		if (searchTerm) {
+			const response = await apiGet('module', '/search', {
+				q: encodeURIComponent(searchTerm),
+			});
+			if (response.ok) {
+				const results = await response.json();
+				setResults(results);
+			}
+		}
+	}, 300); // 300ms debounce
+
+	return () => clearTimeout(timeoutId);
+}, [searchTerm]);
+```
+
+## Real-Time Updates with WebSocket
+
+Combine API calls with WebSocket for real-time updates:
+
+```typescript
+const [data, setData] = React.useState<DataType[]>([]);
+
+// Initial fetch
+React.useEffect(() => {
+	const fetchInitial = async () => {
+		const response = await apiGet('module', '/data/list', {});
+		if (response.ok) {
+			const initial = await response.json();
+			setData(initial);
+		}
+	};
+	void fetchInitial();
+}, []);
+
+// WebSocket updates
+React.useEffect(() => {
+	const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+	const ws = new WebSocket(`${protocol}//${window.location.host}/ws/module`);
+
+	ws.onmessage = (event) => {
+		const update = JSON.parse(event.data);
+		if (update.type === 'data_update') {
+			setData(update.data);
+		}
+	};
+
+	return () => ws.close();
+}, []);
+```
+
+## Optimistic Updates
+
+For better UX, update UI immediately then sync with server:
+
+```typescript
+const toggleDevice = async (deviceId: string) => {
+	// Optimistic update
+	setDevices(devices.map((d) => (d.id === deviceId ? { ...d, on: !d.on } : d)));
+
+	try {
+		// Server sync
+		const response = await apiPost('device', '/toggle', {}, { deviceId });
+		if (!response.ok) {
+			throw new Error('Toggle failed');
+		}
+	} catch (error) {
+		// Revert on error
+		const response = await apiGet('device', '/list', {});
+		if (response.ok) {
+			const actualState = await response.json();
+			setDevices(actualState.devices);
+		}
+		console.error('Toggle failed:', error);
+	}
+};
+```
+
+## Module Namespacing
+
+API routes are automatically namespaced by module in the type-safe API:
+
+Available modules:
+
+- `'device'` - Device management and scenes
+- `'matter'` - Matter protocol integration
+- `'auth'` - Authentication
+- `'dashboard'` - Dashboard configuration
+- `'bot'` - Telegram bot
+- `'ai'` - AI integration (ChatGPT + MCP)
+- `'wled'` - WLED lights
+- `'ewelink'` - eWeLink devices
+- `'temperature'` - Temperature sensors
+- `'webhook'` - Webhooks
+
+Always specify the module:
+
+```typescript
+// ✅ Good - type-safe
+await apiGet('device', '/list', {});
+
+// ❌ Bad - not supported
+await apiGet('/device/list'); // Old API
+```
+
+## Adding New Routes to Type System
+
+When adding new routes, export the route type:
+
+```typescript
+// app/server/modules/mymodule/routing.ts
+export const routes = createServeOptions({
+	'/my-endpoint': {
+		GET: handler,
+	},
+});
+
+export type MyModuleRoutes = typeof routes;
+```
+
+Then register in `app/client/lib/fetch.ts`:
+
+```typescript
+import type { MyModuleRoutes } from '../../server/modules/mymodule/routing';
+
+type RoutesForModules = {
+	// ... existing modules
+	mymodule: MyModuleRoutes;
+};
+```
+
+## Best Practices
+
+- ✅ Use the type-safe API (`apiGet`, `apiPost`, `apiDelete`)
+- ✅ Always check `response.ok` before reading response
+- ✅ Let TypeScript infer types from route definitions
+- ✅ Handle loading and error states
+- ✅ Use try-catch for network errors
+- ✅ Cancel requests when components unmount
+- ✅ Combine with WebSocket for real-time updates
+- ✅ Use optimistic updates for better UX
+- ❌ Don't make API calls on every render
+- ❌ Don't forget to handle error responses
+- ❌ Avoid deeply nested API calls (use Promise.all)
+- ❌ Don't bypass the type-safe API system

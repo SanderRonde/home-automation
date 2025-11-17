@@ -7,16 +7,10 @@ declare module 'castv2-player' {
 		type: string;
 	}
 
-	export function ScannerPromise(
-		logger?: any
-	): (name?: string) => Promise<Device>;
+	export function ScannerPromise(logger?: any): (name?: string) => Promise<Device>;
 
 	interface Playlist {
-		insertPromise(
-			url: string,
-			options?: any,
-			disableCheck?: boolean
-		): Promise<void>;
+		insertPromise(url: string, options?: any, disableCheck?: boolean): Promise<void>;
 	}
 
 	interface PersistentPlayer {
@@ -67,20 +61,13 @@ declare module 'castv2-player' {
 
 		updatePlaylistPromise(items: any[], options?: any): Promise<void>;
 		insertIntoPlaylistPromise(items: any[], options?: any): Promise<void>;
-		removeFromPlaylistPromise(
-			itemIds: number[],
-			options?: any
-		): Promise<void>;
+		removeFromPlaylistPromise(itemIds: number[], options?: any): Promise<void>;
 		reorderPlaylistPromise(itemIds: number[], options?: any): Promise<void>;
 		jumpInPlaylistPromise(jump: number): Promise<void>;
 
 		//set repeatMode - REPEAT_OFF, REPEAT_ALL, REPEAT_SINGLE, REPEAT_ALL_AND_SHUFFLE
 		setRepeatModePromise(
-			repeatMode:
-				| 'REPEAT_OFF'
-				| 'REPEAT_ALL'
-				| 'REPEAT_SINGLE'
-				| 'REPEAT_ALL_AND_SHUFFLE'
+			repeatMode: 'REPEAT_OFF' | 'REPEAT_ALL' | 'REPEAT_SINGLE' | 'REPEAT_ALL_AND_SHUFFLE'
 		): Promise<void>;
 		playAnnouncementPromise(url: string, options?: any): Promise<void>;
 

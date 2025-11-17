@@ -1,3 +1,5 @@
+import { genId, getClientSecret } from '../app/server/modules/auth/client-secret';
+import { logImmediate } from '../app/server/lib/logging/logger';
 import { exec } from 'child_process';
 import * as https from 'https';
 
@@ -10,30 +12,28 @@ function getArg(name: string) {
 	throw new Error(`Missing argument --${name}`);
 }
 
-function report(temperature: number) {
+function report(temperature: number, id: number, secret: string) {
 	const name = getArg('name');
 	const req = https.request(
 		{
 			method: 'POST',
 			hostname: getArg('host'),
-			path: `/temperature/report/${name}/${temperature}`,
+			path: `/temperature/report/${name}/${temperature}?id=${id}&auth=${secret}`,
 		},
 		(res) => {
 			if (res.statusCode === 200) {
-				console.log(
+				logImmediate(
 					`[${new Date().toLocaleTimeString()}] Reported temperature ${temperature}`
 				);
 			} else {
-				console.log(
-					`[${new Date().toLocaleTimeString()}] Failed to report temperature`
-				);
+				logImmediate(`[${new Date().toLocaleTimeString()}] Failed to report temperature`);
 			}
 		}
 	);
 	req.end();
 }
 
-function measure() {
+function measure(id: number, secret: string) {
 	const device = getArg('device');
 	exec(`sensors -u ${device}`, (err, stdout) => {
 		if (err) {
@@ -42,10 +42,8 @@ function measure() {
 
 		for (const line of stdout.split('\n').slice(1)) {
 			if (line.startsWith('  temp1_input:')) {
-				const temperature = parseFloat(
-					line.split(/\s/g).filter((l) => l.length)[1]
-				);
-				report(temperature);
+				const temperature = parseFloat(line.split(/\s/g).filter((l) => l.length)[1]);
+				report(temperature, id, secret);
 				break;
 			}
 		}
@@ -53,10 +51,12 @@ function measure() {
 }
 
 function main(): void {
+	const id = genId();
+	const secret = getClientSecret(id);
 	setInterval(() => {
-		void measure();
+		void measure(id, secret);
 	}, 1000 * 60);
-	void measure();
+	void measure(id, secret);
 }
 
 main();

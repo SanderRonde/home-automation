@@ -1,86 +1,51 @@
 import { HomeDetector } from './home-detector';
+import { Notification } from './notification';
 import { Temperature } from './temperature';
-import { SwitchBot } from './switchbot/';
-import { Pressure } from './pressure';
-import { Movement } from './movement';
+import { LedArt } from './led-art/led-art';
+import { InfoScreen } from './info-screen';
+import { Wakelight } from './wakelight';
+import { Dashboard } from './dashboard';
 import { Webhook } from './webhook';
 import { EWeLink } from './ewelink';
 import { Secret } from './secret/';
-import { Notion } from './notion/';
-import { KeyVal } from './keyval';
-import { OAuth } from './oauth/';
+import { Matter } from './matter';
+import { Device } from './device';
+import { WLed } from './wled';
 import { Auth } from './auth';
-import { Hue } from './hue/';
 import { Bot } from './bot';
-import { RGB } from './rgb';
+import { AI } from './ai';
 
-import type { AsyncExpressApplication } from '../types/express';
-import type { SQLDatabaseWithSchema } from '../lib/sql-db';
-import type { WSSimulator, WSWrapper } from '../lib/ws';
-import { InfoScreen } from './info-screen';
 import type { Database } from '../lib/db';
-import type { ModuleMeta } from './meta';
-import type { Config } from '../app';
-
-export { HomeDetector } from './home-detector';
-export { Temperature } from './temperature';
-export { SwitchBot } from './switchbot/';
-export { Pressure } from './pressure';
-export { Movement } from './movement';
-export { Webhook } from './webhook';
-export { EWeLink } from './ewelink';
-export { Notion } from './notion/';
-export { KeyVal } from './keyval';
-export { Secret } from './secret/';
-export { OAuth } from './oauth/';
-export { Auth } from './auth';
-export { Bot } from './bot';
-export { RGB } from './rgb';
-export { Hue } from './hue/';
+import type { AppConfig } from '../app';
+import type { SQL } from 'bun';
 
 export type AllModules = ReturnType<typeof getModuleObj>;
 
-export type InstanceOf<T> = T extends {
-	new (...args: unknown[]): infer I;
-}
-	? I
-	: void;
-
-export type ModuleHookables = {
-	[K in keyof AllModules]: AllModules[K];
-};
-
-export interface BaseModuleConfig {
-	app: AsyncExpressApplication;
-	websocketSim: WSSimulator;
-	websocket: WSWrapper;
-	config: Config;
-	randomNum: number;
-}
-
-export interface ModuleConfig<M extends ModuleMeta> extends BaseModuleConfig {
-	db: Database;
-	sqlDB: SQLDatabaseWithSchema<M['schema']>;
+export interface ModuleConfig {
+	config: AppConfig;
+	wsPublish: (data: string) => Promise<Bun.ServerWebSocketSendStatus>;
+	db: Database<unknown>;
+	sqlDB: SQL;
 	modules: AllModules;
 }
 
 const getModuleObj = () => ({
 	bot: Bot,
-	RGB: RGB,
-	hue: Hue,
 	auth: Auth,
-	oauth: OAuth,
-	keyval: KeyVal,
+	wled: WLed,
+	ledArt: LedArt,
+	device: Device,
+	matter: Matter,
+	dashboard: Dashboard,
 	secret: Secret,
-	notion: Notion,
+	wakelight: Wakelight,
 	webhook: Webhook,
 	ewelink: EWeLink,
-	pressure: Pressure,
-	movement: Movement,
-	switchbot: SwitchBot,
 	infoScreen: InfoScreen,
 	temperature: Temperature,
 	homeDetector: HomeDetector,
+	notification: Notification,
+	ai: AI,
 });
 
 let notified = false;

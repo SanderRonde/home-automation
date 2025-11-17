@@ -8,19 +8,6 @@ function getCalculatedValue(value: string, width: number) {
 	}
 }
 
-export function clampWidth(
-	selector: string,
-	property: string,
-	value: string,
-	width = 1000
-): string {
-	const calculatedvalue = getCalculatedValue(value, width);
-	return (
-		`${selector} { ${property}: ${value}; }\t` +
-		`@media screen and (min-width: ${width}px) { ${selector} { ${property}: ${calculatedvalue} } }`
-	);
-}
-
 export function clampWidthSelector(selector: string, width = 1000) {
 	return (...configs: [string, string][]): string => {
 		return `${selector} {\n${configs

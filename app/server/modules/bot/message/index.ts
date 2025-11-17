@@ -1,22 +1,17 @@
-import type {
-	MatchResponse,
-	TelegramMessage,
-	TelegramReq,
-	TelegramText,
-} from '../types';
-import type { ResponseLike } from '../../../lib/logging/response-logger';
+import type { MatchResponse, TelegramMessage, TelegramText } from '../types';
 import { BotStateBase, Matchable } from '../../../lib/bot-state';
 import { LogObj } from '../../../lib/logging/lob-obj';
 import { TELEGRAM_API } from '../../../lib/constants';
 import { logTag } from '../../../lib/logging/logger';
 import type { ChatState } from './state-keeping';
 import type { Database } from '../../../lib/db';
+import type { AllModules } from '../../modules';
 import { StateKeeper } from './state-keeping';
 import { RESPONSE_TYPE } from '../types';
 import { BOT_NAME } from '../constants';
+import { Bot, type BotDB } from '..';
 import * as https from 'https';
 import chalk from 'chalk';
-import { Bot } from '..';
 
 export interface MatchParameters {
 	logObj: LogObj;
@@ -24,19 +19,12 @@ export interface MatchParameters {
 	message: TelegramMessage;
 	state: ChatState;
 	bot: MessageHandler;
-	res: ResWrapper;
-}
-
-export class ResWrapper {
-	public sent = false;
-
-	public constructor(public res: ResponseLike) {}
 }
 
 export class MessageHandler extends BotStateBase {
 	private static _bootedAt = new Date();
 
-	public static readonly matches = MessageHandler.createMatchMaker(
+	public static override readonly matches = MessageHandler.createMatchMaker(
 		({ matchMaker: mm, sameWordMaker: wm }) => {
 			mm('hi', 'hello', () => 'Hi!');
 			mm('thanks', () => "You're welcome");
@@ -89,20 +77,19 @@ export class MessageHandler extends BotStateBase {
 		}
 	);
 
-	private _stateKeeper!: StateKeeper;
+	private readonly _stateKeeper: StateKeeper;
 	private _openQuestions: ((response: string) => void)[] = [];
 	private _lastChatID = 0;
 
 	public constructor(
 		private readonly _secret: string,
-		private readonly _db: Database
+		private readonly _db: Database<BotDB>
 	) {
 		super();
+		this._stateKeeper = new StateKeeper(this._db);
 	}
 
-	private static async _matchSelf(
-		config: MatchParameters
-	): Promise<MatchResponse | undefined> {
+	private static async _matchSelf(config: MatchParameters): Promise<MatchResponse | undefined> {
 		return await Matchable.matchLines({
 			...config,
 			matchConfig: MessageHandler.matches,
@@ -124,26 +111,19 @@ export class MessageHandler extends BotStateBase {
 		return value;
 	}
 
-	public static async match(
+	public static override async match(
 		config: MatchParameters
 	): Promise<MatchResponse | undefined> {
 		return this._matchMatchables(
 			config,
 			await this._matchSelf(config),
-			...Object.values(await Bot.modules).map((meta) => {
+			...Object.values(await Bot.getModules<AllModules>()).map((meta) => {
 				return meta.Bot;
 			})
 		);
 	}
 
-	public static async multiMatch({
-		logObj,
-		text,
-		message,
-		state,
-		res,
-		bot,
-	}: MatchParameters): Promise<
+	public static async multiMatch({ logObj, text, message, state, bot }: MatchParameters): Promise<
 		| {
 				type: RESPONSE_TYPE;
 				text: string | number;
@@ -163,15 +143,11 @@ export class MessageHandler extends BotStateBase {
 				text,
 				message,
 				state,
-				res,
 				bot,
 			}))
 		) {
 			// Push response
-			if (
-				typeof match.response === 'string' ||
-				typeof match.response === 'number'
-			) {
+			if (typeof match.response === 'string' || typeof match.response === 'number') {
 				response.push({
 					type: RESPONSE_TYPE.TEXT,
 					text: match.response,
@@ -206,8 +182,7 @@ export class MessageHandler extends BotStateBase {
 			if (lastType !== response[i].type) {
 				responses.push(response[i]);
 			} else {
-				responses[responses.length - 1].text +=
-					`'\n'${response[i].text}`;
+				responses[responses.length - 1].text += `'\n'${response[i].text}`;
 			}
 		}
 		return responses;
@@ -225,25 +200,7 @@ export class MessageHandler extends BotStateBase {
 		return parts;
 	}
 
-	private _finishRes(wrapped: ResWrapper) {
-		if (wrapped.sent) {
-			return;
-		}
-		wrapped.res.write('ok');
-		wrapped.res.end();
-		wrapped.sent = true;
-	}
-
-	public async init(): Promise<this> {
-		this._stateKeeper = await new StateKeeper(this._db).init();
-		return this;
-	}
-
-	public async sendMessage(
-		text: string,
-		type: RESPONSE_TYPE,
-		chatId?: number
-	): Promise<boolean> {
+	public async sendMessage(text: string, type: RESPONSE_TYPE, chatId?: number): Promise<boolean> {
 		if (!this._lastChatID && !chatId) {
 			logTag(
 				'bot',
@@ -277,10 +234,7 @@ export class MessageHandler extends BotStateBase {
 
 			req.write(msg);
 			req.on('error', (e) => {
-				reqLogObj.attachMessage(
-					chalk.red('Error sending telegram msg'),
-					e.toString()
-				);
+				reqLogObj.attachMessage(chalk.red('Error sending telegram msg'), e.toString());
 				resolve(false);
 			});
 			req.on('finish', () => {
@@ -297,8 +251,7 @@ export class MessageHandler extends BotStateBase {
 
 	public async handleTextMessage(
 		logObj: LogObj,
-		message: TelegramMessage<TelegramText>,
-		res: ResWrapper
+		message: TelegramMessage<TelegramText>
 	): Promise<
 		{
 			type: RESPONSE_TYPE;
@@ -315,7 +268,6 @@ export class MessageHandler extends BotStateBase {
 				text: message.text,
 				message,
 				state: this._stateKeeper.getState(message.chat.id),
-				res,
 				bot: this,
 			})) ||
 			(matchMsg.attachMessage('None') && [
@@ -329,12 +281,8 @@ export class MessageHandler extends BotStateBase {
 
 	public async askQuestion(
 		question: string,
-		message: TelegramMessage,
-		res: ResWrapper
+		message: TelegramMessage
 	): Promise<string | undefined> {
-		// Send early
-		this._finishRes(res);
-
 		const chatId = message?.chat.id;
 		if (chatId === undefined) {
 			return undefined;
@@ -353,12 +301,8 @@ export class MessageHandler extends BotStateBase {
 	public async askCancelable(
 		question: string,
 		message: TelegramMessage,
-		res: ResWrapper,
 		setCancelable: (cancel: () => void) => void
 	): Promise<string | undefined> {
-		// Send early
-		this._finishRes(res);
-
 		const chatId = message?.chat.id;
 		if (chatId === undefined) {
 			return undefined;
@@ -372,22 +316,12 @@ export class MessageHandler extends BotStateBase {
 		return new Promise<string>((resolve) => {
 			this._openQuestions.push(resolve);
 			setCancelable(() => {
-				this._openQuestions.splice(
-					this._openQuestions.indexOf(resolve),
-					1
-				);
+				this._openQuestions.splice(this._openQuestions.indexOf(resolve), 1);
 			});
 		});
 	}
 
-	public async sendText(
-		text: string,
-		message: TelegramMessage,
-		res: ResWrapper
-	): Promise<boolean> {
-		// Send early
-		this._finishRes(res);
-
+	public async sendText(text: string, message: TelegramMessage): Promise<boolean> {
 		const chatId = message?.chat.id;
 		if (chatId === undefined) {
 			return false;
@@ -407,15 +341,10 @@ export class MessageHandler extends BotStateBase {
 	}
 
 	public async handleMessage(
-		req: TelegramReq,
-		res: ResponseLike
-	): Promise<void> {
-		const { message, edited_message } = req.body;
-		const logObj = LogObj.fromRes(res).attachMessage(
-			chalk.bold(chalk.cyan('[bot]'))
-		);
-
-		const resWrapped = new ResWrapper(res);
+		message: TelegramMessage,
+		edited_message: TelegramMessage | undefined,
+		logObj: LogObj
+	): Promise<Response> {
 		const responses = await (() => {
 			if (edited_message) {
 				return [
@@ -430,10 +359,10 @@ export class MessageHandler extends BotStateBase {
 				return [];
 			}
 			if ('reply_to_message' in message) {
-				return this.handleTextMessage(logObj, message, resWrapped);
+				return this.handleTextMessage(logObj, message);
 			}
 			if ('text' in message) {
-				return this.handleTextMessage(logObj, message, resWrapped);
+				return this.handleTextMessage(logObj, message);
 			}
 			return [
 				{
@@ -442,10 +371,7 @@ export class MessageHandler extends BotStateBase {
 				},
 			];
 		})();
-		logObj.attachMessage(
-			'Return value(s)',
-			chalk.bold(JSON.stringify(responses))
-		);
+		logObj.attachMessage('Return value(s)', chalk.bold(JSON.stringify(responses)));
 		const sendSuccesful = (
 			await Promise.all(
 				responses.map(async (response) => {
@@ -454,17 +380,9 @@ export class MessageHandler extends BotStateBase {
 						return false;
 					}
 					this._lastChatID = chatId;
-					const textParts = this._splitLongText(
-						String(response.text)
-					);
+					const textParts = this._splitLongText(String(response.text));
 					for (const textPart of textParts) {
-						if (
-							!(await this.sendMessage(
-								textPart,
-								response.type,
-								chatId
-							))
-						) {
+						if (!(await this.sendMessage(textPart, response.type, chatId))) {
 							return false;
 						}
 					}
@@ -473,13 +391,10 @@ export class MessageHandler extends BotStateBase {
 			)
 		).every((v) => v);
 
-		if (!resWrapped.sent) {
-			if (sendSuccesful) {
-				resWrapped.res.write('ok');
-			} else {
-				resWrapped.res.write('Error : failed to respond');
-			}
-			resWrapped.res.end();
+		if (sendSuccesful) {
+			return new Response('ok', { status: 200 });
+		} else {
+			return new Response('Error : failed to respond', { status: 500 });
 		}
 	}
 

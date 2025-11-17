@@ -1,0 +1,39 @@
+- [x] Convert routes to Bun
+- [x] Use bun websocket & channels
+- [x] Remove unused imports
+- [x] Remove unused env
+- [x] Remove dead/unreachable code
+- [x] Consider axing logObj
+- [x] Use bun bundling of .html files to bundle frontend code into 1 mega-bundle from backend (don't wrap request in logging. See lib/routes.ts)
+- [x] Update README.md
+- [x] Typed routes
+- [x] Add MCP server
+- [x] Bump prettier printWidth
+- [x] Migrate MCP key generation to dashboard
+- [x] Websocket support for home tab
+- [x] Add UI for more clusters
+    - [x] Temperature measurement
+    - [x] Relative humidity measurement
+    - [x] Boolean state
+    - [x] Switch
+    - [x] Illuminance measurement
+    - [x] Color control
+- [x] Add support for scenes
+- [x] Detail pages for devices
+    - [x] Light
+    - [x] Window covering
+    - [x] Color control
+- [x] Improve class inheritance, right now TS does not type-check abstract classes
+- [x] Actions cluster
+- [x] Tuya support
+- [x] Improve performance
+- [x] Button presses don't work anymore
+- [x] WLED on/off does not work from UI or from scene
+- [x] Phone charge webhook does not work
+- [x] Get rid of dynamic imports
+- [x] Notifications don't work yet
+- [x] Add power measuring support for ikea smart plugs
+- [x] 3D house overview
+- [x] Inside temperature
+- [x] Scene buttons above 2D view
+- [ ] Wakelight does not appear to work

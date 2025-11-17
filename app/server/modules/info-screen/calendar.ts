@@ -1,19 +1,17 @@
-import { SettablePromise, flatten } from '../../lib/util';
+import { SettablePromise } from '../../lib/settable-promise';
 import type { Credentials } from 'google-auth-library';
 import { SECRETS_FOLDER } from '../../lib/constants';
+import { logTag } from '../../lib/logging/logger';
 import type { calendar_v3 } from 'googleapis';
+import { flatten } from '../../lib/array';
 import { getEnv } from '../../lib/io';
 import { SCOPES } from './constants';
 import { google } from 'googleapis';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const optionalRequire = require('optional-require')(require) as (
-	requirePath: string
-) => unknown;
-
-export let authenticated = false;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const optionalRequire = require('optional-require')(require) as (requirePath: string) => unknown;
 
 export async function refresh(): Promise<void> {
 	try {
@@ -24,7 +22,7 @@ export async function refresh(): Promise<void> {
 		);
 		await authTokens(credentials, true);
 	} catch (e) {
-		console.log('Failed to re-use google code', e);
+		logTag('calendar', 'red', 'Failed to re-use google code', (e as Error).message);
 	}
 }
 
@@ -48,17 +46,9 @@ function createClient(): void {
 
 const client = new SettablePromise<InstanceType<typeof google.auth.OAuth2>>();
 let calendar: calendar_v3.Calendar | null = null;
-export async function authenticateURL(): Promise<string | null> {
-	createClient();
 
-	if (client) {
-		const url = (await client.value).generateAuthUrl({
-			access_type: 'offline',
-			scope: SCOPES,
-		});
-		return url;
-	}
-	return null;
+export function getCalendar(): calendar_v3.Calendar | null {
+	return calendar;
 }
 
 async function authTokens(tokens: Credentials, reAuth: boolean) {
@@ -83,8 +73,6 @@ async function authTokens(tokens: Credentials, reAuth: boolean) {
 		version: 'v3',
 		auth: await client.value,
 	});
-
-	authenticated = true;
 }
 
 export async function authCode(code: string): Promise<void> {
@@ -100,15 +88,18 @@ function getDay(dayOffset: number) {
 	return date;
 }
 
-export type CalendarEvent = calendar_v3.Schema$Event & {
+type CalendarEvent = calendar_v3.Schema$Event & {
 	color: calendar_v3.Schema$ColorDefinition;
 };
 
-export async function getEvents(days: number): Promise<CalendarEvent[]> {
-	const listResponse = await calendar!.calendarList.list();
+export async function getEvents(
+	calendar: calendar_v3.Calendar,
+	days: number
+): Promise<CalendarEvent[]> {
+	const listResponse = await calendar.calendarList.list();
 	const calendars = listResponse.data.items || [];
 
-	const colors = await calendar!.colors.get();
+	const colors = await calendar.colors.get();
 
 	const startTime = getDay(0);
 	startTime.setHours(0, 0, 0);
@@ -140,13 +131,26 @@ export async function getEvents(days: number): Promise<CalendarEvent[]> {
 		})
 	);
 	const flatEvents = flatten(joined);
-	const filter = optionalRequire(
-		path.join(SECRETS_FOLDER, 'event-filter.js')
-	) as (toFilter: CalendarEvent) => boolean;
+	const filter = optionalRequire(path.join(SECRETS_FOLDER, 'event-filter.js')) as (
+		toFilter: CalendarEvent
+	) => boolean;
 	if (filter) {
 		return flatEvents.filter((event) => {
 			return filter(event);
 		});
 	}
 	return flatEvents;
+}
+
+export async function authenticateURL(): Promise<string | null> {
+	createClient();
+
+	if (client) {
+		const url = (await client.value).generateAuthUrl({
+			access_type: 'offline',
+			scope: SCOPES,
+		});
+		return url;
+	}
+	return null;
 }

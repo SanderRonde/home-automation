@@ -84,9 +84,7 @@ declare module 'magic-home' {
 			ww: number,
 			callback?: (err: Error | null, success: boolean) => void
 		): Promise<boolean>;
-		startEffectMode(
-			callback?: (interface: EffectInterface) => void
-		): Promise<EffectInterface>;
+		startEffectMode(callback?: (interface: EffectInterface) => void): Promise<EffectInterface>;
 		turnOff(callback?: () => void): Promise<boolean>;
 		turnOn(callback?: () => void): Promise<boolean>;
 	}
@@ -131,10 +129,7 @@ declare module 'magic-home' {
 
 	export class Discovery {
 		static scan(timeout: number): Discovery;
-		scan(
-			timeout?: number,
-			callback?: (devices: Client[]) => void
-		): Promise<Client[]>;
+		scan(timeout?: number, callback?: (devices: Client[]) => void): Promise<Client[]>;
 
 		clients: Client[];
 		scanned: boolean;

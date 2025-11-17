@@ -59,39 +59,4 @@ export abstract class ServerComm<
 			}, 1000);
 		});
 	}
-
-	protected async request(
-		url: string,
-		postBody: {
-			[key: string]: unknown;
-		} = {},
-		errName = 'Failed request'
-	): Promise<false | Response> {
-		await this.assertOnline();
-
-		try {
-			const response = await fetch(url, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({ ...postBody }),
-				credentials: 'include',
-			});
-			if (!response.ok) {
-				await MessageToast.create({
-					message: `${errName} ${response.status}`,
-					duration: 5000,
-				});
-				return false;
-			}
-			return response;
-		} catch (e) {
-			await MessageToast.create({
-				message: `${errName} (network error)`,
-				duration: 5000,
-			});
-			return false;
-		}
-	}
 }

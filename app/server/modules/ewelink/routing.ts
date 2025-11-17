@@ -1,77 +1,77 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import type eWelink from '../../../../temp/ewelink-api-next';
-import type { EWeLink, ModuleConfig } from '..';
+import { createServeOptions, staticResponse } from '../../lib/routes';
+import type { ServeOptions } from '../../lib/routes';
 import type { Database } from '../../lib/db';
+import type eWelink from 'ewelink-api-next';
+import type { ModuleConfig } from '..';
 import { getEnv } from '../../lib/io';
+import type { EWelinkDB } from '.';
 
-export function initRouting(
-	{ app, db }: ModuleConfig<typeof EWeLink>,
-	// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-	api: InstanceType<typeof eWelink.WebAPI> | null
-): void {
-	app.get('/ewelink/oauth/', (_, res) => {
-		if (!api) {
-			res.status(500).end();
-			return;
-		}
+function _initRouting({ db }: ModuleConfig, api: InstanceType<typeof eWelink.WebAPI> | null) {
+	return createServeOptions(
+		{
+			'/oauth': (_req, _server, { error }) => {
+				if (!api) {
+					return error('No API', 500);
+				}
 
-		res.redirect(
-			api.oauth.createLoginUrl({
-				redirectUrl: `${getEnv(
-					'SECRET_EWELINK_REDIRECT_URL_BASE',
-					true
-				)}/ewelink/redirect_url`,
-				state: 'XXX',
-			})
-		);
-	});
-	app.get('/ewelink/redirect_url', async (req, res) => {
-		const code = req.query['code'];
-		if (!api) {
-			res.status(500).end();
-			return;
-		}
+				return staticResponse(
+					Response.redirect(
+						api.oauth.createLoginUrl({
+							redirectUrl: `${getEnv('SECRET_EWELINK_REDIRECT_URL_BASE', true)}/ewelink/redirect_url`,
+							state: 'XXX',
+						})
+					)
+				);
+			},
+			'/redirect_url': async (req, _server, { error, text }) => {
+				const queryParams = new URL(req.url).searchParams;
+				const code = queryParams.get('code');
+				if (!api) {
+					return error('No API', 500);
+				}
 
-		const token = await api.oauth.getToken({
-			code: code as string,
-			redirectUrl: `${getEnv(
-				'SECRET_EWELINK_REDIRECT_URL_BASE',
-				true
-			)}/ewelink/redirect_url`,
-			region: getEnv('SECRET_EWELINK_REGION', true),
-		});
-		if (!token.data) {
-			res.write('Failed to get token! ' + (token.msg as string));
-			res.end();
-			return;
-		}
+				const token = await api.oauth.getToken({
+					code: code as string,
+					redirectUrl: `${getEnv('SECRET_EWELINK_REDIRECT_URL_BASE', true)}/ewelink/redirect_url`,
+					region: getEnv('SECRET_EWELINK_REGION', true),
+				});
+				if (!token.data) {
+					return error('Failed to get token! ' + (token.msg as string), 500);
+				}
 
-		db.setVal('accessToken', token.data.accessToken);
-		db.setVal('refreshToken', token.data.refreshToken);
-		db.setVal('expiresAt', new Date().getTime() + 1000 * 60 * 60 * 24 * 29);
-		api.at = token.data.accessToken;
-		queueEwelinkTokenRefresh(api, db);
+				db.update((old) => ({
+					...old,
+					accessToken: token.data.accessToken,
+					refreshToken: token.data.refreshToken,
+					expiresAt: new Date().getTime() + 1000 * 60 * 60 * 24 * 29,
+				}));
+				api.at = token.data.accessToken;
+				queueEwelinkTokenRefresh(api, db);
 
-		res.write(
-			`Success! Please restart the server\nResponse:${JSON.stringify(
-				token
-			)}`
-		);
-		res.end();
-	});
+				return text(`Success!\nResponse:${JSON.stringify(token)}`, 200);
+			},
+		},
+		true
+	);
 }
+
+export const initRouting = _initRouting as (
+	config: ModuleConfig,
+	api: InstanceType<typeof eWelink.WebAPI> | null
+) => ServeOptions<unknown>;
 
 export function queueEwelinkTokenRefresh(
 	// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 	api: InstanceType<typeof eWelink.WebAPI> | null,
-	db: Database
+	db: Database<EWelinkDB>
 ): void {
 	if (!api) {
 		return;
 	}
 
-	const refreshToken = db.get<string>('refreshToken');
-	const expiresAt = db.get<number>('expiresAt');
+	const refreshToken = db.current().refreshToken;
+	const expiresAt = db.current().expiresAt;
 	if (!refreshToken || !expiresAt) {
 		return;
 	}
@@ -86,9 +86,11 @@ export function queueEwelinkTokenRefresh(
 		};
 		api.at = data.at;
 
-		db.setVal('accessToken', data.at);
-		db.setVal('refreshToken', data.rt);
-		db.setVal('expiresAt', new Date().getTime() + 1000 * 60 * 60 * 24 * 29);
+		db.set({
+			accessToken: data.at,
+			refreshToken: data.rt,
+			expiresAt: new Date().getTime() + 1000 * 60 * 60 * 24 * 29,
+		});
 
 		queueEwelinkTokenRefresh(api, db);
 	};
@@ -99,3 +101,6 @@ export function queueEwelinkTokenRefresh(
 		setTimeout(refresh, timeToRefresh);
 	}
 }
+
+export type EwelinkRoutes =
+	ReturnType<typeof _initRouting> extends ServeOptions<infer R> ? R : never;

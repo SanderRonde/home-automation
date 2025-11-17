@@ -1,0 +1,116 @@
+---
+description: Patterns for API routing and request handling
+---
+
+# API Routing Patterns
+
+This project uses a custom typed routing system built on Bun.serve.
+
+## Route Definition
+
+Routes are defined using `ServeOptions` from [app/server/lib/routes.ts](mdc:app/server/lib/routes.ts):
+
+```typescript
+import type { ServeOptions, BrandedRouteHandler } from '../../lib/routes';
+import { createServeOptions, withRequestBody } from '../../lib/routes';
+
+const routes = createServeOptions(
+	{
+		'/api/endpoint': {
+			GET: async (req, server, response) => {
+				return response.json({ data: 'value' });
+			},
+			POST: withRequestBody(
+				z.object({ name: z.string() }),
+				async (body, req, server, response) => {
+					return response.json({ received: body.name });
+				}
+			),
+		},
+	},
+	true // auth required
+);
+```
+
+## Response Helpers
+
+The `response` parameter provides typed response builders:
+
+- `response.json<T>(data: T)` - JSON response with type inference
+- `response.error(message: string | object, statusCode: number)` - Error response
+- `response.text(message: string, statusCode: number)` - Plain text response
+
+## Request Body Validation
+
+Use `withRequestBody` with Zod schemas for type-safe request handling:
+
+```typescript
+import * as z from 'zod';
+
+const handler = withRequestBody(
+	z.object({
+		deviceId: z.string(),
+		state: z.enum(['on', 'off']),
+	}),
+	async (body, req, server, response) => {
+		// body is fully typed!
+		await toggleDevice(body.deviceId, body.state);
+		return response.json({ success: true });
+	}
+);
+```
+
+## Authentication
+
+Routes can require authentication by passing `true` or an object:
+
+```typescript
+// All routes require auth
+createServeOptions(routes, true);
+
+// Specific routes require auth
+createServeOptions(routes, {
+	'/api/protected': true,
+	'/api/public': false,
+});
+```
+
+Authentication is checked via cookies or bearer tokens (see [app/server/lib/auth.ts](mdc:app/server/lib/auth.ts)).
+
+## Module Routes
+
+Module routes are automatically prefixed with `/${moduleName}`:
+
+```typescript
+export class MyModuleMeta extends ModuleMeta {
+	public async init(config: ModuleConfig) {
+		return {
+			serve: createServeOptions(
+				{
+					'/api': { GET: handler }, // becomes /mymodule/api
+				},
+				true
+			),
+		};
+	}
+}
+```
+
+## Type Safety
+
+The routing system provides:
+
+- Typed response bodies
+- Request validation with Zod
+- Automatic error handling (try-catch wrapper)
+- Type-safe route handlers
+
+## Error Handling
+
+Errors thrown in handlers are automatically caught and return 500 responses. For custom errors, use `response.error()`:
+
+```typescript
+if (!device) {
+	return response.error('Device not found', 404);
+}
+```

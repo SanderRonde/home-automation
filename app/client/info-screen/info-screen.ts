@@ -8,9 +8,9 @@ import {
 	isDirective,
 	noChange,
 	directive,
-} from '../../../node_modules/lit-html/lit-html.js';
-import { WebComponent } from '../../../node_modules/wc-lib/build/es/wc-lib.js';
+} from 'lit-html';
 import { InfoScreen } from './components/info-screen/info-screen.js';
+import { WebComponent } from 'wc-lib';
 
 function registerElements() {
 	WebComponent.initComplexTemplateProvider({

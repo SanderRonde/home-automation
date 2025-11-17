@@ -1,3 +1,4 @@
+import { warning } from './logging/logger';
 import * as dotenv from 'dotenv';
 
 type NumArg = `${number}`;
@@ -28,7 +29,7 @@ const getEnvironmentVariables = (() => {
 	return () => {
 		if (!loaded) {
 			dotenv.config({
-				// eslint-disable-next-line @typescript-eslint/no-var-requires
+				// eslint-disable-next-line @typescript-eslint/no-require-imports
 				path: (require('path') as typeof import('path')).join(
 					__dirname,
 					'../../../',
@@ -42,16 +43,17 @@ const getEnvironmentVariables = (() => {
 })();
 
 export function getArg(name: keyof Args, short?: string): string | void {
+	let result: string | void = void 0;
 	for (let i = 0; i < process.argv.length; i++) {
 		if (process.argv[i] === `--${name}`) {
-			return process.argv[i + 1];
+			result = process.argv[i + 1];
 		} else if (short && process.argv[i] === `--${short}`) {
-			return process.argv[i + 1];
+			result = process.argv[i + 1];
 		} else if (process.argv[i].startsWith(`--${name}=`)) {
-			return process.argv[i].slice(3 + name.length);
+			result = process.argv[i].slice(3 + name.length);
 		}
 	}
-	return void 0;
+	return result;
 }
 
 export function hasArg(name: keyof Args, short?: string): boolean | undefined {
@@ -75,44 +77,27 @@ export function getNumberArg(name: keyof Args): number | void {
 	return ~~arg;
 }
 
-export interface EnvShape {
+interface EnvShape {
 	// IO
 	IO_PORT_HTTP: NumArg;
 	IO_PORT_HTTPS: NumArg;
 	IO_PORT_INFO: string;
-	IO_UID: NumArg;
-	IO_DEBUG: BoolArg;
 
 	// LED IPs
 	SELF_IP: string;
 
-	// Info-screen
-	INFO_SCREEN_KEYVAL: string;
-
 	// Secrets
 	SECRET_AUTH: string;
 	SECRET_BOT: string;
-	SECRET_REMOTE_CONTROL: string;
-	SECRET_OAUTH_TOKEN_URL_POSTFIX: string;
 
 	SECRET_GOOGLE_CLIENT_ID: string;
 	SECRET_GOOGLE_CLIENT_SECRET: string;
 	SECRET_GOOGLE_REDIRECT_URL: string;
 
-	SECRET_SAMSUNG_REDIRECT_URI: string;
-	SECRET_SAMSUNG_APP_ID: string;
-	SECRET_SAMSUNG_CLIENT_ID: string;
-	SECRET_SAMSUNG_CLIENT_SECRET: string;
-	SECRET_SAMSUNG_URL_POSTFIX: string;
-
 	SECRET_OPENWEATHERMAP_API_KEY: string;
 	SECRET_OPENWEATHERMAP_LAT: string;
 	SECRET_OPENWEATHERMAP_LON: string;
 	SECRET_OPENWEATHERMAP_UNITS: string;
-
-	SECRET_SPOTIFY_ID: string;
-	SECRET_SPOTIFY_SECRET: string;
-	SECRET_SPOTIFY_REDIRECT_URL_BASE: string;
 
 	SECRET_EWELINK_APP_ID: string;
 	SECRET_EWELINK_APP_SECRET: string;
@@ -121,25 +106,14 @@ export interface EnvShape {
 	SECRET_EWELINK_PASSWORD: string;
 	SECRET_EWELINK_AREA_CODE: string;
 	SECRET_EWELINK_REDIRECT_URL_BASE: string;
-
-	SECRET_NOTION_API_KEY: string;
-
-	SECRET_HUE_USERNAME: string;
-
-	SECRET_SENTRY_DSN: string;
 }
 
-export function getEnv<S extends EnvShape>(
-	name: Extract<keyof S, string>
-): string | void;
+export function getEnv<S extends EnvShape>(name: Extract<keyof S, string>): string | void;
 export function getEnv<S extends EnvShape>(
 	name: Extract<keyof S, string>,
 	required: false
 ): string | void;
-export function getEnv<S extends EnvShape>(
-	name: Extract<keyof S, string>,
-	required: true
-): string;
+export function getEnv<S extends EnvShape>(name: Extract<keyof S, string>, required: true): string;
 export function getEnv<S extends EnvShape>(
 	name: Extract<keyof S, string>,
 	required: boolean
@@ -153,16 +127,14 @@ export function getEnv<S extends EnvShape>(
 		if (!required) {
 			return void 0;
 		}
-		console.log(`Missing env variable "${name}"`);
-		// eslint-disable-next-line no-process-exit
+		warning(`Missing env variable "${name}"`);
+		// eslint-disable-next-line n/no-process-exit
 		process.exit(1);
 	}
 	return value;
 }
 
-export function getNumberEnv<S extends EnvShape>(
-	name: Extract<keyof S, string>
-): number | void;
+export function getNumberEnv<S extends EnvShape>(name: Extract<keyof S, string>): number | void;
 export function getNumberEnv<S extends EnvShape>(
 	name: Extract<keyof S, string>,
 	required: false

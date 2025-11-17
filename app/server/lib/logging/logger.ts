@@ -12,43 +12,40 @@ export function logReady(): void {
 	signalLogReady?.();
 }
 
-const chalkColors = [
-	'black',
-	'red',
-	'green',
-	'yellow',
-	'blue',
-	'magenta',
-	'cyan',
-	'white',
-	'gray',
-	'grey',
-	'blackBright',
-	'redBright',
-	'greenBright',
-	'yellowBright',
-	'blueBright',
-	'magentaBright',
-	'cyanBright',
-	'whiteBright',
-] as const;
+type ChalkColor =
+	| 'black'
+	| 'red'
+	| 'green'
+	| 'yellow'
+	| 'blue'
+	| 'magenta'
+	| 'cyan'
+	| 'white'
+	| 'gray'
+	| 'grey'
+	| 'blackBright'
+	| 'redBright'
+	| 'greenBright'
+	| 'yellowBright'
+	| 'blueBright'
+	| 'magentaBright'
+	| 'cyanBright'
+	| 'whiteBright';
+
+export function logImmediate(...args: unknown[]): void {
+	// eslint-disable-next-line no-console
+	console.log(...args);
+}
 
 function log(...args: unknown[]): void {
 	void logIsReady.then(() => {
+		// eslint-disable-next-line no-console
 		console.log(...args);
 	});
 }
 
-export function logTag(
-	tag: string,
-	color: (typeof chalkColors)[Extract<keyof typeof chalkColors, number>],
-	...messages: unknown[]
-): void {
+export function logTag(tag: string, color: ChalkColor, ...messages: unknown[]): void {
 	log(getTime(), chalk[color](`[${tag}]`), ...messages);
-}
-
-export function debug(...messages: unknown[]): void {
-	log(getTime(), chalk.bgHex('fc8803')('[DEBUG]'), ...messages);
 }
 
 export function warning(...messages: unknown[]): void {

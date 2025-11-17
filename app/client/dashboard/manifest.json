@@ -1,0 +1,50 @@
+{
+	"name": "Home Automation",
+	"short_name": "Home Auto",
+	"description": "Smart home automation dashboard",
+	"start_url": "/dashboard/",
+	"display": "standalone",
+	"background_color": "#000000",
+	"theme_color": "#1976d2",
+	"orientation": "portrait-primary",
+	"screenshots": [
+		{
+			"src": "/dashboard/static/icons/screenshot-mobile.png",
+			"sizes": "1440x2960",
+			"type": "image/png",
+			"form_factor": "narrow"
+		},
+		{
+			"src": "/dashboard/static/icons/screenshot-wide.png",
+			"sizes": "3514x1586",
+			"type": "image/png",
+			"form_factor": "wide"
+		}
+	],
+	"icons": [
+		{
+			"src": "/dashboard/static/icons/icon-192.png",
+			"sizes": "192x192",
+			"type": "image/png",
+			"purpose": "any"
+		},
+		{
+			"src": "/dashboard/static/icons/icon-512.png",
+			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "any"
+		},
+		{
+			"src": "/dashboard/static/icons/icon-192.png",
+			"sizes": "192x192",
+			"type": "image/png",
+			"purpose": "maskable"
+		},
+		{
+			"src": "/dashboard/static/icons/icon-512.png",
+			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "maskable"
+		}
+	]
+}

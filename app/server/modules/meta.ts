@@ -1,16 +1,9 @@
+import { SettablePromise } from '../lib/settable-promise';
 import type { ModuleConfig, AllModules } from './modules';
-import type { LogObj } from '../lib/logging/lob-obj';
 import { HOME_STATE } from './home-detector/types';
+import type { ServeOptions } from '../lib/routes';
 import { BotStateBase } from '../lib/bot-state';
-import { SettablePromise } from '../lib/util';
-
-declare class Handler {
-	public constructor(_logObj: LogObj, _source: string);
-}
-
-class HandlerDefault implements Handler {
-	public constructor() {}
-}
+import type { SQL } from 'bun';
 
 export class BotBase extends BotStateBase {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -26,26 +19,18 @@ export class BotBase extends BotStateBase {
 
 export abstract class ModuleMeta {
 	public abstract name: string;
-	public _modules = new SettablePromise<AllModules>();
+	public _modules = new SettablePromise<unknown>();
+	public _sqlDB = new SettablePromise<SQL>();
 
 	public _dbName: string | null = null;
 	public _loggerName: string | null = null;
-
-	public get External(): typeof Handler {
-		return HandlerDefault;
-	}
 
 	public get Bot(): typeof BotBase {
 		return BotBase;
 	}
 
-	// eslint-disable-next-line @typescript-eslint/ban-types
-	public get schema(): {} {
-		return {} as const;
-	}
-
-	public get modules(): Promise<AllModules> {
-		return this._modules.value;
+	public getModules<T = unknown>(): Promise<T> {
+		return this._modules.value as Promise<T>;
 	}
 
 	public get dbName(): string {
@@ -56,16 +41,21 @@ export abstract class ModuleMeta {
 		return this._loggerName || `/${this.name}`;
 	}
 
-	public abstract init(config: ModuleConfig<this>): Promise<void> | void;
+	public abstract init(config: ModuleConfig):
+		| {
+				serve: ServeOptions<unknown>;
+		  }
+		| Promise<{ serve: ServeOptions<unknown> }>;
 
 	public postInit(): Promise<void> {
 		return Promise.resolve(void 0);
 	}
 
-	public notifyModulesFromExternal(modules: AllModules): void {
+	public notifyModulesFromExternal(_modules: unknown): void {
+		const modules = _modules as AllModules;
 		this._modules.set(modules);
 		let initialSelfChangeDone: boolean = false;
-		modules.homeDetector.onUpdate(async (homeState, name) => {
+		void modules.homeDetector.onUpdate(async (homeState, name) => {
 			if (name !== 'self') {
 				return;
 			}

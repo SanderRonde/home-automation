@@ -1,4 +1,4 @@
-import { getTime } from './logger';
+import { getTime, logImmediate } from './logger';
 import chalk from 'chalk';
 
 export class ProgressLogger {
@@ -12,9 +12,7 @@ export class ProgressLogger {
 
 	private _getProgressBar() {
 		if (this._max - this._progress < 0) {
-			console.log(
-				chalk.red('Increment got called more often than configured')
-			);
+			logImmediate(chalk.red('Increment got called more often than configured'));
 		}
 		return `[${new Array(this._progress).fill('*').join('')}${new Array(
 			this._max - this._progress
@@ -24,28 +22,22 @@ export class ProgressLogger {
 	}
 
 	public logInitial(): void {
-		console.log(
+		logImmediate(
 			chalk.bgBlack(
 				getTime(),
-				chalk.bgBlack(
-					chalk.bold(
-						chalk.white(`${this._name}: ${this._getProgressBar()}`)
-					)
-				)
+				chalk.bgBlack(chalk.bold(chalk.white(`${this._name}: ${this._getProgressBar()}`)))
 			)
 		);
 	}
 
 	public increment(name: string): void {
 		this._progress++;
-		console.log(
+		logImmediate(
 			chalk.bgBlack(
 				getTime(),
 				chalk.bgBlack(
 					chalk.bold(
-						chalk.white(
-							`${this._name}: ${this._getProgressBar()} - `
-						),
+						chalk.white(`${this._name}: ${this._getProgressBar()} - `),
 						chalk.green('✔'),
 						chalk.white(name)
 					)
@@ -56,22 +48,16 @@ export class ProgressLogger {
 
 	public done(): void {
 		if (this._progress > this._max) {
-			console.log(
-				chalk.red('Increment got called more often than configured')
-			);
+			logImmediate(chalk.red('Increment got called more often than configured'));
 		} else if (this._progress < this._max) {
-			console.log(
-				chalk.red('Increment got called less times than configured')
-			);
+			logImmediate(chalk.red('Increment got called less times than configured'));
 		}
 
-		console.log(
+		logImmediate(
 			chalk.bgBlack(
 				getTime(),
 				chalk.bgBlack(
-					chalk.bold(
-						`Done loading ${this._name} in ${Date.now() - this._startTime}ms`
-					)
+					chalk.bold(`Done loading ${this._name} in ${Date.now() - this._startTime}ms`)
 				)
 			)
 		);

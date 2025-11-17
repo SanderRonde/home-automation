@@ -1,24 +1,20 @@
-import {
-	initMiddleware,
-	initAnnotatorRoutes,
-	initPostRoutes,
-} from './lib/routes';
+import { createServeOptions, staticResponse, type ServeOptions } from './lib/routes';
+import { logImmediate, logReady, logTag } from './lib/logging/logger';
 import { hasArg, getArg, getNumberArg, getNumberEnv } from './lib/io';
+import { CLIENT_FOLDER, DB_FOLDER, ROOT } from './lib/constants';
 import { ProgressLogger } from './lib/logging/progress-logger';
-import type { BaseModuleConfig } from './modules/modules';
-import { logReady, logTag } from './lib/logging/logger';
+import type { AllModules, ModuleConfig } from './modules';
+import { SettablePromise } from './lib/settable-promise';
 import { printCommands } from './modules/bot/helpers';
 import { notifyAllModules } from './modules/modules';
-import { WSSimulator, WSWrapper } from './lib/ws';
+import { serveStatic } from './lib/serve-static';
 import { LogObj } from './lib/logging/lob-obj';
-import type { AllModules } from './modules';
-import { SQLDatabase } from './lib/sql-db';
 import { getAllModules } from './modules';
+import { checkAuth } from './lib/auth';
 import { Database } from './lib/db';
-import { wait } from './lib/util';
-import 'express-async-errors';
-import express from 'express';
-import * as http from 'http';
+import { wait } from './lib/time';
+import { SQL } from 'bun';
+import path from 'path';
 
 interface PartialConfig {
 	ports?: {
@@ -29,7 +25,7 @@ interface PartialConfig {
 	log?: {
 		level?: number;
 		secrets: boolean;
-		ignorePressure?: boolean;
+
 		errorLogPath?: string | null | void;
 	};
 	debug?: boolean;
@@ -41,22 +37,18 @@ type DeepRequired<T> = {
 	[P in keyof T]-?: DeepRequired<T[P]>;
 };
 
-export type Config = DeepRequired<PartialConfig>;
+export type AppConfig = DeepRequired<PartialConfig>;
 
 class WebServer {
-	private readonly _config: Config;
-	private _server!: http.Server;
+	private readonly _config: AppConfig;
+	private readonly _server = new SettablePromise<Bun.Server>();
 	private _initLogger!: ProgressLogger;
-
-	public app!: express.Express;
-	public websocketSim!: WSSimulator;
-	public ws!: WSWrapper;
 
 	public constructor(config: PartialConfig = {}) {
 		this._config = this._setConfigDefaults(config);
 	}
 
-	private _setConfigDefaults(config: PartialConfig): Config {
+	private _setConfigDefaults(config: PartialConfig): AppConfig {
 		return {
 			ports: {
 				http: config.ports?.http || 1234,
@@ -66,25 +58,13 @@ class WebServer {
 			log: {
 				level: config.log?.level || 1,
 				secrets: config.log?.secrets || false,
-				ignorePressure: config?.log?.ignorePressure || false,
+
 				// In debug mode always log errors to console
-				errorLogPath: config.debug
-					? null
-					: (config?.log?.errorLogPath ?? null),
+				errorLogPath: config.debug ? null : (config?.log?.errorLogPath ?? null),
 			},
 			debug: config.debug || false,
 			instant: config.instant || false,
 			logTelegramBotCommands: config.logTelegramBotCommands || false,
-		};
-	}
-
-	private _getModuleConfig(): BaseModuleConfig {
-		return {
-			app: this.app,
-			websocketSim: this.websocketSim,
-			config: this._config,
-			randomNum: Math.round(Math.random() * 1000000),
-			websocket: this.ws,
 		};
 	}
 
@@ -93,107 +73,239 @@ class WebServer {
 
 		const modules = getAllModules();
 
-		const config: BaseModuleConfig = this._getModuleConfig();
-		await Promise.all(
+		const initValues = await Promise.all(
 			Object.values(modules).map(async (meta) => {
-				await meta.init({
-					...config,
-					db: await new Database(`${meta.dbName}.json`).init(),
-					sqlDB: (await new SQLDatabase(
-						`${meta.dbName}.sqlite`
-						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					).applySchema(meta.schema)) as any,
+				const sqlDB = new SQL(`sqlite://${path.join(DB_FOLDER, meta.dbName)}.db`);
+				const moduleName = meta.name.toLowerCase();
+				const initConfig: ModuleConfig = {
+					config: this._config,
+					wsPublish: async (data: string) => {
+						return (await this._server.value).publish(moduleName, data);
+					},
+					db: new Database(`${meta.dbName}.json`),
+					sqlDB: sqlDB,
 					modules,
-				});
+				};
+				meta._sqlDB.set(sqlDB);
+				const result = await meta.init(initConfig);
+				const serveOptions = (result?.serve as ServeOptions<unknown>) ?? {};
 				this._initLogger.increment(meta.loggerName);
+
+				const mappedRoutes: NonNullable<ServeOptions<unknown>['routes']> = {};
+				for (const key in serveOptions.routes) {
+					mappedRoutes[`/${moduleName}${key}`] = serveOptions.routes[key];
+				}
+				return {
+					routes: mappedRoutes,
+					moduleName,
+					websocket: serveOptions.websocket,
+				};
 			})
 		);
 
+		const allRoutes: ServeOptions<unknown>['routes'] = {};
+		for (const { routes } of initValues) {
+			for (const key in routes) {
+				allRoutes[key] = routes[key];
+			}
+		}
+
+		const websocketsByRoute: Record<
+			string,
+			| {
+					websocket: ServeOptions<unknown>['websocket'];
+					moduleName: string;
+			  }
+			| undefined
+		> = {};
+		for (const { moduleName, websocket } of initValues) {
+			if (websocket) {
+				websocketsByRoute[`/${moduleName}/ws`] = {
+					websocket,
+					moduleName,
+				};
+			}
+		}
+
 		this._initLogger.increment('post-init');
-		return modules;
+		return {
+			modules,
+			routes: allRoutes,
+			websocketsByRoute: websocketsByRoute,
+		};
 	}
 
-	private _initServers() {
-		this.websocketSim = new WSSimulator();
-		this.app.use(async (req, res, next) => {
-			await this.websocketSim.handler(req, res, next);
+	private async _listen(
+		modules: AllModules,
+		routes: ServeOptions<unknown>['routes'],
+		websocketsByRoute: Record<
+			string,
+			| {
+					websocket: ServeOptions<unknown>['websocket'];
+					moduleName: string;
+			  }
+			| undefined
+		>
+	) {
+		const server: Bun.Server = Bun.serve<
+			{ route: string; moduleName: string },
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			any
+		>({
+			fetch: async (req, server) => {
+				const url = new URL(req.url);
+				const websocket = websocketsByRoute[url.pathname];
+				if (websocket) {
+					// Check authentication for WebSocket upgrade
+					const isAuthenticated = await checkAuth({
+						cookies: new Bun.CookieMap(req.headers.get('cookie')!),
+						url: req.url,
+					});
+					if (!isAuthenticated) {
+						logTag('WEBSOCKET', 'yellow', 'Unauthorized WebSocket connection attempt');
+						return new Response('Unauthorized', { status: 401 });
+					}
+
+					server.upgrade(req, {
+						data: {
+							route: url.pathname,
+							moduleName: websocket.moduleName,
+						},
+					});
+					return undefined;
+				}
+				return new Response('Not found', { status: 404 });
+			},
+			routes: {
+				...routes,
+				...createServeOptions(
+					{
+						...(await serveStatic(CLIENT_FOLDER)),
+						// Bun quirk where it rewrites the path but doesn't actually bundle it...
+						'/manifest.json': staticResponse(
+							new Response(
+								Bun.file(path.join(CLIENT_FOLDER, 'dashboard', 'manifest.json'))
+							)
+						),
+						// @ts-ignore
+						'/service-worker.js': this._config.debug
+							? async () => {
+									await Bun.build({
+										entrypoints: [
+											path.join(
+												CLIENT_FOLDER,
+												'dashboard',
+												'service-worker.ts'
+											),
+										],
+										outdir: path.join(ROOT, 'build'),
+										naming: 'service-worker.js',
+									});
+									return new Response(
+										Bun.file(path.join(ROOT, 'build', 'service-worker.js'))
+									);
+								}
+							: staticResponse(
+									new Response(
+										Bun.file(
+											path.join(ROOT, 'build/dashboard/service-worker.js')
+										)
+									)
+								),
+						'/app/client/dashboard/manifest.json': staticResponse(
+							new Response(
+								Bun.file(path.join(CLIENT_FOLDER, 'dashboard', 'manifest.json'))
+							)
+						),
+					},
+					false
+				).routes,
+			},
+			// HTTPS is unused for now
+			port: this._config.ports.http,
+			development: this._config.debug
+				? {
+						hmr: true,
+						console: true,
+						chromeDevToolsAutomaticWorkspaceFolders: true,
+					}
+				: false,
+			error: (error) => {
+				console.error('Error', error);
+				return new Response('Error', { status: 500 });
+			},
+			// Matter pairing can take a while
+			idleTimeout: 60,
+			websocket: {
+				open: (ws) => {
+					ws.subscribe(ws.data.moduleName);
+					return websocketsByRoute[ws.data.route]?.websocket?.open?.(ws, server);
+				},
+				message: (ws, message) =>
+					websocketsByRoute[ws.data.route]?.websocket?.message?.(ws, message, server),
+				close: (ws, code, reason) => {
+					ws.unsubscribe(ws.data.moduleName);
+					return websocketsByRoute[ws.data.route]?.websocket?.close?.(
+						ws,
+						code,
+						reason,
+						server
+					);
+				},
+			},
 		});
-		this._server = http.createServer(this.app);
-		this.ws = new WSWrapper(this._server);
-		this._initLogger.increment('HTTP server');
-	}
+		this._server.set(server);
 
-	private _listen(modules: AllModules) {
-		// HTTPS is unused for now
-		this._server.listen(this._config.ports.http, async () => {
-			this._initLogger.increment('listening');
-			this._initLogger.done();
-			await wait(100);
-			logReady();
+		this._initLogger.increment('listening');
+		this._initLogger.done();
+		await wait(100);
+		logReady();
 
-			logTag(
-				'HTTP server',
-				'magenta',
-				`listening on port ${this._config.ports.http}`
-			);
+		logTag('HTTP server', 'magenta', `listening on port ${this._config.ports.http}`);
 
-			// Run post-inits
-			void Promise.all(
-				Object.values(modules).map(async (meta) => {
-					await meta.postInit();
-				})
-			);
-		});
+		// Run post-inits
+		void Promise.all(
+			Object.values(modules).map(async (meta) => {
+				await meta.postInit();
+			})
+		);
 	}
 
 	public async init() {
 		this._initLogger = new ProgressLogger(
 			'Server start',
-			8 + Object.keys(getAllModules(false)).length
+			3 + Object.keys(getAllModules(false)).length
 		);
-		this._initLogger.increment('IO');
-
-		this.app = express();
-
-		this._initLogger.increment('express');
-		initMiddleware(this._getModuleConfig().app);
-		initAnnotatorRoutes(this.app);
-		this._initLogger.increment('middleware');
-		this._initServers();
-		this._initLogger.increment('servers');
-		const modules = await this._initModules();
+		const { modules, routes, websocketsByRoute } = await this._initModules();
 		this._initLogger.increment('modules');
-		initPostRoutes({ app: this.app, config: this._config });
 
 		LogObj.logLevel = this._config.log.level;
 		if (this._config.logTelegramBotCommands) {
 			await printCommands();
 		}
-		this._listen(modules);
+		await this._listen(modules, routes, websocketsByRoute);
 	}
 }
 
 if (hasArg('help', 'h')) {
-	console.log('Usage:');
-	console.log('');
-	console.log('node app/server/app.js 		[-h | --help] [--http {port}] ');
-	console.log('				[--https {port}] [-v | --verbose]');
-	console.log('				[-vv | --veryverbose]');
-	console.log('');
-	console.log('-h, --help			Print this help message');
-	console.log('--http 		{port}		The HTTP port to use');
-	console.log('--https 	{port}		The HTTP port to use');
-	console.log('-v, --verbose			Log request-related data');
-	console.log('-vv, --veryverbose		Log even more request-related data');
-	console.log(
+	logImmediate('Usage:');
+	logImmediate('');
+	logImmediate('node app/server/app.js 		[-h | --help] [--http {port}] ');
+	logImmediate('				[--https {port}] [-v | --verbose]');
+	logImmediate('				[-vv | --veryverbose]');
+	logImmediate('');
+	logImmediate('-h, --help			Print this help message');
+	logImmediate('--http 		{port}		The HTTP port to use');
+	logImmediate('--https 	{port}		The HTTP port to use');
+	logImmediate('-v, --verbose			Log request-related data');
+	logImmediate('-vv, --veryverbose		Log even more request-related data');
+	logImmediate(
 		"-v{v+}, --{very+}verbose	Logs even more data. The more v's and very's the more data"
 	);
-	console.log(
-		"-v*, --verbose*			Logs all data (equivalent of adding a lot of v's"
-	);
-	console.log('--ignore-pressure		Ignore pressure report logs');
-	console.log('--log-telegram-bot-commands		Log all telegram bot commands');
-	// eslint-disable-next-line no-process-exit
+	logImmediate("-v*, --verbose*			Logs all data (equivalent of adding a lot of v's");
+
+	logImmediate('--log-telegram-bot-commands		Log all telegram bot commands');
+	// eslint-disable-next-line n/no-process-exit
 	process.exit(0);
 }
 function getVerbosity() {
@@ -225,10 +337,30 @@ void new WebServer({
 	log: {
 		level: getVerbosity(),
 		secrets: hasArg('log-secrets') || false,
-		ignorePressure: hasArg('ignore-pressure'),
+
 		errorLogPath: getArg('error-log-path'),
 	},
 	debug: hasArg('debug') || !!getArg('IO_DEBUG'),
 	instant: hasArg('instant', 'i'),
 	logTelegramBotCommands: hasArg('log-telegram-bot-commands'),
 }).init();
+
+let shuttingDown = false;
+process.on('SIGINT', () => {
+	if (shuttingDown) {
+		return;
+	}
+	shuttingDown = true;
+	let countdown = 3;
+	const interval = setInterval(() => {
+		// eslint-disable-next-line no-console
+		console.log(`Shutting down in ${countdown}...`);
+		countdown--;
+		if (countdown < 0) {
+			clearInterval(interval);
+			// Wait for Matter to finish
+			// eslint-disable-next-line n/no-process-exit
+			process.exit(0);
+		}
+	}, 1000);
+});

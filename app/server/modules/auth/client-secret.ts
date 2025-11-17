@@ -42,14 +42,3 @@ export function getClientSecret(id: number): string {
 	ids.set(id, secret);
 	return secret;
 }
-
-export function authenticate(authKey: string, id: string): boolean {
-	if (authKey === getKey()) {
-		return true;
-	}
-
-	if (Number.isNaN(parseInt(id, 10))) {
-		return false;
-	}
-	return getClientSecret(parseInt(id, 10)) === authKey;
-}

@@ -7,7 +7,7 @@ export function genCookie(): string {
 	return JSON.stringify([id, clientSecret]);
 }
 
-function verifyCookie(cookie: string) {
+export function verifyCookie(cookie: string): boolean {
 	const parsed = JSON.parse(cookie);
 	if (!parsed || !Array.isArray(parsed) || parsed.length !== 2) {
 		return false;
@@ -17,12 +17,4 @@ function verifyCookie(cookie: string) {
 	}
 
 	return getClientSecret(parsed[0]) === parsed[1];
-}
-
-export function checkCookie(req: {
-	cookies: {
-		[key: string]: string;
-	};
-}): boolean {
-	return !!(req.cookies?.key && verifyCookie(req.cookies['key']));
 }

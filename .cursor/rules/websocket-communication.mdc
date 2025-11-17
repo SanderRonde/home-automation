@@ -1,0 +1,152 @@
+---
+description: WebSocket patterns for real-time communication
+---
+
+# WebSocket Communication
+
+The project uses Bun's native WebSocket implementation for real-time updates.
+
+## Module WebSocket Publishing
+
+Each module gets a `wsPublish` function to broadcast to subscribers:
+
+```typescript
+export class MyModuleMeta extends ModuleMeta {
+	private config!: ModuleConfig;
+
+	public async init(config: ModuleConfig) {
+		this.config = config;
+
+		// Publish updates to all WebSocket subscribers
+		await this.notifyClients({ type: 'update', data: 'value' });
+	}
+
+	private async notifyClients(data: unknown): Promise<void> {
+		await this.config.wsPublish(JSON.stringify(data));
+	}
+}
+```
+
+## WebSocket Topics
+
+Each module automatically gets its own WebSocket topic named after the module:
+
+- Device module → `/device` WebSocket topic
+- Matter module → `/matter` WebSocket topic
+- Dashboard → `/dashboard` WebSocket topic
+
+## Client-Side WebSocket Connection
+
+From React components:
+
+```typescript
+import React from 'react';
+
+export const MyComponent = (): JSX.Element => {
+    React.useEffect(() => {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const ws = new WebSocket(
+            `${protocol}//${window.location.host}/ws/device`
+        );
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            // Handle update
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+
+        return () => {
+            ws.close();
+        };
+    }, []);
+
+    return <div>...</div>;
+};
+```
+
+## WebSocket Message Format
+
+Always use JSON for WebSocket messages:
+
+```typescript
+// Server-side
+await config.wsPublish(
+	JSON.stringify({
+		type: 'device_update',
+		deviceId: '123',
+		state: { on: true },
+	})
+);
+
+// Client-side
+ws.onmessage = (event) => {
+	const message = JSON.parse(event.data);
+	if (message.type === 'device_update') {
+		updateDevice(message.deviceId, message.state);
+	}
+};
+```
+
+## Server-Side WebSocket Handlers
+
+Modules can define WebSocket handlers in their `ServeOptions`:
+
+```typescript
+return {
+	serve: {
+		routes: {
+			/* ... */
+		},
+		websocket: {
+			open: async (ws, server) => {
+				// Client connected
+				logTag('MODULE', 'blue', 'WebSocket connected');
+			},
+			message: async (ws, message, server) => {
+				// Received message from client
+				const data = JSON.parse(message.toString());
+				// Handle message
+			},
+			close: async (ws, code, reason, server) => {
+				// Client disconnected
+				logTag('MODULE', 'blue', 'WebSocket disconnected');
+			},
+		},
+	},
+};
+```
+
+## Publishing on Data Changes
+
+Use reactive `Data<T>` subscriptions to automatically publish WebSocket updates:
+
+```typescript
+import { Data } from '../../lib/data';
+
+const deviceState = new Data<DeviceState>({ on: false });
+
+deviceState.subscribe((state) => {
+	// Notify all WebSocket clients when state changes
+	void config.wsPublish(
+		JSON.stringify({
+			type: 'state_change',
+			state,
+		})
+	);
+});
+
+// Later: update triggers WebSocket notification
+deviceState.set({ on: true });
+```
+
+## Best Practices
+
+- ✅ Always JSON stringify/parse messages
+- ✅ Include a `type` field for message identification
+- ✅ Handle WebSocket errors and reconnection on client side
+- ✅ Close WebSocket connections when components unmount
+- ❌ Don't send binary data (use JSON only)
+- ❌ Avoid sending very large payloads frequently

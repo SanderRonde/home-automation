@@ -76,7 +76,7 @@ ai/beat-detector/data
 ai/beat-detector/input_files
 **/*.pyc
 
-static/
+./static/
 
 ai/files/
 ai/annotator/**/*.js
@@ -105,4 +105,4 @@ temp/
 .venv
 switchbot.sock
 
-app/client/keyval/antd.dark.css
+app/client/switch/antd.dark.css

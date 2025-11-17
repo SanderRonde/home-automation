@@ -1,10 +1,12 @@
+import { logImmediate } from '../../lib/logging/logger';
+import type { AllModules } from '../modules';
 import chalk from 'chalk';
 import { Bot } from '.';
 
 export async function printCommands(): Promise<void> {
-	console.log(
+	logImmediate(
 		`${chalk.bold('Available commands are')}:\n\n${Object.values(
-			await Bot.modules
+			await Bot.getModules<AllModules>()
 		)
 			.map((meta) => {
 				return meta.Bot;
@@ -12,11 +14,7 @@ export async function printCommands(): Promise<void> {
 			.map((bot) => {
 				return `${Object.keys(bot.commands)
 					.map((cmd) => {
-						return `${chalk.bold(cmd.slice(1))} - ${
-							bot.commands[
-								cmd as keyof typeof bot.commands
-							] as string
-						}`;
+						return `${chalk.bold(cmd.slice(1))} - ${bot.commands[cmd as keyof typeof bot.commands]}`;
 					})
 					.join('\n')}`;
 			})

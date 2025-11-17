@@ -1,0 +1,56 @@
+import { createServeOptions, withRequestBody } from '../../lib/routes';
+import type { ServeOptions } from '../../lib/routes';
+import type { Database } from '../../lib/db';
+import type { WLEDDB } from '.';
+import * as z from 'zod';
+
+const WLEDConfig = z.object({
+	devices: z.array(
+		z
+			.string()
+			.regex(
+				/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/,
+				'Invalid IP address'
+			)
+	),
+});
+
+export type WLEDConfig = z.infer<typeof WLEDConfig>;
+
+function _initRouting(db: Database<WLEDDB>) {
+	return createServeOptions(
+		{
+			'/config': {
+				GET: (_req, _server, { json }) => {
+					const configJson = db.current().devices ?? [];
+					return json({ devices: configJson });
+				},
+				POST: withRequestBody(WLEDConfig, (body, _req, _server, { error, json }) => {
+					try {
+						// Store the config
+						db.update((old) => ({
+							...old,
+							devices: body.devices,
+						}));
+
+						return json({ success: true });
+					} catch {
+						return error({ error: 'Invalid config structure' }, 400);
+					}
+				}),
+			},
+			'/refresh': {
+				POST: (_req, _server, { json }) => {
+					// Queue an empty update
+					db.update((old) => ({ ...old }));
+					return json({ success: true });
+				},
+			},
+		},
+		true
+	);
+}
+
+export const initRouting = _initRouting as (db: Database<WLEDDB>) => ServeOptions<unknown>;
+
+export type WledRoutes = ReturnType<typeof _initRouting> extends ServeOptions<infer R> ? R : never;

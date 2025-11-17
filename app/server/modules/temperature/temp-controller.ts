@@ -1,7 +1,6 @@
 import { logTag } from '../../lib/logging/logger';
 import { LOG_INTERVAL_SECS } from './constants';
-import type { ModuleConfig } from '..';
-import type { Temperature } from '..';
+import type { SQL } from 'bun';
 import chalk from 'chalk';
 
 class TempControl {
@@ -10,22 +9,26 @@ class TempControl {
 	public lastTemp = -1;
 	public lastLogTime = 0;
 	public lastLoggedTemp = -1;
+	public readonly db: SQL;
 
 	public constructor(
-		public readonly db: ModuleConfig<typeof Temperature>['sqlDB'],
+		db: SQL,
 		public readonly name: string
-	) {}
+	) {
+		this.db = db;
+	}
+
+	private get sql() {
+		return this.db;
+	}
 
 	public async setLastTemp(temp: number, store = true, doLog = true) {
 		this.lastTemp = temp;
 
 		// Write temp to database
 		if (store) {
-			await this.db.temperatures.insert({
-				time: Date.now(),
-				location: this.name,
-				temperature: temp,
-			});
+			await this
+				.sql`INSERT INTO temperatures (time, location, temperature) VALUES (${Date.now()}, ${this.name}, ${temp})`;
 		}
 
 		if (
@@ -33,34 +36,41 @@ class TempControl {
 			Math.round(this.lastLoggedTemp) !== Math.round(temp) &&
 			Date.now() - this.lastLogTime > LOG_INTERVAL_SECS * 1000
 		) {
-			logTag(
-				'temp',
-				'cyan',
-				chalk.bold(`Current ${this.name} temperature: ${temp}°`)
-			);
+			logTag('temp', 'cyan', chalk.bold(`Current ${this.name} temperature: ${temp}°`));
 			this.lastLogTime = Date.now();
 		}
 
-		void Promise.all(this._listeners.map((listener) => listener(temp)));
+		void Promise.all(this._listeners.map(async (listener) => await listener(temp)));
 	}
 
 	public getLastTemp() {
 		return this.lastTemp;
 	}
 
-	public addListener(
-		listener: (temperature: number) => void | Promise<void>
-	) {
+	public addListener(listener: (temperature: number) => void | Promise<void>) {
 		this._listeners.push(listener);
 	}
 
 	public async init() {
+		const tableExists = await this.sql<{ name: string }[]>`
+			SELECT name FROM sqlite_master WHERE type='table' AND name='temperatures'
+		`;
+
+		if (!tableExists.length) {
+			await this.sql`
+				CREATE TABLE temperatures (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					time INTEGER NOT NULL,
+					location TEXT NOT NULL,
+					temperature REAL NOT NULL
+				)
+			`;
+		}
 		const temp =
 			(
-				await this.db.temperatures.querySingle(
-					{ location: this.name },
-					'last'
-				)
+				await this.sql<{
+					temperature: number;
+				}>`SELECT temperature FROM temperatures WHERE location = ${this.name} ORDER BY time DESC LIMIT 1`
 			)?.temperature ?? 20.0;
 
 		await this.setLastTemp(temp, false, false);
@@ -71,17 +81,10 @@ class TempControl {
 
 const controllers: Map<string, TempControl> = new Map();
 
-export async function getController(
-	db: ModuleConfig<typeof Temperature>['sqlDB'],
-	name = 'default'
-): Promise<TempControl> {
+export async function getController(db: SQL, name = 'default'): Promise<TempControl> {
 	if (!controllers.has(name)) {
 		controllers.set(name, await new TempControl(db, name).init());
 	}
 
 	return controllers.get(name)!;
-}
-
-export function getAll(): TempControl[] {
-	return Array.from(controllers.values());
 }

@@ -1,0 +1,36 @@
+{
+	"compilerOptions": {
+		"alwaysStrict": true,
+		"paths": {
+			"*": ["../../types/*"]
+		},
+		"forceConsistentCasingInFileNames": true,
+		"module": "node16",
+		"moduleResolution": "node16",
+		"noImplicitAny": true,
+		"noImplicitThis": true,
+		"preserveConstEnums": true,
+		"listFiles": false,
+		"pretty": true,
+		"noFallthroughCasesInSwitch": true,
+		"noImplicitReturns": true,
+		"noUnusedLocals": true,
+		"target": "es2024",
+		"noUnusedParameters": true,
+		"experimentalDecorators": true,
+		"strictPropertyInitialization": true,
+		"strictNullChecks": true,
+		"strictBindCallApply": true,
+		"jsx": "react",
+		"skipLibCheck": true,
+		"noEmit": true,
+		"allowSyntheticDefaultImports": true,
+		"emitDecoratorMetadata": true,
+		"allowJs": true,
+		"incremental": true,
+		"tsBuildInfoFile": ".tsbuildinfo"
+	},
+	"compileOnSave": true,
+	"include": ["./**/*.ts", "./**/*.tsx", "../types/*", "../scripts/*"],
+	"exclude": ["node_modules"]
+}

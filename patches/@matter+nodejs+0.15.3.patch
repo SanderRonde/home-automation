@@ -1,0 +1,44 @@
+diff --git a/node_modules/@matter/nodejs/dist/cjs/crypto/NodeJsCrypto.js b/node_modules/@matter/nodejs/dist/cjs/crypto/NodeJsCrypto.js
+index 4f3fd1b..1989e72 100644
+--- a/node_modules/@matter/nodejs/dist/cjs/crypto/NodeJsCrypto.js
++++ b/node_modules/@matter/nodejs/dist/cjs/crypto/NodeJsCrypto.js
+@@ -96,7 +96,7 @@ class NodeJsCrypto extends import_general.Crypto {
+   createPbkdf2Key(secret, salt, iteration, keyLength) {
+     return new Promise((resolver, rejecter) => {
+       crypto.pbkdf2(secret, salt, iteration, keyLength, import_general.CRYPTO_HASH_ALGORITHM, (error, key) => {
+-        if (error !== null) rejecter(error);
++        if (error) rejecter(error);
+         resolver(new Uint8Array(key));
+       });
+     });
+@@ -104,7 +104,7 @@ class NodeJsCrypto extends import_general.Crypto {
+   createHkdfKey(secret, salt, info, length = import_general.CRYPTO_SYMMETRIC_KEY_LENGTH) {
+     return new Promise((resolver, rejecter) => {
+       crypto.hkdf(import_general.CRYPTO_HASH_ALGORITHM, secret, salt, info, length, (error, key) => {
+-        if (error !== null) rejecter(error);
++        if (error) rejecter(error);
+         resolver(new Uint8Array(key));
+       });
+     });
+diff --git a/node_modules/@matter/nodejs/dist/esm/crypto/NodeJsCrypto.js b/node_modules/@matter/nodejs/dist/esm/crypto/NodeJsCrypto.js
+index fa94df0..3048114 100644
+--- a/node_modules/@matter/nodejs/dist/esm/crypto/NodeJsCrypto.js
++++ b/node_modules/@matter/nodejs/dist/esm/crypto/NodeJsCrypto.js
+@@ -76,7 +76,7 @@ class NodeJsCrypto extends Crypto {
+   createPbkdf2Key(secret, salt, iteration, keyLength) {
+     return new Promise((resolver, rejecter) => {
+       crypto.pbkdf2(secret, salt, iteration, keyLength, CRYPTO_HASH_ALGORITHM, (error, key) => {
+-        if (error !== null) rejecter(error);
++        if (error) rejecter(error);
+         resolver(new Uint8Array(key));
+       });
+     });
+@@ -84,7 +84,7 @@ class NodeJsCrypto extends Crypto {
+   createHkdfKey(secret, salt, info, length = CRYPTO_SYMMETRIC_KEY_LENGTH) {
+     return new Promise((resolver, rejecter) => {
+       crypto.hkdf(CRYPTO_HASH_ALGORITHM, secret, salt, info, length, (error, key) => {
+-        if (error !== null) rejecter(error);
++        if (error) rejecter(error);
+         resolver(new Uint8Array(key));
+       });
+     });

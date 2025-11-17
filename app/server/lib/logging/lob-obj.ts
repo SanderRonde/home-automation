@@ -1,12 +1,9 @@
-import { externalRedact } from '../../modules/auth/helpers';
-import type { ResponseLike } from './response-logger';
-import { generateRandomString } from '../util';
-import { getTime, warning } from './logger';
-import type { WSSimInstance } from '../ws';
+import { getTime, logImmediate, warning } from './logger';
+import { redact } from '../../modules/auth/secret';
+import { generateRandomString } from '../random';
+import type { BunRequest, Server } from 'bun';
+import type { AppConfig } from '../../app';
 import { getIP } from './request-logger';
-import { gatherTimings } from '../timer';
-import type { Config } from '../../app';
-import type * as express from 'express';
 import * as fs from 'fs/promises';
 import type * as http from 'http';
 import chalk from 'chalk';
@@ -17,10 +14,9 @@ interface AssociatedMessage {
 }
 
 export class LogObj {
-	private static _objMap: WeakMap<
-		ResponseLike | WSSimInstance | express.Request | http.ClientRequest,
-		LogObj
-	> = new WeakMap();
+	private static _objMap: WeakMap<Omit<BunRequest, 'json'> | http.ClientRequest, LogObj> =
+		new WeakMap();
+	private static _requestTimingMap: Map<Omit<BunRequest, 'json'>, number> = new Map();
 	public static logLevel: number = 1;
 
 	private _messages: AssociatedMessage[] = [];
@@ -32,7 +28,7 @@ export class LogObj {
 	private constructor() {}
 
 	private static _log(...params: unknown[]) {
-		console.log(
+		logImmediate(
 			params
 				.map((param) => {
 					if (typeof param === 'string') {
@@ -75,11 +71,7 @@ export class LogObj {
 		return obj;
 	}
 
-	public static fromFixture(
-		tag: string,
-		source: string,
-		timeout?: number
-	): LogObj {
+	public static fromFixture(tag: string, source: string, timeout?: number): LogObj {
 		const obj = new LogObj();
 		obj._timeout = timeout ?? obj._timeout;
 
@@ -94,19 +86,16 @@ export class LogObj {
 		return obj;
 	}
 
-	public static fromRes(res: ResponseLike, timeout?: number): LogObj {
-		if (!LogObj._objMap.has(res)) {
+	public static fromReqRes(reqRes: Omit<BunRequest, 'json'>, timeout?: number): LogObj {
+		if (!LogObj._objMap.has(reqRes)) {
 			const obj = new LogObj();
 			obj._timeout = timeout ?? obj._timeout;
-			LogObj._objMap.set(res, obj);
+			LogObj._objMap.set(reqRes, obj);
 		}
-		return LogObj._objMap.get(res)!;
+		return LogObj._objMap.get(reqRes)!;
 	}
 
-	public static fromOutgoingReq(
-		req: http.ClientRequest,
-		timeout?: number
-	): LogObj {
+	public static fromOutgoingReq(req: http.ClientRequest, timeout?: number): LogObj {
 		if (LogObj._objMap.has(req)) {
 			return LogObj._objMap.get(req)!;
 		}
@@ -137,7 +126,7 @@ export class LogObj {
 					getTime(),
 					statusColor(`[${res.statusCode}]`),
 					`[${req.method.toUpperCase()}]`,
-					ipBg(chalk.black(externalRedact(`${req.host}${req.path}`))),
+					ipBg(chalk.black(redact(`${req.host}${req.path}`))),
 					'->',
 					`(${end - start} ms)`
 				);
@@ -167,9 +156,7 @@ export class LogObj {
 
 			const message = this._messages[i];
 
-			const timeFiller = new Array(new Date().toLocaleString().length + 2)
-				.fill(' ')
-				.join('');
+			const timeFiller = new Array(new Date().toLocaleString().length + 2).fill(' ').join('');
 			if (i === this._messages.length - 1) {
 				LogObj._log(timeFiller, `${padding} \\- `, ...message.content);
 				hasNextMessage[depth] = false;
@@ -182,55 +169,51 @@ export class LogObj {
 		}
 	}
 
-	public static fromIncomingReq(
-		req: express.Request,
-		res: express.Response
-	): LogObj {
+	public static fromIncomingReq(req: BunRequest): LogObj {
 		if (LogObj._objMap.has(req)) {
 			return LogObj._objMap.get(req)!;
 		}
 		const obj = new LogObj();
+		LogObj._requestTimingMap.set(req, Date.now());
 		LogObj._objMap.set(req, obj);
-		LogObj._objMap.set(res, obj);
-
-		const start = Date.now();
-		const ip = getIP(req);
-		res.on('finish', () => {
-			if (LogObj.logLevel < 1 || obj.ignore) {
-				return;
-			}
-			const end = Date.now();
-			gatherTimings(res);
-
-			const [statusColor, ipBg] = (() => {
-				if (res.statusCode === 200) {
-					return [chalk.green, chalk.bgGreen];
-				} else if (res.statusCode === 500) {
-					return [chalk.red, chalk.bgRed];
-				} else {
-					return [chalk.yellow, chalk.bgYellow];
-				}
-			})();
-			this._log(
-				getTime(),
-				statusColor(`[${res.statusCode}]`),
-				`[${req.method.toUpperCase()}]`,
-				ipBg(chalk.black(externalRedact(req.url))),
-				'<-',
-				chalk.bold(ip ?? '?'),
-				`(${end - start} ms)`
-			);
-			obj._logMessages();
-		});
-
 		return obj;
+	}
+
+	public static logOutgoingResponse(req: BunRequest, res: Response, server: Server): void {
+		const obj = LogObj._objMap.get(req);
+		const start = LogObj._requestTimingMap.get(req)!;
+		const ip = getIP(req) ?? server.requestIP(req)?.address;
+
+		if (LogObj.logLevel < 1 || obj?.ignore) {
+			return;
+		}
+
+		const end = Date.now();
+
+		const [statusColor, ipBg] = (() => {
+			if (res.status === 200) {
+				return [chalk.green, chalk.bgGreen];
+			} else if (res.status === 500) {
+				return [chalk.red, chalk.bgRed];
+			} else {
+				return [chalk.yellow, chalk.bgYellow];
+			}
+		})();
+		this._log(
+			getTime(),
+			statusColor(`[${res.status}]`),
+			`[${req.method.toUpperCase()}]`,
+			ipBg(chalk.black(redact(new URL(req.url).pathname))),
+			'<-',
+			chalk.bold(ip ?? '?'),
+			`(${end - start} ms)`
+		);
+		obj?._logMessages();
 	}
 
 	public attachMessage(...messages: string[]): LogObj {
 		if (this._finalized) {
-			warning(
-				'Attaching message to finalized log object, consider increasing timeout'
-			);
+			warning('Attaching message to finalized log object, consider increasing timeout');
 			console.trace();
 			return LogObj.fromParent();
 		}
@@ -243,21 +226,17 @@ export class LogObj {
 		return newObj;
 	}
 
-	public reportError(err: Error, config: Config): void {
+	public reportError(err: Error, config: AppConfig): void {
 		const errPath = config.log.errorLogPath;
 		if (errPath) {
 			// Log error to error path and create it
 			const error = `${err.name}: ${err.message}\n${err.stack ?? ''}`;
 			const id = `E${generateRandomString(32)}`;
 			void fs.appendFile(errPath, `${id}: ${error}\n\n`);
-			this.attachMessage(
-				`${chalk.red('Error')}: ${err.toString()} (${id})`
-			);
+			this.attachMessage(`${chalk.red('Error')}: ${err.toString()} (${id})`);
 		}
 
-		this.attachMessage(
-			`${chalk.red('Error')}: ${err.toString()}\n${err.stack ?? ''}`
-		);
+		this.attachMessage(`${chalk.red('Error')}: ${err.toString()}\n${err.stack ?? ''}`);
 	}
 
 	public transferTo(target: LogObj): void {

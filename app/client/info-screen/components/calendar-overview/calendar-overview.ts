@@ -90,9 +90,7 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 		columnEnd: number;
 	})[][] {
 		const weekdayEvents = this.getWeekDayEvents();
-		const max = Math.max(
-			...weekdayEvents.map((weekDay) => weekDay.events.length)
-		);
+		const max = Math.max(...weekdayEvents.map((weekDay) => weekDay.events.length));
 
 		const arr: (TimedEvent & {
 			columnStart: number;
@@ -130,17 +128,10 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 			endIndex: number;
 		})[][] = [];
 		for (const event of events) {
-			if (
-				event.start?.dateTime ||
-				!event.start?.date ||
-				!event.end?.date
-			) {
+			if (event.start?.dateTime || !event.start?.date || !event.end?.date) {
 				continue;
 			}
-			const startIndex = this.getDayIndex(
-				new Date(event.start?.date),
-				endsOfDays
-			);
+			const startIndex = this.getDayIndex(new Date(event.start?.date), endsOfDays);
 			const endIndex = Math.min(
 				endsOfDays.length - 1,
 				this.getDayIndex(new Date(event.end?.date), endsOfDays) - 1
@@ -269,6 +260,7 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 		}
 	): Promise<Response | null> {
 		try {
+			// eslint-disable-next-line no-restricted-globals
 			const response = await fetch(url, {
 				method: 'POST',
 				headers: {
@@ -278,18 +270,34 @@ export class CalendarOverview extends ConfigurableWebComponent<{
 				credentials: 'include',
 			});
 			return response;
-		} catch (e) {
+		} catch {
 			return null;
 		}
 	}
 
 	public async updateCalendar(): Promise<void> {
 		const response = await this.request(`${location.origin}/calendar`, {});
-		if (!response) {
+		if (!response?.ok) {
 			return;
 		}
-		const { events } = await response.json();
-		this.props.events = events;
+
+		const json = (await response.json()) as
+			| {
+					success: true;
+					events: ExtendedEvent[];
+			  }
+			| {
+					success: false;
+					error: string;
+					redirect: string;
+			  };
+
+		if (!json.success) {
+			window.location.href = json.redirect;
+			return;
+		}
+
+		this.props.events = json.events;
 	}
 
 	public async setup(): Promise<void> {

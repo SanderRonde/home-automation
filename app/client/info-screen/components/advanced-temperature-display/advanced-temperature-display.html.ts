@@ -3,10 +3,9 @@ import { TEMPERATURE_DISPLAY_PERIOD } from './advanced-temperature-display.js';
 import { TemplateFn, CHANGE_TYPE } from 'wc-lib/build/es/wc-lib';
 import { render } from 'lit-html';
 
-export const AdvancedTemperatureDisplayHTML =
-	new TemplateFn<AdvancedTemperatureDisplay>(
-		(html, { props }) => {
-			return html`
+export const AdvancedTemperatureDisplayHTML = new TemplateFn<AdvancedTemperatureDisplay>(
+	(html, { props }) => {
+		return html`
 				<div id="centerer">
 					<div id="temp-row">
 						<div id="container">
@@ -20,12 +19,7 @@ export const AdvancedTemperatureDisplayHTML =
 						</div>
 					</div>
 						<div id="wind-row">
-							<span class="bold">${
-								props.period ===
-								TEMPERATURE_DISPLAY_PERIOD.CURRENT
-									? 'NU'
-									: 'DAG'
-							}</span>
+							<span class="bold">${props.period === TEMPERATURE_DISPLAY_PERIOD.CURRENT ? 'NU' : 'DAG'}</span>
 							<img
 								id="wind-icon"
 								style="transform: rotate(${String(props.windDegrees)}deg);"
@@ -41,15 +35,9 @@ export const AdvancedTemperatureDisplayHTML =
 							props.tempMax &&
 							props.tempMin &&
 							html`<span id="high"
-									><span
-										><span class="bold">H</span>
-										${props.tempMax}</span
-									></span
+									><span><span class="bold">H</span> ${props.tempMax}</span></span
 								><span id="low"
-									><span
-										><span class="bold">L</span>
-										${props.tempMin}</span
-									></span
+									><span><span class="bold">L</span> ${props.tempMin}</span></span
 								>`
 						}
 							<img
@@ -62,7 +50,7 @@ export const AdvancedTemperatureDisplayHTML =
 						</div>
 				</div>
 			`;
-		},
-		CHANGE_TYPE.PROP,
-		render
-	);
+	},
+	CHANGE_TYPE.PROP,
+	render
+);

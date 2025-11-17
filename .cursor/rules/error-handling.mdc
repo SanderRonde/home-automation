@@ -1,0 +1,171 @@
+---
+globs: app/server/**/*.ts,app/client/**/*.tsx
+---
+
+# Error Handling
+
+## Server-Side Error Handling
+
+### Route Handler Errors
+
+Route handlers automatically catch errors and return 500 responses:
+
+```typescript
+const handler = async (req, server, response) => {
+	// Errors here are automatically caught
+	const result = await riskyOperation();
+	return response.json(result);
+};
+```
+
+For custom error responses, use `response.error()`:
+
+```typescript
+const handler = async (req, server, response) => {
+	const device = await getDevice(id);
+	if (!device) {
+		return response.error('Device not found', 404);
+	}
+
+	if (!hasPermission(device)) {
+		return response.error({ error: 'Forbidden', reason: 'No access' }, 403);
+	}
+
+	return response.json(device);
+};
+```
+
+### Try-Catch in Module Code
+
+For operations outside route handlers:
+
+```typescript
+try {
+	await connectToDevice(deviceId);
+	logTag('DEVICE', 'green', 'Connected to device:', deviceId);
+} catch (error) {
+	logTag('DEVICE', 'red', 'Failed to connect:', error);
+	warning('Device connection failed for', deviceId);
+	// Optionally rethrow or handle gracefully
+}
+```
+
+### Promise Error Handling
+
+Always handle promises - no floating promises:
+
+```typescript
+// ✅ Good: awaited
+await riskyOperation();
+
+// ✅ Good: explicitly handled
+riskyOperation().catch((error) => {
+	warning('Operation failed:', error);
+});
+
+// ✅ Good: void for fire-and-forget (if really needed)
+void riskyOperation();
+
+// ❌ Bad: floating promise
+riskyOperation();
+```
+
+### Error Propagation
+
+Let errors propagate when appropriate:
+
+```typescript
+export async function getDevice(id: string): Promise<Device> {
+	// Let errors propagate to caller
+	const device = await db`SELECT * FROM devices WHERE id = ${id}`;
+	if (!device[0]) {
+		throw new Error(`Device not found: ${id}`);
+	}
+	return device[0];
+}
+```
+
+## Client-Side Error Handling
+
+### API Call Error Handling
+
+```typescript
+import { apiGet } from '../../lib/fetch';
+
+try {
+	const data = await apiGet<DeviceData>('/device/info');
+	setDevice(data);
+} catch (error) {
+	console.error('Failed to fetch device:', error);
+	setError('Could not load device data');
+}
+```
+
+### React Error Boundaries
+
+For component-level errors, consider using error boundaries:
+
+```typescript
+interface ErrorBoundaryState {
+    hasError: boolean;
+    error?: Error;
+}
+
+export class ErrorBoundary extends React.Component<
+    { children: React.ReactNode },
+    ErrorBoundaryState
+> {
+    public state: ErrorBoundaryState = { hasError: false };
+
+    public static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+        return { hasError: true, error };
+    }
+
+    public componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
+        console.error('Component error:', error, errorInfo);
+    }
+
+    public render(): React.ReactNode {
+        if (this.state.hasError) {
+            return <div>Something went wrong: {this.state.error?.message}</div>;
+        }
+        return this.props.children;
+    }
+}
+```
+
+### useEffect Error Handling
+
+```typescript
+React.useEffect(() => {
+	const fetchData = async () => {
+		try {
+			const data = await apiGet('/data');
+			setData(data);
+		} catch (error) {
+			console.error('Error fetching data:', error);
+			setError(error);
+		}
+	};
+
+	void fetchData();
+}, []);
+```
+
+## Error Logging
+
+- Use `logTag` with `'red'` color for errors
+- Use `warning()` for warnings
+- Always log enough context to debug the issue
+- Include device IDs, user IDs, or other relevant identifiers
+
+## Best Practices
+
+- ✅ Always handle promise rejections
+- ✅ Use typed errors when possible
+- ✅ Log errors with context
+- ✅ Return appropriate HTTP status codes
+- ✅ Provide helpful error messages to users
+- ❌ Don't swallow errors silently
+- ❌ Don't expose sensitive information in error messages
+- ❌ Don't use `any` for error types - use `Error` or `unknown`

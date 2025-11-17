@@ -52,6 +52,7 @@ export class TemperatureDisplay extends ConfigurableWebComponent<{
 		}
 	): Promise<Response | null> {
 		try {
+			// eslint-disable-next-line no-restricted-globals
 			const response = await fetch(url, {
 				method: 'POST',
 				headers: {
@@ -61,7 +62,7 @@ export class TemperatureDisplay extends ConfigurableWebComponent<{
 				credentials: 'include',
 			});
 			return response;
-		} catch (e) {
+		} catch {
 			return null;
 		}
 	}
@@ -89,9 +90,7 @@ export class TemperatureDisplay extends ConfigurableWebComponent<{
 			() => {
 				void this.updateWeather();
 			},
-			this.props.tempType === TEMPERATURE_DISPLAY_TYPE.OUTSIDE
-				? 1000 * 60 * 60
-				: 1000 * 60
+			this.props.tempType === TEMPERATURE_DISPLAY_TYPE.OUTSIDE ? 1000 * 60 * 60 : 1000 * 60
 		);
 	}
 

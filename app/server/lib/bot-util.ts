@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
-/* eslint-disable @typescript-eslint/ban-types */
+/* eslint-disable @typescript-eslint/no-wrapper-object-types */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 
@@ -78,9 +78,7 @@ export abstract class BotUtil {
 		return final;
 	}
 
-	public static unsetUndefined<O extends { [key: string]: unknown }>(
-		obj: O
-	): Defined<O> {
+	public static unsetUndefined<O extends { [key: string]: unknown }>(obj: O): Defined<O> {
 		const finalObj: Partial<Defined<O>> = {};
 		for (const key in obj) {
 			if (obj[key] !== undefined) {
@@ -97,29 +95,18 @@ export abstract class BotUtil {
 		if (list.length === 1) {
 			return `${list[0]}`;
 		} else {
-			return `${list.slice(0, -1).join(', ')} and ${String(
-				list.slice(-1)
-			)}`;
+			return `${list.slice(0, -1).join(', ')} and ${String(list.slice(-1))}`;
 		}
 	}
 
-	public static makeTable({
-		header,
-		contents,
-	}: {
-		header?: string[];
-		contents: string[][];
-	}):
+	public static makeTable({ header, contents }: { header?: string[]; contents: string[][] }):
 		| {
 				type: RESPONSE_TYPE;
 				text: string;
 		  }
 		| string {
 		if (
-			!contents.every(
-				(row) =>
-					row.length === (header ? header.length : contents[0].length)
-			)
+			!contents.every((row) => row.length === (header ? header.length : contents[0].length))
 		) {
 			throw new Error('Invalid table dimensions');
 		}
