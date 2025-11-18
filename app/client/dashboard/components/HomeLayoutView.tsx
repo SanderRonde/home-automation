@@ -2,7 +2,6 @@ import type { DeviceListWithValuesResponse } from '../../../server/modules/devic
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import type { WallSegment, DoorSlot } from '../types/layout';
 import { Box, IconButton, Typography } from '@mui/material';
-import { WbSunny } from '@mui/icons-material';
 // @ts-expect-error - konva ESM/CommonJS type resolution issue
 import type { Stage as StageType } from 'konva/lib/Stage';
 import type { RoomInfo } from './RoomAssignmentDialog';
@@ -13,6 +12,7 @@ import React, { useEffect, useState } from 'react';
 import { apiGet, apiPost } from '../../lib/fetch';
 import { Layer, Line, Stage } from 'react-konva';
 import type { IncludedIconNames } from './icon';
+import { WbSunny } from '@mui/icons-material';
 import type { HomeDetailView } from './Home';
 import { IconComponent } from './icon';
 
@@ -244,7 +244,7 @@ interface RoomExpandButtonProps {
 	};
 	stageTransform: { x: number; y: number; scale: number };
 	expandedRoomId: string | null;
-	isDragging: boolean;
+	isDraggingRef: React.MutableRefObject<boolean>;
 	temperatureExpanded: boolean;
 	energyExpanded: boolean;
 	setExpandedRoomId: (id: string | null) => void;
@@ -257,7 +257,7 @@ const RoomExpandButton = (props: RoomExpandButtonProps): JSX.Element | null => {
 	}
 
 	const handleToggle = () => {
-		if (!props.isDragging) {
+		if (!props.isDraggingRef.current) {
 			if (props.expandedRoomId === props.roomData.room.id) {
 				props.setCollapsingRoomId(props.roomData.room.id);
 				setTimeout(() => {
@@ -438,7 +438,7 @@ interface RoomOverlayProps {
 	stageTransform: { x: number; y: number; scale: number };
 	expandedRoomId: string | null;
 	collapsingRoomId: string | null;
-	isDragging: boolean;
+	isDraggingRef: React.MutableRefObject<boolean>;
 	temperatureExpanded: boolean;
 	energyExpanded: boolean;
 	clusterIconSize: number;
@@ -503,7 +503,7 @@ const RoomOverlay = (props: RoomOverlayProps): JSX.Element => {
 					roomData={props.roomData}
 					stageTransform={props.stageTransform}
 					expandedRoomId={props.expandedRoomId}
-					isDragging={props.isDragging}
+					isDraggingRef={props.isDraggingRef}
 					temperatureExpanded={props.temperatureExpanded}
 					energyExpanded={props.energyExpanded}
 					setExpandedRoomId={props.setExpandedRoomId}
@@ -532,7 +532,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	const [availableRooms, setAvailableRooms] = useState<Record<string, RoomInfo>>({});
 	const stageRef = React.useRef<StageType | null>(null);
 	const containerRef = React.useRef<HTMLDivElement | null>(null);
-	const [isDragging, setIsDragging] = React.useState(false);
+	const isDraggingRef = React.useRef<boolean>(false);
 	const dragStartPos = React.useRef<{ x: number; y: number } | null>(null);
 	const touchStartPos = React.useRef<{ x: number; y: number } | null>(null);
 	const [stageTransform, setStageTransform] = React.useState({ x: 0, y: 0, scale: 1 });
@@ -543,8 +543,9 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	const isPinching = React.useRef<boolean>(false);
 	const isPanning = React.useRef<boolean>(false);
 	const lastTouchPos = React.useRef<{ x: number; y: number } | null>(null);
-	const DRAG_THRESHOLD = 10; // pixels
+	const DRAG_THRESHOLD = 20; // pixels
 	const [outsideTemp, setOutsideTemp] = React.useState<number | null>(null);
+	const [hoveringRoomId, setHoveringRoomId] = React.useState<string | null>(null);
 
 	const width = window.innerWidth > 900 ? window.innerWidth - 240 : window.innerWidth;
 	const height = window.innerHeight - props.verticalSpacing;
@@ -741,14 +742,14 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 					dragStartPos.current = { x: pos.x, y: pos.y };
 				}
 			}
-			setIsDragging(false);
+			isDraggingRef.current = false;
 		},
 		[]
 	);
 
 	const handleStageMouseMove = React.useCallback(() => {
 		if (dragStartPos.current) {
-			setIsDragging(true);
+			isDraggingRef.current = true;
 			updateStageTransform();
 		}
 	}, [updateStageTransform]);
@@ -763,7 +764,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	}, [handleStageMouseMove]);
 
 	const handleStageMouseUp = React.useCallback(() => {
-		if (!isDragging) {
+		if (!isDraggingRef.current) {
 			// Close expanded clusters if clicking on stage background
 			setCollapsingRoomId(expandedRoomId);
 			setTimeout(() => {
@@ -772,9 +773,9 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 			}, 200);
 		}
 		dragStartPos.current = null;
-		setTimeout(() => setIsDragging(false), 50); // Small delay to allow click events to check drag state
+		setTimeout(() => (isDraggingRef.current = false), 50); // Small delay to allow click events to check drag state
 		updateStageTransform();
-	}, [updateStageTransform, isDragging, expandedRoomId]);
+	}, [updateStageTransform, expandedRoomId]);
 
 	const handleStageDragEnd = React.useCallback(() => {
 		updateStageTransform();
@@ -849,7 +850,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 						// Start panning - record initial position
 						isPanning.current = true;
 						lastTouchPos.current = currentPos;
-						setIsDragging(true);
+						isDraggingRef.current = true;
 					} else if (lastTouchPos.current) {
 						// Continue panning - calculate delta and update stage position
 						const deltaX = currentPos.x - lastTouchPos.current.x;
@@ -885,7 +886,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				stage.draggable(true);
 			}
 			// Reset dragging state after a short delay to allow tap events to check it
-			setTimeout(() => setIsDragging(false), 50);
+			setTimeout(() => (isDraggingRef.current = false), 50);
 		} else if (e.evt.touches.length === 1 && isPinching.current) {
 			// One finger lifted during pinch - reset pinch state and prepare for potential pan
 			lastDist.current = 0;
@@ -934,7 +935,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				// Record start position for drag detection
 				const touch = e.evt.touches[0];
 				touchStartPos.current = { x: touch.clientX, y: touch.clientY };
-				setIsDragging(false);
+				isDraggingRef.current = false;
 				handleStageMouseDown(e);
 			} else if (isPinching.current) {
 				// If we're in pinch mode, prevent default to avoid interference
@@ -1023,7 +1024,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 		// Close expanded clusters
 		setExpandedRoomId(null);
 		// Only navigate if we didn't drag
-		if (!isDragging) {
+		if (!isDraggingRef.current) {
 			props.pushDetailView({
 				type: 'room',
 				roomName: roomName,
@@ -1160,7 +1161,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 									points={roomData.room.polygon.map((p) => [p.x, p.y]).flat()}
 									fill={
 										roomData.roomInfo?.color
-											? `${roomData.roomInfo.color}80`
+											? `${roomData.roomInfo.color}${hoveringRoomId === roomData.room.id ? 'C0' : '80'}`
 											: '#00000030'
 									}
 									stroke={roomData.roomInfo?.color || '#ccc'}
@@ -1168,6 +1169,10 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 									closed
 									onMouseOver={cursorPointer}
 									onMouseOut={cursorDefault}
+									onMouseDown={() => setHoveringRoomId(roomData.room.id)}
+									onMouseUp={() => setHoveringRoomId(null)}
+									onTouchStart={() => setHoveringRoomId(roomData.room.id)}
+									onTouchEnd={() => setHoveringRoomId(null)}
 									onClick={() => handleRoomClick(roomData.mappedRoomName)}
 									onTap={() => handleRoomClick(roomData.mappedRoomName)}
 								/>
@@ -1209,7 +1214,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 							stageTransform={stageTransform}
 							expandedRoomId={expandedRoomId}
 							collapsingRoomId={collapsingRoomId}
-							isDragging={isDragging}
+							isDraggingRef={isDraggingRef}
 							temperatureExpanded={props.temperatureExpanded}
 							energyExpanded={props.energyExpanded}
 							clusterIconSize={clusterIconSize}
@@ -1225,62 +1230,85 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				})}
 
 				{/* Outside temperature bubble */}
-				{outsideTemp !== null && (() => {
-					// Determine background color based on temperature
-					const getTemperatureColor = (temp: number): string => {
-						if (temp < 10) return '#E3F2FD'; // Light blue - cold
-						if (temp < 18) return '#B3E5FC'; // Blue - cool
-						if (temp < 24) return '#C8E6C9'; // Light green - mild
-						if (temp < 30) return '#FFE0B2'; // Light orange - warm
-						return '#FFCDD2'; // Light red - hot
-					};
+				{outsideTemp !== null &&
+					(() => {
+						// Determine background color based on temperature
+						const getTemperatureColor = (temp: number): string => {
+							if (temp < 10) {
+								return '#E3F2FD';
+							} // Light blue - cold
+							if (temp < 18) {
+								return '#B3E5FC';
+							} // Blue - cool
+							if (temp < 24) {
+								return '#C8E6C9';
+							} // Light green - mild
+							if (temp < 30) {
+								return '#FFE0B2';
+							} // Light orange - warm
+							return '#FFCDD2'; // Light red - hot
+						};
 
-					const getTemperatureTextColor = (temp: number): string => {
-						if (temp < 10) return '#0D47A1'; // Dark blue
-						if (temp < 18) return '#01579B'; // Blue
-						if (temp < 24) return '#2E7D32'; // Green
-						if (temp < 30) return '#E65100'; // Orange
-						return '#C62828'; // Red
-					};
+						const getTemperatureTextColor = (temp: number): string => {
+							if (temp < 10) {
+								return '#0D47A1';
+							} // Dark blue
+							if (temp < 18) {
+								return '#01579B';
+							} // Blue
+							if (temp < 24) {
+								return '#2E7D32';
+							} // Green
+							if (temp < 30) {
+								return '#E65100';
+							} // Orange
+							return '#C62828'; // Red
+						};
 
-					return (
-						<Box
-							sx={{
-								position: 'absolute',
-								left: outsideTempPosition.x * stageTransform.scale + stageTransform.x - 32,
-								top: outsideTempPosition.y * stageTransform.scale + stageTransform.y - 32,
-								width: 64,
-								height: 64,
-								borderRadius: '50%',
-								backgroundColor: getTemperatureColor(outsideTemp),
-								display: 'flex',
-								flexDirection: 'column',
-								alignItems: 'center',
-								justifyContent: 'center',
-								boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-								pointerEvents: 'auto',
-								gap: '2px',
-							}}
-						>
-							<WbSunny
+						return (
+							<Box
 								sx={{
-									fontSize: '18px',
-									color: getTemperatureTextColor(outsideTemp),
-								}}
-							/>
-							<Typography
-								sx={{
-									fontWeight: 600,
-									fontSize: '14px',
-									lineHeight: 1,
-									color: getTemperatureTextColor(outsideTemp),
+									position: 'absolute',
+									left:
+										outsideTempPosition.x * stageTransform.scale +
+										stageTransform.x -
+										32,
+									top:
+										outsideTempPosition.y * stageTransform.scale +
+										stageTransform.y -
+										32,
+									width: 64,
+									height: 64,
+									borderRadius: '50%',
+									backgroundColor: getTemperatureColor(outsideTemp),
+									display: 'flex',
+									flexDirection: 'column',
+									alignItems: 'center',
+									justifyContent: 'center',
+									boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+									pointerEvents: 'auto',
+									gap: '2px',
 								}}
 							>
-								{outsideTemp}°
-							</Typography>
-						</Box>
-					);
-				})()}
+								<WbSunny
+									sx={{
+										fontSize: '18px',
+										color: getTemperatureTextColor(outsideTemp),
+									}}
+								/>
+								<Typography
+									sx={{
+										fontWeight: 600,
+										fontSize: '14px',
+										lineHeight: 1,
+										color: getTemperatureTextColor(outsideTemp),
+									}}
+								>
+									{outsideTemp}°
+								</Typography>
+							</Box>
+						);
+					})()}
 			</Box>
 		</Box>
 	);
