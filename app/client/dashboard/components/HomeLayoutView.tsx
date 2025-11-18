@@ -2,11 +2,13 @@ import type { DeviceListWithValuesResponse } from '../../../server/modules/devic
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import type { WallSegment, DoorSlot } from '../types/layout';
 import { Box, IconButton, Typography } from '@mui/material';
+import { useCreateData, useData } from '../lib/data-hooks';
 // @ts-expect-error - konva ESM/CommonJS type resolution issue
 import type { Stage as StageType } from 'konva/lib/Stage';
 import type { RoomInfo } from './RoomAssignmentDialog';
 // @ts-expect-error - konva ESM/CommonJS type resolution issue
 import type { KonvaEventObject } from 'konva/lib/Node';
+import type { Data } from '../../../server/lib/data';
 import { detectRooms } from '../lib/room-detection';
 import React, { useEffect, useState } from 'react';
 import { apiGet, apiPost } from '../../lib/fetch';
@@ -57,6 +59,7 @@ interface ClusterIconButtonProps {
 	offsetX: number;
 	offsetY: number;
 	clusterIconSize: number;
+	isCollapsing: boolean;
 	handleClusterClick: (clusterName: DeviceClusterName, roomName: string) => void;
 	handleClusterAction: (
 		clusterName: DeviceClusterName,
@@ -115,7 +118,10 @@ const ClusterIconButton = (props: ClusterIconButtonProps): JSX.Element | null =>
 		return null;
 	}
 
-	const keyframeName = `clusterExpand-${props.roomData.room.id}-${props.index}`;
+	const keyframeName = props.isCollapsing
+		? `clusterCollapse-${props.roomData.room.id}-${props.index}`
+		: `clusterExpand-${props.roomData.room.id}-${props.index}`;
+
 	return (
 		<IconButton
 			key={`${props.roomData.room.id}-${props.clusterData.clusterName}`}
@@ -127,22 +133,37 @@ const ClusterIconButton = (props: ClusterIconButtonProps): JSX.Element | null =>
 				height: props.clusterIconSize,
 				backgroundColor: isEnabled ? '#ffffff' : 'rgba(255, 255, 255, 0.5)',
 				color: isEnabled ? '#2a2a2a' : 'rgba(0, 0, 0, 0.5)',
-				pointerEvents: 'auto',
+				pointerEvents: props.isCollapsing ? 'none' : 'auto',
 				fontSize: '20px',
-				opacity: 0,
-				transform: 'translate(0, 0) scale(0.8)',
-				animation: `${keyframeName} 300ms ease-out forwards`,
-				animationDelay: `${props.index * 40}ms`,
-				[`@keyframes ${keyframeName}`]: {
-					'0%': {
-						opacity: 0,
-						transform: 'translate(0, 0) scale(0.8)',
-					},
-					'100%': {
-						opacity: 1,
-						transform: `translate(${props.offsetX}px, ${props.offsetY}px) scale(1)`,
-					},
-				},
+				opacity: props.isCollapsing ? 1 : 0,
+				transform: props.isCollapsing
+					? `translate(${props.offsetX}px, ${props.offsetY}px) scale(1)`
+					: 'translate(0, 0) scale(0.8)',
+				animation: props.isCollapsing
+					? `${keyframeName} 200ms ease-out forwards`
+					: `${keyframeName} 300ms ease-out forwards`,
+				animationDelay: props.isCollapsing ? '0ms' : `${props.index * 40}ms`,
+				[`@keyframes ${keyframeName}`]: props.isCollapsing
+					? {
+							'0%': {
+								opacity: 1,
+								transform: `translate(${props.offsetX}px, ${props.offsetY}px) scale(1)`,
+							},
+							'100%': {
+								opacity: 0,
+								transform: 'translate(0, 0) scale(0.8)',
+							},
+						}
+					: {
+							'0%': {
+								opacity: 0,
+								transform: 'translate(0, 0) scale(0.8)',
+							},
+							'100%': {
+								opacity: 1,
+								transform: `translate(${props.offsetX}px, ${props.offsetY}px) scale(1)`,
+							},
+						},
 				'&:hover': {
 					backgroundColor: isEnabled ? '#f0f0f0' : 'rgba(255, 255, 255, 0.7)',
 				},
@@ -187,6 +208,7 @@ interface ExpandedClusterIconsProps {
 	clusterIconSpacing: number;
 	clusterStartX: number;
 	clusterY: number;
+	isCollapsing: boolean;
 	handleClusterClick: (clusterName: DeviceClusterName, roomName: string) => void;
 	handleClusterAction: (
 		clusterName: DeviceClusterName,
@@ -226,6 +248,7 @@ const ExpandedClusterIcons = (props: ExpandedClusterIconsProps): JSX.Element => 
 						offsetX={offsetX}
 						offsetY={offsetY}
 						clusterIconSize={props.clusterIconSize}
+						isCollapsing={props.isCollapsing}
 						handleClusterClick={props.handleClusterClick}
 						handleClusterAction={props.handleClusterAction}
 					/>
@@ -243,32 +266,41 @@ interface RoomExpandButtonProps {
 		clusterInfo: Array<{ clusterName: DeviceClusterName; icon: IncludedIconNames | null }>;
 	};
 	stageTransform: { x: number; y: number; scale: number };
-	expandedRoomId: string | null;
+	expandedRoomIdData: Data<string | null>;
+	collapsingRoomIdData: Data<string | null>;
 	isDraggingRef: React.MutableRefObject<boolean>;
 	temperatureExpanded: boolean;
 	energyExpanded: boolean;
-	setExpandedRoomId: (id: string | null) => void;
-	setCollapsingRoomId: (id: string | null) => void;
 }
 
-const RoomExpandButton = (props: RoomExpandButtonProps): JSX.Element | null => {
+const RoomExpandButton = React.memo((props: RoomExpandButtonProps): JSX.Element | null => {
+	const isExpanded = useData(
+		props.expandedRoomIdData,
+		(expandedRoomId) => expandedRoomId === props.roomData.room.id
+	);
+
+	const handleToggle = React.useCallback(() => {
+		if (!props.isDraggingRef.current) {
+			if (props.expandedRoomIdData.current() === props.roomData.room.id) {
+				props.collapsingRoomIdData.set(props.roomData.room.id);
+				setTimeout(() => {
+					props.expandedRoomIdData.set(null);
+					props.collapsingRoomIdData.set(null);
+				}, 200);
+			} else {
+				props.expandedRoomIdData.set(props.roomData.room.id);
+			}
+		}
+	}, [
+		props.expandedRoomIdData,
+		props.isDraggingRef,
+		props.roomData.room.id,
+		props.collapsingRoomIdData,
+	]);
+
 	if (props.roomData.clusterInfo.length === 0) {
 		return null;
 	}
-
-	const handleToggle = () => {
-		if (!props.isDraggingRef.current) {
-			if (props.expandedRoomId === props.roomData.room.id) {
-				props.setCollapsingRoomId(props.roomData.room.id);
-				setTimeout(() => {
-					props.setExpandedRoomId(null);
-					props.setCollapsingRoomId(null);
-				}, 200);
-			} else {
-				props.setExpandedRoomId(props.roomData.room.id);
-			}
-		}
-	};
 
 	let expandedContent = null;
 	if (props.temperatureExpanded && props.roomData.roomTemperature !== null) {
@@ -302,7 +334,7 @@ const RoomExpandButton = (props: RoomExpandButtonProps): JSX.Element | null => {
 				transform: expandedContent ? 'scale(1)' : 'scale(0.8)',
 			}}
 		>
-			{expandedContent && props.expandedRoomId !== props.roomData.room.id ? (
+			{expandedContent && !isExpanded ? (
 				<Box
 					sx={{
 						width: 48,
@@ -378,7 +410,7 @@ const RoomExpandButton = (props: RoomExpandButtonProps): JSX.Element | null => {
 			)}
 		</Box>
 	);
-};
+});
 
 interface EllipsisFadeOutButtonProps {
 	roomId: string;
@@ -386,7 +418,7 @@ interface EllipsisFadeOutButtonProps {
 	roomCenter: { x: number; y: number };
 }
 
-const EllipsisFadeOutButton = (props: EllipsisFadeOutButtonProps): JSX.Element => {
+const EllipsisFadeOutButton = React.memo((props: EllipsisFadeOutButtonProps): JSX.Element => {
 	return (
 		<IconButton
 			key={`${props.roomId}-ellipsis-fading`}
@@ -423,7 +455,7 @@ const EllipsisFadeOutButton = (props: EllipsisFadeOutButtonProps): JSX.Element =
 			...
 		</IconButton>
 	);
-};
+});
 
 interface RoomOverlayProps {
 	roomData: {
@@ -436,8 +468,8 @@ interface RoomOverlayProps {
 		roomEnergy: number | null;
 	};
 	stageTransform: { x: number; y: number; scale: number };
-	expandedRoomId: string | null;
-	collapsingRoomId: string | null;
+	expandedRoomIdData: Data<string | null>;
+	collapsingRoomIdData: Data<string | null>;
 	isDraggingRef: React.MutableRefObject<boolean>;
 	temperatureExpanded: boolean;
 	energyExpanded: boolean;
@@ -450,14 +482,17 @@ interface RoomOverlayProps {
 		clusterName: DeviceClusterName,
 		roomDevices: DeviceListWithValuesResponse
 	) => Promise<void>;
-	setExpandedRoomId: (id: string | null) => void;
-	setCollapsingRoomId: (id: string | null) => void;
 }
 
-const RoomOverlay = (props: RoomOverlayProps): JSX.Element => {
-	const isExpanded =
-		props.expandedRoomId === props.roomData.room.id ||
-		props.collapsingRoomId === props.roomData.room.id;
+const RoomOverlay = React.memo((props: RoomOverlayProps): JSX.Element => {
+	const isExpanded = useData(
+		props.expandedRoomIdData,
+		(expandedRoomId) => expandedRoomId === props.roomData.room.id
+	);
+	const isCollapsing = useData(
+		props.collapsingRoomIdData,
+		(collapsingRoomId) => collapsingRoomId === props.roomData.room.id
+	);
 
 	return (
 		<React.Fragment key={`overlay-${props.roomData.room.id}`}>
@@ -487,7 +522,7 @@ const RoomOverlay = (props: RoomOverlayProps): JSX.Element => {
 			)}
 
 			{/* Cluster expand button or cluster icons */}
-			{isExpanded ? (
+			{isExpanded || isCollapsing ? (
 				<ExpandedClusterIcons
 					roomData={props.roomData}
 					stageTransform={props.stageTransform}
@@ -495,6 +530,7 @@ const RoomOverlay = (props: RoomOverlayProps): JSX.Element => {
 					clusterIconSpacing={props.clusterIconSpacing}
 					clusterStartX={props.clusterStartX}
 					clusterY={props.clusterY}
+					isCollapsing={isCollapsing}
 					handleClusterClick={props.handleClusterClick}
 					handleClusterAction={props.handleClusterAction}
 				/>
@@ -502,31 +538,209 @@ const RoomOverlay = (props: RoomOverlayProps): JSX.Element => {
 				<RoomExpandButton
 					roomData={props.roomData}
 					stageTransform={props.stageTransform}
-					expandedRoomId={props.expandedRoomId}
+					expandedRoomIdData={props.expandedRoomIdData}
+					collapsingRoomIdData={props.collapsingRoomIdData}
 					isDraggingRef={props.isDraggingRef}
 					temperatureExpanded={props.temperatureExpanded}
 					energyExpanded={props.energyExpanded}
-					setExpandedRoomId={props.setExpandedRoomId}
-					setCollapsingRoomId={props.setCollapsingRoomId}
 				/>
 			)}
 
 			{/* Show "..." button fading out when expanding */}
-			{props.expandedRoomId === props.roomData.room.id &&
-				!props.collapsingRoomId &&
-				props.roomData.clusterInfo.length > 0 && (
-					<EllipsisFadeOutButton
-						roomId={props.roomData.room.id}
-						stageTransform={props.stageTransform}
-						roomCenter={props.roomData.room.center}
-					/>
-				)}
+			{isExpanded && !isCollapsing && props.roomData.clusterInfo.length > 0 && (
+				<EllipsisFadeOutButton
+					roomId={props.roomData.room.id}
+					stageTransform={props.stageTransform}
+					roomCenter={props.roomData.room.center}
+				/>
+			)}
 		</React.Fragment>
 	);
-};
+});
+
+interface OutsideTemperatureBubbleProps {
+	outsideTempData: Data<number | null>;
+	wallsData: Data<WallSegment[]>;
+	stageTransformData: Data<{ x: number; y: number; scale: number }>;
+}
+
+const OutsideTemperatureBubble = React.memo(
+	(props: OutsideTemperatureBubbleProps): React.ReactNode => {
+		const outsideTemp = useData(props.outsideTempData);
+		if (!outsideTemp) {
+			return null;
+		}
+
+		return <_OutsideTemperatureBubble {...props} outsideTemp={outsideTemp} />;
+	}
+);
+
+const _OutsideTemperatureBubble = React.memo(
+	(props: OutsideTemperatureBubbleProps & { outsideTemp: number }): React.ReactNode => {
+		// Calculate position for outside temperature display (center, closest edge outside)
+		const walls = useData(props.wallsData);
+		const stageTransform = useData(props.stageTransformData);
+
+		const outsideTempPosition = React.useMemo(() => {
+			if (walls.length === 0) {
+				return { x: 60, y: 60 }; // Default if no walls
+			}
+
+			const bbox = calculateBoundingBox(walls);
+			const centerX = (bbox.minX + bbox.maxX) / 2;
+			const centerY = (bbox.minY + bbox.maxY) / 2;
+			const padding = 25; // Small padding outside the walls, within viewport
+
+			// Calculate distance from center to each edge
+			const distToTop = centerY - bbox.minY;
+			const distToBottom = bbox.maxY - centerY;
+			const distToLeft = centerX - bbox.minX;
+			const distToRight = bbox.maxX - centerX;
+
+			// Find the closest edge
+			const minDist = Math.min(distToTop, distToBottom, distToLeft, distToRight);
+
+			// Place temperature bubble just outside the closest edge
+			if (minDist === distToTop) {
+				return { x: centerX, y: bbox.minY - padding };
+			} else if (minDist === distToBottom) {
+				return { x: centerX, y: bbox.maxY + padding };
+			} else if (minDist === distToLeft) {
+				return { x: bbox.minX - padding, y: centerY };
+			} else {
+				return { x: bbox.maxX + padding, y: centerY };
+			}
+		}, [walls]);
+
+		// Determine background color based on temperature
+		const getTemperatureColor = (temp: number): string => {
+			if (temp < 10) {
+				return '#E3F2FD';
+			} // Light blue - cold
+			if (temp < 18) {
+				return '#B3E5FC';
+			} // Blue - cool
+			if (temp < 24) {
+				return '#C8E6C9';
+			} // Light green - mild
+			if (temp < 30) {
+				return '#FFE0B2';
+			} // Light orange - warm
+			return '#FFCDD2'; // Light red - hot
+		};
+
+		const getTemperatureTextColor = (temp: number): string => {
+			if (temp < 10) {
+				return '#0D47A1';
+			} // Dark blue
+			if (temp < 18) {
+				return '#01579B';
+			} // Blue
+			if (temp < 24) {
+				return '#2E7D32';
+			} // Green
+			if (temp < 30) {
+				return '#E65100';
+			} // Orange
+			return '#C62828'; // Red
+		};
+
+		return (
+			<Box
+				sx={{
+					position: 'absolute',
+					left: outsideTempPosition.x * stageTransform.scale + stageTransform.x - 32,
+					top: outsideTempPosition.y * stageTransform.scale + stageTransform.y - 32,
+					width: 64,
+					height: 64,
+					borderRadius: '50%',
+					backgroundColor: getTemperatureColor(props.outsideTemp),
+					display: 'flex',
+					flexDirection: 'column',
+					alignItems: 'center',
+					justifyContent: 'center',
+					boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+					pointerEvents: 'auto',
+					gap: '2px',
+				}}
+			>
+				<WbSunny
+					sx={{
+						fontSize: '18px',
+						color: getTemperatureTextColor(props.outsideTemp),
+					}}
+				/>
+				<Typography
+					sx={{
+						fontWeight: 600,
+						fontSize: '14px',
+						lineHeight: 1,
+						color: getTemperatureTextColor(props.outsideTemp),
+					}}
+				>
+					{props.outsideTemp}°
+				</Typography>
+			</Box>
+		);
+	}
+);
+
+interface RoomProps {
+	roomData: {
+		room: { id: string; polygon: { x: number; y: number }[] };
+		roomInfo: RoomInfo | undefined;
+		mappedRoomName: string;
+	};
+	hoveringRoomIdData: Data<string | null>;
+	handleRoomClick: (roomName: string) => void;
+}
+
+const Room = React.memo((props: RoomProps): JSX.Element => {
+	const isHovering = useData(
+		props.hoveringRoomIdData,
+		(hoveringRoomId) => hoveringRoomId === props.roomData.room.id
+	);
+
+	const cursorPointer = React.useCallback((e: KonvaEventObject<MouseEvent>) => {
+		const stage = e.target.getStage();
+		if (stage) {
+			stage.container().style.cursor = 'pointer';
+		}
+	}, []);
+
+	const cursorDefault = React.useCallback((e: KonvaEventObject<MouseEvent>) => {
+		const stage = e.target.getStage();
+		if (stage) {
+			stage.container().style.cursor = 'default';
+		}
+	}, []);
+
+	return (
+		<Line
+			points={props.roomData.room.polygon.map((p) => [p.x, p.y]).flat()}
+			fill={
+				props.roomData.roomInfo?.color
+					? `${props.roomData.roomInfo.color}${isHovering ? 'C0' : '80'}`
+					: '#00000030'
+			}
+			stroke={props.roomData.roomInfo?.color || '#ccc'}
+			strokeWidth={2}
+			closed
+			onMouseOver={cursorPointer}
+			onMouseOut={cursorDefault}
+			onMouseDown={() => props.hoveringRoomIdData.set(props.roomData.room.id)}
+			onMouseUp={() => props.hoveringRoomIdData.set(null)}
+			onTouchStart={() => props.hoveringRoomIdData.set(props.roomData.room.id)}
+			onTouchEnd={() => props.hoveringRoomIdData.set(null)}
+			onClick={() => props.handleRoomClick(props.roomData.mappedRoomName)}
+			onTap={() => props.handleRoomClick(props.roomData.mappedRoomName)}
+		/>
+	);
+});
 
 export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
-	const [walls, setWalls] = useState<WallSegment[]>([]);
+	const wallsData = useCreateData<WallSegment[]>([]);
+	const walls = useData(wallsData);
 	const [doors, setDoors] = useState<DoorSlot[]>([]);
 	const [roomMappings, setRoomMappings] = useState<Record<string, string>>({});
 	const [availableRooms, setAvailableRooms] = useState<Record<string, RoomInfo>>({});
@@ -535,28 +749,35 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	const isDraggingRef = React.useRef<boolean>(false);
 	const dragStartPos = React.useRef<{ x: number; y: number } | null>(null);
 	const touchStartPos = React.useRef<{ x: number; y: number } | null>(null);
-	const [stageTransform, setStageTransform] = React.useState({ x: 0, y: 0, scale: 1 });
-	const [expandedRoomId, setExpandedRoomId] = React.useState<string | null>(null);
-	const [collapsingRoomId, setCollapsingRoomId] = React.useState<string | null>(null);
+
+	const expandedRoomIdData = useCreateData<string | null>(null);
+	const collapsingRoomIdData = useCreateData<string | null>(null);
+	const outsideTempData = useCreateData<number | null>(null);
+	const hoveringRoomIdData = useCreateData<string | null>(null);
+
+	const stageTransformData = useCreateData<{ x: number; y: number; scale: number }>({
+		x: 0,
+		y: 0,
+		scale: 1,
+	});
+	const stageTransform = useData(stageTransformData);
 	const lastDist = React.useRef<number>(0);
 	const lastCenter = React.useRef<{ x: number; y: number } | null>(null);
 	const isPinching = React.useRef<boolean>(false);
 	const isPanning = React.useRef<boolean>(false);
 	const lastTouchPos = React.useRef<{ x: number; y: number } | null>(null);
 	const DRAG_THRESHOLD = 20; // pixels
-	const [outsideTemp, setOutsideTemp] = React.useState<number | null>(null);
-	const [hoveringRoomId, setHoveringRoomId] = React.useState<string | null>(null);
 
 	const width = window.innerWidth > 900 ? window.innerWidth - 240 : window.innerWidth;
 	const height = window.innerHeight - props.verticalSpacing;
 
-	const loadLayout = async () => {
+	const loadLayout = React.useCallback(async () => {
 		try {
 			const response = await apiGet('device', '/layout', {});
 			if (response.ok) {
 				const data = await response.json();
 				if (data.layout) {
-					setWalls(data.layout.walls || []);
+					wallsData.set(data.layout.walls || []);
 					setDoors(data.layout.doors || []);
 					setRoomMappings(data.layout.roomMappings || {});
 				}
@@ -564,7 +785,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 		} catch (error) {
 			console.error('Failed to load layout:', error);
 		}
-	};
+	}, [wallsData]);
 
 	const loadRooms = React.useCallback(async () => {
 		try {
@@ -582,7 +803,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	useEffect(() => {
 		void loadLayout();
 		void loadRooms();
-	}, [loadRooms]);
+	}, [loadRooms, loadLayout]);
 
 	// Fetch outside temperature periodically
 	useEffect(() => {
@@ -592,7 +813,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				if (response.ok) {
 					const data = await response.json();
 					if (data.success) {
-						setOutsideTemp(data.temperature);
+						outsideTempData.set(data.temperature);
 					}
 				}
 			} catch (error) {
@@ -606,43 +827,11 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 		}, 600000); // Refresh every 10 minutes
 
 		return () => clearInterval(interval);
-	}, []);
+	}, [outsideTempData]);
 
 	const detectedRooms = React.useMemo(() => {
 		return detectRooms(walls, width, height);
 	}, [walls, width, height]);
-
-	// Calculate position for outside temperature display (center, closest edge outside)
-	const outsideTempPosition = React.useMemo(() => {
-		if (walls.length === 0) {
-			return { x: 60, y: 60 }; // Default if no walls
-		}
-
-		const bbox = calculateBoundingBox(walls);
-		const centerX = (bbox.minX + bbox.maxX) / 2;
-		const centerY = (bbox.minY + bbox.maxY) / 2;
-		const padding = 25; // Small padding outside the walls, within viewport
-
-		// Calculate distance from center to each edge
-		const distToTop = centerY - bbox.minY;
-		const distToBottom = bbox.maxY - centerY;
-		const distToLeft = centerX - bbox.minX;
-		const distToRight = bbox.maxX - centerX;
-
-		// Find the closest edge
-		const minDist = Math.min(distToTop, distToBottom, distToLeft, distToRight);
-
-		// Place temperature bubble just outside the closest edge
-		if (minDist === distToTop) {
-			return { x: centerX, y: bbox.minY - padding };
-		} else if (minDist === distToBottom) {
-			return { x: centerX, y: bbox.maxY + padding };
-		} else if (minDist === distToLeft) {
-			return { x: bbox.minX - padding, y: centerY };
-		} else {
-			return { x: bbox.maxX + padding, y: centerY };
-		}
-	}, [walls]);
 
 	// Calculate initial zoom to fit all walls with padding
 	useEffect(() => {
@@ -666,18 +855,18 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				x: posX,
 				y: posY,
 			});
-			setStageTransform({ x: posX, y: posY, scale });
+			stageTransformData.set({ x: posX, y: posY, scale });
 		}
-	}, [walls, width, height, props.kiosk]);
+	}, [walls, width, height, props.kiosk, stageTransformData]);
 
 	// Update stage transform state on pan/zoom
 	const updateStageTransform = React.useCallback(() => {
 		if (stageRef.current) {
 			const pos = stageRef.current.position();
 			const scale = stageRef.current.scaleX();
-			setStageTransform({ x: pos.x, y: pos.y, scale });
+			stageTransformData.set({ x: pos.x, y: pos.y, scale });
 		}
-	}, []);
+	}, [stageTransformData]);
 
 	const handleWheel = React.useCallback(
 		(e: KonvaEventObject<WheelEvent>) => {
@@ -719,20 +908,6 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 		[updateStageTransform]
 	);
 
-	const cursorPointer = React.useCallback((e: KonvaEventObject<MouseEvent>) => {
-		const stage = e.target.getStage();
-		if (stage) {
-			stage.container().style.cursor = 'pointer';
-		}
-	}, []);
-
-	const cursorDefault = React.useCallback((e: KonvaEventObject<MouseEvent>) => {
-		const stage = e.target.getStage();
-		if (stage) {
-			stage.container().style.cursor = 'default';
-		}
-	}, []);
-
 	const handleStageMouseDown = React.useCallback(
 		(e: KonvaEventObject<MouseEvent> | KonvaEventObject<TouchEvent>) => {
 			const stage = e.target.getStage();
@@ -766,16 +941,16 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	const handleStageMouseUp = React.useCallback(() => {
 		if (!isDraggingRef.current) {
 			// Close expanded clusters if clicking on stage background
-			setCollapsingRoomId(expandedRoomId);
+			collapsingRoomIdData.set(expandedRoomIdData.current());
 			setTimeout(() => {
-				setExpandedRoomId(null);
-				setCollapsingRoomId(null);
+				expandedRoomIdData.set(null);
+				collapsingRoomIdData.set(null);
 			}, 200);
 		}
 		dragStartPos.current = null;
 		setTimeout(() => (isDraggingRef.current = false), 50); // Small delay to allow click events to check drag state
 		updateStageTransform();
-	}, [updateStageTransform, expandedRoomId]);
+	}, [updateStageTransform, collapsingRoomIdData, expandedRoomIdData]);
 
 	const handleStageDragEnd = React.useCallback(() => {
 		updateStageTransform();
@@ -1022,7 +1197,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 
 	const handleRoomClick = (roomName: string) => {
 		// Close expanded clusters
-		setExpandedRoomId(null);
+		expandedRoomIdData.set(null);
 		// Only navigate if we didn't drag
 		if (!isDraggingRef.current) {
 			props.pushDetailView({
@@ -1155,28 +1330,12 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 					{/* Rooms */}
 					{roomsWithClusters.map((roomData) => {
 						return (
-							<React.Fragment key={roomData.room.id}>
-								{/* Room polygon */}
-								<Line
-									points={roomData.room.polygon.map((p) => [p.x, p.y]).flat()}
-									fill={
-										roomData.roomInfo?.color
-											? `${roomData.roomInfo.color}${hoveringRoomId === roomData.room.id ? 'C0' : '80'}`
-											: '#00000030'
-									}
-									stroke={roomData.roomInfo?.color || '#ccc'}
-									strokeWidth={2}
-									closed
-									onMouseOver={cursorPointer}
-									onMouseOut={cursorDefault}
-									onMouseDown={() => setHoveringRoomId(roomData.room.id)}
-									onMouseUp={() => setHoveringRoomId(null)}
-									onTouchStart={() => setHoveringRoomId(roomData.room.id)}
-									onTouchEnd={() => setHoveringRoomId(null)}
-									onClick={() => handleRoomClick(roomData.mappedRoomName)}
-									onTap={() => handleRoomClick(roomData.mappedRoomName)}
-								/>
-							</React.Fragment>
+							<Room
+								key={roomData.room.id}
+								roomData={roomData}
+								hoveringRoomIdData={hoveringRoomIdData}
+								handleRoomClick={handleRoomClick}
+							/>
 						);
 					})}
 				</Layer>
@@ -1212,8 +1371,8 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 							key={`overlay-${roomData.room.id}`}
 							roomData={roomData}
 							stageTransform={stageTransform}
-							expandedRoomId={expandedRoomId}
-							collapsingRoomId={collapsingRoomId}
+							expandedRoomIdData={expandedRoomIdData}
+							collapsingRoomIdData={collapsingRoomIdData}
 							isDraggingRef={isDraggingRef}
 							temperatureExpanded={props.temperatureExpanded}
 							energyExpanded={props.energyExpanded}
@@ -1223,92 +1382,14 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 							clusterY={clusterY}
 							handleClusterClick={handleClusterClick}
 							handleClusterAction={handleClusterAction}
-							setExpandedRoomId={setExpandedRoomId}
-							setCollapsingRoomId={setCollapsingRoomId}
 						/>
 					);
 				})}
-
-				{/* Outside temperature bubble */}
-				{outsideTemp !== null &&
-					(() => {
-						// Determine background color based on temperature
-						const getTemperatureColor = (temp: number): string => {
-							if (temp < 10) {
-								return '#E3F2FD';
-							} // Light blue - cold
-							if (temp < 18) {
-								return '#B3E5FC';
-							} // Blue - cool
-							if (temp < 24) {
-								return '#C8E6C9';
-							} // Light green - mild
-							if (temp < 30) {
-								return '#FFE0B2';
-							} // Light orange - warm
-							return '#FFCDD2'; // Light red - hot
-						};
-
-						const getTemperatureTextColor = (temp: number): string => {
-							if (temp < 10) {
-								return '#0D47A1';
-							} // Dark blue
-							if (temp < 18) {
-								return '#01579B';
-							} // Blue
-							if (temp < 24) {
-								return '#2E7D32';
-							} // Green
-							if (temp < 30) {
-								return '#E65100';
-							} // Orange
-							return '#C62828'; // Red
-						};
-
-						return (
-							<Box
-								sx={{
-									position: 'absolute',
-									left:
-										outsideTempPosition.x * stageTransform.scale +
-										stageTransform.x -
-										32,
-									top:
-										outsideTempPosition.y * stageTransform.scale +
-										stageTransform.y -
-										32,
-									width: 64,
-									height: 64,
-									borderRadius: '50%',
-									backgroundColor: getTemperatureColor(outsideTemp),
-									display: 'flex',
-									flexDirection: 'column',
-									alignItems: 'center',
-									justifyContent: 'center',
-									boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-									pointerEvents: 'auto',
-									gap: '2px',
-								}}
-							>
-								<WbSunny
-									sx={{
-										fontSize: '18px',
-										color: getTemperatureTextColor(outsideTemp),
-									}}
-								/>
-								<Typography
-									sx={{
-										fontWeight: 600,
-										fontSize: '14px',
-										lineHeight: 1,
-										color: getTemperatureTextColor(outsideTemp),
-									}}
-								>
-									{outsideTemp}°
-								</Typography>
-							</Box>
-						);
-					})()}
+				<OutsideTemperatureBubble
+					outsideTempData={outsideTempData}
+					wallsData={wallsData}
+					stageTransformData={stageTransformData}
+				/>
 			</Box>
 		</Box>
 	);
