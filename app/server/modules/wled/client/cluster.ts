@@ -144,13 +144,18 @@ export class WLEDColorControlCluster
 
 	public setColor = async ({ colors }: { colors: Color[] }): Promise<void> => {
 		if (!this.client.state.segments || colors.length === 1) {
-			return this.client.setColor([colors[0].r, colors[0].g, colors[0].b]);
+			await this.client.setEffect(0);
+			await this.client.setColor([colors[0].r, colors[0].g, colors[0].b]);
+			return;
 		}
 
 		// Sort segments by ID to ensure we process them in order and don't skip any
 		const segments = [...this.client.state.segments].sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
 		for (const [i, segment] of segments.entries()) {
 			const color = colors[i % colors.length];
+			await this.client.setEffect(0, {
+				segmentId: segment.id,
+			});
 			await this.client.setColor([color.r, color.g, color.b], {
 				segmentId: segment.id,
 			});
@@ -158,15 +163,6 @@ export class WLEDColorControlCluster
 	};
 
 	public getSegmentCount = (): number => this.client.state.segments.length;
-	public setColorMulti = (options: { colors: Color[] }): Promise<void> => {
-		// Sort segments by ID to ensure we process them in order and don't skip any
-		const segments = [...this.client.state.segments].sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
-		for (const [i, segment] of segments.entries()) {
-			const color = options.colors[i % options.colors.length];
-			segment.colors = [[color.r, color.g, color.b], ...(segment.colors?.slice(1) ?? [])];
-		}
-		return this.client.setSegments(segments);
-	};
 }
 
 export class WLEDActionsCluster extends ConfigurableCluster implements DeviceActionsCluster {
