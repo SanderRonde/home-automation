@@ -91,7 +91,7 @@ export class LEDClient implements Disposable {
 			});
 
 			this._socket.on('connect_error', (error) => {
-				warning('Failed to connect to LED server:', error);
+				warning('Failed to connect to LED server:', error.name);
 			});
 
 			this._socket.on('state_update', (data: LEDState) => {
