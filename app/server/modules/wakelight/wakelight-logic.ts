@@ -129,7 +129,8 @@ export class WakelightLogic {
 		const updateIntervalMs = UPDATE_INTERVAL_SECONDS * 1000;
 
 		this._intervalId = setInterval(() => {
-			const elapsed = Date.now() - this._startTime;
+			const now = Date.now();
+			const elapsed = now - this._startTime;
 			const progress = Math.min(elapsed / totalDurationMs, 1.0);
 
 			// Linear brightness curve from 0 to 1
@@ -199,6 +200,7 @@ export class WakelightLogic {
 		try {
 			await Promise.all(
 				devices.map(async (device) => {
+					const deviceId = device.getUniqueId();
 					try {
 						// Try to use LevelControl if available, otherwise use ColorControl value
 						const levelControlCluster =
@@ -235,7 +237,7 @@ export class WakelightLogic {
 							}
 						}
 					} catch (error) {
-						warning(`Failed to update device ${device.getUniqueId()}:`, error);
+						warning(`Failed to update device ${deviceId}:`, error);
 					}
 				})
 			);
@@ -253,25 +255,10 @@ export class WakelightLogic {
 			// Subscribe to OnOff changes
 			const onOffCluster = device.getClusterByType(DeviceOnOffCluster);
 			if (onOffCluster) {
-				const unsubscribe = onOffCluster.isOn.subscribe(() => {
-					onChangeCallback();
-				});
-				this._deviceSubscriptions.push(unsubscribe);
-			}
-
-			// Subscribe to ColorControl changes
-			const colorControlCluster = device.getClusterByType(DeviceColorControlCluster);
-			if (colorControlCluster) {
-				const unsubscribe = colorControlCluster.color.subscribe(() => {
-					onChangeCallback();
-				});
-				this._deviceSubscriptions.push(unsubscribe);
-			}
-
-			// Subscribe to LevelControl changes
-			const levelControlCluster = device.getClusterByType(DeviceLevelControlCluster);
-			if (levelControlCluster) {
-				const unsubscribe = levelControlCluster.currentLevel.subscribe(() => {
+				const unsubscribe = onOffCluster.isOn.subscribe((value, isInitial) => {
+					if (isInitial || value || value === undefined) {
+						return;
+					}
 					onChangeCallback();
 				});
 				this._deviceSubscriptions.push(unsubscribe);

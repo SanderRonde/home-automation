@@ -37,4 +37,4 @@
 - [x] Inside temperature
 - [x] Scene buttons above 2D view
 - [x] Kiosk mode of 2D view
-- [ ] Wakelight does not appear to work
+- [x] Wakelight does not appear to work
