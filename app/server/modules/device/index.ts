@@ -1,4 +1,5 @@
 import type { IncludedIconNames } from '../../../client/dashboard/components/icon';
+import { ThermostatOrchestrator } from './thermostat-orchestrator';
 import { SceneTriggerType } from '../../../../types/scene.js';
 import { SettablePromise } from '../../lib/settable-promise';
 import type { DeviceGroup } from '../../../../types/group';
@@ -47,12 +48,17 @@ export interface DeviceDB {
 	groups?: Record<string, DeviceGroup>;
 	palettes?: Record<string, Palette>;
 	house_layout?: HouseLayout;
+	thermostat_config?: {
+		masterDeviceIds: string[];
+		slaveDeviceIds: string[];
+	};
 }
 
 export const Device = new (class Device extends ModuleMeta {
 	private _db = new SettablePromise<Database<DeviceDB>>();
 	public api = new SettablePromise<DeviceAPI>();
 	private _cronTracker = new SettablePromise<CronTracker>();
+	private _thermostatOrchestrator: ThermostatOrchestrator | null = null;
 	public name = 'device';
 
 	public async init(config: ModuleConfig) {
@@ -222,6 +228,12 @@ export const Device = new (class Device extends ModuleMeta {
 		const cronTracker = new CronTracker(api.sceneAPI, config.sqlDB);
 		this._cronTracker.set(cronTracker);
 
+		// Initialize Thermostat Orchestrator
+		const thermostatConfig = (config.db as Database<DeviceDB>).current()?.thermostat_config;
+		if (thermostatConfig) {
+			this._thermostatOrchestrator = new ThermostatOrchestrator(api, thermostatConfig);
+		}
+
 		// Subscribe to home-detector state changes to trigger scenes
 		const modules = await this.getModules<AllModules>();
 		void modules.homeDetector.onUpdate(async (newState: HOME_STATE, hostId: string) => {
@@ -239,7 +251,7 @@ export const Device = new (class Device extends ModuleMeta {
 		});
 
 		return {
-			serve: initRouting(config, api),
+			serve: initRouting(config, api, this._thermostatOrchestrator),
 		};
 	}
 

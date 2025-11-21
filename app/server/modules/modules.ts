@@ -11,6 +11,7 @@ import { Secret } from './secret/';
 import { Matter } from './matter';
 import { Device } from './device';
 import { Kiosk } from './kiosk';
+import { Tuya } from './tuya';
 import { WLed } from './wled';
 import { Auth } from './auth';
 import { Bot } from './bot';
@@ -42,6 +43,7 @@ const getModuleObj = () => ({
 	wakelight: Wakelight,
 	webhook: Webhook,
 	ewelink: EWeLink,
+	tuya: Tuya,
 	kiosk: Kiosk,
 	temperature: Temperature,
 	homeDetector: HomeDetector,

@@ -428,6 +428,8 @@ class DeviceThermostatClusterSpec extends DeviceThermostatCluster {
 	// TODO: ThermostatMode type
 	@DescribeMethod(z.promise(z.void()), { name: 'mode', type: z.string() })
 	public setMode!: (mode: string) => Promise<void>;
+	@DescribeProperty(z.enum(['master', 'slave']))
+	public readonly role!: 'master' | 'slave';
 
 	public onChange!: EventEmitter<void>;
 	public [Symbol.dispose](): void {}
