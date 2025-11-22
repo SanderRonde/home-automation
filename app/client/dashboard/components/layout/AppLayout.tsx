@@ -5,11 +5,13 @@ import {
 	createTheme,
 	useMediaQuery,
 	useTheme,
-	Alert,
-	Collapse,
+	IconButton,
+	Tooltip,
+	Fade,
 } from '@mui/material';
 import { useOffline } from '../../../lib/offline-context';
 import { TOP_BAR_HEIGHT, TopBar } from './TopBar';
+import { WifiOff } from '@mui/icons-material';
 import type { SidebarTab } from './Sidebar';
 import { Sidebar } from './Sidebar';
 import React from 'react';
@@ -111,6 +113,7 @@ export const AppLayout = (props: AppLayoutProps): JSX.Element => {
 						overflow: 'auto',
 						bgcolor: props.kiosk ? 'black' : 'background.default',
 						marginTop: props.kiosk ? 0 : `${TOP_BAR_HEIGHT}px`,
+						position: 'relative',
 						transition: (theme) =>
 							theme.transitions.create('margin', {
 								easing: theme.transitions.easing.sharp,
@@ -124,12 +127,33 @@ export const AppLayout = (props: AppLayoutProps): JSX.Element => {
 						transform: 'translateZ(0)',
 					}}
 				>
-					{/* Offline indicator banner */}
-					<Collapse in={!isOnline}>
-						<Alert severity="warning" sx={{ borderRadius: 0, mb: 0 }}>
-							You're offline - viewing cached data. Device controls are disabled.
-						</Alert>
-					</Collapse>
+					{/* Offline indicator icon - fixed position, doesn't take up layout space */}
+					<Fade in={!isOnline}>
+						<Tooltip
+							title="You're offline - viewing cached data. Device controls are disabled."
+							arrow
+						>
+							<IconButton
+								sx={{
+									position: 'fixed',
+									top: props.kiosk ? 16 : `${TOP_BAR_HEIGHT + 16}px`,
+									right: 16,
+									zIndex: 1300,
+									backgroundColor: 'warning.main',
+									color: 'warning.contrastText',
+									'&:hover': {
+										backgroundColor: 'warning.dark',
+									},
+									opacity: !isOnline ? 1 : 0,
+									pointerEvents: !isOnline ? 'auto' : 'none',
+									transition: 'opacity 0.3s ease-in-out',
+								}}
+								size="small"
+							>
+								<WifiOff />
+							</IconButton>
+						</Tooltip>
+					</Fade>
 					<Box key={props.currentTab}>{props.children}</Box>
 				</Box>
 			</Box>
