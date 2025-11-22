@@ -31,6 +31,8 @@ export const Kiosk = (): JSX.Element => {
 				const json = await response.json();
 				if (json.success) {
 					setEvents(json.events);
+				} else if (json.error && json.redirect) {
+					window.location.href = json.redirect;
 				}
 			} catch (error) {
 				console.error('Failed to fetch calendar:', error);

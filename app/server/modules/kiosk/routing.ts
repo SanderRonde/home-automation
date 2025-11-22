@@ -13,7 +13,7 @@ function _initRouting() {
 					await authCode(code);
 				}
 
-				return staticResponse(Response.redirect('/'));
+				return staticResponse(Response.redirect('/dashboard#home-kiosk'));
 			},
 			'/calendar': async (_req, _server, { json }) => {
 				const calendar = getCalendar();
