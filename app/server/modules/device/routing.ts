@@ -229,7 +229,11 @@ interface DashboardDeviceResponse extends DashboardDeviceEndpointResponse {
 	managementUrl?: string;
 }
 
-function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api: DeviceAPI) {
+function _initRouting(
+	{ db, modules, wsPublish: _wsPublish }: ModuleConfig,
+	api: DeviceAPI,
+	thermostatOrchestrator: import('./thermostat-orchestrator').ThermostatOrchestrator | null = null
+) {
 	// Create a deduplicated WebSocket publisher to avoid sending duplicate messages
 	const wsPublish = createDeduplicatedTypedWSPublish<DeviceWebsocketServerMessage>(_wsPublish);
 
@@ -1148,6 +1152,36 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 					return json({ success: true });
 				}
 			),
+			'/thermostat/config': (_req, _server, { json }) => {
+				const config = (db as Database<import('./').DeviceDB>).current()?.thermostat_config;
+				return json({ config: config ?? { masterDeviceIds: [], slaveDeviceIds: [] } });
+			},
+			'/thermostat/config/update': withRequestBody(
+				z.object({
+					masterDeviceIds: z.array(z.string()),
+					slaveDeviceIds: z.array(z.string()),
+				}),
+				(body, _req, _server, { json }) => {
+					(db as Database<import('./').DeviceDB>).update((old) => ({
+						...old,
+						thermostat_config: body,
+					}));
+
+					// Update orchestrator if it exists
+					if (thermostatOrchestrator) {
+						thermostatOrchestrator.updateConfig(body);
+					}
+
+					return json({ success: true });
+				}
+			),
+			'/thermostat/status': (_req, _server, { json }) => {
+				if (!thermostatOrchestrator) {
+					return json({ error: 'Thermostat orchestrator not initialized' }, { status: 500 });
+				}
+				const status = thermostatOrchestrator.getStatus();
+				return json({ status });
+			},
 		},
 		true,
 		{
@@ -1675,7 +1709,8 @@ function validateClusterRoute<T extends `/cluster/${DeviceClusterName}`>(route: 
 
 export const initRouting = _initRouting as (
 	config: ModuleConfig,
-	api: DeviceAPI
+	api: DeviceAPI,
+	thermostatOrchestrator?: import('./thermostat-orchestrator').ThermostatOrchestrator | null
 ) => ServeOptions<unknown>;
 
 export type DeviceRoutes =
