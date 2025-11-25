@@ -922,22 +922,6 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 		[]
 	);
 
-	const handleStageMouseMove = React.useCallback(() => {
-		if (dragStartPos.current) {
-			isDraggingRef.current = true;
-			updateStageTransform();
-		}
-	}, [updateStageTransform]);
-
-	React.useEffect(() => {
-		window.addEventListener('mousemove', handleStageMouseMove);
-		window.addEventListener('pointermove', handleStageMouseMove);
-		return () => {
-			window.removeEventListener('mousemove', handleStageMouseMove);
-			window.removeEventListener('pointermove', handleStageMouseMove);
-		};
-	}, [handleStageMouseMove]);
-
 	const handleStageMouseUp = React.useCallback(() => {
 		if (!isDraggingRef.current) {
 			// Close expanded clusters if clicking on stage background
