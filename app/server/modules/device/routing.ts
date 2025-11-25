@@ -1318,7 +1318,7 @@ const getClusterState = async (
 			currentTemperature: (await cluster.currentTemperature.get()) ?? 20.0,
 			targetTemperature: (await cluster.targetTemperature.get()) ?? 20.0,
 			mode: (await cluster.mode.get()) ?? ThermostatMode.OFF,
-			isHeating: await cluster.isHeating.get(),
+			isHeating: (await cluster.isHeating.get()) ?? false,
 			minTemperature: 5.0,
 			maxTemperature: 30.0,
 		};
