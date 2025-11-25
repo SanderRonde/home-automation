@@ -200,4 +200,3 @@ export const TuyaConfig = (): JSX.Element => {
 		</Box>
 	);
 };
-
