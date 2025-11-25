@@ -4,8 +4,8 @@ import { logTag, warning } from '../../lib/logging/logger';
 import { DeviceOnOffCluster } from '../device/cluster';
 import type { AlarmState, WakelightDB } from './types';
 import type { Database } from '../../lib/db';
-import type { AllModules } from '../modules';
 import { Color } from '../../lib/color.js';
+import type { AllModules } from '../types';
 
 const UPDATE_INTERVAL_SECONDS = 5;
 

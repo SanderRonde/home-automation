@@ -21,7 +21,11 @@ import type { Database } from '../lib/db';
 import type { AppConfig } from '../app';
 import type { SQL } from 'bun';
 
-export type AllModules = ReturnType<typeof getModuleObj>;
+// Import AllModules type from types.ts to avoid circular dependency
+import type { AllModules } from './types';
+
+// The runtime value is still computed here
+export type { AllModules };
 
 export interface ModuleConfig {
 	config: AppConfig;

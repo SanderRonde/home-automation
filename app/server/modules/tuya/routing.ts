@@ -54,3 +54,4 @@ function _initRouting(db: Database<TuyaDB>) {
 export const initRouting = _initRouting as (db: Database<TuyaDB>) => ServeOptions<unknown>;
 
 export type TuyaRoutes = ReturnType<typeof _initRouting> extends ServeOptions<infer R> ? R : never;
+
