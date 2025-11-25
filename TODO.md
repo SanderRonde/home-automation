@@ -38,3 +38,4 @@
 - [x] Scene buttons above 2D view
 - [x] Kiosk mode of 2D view
 - [x] Wakelight does not appear to work
+- [ ] Bump matter.js

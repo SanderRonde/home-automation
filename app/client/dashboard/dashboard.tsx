@@ -11,6 +11,7 @@ import { HomeDetector } from './components/HomeDetector';
 import { OfflineProvider } from '../lib/offline-context';
 import { HouseLayout } from './components/HouseLayout';
 import { EnergyUsage } from './components/EnergyUsage';
+import { TuyaConfig } from './components/TuyaConfig';
 import React, { useState, useEffect } from 'react';
 import { Webhooks } from './components/Webhooks';
 import { Palettes } from './components/Palettes';
@@ -138,6 +139,8 @@ function DashboardApp() {
 				return <Devices />;
 			case SidebarTab.EWELINK:
 				return <EweLinkConfig />;
+			case SidebarTab.TUYA:
+				return <TuyaConfig />;
 			case SidebarTab.LED_SOURCES:
 				return <LEDSourcesConfig />;
 			case SidebarTab.AI:

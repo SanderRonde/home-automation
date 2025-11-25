@@ -11,6 +11,7 @@ import type { LedArtRoutes } from '../../server/modules/led-art/routing';
 import type { DeviceRoutes } from '../../server/modules/device/routing';
 import type { KioskRoutes } from '../../server/modules/kiosk/routing';
 import type { WledRoutes } from '../../server/modules/wled/routing';
+import type { TuyaRoutes } from '../../server/modules/tuya/routing';
 import type { AuthRoutes } from '../../server/modules/auth/routing';
 import type { BotRoutes } from '../../server/modules/bot/routing';
 import type { AIRoutes } from '../../server/modules/ai/routing';
@@ -223,6 +224,7 @@ type RoutesForModules = {
 	device: DeviceRoutes;
 	kiosk: KioskRoutes;
 	ewelink: EwelinkRoutes;
+	tuya: TuyaRoutes;
 	'led-art': LedArtRoutes;
 	'home-detector': HomeDetectorRoutes;
 	ai: AIRoutes;

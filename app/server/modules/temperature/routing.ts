@@ -1,11 +1,11 @@
 import { createServeOptions, withRequestBody } from '../../lib/routes';
+import { ExternalWeatherTimePeriod } from '../kiosk/types';
 import type { ServeOptions } from '../../lib/routes';
+import { get } from '../kiosk/temperature/external';
 import { LogObj } from '../../lib/logging/lob-obj';
 import { getController } from './temp-controller';
 import type { ModuleConfig } from '..';
 import { Temperature } from './index';
-import { get } from '../kiosk/temperature/external';
-import { ExternalWeatherTimePeriod } from '../kiosk/types';
 import * as z from 'zod';
 
 function _initRouting({ sqlDB, db, modules }: ModuleConfig) {

@@ -12,6 +12,7 @@ import { Matter } from './matter';
 import { Device } from './device';
 import { Kiosk } from './kiosk';
 import { WLed } from './wled';
+import { Tuya } from './tuya';
 import { Auth } from './auth';
 import { Bot } from './bot';
 import { AI } from './ai';
@@ -31,23 +32,24 @@ export interface ModuleConfig {
 }
 
 const getModuleObj = () => ({
+	ai: AI,
 	bot: Bot,
 	auth: Auth,
 	wled: WLed,
+	tuya: Tuya,
+	kiosk: Kiosk,
 	ledArt: LedArt,
 	device: Device,
 	matter: Matter,
-	dashboard: Dashboard,
 	secret: Secret,
-	wakelight: Wakelight,
-	webhook: Webhook,
 	ewelink: EWeLink,
-	kiosk: Kiosk,
+	webhook: Webhook,
+	wakelight: Wakelight,
+	dashboard: Dashboard,
+	homewizard: HomeWizard,
 	temperature: Temperature,
 	homeDetector: HomeDetector,
 	notification: Notification,
-	ai: AI,
-	homewizard: HomeWizard,
 });
 
 let notified = false;

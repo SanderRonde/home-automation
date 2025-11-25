@@ -202,6 +202,7 @@ export enum ThermostatMode {
 	HEAT = 'heat',
 	COOL = 'cool',
 	AUTO = 'auto',
+	MANUAL = 'manual',
 }
 
 export abstract class DeviceThermostatCluster extends Cluster {
@@ -222,7 +223,7 @@ export abstract class DeviceThermostatCluster extends Cluster {
 	/**
 	 * Whether the thermostat is currently heating or cooling
 	 */
-	public abstract isHeating: Data<boolean>;
+	public abstract isHeating: Data<boolean | undefined>;
 
 	public abstract setTargetTemperature(temperature: number): Promise<void>;
 	public abstract setMode(mode: ThermostatMode): Promise<void>;
