@@ -1,6 +1,6 @@
 import type { CalendarEvent } from '../../../server/modules/kiosk/calendar';
+import { Box, useTheme, useMediaQuery } from '@mui/material';
 import { apiGet } from '../../lib/fetch';
-import { Box } from '@mui/material';
 import { Home } from './Home';
 import React from 'react';
 
@@ -9,9 +9,27 @@ interface TimedEvent extends CalendarEvent {
 	endTime: string;
 }
 
+// Make things bigger when size md is hit
+const CLOCK_HEIGHTS = { xs: 65, sm: 65, md: 200 };
+const CALENDAR_HEIGHTS = { xs: 120, sm: 120, md: 370 };
+const CALENDAR_MARGINS = { xs: 8, sm: 8, md: 16 };
+
 export const Kiosk = (): JSX.Element => {
 	const [time, setTime] = React.useState(new Date());
 	const [events, setEvents] = React.useState<CalendarEvent[]>([]);
+	const theme = useTheme();
+	const isMd = useMediaQuery(theme.breakpoints.up('md'));
+	const isSm = useMediaQuery(theme.breakpoints.up('sm'));
+
+	const layoutViewVerticalSpacing = React.useMemo(() => {
+		if (isMd) {
+			return CLOCK_HEIGHTS.md + CALENDAR_HEIGHTS.md + CALENDAR_MARGINS.md;
+		}
+		if (isSm) {
+			return CLOCK_HEIGHTS.sm + CALENDAR_HEIGHTS.sm + CALENDAR_MARGINS.sm;
+		}
+		return CLOCK_HEIGHTS.xs + CALENDAR_HEIGHTS.xs + CALENDAR_MARGINS.xs;
+	}, [isMd, isSm]);
 
 	React.useEffect(() => {
 		const interval = setInterval(() => {
@@ -253,21 +271,25 @@ export const Kiosk = (): JSX.Element => {
 	const weekDayEvents = getWeekDayEvents();
 
 	return (
-		<Box sx={{ px: { xs: 1, sm: 2 } }}>
+		<Box sx={{ px: { xs: 1, sm: 2, md: 4 } }}>
 			<Box
 				sx={{
 					textAlign: 'center',
-					fontSize: { xs: 22, sm: 28 },
+					fontSize: { xs: 22, sm: 28, md: 88 },
 					fontWeight: 500,
 					py: 0.5,
-					height: `${CLOCK_HEIGHT}px`,
+					height: {
+						xs: `${CLOCK_HEIGHTS.xs}px`,
+						sm: `${CLOCK_HEIGHTS.sm}px`,
+						md: `${CLOCK_HEIGHTS.md}px`,
+					},
 				}}
 			>
 				<Box
 					component="span"
 					sx={{
 						display: 'block',
-						fontSize: { xs: 16, sm: 20 },
+						fontSize: { xs: 16, sm: 20, md: 60 },
 						fontWeight: 400,
 						color: 'text.secondary',
 						lineHeight: 1.2,
@@ -285,7 +307,7 @@ export const Kiosk = (): JSX.Element => {
 					component="span"
 					sx={{
 						display: 'block',
-						fontSize: { xs: 30, sm: 42 },
+						fontSize: { xs: 30, sm: 42, md: 128 },
 						fontWeight: 600,
 						letterSpacing: 1,
 						mt: 0.4,
@@ -300,19 +322,24 @@ export const Kiosk = (): JSX.Element => {
 					})}
 				</Box>
 			</Box>
-			<Home
-				kiosk
-				layoutViewVerticalSpacing={CLOCK_HEIGHT + CALENDAR_HEIGHT + CALENDAR_MARGIN}
-			/>
+			<Home kiosk layoutViewVerticalSpacing={layoutViewVerticalSpacing} />
 
 			{/* Calendar Overview */}
 			<Box
 				sx={{
-					mt: `${CALENDAR_MARGIN}px`,
-					mx: { xs: 2, sm: 4 },
+					mt: {
+						xs: `${CALENDAR_MARGINS.xs}px`,
+						sm: `${CALENDAR_MARGINS.sm}px`,
+						md: `${CALENDAR_MARGINS.md}px`,
+					},
+					mx: '20px',
 					display: 'grid',
 					gridTemplateColumns: '1px repeat(7, calc((100% - 8px) / 7) 1px)',
-					height: `${CALENDAR_HEIGHT}px`,
+					height: {
+						xs: `${CALENDAR_HEIGHTS.xs}px`,
+						sm: `${CALENDAR_HEIGHTS.sm}px`,
+						md: `${CALENDAR_HEIGHTS.md}px`,
+					},
 					boxSizing: 'border-box',
 					gap: 0,
 				}}
@@ -353,7 +380,7 @@ export const Kiosk = (): JSX.Element => {
 							gridRowEnd: 1,
 							overflow: 'hidden',
 							borderBottom: '1px solid white',
-							fontSize: { xs: '0.7rem', sm: '0.85rem' },
+							fontSize: { xs: '0.7rem', sm: '0.85rem', md: '1.7rem' },
 							fontWeight: 'bold',
 							textAlign: 'center',
 							textTransform: 'uppercase',
@@ -377,9 +404,9 @@ export const Kiosk = (): JSX.Element => {
 								gridColumnEnd: (event.endIndex + 1) * 2 + 1,
 								backgroundColor: event.color.background,
 								borderBottom: '1px solid black',
-								padding: '2px',
+								padding: { xs: '2px', md: '6px 4px' },
 								wordBreak: 'break-word',
-								fontSize: '0.5rem',
+								fontSize: { xs: '0.5rem', sm: '0.8rem', md: '1.05rem' },
 							}}
 						>
 							<Box sx={{ fontWeight: 'bold', color: 'black' }}>{event.summary}</Box>
@@ -414,16 +441,21 @@ export const Kiosk = (): JSX.Element => {
 									gridColumnEnd: event.columnEnd * 2 + 1,
 									backgroundColor: event.color.background,
 									borderBottom: '1px solid black',
-									padding: '2px',
+									padding: { xs: '2px', md: '6px 4px' },
 									wordBreak: 'break-word',
-									fontSize: '0.5rem',
+									fontSize: { xs: '0.5rem', sm: '0.8rem', md: '1.05rem' },
 									lineHeight: 1,
 								}}
 							>
 								<Box sx={{ fontWeight: 'bold', color: 'black' }}>
 									{event.summary}
 								</Box>
-								<Box sx={{ color: 'black', fontSize: '0.35rem' }}>
+								<Box
+									sx={{
+										color: 'black',
+										fontSize: { xs: '0.35rem', sm: '0.5rem', md: '0.75rem' },
+									}}
+								>
 									{event.startTime} - {event.endTime}
 								</Box>
 							</Box>
@@ -434,7 +466,3 @@ export const Kiosk = (): JSX.Element => {
 		</Box>
 	);
 };
-
-const CLOCK_HEIGHT = 65;
-const CALENDAR_HEIGHT = 120;
-const CALENDAR_MARGIN = 8;

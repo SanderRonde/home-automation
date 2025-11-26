@@ -120,7 +120,7 @@ export const AppLayout = (props: AppLayoutProps): JSX.Element => {
 								duration: theme.transitions.duration.leavingScreen,
 							}),
 						// Only shift content on desktop when sidebar is open
-						marginLeft: !isMobile && open ? '240px' : 0,
+						marginLeft: !isMobile && open && !props.kiosk ? '240px' : 0,
 						// Ensure scroll works during transitions
 						willChange: 'margin',
 						// Use GPU acceleration for smoother transitions

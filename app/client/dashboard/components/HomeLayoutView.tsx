@@ -839,10 +839,12 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 			const bbox = calculateBoundingBox(walls);
 			const paddingHorizontal = 40;
 			const paddingTop = 40;
-			const paddingBottom = props.kiosk ? 40 : 100;
+			const paddingBottom = 40;
 			const scaleX = (width - paddingHorizontal * 2) / bbox.width;
 			const scaleY = (height - (paddingTop + paddingBottom)) / bbox.height;
-			const scale = Math.min(scaleX, scaleY, 1); // Don't zoom in more than 1:1
+			// Allow zooming beyond 1:1 on large screens, but cap at reasonable maximum
+			const maxScale = window.innerWidth >= 900 ? 2 : 1;
+			const scale = Math.min(scaleX, scaleY, maxScale);
 
 			const posX = (width - bbox.width * scale) / 2 - bbox.minX * scale;
 			const posY =
