@@ -1,0 +1,24 @@
+# Systemd user service for Chrome Kiosk
+# Install to: ~/.config/systemd/user/kiosk.service
+#
+# Enable with:
+#   systemctl --user enable kiosk.service
+#   systemctl --user start kiosk.service
+#
+# For auto-start without login, also configure autologin (see setup-kiosk.sh)
+
+[Unit]
+Description=Chrome Kiosk Mode
+After=graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=simple
+Environment=DISPLAY=:0
+Environment=KIOSK_URL=http://localhost:3000/dashboard#home-kiosk
+ExecStart=%h/kiosk/kiosk-chrome.sh
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target
