@@ -1,6 +1,6 @@
 #!/bin/bash
 # Arch Linux Kiosk Setup Script
-# Sets up automatic login, X11/Wayland, and Chrome kiosk mode
+# Sets up automatic login, X11 with i3, and Chrome kiosk mode
 #
 # Run as root: sudo ./setup-kiosk.sh <username> [kiosk-url]
 
@@ -46,8 +46,9 @@ pacman -S --noconfirm --needed \
     xorg-xinit \
     xorg-xset \
     chromium \
-    openbox \
+    i3-wm \
     unclutter \
+    curl \
     || echo "Some packages may already be installed"
 
 # Create kiosk directory
@@ -71,8 +72,8 @@ xset -dpms
 # Hide cursor after 1 second of inactivity
 unclutter -idle 1 -root &
 
-# Start a simple window manager (needed for fullscreen)
-openbox &
+# Start i3 window manager
+i3 &
 
 # Wait for window manager to start
 sleep 2
@@ -83,6 +84,30 @@ XINITRC
 chmod +x "$KIOSK_HOME/.xinitrc"
 chown "$KIOSK_USER:$KIOSK_USER" "$KIOSK_HOME/.xinitrc"
 
+# Create minimal i3 config for kiosk mode
+echo "[3.5/6] Creating i3 kiosk config..."
+I3_CONFIG_DIR="$KIOSK_HOME/.config/i3"
+mkdir -p "$I3_CONFIG_DIR"
+cat > "$I3_CONFIG_DIR/config" << 'I3CONFIG'
+# i3 config for kiosk mode - minimal configuration
+
+# No window borders
+default_border none
+default_floating_border none
+
+# Hide i3bar
+bar {
+    mode invisible
+}
+
+# Disable window titles
+for_window [class=".*"] border pixel 0
+
+# Make all windows fullscreen by default
+for_window [class=".*"] fullscreen enable
+I3CONFIG
+chown -R "$KIOSK_USER:$KIOSK_USER" "$I3_CONFIG_DIR"
+
 # Set environment variables
 echo "[4/6] Configuring environment..."
 cat > "$KIOSK_DIR/environment" << EOF
@@ -90,9 +115,6 @@ KIOSK_URL=$KIOSK_URL
 DISPLAY=:0
 EOF
 chown "$KIOSK_USER:$KIOSK_USER" "$KIOSK_DIR/environment"
-
-# Update kiosk-chrome.sh to source environment
-sed -i '3a\\n# Source environment variables\nif [[ -f ~/kiosk/environment ]]; then\n    source ~/kiosk/environment\nfi' "$KIOSK_DIR/kiosk-chrome.sh"
 
 # Setup auto-login with getty
 echo "[5/6] Configuring auto-login..."
@@ -124,9 +146,10 @@ echo "=== Setup Complete ==="
 echo ""
 echo "The kiosk will automatically:"
 echo "  1. Auto-login as '$KIOSK_USER' on boot"
-echo "  2. Start X11 automatically"
+echo "  2. Start X11 with i3 automatically"
 echo "  3. Launch Chrome in kiosk mode"
-echo "  4. Restart Chrome if it crashes"
+echo "  4. Reload the page if it crashes (renderer crash)"
+echo "  5. Restart Chrome if Chrome itself crashes"
 echo ""
 echo "To test immediately (without reboot):"
 echo "  sudo systemctl restart getty@tty1"

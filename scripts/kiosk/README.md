@@ -1,12 +1,13 @@
 # Chrome Kiosk Mode Setup for Arch Linux
 
-This directory contains scripts to run Chrome in kiosk mode with automatic restart on crash and auto-start on boot.
+This directory contains scripts to run Chrome in kiosk mode with automatic recovery from page crashes and auto-start on boot.
 
 ## Features
 
-- **Auto-restart on crash**: Chrome restarts automatically when it crashes (including SIGILL, SIGSEGV, etc.)
+- **Auto-reload on page crash**: Detects renderer/page crashes (like SIGILL) and automatically reloads
+- **Auto-restart Chrome**: Restarts Chrome if the browser process itself dies
 - **Auto-login**: No manual login required on boot
-- **Auto-start**: X11 and Chrome start automatically on boot
+- **Auto-start**: X11 with i3 and Chrome start automatically on boot
 - **Fullscreen kiosk**: Chrome runs in true fullscreen kiosk mode
 - **Hidden cursor**: Mouse cursor hides after 1 second of inactivity
 - **No screen saver**: Screen stays on indefinitely
@@ -30,7 +31,7 @@ Then reboot.
 #### 1. Install Dependencies
 
 ```bash
-sudo pacman -S xorg-server xorg-xinit xorg-xset chromium openbox unclutter
+sudo pacman -S xorg-server xorg-xinit xorg-xset chromium i3-wm unclutter curl
 ```
 
 #### 2. Copy Kiosk Script
@@ -57,14 +58,27 @@ xset s off
 xset s noblank
 xset -dpms
 unclutter -idle 1 -root &
-openbox &
+i3 &
 sleep 2
 exec ~/kiosk/kiosk-chrome.sh
 ```
 
 Make it executable: `chmod +x ~/.xinitrc`
 
-#### 5. Configure Auto-Login
+#### 5. Create i3 Kiosk Config
+
+Create `~/.config/i3/config`:
+```
+default_border none
+default_floating_border none
+bar {
+    mode invisible
+}
+for_window [class=".*"] border pixel 0
+for_window [class=".*"] fullscreen enable
+```
+
+#### 6. Configure Auto-Login
 
 Create `/etc/systemd/system/getty@tty1.service.d/autologin.conf`:
 ```ini
@@ -73,7 +87,7 @@ ExecStart=
 ExecStart=-/sbin/agetty --autologin YOUR_USERNAME --noclear %I $TERM
 ```
 
-#### 6. Configure Auto-Start X11
+#### 7. Configure Auto-Start X11
 
 Add to `~/.bash_profile`:
 ```bash
@@ -82,36 +96,14 @@ if [[ -z $DISPLAY ]] && [[ $(tty) = /dev/tty1 ]]; then
 fi
 ```
 
-## Wayland Alternative (cage)
+## How Page Crash Recovery Works
 
-If you prefer Wayland over X11, you can use `cage` (a Wayland kiosk compositor):
+When a page crashes in Chrome (e.g., due to SIGILL in the renderer process), Chrome itself keeps running but displays "Aw, Snap!". The script detects this using Chrome DevTools Protocol:
 
-```bash
-# Install cage
-sudo pacman -S cage
-
-# Create a systemd service for cage
-sudo tee /etc/systemd/system/kiosk.service << 'EOF'
-[Unit]
-Description=Chrome Kiosk (Wayland)
-After=systemd-user-sessions.service
-Wants=systemd-user-sessions.service
-
-[Service]
-Type=simple
-User=YOUR_USERNAME
-Environment=XDG_RUNTIME_DIR=/run/user/1000
-ExecStart=/usr/bin/cage -s chromium --kiosk --noerrdialogs --disable-infobars http://localhost:3000/dashboard#home-kiosk
-Restart=always
-RestartSec=3
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# Enable the service
-sudo systemctl enable kiosk.service
-```
+1. Chrome is started with `--remote-debugging-port=9222`
+2. A monitor checks the page status every 5 seconds via CDP
+3. If a crash is detected (empty title, "Aw, Snap!", or chrome-error://), the page is reloaded
+4. If Chrome itself dies, it's restarted automatically
 
 ## Configuration
 
@@ -121,8 +113,10 @@ sudo systemctl enable kiosk.service
 |----------|---------|-------------|
 | `KIOSK_URL` | `http://localhost:3000/dashboard#home-kiosk` | URL to display |
 | `DISPLAY` | `:0` | X11 display number |
-| `RESTART_DELAY` | `3` | Seconds to wait before restarting after crash |
+| `RESTART_DELAY` | `3` | Seconds to wait before restarting after Chrome crash |
 | `CHROME_BIN` | Auto-detected | Path to Chrome/Chromium binary |
+| `DEBUG_PORT` | `9222` | Chrome DevTools Protocol port |
+| `CRASH_CHECK_INTERVAL` | `5` | Seconds between page crash checks |
 
 ### Changing the URL
 
@@ -133,14 +127,14 @@ KIOSK_URL=http://your-server:3000/dashboard#home-kiosk
 
 ## Troubleshooting
 
-### Chrome crashes with SIGILL
+### Page crashes with SIGILL
 
 This is often caused by:
-1. **CPU compatibility issues**: Chrome may use CPU instructions not supported by your processor
-2. **GPU driver issues**: Try adding `--disable-gpu` to Chrome flags
-3. **Memory issues**: Ensure sufficient RAM is available
+1. **JavaScript/WASM using unsupported CPU instructions**
+2. **GPU driver issues in the renderer**: Try adding `--disable-gpu` to Chrome flags
+3. **Memory pressure**: Ensure sufficient RAM is available
 
-The wrapper script will automatically restart Chrome when this happens.
+The wrapper script will automatically detect the crash and reload the page.
 
 ### Screen goes blank
 
@@ -161,11 +155,15 @@ rm -f ~/.config/chromium-kiosk/Singleton*
 ### View logs
 
 ```bash
-# If using systemd user service
-journalctl --user -u kiosk -f
-
-# If using the getty approach
 journalctl -f
+```
+
+### Test page crash detection
+
+You can trigger a renderer crash for testing:
+```bash
+# In a browser, navigate to:
+chrome://crash
 ```
 
 ### Test without reboot
@@ -181,15 +179,12 @@ sudo systemctl restart getty@tty1
 # Remove auto-login
 sudo rm /etc/systemd/system/getty@tty1.service.d/autologin.conf
 sudo systemctl daemon-reload
-
-# Or if using systemd service
-sudo systemctl disable kiosk.service
 ```
 
 ## Files
 
 | File | Description |
 |------|-------------|
-| `kiosk-chrome.sh` | Main wrapper script that runs Chrome and restarts on crash |
+| `kiosk-chrome.sh` | Main wrapper script that runs Chrome, monitors for page crashes, and auto-reloads |
 | `kiosk.service` | Systemd user service (alternative to getty approach) |
 | `setup-kiosk.sh` | Automated setup script (run as root) |
