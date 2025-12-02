@@ -100,14 +100,11 @@ export const HomeDetector = new (class HomeDetector extends ModuleMeta {
 		const deviceAPI = await modules.device.api.value;
 
 		// Track devices initially
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		deviceAPI.devices.subscribe((devices: any) => {
+		deviceAPI.devices.subscribe((devices) => {
 			if (this._doorSensorMonitor && devices) {
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 				this._doorSensorMonitor.trackDevices(Object.values(devices));
 			}
 			if (this._movementSensorMonitor && devices) {
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 				this._movementSensorMonitor.trackDevices(Object.values(devices));
 			}
 		});

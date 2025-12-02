@@ -704,14 +704,14 @@ export class DoorSensorMonitor {
 			for (const booleanStateCluster of booleanStateClusters) {
 				// Subscribe to door state changes
 				const unsubscribe = booleanStateCluster.onStateChange.listen(async ({ state }) => {
-					// Door opened (state changed to true/open)
-					if (state) {
+					// Door opened (state changed to false/open)
+					if (!state) {
 						logTag(
 							'home-detector',
 							'yellow',
 							`Door sensor ${deviceId} triggered - starting rapid ping`
 						);
-						void this._detector.triggerRapidPing();
+						void this._detector.triggerRapidPing({ fireAnybodyHomeFirst: true });
 						await this._detector.logDoorSensorTrigger();
 					}
 				});
