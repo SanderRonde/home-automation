@@ -191,7 +191,7 @@ const ColorControlIconButton = (props: ClusterIconButtonProps) => {
 			{...props}
 			enabled={anyEnabled}
 			clusterIcon={icon}
-			onPress={undefined}
+			onPress={props.onLongPress}
 		/>
 	);
 };
