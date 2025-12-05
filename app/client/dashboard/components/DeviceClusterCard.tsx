@@ -198,8 +198,8 @@ const WindowCoveringCard = (
 		if (!hasMoved) {
 			props.pushDetailView({
 				type: 'device',
-				device: props.device,
-				cluster: props.cluster,
+				deviceId: props.device.uniqueId,
+				clusterName: props.cluster.name,
 			});
 			return;
 		}
@@ -309,7 +309,7 @@ const GroupedWindowCoveringCard = (props: GroupedWindowCoveringCardProps): JSX.E
 				type: 'room-grouped-cluster',
 				roomName: props.roomName,
 				clusterName: DeviceClusterName.WINDOW_COVERING,
-				devices: props.devices,
+				deviceIds: props.devices.map((device) => device.uniqueId),
 			});
 			return;
 		}
@@ -529,8 +529,8 @@ const OccupancySensingCard = (
 			onPress={() => {
 				props.pushDetailView({
 					type: 'device',
-					device: props.device,
-					cluster: props.cluster,
+					deviceId: props.device.uniqueId,
+					clusterName: props.cluster.name,
 				});
 			}}
 		>
@@ -610,8 +610,8 @@ const SwitchCard = (
 			onPress={() => {
 				props.pushDetailView({
 					type: 'device',
-					device: props.device,
-					cluster: props.cluster,
+					deviceId: props.device.uniqueId,
+					clusterName: props.cluster.name,
 				});
 			}}
 		>
@@ -687,8 +687,8 @@ const TemperatureMeasurementCard = (
 			onPress={() => {
 				props.pushDetailView({
 					type: 'device',
-					device: props.device,
-					cluster: props.cluster,
+					deviceId: props.device.uniqueId,
+					clusterName: props.cluster.name,
 				});
 			}}
 		>
@@ -761,8 +761,8 @@ const RelativeHumidityMeasurementCard = (
 			onPress={() => {
 				props.pushDetailView({
 					type: 'device',
-					device: props.device,
-					cluster: props.cluster,
+					deviceId: props.device.uniqueId,
+					clusterName: props.cluster.name,
 				});
 			}}
 		>
@@ -844,8 +844,8 @@ const IlluminanceMeasurementCard = (
 			onPress={() => {
 				props.pushDetailView({
 					type: 'device',
-					device: props.device,
-					cluster: props.cluster,
+					deviceId: props.device.uniqueId,
+					clusterName: props.cluster.name,
 				});
 			}}
 		>
@@ -966,8 +966,8 @@ const SensorGroupCard = (
 			onPress={() => {
 				props.pushDetailView({
 					type: 'device',
-					device: props.device,
-					cluster: props.cluster,
+					deviceId: props.device.uniqueId,
+					clusterName: props.cluster.name,
 				});
 			}}
 		>
@@ -1091,8 +1091,8 @@ const BooleanStateCard = (
 			onPress={() => {
 				props.pushDetailView({
 					type: 'device',
-					device: props.device,
-					cluster: props.cluster,
+					deviceId: props.device.uniqueId,
+					clusterName: props.cluster.name,
 				});
 			}}
 		>
@@ -1280,8 +1280,8 @@ const ColorControlCard = (
 			onPress={() => {
 				props.pushDetailView({
 					type: 'device',
-					device: props.device,
-					cluster: props.cluster,
+					deviceId: props.device.uniqueId,
+					clusterName: props.cluster.name,
 				});
 			}}
 		>
@@ -1364,8 +1364,8 @@ const ThermostatCard = (
 			onPress={() => {
 				props.pushDetailView({
 					type: 'device',
-					device: props.device,
-					cluster: props.cluster,
+					deviceId: props.device.uniqueId,
+					clusterName: props.cluster.name,
 				});
 			}}
 		>
@@ -1484,8 +1484,8 @@ const ActionsCard = (
 			onPress={() => {
 				props.pushDetailView({
 					type: 'device',
-					device: props.device,
-					cluster: props.cluster,
+					deviceId: props.device.uniqueId,
+					clusterName: props.cluster.name,
 				});
 			}}
 		>

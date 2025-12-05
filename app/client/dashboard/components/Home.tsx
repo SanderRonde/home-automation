@@ -61,14 +61,14 @@ export type HomeDetailView =
 	  }
 	| {
 			type: 'device';
-			device: DeviceType;
-			cluster: DashboardDeviceClusterWithState;
+			deviceId: string;
+			clusterName: DeviceClusterName;
 	  }
 	| {
 			type: 'room-grouped-cluster';
 			roomName: string;
 			clusterName: DeviceClusterName;
-			devices: DeviceType[];
+			deviceIds: string[];
 	  };
 
 type HomeDetailViewWithFrom = HomeDetailView & {
@@ -115,8 +115,8 @@ function parseDetailViewFromHash(hash: string, devices: DeviceType[]): HomeDetai
 			if (device && cluster) {
 				return {
 					type: 'device',
-					device,
-					cluster,
+					deviceId: device.uniqueId,
+					clusterName: cluster.name,
 				};
 			}
 		}
@@ -132,7 +132,7 @@ function parseDetailViewFromHash(hash: string, devices: DeviceType[]): HomeDetai
 					type: 'room-grouped-cluster',
 					roomName: decodeURIComponent(roomName),
 					clusterName,
-					devices: groupedDevices,
+					deviceIds: groupedDevices.map((d) => d.uniqueId),
 				};
 			}
 		}
@@ -166,15 +166,15 @@ function serializeDetailViewToHash(view: HomeDetailView | null): string {
 	} else if (view.type === 'device') {
 		const params = new URLSearchParams();
 		params.set('view', 'device');
-		params.set('deviceId', view.device.uniqueId);
-		params.set('cluster', view.cluster.name);
+		params.set('deviceId', view.deviceId);
+		params.set('cluster', view.clusterName);
 		return `home?${params.toString()}`;
 	} else if (view.type === 'room-grouped-cluster') {
 		const params = new URLSearchParams();
 		params.set('view', 'room-grouped-cluster');
 		params.set('name', view.roomName);
 		params.set('cluster', view.clusterName);
-		params.set('deviceIds', view.devices.map((d) => d.uniqueId).join(','));
+		params.set('deviceIds', view.deviceIds.join(','));
 		return `home?${params.toString()}`;
 	}
 
@@ -233,7 +233,7 @@ interface HomeProps {
 	layoutViewVerticalSpacing: number;
 }
 
-export const Home = React.memo((props: HomeProps): JSX.Element => {
+export const Home = React.memo((props: HomeProps): React.ReactNode => {
 	const { loading, devices, refresh } = useDevices();
 	const [scenes, setScenes] = React.useState<Scene[]>([]);
 	const [groups, setGroups] = React.useState<DeviceGroup[]>([]);
@@ -529,7 +529,7 @@ export const Home = React.memo((props: HomeProps): JSX.Element => {
 				roomName={detailView.roomName}
 				roomColor={room?.roomColor}
 				clusterName={detailView.clusterName}
-				devices={detailView.devices}
+				devices={devices.filter((d) => detailView.deviceIds.includes(d.uniqueId))}
 				onExit={popDetailView}
 				invalidate={() => refresh(false)}
 				pushDetailView={pushDetailView}
@@ -537,10 +537,14 @@ export const Home = React.memo((props: HomeProps): JSX.Element => {
 		);
 	}
 	if (detailView && detailView.type === 'device') {
+		const device = devices.find((d) => d.uniqueId === detailView.deviceId);
+		if (!device) {
+			return null;
+		}
 		return (
 			<DeviceDetail
-				device={detailView.device}
-				cluster={detailView.cluster}
+				device={device}
+				cluster={device.mergedAllClusters.find((c) => c.name === detailView.clusterName)!}
 				onExit={popDetailView}
 			/>
 		);
