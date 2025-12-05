@@ -183,7 +183,7 @@ export function registerTools(server: ChatGPTService, modules: AllModules): void
 							error: 'Method not found, ensure it exists by getting the definition of the cluster',
 						});
 					}
-					return JSON.stringify(await method(args.methodArgs));
+					return JSON.stringify(await method.call(cluster, args.methodArgs));
 				})
 			);
 			return JSON.stringify(methodValues);
