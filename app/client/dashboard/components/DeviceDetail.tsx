@@ -2551,24 +2551,11 @@ const ThermostatDetail = (props: ThermostatDetailProps): JSX.Element => {
 	const [targetTemperature, setTargetTemperature] = useState(props.cluster.targetTemperature);
 	const [mode, setMode] = useState(props.cluster.mode);
 	const [isUpdating, setIsUpdating] = useState(false);
-	const [userHasInteracted, setUserHasInteracted] = useState(false);
 	const roomColor = props.device.roomColor || '#555';
 
 	// Circular slider state
 	const [isDragging, setIsDragging] = useState(false);
 	const circleRef = useRef<HTMLDivElement>(null);
-
-	// Animate temperature from min to target on mount
-	const animatedTemp = 0;
-	// useAnimatedValue(
-	// 	props.cluster.targetTemperature,
-	// 	props.cluster.minTemperature,
-	// 	500,
-	// 	0
-	// );
-
-	// Use animated value initially, then switch to user-controlled value after interaction
-	const displayTemp = userHasInteracted ? targetTemperature : animatedTemp;
 
 	const handleModeChange = async (newMode: ThermostatMode) => {
 		setMode(newMode);
@@ -2591,7 +2578,6 @@ const ThermostatDetail = (props: ThermostatDetailProps): JSX.Element => {
 	};
 
 	const handleTemperatureChange = (newTemp: number) => {
-		setUserHasInteracted(true);
 		const clampedTemp = Math.max(
 			props.cluster.minTemperature,
 			Math.min(props.cluster.maxTemperature, newTemp)
@@ -2623,7 +2609,6 @@ const ThermostatDetail = (props: ThermostatDetailProps): JSX.Element => {
 	};
 
 	const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-		setUserHasInteracted(true);
 		setIsDragging(true);
 		e.currentTarget.setPointerCapture(e.pointerId);
 		handlePointerMove(e);
@@ -2746,7 +2731,7 @@ const ThermostatDetail = (props: ThermostatDetailProps): JSX.Element => {
 
 							{/* Circular Slider */}
 							<ThermostatCircularSlider
-								displayTemp={displayTemp}
+								displayTemp={targetTemperature}
 								currentTemp={props.cluster.currentTemperature}
 								minTemp={props.cluster.minTemperature}
 								maxTemp={props.cluster.maxTemperature}

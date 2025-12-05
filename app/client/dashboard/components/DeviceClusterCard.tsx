@@ -14,6 +14,7 @@ import type {
 	DashboardDeviceClusterSwitch,
 	DeviceListWithValuesResponse,
 } from '../../../server/modules/device/routing';
+import { MyLocation as MyLocationIcon, Thermostat as ThermostatIcon } from '@mui/icons-material';
 import { DeviceClusterName, ThermostatMode } from '../../../server/modules/device/cluster';
 import { fadeInUpStaggered, staggerItem } from '../../lib/animations';
 import { Card, CardActionArea, Box, Typography } from '@mui/material';
@@ -110,10 +111,8 @@ const DeviceClusterCardSkeleton = (props: DeviceClusterCardProps) => {
 	return (
 		<motion.div
 			variants={staggerItem}
-			whileHover={isDraggable ? undefined : 'hover'}
-			whileTap={isDraggable ? undefined : 'tap'}
-			initial="rest"
-			animate="rest"
+			initial="initial"
+			animate="animate"
 			style={{ position: 'relative' }}
 		>
 			<Card
@@ -1351,7 +1350,7 @@ const ThermostatCard = (
 				return 'Auto';
 			case ThermostatMode.OFF:
 			default:
-				return 'Off';
+				return 'Cooling';
 		}
 	};
 
@@ -1409,8 +1408,7 @@ const ThermostatCard = (
 							color: 'text.secondary',
 						}}
 					>
-						{getModeLabel(props.cluster.mode)}
-						{props.cluster.isHeating && ' • Active'}
+						{props.cluster.isHeating ? 'Heating' : getModeLabel(props.cluster.mode)}
 					</Typography>
 				</Box>
 				<Box
@@ -1421,23 +1419,51 @@ const ThermostatCard = (
 						gap: 0.5,
 					}}
 				>
-					<Typography
-						variant="h6"
+					<Box
 						sx={{
-							fontWeight: 'bold',
-							color: accentColor,
+							display: 'flex',
+							alignItems: 'center',
+							gap: 0.5,
 						}}
 					>
-						{props.cluster.targetTemperature.toFixed(1)}°C
-					</Typography>
-					<Typography
-						variant="caption"
+						<MyLocationIcon
+							sx={{
+								fontSize: '1rem',
+								color: accentColor,
+							}}
+						/>
+						<Typography
+							variant="h6"
+							sx={{
+								fontWeight: 'bold',
+								color: accentColor,
+							}}
+						>
+							{props.cluster.targetTemperature.toFixed(1)}°C
+						</Typography>
+					</Box>
+					<Box
 						sx={{
-							color: 'text.secondary',
+							display: 'flex',
+							alignItems: 'center',
+							gap: 0.5,
 						}}
 					>
-						{props.cluster.currentTemperature.toFixed(1)}°C
-					</Typography>
+						<ThermostatIcon
+							sx={{
+								fontSize: '0.875rem',
+								color: 'text.secondary',
+							}}
+						/>
+						<Typography
+							variant="caption"
+							sx={{
+								color: 'text.secondary',
+							}}
+						>
+							{props.cluster.currentTemperature.toFixed(1)}°C
+						</Typography>
+					</Box>
 				</Box>
 			</Box>
 		</DeviceClusterCardSkeleton>
