@@ -4,7 +4,7 @@ A locally hosted home automation server that automates various things. Currently
 
 A large part of this project consists of the smart controllers that are to be controlled. This part is done with microcontrollers, consisting of Arduinos (Uno and Due) and various boards with the ESP8266 WiFi chip. These are programmed in C/C++ to interface with the server. See [How it works](#How-it-works) for more info on that.
 
-Backend consists of a NodeJS server running express, using the web and the [serialport](https://www.npmjs.com/package/serialport) and [magic-home](https://www.npmjs.com/package/magic-home) packages to interface with microcontrollers and the [castv2-player](https://www.npmjs.com/package/castv2-player) package to interface with cast-enabled devices (google home). The frontend uses [wc-lib](https://github.com/SanderRonde/wc-lib), a webcomponent-based web framework that just so happens to be made by me as well.
+Backend consists of a Bun server connecting together a bunch of IoT devices.
 
 **Note: This project is personalized to me and as such is very unlikely to suit your needs or to even compile successfully (missing secrets and config files). Please feel free to copy and use any code you'd like but keep this in mind.**
 

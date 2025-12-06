@@ -1,5 +1,10 @@
 import * as ColorConverter from 'cie-rgb-color-converter';
-import type { Color as MagicHomeColor } from 'magic-home';
+
+interface LongColor {
+	red: number;
+	green: number;
+	blue: number;
+}
 
 interface IColor {
 	r: number;
@@ -12,10 +17,10 @@ export class Color implements Color {
 	public b: number;
 
 	public constructor(color: number);
-	public constructor(color: MagicHomeColor);
+	public constructor(color: LongColor);
 	public constructor(r: number, g: number, b: number);
 	public constructor(
-		r: number | MagicHomeColor,
+		r: number | LongColor,
 		g: number = typeof r === 'number' ? r : 0,
 		b: number = typeof r === 'number' ? r : 0
 	) {

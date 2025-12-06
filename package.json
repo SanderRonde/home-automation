@@ -64,6 +64,7 @@
 		"typescript": "^5.9.2"
 	},
 	"dependencies": {
+		"@fseehawer/react-circular-slider": "^3.2.7",
 		"@matter/main": "^0.15.6",
 		"@modelcontextprotocol/sdk": "^1.18.2",
 		"@mui/icons-material": "^7.3.2",
@@ -89,7 +90,6 @@
 		"highlight.js": "^11.11.1",
 		"konva": "^10.0.8",
 		"lit-html": "1.1.0",
-		"magic-home": "^2.6.0",
 		"openai": "^6.8.1",
 		"optional-require": "^1.0.0",
 		"patch-package": "^8.0.1",
