@@ -58,7 +58,7 @@ import { DeviceClusterName, ThermostatMode } from '../../../server/modules/devic
 import { WindowCoveringVisualization } from './WindowCoveringVisualization';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import { ThermostatCircularSlider } from './ThermostatCircularSlider';
+import CircularSlider from '@fseehawer/react-circular-slider';
 import React, { useState, useEffect, useRef } from 'react';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { DeviceActionsCard } from './DeviceActionsCard';
@@ -2555,7 +2555,6 @@ const ThermostatDetail = (props: ThermostatDetailProps): JSX.Element => {
 
 	// Circular slider state
 	const [isDragging, setIsDragging] = useState(false);
-	const circleRef = useRef<HTMLDivElement>(null);
 
 	const handleModeChange = async (newMode: ThermostatMode) => {
 		setMode(newMode);
@@ -2575,14 +2574,6 @@ const ThermostatDetail = (props: ThermostatDetailProps): JSX.Element => {
 		} finally {
 			setIsUpdating(false);
 		}
-	};
-
-	const handleTemperatureChange = (newTemp: number) => {
-		const clampedTemp = Math.max(
-			props.cluster.minTemperature,
-			Math.min(props.cluster.maxTemperature, newTemp)
-		);
-		setTargetTemperature(clampedTemp);
 	};
 
 	const handleTemperatureCommit = async () => {
@@ -2608,61 +2599,12 @@ const ThermostatDetail = (props: ThermostatDetailProps): JSX.Element => {
 		}
 	};
 
-	const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+	const handlePointerDown = () => {
 		setIsDragging(true);
-		e.currentTarget.setPointerCapture(e.pointerId);
-		handlePointerMove(e);
 	};
 
-	const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-		if (!circleRef.current) {
-			return;
-		}
-
-		const rect = circleRef.current.getBoundingClientRect();
-		const centerX = rect.left + rect.width / 2;
-		const centerY = rect.top + rect.height / 2;
-
-		const deltaX = e.clientX - centerX;
-		const deltaY = e.clientY - centerY;
-
-		// Calculate angle (-180 to 180)
-		let angle = (Math.atan2(deltaY, deltaX) * 180) / Math.PI;
-
-		// Convert to 0-360 range, starting from top (270° = 0%)
-		angle = (angle + 360) % 360;
-
-		// Map angle to temperature (start from bottom, go clockwise 270°)
-		// We use 270° of the circle (from -135° to +135° relative to top)
-		const startAngle = 135; // Start position (bottom-left)
-		const endAngle = 45; // End position (bottom-right)
-
-		let normalizedAngle: number;
-		if (angle >= startAngle || angle <= endAngle) {
-			if (angle >= startAngle) {
-				normalizedAngle = angle - startAngle;
-			} else {
-				normalizedAngle = 360 - startAngle + angle;
-			}
-		} else {
-			// Click is in the dead zone
-			return;
-		}
-
-		const totalRange = 270; // 270 degrees of arc
-		const percentage = normalizedAngle / totalRange;
-
-		// Map to temperature range
-		const { minTemperature, maxTemperature } = props.cluster;
-		const tempRange = maxTemperature - minTemperature;
-		const newTemp = minTemperature + percentage * tempRange;
-
-		handleTemperatureChange(Math.round(newTemp * 2) / 2); // Round to 0.5°C
-	};
-
-	const handlePointerUp = async (e: React.PointerEvent<HTMLDivElement>) => {
+	const handlePointerUp = async () => {
 		if (isDragging) {
-			e.currentTarget.releasePointerCapture(e.pointerId);
 			setIsDragging(false);
 			await handleTemperatureCommit();
 		}
@@ -2725,24 +2667,75 @@ const ThermostatDetail = (props: ThermostatDetailProps): JSX.Element => {
 						}}
 					>
 						<CardContent>
-							<Typography variant="h6" gutterBottom>
-								{props.device.name}
-							</Typography>
-
-							{/* Circular Slider */}
-							<ThermostatCircularSlider
-								displayTemp={targetTemperature}
-								currentTemp={props.cluster.currentTemperature}
-								minTemp={props.cluster.minTemperature}
-								maxTemp={props.cluster.maxTemperature}
-								accentColor={accentColor}
-								isHeating={props.cluster.isHeating}
-								isDragging={isDragging}
-								circleRef={circleRef}
+							<Box
+								style={{
+									display: 'flex',
+									flexDirection: 'column',
+									justifyContent: 'center',
+									alignItems: 'center',
+									marginBottom: 20,
+								}}
 								onPointerDown={handlePointerDown}
-								onPointerMove={handlePointerMove}
 								onPointerUp={handlePointerUp}
-							/>
+							>
+								<Typography variant="h6" gutterBottom>
+									{props.device.name}
+								</Typography>
+
+								<CircularSlider
+									label={'Target'}
+									knobPosition={'bottom'}
+									min={props.cluster.minTemperature * 2}
+									max={props.cluster.maxTemperature * 2}
+									dataIndex={
+										targetTemperature * 2 - props.cluster.minTemperature * 2
+									}
+									labelColor={accentColor}
+									knobColor={accentColor}
+									progressColorFrom={accentColor}
+									progressColorTo={accentColor}
+									renderLabelValue={
+										<div
+											style={{
+												position: 'absolute',
+												top: 0,
+												left: 0,
+												width: '100%',
+												height: '100%',
+												display: 'flex',
+												flexDirection: 'column',
+												justifyContent: 'center',
+												alignItems: 'center',
+												color: accentColor,
+												userSelect: 'none',
+												zIndex: 1,
+											}}
+										>
+											<div
+												style={{
+													fontSize: '2.5rem',
+													fontWeight: 600,
+													lineHeight: 1.2,
+												}}
+											>
+												{`${targetTemperature}°`}
+											</div>
+											<div
+												style={{
+													fontSize: '1rem',
+													opacity: 0.7,
+													marginTop: '0.5rem',
+												}}
+											>
+												Current: {`${props.cluster.currentTemperature}°`}
+											</div>
+										</div>
+									}
+									onChange={(value: number) => {
+										setTargetTemperature(value / 2);
+									}}
+								/>
+							</Box>
 
 							{/* Mode Toggle Buttons */}
 							<Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
