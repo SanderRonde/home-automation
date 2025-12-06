@@ -11,8 +11,6 @@ The `types/` directory contains TypeScript type definitions shared between front
 ```
 types/
 ├── scene.ts              # Scene and automation types
-├── castv2-player.d.ts    # Chromecast types
-├── magic-home.d.ts       # LED controller types
 ├── wled-client.d.ts      # WLED types
 └── serviceworker.d.ts    # Service worker types
 ```
