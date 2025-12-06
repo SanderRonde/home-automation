@@ -11,6 +11,11 @@ import {
 	ListItemSecondaryAction,
 	Checkbox,
 	Divider,
+	Radio,
+	RadioGroup,
+	FormControlLabel,
+	FormControl,
+	FormLabel,
 } from '@mui/material';
 import { Save as SaveIcon } from '@mui/icons-material';
 import React, { useState, useEffect } from 'react';
@@ -23,6 +28,10 @@ interface AvailableSensors {
 	deviceSensors: Array<{ deviceId: string; name: string }>;
 }
 
+interface AvailableThermostats {
+	thermostats: Array<{ deviceId: string; name: string }>;
+}
+
 export const TemperatureConfig = (): JSX.Element => {
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
@@ -31,13 +40,18 @@ export const TemperatureConfig = (): JSX.Element => {
 		deviceSensors: [],
 	});
 	const [selectedSensors, setSelectedSensors] = useState<TemperatureSensorConfig[]>([]);
+	const [selectedThermostat, setSelectedThermostat] = useState<string>('');
+	const [availableThermostats, setAvailableThermostats] = useState<
+		Array<{ deviceId: string; name: string }>
+	>([]);
 
 	const loadData = async () => {
 		setLoading(true);
 		try {
-			const [sensorsResponse, configResponse] = await Promise.all([
+			const [sensorsResponse, configResponse, thermostatsResponse] = await Promise.all([
 				apiGet('temperature', '/temperature-sensors', {}),
 				apiGet('temperature', '/inside-temperature-sensors', {}),
+				apiGet('temperature', '/thermostats', {}),
 			]);
 
 			if (sensorsResponse.ok) {
@@ -51,6 +65,12 @@ export const TemperatureConfig = (): JSX.Element => {
 			if (configResponse.ok) {
 				const configData = await configResponse.json();
 				setSelectedSensors(configData.sensors || []);
+				setSelectedThermostat(configData.thermostat || '');
+			}
+
+			if (thermostatsResponse.ok) {
+				const thermostatsData = await thermostatsResponse.json();
+				setAvailableThermostats(thermostatsData.thermostats || []);
 			}
 		} catch (error) {
 			console.error('Failed to load temperature configuration:', error);
@@ -111,7 +131,10 @@ export const TemperatureConfig = (): JSX.Element => {
 				'temperature',
 				'/inside-temperature-sensors',
 				{},
-				{ sensors: selectedSensors }
+				{
+					sensors: selectedSensors,
+					thermostat: selectedThermostat || undefined,
+				}
 			);
 			if (response.ok) {
 				// Success - could show a snackbar here
@@ -235,6 +258,52 @@ export const TemperatureConfig = (): JSX.Element => {
 									);
 								})}
 							</List>
+						</CardContent>
+					</Card>
+				)}
+
+				{/* Central Thermostat */}
+				{availableThermostats.length > 0 && (
+					<Card>
+						<CardContent>
+							<Typography variant="h6" sx={{ mb: 2 }}>
+								Central Thermostat
+							</Typography>
+							<Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+								Select a single thermostat device to use as the central thermostat.
+							</Typography>
+							<FormControl component="fieldset">
+								<RadioGroup
+									value={selectedThermostat}
+									onChange={(e) => setSelectedThermostat(e.target.value)}
+								>
+									{availableThermostats.map((thermostat) => (
+										<FormControlLabel
+											key={thermostat.deviceId}
+											value={thermostat.deviceId}
+											control={<Radio />}
+											label={
+												<Box>
+													<Typography variant="body1">
+														{thermostat.name}
+													</Typography>
+													<Typography
+														variant="caption"
+														color="text.secondary"
+													>
+														{thermostat.deviceId}
+													</Typography>
+												</Box>
+											}
+										/>
+									))}
+									<FormControlLabel
+										value=""
+										control={<Radio />}
+										label="None"
+									/>
+								</RadioGroup>
+							</FormControl>
 						</CardContent>
 					</Card>
 				)}

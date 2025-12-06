@@ -251,7 +251,7 @@ export const TemperatureHistory = (): JSX.Element => {
 						gap: 2,
 					}}
 				>
-					<Typography variant="h5">Temperature</Typography>
+					<Typography variant="h5">Temperature Measurement</Typography>
 					<ToggleButtonGroup
 						value={timeframe}
 						exclusive

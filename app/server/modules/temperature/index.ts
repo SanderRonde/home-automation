@@ -1,4 +1,8 @@
-import { DeviceTemperatureMeasurementCluster } from '../device/cluster';
+import {
+	DeviceTemperatureMeasurementCluster,
+	DeviceThermostatCluster,
+	ThermostatMode,
+} from '../device/cluster';
 import type { ModuleConfig, AllModules } from '..';
 import { logTag } from '../../lib/logging/logger';
 import { getController } from './temp-controller';
@@ -9,6 +13,7 @@ type TemperatureSensorConfig = string | { type: 'device'; deviceId: string };
 
 interface TemperatureDB {
 	insideTemperatureSensors?: TemperatureSensorConfig[];
+	thermostat?: string;
 }
 
 export const Temperature = new (class Temperature extends ModuleMeta {
@@ -36,6 +41,17 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		}
 		const data = this._db.current() as TemperatureDB;
 		return data.insideTemperatureSensors ?? [];
+	}
+
+	/**
+	 * Get the configured central thermostat device ID from the database
+	 */
+	public getThermostat(): string | undefined {
+		if (!this._db) {
+			return undefined;
+		}
+		const data = this._db.current() as TemperatureDB;
+		return data.thermostat;
 	}
 
 	/**
@@ -199,5 +215,134 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 			temperatureControllers,
 			deviceSensors,
 		};
+	}
+
+	/**
+	 * Get list of available thermostats (devices with thermostat clusters)
+	 */
+	public async getAvailableThermostats(
+		modules: AllModules
+	): Promise<Array<{ deviceId: string; name: string }>> {
+		const thermostats: Array<{ deviceId: string; name: string }> = [];
+		try {
+			const deviceApi = await modules.device.api.value;
+			const devices = deviceApi.devices.current();
+
+			for (const [deviceId, deviceValue] of Object.entries(devices)) {
+				if (!deviceValue) {
+					continue;
+				}
+				const device = deviceValue;
+				const thermostatClusters = device.getAllClustersByType(DeviceThermostatCluster);
+				if (thermostatClusters.length > 0) {
+					const name = await device.getDeviceName();
+					thermostats.push({ deviceId, name });
+				}
+			}
+		} catch {
+			// Device module might not be available
+		}
+
+		return thermostats;
+	}
+
+	/**
+	 * Get the status of the configured central thermostat
+	 */
+	public async getCentralThermostatStatus(modules: AllModules): Promise<{
+		deviceId: string;
+		currentTemperature: number;
+		targetTemperature: number;
+		isHeating: boolean;
+		mode: ThermostatMode;
+	} | null> {
+		const thermostatId = this.getThermostat();
+		if (!thermostatId) {
+			return null;
+		}
+
+		try {
+			const deviceApi = await modules.device.api.value;
+			const devices = deviceApi.devices.current();
+			const device = devices[thermostatId];
+
+			if (!device) {
+				return null;
+			}
+
+			const thermostatClusters = device.getAllClustersByType(DeviceThermostatCluster);
+			if (thermostatClusters.length === 0) {
+				return null;
+			}
+
+			const cluster = thermostatClusters[0];
+			const currentTemperature = (await cluster.currentTemperature.get()) ?? 20;
+			const targetTemperature = (await cluster.targetTemperature.get()) ?? 20;
+			const isHeating = (await cluster.isHeating.get()) ?? false;
+			const mode = (await cluster.mode.get()) ?? ThermostatMode.OFF;
+
+			return {
+				deviceId: thermostatId,
+				currentTemperature,
+				targetTemperature,
+				isHeating,
+				mode,
+			};
+		} catch (error) {
+			logTag(
+				'temperature',
+				'yellow',
+				`Failed to get central thermostat status: ${thermostatId}`,
+				error
+			);
+			return null;
+		}
+	}
+
+	/**
+	 * Set the target temperature on the central thermostat and switch to manual mode
+	 */
+	public async setCentralThermostatTarget(
+		modules: AllModules,
+		targetTemperature: number
+	): Promise<boolean> {
+		const thermostatId = this.getThermostat();
+		if (!thermostatId) {
+			return false;
+		}
+
+		try {
+			const deviceApi = await modules.device.api.value;
+			const devices = deviceApi.devices.current();
+			const device = devices[thermostatId];
+
+			if (!device) {
+				return false;
+			}
+
+			const thermostatClusters = device.getAllClustersByType(DeviceThermostatCluster);
+			if (thermostatClusters.length === 0) {
+				return false;
+			}
+
+			const cluster = thermostatClusters[0];
+			await cluster.setTargetTemperature(targetTemperature);
+			await cluster.setMode(ThermostatMode.MANUAL);
+
+			logTag(
+				'temperature',
+				'green',
+				`Set central thermostat target to ${targetTemperature}°C (manual mode)`
+			);
+			return true;
+		} catch (error) {
+			logTag(
+				'temperature',
+				'red',
+				`Failed to set central thermostat target: ${thermostatId}`,
+				error
+			);
+			return false;
+		}
 	}
 })();

@@ -112,7 +112,8 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 			'/inside-temperature-sensors': {
 				GET: (_req, _server, { json }) => {
 					const sensors = Temperature.getInsideTemperatureSensors();
-					return json({ success: true, sensors });
+					const thermostat = Temperature.getThermostat();
+					return json({ success: true, sensors, thermostat });
 				},
 				POST: withRequestBody(
 					z.object({
@@ -125,13 +126,48 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 								}),
 							])
 						),
+						thermostat: z.string().optional(),
 					}),
 					(body, _req, _server, { json }) => {
 						db.update((old) => ({
 							...old,
 							insideTemperatureSensors: body.sensors,
+							thermostat: body.thermostat,
 						}));
-						return json({ success: true, sensors: body.sensors });
+						return json({
+							success: true,
+							sensors: body.sensors,
+							thermostat: body.thermostat,
+						});
+					}
+				),
+			},
+			'/thermostats': async (_req, _server, { json }) => {
+				const thermostats = await Temperature.getAvailableThermostats(modules);
+				return json({ success: true, thermostats });
+			},
+			'/central-thermostat': {
+				GET: async (_req, _server, { json }) => {
+					const status = await Temperature.getCentralThermostatStatus(modules);
+					if (!status) {
+						return json({ success: true, configured: false });
+					}
+					return json({ success: true, configured: true, ...status });
+				},
+				POST: withRequestBody(
+					z.object({
+						targetTemperature: z.number(),
+					}),
+					async (body, _req, _server, { json }) => {
+						const success = await Temperature.setCentralThermostatTarget(
+							modules,
+							body.targetTemperature
+						);
+						if (!success) {
+							return json({ success: false, error: 'Failed to set target temperature' });
+						}
+						const status = await Temperature.getCentralThermostatStatus(modules);
+						return json({ success: true, ...status });
 					}
 				),
 			},

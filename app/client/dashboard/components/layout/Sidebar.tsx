@@ -60,7 +60,7 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 				{ text: 'Home', icon: <HomeIcon />, id: SidebarTab.HOME },
 				{ text: 'Layout', icon: <MapIcon />, id: SidebarTab.LAYOUT },
 				{
-					text: 'Temperature',
+					text: 'Temperatures',
 					icon: <DeviceThermostatIcon />,
 					id: SidebarTab.TEMPERATURE_HISTORY,
 				},
