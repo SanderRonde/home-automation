@@ -3,17 +3,22 @@ import {
 	DeviceThermostatCluster,
 	ThermostatMode,
 } from '../device/cluster';
+import type { TemperatureScheduleEntry } from './types';
 import type { ModuleConfig, AllModules } from '..';
 import { logTag } from '../../lib/logging/logger';
 import { getController } from './temp-controller';
+import { initScheduler } from './scheduler';
 import { initRouting } from './routing';
 import { ModuleMeta } from '../meta';
+
+export type { TemperatureScheduleEntry } from './types';
 
 type TemperatureSensorConfig = string | { type: 'device'; deviceId: string };
 
 interface TemperatureDB {
 	insideTemperatureSensors?: TemperatureSensorConfig[];
 	thermostat?: string;
+	schedule?: TemperatureScheduleEntry[];
 }
 
 export const Temperature = new (class Temperature extends ModuleMeta {
@@ -22,6 +27,10 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 
 	public init(config: ModuleConfig) {
 		this._db = config.db;
+
+		// Initialize the temperature scheduler
+		initScheduler(config.modules);
+
 		return {
 			serve: initRouting(config),
 		};
@@ -52,6 +61,142 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		}
 		const data = this._db.current() as TemperatureDB;
 		return data.thermostat;
+	}
+
+	/**
+	 * Get the configured temperature schedule from the database
+	 */
+	public getSchedule(): TemperatureScheduleEntry[] {
+		if (!this._db) {
+			return [];
+		}
+		const data = this._db.current() as TemperatureDB;
+		return data.schedule ?? [];
+	}
+
+	/**
+	 * Save the temperature schedule to the database
+	 */
+	public setSchedule(schedule: TemperatureScheduleEntry[]): void {
+		if (!this._db) {
+			return;
+		}
+		this._db.update((old) => ({
+			...old,
+			schedule,
+		}));
+	}
+
+	/**
+	 * Get the next scheduled temperature change
+	 * Returns the next schedule entry that will trigger, along with when it triggers
+	 */
+	public getNextScheduledChange(): {
+		entry: TemperatureScheduleEntry;
+		nextTriggerTime: Date;
+	} | null {
+		const schedule = this.getSchedule();
+		const enabledSchedules = schedule.filter((s) => s.enabled);
+
+		if (enabledSchedules.length === 0) {
+			return null;
+		}
+
+		const now = new Date();
+		const currentDay = now.getDay();
+		const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+		let closestEntry: TemperatureScheduleEntry | null = null;
+		let closestTime: Date | null = null;
+		let minDiff = Infinity;
+
+		// Check up to 7 days ahead
+		for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+			const checkDay = (currentDay + dayOffset) % 7;
+			const checkDate = new Date(now);
+			checkDate.setDate(checkDate.getDate() + dayOffset);
+
+			for (const entry of enabledSchedules) {
+				if (!entry.days.includes(checkDay)) {
+					continue;
+				}
+
+				const [startHour, startMinute] = entry.startTime.split(':').map(Number);
+				const startMinutes = startHour * 60 + startMinute;
+
+				// Calculate time until this schedule triggers
+				let diff: number;
+				if (dayOffset === 0) {
+					// Same day
+					if (startMinutes > currentMinutes) {
+						diff = startMinutes - currentMinutes;
+					} else {
+						continue; // Already passed today
+					}
+				} else {
+					// Future day
+					diff = dayOffset * 24 * 60 - currentMinutes + startMinutes;
+				}
+
+				if (diff < minDiff) {
+					minDiff = diff;
+					closestEntry = entry;
+					closestTime = new Date(checkDate);
+					closestTime.setHours(startHour, startMinute, 0, 0);
+				}
+			}
+		}
+
+		if (closestEntry && closestTime) {
+			return {
+				entry: closestEntry,
+				nextTriggerTime: closestTime,
+			};
+		}
+
+		return null;
+	}
+
+	/**
+	 * Get the currently active schedule entry (if any)
+	 */
+	public getCurrentActiveSchedule(): TemperatureScheduleEntry | null {
+		const schedule = this.getSchedule();
+		const enabledSchedules = schedule.filter((s) => s.enabled);
+
+		if (enabledSchedules.length === 0) {
+			return null;
+		}
+
+		const now = new Date();
+		const currentDay = now.getDay();
+		const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+		for (const entry of enabledSchedules) {
+			if (!entry.days.includes(currentDay)) {
+				continue;
+			}
+
+			const [startHour, startMinute] = entry.startTime.split(':').map(Number);
+			const [endHour, endMinute] = entry.endTime.split(':').map(Number);
+			const startMinutes = startHour * 60 + startMinute;
+			const endMinutes = endHour * 60 + endMinute;
+
+			// Handle schedules that cross midnight
+			if (endMinutes <= startMinutes) {
+				// Schedule crosses midnight
+				if (currentMinutes >= startMinutes || currentMinutes < endMinutes) {
+					return entry;
+				}
+			} else {
+				// Normal schedule within same day
+				if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
+					return entry;
+				}
+			}
+		}
+
+		return null;
 	}
 
 	/**

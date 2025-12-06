@@ -204,7 +204,7 @@ export class TuyaThermostatCluster
 				[ThermostatMode.AUTO]: 'auto',
 				[ThermostatMode.HEAT]: 'home',
 				[ThermostatMode.COOL]: 'away',
-				[ThermostatMode.MANUAL]: 'temporary',
+				[ThermostatMode.MANUAL]: 'home',
 				[ThermostatMode.OFF]: 'away',
 			} as const
 		)[value];

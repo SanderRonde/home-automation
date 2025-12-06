@@ -1,5 +1,6 @@
 import { createServeOptions, withRequestBody } from '../../lib/routes';
 import { ExternalWeatherTimePeriod } from '../kiosk/types';
+import type { TemperatureScheduleEntry } from './types';
 import type { ServeOptions } from '../../lib/routes';
 import { get } from '../kiosk/temperature/external';
 import { LogObj } from '../../lib/logging/lob-obj';
@@ -173,6 +174,53 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 						return json({ success: true, ...status });
 					}
 				),
+			},
+			'/schedule': {
+				GET: (_req, _server, { json }) => {
+					const schedule = Temperature.getSchedule();
+					return json({ success: true, schedule });
+				},
+				POST: withRequestBody(
+					z.object({
+						schedule: z.array(
+							z.object({
+								id: z.string(),
+								name: z.string(),
+								days: z.array(z.number().min(0).max(6)),
+								startTime: z.string().regex(/^\d{2}:\d{2}$/),
+								endTime: z.string().regex(/^\d{2}:\d{2}$/),
+								targetTemperature: z.number().min(5).max(30),
+								enabled: z.boolean(),
+							})
+						),
+					}),
+					(body, _req, _server, { json }) => {
+						Temperature.setSchedule(body.schedule);
+						return json({ success: true, schedule: body.schedule });
+					}
+				),
+			},
+			'/schedule/next': {
+				GET: (_req, _server, { json }) => {
+					const nextChange: {
+						entry: TemperatureScheduleEntry;
+						nextTriggerTime: Date;
+					} | null = Temperature.getNextScheduledChange();
+					if (!nextChange) {
+						return json({
+							success: true as const,
+							hasNext: false as const,
+						});
+					}
+					const { entry, nextTriggerTime } = nextChange;
+					return json({
+						success: true as const,
+						hasNext: true as const,
+						nextTriggerTime: nextTriggerTime.toISOString(),
+						targetTemperature: entry.targetTemperature,
+						name: entry.name,
+					});
+				},
 			},
 		},
 		true

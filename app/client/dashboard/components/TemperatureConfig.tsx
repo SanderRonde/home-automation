@@ -15,8 +15,13 @@ import {
 	RadioGroup,
 	FormControlLabel,
 	FormControl,
+	IconButton,
+	TextField,
+	Switch,
+	Chip,
+	Slider,
 } from '@mui/material';
-import { Save as SaveIcon } from '@mui/icons-material';
+import { Save as SaveIcon, Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import React, { useState, useEffect } from 'react';
 import { apiGet, apiPost } from '../../lib/fetch';
 
@@ -26,6 +31,18 @@ interface AvailableSensors {
 	temperatureControllers: string[];
 	deviceSensors: Array<{ deviceId: string; name: string }>;
 }
+
+interface TemperatureScheduleEntry {
+	id: string;
+	name: string;
+	days: number[];
+	startTime: string;
+	endTime: string;
+	targetTemperature: number;
+	enabled: boolean;
+}
+
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export const TemperatureConfig = (): JSX.Element => {
 	const [loading, setLoading] = useState(true);
@@ -39,15 +56,19 @@ export const TemperatureConfig = (): JSX.Element => {
 	const [availableThermostats, setAvailableThermostats] = useState<
 		Array<{ deviceId: string; name: string }>
 	>([]);
+	const [schedule, setSchedule] = useState<TemperatureScheduleEntry[]>([]);
+	const [savingSchedule, setSavingSchedule] = useState(false);
 
 	const loadData = async () => {
 		setLoading(true);
 		try {
-			const [sensorsResponse, configResponse, thermostatsResponse] = await Promise.all([
-				apiGet('temperature', '/temperature-sensors', {}),
-				apiGet('temperature', '/inside-temperature-sensors', {}),
-				apiGet('temperature', '/thermostats', {}),
-			]);
+			const [sensorsResponse, configResponse, thermostatsResponse, scheduleResponse] =
+				await Promise.all([
+					apiGet('temperature', '/temperature-sensors', {}),
+					apiGet('temperature', '/inside-temperature-sensors', {}),
+					apiGet('temperature', '/thermostats', {}),
+					apiGet('temperature', '/schedule', {}),
+				]);
 
 			if (sensorsResponse.ok) {
 				const sensorsData = await sensorsResponse.json();
@@ -66,6 +87,11 @@ export const TemperatureConfig = (): JSX.Element => {
 			if (thermostatsResponse.ok) {
 				const thermostatsData = await thermostatsResponse.json();
 				setAvailableThermostats(thermostatsData.thermostats || []);
+			}
+
+			if (scheduleResponse.ok) {
+				const scheduleData = await scheduleResponse.json();
+				setSchedule(scheduleData.schedule || []);
 			}
 		} catch (error) {
 			console.error('Failed to load temperature configuration:', error);
@@ -140,6 +166,58 @@ export const TemperatureConfig = (): JSX.Element => {
 		} finally {
 			setSaving(false);
 		}
+	};
+
+	const handleSaveSchedule = async () => {
+		try {
+			setSavingSchedule(true);
+			const response = await apiPost('temperature', '/schedule', {}, { schedule });
+			if (response.ok) {
+				// Success
+				await loadData();
+			}
+		} catch (error) {
+			console.error('Failed to save schedule:', error);
+		} finally {
+			setSavingSchedule(false);
+		}
+	};
+
+	const handleAddScheduleEntry = () => {
+		const newEntry: TemperatureScheduleEntry = {
+			id: `schedule-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+			name: `Schedule ${schedule.length + 1}`,
+			days: [1, 2, 3, 4, 5], // Weekdays by default
+			startTime: '07:00',
+			endTime: '22:00',
+			targetTemperature: 20,
+			enabled: true,
+		};
+		setSchedule((prev) => [...prev, newEntry]);
+	};
+
+	const handleRemoveScheduleEntry = (id: string) => {
+		setSchedule((prev) => prev.filter((entry) => entry.id !== id));
+	};
+
+	const handleUpdateScheduleEntry = (id: string, updates: Partial<TemperatureScheduleEntry>) => {
+		setSchedule((prev) =>
+			prev.map((entry) => (entry.id === id ? { ...entry, ...updates } : entry))
+		);
+	};
+
+	const handleToggleDay = (entryId: string, day: number) => {
+		setSchedule((prev) =>
+			prev.map((entry) => {
+				if (entry.id !== entryId) {
+					return entry;
+				}
+				const newDays = entry.days.includes(day)
+					? entry.days.filter((d) => d !== day)
+					: [...entry.days, day].sort();
+				return { ...entry, days: newDays };
+			})
+		);
 	};
 
 	if (loading) {
@@ -295,6 +373,254 @@ export const TemperatureConfig = (): JSX.Element => {
 									<FormControlLabel value="" control={<Radio />} label="None" />
 								</RadioGroup>
 							</FormControl>
+						</CardContent>
+					</Card>
+				)}
+
+				{/* Temperature Schedule */}
+				{selectedThermostat && (
+					<Card>
+						<CardContent>
+							<Box
+								sx={{
+									display: 'flex',
+									justifyContent: 'space-between',
+									alignItems: 'center',
+									mb: 2,
+								}}
+							>
+								<Typography variant="h6">Temperature Schedule</Typography>
+								<Box sx={{ display: 'flex', gap: 1 }}>
+									<Button
+										variant="outlined"
+										startIcon={<AddIcon />}
+										onClick={handleAddScheduleEntry}
+										size="small"
+									>
+										Add
+									</Button>
+									<Button
+										variant="contained"
+										startIcon={
+											savingSchedule ? (
+												<CircularProgress size={16} />
+											) : (
+												<SaveIcon />
+											)
+										}
+										onClick={handleSaveSchedule}
+										disabled={savingSchedule}
+										size="small"
+									>
+										Save Schedule
+									</Button>
+								</Box>
+							</Box>
+							<Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+								Configure automatic temperature schedules. When a schedule starts,
+								the thermostat will be set to the target temperature. Manual
+								adjustments will override until the next schedule triggers.
+							</Typography>
+
+							{schedule.length === 0 ? (
+								<Box
+									sx={{
+										textAlign: 'center',
+										py: 4,
+										color: 'text.secondary',
+									}}
+								>
+									<Typography variant="body2">
+										No schedules configured. Click "Add" to create one.
+									</Typography>
+								</Box>
+							) : (
+								<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+									{schedule.map((entry) => (
+										<Box
+											key={entry.id}
+											sx={{
+												p: 2,
+												border: '1px solid',
+												borderColor: entry.enabled
+													? 'primary.main'
+													: 'divider',
+												borderRadius: 2,
+												opacity: entry.enabled ? 1 : 0.6,
+											}}
+										>
+											<Box
+												sx={{
+													display: 'flex',
+													justifyContent: 'space-between',
+													alignItems: 'center',
+													mb: 2,
+													gap: 2,
+												}}
+											>
+												<Box
+													sx={{
+														display: 'flex',
+														alignItems: 'center',
+														gap: 1,
+													}}
+												>
+													<Switch
+														checked={entry.enabled}
+														onChange={(e) =>
+															handleUpdateScheduleEntry(entry.id, {
+																enabled: e.target.checked,
+															})
+														}
+														size="small"
+													/>
+												</Box>
+												<TextField
+													value={entry.name}
+													onChange={(e) =>
+														handleUpdateScheduleEntry(entry.id, {
+															name: e.target.value,
+														})
+													}
+													size="small"
+													placeholder="Schedule name"
+													sx={{ flexGrow: 1 }}
+													slotProps={{
+														input: {
+															sx: { fontWeight: 500 },
+														},
+													}}
+												/>
+												<IconButton
+													onClick={() =>
+														handleRemoveScheduleEntry(entry.id)
+													}
+													size="small"
+													color="error"
+												>
+													<DeleteIcon />
+												</IconButton>
+											</Box>
+
+											{/* Days selection */}
+											<Box sx={{ mb: 2 }}>
+												<Typography
+													variant="caption"
+													color="text.secondary"
+													sx={{ display: 'block', mb: 1 }}
+												>
+													Days
+												</Typography>
+												<Box
+													sx={{
+														display: 'flex',
+														gap: 0.5,
+														flexWrap: 'wrap',
+													}}
+												>
+													{DAY_NAMES.map((dayName, dayIndex) => (
+														<Chip
+															key={dayIndex}
+															label={dayName}
+															size="small"
+															onClick={() =>
+																handleToggleDay(entry.id, dayIndex)
+															}
+															color={
+																entry.days.includes(dayIndex)
+																	? 'primary'
+																	: 'default'
+															}
+															variant={
+																entry.days.includes(dayIndex)
+																	? 'filled'
+																	: 'outlined'
+															}
+															sx={{ minWidth: 45 }}
+														/>
+													))}
+												</Box>
+											</Box>
+
+											{/* Time range */}
+											<Box
+												sx={{
+													display: 'flex',
+													gap: 2,
+													mb: 2,
+													flexWrap: 'wrap',
+												}}
+											>
+												<TextField
+													label="Start Time"
+													type="time"
+													value={entry.startTime}
+													onChange={(e) =>
+														handleUpdateScheduleEntry(entry.id, {
+															startTime: e.target.value,
+														})
+													}
+													size="small"
+													sx={{ width: 140 }}
+													slotProps={{
+														inputLabel: { shrink: true },
+													}}
+												/>
+												<TextField
+													label="End Time"
+													type="time"
+													value={entry.endTime}
+													onChange={(e) =>
+														handleUpdateScheduleEntry(entry.id, {
+															endTime: e.target.value,
+														})
+													}
+													size="small"
+													sx={{ width: 140 }}
+													slotProps={{
+														inputLabel: { shrink: true },
+													}}
+												/>
+											</Box>
+
+											{/* Target temperature */}
+											<Box>
+												<Typography
+													variant="caption"
+													color="text.secondary"
+													sx={{ display: 'block', mb: 1 }}
+												>
+													Target Temperature: {entry.targetTemperature}°C
+												</Typography>
+												<Box
+													sx={{
+														display: 'flex',
+														alignItems: 'center',
+														gap: 2,
+													}}
+												>
+													<Typography variant="body2">5°</Typography>
+													<Slider
+														value={entry.targetTemperature}
+														onChange={(_e, value) =>
+															handleUpdateScheduleEntry(entry.id, {
+																targetTemperature: value,
+															})
+														}
+														min={5}
+														max={30}
+														step={0.5}
+														valueLabelDisplay="auto"
+														valueLabelFormat={(v) => `${v}°C`}
+														sx={{ flexGrow: 1 }}
+													/>
+													<Typography variant="body2">30°</Typography>
+												</Box>
+											</Box>
+										</Box>
+									))}
+								</Box>
+							)}
 						</CardContent>
 					</Card>
 				)}

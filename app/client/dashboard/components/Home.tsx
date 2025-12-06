@@ -608,6 +608,7 @@ export const Home = React.memo((props: HomeProps): React.ReactNode => {
 							setTemperatureExpanded(expanded);
 							setEnergyExpanded(false);
 						}}
+						kiosk={props.kiosk}
 					/>
 					<EnergyDisplay
 						expanded={energyExpanded}

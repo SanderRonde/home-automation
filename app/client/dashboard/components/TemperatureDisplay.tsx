@@ -4,6 +4,7 @@ import {
 	LocalFireDepartment as FireIcon,
 	Add as AddIcon,
 	Remove as RemoveIcon,
+	Schedule as ScheduleIcon,
 } from '@mui/icons-material';
 import {
 	Box,
@@ -15,7 +16,7 @@ import {
 	Collapse,
 	Slider,
 } from '@mui/material';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { apiGet, apiPost } from '../../lib/fetch';
 
 interface ThermostatData {
@@ -27,9 +28,17 @@ interface ThermostatData {
 	mode?: string;
 }
 
+interface NextScheduleData {
+	hasNext: boolean;
+	nextTriggerTime?: string;
+	targetTemperature?: number;
+	name?: string;
+}
+
 interface TemperatureDisplayProps {
 	expanded: boolean;
 	onExpandedChange: (expanded: boolean) => void;
+	kiosk?: boolean;
 }
 
 export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element => {
@@ -38,12 +47,15 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 	const [loading, setLoading] = useState(true);
 	const [newTarget, setNewTarget] = useState<number | null>(null);
 	const [updating, setUpdating] = useState(false);
+	const [nextSchedule, setNextSchedule] = useState<NextScheduleData | null>(null);
+	const [timeUntilNext, setTimeUntilNext] = useState<string>('');
 
 	const loadData = useCallback(async () => {
 		try {
-			const [tempResponse, thermostatResponse] = await Promise.all([
+			const [tempResponse, thermostatResponse, scheduleResponse] = await Promise.all([
 				apiGet('temperature', '/inside-temperature', {}),
 				apiGet('temperature', '/central-thermostat', {}),
+				apiGet('temperature', '/schedule/next', {}),
 			]);
 
 			if (tempResponse.ok) {
@@ -57,6 +69,11 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 				if (data.configured && data.targetTemperature !== undefined) {
 					setNewTarget(data.targetTemperature);
 				}
+			}
+
+			if (scheduleResponse.ok) {
+				const data = await scheduleResponse.json();
+				setNextSchedule(data);
 			}
 		} catch (error) {
 			console.error('Failed to load temperature data:', error);
@@ -74,26 +91,71 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 		return () => clearInterval(interval);
 	}, [loadData]);
 
+	// Update time until next schedule every minute
+	useEffect(() => {
+		const updateTimeUntilNext = () => {
+			if (!nextSchedule?.hasNext || !nextSchedule.nextTriggerTime) {
+				setTimeUntilNext('');
+				return;
+			}
+
+			const nextTime = new Date(nextSchedule.nextTriggerTime);
+			const now = new Date();
+			const diffMs = nextTime.getTime() - now.getTime();
+
+			if (diffMs <= 0) {
+				// Schedule has passed, reload data
+				void loadData();
+				return;
+			}
+
+			const diffMins = Math.floor(diffMs / 60000);
+			const diffHours = Math.floor(diffMins / 60);
+			const remainingMins = diffMins % 60;
+
+			if (diffHours > 24) {
+				const days = Math.floor(diffHours / 24);
+				setTimeUntilNext(`in ${days}d ${diffHours % 24}h`);
+			} else if (diffHours > 0) {
+				setTimeUntilNext(`in ${diffHours}h ${remainingMins}m`);
+			} else {
+				setTimeUntilNext(`in ${diffMins}m`);
+			}
+		};
+
+		updateTimeUntilNext();
+		const interval = setInterval(updateTimeUntilNext, 60000);
+		return () => clearInterval(interval);
+	}, [nextSchedule, loadData]);
+
+	const formatNextScheduleTime = (): string => {
+		if (!nextSchedule?.hasNext || !nextSchedule.nextTriggerTime) {
+			return '';
+		}
+		const nextTime = new Date(nextSchedule.nextTriggerTime);
+		return nextTime.toLocaleTimeString(undefined, {
+			hour: '2-digit',
+			minute: '2-digit',
+			hour12: false,
+		});
+	};
+
 	const handleToggle = () => {
 		props.onExpandedChange(!props.expanded);
 	};
 
-	const handleTargetChange = async (delta: number) => {
-		if (newTarget === null || updating) {
-			return;
-		}
+	// Debounced temperature update
+	const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const pendingTargetRef = useRef<number | null>(null);
 
-		const updatedTarget = Math.round((newTarget + delta) * 2) / 2; // Round to 0.5
-		const clampedTarget = Math.max(5, Math.min(30, updatedTarget));
-		setNewTarget(clampedTarget);
-
+	const sendTemperatureUpdate = useCallback(async (targetTemp: number) => {
 		setUpdating(true);
 		try {
 			const response = await apiPost(
 				'temperature',
 				'/central-thermostat',
 				{},
-				{ targetTemperature: clampedTarget }
+				{ targetTemperature: targetTemp }
 			);
 			if (response.ok) {
 				const data = await response.json();
@@ -109,37 +171,50 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 		} finally {
 			setUpdating(false);
 		}
+	}, []);
+
+	const debouncedSetTemperature = useCallback(
+		(targetTemp: number) => {
+			pendingTargetRef.current = targetTemp;
+
+			if (debounceTimerRef.current) {
+				clearTimeout(debounceTimerRef.current);
+			}
+
+			debounceTimerRef.current = setTimeout(() => {
+				if (pendingTargetRef.current !== null) {
+					void sendTemperatureUpdate(pendingTargetRef.current);
+					pendingTargetRef.current = null;
+				}
+			}, 1000);
+		},
+		[sendTemperatureUpdate]
+	);
+
+	// Cleanup debounce timer on unmount
+	useEffect(() => {
+		return () => {
+			if (debounceTimerRef.current) {
+				clearTimeout(debounceTimerRef.current);
+			}
+		};
+	}, []);
+
+	const handleTargetChange = (delta: number) => {
+		if (newTarget === null) {
+			return;
+		}
+
+		const updatedTarget = Math.round((newTarget + delta) * 2) / 2; // Round to 0.5
+		const clampedTarget = Math.max(5, Math.min(30, updatedTarget));
+		setNewTarget(clampedTarget);
+		debouncedSetTemperature(clampedTarget);
 	};
 
 	const handleSliderChange = (_event: Event, value: number | number[]) => {
-		setNewTarget(value as number);
-	};
-
-	const handleSliderCommit = async (
-		_event: React.SyntheticEvent | Event,
-		value: number | number[]
-	) => {
 		const targetValue = value as number;
-		setUpdating(true);
-		try {
-			const response = await apiPost(
-				'temperature',
-				'/central-thermostat',
-				{},
-				{ targetTemperature: targetValue }
-			);
-			if (response.ok) {
-				const data = await response.json();
-				setThermostatData({
-					...data,
-					configured: true,
-				});
-			}
-		} catch (error) {
-			console.error('Failed to update target temperature:', error);
-		} finally {
-			setUpdating(false);
-		}
+		setNewTarget(targetValue);
+		debouncedSetTemperature(targetValue);
 	};
 
 	const formatTemp = (temp: number | null | undefined): string => {
@@ -160,7 +235,6 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 					boxShadow: 3,
 					transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
 					transform: props.expanded ? 'scale(1.02)' : 'scale(1)',
-					minWidth: hasThermostat ? 200 : 120,
 				}}
 			>
 				<CardContent
@@ -261,64 +335,138 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 
 					{/* Expanded controls */}
 					<Collapse in={props.expanded && hasThermostat}>
-						<Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-							<Typography
-								variant="caption"
-								sx={{ color: 'text.secondary', mb: 1, display: 'block' }}
+						{props.expanded && (
+							<Box
+								sx={{
+									mt: 2,
+									pt: 2,
+									borderTop: '1px solid',
+									borderColor: 'divider',
+								}}
 							>
-								Set target temperature
-							</Typography>
-							<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-								<IconButton
-									size="small"
-									onClick={() => void handleTargetChange(-0.5)}
-									disabled={updating || newTarget === null || newTarget <= 5}
-								>
-									<RemoveIcon />
-								</IconButton>
-								<Box sx={{ flexGrow: 1, px: 1 }}>
-									<Slider
-										value={newTarget ?? 20}
-										min={5}
-										max={30}
-										step={0.5}
-										onChange={handleSliderChange}
-										onChangeCommitted={handleSliderCommit}
-										disabled={updating}
-										valueLabelDisplay="auto"
-										valueLabelFormat={(v) => `${v}°`}
+								{/* Target temperature controls - hidden in kiosk mode */}
+								{!props.kiosk && (
+									<>
+										<Typography
+											variant="caption"
+											sx={{
+												color: 'text.secondary',
+												mb: 1,
+												display: 'block',
+											}}
+										>
+											Set target temperature
+										</Typography>
+										<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+											<IconButton
+												size="small"
+												onClick={() => void handleTargetChange(-0.5)}
+												disabled={
+													updating || newTarget === null || newTarget <= 5
+												}
+											>
+												<RemoveIcon />
+											</IconButton>
+											<Box sx={{ flexGrow: 1, px: 1 }}>
+												<Slider
+													value={newTarget ?? 20}
+													min={5}
+													max={30}
+													step={0.5}
+													onChange={handleSliderChange}
+													disabled={updating}
+													valueLabelDisplay="auto"
+													valueLabelFormat={(v) => `${v}°`}
+													sx={{
+														'& .MuiSlider-thumb': {
+															width: 20,
+															height: 20,
+														},
+													}}
+												/>
+											</Box>
+											<IconButton
+												size="small"
+												onClick={() => void handleTargetChange(0.5)}
+												disabled={
+													updating ||
+													newTarget === null ||
+													newTarget >= 30
+												}
+											>
+												<AddIcon />
+											</IconButton>
+											<Typography
+												variant="body1"
+												sx={{
+													fontWeight: 600,
+													minWidth: 45,
+													textAlign: 'right',
+												}}
+											>
+												{newTarget !== null ? `${newTarget}°` : '--°'}
+											</Typography>
+										</Box>
+										{updating && (
+											<Box
+												sx={{
+													display: 'flex',
+													justifyContent: 'center',
+													mt: 1,
+												}}
+											>
+												<CircularProgress size={16} />
+											</Box>
+										)}
+									</>
+								)}
+
+								{/* Next scheduled temperature */}
+								{nextSchedule?.hasNext && (
+									<Box
 										sx={{
-											'& .MuiSlider-thumb': {
-												width: 20,
-												height: 20,
-											},
+											mt: props.kiosk ? 0 : 2,
+											pt: props.kiosk ? 0 : 1,
+											borderTop: props.kiosk ? 'none' : '1px solid',
+											borderColor: 'divider',
+											display: 'flex',
+											alignItems: 'center',
+											gap: 1,
 										}}
-									/>
-								</Box>
-								<IconButton
-									size="small"
-									onClick={() => void handleTargetChange(0.5)}
-									disabled={updating || newTarget === null || newTarget >= 30}
-								>
-									<AddIcon />
-								</IconButton>
-								<Typography
-									variant="body1"
-									sx={{
-										fontWeight: 600,
-										minWidth: 45,
-										textAlign: 'right',
-									}}
-								>
-									{newTarget !== null ? `${newTarget}°` : '--°'}
-								</Typography>
+									>
+										<ScheduleIcon
+											sx={{ fontSize: 16, color: 'text.secondary' }}
+										/>
+										<Typography variant="caption" color="text.secondary">
+											Next:{' '}
+											<Box
+												component="span"
+												sx={{ fontWeight: 500, color: 'text.primary' }}
+											>
+												{nextSchedule.name}
+											</Box>
+											{' @ '}
+											<Box component="span" sx={{ color: 'text.primary' }}>
+												{formatNextScheduleTime()}
+											</Box>
+											{' → '}
+											<Box
+												component="span"
+												sx={{ fontWeight: 600, color: 'primary.main' }}
+											>
+												{nextSchedule.targetTemperature}°
+											</Box>
+											<Box
+												component="span"
+												sx={{ color: 'text.disabled', ml: 0.5 }}
+											>
+												({timeUntilNext})
+											</Box>
+										</Typography>
+									</Box>
+								)}
 							</Box>
-							{updating && (
-								<Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
-									<CircularProgress size={16} />
-								</Box>
-							)}
-						</Box>
+						)}
 					</Collapse>
 				</CardContent>
 			</Card>
