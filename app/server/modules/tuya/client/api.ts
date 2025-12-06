@@ -106,7 +106,7 @@ export class TuyaAPI {
 	): Promise<boolean> {
 		return (
 			await this._context.request<void>({
-				method: 'PUT',
+				method: 'POST',
 				path: `/v2.0/cloud/thing/${deviceId}/shadow/properties/issue`,
 				body: {
 					properties: JSON.stringify({ [propertyCode]: value }),
