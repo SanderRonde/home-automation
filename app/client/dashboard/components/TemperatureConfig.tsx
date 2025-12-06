@@ -15,7 +15,6 @@ import {
 	RadioGroup,
 	FormControlLabel,
 	FormControl,
-	FormLabel,
 } from '@mui/material';
 import { Save as SaveIcon } from '@mui/icons-material';
 import React, { useState, useEffect } from 'react';
@@ -26,10 +25,6 @@ type TemperatureSensorConfig = string | { type: 'device'; deviceId: string };
 interface AvailableSensors {
 	temperatureControllers: string[];
 	deviceSensors: Array<{ deviceId: string; name: string }>;
-}
-
-interface AvailableThermostats {
-	thermostats: Array<{ deviceId: string; name: string }>;
 }
 
 export const TemperatureConfig = (): JSX.Element => {
@@ -297,11 +292,7 @@ export const TemperatureConfig = (): JSX.Element => {
 											}
 										/>
 									))}
-									<FormControlLabel
-										value=""
-										control={<Radio />}
-										label="None"
-									/>
+									<FormControlLabel value="" control={<Radio />} label="None" />
 								</RadioGroup>
 							</FormControl>
 						</CardContent>

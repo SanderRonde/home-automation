@@ -164,7 +164,10 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 							body.targetTemperature
 						);
 						if (!success) {
-							return json({ success: false, error: 'Failed to set target temperature' });
+							return json({
+								success: false,
+								error: 'Failed to set target temperature',
+							});
 						}
 						const status = await Temperature.getCentralThermostatStatus(modules);
 						return json({ success: true, ...status });
