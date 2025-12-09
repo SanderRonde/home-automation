@@ -669,20 +669,16 @@ export class SceneAPI {
 			logTag('scene', 'yellow', `Failed to get current level for ${deviceId}:`, error);
 		}
 
-		// Ensure device is on if it has OnOff cluster and target level > 0
-		// (Don't turn on if we're fading to off - this prevents a flash when
-		// a scene has both an OnOff=false action and a LevelControl action)
-		if (targetLevel > 0) {
-			const onOffCluster = device.getClusterByType(DeviceOnOffCluster);
-			if (onOffCluster) {
-				try {
-					const isOn = await onOffCluster.isOn.get();
-					if (!isOn) {
-						await onOffCluster.setOn(true);
-					}
-				} catch (error) {
-					logTag('scene', 'yellow', `Failed to turn on device ${deviceId}:`, error);
+		// Ensure device is on if it has OnOff cluster
+		const onOffCluster = device.getClusterByType(DeviceOnOffCluster);
+		if (onOffCluster) {
+			try {
+				const isOn = await onOffCluster.isOn.get();
+				if (!isOn) {
+					await onOffCluster.setOn(true);
 				}
+			} catch (error) {
+				logTag('scene', 'yellow', `Failed to turn on device ${deviceId}:`, error);
 			}
 		}
 
