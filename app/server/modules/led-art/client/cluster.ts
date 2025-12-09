@@ -59,6 +59,9 @@ export class LEDArtOnOffCluster extends ConfigurableCluster implements DeviceOnO
 	}
 
 	public setOn = async (on: boolean): Promise<void> => {
+		if (this.client.state.current().target_power_state === on) {
+			return;
+		}
 		await this.client.setState({ power_state: on });
 	};
 
