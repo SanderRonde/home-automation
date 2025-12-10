@@ -20,8 +20,17 @@ import {
 	Switch,
 	Chip,
 	Slider,
+	MenuItem,
+	Select,
+	Alert,
+	InputLabel,
 } from '@mui/material';
-import { Save as SaveIcon, Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import {
+	Save as SaveIcon,
+	Add as AddIcon,
+	Delete as DeleteIcon,
+	Warning as WarningIcon,
+} from '@mui/icons-material';
 import React, { useState, useEffect } from 'react';
 import { apiGet, apiPost } from '../../lib/fetch';
 
@@ -35,6 +44,7 @@ interface AvailableSensors {
 interface TemperatureScheduleEntry {
 	id: string;
 	name: string;
+	roomName: string; // Required: which room this schedule applies to
 	days: number[];
 	startTime: string;
 	endTime: string;
@@ -58,17 +68,25 @@ export const TemperatureConfig = (): JSX.Element => {
 	>([]);
 	const [schedule, setSchedule] = useState<TemperatureScheduleEntry[]>([]);
 	const [savingSchedule, setSavingSchedule] = useState(false);
+	const [roomsWithThermostats, setRoomsWithThermostats] = useState<string[]>([]);
+	const [migratedSchedules, setMigratedSchedules] = useState(false);
 
 	const loadData = async () => {
 		setLoading(true);
 		try {
-			const [sensorsResponse, configResponse, thermostatsResponse, scheduleResponse] =
-				await Promise.all([
-					apiGet('temperature', '/temperature-sensors', {}),
-					apiGet('temperature', '/inside-temperature-sensors', {}),
-					apiGet('temperature', '/thermostats', {}),
-					apiGet('temperature', '/schedule', {}),
-				]);
+			const [
+				sensorsResponse,
+				configResponse,
+				thermostatsResponse,
+				scheduleResponse,
+				roomsResponse,
+			] = await Promise.all([
+				apiGet('temperature', '/temperature-sensors', {}),
+				apiGet('temperature', '/inside-temperature-sensors', {}),
+				apiGet('temperature', '/thermostats', {}),
+				apiGet('temperature', '/schedule', {}),
+				apiGet('temperature', '/rooms-with-thermostats', {}),
+			]);
 
 			if (sensorsResponse.ok) {
 				const sensorsData = await sensorsResponse.json();
@@ -89,9 +107,28 @@ export const TemperatureConfig = (): JSX.Element => {
 				setAvailableThermostats(thermostatsData.thermostats || []);
 			}
 
+			let rooms: string[] = [];
+			if (roomsResponse.ok) {
+				const roomsData = await roomsResponse.json();
+				rooms = roomsData.rooms || [];
+				setRoomsWithThermostats(rooms);
+			}
+
 			if (scheduleResponse.ok) {
 				const scheduleData = await scheduleResponse.json();
-				setSchedule(scheduleData.schedule || []);
+				const loadedSchedule = (scheduleData.schedule || []) as TemperatureScheduleEntry[];
+
+				// Filter out schedules without roomName (old format) - they will be discarded
+				const validSchedules = loadedSchedule.filter(
+					(s) => s.roomName && rooms.includes(s.roomName)
+				);
+				const invalidCount = loadedSchedule.length - validSchedules.length;
+
+				if (invalidCount > 0) {
+					setMigratedSchedules(true);
+				}
+
+				setSchedule(validSchedules);
 			}
 		} catch (error) {
 			console.error('Failed to load temperature configuration:', error);
@@ -184,9 +221,12 @@ export const TemperatureConfig = (): JSX.Element => {
 	};
 
 	const handleAddScheduleEntry = () => {
+		// Use first available room as default
+		const defaultRoom = roomsWithThermostats[0] || '';
 		const newEntry: TemperatureScheduleEntry = {
 			id: `schedule-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
 			name: `Schedule ${schedule.length + 1}`,
+			roomName: defaultRoom,
 			days: [1, 2, 3, 4, 5], // Weekdays by default
 			startTime: '07:00',
 			endTime: '22:00',
@@ -378,7 +418,7 @@ export const TemperatureConfig = (): JSX.Element => {
 				)}
 
 				{/* Temperature Schedule */}
-				{selectedThermostat && (
+				{roomsWithThermostats.length > 0 && (
 					<Card>
 						<CardContent>
 							<Box
@@ -396,6 +436,7 @@ export const TemperatureConfig = (): JSX.Element => {
 										startIcon={<AddIcon />}
 										onClick={handleAddScheduleEntry}
 										size="small"
+										disabled={roomsWithThermostats.length === 0}
 									>
 										Add
 									</Button>
@@ -416,10 +457,19 @@ export const TemperatureConfig = (): JSX.Element => {
 									</Button>
 								</Box>
 							</Box>
+
+							{migratedSchedules && (
+								<Alert severity="warning" sx={{ mb: 2 }} icon={<WarningIcon />}>
+									Some schedules without a room assignment have been removed.
+									Please recreate them with a specific room.
+								</Alert>
+							)}
+
 							<Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-								Configure automatic temperature schedules. When a schedule starts,
-								the thermostat will be set to the target temperature. Manual
-								adjustments will override until the next schedule triggers.
+								Configure automatic temperature schedules for specific rooms. When a
+								schedule starts, the room&apos;s thermostats will be set to the
+								target temperature. If any room thermostat is heating, the central
+								thermostat will also heat.
 							</Typography>
 
 							{schedule.length === 0 ? (
@@ -500,6 +550,33 @@ export const TemperatureConfig = (): JSX.Element => {
 												>
 													<DeleteIcon />
 												</IconButton>
+											</Box>
+
+											{/* Room selection */}
+											<Box sx={{ mb: 2 }}>
+												<FormControl fullWidth size="small">
+													<InputLabel
+														id={`room-select-label-${entry.id}`}
+													>
+														Room
+													</InputLabel>
+													<Select
+														labelId={`room-select-label-${entry.id}`}
+														value={entry.roomName}
+														label="Room"
+														onChange={(e) =>
+															handleUpdateScheduleEntry(entry.id, {
+																roomName: e.target.value,
+															})
+														}
+													>
+														{roomsWithThermostats.map((room) => (
+															<MenuItem key={room} value={room}>
+																{room}
+															</MenuItem>
+														))}
+													</Select>
+												</FormControl>
 											</Box>
 
 											{/* Days selection */}

@@ -6,11 +6,12 @@ import type { AllModules } from '..';
 /**
  * Temperature Schedule Executor
  * Checks every minute if a schedule boundary has been crossed and applies the new temperature
+ * Now supports room-level schedules - applies to specific room thermostats
  */
 export class TemperatureScheduler {
 	private readonly _modules: AllModules;
 	private _intervalId: ReturnType<typeof setInterval> | null = null;
-	private _lastAppliedScheduleId: string | null = null;
+	private _lastAppliedScheduleIds: Set<string> = new Set();
 	private _lastCheckMinute: number = -1;
 
 	public constructor(modules: AllModules) {
@@ -48,7 +49,8 @@ export class TemperatureScheduler {
 	}
 
 	/**
-	 * Check if we need to apply a new schedule
+	 * Check if we need to apply new schedules
+	 * Now checks all room-specific schedules
 	 */
 	private async _checkSchedule(): Promise<void> {
 		const now = new Date();
@@ -60,55 +62,75 @@ export class TemperatureScheduler {
 		}
 		this._lastCheckMinute = currentMinute;
 
-		const activeSchedule = Temperature.getCurrentActiveSchedule();
+		const currentDay = now.getDay();
 
-		if (!activeSchedule) {
-			// No active schedule - reset tracking
-			this._lastAppliedScheduleId = null;
+		// Get all schedules and check each one
+		const schedule = Temperature.getSchedule();
+		const enabledSchedules = schedule.filter((s) => s.enabled);
+
+		if (enabledSchedules.length === 0) {
 			return;
 		}
 
-		// Check if this is a new schedule we haven't applied yet
-		// We need to detect schedule boundary crossings, not just "is there an active schedule"
-		const scheduleKey = this._getScheduleKey(activeSchedule, now);
+		// Check each schedule to see if it should trigger now
+		for (const entry of enabledSchedules) {
+			// Skip if not applicable today
+			if (!entry.days.includes(currentDay)) {
+				continue;
+			}
 
-		if (scheduleKey === this._lastAppliedScheduleId) {
-			// Already applied this schedule for this time period
-			return;
+			const [startHour, startMinute] = entry.startTime.split(':').map(Number);
+			const scheduleStartMinutes = startHour * 60 + startMinute;
+
+			// Check if we're within the first minute of the schedule start
+			if (Math.abs(currentMinute - scheduleStartMinutes) <= 1) {
+				const scheduleKey = this._getScheduleKey(entry, now);
+
+				// Skip if already applied
+				if (this._lastAppliedScheduleIds.has(scheduleKey)) {
+					continue;
+				}
+
+				// Apply the schedule to the specific room
+				await this._applyRoomSchedule(entry);
+				this._lastAppliedScheduleIds.add(scheduleKey);
+
+				// Clean up old keys (from previous days)
+				this._cleanupOldKeys(now);
+			}
 		}
+	}
 
-		// Check if we just entered this schedule (within the first minute)
-		const [startHour, startMinute] = activeSchedule.startTime.split(':').map(Number);
-		const scheduleStartMinutes = startHour * 60 + startMinute;
+	/**
+	 * Apply a schedule to its target room
+	 */
+	private async _applyRoomSchedule(entry: TemperatureScheduleEntry): Promise<void> {
+		const roomName = entry.roomName;
 
-		// Only apply if we're within the first minute of the schedule start
-		// This prevents applying when the server restarts mid-schedule
-		if (Math.abs(currentMinute - scheduleStartMinutes) <= 1) {
+		logTag(
+			'temperature',
+			'green',
+			`Applying scheduled temperature for ${roomName}: ${entry.targetTemperature}°C (schedule: ${entry.name}, ${entry.startTime}-${entry.endTime})`
+		);
+
+		const success = await Temperature.setRoomThermostatTarget(
+			roomName,
+			entry.targetTemperature,
+			this._modules
+		);
+
+		if (success) {
 			logTag(
 				'temperature',
 				'green',
-				`Applying scheduled temperature: ${activeSchedule.targetTemperature}°C (schedule: ${activeSchedule.startTime}-${activeSchedule.endTime})`
+				`Successfully applied scheduled temperature for ${roomName}: ${entry.targetTemperature}°C`
 			);
-
-			const success = await Temperature.setCentralThermostatTarget(
-				this._modules,
-				activeSchedule.targetTemperature
+		} else {
+			logTag(
+				'temperature',
+				'red',
+				`Failed to apply scheduled temperature for ${roomName}: ${entry.targetTemperature}°C`
 			);
-
-			if (success) {
-				this._lastAppliedScheduleId = scheduleKey;
-				logTag(
-					'temperature',
-					'green',
-					`Successfully applied scheduled temperature: ${activeSchedule.targetTemperature}°C`
-				);
-			} else {
-				logTag(
-					'temperature',
-					'red',
-					`Failed to apply scheduled temperature: ${activeSchedule.targetTemperature}°C`
-				);
-			}
 		}
 	}
 
@@ -118,7 +140,30 @@ export class TemperatureScheduler {
 	 */
 	private _getScheduleKey(schedule: TemperatureScheduleEntry, date: Date): string {
 		const dateStr = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-		return `${schedule.id}-${dateStr}-${schedule.startTime}`;
+		return `${schedule.id}-${schedule.roomName}-${dateStr}-${schedule.startTime}`;
+	}
+
+	/**
+	 * Remove schedule keys from previous days to prevent memory buildup
+	 */
+	private _cleanupOldKeys(currentDate: Date): void {
+		const currentDateStr = `${currentDate.getFullYear()}-${currentDate.getMonth()}-${currentDate.getDate()}`;
+		const keysToRemove: string[] = [];
+
+		for (const key of this._lastAppliedScheduleIds) {
+			// Extract the date part from the key
+			const parts = key.split('-');
+			if (parts.length >= 4) {
+				const keyDateStr = `${parts[1]}-${parts[2]}-${parts[3]}`;
+				if (keyDateStr !== currentDateStr) {
+					keysToRemove.push(key);
+				}
+			}
+		}
+
+		for (const key of keysToRemove) {
+			this._lastAppliedScheduleIds.delete(key);
+		}
 	}
 }
 

@@ -33,6 +33,13 @@ interface NextScheduleData {
 	nextTriggerTime?: string;
 	targetTemperature?: number;
 	name?: string;
+	roomName?: string;
+}
+
+interface HeatingStatus {
+	heatingRooms: string[];
+	totalRoomsWithThermostats: number;
+	centralShouldHeat: boolean;
 }
 
 interface TemperatureDisplayProps {
@@ -49,14 +56,17 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 	const [updating, setUpdating] = useState(false);
 	const [nextSchedule, setNextSchedule] = useState<NextScheduleData | null>(null);
 	const [timeUntilNext, setTimeUntilNext] = useState<string>('');
+	const [heatingStatus, setHeatingStatus] = useState<HeatingStatus | null>(null);
 
 	const loadData = useCallback(async () => {
 		try {
-			const [tempResponse, thermostatResponse, scheduleResponse] = await Promise.all([
-				apiGet('temperature', '/inside-temperature', {}),
-				apiGet('temperature', '/central-thermostat', {}),
-				apiGet('temperature', '/schedule/next', {}),
-			]);
+			const [tempResponse, thermostatResponse, scheduleResponse, heatingResponse] =
+				await Promise.all([
+					apiGet('temperature', '/inside-temperature', {}),
+					apiGet('temperature', '/central-thermostat', {}),
+					apiGet('temperature', '/schedule/next', {}),
+					apiGet('temperature', '/heating-status', {}),
+				]);
 
 			if (tempResponse.ok) {
 				const data = await tempResponse.json();
@@ -74,6 +84,17 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 			if (scheduleResponse.ok) {
 				const data = await scheduleResponse.json();
 				setNextSchedule(data);
+			}
+
+			if (heatingResponse.ok) {
+				const data = await heatingResponse.json();
+				if (data.success) {
+					setHeatingStatus({
+						heatingRooms: data.heatingRooms,
+						totalRoomsWithThermostats: data.totalRoomsWithThermostats,
+						centralShouldHeat: data.centralShouldHeat,
+					});
+				}
 			}
 		} catch (error) {
 			console.error('Failed to load temperature data:', error);
@@ -272,6 +293,49 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 								</Typography>
 
 								{/* Thermostat info */}
+								{/* Show heating status - how many rooms are heating */}
+								{heatingStatus && heatingStatus.heatingRooms.length > 0 && (
+									<>
+										<Typography
+											variant="body2"
+											sx={{ color: 'text.secondary', mx: 0.5 }}
+										>
+											|
+										</Typography>
+										<Box
+											sx={{
+												display: 'flex',
+												alignItems: 'center',
+												gap: 0.5,
+											}}
+											title={`Heating: ${heatingStatus.heatingRooms.join(', ')}`}
+										>
+											<FireIcon
+												sx={{
+													fontSize: 18,
+													color: '#f97316',
+													animation: 'pulse 1.5s infinite',
+													'@keyframes pulse': {
+														'0%, 100%': { opacity: 1 },
+														'50%': { opacity: 0.5 },
+													},
+												}}
+											/>
+											<Typography
+												variant="body2"
+												sx={{
+													fontWeight: 500,
+													color: '#f97316',
+												}}
+											>
+												{heatingStatus.heatingRooms.length}
+												{heatingStatus.totalRoomsWithThermostats > 0 &&
+													`/${heatingStatus.totalRoomsWithThermostats}`}
+											</Typography>
+										</Box>
+									</>
+								)}
+
 								{hasThermostat && (
 									<>
 										<Typography
@@ -439,6 +503,17 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 										/>
 										<Typography variant="caption" color="text.secondary">
 											Next:{' '}
+											{nextSchedule.roomName && (
+												<>
+													<Box
+														component="span"
+														sx={{ fontWeight: 500, color: 'info.main' }}
+													>
+														{nextSchedule.roomName}
+													</Box>
+													{' - '}
+												</>
+											)}
 											<Box
 												component="span"
 												sx={{ fontWeight: 500, color: 'text.primary' }}
@@ -463,6 +538,53 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 												({timeUntilNext})
 											</Box>
 										</Typography>
+									</Box>
+								)}
+
+								{/* Heating rooms list when expanded */}
+								{heatingStatus && heatingStatus.heatingRooms.length > 0 && (
+									<Box
+										sx={{
+											mt: 2,
+											pt: 1,
+											borderTop: '1px solid',
+											borderColor: 'divider',
+										}}
+									>
+										<Typography
+											variant="caption"
+											color="text.secondary"
+											sx={{ display: 'block', mb: 0.5 }}
+										>
+											Rooms currently heating:
+										</Typography>
+										<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+											{heatingStatus.heatingRooms.map((room) => (
+												<Box
+													key={room}
+													sx={{
+														display: 'flex',
+														alignItems: 'center',
+														gap: 0.5,
+														px: 1,
+														py: 0.25,
+														borderRadius: 1,
+														backgroundColor: 'rgba(249, 115, 22, 0.15)',
+														border: '1px solid rgba(249, 115, 22, 0.3)',
+													}}
+												>
+													<FireIcon
+														sx={{ fontSize: 12, color: '#f97316' }}
+													/>
+													<Typography
+														variant="caption"
+														sx={{ fontWeight: 500 }}
+													>
+														{room}
+													</Typography>
+												</Box>
+											))}
+										</Box>
 									</Box>
 								)}
 							</Box>

@@ -186,6 +186,7 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 							z.object({
 								id: z.string(),
 								name: z.string(),
+								roomName: z.string(), // Required: which room this schedule applies to
 								days: z.array(z.number().min(0).max(6)),
 								startTime: z.string().regex(/^\d{2}:\d{2}$/),
 								endTime: z.string().regex(/^\d{2}:\d{2}$/),
@@ -219,8 +220,57 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 						nextTriggerTime: nextTriggerTime.toISOString(),
 						targetTemperature: entry.targetTemperature,
 						name: entry.name,
+						roomName: entry.roomName,
 					});
 				},
+			},
+			// Room-level thermostat endpoints
+			'/room-thermostats': async (_req, _server, { json }) => {
+				const roomThermostats = await Temperature.getRoomThermostats(modules);
+				const roomsArray = Array.from(roomThermostats.values());
+				return json({ success: true, rooms: roomsArray });
+			},
+			'/room/:roomName/thermostat': {
+				GET: async (req, _server, { json }) => {
+					const roomName = decodeURIComponent(req.params.roomName);
+					const status = await Temperature.getRoomThermostatStatus(roomName, modules);
+					if (!status) {
+						return json({
+							success: false,
+							error: 'Room not found or has no thermostats',
+						});
+					}
+					return json({ success: true, ...status });
+				},
+				POST: withRequestBody(
+					z.object({
+						targetTemperature: z.number().min(5).max(30),
+					}),
+					async (body, req, _server, { json }) => {
+						const roomName = decodeURIComponent(req.params.roomName);
+						const success = await Temperature.setRoomThermostatTarget(
+							roomName,
+							body.targetTemperature,
+							modules
+						);
+						if (!success) {
+							return json({
+								success: false,
+								error: 'Failed to set room thermostat target',
+							});
+						}
+						const status = await Temperature.getRoomThermostatStatus(roomName, modules);
+						return json({ success: true, ...status });
+					}
+				),
+			},
+			'/heating-status': async (_req, _server, { json }) => {
+				const status = await Temperature.getHouseHeatingStatus(modules);
+				return json({ success: true, ...status });
+			},
+			'/rooms-with-thermostats': async (_req, _server, { json }) => {
+				const rooms = await Temperature.getRoomsWithThermostats(modules);
+				return json({ success: true, rooms });
 			},
 		},
 		true

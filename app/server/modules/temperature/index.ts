@@ -3,10 +3,11 @@ import {
 	DeviceThermostatCluster,
 	ThermostatMode,
 } from '../device/cluster';
-import type { TemperatureScheduleEntry } from './types';
+import type { TemperatureScheduleEntry, RoomThermostatStatus, HouseHeatingStatus } from './types';
 import type { ModuleConfig, AllModules } from '..';
 import { logTag } from '../../lib/logging/logger';
 import { getController } from './temp-controller';
+import { initCoordinator } from './coordinator';
 import { initScheduler } from './scheduler';
 import { initRouting } from './routing';
 import { ModuleMeta } from '../meta';
@@ -30,6 +31,9 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 
 		// Initialize the temperature scheduler
 		initScheduler(config.modules);
+
+		// Initialize the thermostat coordinator (coordinates room TRVs with central thermostat)
+		initCoordinator(config.modules);
 
 		return {
 			serve: initRouting(config),
@@ -90,13 +94,19 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 	/**
 	 * Get the next scheduled temperature change
 	 * Returns the next schedule entry that will trigger, along with when it triggers
+	 * Optionally filter by room name
 	 */
-	public getNextScheduledChange(): {
+	public getNextScheduledChange(roomName?: string): {
 		entry: TemperatureScheduleEntry;
 		nextTriggerTime: Date;
 	} | null {
 		const schedule = this.getSchedule();
-		const enabledSchedules = schedule.filter((s) => s.enabled);
+		let enabledSchedules = schedule.filter((s) => s.enabled);
+
+		// Filter by room if specified
+		if (roomName) {
+			enabledSchedules = enabledSchedules.filter((s) => s.roomName === roomName);
+		}
 
 		if (enabledSchedules.length === 0) {
 			return null;
@@ -159,10 +169,16 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 
 	/**
 	 * Get the currently active schedule entry (if any)
+	 * Optionally filter by room name
 	 */
-	public getCurrentActiveSchedule(): TemperatureScheduleEntry | null {
+	public getCurrentActiveSchedule(roomName?: string): TemperatureScheduleEntry | null {
 		const schedule = this.getSchedule();
-		const enabledSchedules = schedule.filter((s) => s.enabled);
+		let enabledSchedules = schedule.filter((s) => s.enabled);
+
+		// Filter by room if specified
+		if (roomName) {
+			enabledSchedules = enabledSchedules.filter((s) => s.roomName === roomName);
+		}
 
 		if (enabledSchedules.length === 0) {
 			return null;
@@ -197,6 +213,47 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Get all currently active schedules (across all rooms)
+	 */
+	public getAllActiveSchedules(): TemperatureScheduleEntry[] {
+		const schedule = this.getSchedule();
+		const enabledSchedules = schedule.filter((s) => s.enabled);
+
+		if (enabledSchedules.length === 0) {
+			return [];
+		}
+
+		const now = new Date();
+		const currentDay = now.getDay();
+		const currentMinutes = now.getHours() * 60 + now.getMinutes();
+		const activeSchedules: TemperatureScheduleEntry[] = [];
+
+		for (const entry of enabledSchedules) {
+			if (!entry.days.includes(currentDay)) {
+				continue;
+			}
+
+			const [startHour, startMinute] = entry.startTime.split(':').map(Number);
+			const [endHour, endMinute] = entry.endTime.split(':').map(Number);
+			const startMinutes = startHour * 60 + startMinute;
+			const endMinutes = endHour * 60 + endMinute;
+
+			// Handle schedules that cross midnight
+			if (endMinutes <= startMinutes) {
+				if (currentMinutes >= startMinutes || currentMinutes < endMinutes) {
+					activeSchedules.push(entry);
+				}
+			} else {
+				if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
+					activeSchedules.push(entry);
+				}
+			}
+		}
+
+		return activeSchedules;
 	}
 
 	/**
@@ -489,5 +546,249 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 			);
 			return false;
 		}
+	}
+
+	/**
+	 * Get all thermostats grouped by room with their status
+	 */
+	public async getRoomThermostats(
+		modules: AllModules
+	): Promise<Map<string, RoomThermostatStatus>> {
+		const roomThermostats = new Map<string, RoomThermostatStatus>();
+
+		try {
+			const deviceApi = await modules.device.api.value;
+			const devices = deviceApi.devices.current();
+			const storedDevices = deviceApi.getStoredDevices();
+
+			// Group thermostats by room
+			const thermostatsByRoom = new Map<
+				string,
+				Array<{
+					deviceId: string;
+					deviceName: string;
+					cluster: DeviceThermostatCluster;
+				}>
+			>();
+
+			for (const [deviceId, device] of Object.entries(devices)) {
+				if (!device) {
+					continue;
+				}
+
+				const thermostatClusters = device.getAllClustersByType(DeviceThermostatCluster);
+				if (thermostatClusters.length === 0) {
+					continue;
+				}
+
+				const storedDevice = storedDevices[deviceId];
+				const roomName = storedDevice?.room;
+				if (!roomName) {
+					continue;
+				} // Skip devices not assigned to a room
+
+				const deviceName = storedDevice?.name ?? (await device.getDeviceName());
+
+				if (!thermostatsByRoom.has(roomName)) {
+					thermostatsByRoom.set(roomName, []);
+				}
+
+				for (const cluster of thermostatClusters) {
+					thermostatsByRoom.get(roomName)!.push({
+						deviceId,
+						deviceName,
+						cluster,
+					});
+				}
+			}
+
+			// Build room status for each room
+			for (const [roomName, thermostats] of thermostatsByRoom) {
+				const thermostatStatuses: RoomThermostatStatus['thermostats'] = [];
+				let totalThermostatTemp = 0;
+				let totalTargetTemp = 0;
+				let isAnyHeating = false;
+
+				for (const { deviceId, deviceName, cluster } of thermostats) {
+					const currentTemp = (await cluster.currentTemperature.get()) ?? 20;
+					const targetTemp = (await cluster.targetTemperature.get()) ?? 20;
+					const isHeating = (await cluster.isHeating.get()) ?? false;
+					const mode = (await cluster.mode.get()) ?? ThermostatMode.OFF;
+
+					thermostatStatuses.push({
+						deviceId,
+						deviceName,
+						currentTemperature: currentTemp,
+						targetTemperature: targetTemp,
+						isHeating,
+						mode,
+					});
+
+					totalThermostatTemp += currentTemp;
+					totalTargetTemp += targetTemp;
+					if (isHeating) {
+						isAnyHeating = true;
+					}
+				}
+
+				// Get sensor temperature for this room
+				let sensorTemp: number | null = null;
+				try {
+					const roomDevices = Object.entries(devices).filter(([id]) => {
+						const stored = storedDevices[id];
+						return stored?.room === roomName;
+					});
+
+					const sensorTemps: number[] = [];
+					for (const [, device] of roomDevices) {
+						if (!device) {
+							continue;
+						}
+						const tempClusters = device.getAllClustersByType(
+							DeviceTemperatureMeasurementCluster
+						);
+						for (const cluster of tempClusters) {
+							const temp = await cluster.temperature.get();
+							if (temp !== undefined && !Number.isNaN(temp)) {
+								sensorTemps.push(temp);
+							}
+						}
+					}
+
+					if (sensorTemps.length > 0) {
+						sensorTemp = sensorTemps.reduce((a, b) => a + b, 0) / sensorTemps.length;
+					}
+				} catch {
+					// Ignore sensor errors
+				}
+
+				roomThermostats.set(roomName, {
+					roomName,
+					thermostats: thermostatStatuses,
+					averageThermostatTemperature:
+						thermostatStatuses.length > 0
+							? totalThermostatTemp / thermostatStatuses.length
+							: 20,
+					averageSensorTemperature: sensorTemp,
+					isHeating: isAnyHeating,
+					targetTemperature:
+						thermostatStatuses.length > 0
+							? totalTargetTemp / thermostatStatuses.length
+							: 20,
+				});
+			}
+		} catch (error) {
+			logTag('temperature', 'red', 'Failed to get room thermostats:', error);
+		}
+
+		return roomThermostats;
+	}
+
+	/**
+	 * Get thermostat status for a specific room
+	 */
+	public async getRoomThermostatStatus(
+		roomName: string,
+		modules: AllModules
+	): Promise<RoomThermostatStatus | null> {
+		const allRooms = await this.getRoomThermostats(modules);
+		return allRooms.get(roomName) ?? null;
+	}
+
+	/**
+	 * Get the overall house heating status
+	 */
+	public async getHouseHeatingStatus(modules: AllModules): Promise<HouseHeatingStatus> {
+		const roomThermostats = await this.getRoomThermostats(modules);
+		const centralStatus = await this.getCentralThermostatStatus(modules);
+
+		const heatingRooms: string[] = [];
+		for (const [roomName, status] of roomThermostats) {
+			if (status.isHeating) {
+				heatingRooms.push(roomName);
+			}
+		}
+
+		return {
+			heatingRooms,
+			totalRoomsWithThermostats: roomThermostats.size,
+			centralShouldHeat: heatingRooms.length > 0,
+			centralThermostat: centralStatus
+				? {
+						deviceId: centralStatus.deviceId,
+						currentTemperature: centralStatus.currentTemperature,
+						targetTemperature: centralStatus.targetTemperature,
+						isHeating: centralStatus.isHeating,
+						mode: centralStatus.mode,
+					}
+				: null,
+		};
+	}
+
+	/**
+	 * Set target temperature for all thermostats in a specific room
+	 */
+	public async setRoomThermostatTarget(
+		roomName: string,
+		targetTemperature: number,
+		modules: AllModules
+	): Promise<boolean> {
+		try {
+			const deviceApi = await modules.device.api.value;
+			const devices = deviceApi.devices.current();
+			const storedDevices = deviceApi.getStoredDevices();
+
+			let success = false;
+
+			for (const [deviceId, device] of Object.entries(devices)) {
+				if (!device) {
+					continue;
+				}
+
+				const storedDevice = storedDevices[deviceId];
+				if (storedDevice?.room !== roomName) {
+					continue;
+				}
+
+				const thermostatClusters = device.getAllClustersByType(DeviceThermostatCluster);
+				for (const cluster of thermostatClusters) {
+					try {
+						await cluster.setTargetTemperature(targetTemperature);
+						await cluster.setMode(ThermostatMode.MANUAL);
+						success = true;
+						logTag(
+							'temperature',
+							'green',
+							`Set ${roomName} thermostat ${deviceId} to ${targetTemperature}°C`
+						);
+					} catch (error) {
+						logTag(
+							'temperature',
+							'red',
+							`Failed to set thermostat ${deviceId} in ${roomName}:`,
+							error
+						);
+					}
+				}
+			}
+
+			return success;
+		} catch (error) {
+			logTag(
+				'temperature',
+				'red',
+				`Failed to set room thermostat target for ${roomName}:`,
+				error
+			);
+			return false;
+		}
+	}
+
+	/**
+	 * Get rooms that have thermostats assigned
+	 */
+	public async getRoomsWithThermostats(modules: AllModules): Promise<string[]> {
+		const roomThermostats = await this.getRoomThermostats(modules);
+		return Array.from(roomThermostats.keys());
 	}
 })();
