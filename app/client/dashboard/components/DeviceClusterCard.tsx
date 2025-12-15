@@ -14,10 +14,14 @@ import type {
 	DashboardDeviceClusterSwitch,
 	DeviceListWithValuesResponse,
 } from '../../../server/modules/device/routing';
-import { MyLocation as MyLocationIcon, Thermostat as ThermostatIcon } from '@mui/icons-material';
+import {
+	MyLocation as MyLocationIcon,
+	Thermostat as ThermostatIcon,
+	PowerSettingsNew as PowerIcon,
+} from '@mui/icons-material';
 import { DeviceClusterName, ThermostatMode } from '../../../server/modules/device/cluster';
+import { Card, CardActionArea, Box, Typography, IconButton } from '@mui/material';
 import { fadeInUpStaggered, staggerItem } from '../../lib/animations';
-import { Card, CardActionArea, Box, Typography } from '@mui/material';
 import type { IncludedIconNames } from './icon';
 import type { HomeDetailView } from './Home';
 import { apiPost } from '../../lib/fetch';
@@ -1261,9 +1265,9 @@ const ColorControlCard = (
 	);
 
 	// Check if device is on or off
-	const isDeviceOn =
-		!props.cluster.mergedClusters[DeviceClusterName.ON_OFF] ||
-		props.cluster.mergedClusters[DeviceClusterName.ON_OFF].isOn;
+	const onOffCluster = props.cluster.mergedClusters[DeviceClusterName.ON_OFF];
+	const isDeviceOn = !onOffCluster || onOffCluster.isOn;
+	const hasOnOff = !!onOffCluster;
 
 	// Calculate luminance and determine text color
 	const luminance = getLuminance(r, g, b);
@@ -1272,6 +1276,23 @@ const ColorControlCard = (
 	const iconBgColor = isLightBackground ? 'rgba(0, 0, 0, 0.08)' : 'rgba(0, 0, 0, 0.3)';
 	const iconColor = isLightBackground ? 'rgba(0, 0, 0, 0.6)' : 'white';
 	const textShadow = isLightBackground ? 'none' : '0 0 4px rgba(0,0,0,0.5)';
+
+	const handleToggleOnOff = async (e: React.MouseEvent) => {
+		e.stopPropagation(); // Prevent card click from opening detail view
+		if (!onOffCluster) {
+			return;
+		}
+		await apiPost(
+			'device',
+			'/cluster/OnOff',
+			{},
+			{
+				deviceIds: [props.device.uniqueId],
+				isOn: !onOffCluster.isOn,
+			}
+		);
+		props.invalidate();
+	};
 
 	return (
 		<DeviceClusterCardSkeleton
@@ -1318,6 +1339,23 @@ const ColorControlCard = (
 				>
 					{props.device.name}
 				</Typography>
+				{hasOnOff && (
+					<IconButton
+						onClick={handleToggleOnOff}
+						size="small"
+						sx={{
+							color: iconColor,
+							opacity: isDeviceOn ? 1 : 0.5,
+							'&:hover': {
+								backgroundColor: isLightBackground
+									? 'rgba(0, 0, 0, 0.12)'
+									: 'rgba(255, 255, 255, 0.1)',
+							},
+						}}
+					>
+						<PowerIcon fontSize="small" />
+					</IconButton>
+				)}
 			</Box>
 		</DeviceClusterCardSkeleton>
 	);
