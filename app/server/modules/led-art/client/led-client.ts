@@ -156,7 +156,7 @@ export class LEDClient implements Disposable {
 			this.state.set(data);
 		} catch (error) {
 			warning('Failed to set LED state:', error);
-			throw error;
+			return;
 		}
 	}
 
