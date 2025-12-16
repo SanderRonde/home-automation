@@ -30,11 +30,15 @@
 		"knip": "knip-bun"
 	},
 	"devDependencies": {
+		"@babel/core": "^7.28.5",
+		"@babel/preset-react": "^7.28.5",
+		"@babel/preset-typescript": "^7.28.5",
 		"@emotion/react": "^11.14.0",
 		"@emotion/styled": "^11.14.1",
 		"@eslint/compat": "^1.4.0",
 		"@matter/types": "^0.15.6",
 		"@playwright/test": "^1.56.0",
+		"@types/babel__core": "^7.20.5",
 		"@types/bun": "1.2.20",
 		"@types/fs-extra": "^7.0.0",
 		"@types/node": "^20.19.11",
@@ -45,6 +49,7 @@
 		"@types/ws": "^8.18.1",
 		"@typescript-eslint/eslint-plugin": "^8.18.2",
 		"@typescript-eslint/parser": "^8.18.2",
+		"babel-plugin-react-compiler": "^1.0.0",
 		"eslint": "8",
 		"eslint-config-prettier": "^8.3.0",
 		"eslint-plugin-node": "^11.1.0",

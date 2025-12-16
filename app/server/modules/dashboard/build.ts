@@ -1,4 +1,5 @@
 import { logImmediate, logTag } from '../../lib/logging/logger';
+import { reactCompilerPlugin } from './react-compiler-plugin';
 import { CLIENT_FOLDER, ROOT } from '../../lib/constants';
 import * as fs from 'fs-extra';
 import * as path from 'path';
@@ -21,6 +22,7 @@ export async function buildDashboard(): Promise<void> {
 			minify: true,
 			splitting: true,
 			sourcemap: 'external',
+			plugins: [reactCompilerPlugin],
 			naming: {
 				entry: '[dir]/[name].[hash].[ext]',
 				chunk: '[dir]/[name].[hash].[ext]',
