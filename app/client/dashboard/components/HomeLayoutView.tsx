@@ -1,5 +1,8 @@
 import type { DeviceListWithValuesResponse } from '../../../server/modules/device/routing';
+import type { RoomThermostatStatus } from '../../../server/modules/temperature/types';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
+import { WbSunny, LocalFireDepartment } from '@mui/icons-material';
+import { RoomThermostatControl } from './RoomThermostatControl';
 import type { WallSegment, DoorSlot } from '../types/layout';
 import { Box, IconButton, Typography } from '@mui/material';
 import { useCreateData, useData } from '../lib/data-hooks';
@@ -14,7 +17,6 @@ import React, { useEffect, useState } from 'react';
 import { apiGet, apiPost } from '../../lib/fetch';
 import { Layer, Line, Stage } from 'react-konva';
 import type { IncludedIconNames } from './icon';
-import { WbSunny } from '@mui/icons-material';
 import type { HomeDetailView } from './Home';
 import { IconComponent } from './icon';
 
@@ -261,9 +263,15 @@ const ExpandedClusterIcons = (props: ExpandedClusterIconsProps): JSX.Element => 
 interface RoomExpandButtonProps {
 	roomData: {
 		room: { id: string; center: { x: number; y: number } };
+		mappedRoomName: string;
 		roomTemperature: number | null;
 		roomEnergy: number | null;
 		clusterInfo: Array<{ clusterName: DeviceClusterName; icon: IncludedIconNames | null }>;
+		// Thermostat data
+		thermostatTemperature: number | null;
+		isHeating: boolean;
+		targetTemperature: number | null;
+		hasThermostat: boolean;
 	};
 	stageTransform: { x: number; y: number; scale: number };
 	expandedRoomIdData: Data<string | null>;
@@ -271,6 +279,7 @@ interface RoomExpandButtonProps {
 	isDraggingRef: React.MutableRefObject<boolean>;
 	temperatureExpanded: boolean;
 	energyExpanded: boolean;
+	onThermostatClick?: (roomName: string) => void;
 }
 
 const RoomExpandButton = React.memo((props: RoomExpandButtonProps): JSX.Element | null => {
@@ -298,17 +307,70 @@ const RoomExpandButton = React.memo((props: RoomExpandButtonProps): JSX.Element 
 		props.collapsingRoomIdData,
 	]);
 
-	if (props.roomData.clusterInfo.length === 0) {
+	if (props.roomData.clusterInfo.length === 0 && !props.roomData.hasThermostat) {
 		return null;
 	}
 
-	let expandedContent = null;
-	if (props.temperatureExpanded && props.roomData.roomTemperature !== null) {
-		expandedContent = `${Math.round(props.roomData.roomTemperature * 10) / 10}°`;
+	// Determine what to show in the bubble
+	let expandedContent: React.ReactNode = null;
+	let showHeatingIndicator = false;
+	let bubbleWidth = 48;
+
+	if (props.temperatureExpanded) {
+		// Show dual temperature display if we have both sensor and thermostat temps
+		const sensorTemp = props.roomData.roomTemperature;
+		const thermostatTemp = props.roomData.thermostatTemperature;
+		const targetTemp = props.roomData.targetTemperature;
+		showHeatingIndicator = props.roomData.isHeating;
+
+		if (sensorTemp !== null && thermostatTemp !== null) {
+			// Show both temperatures: sensor → target
+			bubbleWidth = 72;
+			expandedContent = (
+				<Box
+					sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}
+				>
+					<Typography sx={{ fontSize: '13px', fontWeight: 600, lineHeight: 1.1 }}>
+						{Math.round(sensorTemp * 10) / 10}°
+					</Typography>
+					{targetTemp !== null && (
+						<Typography
+							sx={{ fontSize: '10px', color: 'rgba(0,0,0,0.5)', lineHeight: 1 }}
+						>
+							→{Math.round(targetTemp * 10) / 10}°
+						</Typography>
+					)}
+				</Box>
+			);
+		} else if (thermostatTemp !== null) {
+			// Only thermostat temp available
+			expandedContent = (
+				<Box
+					sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}
+				>
+					<Typography sx={{ fontSize: '13px', fontWeight: 600, lineHeight: 1.1 }}>
+						{Math.round(thermostatTemp * 10) / 10}°
+					</Typography>
+					{targetTemp !== null && (
+						<Typography
+							sx={{ fontSize: '10px', color: 'rgba(0,0,0,0.5)', lineHeight: 1 }}
+						>
+							→{Math.round(targetTemp * 10) / 10}°
+						</Typography>
+					)}
+				</Box>
+			);
+		} else if (sensorTemp !== null) {
+			// Only sensor temp available
+			expandedContent = `${Math.round(sensorTemp * 10) / 10}°`;
+		}
 	}
+
 	if (props.energyExpanded && props.roomData.roomEnergy !== null) {
 		expandedContent = `${Math.round(props.roomData.roomEnergy * 10) / 10}W`;
+		bubbleWidth = 48;
 	}
+
 	return (
 		<Box
 			key={`${props.roomData.room.id}-ellipsis`}
@@ -317,13 +379,13 @@ const RoomExpandButton = React.memo((props: RoomExpandButtonProps): JSX.Element 
 				left:
 					props.roomData.room.center.x * props.stageTransform.scale +
 					props.stageTransform.x -
-					24,
+					bubbleWidth / 2,
 				top:
 					(props.roomData.room.center.y + 30 / props.stageTransform.scale) *
 						props.stageTransform.scale +
 					props.stageTransform.y -
 					24,
-				width: 48,
+				width: bubbleWidth,
 				height: 48,
 				display: 'flex',
 				alignItems: 'center',
@@ -336,17 +398,33 @@ const RoomExpandButton = React.memo((props: RoomExpandButtonProps): JSX.Element 
 		>
 			{expandedContent && !isExpanded ? (
 				<Box
+					onClick={(e) => {
+						e.stopPropagation();
+						// Open thermostat dialog if room has thermostat, otherwise just expand clusters
+						if (props.roomData.hasThermostat && props.onThermostatClick) {
+							props.onThermostatClick(props.roomData.mappedRoomName);
+						} else {
+							handleToggle();
+						}
+					}}
 					sx={{
-						width: 48,
+						width: bubbleWidth,
 						height: 48,
-						backgroundColor: 'rgba(255, 255, 255, 0.95)',
-						borderRadius: '50%',
+						backgroundColor: showHeatingIndicator
+							? 'rgba(255, 152, 0, 0.95)'
+							: 'rgba(255, 255, 255, 0.95)',
+						borderRadius: bubbleWidth === 48 ? '50%' : '24px',
 						display: 'flex',
 						alignItems: 'center',
 						justifyContent: 'center',
-						boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+						boxShadow: showHeatingIndicator
+							? '0 2px 12px rgba(255, 152, 0, 0.4)'
+							: '0 2px 8px rgba(0, 0, 0, 0.15)',
 						transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-						animation: 'fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+						cursor: 'pointer',
+						animation: showHeatingIndicator
+							? 'heatingPulse 2s ease-in-out infinite'
+							: 'fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
 						'@keyframes fadeInScale': {
 							from: {
 								opacity: 0,
@@ -357,36 +435,66 @@ const RoomExpandButton = React.memo((props: RoomExpandButtonProps): JSX.Element 
 								transform: 'scale(1)',
 							},
 						},
+						'@keyframes heatingPulse': {
+							'0%, 100%': {
+								boxShadow: '0 2px 12px rgba(255, 152, 0, 0.4)',
+							},
+							'50%': {
+								boxShadow: '0 2px 20px rgba(255, 152, 0, 0.6)',
+							},
+						},
 						'&:hover': {
-							backgroundColor: '#ffffff',
+							backgroundColor: showHeatingIndicator
+								? 'rgba(255, 167, 38, 1)'
+								: '#ffffff',
 							transform: 'scale(1.1)',
 						},
+						gap: 0.5,
+						px: bubbleWidth > 48 ? 1 : 0,
 					}}
 				>
-					<Typography
-						sx={{
-							fontSize: '14px',
-							fontWeight: 600,
-							color: 'rgba(0, 0, 0, 0.87)',
-						}}
-					>
-						{expandedContent}
-					</Typography>
+					{showHeatingIndicator && (
+						<LocalFireDepartment
+							sx={{
+								fontSize: '14px',
+								color: showHeatingIndicator ? '#fff' : 'rgba(255, 152, 0, 0.8)',
+							}}
+						/>
+					)}
+					{typeof expandedContent === 'string' ? (
+						<Typography
+							sx={{
+								fontSize: '14px',
+								fontWeight: 600,
+								color: showHeatingIndicator ? '#fff' : 'rgba(0, 0, 0, 0.87)',
+							}}
+						>
+							{expandedContent}
+						</Typography>
+					) : (
+						<Box sx={{ color: showHeatingIndicator ? '#fff' : 'rgba(0, 0, 0, 0.87)' }}>
+							{expandedContent}
+						</Box>
+					)}
 				</Box>
 			) : (
 				<IconButton
 					sx={{
 						width: 48,
 						height: 48,
-						backgroundColor: 'rgba(255, 255, 255, 0.9)',
-						color: 'rgba(0, 0, 0, 0.6)',
+						backgroundColor: props.roomData.isHeating
+							? 'rgba(255, 152, 0, 0.9)'
+							: 'rgba(255, 255, 255, 0.9)',
+						color: props.roomData.isHeating ? '#fff' : 'rgba(0, 0, 0, 0.6)',
 						fontSize: '20px',
 						fontWeight: 'bold',
 						opacity: 1,
 						transform: 'scale(1)',
 						transition: 'opacity 200ms ease-out, transform 200ms ease-out',
 						'&:hover': {
-							backgroundColor: '#ffffff',
+							backgroundColor: props.roomData.isHeating
+								? 'rgba(255, 167, 38, 1)'
+								: '#ffffff',
 							transform: 'scale(1.1)',
 						},
 					}}
@@ -405,7 +513,7 @@ const RoomExpandButton = React.memo((props: RoomExpandButtonProps): JSX.Element 
 						handleToggle();
 					}}
 				>
-					...
+					{props.roomData.isHeating ? <LocalFireDepartment /> : '...'}
 				</IconButton>
 			)}
 		</Box>
@@ -466,6 +574,12 @@ interface RoomOverlayProps {
 		clusterInfo: Array<{ clusterName: DeviceClusterName; icon: IncludedIconNames | null }>;
 		roomTemperature: number | null;
 		roomEnergy: number | null;
+		// Thermostat data
+		thermostatTemperature: number | null;
+		isHeating: boolean;
+		targetTemperature: number | null;
+		hasThermostat: boolean;
+		thermostatStatus: RoomThermostatStatus | null;
 	};
 	stageTransform: { x: number; y: number; scale: number };
 	expandedRoomIdData: Data<string | null>;
@@ -482,6 +596,7 @@ interface RoomOverlayProps {
 		clusterName: DeviceClusterName,
 		roomDevices: DeviceListWithValuesResponse
 	) => Promise<void>;
+	onThermostatClick?: (roomName: string) => void;
 }
 
 const RoomOverlay = React.memo((props: RoomOverlayProps): JSX.Element => {
@@ -543,6 +658,7 @@ const RoomOverlay = React.memo((props: RoomOverlayProps): JSX.Element => {
 					isDraggingRef={props.isDraggingRef}
 					temperatureExpanded={props.temperatureExpanded}
 					energyExpanded={props.energyExpanded}
+					onThermostatClick={props.onThermostatClick}
 				/>
 			)}
 
@@ -690,6 +806,7 @@ interface RoomProps {
 		room: { id: string; polygon: { x: number; y: number }[] };
 		roomInfo: RoomInfo | undefined;
 		mappedRoomName: string;
+		isHeating: boolean;
 	};
 	hoveringRoomIdData: Data<string | null>;
 	handleRoomClick: (roomName: string) => void;
@@ -715,16 +832,25 @@ const Room = React.memo((props: RoomProps): JSX.Element => {
 		}
 	}, []);
 
+	// Determine fill and stroke colors based on heating status
+	const baseColor = props.roomData.roomInfo?.color || '#ccc';
+	const heatingColor = '#FF9800'; // Orange for heating
+
+	const fillColor = props.roomData.isHeating
+		? `${heatingColor}${isHovering ? '40' : '25'}`
+		: props.roomData.roomInfo?.color
+			? `${props.roomData.roomInfo.color}${isHovering ? 'C0' : '80'}`
+			: '#00000030';
+
+	const strokeColor = props.roomData.isHeating ? heatingColor : baseColor;
+	const strokeWidth = props.roomData.isHeating ? 3 : 2;
+
 	return (
 		<Line
 			points={props.roomData.room.polygon.map((p) => [p.x, p.y]).flat()}
-			fill={
-				props.roomData.roomInfo?.color
-					? `${props.roomData.roomInfo.color}${isHovering ? 'C0' : '80'}`
-					: '#00000030'
-			}
-			stroke={props.roomData.roomInfo?.color || '#ccc'}
-			strokeWidth={2}
+			fill={fillColor}
+			stroke={strokeColor}
+			strokeWidth={strokeWidth}
 			closed
 			onMouseOver={cursorPointer}
 			onMouseOut={cursorDefault}
@@ -744,6 +870,11 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	const [doors, setDoors] = useState<DoorSlot[]>([]);
 	const [roomMappings, setRoomMappings] = useState<Record<string, string>>({});
 	const [availableRooms, setAvailableRooms] = useState<Record<string, RoomInfo>>({});
+	const [roomThermostatStatus, setRoomThermostatStatus] = useState<
+		Record<string, RoomThermostatStatus>
+	>({});
+	const [thermostatDialogOpen, setThermostatDialogOpen] = useState(false);
+	const [selectedRoomForThermostat, setSelectedRoomForThermostat] = useState<string | null>(null);
 	const stageRef = React.useRef<StageType | null>(null);
 	const containerRef = React.useRef<HTMLDivElement | null>(null);
 	const isDraggingRef = React.useRef<boolean>(false);
@@ -799,11 +930,39 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 		}
 	}, []);
 
+	const loadRoomThermostats = React.useCallback(async () => {
+		try {
+			const response = await apiGet('temperature', '/room-thermostats', {});
+			if (response.ok) {
+				const data = await response.json();
+				if (data.success && data.rooms) {
+					const statusByRoom: Record<string, RoomThermostatStatus> = {};
+					for (const room of data.rooms) {
+						statusByRoom[room.roomName] = room;
+					}
+					setRoomThermostatStatus(statusByRoom);
+				}
+			}
+		} catch (error) {
+			console.error('Failed to load room thermostats:', error);
+		}
+	}, []);
+
 	// Load layout and rooms on mount
 	useEffect(() => {
 		void loadLayout();
 		void loadRooms();
-	}, [loadRooms, loadLayout]);
+		void loadRoomThermostats();
+	}, [loadRooms, loadLayout, loadRoomThermostats]);
+
+	// Refresh thermostat status periodically
+	useEffect(() => {
+		const interval = setInterval(() => {
+			void loadRoomThermostats();
+		}, 30000); // Refresh every 30 seconds
+
+		return () => clearInterval(interval);
+	}, [loadRoomThermostats]);
 
 	// Fetch outside temperature periodically
 	useEffect(() => {
@@ -1114,6 +1273,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				const mappedRoomName = roomMappings[room.id];
 				const roomInfo = availableRooms[mappedRoomName];
 				const roomDevices = props.devices.filter((d) => d.room === mappedRoomName);
+				const thermostatStatus = roomThermostatStatus[mappedRoomName] ?? null;
 
 				// Find which clusters are represented in this room
 				const allClusters = new Set<DeviceClusterName>();
@@ -1168,6 +1328,14 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 					}
 				}
 
+				// Use thermostat-reported temperature if available
+				const thermostatTemperature =
+					thermostatStatus?.averageThermostatTemperature ?? null;
+				const isHeating = thermostatStatus?.isHeating ?? false;
+				const targetTemperature = thermostatStatus?.targetTemperature ?? null;
+				const hasThermostat =
+					thermostatStatus !== null && thermostatStatus.thermostats.length > 0;
+
 				return {
 					room,
 					mappedRoomName,
@@ -1177,9 +1345,15 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 					clusterInfo,
 					roomTemperature,
 					roomEnergy,
+					// Thermostat data
+					thermostatTemperature,
+					isHeating,
+					targetTemperature,
+					hasThermostat,
+					thermostatStatus,
 				};
 			});
-	}, [detectedRooms, roomMappings, availableRooms, props.devices]);
+	}, [detectedRooms, roomMappings, availableRooms, props.devices, roomThermostatStatus]);
 
 	const handleRoomClick = (roomName: string) => {
 		// Close expanded clusters
@@ -1191,6 +1365,11 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				roomName: roomName,
 			});
 		}
+	};
+
+	const handleThermostatClick = (roomName: string) => {
+		setSelectedRoomForThermostat(roomName);
+		setThermostatDialogOpen(true);
 	};
 
 	const handleClusterClick = (clusterName: DeviceClusterName, roomName: string) => {
@@ -1368,6 +1547,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 							clusterY={clusterY}
 							handleClusterClick={handleClusterClick}
 							handleClusterAction={handleClusterAction}
+							onThermostatClick={handleThermostatClick}
 						/>
 					);
 				})}
@@ -1377,6 +1557,24 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 					stageTransformData={stageTransformData}
 				/>
 			</Box>
+
+			{/* Room Thermostat Control Dialog */}
+			<RoomThermostatControl
+				open={thermostatDialogOpen}
+				onClose={() => {
+					setThermostatDialogOpen(false);
+					setSelectedRoomForThermostat(null);
+				}}
+				roomName={selectedRoomForThermostat ?? ''}
+				thermostatStatus={
+					selectedRoomForThermostat
+						? roomThermostatStatus[selectedRoomForThermostat]
+						: null
+				}
+				onUpdate={() => {
+					void loadRoomThermostats();
+				}}
+			/>
 		</Box>
 	);
 };
