@@ -137,6 +137,29 @@ export class DeviceAPI {
 		return false;
 	}
 
+	public updateDevicePosition(
+		deviceId: string,
+		position: { x: number; y: number } | null
+	): boolean {
+		const knownDevices = this.getStoredDevices();
+
+		if (knownDevices[deviceId]) {
+			if (position === null) {
+				delete knownDevices[deviceId].position;
+			} else {
+				knownDevices[deviceId].position = position;
+			}
+
+			this._db.update((old) => ({
+				...old,
+				device_registry: knownDevices,
+			}));
+			return true;
+		}
+
+		return false;
+	}
+
 	public getRooms(): Record<string, RoomInfo> {
 		const knownDevices = this.getStoredDevices();
 		const rooms: Record<string, RoomInfo> = {};

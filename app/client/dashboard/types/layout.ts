@@ -34,4 +34,5 @@ export enum DrawMode {
 	DRAW_WALLS = 'draw_walls',
 	PLACE_DOORS = 'place_doors',
 	MAP_ROOMS = 'map_rooms',
+	PLACE_DEVICES = 'place_devices',
 }

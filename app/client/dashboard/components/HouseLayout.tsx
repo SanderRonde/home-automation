@@ -11,6 +11,7 @@ import {
 	Close as CloseIcon,
 	FileDownload as FileDownloadIcon,
 	FileUpload as FileUploadIcon,
+	DevicesOther as DevicesIcon,
 } from '@mui/icons-material';
 import {
 	Box,
@@ -31,7 +32,9 @@ import {
 	Snackbar,
 } from '@mui/material';
 import type { Point, WallSegment, DoorSlot, HouseLayout as HouseLayoutType } from '../types/layout';
+import type { DeviceListWithValuesResponse } from '../../../server/modules/device/routing';
 import { Circle, Image as KonvaImage, Layer, Line, Stage, Text } from 'react-konva';
+import type { DeviceGroup } from '../../../../types/group';
 // @ts-expect-error - konva ESM/CommonJS type resolution issue
 import type { Stage as StageType } from 'konva/lib/Stage';
 import type { RoomInfo } from './RoomAssignmentDialog';
@@ -76,6 +79,17 @@ export const HouseLayout = (): JSX.Element => {
 	// Import/Export state
 	const [importError, setImportError] = useState<string | null>(null);
 
+	// Device/Group placement state
+	const [devices, setDevices] = useState<DeviceListWithValuesResponse>([]);
+	const [groups, setGroups] = useState<DeviceGroup[]>([]);
+	const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
+	const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+	const [placementSnackbar, setPlacementSnackbar] = useState<{
+		open: boolean;
+		message: string;
+		severity: 'success' | 'error' | 'info';
+	}>({ open: false, message: '', severity: 'success' });
+
 	const loadLayout = async () => {
 		try {
 			const response = await apiGet('device', '/layout', {});
@@ -104,11 +118,37 @@ export const HouseLayout = (): JSX.Element => {
 		}
 	}, []);
 
-	// Load layout and rooms on mount
+	const loadDevices = React.useCallback(async () => {
+		try {
+			const response = await apiGet('device', '/listWithValues', {});
+			if (response.ok) {
+				const data = await response.json();
+				setDevices(data.devices || []);
+			}
+		} catch (error) {
+			console.error('Failed to load devices:', error);
+		}
+	}, []);
+
+	const loadGroups = React.useCallback(async () => {
+		try {
+			const response = await apiGet('device', '/groups/list', {});
+			if (response.ok) {
+				const data = await response.json();
+				setGroups(data.groups || []);
+			}
+		} catch (error) {
+			console.error('Failed to load groups:', error);
+		}
+	}, []);
+
+	// Load layout, rooms, devices, and groups on mount
 	useEffect(() => {
 		void loadLayout();
 		void loadRooms();
-	}, [loadRooms]);
+		void loadDevices();
+		void loadGroups();
+	}, [loadRooms, loadDevices, loadGroups]);
 
 	const saveLayout = async () => {
 		try {
@@ -243,6 +283,85 @@ export const HouseLayout = (): JSX.Element => {
 		};
 	}, []);
 
+	// Handle device placement on canvas click
+	const handlePlaceDevice = React.useCallback(
+		async (position: Point) => {
+			if (!selectedDeviceId) {
+				return;
+			}
+
+			try {
+				await apiPost(
+					'device',
+					'/updatePosition',
+					{},
+					{
+						deviceId: selectedDeviceId,
+						position,
+					}
+				);
+
+				// Update local state
+				setDevices((prev) =>
+					prev.map((d) => (d.uniqueId === selectedDeviceId ? { ...d, position } : d))
+				);
+
+				setPlacementSnackbar({
+					open: true,
+					message: 'Device placed successfully!',
+					severity: 'success',
+				});
+			} catch (error) {
+				console.error('Failed to place device:', error);
+				setPlacementSnackbar({
+					open: true,
+					message: 'Failed to place device',
+					severity: 'error',
+				});
+			}
+		},
+		[selectedDeviceId]
+	);
+
+	// Handle group placement on canvas click
+	const handlePlaceGroup = React.useCallback(
+		async (position: Point) => {
+			if (!selectedGroupId) {
+				return;
+			}
+
+			try {
+				await apiPost(
+					'device',
+					'/groups/:groupId/updatePosition',
+					{ groupId: selectedGroupId },
+					{
+						position,
+					}
+				);
+
+				// Update local state
+				setGroups((prev) =>
+					prev.map((g) => (g.id === selectedGroupId ? { ...g, position } : g))
+				);
+
+				setPlacementSnackbar({
+					open: true,
+					message: 'Group placed successfully!',
+					severity: 'success',
+				});
+			} catch (error) {
+				console.error('Failed to place group:', error);
+				setPlacementSnackbar({
+					open: true,
+					message: 'Failed to place group',
+					severity: 'error',
+				});
+			}
+		},
+		[selectedGroupId]
+	);
+
 	const handleMouseDown = React.useCallback(
 		(e: KonvaEventObject<MouseEvent>) => {
 			if (mode === DrawMode.DRAW_WALLS) {
@@ -309,6 +428,24 @@ export const HouseLayout = (): JSX.Element => {
 				} else {
 					setDoorDrawStartPoint(snapped);
 				}
+			} else if (mode === DrawMode.PLACE_DEVICES) {
+				if (e.evt.button !== 0) {
+					return;
+				}
+
+				const pointer = stageRef.current?.getPointerPosition();
+				if (!pointer) {
+					return;
+				}
+
+				const floorPoint = toScaledPoint(pointer);
+
+				// Place selected device or group
+				if (selectedDeviceId) {
+					void handlePlaceDevice(floorPoint);
+				} else if (selectedGroupId) {
+					void handlePlaceGroup(floorPoint);
+				}
 			}
 		},
 		[
@@ -319,6 +456,10 @@ export const HouseLayout = (): JSX.Element => {
 			walls,
 			doorDrawStartPoint,
 			doors,
+			selectedDeviceId,
+			selectedGroupId,
+			handlePlaceDevice,
+			handlePlaceGroup,
 		]
 	);
 
@@ -587,6 +728,92 @@ export const HouseLayout = (): JSX.Element => {
 		}
 	}, [selectedRoomName, selectedPolygonId, detectedRooms, roomMappings, loadRooms]);
 
+	// Handle device position removal
+	const handleRemoveDevicePosition = React.useCallback(async () => {
+		if (!selectedDeviceId) {
+			return;
+		}
+
+		try {
+			await apiPost(
+				'device',
+				'/updatePosition',
+				{},
+				{
+					deviceId: selectedDeviceId,
+					position: null,
+				}
+			);
+
+			// Update local state
+			setDevices((prev) =>
+				prev.map((d) =>
+					d.uniqueId === selectedDeviceId ? { ...d, position: undefined } : d
+				)
+			);
+
+			setPlacementSnackbar({
+				open: true,
+				message: 'Device position removed',
+				severity: 'info',
+			});
+			setSelectedDeviceId(null);
+		} catch (error) {
+			console.error('Failed to remove device position:', error);
+			setPlacementSnackbar({
+				open: true,
+				message: 'Failed to remove device position',
+				severity: 'error',
+			});
+		}
+	}, [selectedDeviceId]);
+
+	// Handle group position removal
+	const handleRemoveGroupPosition = React.useCallback(async () => {
+		if (!selectedGroupId) {
+			return;
+		}
+
+		try {
+			await apiPost(
+				'device',
+				'/groups/:groupId/updatePosition',
+				{ groupId: selectedGroupId },
+				{
+					position: null,
+				}
+			);
+
+			// Update local state
+			setGroups((prev) =>
+				prev.map((g) => (g.id === selectedGroupId ? { ...g, position: undefined } : g))
+			);
+
+			setPlacementSnackbar({
+				open: true,
+				message: 'Group position removed',
+				severity: 'info',
+			});
+			setSelectedGroupId(null);
+		} catch (error) {
+			console.error('Failed to remove group position:', error);
+			setPlacementSnackbar({
+				open: true,
+				message: 'Failed to remove group position',
+				severity: 'error',
+			});
+		}
+	}, [selectedGroupId]);
+
+	// Get devices and groups with positions for display
+	const devicesWithPositions = React.useMemo(() => {
+		return devices.filter((d) => d.position !== undefined);
+	}, [devices]);
+
+	const groupsWithPositions = React.useMemo(() => {
+		return groups.filter((g) => g.position !== undefined);
+	}, [groups]);
+
 	return (
 		<Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
 			{/* Toolbar */}
@@ -620,6 +847,11 @@ export const HouseLayout = (): JSX.Element => {
 						<ToggleButton value="map_rooms">
 							<Tooltip title="Map Rooms">
 								<RoomIcon />
+							</Tooltip>
+						</ToggleButton>
+						<ToggleButton value="place_devices">
+							<Tooltip title="Place Devices/Groups">
+								<DevicesIcon />
 							</Tooltip>
 						</ToggleButton>
 					</ToggleButtonGroup>
@@ -720,6 +952,139 @@ export const HouseLayout = (): JSX.Element => {
 					</Button>
 				</Box>
 
+				{/* Device/Group placement controls */}
+				{mode === DrawMode.PLACE_DEVICES && (
+					<Box
+						sx={{
+							display: 'flex',
+							gap: 2,
+							mt: 1,
+							alignItems: 'center',
+							flexWrap: 'wrap',
+						}}
+					>
+						<Autocomplete
+							options={devices.map((d) => ({
+								label: d.name,
+								value: d.uniqueId,
+								hasPosition: !!d.position,
+							}))}
+							getOptionLabel={(option) => option.label}
+							value={
+								selectedDeviceId
+									? {
+											label:
+												devices.find((d) => d.uniqueId === selectedDeviceId)
+													?.name || '',
+											value: selectedDeviceId,
+											hasPosition: !!devices.find(
+												(d) => d.uniqueId === selectedDeviceId
+											)?.position,
+										}
+									: null
+							}
+							onChange={(_e, value) => {
+								setSelectedDeviceId(value?.value || null);
+								setSelectedGroupId(null);
+							}}
+							renderOption={(props, option) => (
+								<li {...props}>
+									{option.label}
+									{option.hasPosition && (
+										<Typography
+											variant="caption"
+											sx={{ ml: 1, color: 'text.secondary' }}
+										>
+											(placed)
+										</Typography>
+									)}
+								</li>
+							)}
+							renderInput={(params) => (
+								<TextField
+									{...params}
+									label="Select Device"
+									variant="outlined"
+									size="small"
+									sx={{ minWidth: 200 }}
+								/>
+							)}
+						/>
+						<Typography variant="body2" sx={{ color: 'text.secondary' }}>
+							or
+						</Typography>
+						<Autocomplete
+							options={groups.map((g) => ({
+								label: g.name,
+								value: g.id,
+								hasPosition: !!g.position,
+							}))}
+							getOptionLabel={(option) => option.label}
+							value={
+								selectedGroupId
+									? {
+											label:
+												groups.find((g) => g.id === selectedGroupId)
+													?.name || '',
+											value: selectedGroupId,
+											hasPosition: !!groups.find(
+												(g) => g.id === selectedGroupId
+											)?.position,
+										}
+									: null
+							}
+							onChange={(_e, value) => {
+								setSelectedGroupId(value?.value || null);
+								setSelectedDeviceId(null);
+							}}
+							renderOption={(props, option) => (
+								<li {...props}>
+									{option.label}
+									{option.hasPosition && (
+										<Typography
+											variant="caption"
+											sx={{ ml: 1, color: 'text.secondary' }}
+										>
+											(placed)
+										</Typography>
+									)}
+								</li>
+							)}
+							renderInput={(params) => (
+								<TextField
+									{...params}
+									label="Select Group"
+									variant="outlined"
+									size="small"
+									sx={{ minWidth: 200 }}
+								/>
+							)}
+						/>
+						{selectedDeviceId &&
+							devices.find((d) => d.uniqueId === selectedDeviceId)?.position && (
+								<Button
+									onClick={handleRemoveDevicePosition}
+									color="error"
+									size="small"
+									startIcon={<CloseIcon />}
+								>
+									Remove Position
+								</Button>
+							)}
+						{selectedGroupId &&
+							groups.find((g) => g.id === selectedGroupId)?.position && (
+								<Button
+									onClick={handleRemoveGroupPosition}
+									color="error"
+									size="small"
+									startIcon={<CloseIcon />}
+								>
+									Remove Position
+								</Button>
+							)}
+					</Box>
+				)}
+
 				<Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
 					{mode === DrawMode.VIEW && 'Click on a room to view details'}
 					{mode === DrawMode.DRAW_WALLS &&
@@ -727,6 +1092,10 @@ export const HouseLayout = (): JSX.Element => {
 					{mode === DrawMode.PLACE_DOORS && 'Click on a wall to place a door'}
 					{mode === DrawMode.MAP_ROOMS &&
 						'Click on a detected room to map it to a system room'}
+					{mode === DrawMode.PLACE_DEVICES &&
+						(selectedDeviceId || selectedGroupId
+							? 'Click on the floor plan to place the selected device/group'
+							: 'Select a device or group to place on the floor plan')}
 				</Typography>
 			</Paper>
 
@@ -907,6 +1276,73 @@ export const HouseLayout = (): JSX.Element => {
 									</React.Fragment>
 								);
 							})}
+
+						{/* Device positions */}
+						{(mode === DrawMode.VIEW || mode === DrawMode.PLACE_DEVICES) &&
+							devicesWithPositions.map((device) => (
+								<React.Fragment key={`device-pos-${device.uniqueId}`}>
+									<Circle
+										x={device.position!.x}
+										y={device.position!.y}
+										radius={8}
+										fill={
+											selectedDeviceId === device.uniqueId
+												? '#4caf50'
+												: '#2196f3'
+										}
+										stroke="#fff"
+										strokeWidth={2}
+										shadowColor="black"
+										shadowBlur={4}
+										shadowOpacity={0.3}
+									/>
+									{mode === DrawMode.PLACE_DEVICES && (
+										<Text
+											x={device.position!.x}
+											y={device.position!.y + 12}
+											text={device.name}
+											fontSize={10}
+											fill="#333"
+											align="center"
+											offsetX={device.name.length * 2.5}
+										/>
+									)}
+								</React.Fragment>
+							))}
+
+						{/* Group positions */}
+						{(mode === DrawMode.VIEW || mode === DrawMode.PLACE_DEVICES) &&
+							groupsWithPositions.map((group) => (
+								<React.Fragment key={`group-pos-${group.id}`}>
+									<Circle
+										x={group.position!.x}
+										y={group.position!.y}
+										radius={10}
+										fill={
+											selectedGroupId === group.id
+												? '#4caf50'
+												: group.color || '#ff9800'
+										}
+										stroke="#fff"
+										strokeWidth={3}
+										shadowColor="black"
+										shadowBlur={4}
+										shadowOpacity={0.3}
+									/>
+									{mode === DrawMode.PLACE_DEVICES && (
+										<Text
+											x={group.position!.x}
+											y={group.position!.y + 14}
+											text={group.name}
+											fontSize={11}
+											fill="#333"
+											fontStyle="bold"
+											align="center"
+											offsetX={group.name.length * 2.8}
+										/>
+									)}
+								</React.Fragment>
+							))}
 					</Layer>
 				</Stage>
 			</Box>
@@ -956,6 +1392,22 @@ export const HouseLayout = (): JSX.Element => {
 			>
 				<Alert onClose={() => setImportError(null)} severity="error" sx={{ width: '100%' }}>
 					{importError}
+				</Alert>
+			</Snackbar>
+
+			{/* Placement Snackbar */}
+			<Snackbar
+				open={placementSnackbar.open}
+				autoHideDuration={3000}
+				onClose={() => setPlacementSnackbar((prev) => ({ ...prev, open: false }))}
+				anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+			>
+				<Alert
+					onClose={() => setPlacementSnackbar((prev) => ({ ...prev, open: false }))}
+					severity={placementSnackbar.severity}
+					sx={{ width: '100%' }}
+				>
+					{placementSnackbar.message}
 				</Alert>
 			</Snackbar>
 		</Box>

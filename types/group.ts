@@ -9,4 +9,5 @@ export interface DeviceGroup {
 	icon?: IncludedIconNames;
 	showOnHome?: boolean;
 	color?: string;
+	position?: { x: number; y: number };
 }

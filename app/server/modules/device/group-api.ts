@@ -113,4 +113,28 @@ export class GroupAPI {
 
 		return true;
 	}
+
+	public updateGroupPosition(id: GroupId, position: { x: number; y: number } | null): boolean {
+		const groups = this._db.current().groups ?? {};
+		if (!groups[id]) {
+			return false;
+		}
+
+		const updatedGroup = { ...groups[id] };
+		if (position === null) {
+			delete updatedGroup.position;
+		} else {
+			updatedGroup.position = position;
+		}
+
+		this._db.update((old) => ({
+			...old,
+			groups: {
+				...(old.groups ?? {}),
+				[id]: updatedGroup,
+			},
+		}));
+
+		return true;
+	}
 }

@@ -47,6 +47,7 @@ export interface DeviceInfo {
 	lastSeen: number; // timestamp
 	name?: string;
 	room?: string;
+	position?: { x: number; y: number };
 }
 
 export interface RoomInfo {
@@ -227,6 +228,7 @@ interface DashboardDeviceResponse extends DashboardDeviceEndpointResponse {
 	roomColor?: string;
 	roomIcon?: IncludedIconNames;
 	managementUrl?: string;
+	position?: { x: number; y: number };
 }
 
 function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api: DeviceAPI) {
@@ -393,6 +395,26 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 					const { deviceId, room, icon } = body;
 
 					if (api.updateDeviceRoom(deviceId, room, icon as IncludedIconNames)) {
+						return json({ success: true });
+					}
+
+					return json({ error: 'Device not found' }, { status: 404 });
+				}
+			),
+			'/updatePosition': withRequestBody(
+				z.object({
+					deviceId: z.string(),
+					position: z
+						.object({
+							x: z.number(),
+							y: z.number(),
+						})
+						.nullable(),
+				}),
+				(body, _req, _server, { json }) => {
+					const { deviceId, position } = body;
+
+					if (api.updateDevicePosition(deviceId, position)) {
 						return json({ success: true });
 					}
 
@@ -1060,6 +1082,26 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 				}
 				return json({ success: true });
 			},
+			'/groups/:groupId/updatePosition': withRequestBody(
+				z.object({
+					position: z
+						.object({
+							x: z.number(),
+							y: z.number(),
+						})
+						.nullable(),
+				}),
+				(body, req, _server, { json }) => {
+					const success = api.groupAPI.updateGroupPosition(
+						req.params.groupId,
+						body.position
+					);
+					if (!success) {
+						return json({ error: 'Group not found' }, { status: 404 });
+					}
+					return json({ success: true });
+				}
+			),
 			'/palettes/list': (_req, _server, { json }) => {
 				const palettes = api.paletteAPI.listPalettes();
 				return json({ palettes });
@@ -1592,6 +1634,7 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 				...endpointResponse,
 				name: storedDevice?.name ?? endpointResponse.name,
 				managementUrl: await device.getManagementUrl(),
+				position: storedDevice?.position,
 			};
 			responseDevices.push(responseDevice);
 		})

@@ -1,7 +1,11 @@
-import type { DeviceListWithValuesResponse } from '../../../server/modules/device/routing';
+import type {
+	DeviceListWithValuesResponse,
+	DashboardDeviceClusterColorControl,
+} from '../../../server/modules/device/routing';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import type { WallSegment, DoorSlot } from '../types/layout';
 import { Box, IconButton, Typography } from '@mui/material';
+import type { DeviceGroup } from '../../../../types/group';
 import { useCreateData, useData } from '../lib/data-hooks';
 // @ts-expect-error - konva ESM/CommonJS type resolution issue
 import type { Stage as StageType } from 'konva/lib/Stage';
@@ -16,6 +20,8 @@ import { Layer, Line, Stage } from 'react-konva';
 import type { IncludedIconNames } from './icon';
 import { WbSunny } from '@mui/icons-material';
 import type { HomeDetailView } from './Home';
+import { DeviceIcon } from './DeviceIcon';
+import { GroupIcon } from './GroupIcon';
 import { IconComponent } from './icon';
 
 interface HomeLayoutViewProps {
@@ -271,6 +277,7 @@ interface RoomExpandButtonProps {
 	isDraggingRef: React.MutableRefObject<boolean>;
 	temperatureExpanded: boolean;
 	energyExpanded: boolean;
+	hideClusterButtons: boolean;
 }
 
 const RoomExpandButton = React.memo((props: RoomExpandButtonProps): JSX.Element | null => {
@@ -305,6 +312,11 @@ const RoomExpandButton = React.memo((props: RoomExpandButtonProps): JSX.Element 
 	let expandedContent = null;
 	if (props.temperatureExpanded && props.roomData.roomTemperature !== null) {
 		expandedContent = `${Math.round(props.roomData.roomTemperature * 10) / 10}°`;
+	}
+
+	// Hide cluster buttons when device icons are shown (but not when temperature/energy mode is active)
+	if (props.hideClusterButtons && !expandedContent) {
+		return null;
 	}
 	if (props.energyExpanded && props.roomData.roomEnergy !== null) {
 		expandedContent = `${Math.round(props.roomData.roomEnergy * 10) / 10}W`;
@@ -473,6 +485,7 @@ interface RoomOverlayProps {
 	isDraggingRef: React.MutableRefObject<boolean>;
 	temperatureExpanded: boolean;
 	energyExpanded: boolean;
+	hideClusterButtons: boolean;
 	clusterIconSize: number;
 	clusterIconSpacing: number;
 	clusterStartX: number;
@@ -543,6 +556,7 @@ const RoomOverlay = React.memo((props: RoomOverlayProps): JSX.Element => {
 					isDraggingRef={props.isDraggingRef}
 					temperatureExpanded={props.temperatureExpanded}
 					energyExpanded={props.energyExpanded}
+					hideClusterButtons={props.hideClusterButtons}
 				/>
 			)}
 
@@ -744,6 +758,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	const [doors, setDoors] = useState<DoorSlot[]>([]);
 	const [roomMappings, setRoomMappings] = useState<Record<string, string>>({});
 	const [availableRooms, setAvailableRooms] = useState<Record<string, RoomInfo>>({});
+	const [groups, setGroups] = useState<DeviceGroup[]>([]);
 	const stageRef = React.useRef<StageType | null>(null);
 	const containerRef = React.useRef<HTMLDivElement | null>(null);
 	const isDraggingRef = React.useRef<boolean>(false);
@@ -799,11 +814,24 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 		}
 	}, []);
 
-	// Load layout and rooms on mount
+	const loadGroups = React.useCallback(async () => {
+		try {
+			const response = await apiGet('device', '/groups/list', {});
+			if (response.ok) {
+				const data = await response.json();
+				setGroups(data.groups || []);
+			}
+		} catch (error) {
+			console.error('Failed to load groups:', error);
+		}
+	}, []);
+
+	// Load layout, rooms, and groups on mount
 	useEffect(() => {
 		void loadLayout();
 		void loadRooms();
-	}, [loadRooms, loadLayout]);
+		void loadGroups();
+	}, [loadRooms, loadLayout, loadGroups]);
 
 	// Fetch outside temperature periodically
 	useEffect(() => {
@@ -1260,6 +1288,167 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 		}
 	};
 
+	// Get devices that have positions set
+	const devicesWithPositions = React.useMemo(() => {
+		return props.devices.filter((device) => device.position !== undefined);
+	}, [props.devices]);
+
+	// Handle device tap (toggle on/off)
+	const invalidate = props.invalidate;
+	const handleDeviceTap = React.useCallback(
+		async (device: DeviceListWithValuesResponse[number]) => {
+			// Find OnOff cluster (either directly or via ColorControl)
+			const onOffCluster = device.mergedAllClusters.find(
+				(c) => c.name === DeviceClusterName.ON_OFF
+			);
+			const colorControlCluster = device.mergedAllClusters.find(
+				(c) =>
+					c.name === DeviceClusterName.COLOR_CONTROL &&
+					(c as DashboardDeviceClusterColorControl).mergedClusters?.[
+						DeviceClusterName.ON_OFF
+					]
+			);
+
+			if (onOffCluster || colorControlCluster) {
+				const isCurrentlyOn = onOffCluster
+					? onOffCluster.isOn
+					: (colorControlCluster as DashboardDeviceClusterColorControl)?.mergedClusters[
+							DeviceClusterName.ON_OFF
+						]?.isOn;
+
+				await apiPost(
+					'device',
+					'/cluster/OnOff',
+					{},
+					{
+						deviceIds: [device.uniqueId],
+						isOn: !isCurrentlyOn,
+					}
+				);
+				invalidate();
+			}
+
+			// Handle window covering toggle
+			const windowCoveringCluster = device.mergedAllClusters.find(
+				(c) => c.name === DeviceClusterName.WINDOW_COVERING
+			);
+			if (windowCoveringCluster && !onOffCluster && !colorControlCluster) {
+				const isOpen = windowCoveringCluster.targetPositionLiftPercentage < 5;
+				await apiPost(
+					'device',
+					'/cluster/WindowCovering',
+					{},
+					{
+						deviceIds: [device.uniqueId],
+						targetPositionLiftPercentage: isOpen ? 100 : 0,
+					}
+				);
+				invalidate();
+			}
+		},
+		[invalidate]
+	);
+
+	// Handle device hold (navigate to detail)
+	const pushDetailView = props.pushDetailView;
+	const handleDeviceHold = React.useCallback(
+		(device: DeviceListWithValuesResponse[number]) => {
+			// Find primary cluster for detail view
+			const primaryCluster =
+				device.mergedAllClusters.find((c) => c.name === DeviceClusterName.COLOR_CONTROL) ||
+				device.mergedAllClusters.find((c) => c.name === DeviceClusterName.ON_OFF) ||
+				device.mergedAllClusters.find(
+					(c) => c.name === DeviceClusterName.WINDOW_COVERING
+				) ||
+				device.mergedAllClusters[0];
+
+			if (primaryCluster) {
+				pushDetailView({
+					type: 'device',
+					deviceId: device.uniqueId,
+					clusterName: primaryCluster.name,
+				});
+			}
+		},
+		[pushDetailView]
+	);
+
+	// Handle group tap (toggle all devices in group)
+	const handleGroupTap = React.useCallback(
+		async (group: DeviceGroup) => {
+			const groupDevices = props.devices.filter((d) => group.deviceIds.includes(d.uniqueId));
+
+			// Check if any device in group is on
+			let anyOn = false;
+			for (const device of groupDevices) {
+				const onOffCluster = device.mergedAllClusters.find(
+					(c) => c.name === DeviceClusterName.ON_OFF
+				);
+				const colorControlCluster = device.mergedAllClusters.find(
+					(c) =>
+						c.name === DeviceClusterName.COLOR_CONTROL &&
+						(c as DashboardDeviceClusterColorControl).mergedClusters?.[
+							DeviceClusterName.ON_OFF
+						]
+				);
+
+				if (
+					onOffCluster?.isOn ||
+					(colorControlCluster as DashboardDeviceClusterColorControl)?.mergedClusters[
+						DeviceClusterName.ON_OFF
+					]?.isOn
+				) {
+					anyOn = true;
+					break;
+				}
+			}
+
+			// Toggle all controllable devices in group
+			const controllableDeviceIds = groupDevices
+				.filter((d) =>
+					d.mergedAllClusters.some(
+						(c) =>
+							c.name === DeviceClusterName.ON_OFF ||
+							(c.name === DeviceClusterName.COLOR_CONTROL &&
+								(c as DashboardDeviceClusterColorControl).mergedClusters?.[
+									DeviceClusterName.ON_OFF
+								])
+					)
+				)
+				.map((d) => d.uniqueId);
+
+			if (controllableDeviceIds.length > 0) {
+				await apiPost(
+					'device',
+					'/cluster/OnOff',
+					{},
+					{
+						deviceIds: controllableDeviceIds,
+						isOn: !anyOn,
+					}
+				);
+				invalidate();
+			}
+		},
+		[props.devices, invalidate]
+	);
+
+	// Handle group hold (navigate to group detail)
+	const handleGroupHold = React.useCallback(
+		(group: DeviceGroup) => {
+			pushDetailView({
+				type: 'group',
+				groupId: group.id,
+			});
+		},
+		[pushDetailView]
+	);
+
+	// Get groups that have positions set
+	const groupsWithPositions = React.useMemo(() => {
+		return groups.filter((group) => group.position !== undefined);
+	}, [groups]);
+
 	return (
 		<Box
 			ref={containerRef}
@@ -1352,6 +1541,12 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 					const clusterStartX = roomData.room.center.x - totalClusterWidth / 2;
 					const clusterY = roomData.room.center.y + 30 / stageTransform.scale;
 
+					// Hide cluster buttons when device icons are shown (but not in temperature/energy mode)
+					const hideClusterButtons =
+						devicesWithPositions.length > 0 &&
+						!props.temperatureExpanded &&
+						!props.energyExpanded;
+
 					return (
 						<RoomOverlay
 							key={`overlay-${roomData.room.id}`}
@@ -1362,6 +1557,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 							isDraggingRef={isDraggingRef}
 							temperatureExpanded={props.temperatureExpanded}
 							energyExpanded={props.energyExpanded}
+							hideClusterButtons={hideClusterButtons}
 							clusterIconSize={clusterIconSize}
 							clusterIconSpacing={clusterIconSpacing}
 							clusterStartX={clusterStartX}
@@ -1371,6 +1567,38 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 						/>
 					);
 				})}
+
+				{/* Individual device icons - hidden when temperature or energy mode is active */}
+				{!props.temperatureExpanded && !props.energyExpanded
+					? devicesWithPositions.map((device) => (
+							<DeviceIcon
+								key={`device-icon-${device.uniqueId}`}
+								device={device}
+								position={device.position!}
+								stageTransform={stageTransform}
+								onTap={() => void handleDeviceTap(device)}
+								onHold={() => handleDeviceHold(device)}
+								isDragging={isDraggingRef.current}
+							/>
+						))
+					: null}
+
+				{/* Group icons - hidden when temperature or energy mode is active */}
+				{!props.temperatureExpanded && !props.energyExpanded
+					? groupsWithPositions.map((group) => (
+							<GroupIcon
+								key={`group-icon-${group.id}`}
+								group={group}
+								devices={props.devices}
+								position={group.position!}
+								stageTransform={stageTransform}
+								onTap={() => void handleGroupTap(group)}
+								onHold={() => handleGroupHold(group)}
+								isDragging={isDraggingRef.current}
+							/>
+						))
+					: null}
+
 				<OutsideTemperatureBubble
 					outsideTempData={outsideTempData}
 					wallsData={wallsData}
