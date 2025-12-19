@@ -811,12 +811,14 @@ interface RoomProps {
 		mappedRoomName: string;
 	};
 	hoveringRoomIdData: Data<string | null>;
+	isPinchingData: Data<boolean>;
 	handleRoomClick: (roomName: string) => void;
 	handleRoomLongPress: (roomName: string) => void;
 }
 
 const Room = React.memo((props: RoomProps): JSX.Element => {
-	const { roomData, hoveringRoomIdData, handleRoomClick, handleRoomLongPress } = props;
+	const { roomData, hoveringRoomIdData, isPinchingData, handleRoomClick, handleRoomLongPress } =
+		props;
 
 	const isHovering = useData(
 		hoveringRoomIdData,
@@ -825,6 +827,17 @@ const Room = React.memo((props: RoomProps): JSX.Element => {
 
 	const holdTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 	const didHoldRef = React.useRef(false);
+
+	// Cancel long press when pinching starts
+	useEffect(() => {
+		return isPinchingData.subscribe((isPinching) => {
+			if (isPinching && holdTimerRef.current) {
+				clearTimeout(holdTimerRef.current);
+				holdTimerRef.current = null;
+				didHoldRef.current = false;
+			}
+		});
+	}, [isPinchingData]);
 
 	const cursorPointer = React.useCallback((e: KonvaEventObject<MouseEvent>) => {
 		const stage = e.target.getStage();
@@ -905,6 +918,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	const outsideTempData = useCreateData<number | null>(null);
 	const hoveringRoomIdData = useCreateData<string | null>(null);
 	const focusedRoomNameData = useCreateData<string | null>(null);
+	const isPinchingData = useCreateData<boolean>(false);
 
 	// Zoom level threshold for showing device icons (devices visible when zoomed in beyond this)
 	const DEVICE_VISIBILITY_ZOOM_THRESHOLD = 1.5;
@@ -1205,43 +1219,48 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 		[updateStageTransform]
 	);
 
-	const handleTouchEnd = React.useCallback((e: KonvaEventObject<TouchEvent>) => {
-		const stage = stageRef.current;
-		if (e.evt.touches.length === 0) {
-			// All touches ended - reset all gesture states
-			lastDist.current = 0;
-			lastCenter.current = null;
-			isPinching.current = false;
-			isPanning.current = false;
-			touchStartPos.current = null;
-			lastTouchPos.current = null;
-			if (stage) {
-				stage.draggable(true);
+	const handleTouchEnd = React.useCallback(
+		(e: KonvaEventObject<TouchEvent>) => {
+			const stage = stageRef.current;
+			if (e.evt.touches.length === 0) {
+				// All touches ended - reset all gesture states
+				lastDist.current = 0;
+				lastCenter.current = null;
+				isPinching.current = false;
+				isPinchingData.set(false);
+				isPanning.current = false;
+				touchStartPos.current = null;
+				lastTouchPos.current = null;
+				if (stage) {
+					stage.draggable(true);
+				}
+				// Reset dragging state after a short delay to allow tap events to check it
+				setTimeout(() => (isDraggingRef.current = false), 50);
+			} else if (e.evt.touches.length === 1 && isPinching.current) {
+				// One finger lifted during pinch - reset pinch state and prepare for potential pan
+				lastDist.current = 0;
+				lastCenter.current = null;
+				isPinching.current = false;
+				isPinchingData.set(false);
+				// Record new touch start position for potential pan
+				const touch = e.evt.touches[0];
+				touchStartPos.current = { x: touch.clientX, y: touch.clientY };
+				lastTouchPos.current = null;
+				if (stage) {
+					stage.draggable(false);
+				}
+			} else if (e.evt.touches.length === 1 && touchStartPos.current) {
+				// Single touch ended - reset pan state
+				isPanning.current = false;
+				lastTouchPos.current = null;
+				touchStartPos.current = null;
+				if (stage) {
+					stage.draggable(true);
+				}
 			}
-			// Reset dragging state after a short delay to allow tap events to check it
-			setTimeout(() => (isDraggingRef.current = false), 50);
-		} else if (e.evt.touches.length === 1 && isPinching.current) {
-			// One finger lifted during pinch - reset pinch state and prepare for potential pan
-			lastDist.current = 0;
-			lastCenter.current = null;
-			isPinching.current = false;
-			// Record new touch start position for potential pan
-			const touch = e.evt.touches[0];
-			touchStartPos.current = { x: touch.clientX, y: touch.clientY };
-			lastTouchPos.current = null;
-			if (stage) {
-				stage.draggable(false);
-			}
-		} else if (e.evt.touches.length === 1 && touchStartPos.current) {
-			// Single touch ended - reset pan state
-			isPanning.current = false;
-			lastTouchPos.current = null;
-			touchStartPos.current = null;
-			if (stage) {
-				stage.draggable(true);
-			}
-		}
-	}, []);
+		},
+		[isPinchingData]
+	);
 
 	const handleTouchStart = React.useCallback(
 		(e: KonvaEventObject<TouchEvent>) => {
@@ -1250,6 +1269,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				// Two finger touch - prepare for pinch zoom
 				e.evt.preventDefault();
 				isPinching.current = true;
+				isPinchingData.set(true); // Notify Room components to cancel long press
 				if (stage) {
 					stage.draggable(false);
 				}
@@ -1275,7 +1295,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				e.evt.preventDefault();
 			}
 		},
-		[handleStageMouseDown]
+		[handleStageMouseDown, isPinchingData]
 	);
 
 	// Group devices by room and calculate cluster representations
@@ -1353,6 +1373,31 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 			});
 	}, [detectedRooms, roomMappings, availableRooms, props.devices]);
 
+	// Zoom out to show all rooms (overview)
+	const zoomOutToOverview = React.useCallback(() => {
+		if (!stageRef.current || walls.length === 0) {
+			return;
+		}
+
+		const bbox = calculateBoundingBox(walls);
+		const paddingHorizontal = 40;
+		const paddingTop = 40;
+		const paddingBottom = 40;
+		const scaleX = (width - paddingHorizontal * 2) / bbox.width;
+		const scaleY = (height - (paddingTop + paddingBottom)) / bbox.height;
+		const maxScale = window.innerWidth >= 900 ? 2 : 1;
+		const scale = Math.min(scaleX, scaleY, maxScale);
+
+		const posX = (width - bbox.width * scale) / 2 - bbox.minX * scale;
+		const posY =
+			(height - (paddingTop + paddingBottom) - bbox.height * scale) / 2 - bbox.minY * scale;
+
+		stageRef.current.scale({ x: scale, y: scale });
+		stageRef.current.position({ x: posX, y: posY });
+		stageTransformData.set({ x: posX, y: posY, scale });
+		focusedRoomNameData.set(null);
+	}, [walls, width, height, stageTransformData, focusedRoomNameData]);
+
 	// Zoom to a specific room
 	const zoomToRoom = React.useCallback(
 		(roomName: string) => {
@@ -1390,6 +1435,11 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 			const targetX = width / 2 - roomCenterX * targetScale;
 			const targetY = height / 2 - roomCenterY * targetScale;
 
+			// Push history state so back button can zoom out
+			if (!focusedRoomNameData.current()) {
+				window.history.pushState({ roomZoomed: true }, '');
+			}
+
 			// Animate zoom (simple version - direct set)
 			stageRef.current.scale({ x: targetScale, y: targetScale });
 			stageRef.current.position({ x: targetX, y: targetY });
@@ -1400,6 +1450,20 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 		},
 		[roomsWithClusters, width, height, stageTransformData, focusedRoomNameData]
 	);
+
+	// Handle hardware back button (Android) - zoom out instead of navigating
+	useEffect(() => {
+		const handlePopState = (e: PopStateEvent) => {
+			// If we're zoomed into a room, zoom out instead of navigating back
+			if (focusedRoomNameData.current()) {
+				e.preventDefault();
+				zoomOutToOverview();
+			}
+		};
+
+		window.addEventListener('popstate', handlePopState);
+		return () => window.removeEventListener('popstate', handlePopState);
+	}, [focusedRoomNameData, zoomOutToOverview]);
 
 	const handleRoomClick = React.useCallback(
 		(roomName: string) => {
@@ -1713,6 +1777,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 								key={roomData.room.id}
 								roomData={roomData}
 								hoveringRoomIdData={hoveringRoomIdData}
+								isPinchingData={isPinchingData}
 								handleRoomClick={handleRoomClick}
 								handleRoomLongPress={handleRoomLongPress}
 							/>
