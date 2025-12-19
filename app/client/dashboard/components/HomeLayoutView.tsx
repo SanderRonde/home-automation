@@ -812,13 +812,20 @@ interface RoomProps {
 	};
 	hoveringRoomIdData: Data<string | null>;
 	isPinchingData: Data<boolean>;
+	isDraggingData: Data<boolean>;
 	handleRoomClick: (roomName: string) => void;
 	handleRoomLongPress: (roomName: string) => void;
 }
 
 const Room = React.memo((props: RoomProps): JSX.Element => {
-	const { roomData, hoveringRoomIdData, isPinchingData, handleRoomClick, handleRoomLongPress } =
-		props;
+	const {
+		roomData,
+		hoveringRoomIdData,
+		isPinchingData,
+		isDraggingData,
+		handleRoomClick,
+		handleRoomLongPress,
+	} = props;
 
 	const isHovering = useData(
 		hoveringRoomIdData,
@@ -828,16 +835,27 @@ const Room = React.memo((props: RoomProps): JSX.Element => {
 	const holdTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 	const didHoldRef = React.useRef(false);
 
-	// Cancel long press when pinching starts
+	// Cancel long press when pinching or dragging starts
 	useEffect(() => {
-		return isPinchingData.subscribe((isPinching) => {
+		const unsubPinch = isPinchingData.subscribe((isPinching) => {
 			if (isPinching && holdTimerRef.current) {
 				clearTimeout(holdTimerRef.current);
 				holdTimerRef.current = null;
 				didHoldRef.current = false;
 			}
 		});
-	}, [isPinchingData]);
+		const unsubDrag = isDraggingData.subscribe((isDragging) => {
+			if (isDragging && holdTimerRef.current) {
+				clearTimeout(holdTimerRef.current);
+				holdTimerRef.current = null;
+				didHoldRef.current = false;
+			}
+		});
+		return () => {
+			unsubPinch();
+			unsubDrag();
+		};
+	}, [isPinchingData, isDraggingData]);
 
 	const cursorPointer = React.useCallback((e: KonvaEventObject<MouseEvent>) => {
 		const stage = e.target.getStage();
@@ -919,6 +937,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	const hoveringRoomIdData = useCreateData<string | null>(null);
 	const focusedRoomNameData = useCreateData<string | null>(null);
 	const isPinchingData = useCreateData<boolean>(false);
+	const isDraggingData = useCreateData<boolean>(false);
 
 	// Zoom level threshold for showing device icons (devices visible when zoomed in beyond this)
 	const DEVICE_VISIBILITY_ZOOM_THRESHOLD = 1.5;
