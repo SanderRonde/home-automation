@@ -699,6 +699,111 @@ const _OutsideTemperatureBubble = React.memo(
 	}
 );
 
+interface DeviceIconsOverlayProps {
+	devices: DeviceListWithValuesResponse;
+	stageTransform: { x: number; y: number; scale: number };
+	focusedRoomNameData: Data<string | null>;
+	zoomThreshold: number;
+	temperatureExpanded: boolean;
+	energyExpanded: boolean;
+	isDraggingRef: React.MutableRefObject<boolean>;
+	handleDeviceTap: (device: DeviceListWithValuesResponse[number]) => Promise<void>;
+	handleDeviceHold: (device: DeviceListWithValuesResponse[number]) => void;
+}
+
+const DeviceIconsOverlay = React.memo((props: DeviceIconsOverlayProps): JSX.Element | null => {
+	const focusedRoomName = useData(props.focusedRoomNameData);
+
+	// Hide when temperature or energy mode is active
+	if (props.temperatureExpanded || props.energyExpanded) {
+		return null;
+	}
+
+	// Check if we should show devices (zoomed in enough or have a focused room)
+	const showDevices =
+		props.stageTransform.scale >= props.zoomThreshold || focusedRoomName !== null;
+
+	if (!showDevices) {
+		return null;
+	}
+
+	// Filter devices based on focused room if set
+	const visibleDevices = focusedRoomName
+		? props.devices.filter((d) => d.room === focusedRoomName)
+		: props.devices;
+
+	return (
+		<>
+			{visibleDevices.map((device) => (
+				<DeviceIcon
+					key={`device-icon-${device.uniqueId}`}
+					device={device}
+					position={device.position!}
+					stageTransform={props.stageTransform}
+					onTap={() => void props.handleDeviceTap(device)}
+					onHold={() => props.handleDeviceHold(device)}
+					isDragging={props.isDraggingRef.current}
+				/>
+			))}
+		</>
+	);
+});
+
+interface GroupIconsOverlayProps {
+	groups: DeviceGroup[];
+	devices: DeviceListWithValuesResponse;
+	stageTransform: { x: number; y: number; scale: number };
+	focusedRoomNameData: Data<string | null>;
+	zoomThreshold: number;
+	temperatureExpanded: boolean;
+	energyExpanded: boolean;
+	isDraggingRef: React.MutableRefObject<boolean>;
+	handleGroupTap: (group: DeviceGroup) => Promise<void>;
+	handleGroupHold: (group: DeviceGroup) => void;
+}
+
+const GroupIconsOverlay = React.memo((props: GroupIconsOverlayProps): JSX.Element | null => {
+	const focusedRoomName = useData(props.focusedRoomNameData);
+
+	// Hide when temperature or energy mode is active
+	if (props.temperatureExpanded || props.energyExpanded) {
+		return null;
+	}
+
+	// Check if we should show groups (zoomed in enough or have a focused room)
+	const showGroups =
+		props.stageTransform.scale >= props.zoomThreshold || focusedRoomName !== null;
+
+	if (!showGroups) {
+		return null;
+	}
+
+	// Filter groups based on focused room if set (group is visible if any of its devices are in the room)
+	const visibleGroups = focusedRoomName
+		? props.groups.filter((g) => {
+				const groupDevices = props.devices.filter((d) => g.deviceIds.includes(d.uniqueId));
+				return groupDevices.some((d) => d.room === focusedRoomName);
+			})
+		: props.groups;
+
+	return (
+		<>
+			{visibleGroups.map((group) => (
+				<GroupIcon
+					key={`group-icon-${group.id}`}
+					group={group}
+					devices={props.devices}
+					position={group.position!}
+					stageTransform={props.stageTransform}
+					onTap={() => void props.handleGroupTap(group)}
+					onHold={() => props.handleGroupHold(group)}
+					isDragging={props.isDraggingRef.current}
+				/>
+			))}
+		</>
+	);
+});
+
 interface RoomProps {
 	roomData: {
 		room: { id: string; polygon: { x: number; y: number }[] };
@@ -707,13 +812,19 @@ interface RoomProps {
 	};
 	hoveringRoomIdData: Data<string | null>;
 	handleRoomClick: (roomName: string) => void;
+	handleRoomLongPress: (roomName: string) => void;
 }
 
 const Room = React.memo((props: RoomProps): JSX.Element => {
+	const { roomData, hoveringRoomIdData, handleRoomClick, handleRoomLongPress } = props;
+
 	const isHovering = useData(
-		props.hoveringRoomIdData,
-		(hoveringRoomId) => hoveringRoomId === props.roomData.room.id
+		hoveringRoomIdData,
+		(hoveringRoomId) => hoveringRoomId === roomData.room.id
 	);
+
+	const holdTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+	const didHoldRef = React.useRef(false);
 
 	const cursorPointer = React.useCallback((e: KonvaEventObject<MouseEvent>) => {
 		const stage = e.target.getStage();
@@ -729,25 +840,49 @@ const Room = React.memo((props: RoomProps): JSX.Element => {
 		}
 	}, []);
 
+	const handleInteractionStart = React.useCallback(() => {
+		hoveringRoomIdData.set(roomData.room.id);
+		didHoldRef.current = false;
+
+		// Start long press timer
+		holdTimerRef.current = setTimeout(() => {
+			didHoldRef.current = true;
+			handleRoomLongPress(roomData.mappedRoomName);
+		}, 500);
+	}, [hoveringRoomIdData, roomData.room.id, roomData.mappedRoomName, handleRoomLongPress]);
+
+	const handleInteractionEnd = React.useCallback(() => {
+		hoveringRoomIdData.set(null);
+
+		// Clear long press timer
+		if (holdTimerRef.current) {
+			clearTimeout(holdTimerRef.current);
+			holdTimerRef.current = null;
+		}
+
+		// If didn't hold, treat as single press (zoom to room)
+		if (!didHoldRef.current) {
+			handleRoomClick(roomData.mappedRoomName);
+		}
+	}, [hoveringRoomIdData, handleRoomClick, roomData.mappedRoomName]);
+
 	return (
 		<Line
-			points={props.roomData.room.polygon.map((p) => [p.x, p.y]).flat()}
+			points={roomData.room.polygon.map((p) => [p.x, p.y]).flat()}
 			fill={
-				props.roomData.roomInfo?.color
-					? `${props.roomData.roomInfo.color}${isHovering ? 'C0' : '80'}`
+				roomData.roomInfo?.color
+					? `${roomData.roomInfo.color}${isHovering ? 'C0' : '80'}`
 					: '#00000030'
 			}
-			stroke={props.roomData.roomInfo?.color || '#ccc'}
+			stroke={roomData.roomInfo?.color || '#ccc'}
 			strokeWidth={2}
 			closed
 			onMouseOver={cursorPointer}
 			onMouseOut={cursorDefault}
-			onMouseDown={() => props.hoveringRoomIdData.set(props.roomData.room.id)}
-			onMouseUp={() => props.hoveringRoomIdData.set(null)}
-			onTouchStart={() => props.hoveringRoomIdData.set(props.roomData.room.id)}
-			onTouchEnd={() => props.hoveringRoomIdData.set(null)}
-			onClick={() => props.handleRoomClick(props.roomData.mappedRoomName)}
-			onTap={() => props.handleRoomClick(props.roomData.mappedRoomName)}
+			onMouseDown={handleInteractionStart}
+			onMouseUp={handleInteractionEnd}
+			onTouchStart={handleInteractionStart}
+			onTouchEnd={handleInteractionEnd}
 		/>
 	);
 });
@@ -769,6 +904,10 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	const collapsingRoomIdData = useCreateData<string | null>(null);
 	const outsideTempData = useCreateData<number | null>(null);
 	const hoveringRoomIdData = useCreateData<string | null>(null);
+	const focusedRoomNameData = useCreateData<string | null>(null);
+
+	// Zoom level threshold for showing device icons (devices visible when zoomed in beyond this)
+	const DEVICE_VISIBILITY_ZOOM_THRESHOLD = 1.5;
 
 	const stageTransformData = useCreateData<{ x: number; y: number; scale: number }>({
 		x: 0,
@@ -895,8 +1034,13 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 			const pos = stageRef.current.position();
 			const scale = stageRef.current.scaleX();
 			stageTransformData.set({ x: pos.x, y: pos.y, scale });
+
+			// Clear focused room when zoomed out below threshold
+			if (scale < DEVICE_VISIBILITY_ZOOM_THRESHOLD && focusedRoomNameData.current()) {
+				focusedRoomNameData.set(null);
+			}
 		}
-	}, [stageTransformData]);
+	}, [stageTransformData, focusedRoomNameData]);
 
 	const handleWheel = React.useCallback(
 		(e: KonvaEventObject<WheelEvent>) => {
@@ -1209,17 +1353,77 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 			});
 	}, [detectedRooms, roomMappings, availableRooms, props.devices]);
 
-	const handleRoomClick = (roomName: string) => {
-		// Close expanded clusters
-		expandedRoomIdData.set(null);
-		// Only navigate if we didn't drag
-		if (!isDraggingRef.current) {
-			props.pushDetailView({
+	// Zoom to a specific room
+	const zoomToRoom = React.useCallback(
+		(roomName: string) => {
+			const roomData = roomsWithClusters.find((r) => r.mappedRoomName === roomName);
+			if (!roomData || !stageRef.current) {
+				return;
+			}
+
+			// Calculate room bounding box from polygon
+			const polygon = roomData.room.polygon;
+			let minX = Infinity;
+			let minY = Infinity;
+			let maxX = -Infinity;
+			let maxY = -Infinity;
+
+			for (const point of polygon) {
+				minX = Math.min(minX, point.x);
+				minY = Math.min(minY, point.y);
+				maxX = Math.max(maxX, point.x);
+				maxY = Math.max(maxY, point.y);
+			}
+
+			const roomWidth = maxX - minX;
+			const roomHeight = maxY - minY;
+			const roomCenterX = (minX + maxX) / 2;
+			const roomCenterY = (minY + maxY) / 2;
+
+			// Calculate scale to fit room with padding
+			const padding = 60;
+			const scaleX = (width - padding * 2) / roomWidth;
+			const scaleY = (height - padding * 2) / roomHeight;
+			const targetScale = Math.min(scaleX, scaleY, 3); // Cap at 3x zoom
+
+			// Calculate position to center the room
+			const targetX = width / 2 - roomCenterX * targetScale;
+			const targetY = height / 2 - roomCenterY * targetScale;
+
+			// Animate zoom (simple version - direct set)
+			stageRef.current.scale({ x: targetScale, y: targetScale });
+			stageRef.current.position({ x: targetX, y: targetY });
+			stageTransformData.set({ x: targetX, y: targetY, scale: targetScale });
+
+			// Set focused room to show devices
+			focusedRoomNameData.set(roomName);
+		},
+		[roomsWithClusters, width, height, stageTransformData, focusedRoomNameData]
+	);
+
+	const handleRoomClick = React.useCallback(
+		(roomName: string) => {
+			// Close expanded clusters
+			expandedRoomIdData.set(null);
+			// Only zoom if we didn't drag
+			if (!isDraggingRef.current) {
+				zoomToRoom(roomName);
+			}
+		},
+		[expandedRoomIdData, zoomToRoom]
+	);
+
+	const pushDetailViewForRoom = props.pushDetailView;
+	const handleRoomLongPress = React.useCallback(
+		(roomName: string) => {
+			// Navigate to room detail view on long press
+			pushDetailViewForRoom({
 				type: 'room',
 				roomName: roomName,
 			});
-		}
-	};
+		},
+		[pushDetailViewForRoom]
+	);
 
 	const handleClusterClick = (clusterName: DeviceClusterName, roomName: string) => {
 		// Navigate to cluster detail view
@@ -1510,6 +1714,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 								roomData={roomData}
 								hoveringRoomIdData={hoveringRoomIdData}
 								handleRoomClick={handleRoomClick}
+								handleRoomLongPress={handleRoomLongPress}
 							/>
 						);
 					})}
@@ -1568,36 +1773,32 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 					);
 				})}
 
-				{/* Individual device icons - hidden when temperature or energy mode is active */}
-				{!props.temperatureExpanded && !props.energyExpanded
-					? devicesWithPositions.map((device) => (
-							<DeviceIcon
-								key={`device-icon-${device.uniqueId}`}
-								device={device}
-								position={device.position!}
-								stageTransform={stageTransform}
-								onTap={() => void handleDeviceTap(device)}
-								onHold={() => handleDeviceHold(device)}
-								isDragging={isDraggingRef.current}
-							/>
-						))
-					: null}
+				{/* Individual device icons - shown when zoomed into a room or above zoom threshold */}
+				<DeviceIconsOverlay
+					devices={devicesWithPositions}
+					stageTransform={stageTransform}
+					focusedRoomNameData={focusedRoomNameData}
+					zoomThreshold={DEVICE_VISIBILITY_ZOOM_THRESHOLD}
+					temperatureExpanded={props.temperatureExpanded}
+					energyExpanded={props.energyExpanded}
+					isDraggingRef={isDraggingRef}
+					handleDeviceTap={handleDeviceTap}
+					handleDeviceHold={handleDeviceHold}
+				/>
 
-				{/* Group icons - hidden when temperature or energy mode is active */}
-				{!props.temperatureExpanded && !props.energyExpanded
-					? groupsWithPositions.map((group) => (
-							<GroupIcon
-								key={`group-icon-${group.id}`}
-								group={group}
-								devices={props.devices}
-								position={group.position!}
-								stageTransform={stageTransform}
-								onTap={() => void handleGroupTap(group)}
-								onHold={() => handleGroupHold(group)}
-								isDragging={isDraggingRef.current}
-							/>
-						))
-					: null}
+				{/* Group icons - shown when zoomed into a room or above zoom threshold */}
+				<GroupIconsOverlay
+					groups={groupsWithPositions}
+					devices={props.devices}
+					stageTransform={stageTransform}
+					focusedRoomNameData={focusedRoomNameData}
+					zoomThreshold={DEVICE_VISIBILITY_ZOOM_THRESHOLD}
+					temperatureExpanded={props.temperatureExpanded}
+					energyExpanded={props.energyExpanded}
+					isDraggingRef={isDraggingRef}
+					handleGroupTap={handleGroupTap}
+					handleGroupHold={handleGroupHold}
+				/>
 
 				<OutsideTemperatureBubble
 					outsideTempData={outsideTempData}
