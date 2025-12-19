@@ -1217,6 +1217,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 						isPanning.current = true;
 						lastTouchPos.current = currentPos;
 						isDraggingRef.current = true;
+						isDraggingData.set(true); // Notify Room components to cancel long press
 					} else if (lastTouchPos.current) {
 						// Continue panning - calculate delta and update stage position
 						const deltaX = currentPos.x - lastTouchPos.current.x;
@@ -1235,7 +1236,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				e.evt.preventDefault();
 			}
 		},
-		[updateStageTransform]
+		[updateStageTransform, isDraggingData]
 	);
 
 	const handleTouchEnd = React.useCallback(
@@ -1254,7 +1255,10 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 					stage.draggable(true);
 				}
 				// Reset dragging state after a short delay to allow tap events to check it
-				setTimeout(() => (isDraggingRef.current = false), 50);
+				setTimeout(() => {
+					isDraggingRef.current = false;
+					isDraggingData.set(false);
+				}, 50);
 			} else if (e.evt.touches.length === 1 && isPinching.current) {
 				// One finger lifted during pinch - reset pinch state and prepare for potential pan
 				lastDist.current = 0;
@@ -1278,7 +1282,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				}
 			}
 		},
-		[isPinchingData]
+		[isPinchingData, isDraggingData]
 	);
 
 	const handleTouchStart = React.useCallback(
@@ -1797,6 +1801,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 								roomData={roomData}
 								hoveringRoomIdData={hoveringRoomIdData}
 								isPinchingData={isPinchingData}
+								isDraggingData={isDraggingData}
 								handleRoomClick={handleRoomClick}
 								handleRoomLongPress={handleRoomLongPress}
 							/>
