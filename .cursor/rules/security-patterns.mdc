@@ -1,0 +1,377 @@
+---
+description: Security and authentication best practices
+---
+
+# Security and Authentication Patterns
+
+This project implements authentication and security measures for protecting API endpoints and user data.
+
+## Authentication System
+
+### Session-Based Authentication
+
+The project uses session-based authentication with cookies:
+
+```typescript
+// Login endpoint
+POST: withRequestBody(
+	z.object({
+		username: z.string().min(1),
+		password: z.string().min(1),
+	}),
+	async (body, req, _server, { json, error }) => {
+		const user = await userManagement.verifyCredentials(
+			body.username,
+			body.password
+		);
+
+		if (!user) {
+			return error('Invalid username or password', 401);
+		}
+
+		// Create session
+		const sessionId = await userManagement.createSession(user.id);
+
+		// Set secure session cookie
+		req.cookies.set('session', sessionId, {
+			httpOnly: true, // Prevents JavaScript access
+			secure: false, // Set to true in production with HTTPS
+			sameSite: 'lax', // CSRF protection
+			path: '/',
+			maxAge: 12 * 30 * 24 * 60 * 60, // 12 months
+		});
+
+		return json({ success: true, username: user.username });
+	}
+);
+```
+
+### Password Hashing
+
+Always hash passwords - never store plain text:
+
+```typescript
+// Using Bun's built-in crypto
+public hashPassword(password: string): string {
+	const hasher = new Bun.CryptoHasher('sha256');
+	hasher.update(password);
+	return hasher.digest('hex');
+}
+
+// Verify password
+public async verifyCredentials(
+	username: string,
+	password: string
+): Promise<User | null> {
+	const passwordHash = this.hashPassword(password);
+	// Compare hashed password with stored hash
+	const users = await this._db<User[]>`
+		SELECT * FROM users
+		WHERE username = ${username} AND password_hash = ${passwordHash}
+	`;
+	return users[0] || null;
+}
+```
+
+### Session Management
+
+Sessions should expire and be cleaned up:
+
+```typescript
+// Create session with expiration
+public async createSession(userId: number): Promise<string> {
+	const sessionId = crypto.randomUUID(); // Use crypto.randomUUID() for secure IDs
+	const createdAt = Date.now();
+	const expiresAt = createdAt + 365.25 * 24 * 60 * 60 * 1000; // 1 year
+
+	await this._db`
+		INSERT INTO sessions (id, user_id, created_at, expires_at)
+		VALUES (${sessionId}, ${userId}, ${createdAt}, ${expiresAt})
+	`;
+
+	return sessionId;
+}
+
+// Verify session and check expiration
+public async verifySession(sessionId: string): Promise<User | null> {
+	// Clean up expired sessions first
+	await this.cleanupExpiredSessions();
+
+	const sessions = await this._db<(Session & User)[]>`
+		SELECT users.*
+		FROM sessions
+		JOIN users ON sessions.user_id = users.id
+		WHERE sessions.id = ${sessionId} AND sessions.expires_at > ${Date.now()}
+	`;
+
+	return sessions[0] || null;
+}
+
+// Cleanup expired sessions
+public async cleanupExpiredSessions(): Promise<void> {
+	await this._db`DELETE FROM sessions WHERE expires_at <= ${Date.now()}`;
+}
+```
+
+## Route Protection
+
+### Requiring Authentication
+
+Use the `createServeOptions` auth parameter:
+
+```typescript
+// All routes require authentication
+export const routes = createServeOptions(
+	{
+		'/api/protected': {
+			GET: async (req, server, response) => {
+				// User is authenticated if we reach here
+				return response.json({ data: 'protected' });
+			},
+		},
+	},
+	true // All routes require auth
+);
+
+// Selective authentication
+export const routes = createServeOptions(
+	{
+		'/api/public': {
+			GET: async (req, server, response) => {
+				return response.json({ data: 'public' });
+			},
+		},
+		'/api/protected': {
+			GET: async (req, server, response) => {
+				return response.json({ data: 'protected' });
+			},
+		},
+	},
+	{
+		'/api/public': false, // Public route
+		'/api/protected': true, // Protected route
+	}
+);
+```
+
+### Authentication Check
+
+The authentication middleware in [app/server/lib/auth.ts](mdc:app/server/lib/auth.ts) checks:
+
+1. Session cookie (new auth method)
+2. Legacy key-based cookie
+3. Query parameter auth (for backward compatibility)
+
+```typescript
+export async function checkAuth(req: {
+	cookies: CookieMap;
+	url: string;
+}): Promise<boolean> {
+	// Check session cookie first
+	const sessionId = req.cookies.get('session');
+	if (sessionId) {
+		const userManagement = await Auth.userManagement;
+		const user = await userManagement.verifySession(sessionId);
+		if (user) {
+			return true;
+		}
+	}
+
+	// Check legacy auth methods...
+	return false;
+}
+```
+
+## Security Best Practices
+
+### Input Validation
+
+Always validate and sanitize user input:
+
+```typescript
+// ✅ Good: Validate with Zod
+const UserInputSchema = z.object({
+	username: z.string().min(3).max(50).regex(/^[a-zA-Z0-9_]+$/),
+	email: z.string().email(),
+});
+
+// ❌ Bad: No validation
+const handler = async (req, server, response) => {
+	const body = await req.json(); // No validation!
+	// ...
+};
+```
+
+### SQL Injection Prevention
+
+Use parameterized queries (Bun SQL automatically handles this):
+
+```typescript
+// ✅ Good: Parameterized query
+const users = await db<User[]>`
+	SELECT * FROM users WHERE username = ${username}
+`;
+
+// ❌ Bad: String concatenation (vulnerable to SQL injection)
+const users = await db<User[]>`SELECT * FROM users WHERE username = '${username}'`;
+```
+
+### Cookie Security
+
+Configure cookies securely:
+
+```typescript
+req.cookies.set('session', sessionId, {
+	httpOnly: true, // Prevents XSS attacks
+	secure: true, // Only send over HTTPS (set in production)
+	sameSite: 'lax', // CSRF protection ('strict' for stricter)
+	path: '/',
+	maxAge: 12 * 30 * 24 * 60 * 60,
+});
+```
+
+### Secret Management
+
+Store secrets in environment variables, never in code:
+
+```typescript
+// ✅ Good: Read from environment
+const secret = getEnv({ SECRET_AUTH: '' }, true).SECRET_AUTH;
+
+// ❌ Bad: Hardcoded secret
+const secret = 'my-secret-key-12345';
+```
+
+### Logout
+
+Properly invalidate sessions on logout:
+
+```typescript
+'/logout': {
+	POST: async (req, _server, { json }) => {
+		const sessionId = req.cookies.get('session');
+		if (sessionId) {
+			await userManagement.deleteSession(sessionId);
+			req.cookies.delete('session');
+		}
+		return json({ success: true });
+	},
+},
+```
+
+### Error Messages
+
+Don't leak sensitive information in error messages:
+
+```typescript
+// ✅ Good: Generic error message
+if (!user) {
+	return error('Invalid username or password', 401);
+}
+
+// ❌ Bad: Reveals if user exists
+if (!user) {
+	return error(`User ${username} not found`, 404);
+}
+```
+
+### Rate Limiting
+
+Consider rate limiting for authentication endpoints:
+
+```typescript
+// Example: Track login attempts
+const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+
+const checkRateLimit = (ip: string): boolean => {
+	const attempts = loginAttempts.get(ip);
+	if (!attempts || attempts.resetAt < Date.now()) {
+		loginAttempts.set(ip, { count: 1, resetAt: Date.now() + 15 * 60 * 1000 });
+		return true;
+	}
+	if (attempts.count >= 5) {
+		return false; // Too many attempts
+	}
+	attempts.count++;
+	return true;
+};
+```
+
+## Authorization
+
+### User Permissions
+
+Check user permissions before allowing actions:
+
+```typescript
+const handler = async (req, server, response) => {
+	const sessionId = req.cookies.get('session');
+	if (!sessionId) {
+		return response.error('Not authenticated', 401);
+	}
+
+	const user = await userManagement.verifySession(sessionId);
+	if (!user) {
+		return response.error('Session invalid', 401);
+	}
+
+	// Check permissions
+	if (!user.isAdmin) {
+		return response.error('Forbidden', 403);
+	}
+
+	// Proceed with admin action
+	return response.json({ success: true });
+};
+```
+
+### Resource Ownership
+
+Verify users can only access their own resources:
+
+```typescript
+const handler = async (req, server, response) => {
+	const user = await getCurrentUser(req);
+	const resourceId = req.params.id;
+
+	const resource = await getResource(resourceId);
+	if (resource.userId !== user.id) {
+		return response.error('Forbidden', 403);
+	}
+
+	return response.json(resource);
+};
+```
+
+## Best Practices
+
+- ✅ Always hash passwords - never store plain text
+- ✅ Use secure session IDs (crypto.randomUUID())
+- ✅ Set appropriate cookie flags (httpOnly, secure, sameSite)
+- ✅ Validate all user input with Zod schemas
+- ✅ Use parameterized queries for database operations
+- ✅ Clean up expired sessions regularly
+- ✅ Provide generic error messages (don't leak information)
+- ✅ Implement rate limiting for authentication endpoints
+- ✅ Check permissions before allowing actions
+- ✅ Verify resource ownership when needed
+- ❌ Don't store secrets in code or version control
+- ❌ Don't expose sensitive information in error messages
+- ❌ Don't trust client-side validation alone
+- ❌ Don't use weak session IDs or predictable tokens
+- ❌ Don't skip authentication checks
+
+## Environment Variables
+
+Store sensitive configuration in environment variables:
+
+```typescript
+// .env file (not committed)
+SECRET_AUTH=your-secret-key-here
+SECRET_BOT=your-bot-secret-here
+
+// Access in code
+import { getEnv } from '../../lib/io';
+
+const secret = getEnv({ SECRET_AUTH: '' }, true).SECRET_AUTH;
+```

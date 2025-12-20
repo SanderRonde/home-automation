@@ -1,0 +1,384 @@
+---
+description: Async operations, promises, queues, and concurrency patterns
+---
+
+# Async Patterns and Concurrency
+
+This project uses async/await extensively. Understanding async patterns is crucial for writing correct, performant code.
+
+## Promise Handling
+
+### Always Handle Promises
+
+Never leave promises unhandled:
+
+```typescript
+// ✅ Good: Awaited
+await riskyOperation();
+
+// ✅ Good: Explicitly handled
+riskyOperation().catch((error) => {
+	warning('Operation failed:', error);
+});
+
+// ✅ Good: Void for fire-and-forget (use sparingly)
+void riskyOperation();
+
+// ❌ Bad: Floating promise (will cause warnings/errors)
+riskyOperation();
+```
+
+### Error Handling in Async Functions
+
+```typescript
+// ✅ Good: Try-catch in async function
+async function processData() {
+	try {
+		const result = await fetchData();
+		return result;
+	} catch (error) {
+		logTag('ERROR', 'red', 'Failed to process:', error);
+		throw error; // Re-throw if needed
+	}
+}
+
+// ✅ Good: Promise chain with catch
+function processData() {
+	return fetchData()
+		.then((result) => {
+			return transform(result);
+		})
+		.catch((error) => {
+			warning('Processing failed:', error);
+			throw error;
+		});
+}
+```
+
+## Async Queues
+
+### Using AsyncQueue
+
+For operations that must run sequentially:
+
+```typescript
+import { AsyncQueue } from '../../lib/async-queue';
+
+class DeviceController {
+	private queue = new AsyncQueue();
+
+	public async setState(deviceId: string, state: boolean): Promise<void> {
+		// Operations are queued and run sequentially
+		await this.queue.addItem(async () => {
+			await this.updateDevice(deviceId, state);
+			await this.notifySubscribers(deviceId);
+		});
+	}
+}
+```
+
+### When to Use Queues
+
+Use `AsyncQueue` when:
+- Operations must complete in order
+- Preventing race conditions
+- Rate limiting external API calls
+- Serializing device operations
+
+```typescript
+// Example: Sequential device updates
+private queue = new AsyncQueue();
+
+public async updateDevice(id: string, config: DeviceConfig): Promise<void> {
+	await this.queue.addItem(async () => {
+		// This will wait for previous operations to complete
+		await this.sendCommand(id, config);
+		await this.waitForResponse(id);
+	});
+}
+```
+
+## Promise Utilities
+
+### SettablePromise
+
+For promises that are resolved later:
+
+```typescript
+import { SettablePromise } from '../../lib/settable-promise';
+
+class Module {
+	private _userManagement = new SettablePromise<UserManagement>();
+
+	public async init() {
+		const userManagement = new UserManagement();
+		await userManagement.init();
+		this._userManagement.set(userManagement); // Resolve the promise
+	}
+
+	public get userManagement(): Promise<UserManagement> {
+		return this._userManagement.value; // Returns the promise
+	}
+}
+
+// Usage
+const module = new Module();
+await module.init();
+const userManagement = await module.userManagement; // Waits until set
+```
+
+### Promise Race with Timeout
+
+```typescript
+import { wait } from '../../lib/time';
+
+// Race operation with timeout
+const result = await Promise.race([
+	asyncOperation(),
+	wait(5000).then(() => {
+		throw new Error('Operation timed out');
+	}),
+]);
+```
+
+## Concurrent Operations
+
+### Parallel Execution
+
+Use `Promise.all` for independent operations:
+
+```typescript
+// ✅ Good: Parallel execution
+const [devices, scenes, groups] = await Promise.all([
+	fetchDevices(),
+	fetchScenes(),
+	fetchGroups(),
+]);
+```
+
+### Sequential Execution
+
+Use `for...of` for operations that depend on each other:
+
+```typescript
+// ✅ Good: Sequential execution
+for (const deviceId of deviceIds) {
+	await updateDevice(deviceId); // Wait for each to complete
+}
+```
+
+### Concurrent with Limit
+
+Limit concurrent operations:
+
+```typescript
+async function processWithLimit<T>(
+	items: T[],
+	limit: number,
+	processor: (item: T) => Promise<void>
+): Promise<void> {
+	const executing: Promise<void>[] = [];
+
+	for (const item of items) {
+		const promise = processor(item).then(() => {
+			executing.splice(executing.indexOf(promise), 1);
+		});
+
+		executing.push(promise);
+
+		if (executing.length >= limit) {
+			await Promise.race(executing);
+		}
+	}
+
+	await Promise.all(executing);
+}
+```
+
+## Async Patterns in Modules
+
+### Module Initialization
+
+Modules use async initialization:
+
+```typescript
+export class MyModuleMeta extends ModuleMeta {
+	public async init(config: ModuleConfig): Promise<{ serve: ServeOptions<unknown> }> {
+		// Async initialization
+		await this.setupDatabase();
+		await this.connectToService();
+
+		return {
+			serve: createServeOptions(/* ... */),
+		};
+	}
+
+	public async postInit(): Promise<void> {
+		// Called after all modules are initialized
+		await this.startBackgroundTasks();
+	}
+}
+```
+
+### Inter-Module Communication
+
+Access other modules asynchronously:
+
+```typescript
+// Module access is async
+const bot = await this.modules;
+await bot.bot.sendMessage('Hello');
+```
+
+## Background Tasks
+
+### Fire-and-Forget Tasks
+
+Use `void` for background tasks that shouldn't block:
+
+```typescript
+// Start background task without waiting
+void this.cleanupExpiredSessions();
+
+// With error handling
+void this.cleanupExpiredSessions().catch((error) => {
+	warning('Cleanup failed:', error);
+});
+```
+
+### Periodic Tasks
+
+```typescript
+class BackgroundService {
+	private intervalId?: ReturnType<typeof setInterval>;
+
+	public start(): void {
+		this.intervalId = setInterval(() => {
+			void this.performCleanup().catch((error) => {
+				warning('Periodic cleanup failed:', error);
+			});
+		}, 60 * 1000); // Every minute
+	}
+
+	public stop(): void {
+		if (this.intervalId) {
+			clearInterval(this.intervalId);
+		}
+	}
+
+	private async performCleanup(): Promise<void> {
+		// Cleanup logic
+	}
+}
+```
+
+## Error Propagation
+
+### Letting Errors Propagate
+
+Allow errors to propagate when appropriate:
+
+```typescript
+// ✅ Good: Let error propagate to caller
+export async function getDevice(id: string): Promise<Device> {
+	const device = await db`SELECT * FROM devices WHERE id = ${id}`;
+	if (!device[0]) {
+		throw new Error(`Device not found: ${id}`);
+	}
+	return device[0];
+}
+
+// Caller handles the error
+try {
+	const device = await getDevice(deviceId);
+	// Use device
+} catch (error) {
+	// Handle error
+}
+```
+
+### Catching and Transforming Errors
+
+```typescript
+export async function safeOperation(): Promise<Result> {
+	try {
+		const result = await riskyOperation();
+		return { success: true, data: result };
+	} catch (error) {
+		return { success: false, error: error.message };
+	}
+}
+```
+
+## Best Practices
+
+- ✅ Always handle promise rejections (await, .catch(), or void)
+- ✅ Use `AsyncQueue` for sequential operations
+- ✅ Use `Promise.all` for independent parallel operations
+- ✅ Use `for...of` for sequential dependent operations
+- ✅ Use `SettablePromise` for promises resolved later
+- ✅ Use `void` for fire-and-forget background tasks
+- ✅ Let errors propagate when appropriate
+- ✅ Add timeouts to long-running operations
+- ✅ Clean up intervals and timeouts
+- ❌ Don't create floating promises
+- ❌ Don't use `Promise.all` for dependent operations
+- ❌ Don't block the event loop with synchronous operations
+- ❌ Don't forget to handle errors in background tasks
+- ❌ Don't create memory leaks with unclosed intervals
+
+## Common Patterns
+
+### Retry Logic
+
+```typescript
+async function retry<T>(
+	fn: () => Promise<T>,
+	maxAttempts: number = 3
+): Promise<T> {
+	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+		try {
+			return await fn();
+		} catch (error) {
+			if (attempt === maxAttempts) {
+				throw error;
+			}
+			await wait(1000 * attempt); // Exponential backoff
+		}
+	}
+	throw new Error('Max attempts reached');
+}
+```
+
+### Debouncing
+
+```typescript
+function debounce<T extends (...args: unknown[]) => void>(
+	fn: T,
+	delay: number
+): T {
+	let timeoutId: ReturnType<typeof setTimeout>;
+	return ((...args: Parameters<T>) => {
+		clearTimeout(timeoutId);
+		timeoutId = setTimeout(() => fn(...args), delay);
+	}) as T;
+}
+```
+
+### Throttling
+
+```typescript
+function throttle<T extends (...args: unknown[]) => void>(
+	fn: T,
+	limit: number
+): T {
+	let lastCall = 0;
+	return ((...args: Parameters<T>) => {
+		const now = Date.now();
+		if (now - lastCall >= limit) {
+			lastCall = now;
+			fn(...args);
+		}
+	}) as T;
+}
+```

@@ -43,12 +43,15 @@ These rules can be fetched when needed by asking about specific topics:
 - **`device-clusters.mdc`** - Understanding and working with device clusters
 - **`scenes-automation.mdc`** - Working with scenes and automation triggers
 - **`shared-types.mdc`** - Creating and using shared TypeScript types
+- **`validation-schemas.mdc`** - Zod validation patterns and schema design
+- **`security-patterns.mdc`** - Security and authentication best practices
+- **`async-patterns.mdc`** - Async operations, promises, queues, and concurrency
 
 ## Quick Reference
 
 ### Working on Server Code?
 
-→ Check: `bun-runtime.mdc`, `module-system.mdc`, `routing-patterns.mdc`, `database-patterns.mdc`
+→ Check: `bun-runtime.mdc`, `module-system.mdc`, `routing-patterns.mdc`, `database-patterns.mdc`, `validation-schemas.mdc`, `security-patterns.mdc`, `async-patterns.mdc`
 
 ### Working on Client Code?
 
@@ -73,6 +76,18 @@ These rules can be fetched when needed by asking about specific topics:
 ### Creating Shared Types?
 
 → Check: `shared-types.mdc`
+
+### Validating Input or Creating Schemas?
+
+→ Check: `validation-schemas.mdc`
+
+### Implementing Security or Authentication?
+
+→ Check: `security-patterns.mdc`
+
+### Working with Async Operations?
+
+→ Check: `async-patterns.mdc`
 
 ### Writing Tests?
 
@@ -134,6 +149,9 @@ Rules should be updated when:
 ✅ Device cluster system
 ✅ Scenes and automation
 ✅ Shared type definitions
+✅ Validation and schema patterns (Zod)
+✅ Security and authentication patterns
+✅ Async operations and concurrency patterns
 
 ## Contributing
 

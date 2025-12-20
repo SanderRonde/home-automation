@@ -1,0 +1,349 @@
+---
+description: Zod validation patterns and schema design best practices
+---
+
+# Validation and Schema Patterns
+
+This project uses Zod for runtime validation and type inference. All request bodies and configuration data should be validated with Zod schemas.
+
+## Basic Schema Patterns
+
+### Simple Object Validation
+
+```typescript
+import * as z from 'zod';
+
+const ConfigSchema = z.object({
+	apiKey: z.string().min(1, 'API Key is required'),
+	apiSecret: z.string().min(1, 'API Secret is required'),
+	apiRegion: z.string().min(1, 'API Region is required'),
+});
+
+export type Config = z.infer<typeof ConfigSchema>;
+```
+
+### Optional Fields
+
+```typescript
+const Schema = z.object({
+	required: z.string(),
+	optional: z.string().optional(),
+	nullable: z.string().nullable(),
+	optionalNullable: z.string().optional().nullable(),
+});
+```
+
+### Arrays and Nested Objects
+
+```typescript
+const Schema = z.object({
+	devices: z.array(
+		z.object({
+			id: z.string(),
+			name: z.string(),
+		})
+	),
+	metadata: z.object({
+		version: z.number(),
+		enabled: z.boolean(),
+	}),
+});
+```
+
+## Common Validation Patterns
+
+### IP Address Validation
+
+```typescript
+// Using regex
+const IPAddressSchema = z
+	.string()
+	.regex(
+		/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/,
+		'Invalid IP address'
+	);
+
+// Using built-in IP validator (Zod 3.20+)
+const IPAddressSchema = z.string().ip('Invalid IP address');
+```
+
+### Enum Validation
+
+```typescript
+// String enum
+const StateSchema = z.enum(['on', 'off', 'unknown']);
+
+// Number enum
+const StatusSchema = z.enum([0, 1, 2, 3]);
+
+// Custom enum with validation
+const MethodSchema = z.enum(['GET', 'POST', 'PUT', 'DELETE']);
+```
+
+### Discriminated Unions
+
+For complex nested structures with different shapes:
+
+```typescript
+const ActionSchema = z.union([
+	z.object({
+		cluster: z.literal('on-off'),
+		action: z.object({
+			isOn: z.boolean(),
+		}),
+	}),
+	z.object({
+		cluster: z.literal('level-control'),
+		action: z.object({
+			level: z.number().min(0).max(100),
+		}),
+	}),
+	z.object({
+		cluster: z.literal('color-control'),
+		action: z.object({
+			hue: z.number().min(0).max(360),
+			saturation: z.number().min(0).max(100),
+			value: z.number().min(0).max(100),
+		}),
+	}),
+]);
+```
+
+### Type Assertions
+
+When you need to assert a string matches a specific type:
+
+```typescript
+import type * as Icons from '@mui/icons-material';
+
+const IconSchema = z.string() as z.ZodType<keyof typeof Icons>;
+```
+
+## Using Schemas in Routes
+
+### Request Body Validation
+
+Always use `withRequestBody` for POST/PUT/PATCH requests:
+
+```typescript
+import { createServeOptions, withRequestBody } from '../../lib/routes';
+import * as z from 'zod';
+
+const ConfigSchema = z.object({
+	apiKey: z.string().min(1),
+	apiSecret: z.string().min(1),
+});
+
+export const routes = createServeOptions(
+	{
+		'/config': {
+			POST: withRequestBody(
+				ConfigSchema,
+				async (body, _req, _server, { json, error }) => {
+					// body is fully typed as ConfigSchema output
+					try {
+						// Use validated body
+						await saveConfig(body);
+						return json({ success: true });
+					} catch {
+						return error({ error: 'Failed to save config' }, 500);
+					}
+				}
+			),
+		},
+	},
+	true
+);
+```
+
+### Type Inference
+
+Export types from schemas for use in other parts of the codebase:
+
+```typescript
+const ConfigSchema = z.object({
+	apiKey: z.string(),
+	apiSecret: z.string(),
+});
+
+export type Config = z.infer<typeof ConfigSchema>;
+
+// Use in functions
+function processConfig(config: Config): void {
+	// config is fully typed
+}
+```
+
+## Schema Composition
+
+### Reusable Base Schemas
+
+```typescript
+const BaseDeviceSchema = z.object({
+	id: z.string(),
+	name: z.string(),
+});
+
+const LightDeviceSchema = BaseDeviceSchema.extend({
+	brightness: z.number().min(0).max(100),
+	color: z.string().optional(),
+});
+
+const SwitchDeviceSchema = BaseDeviceSchema.extend({
+	state: z.enum(['on', 'off']),
+});
+```
+
+### Partial and Pick
+
+```typescript
+const FullSchema = z.object({
+	id: z.string(),
+	name: z.string(),
+	email: z.string().email(),
+});
+
+// Partial update schema
+const UpdateSchema = FullSchema.partial();
+
+// Pick specific fields
+const PublicSchema = FullSchema.pick({ id: true, name: true });
+```
+
+## Advanced Patterns
+
+### Custom Validation
+
+```typescript
+const PasswordSchema = z
+	.string()
+	.min(8, 'Password must be at least 8 characters')
+	.refine(
+		(val) => /[A-Z]/.test(val),
+		'Password must contain at least one uppercase letter'
+	)
+	.refine(
+		(val) => /[a-z]/.test(val),
+		'Password must contain at least one lowercase letter'
+	)
+	.refine(
+		(val) => /[0-9]/.test(val),
+		'Password must contain at least one number'
+	);
+```
+
+### Transform and Preprocess
+
+```typescript
+// Transform string to number
+const NumberStringSchema = z.string().transform((val) => parseInt(val, 10));
+
+// Preprocess before validation
+const TrimmedStringSchema = z.preprocess(
+	(val) => (typeof val === 'string' ? val.trim() : val),
+	z.string().min(1)
+);
+```
+
+### Conditional Validation
+
+```typescript
+const Schema = z
+	.object({
+		type: z.enum(['email', 'phone']),
+		value: z.string(),
+	})
+	.refine(
+		(data) => {
+			if (data.type === 'email') {
+				return z.string().email().safeParse(data.value).success;
+			}
+			return /^\d{10}$/.test(data.value);
+		},
+		{
+			message: 'Invalid value for selected type',
+			path: ['value'],
+		}
+	);
+```
+
+## Error Messages
+
+### Custom Error Messages
+
+Always provide helpful error messages:
+
+```typescript
+// ✅ Good: Descriptive error messages
+const Schema = z.object({
+	email: z.string().email('Please provide a valid email address'),
+	age: z.number().min(18, 'You must be at least 18 years old'),
+});
+
+// ❌ Bad: Generic or no error messages
+const BadSchema = z.object({
+	email: z.string().email(),
+	age: z.number().min(18),
+});
+```
+
+### Error Handling in Routes
+
+The `withRequestBody` helper automatically handles validation errors:
+
+```typescript
+// Validation errors are automatically caught and return 400
+POST: withRequestBody(
+	ConfigSchema,
+	async (body, _req, _server, { json, error }) => {
+		// If we reach here, body is guaranteed to be valid
+		// Validation errors return 400 with error message
+		return json({ success: true });
+	}
+);
+```
+
+## Best Practices
+
+- ✅ Always validate user input with Zod schemas
+- ✅ Export types using `z.infer<typeof Schema>` for reuse
+- ✅ Provide descriptive error messages for all validations
+- ✅ Use discriminated unions for complex variant types
+- ✅ Compose schemas from reusable base schemas
+- ✅ Use `.optional()` or `.nullable()` explicitly when needed
+- ✅ Validate IP addresses, emails, URLs with appropriate validators
+- ✅ Use `.min()`, `.max()`, `.regex()` for string constraints
+- ❌ Don't skip validation - always validate request bodies
+- ❌ Don't use `any` types - let Zod infer types
+- ❌ Don't expose internal validation errors to users
+- ❌ Don't validate the same data multiple times unnecessarily
+
+## Schema Organization
+
+### Module-Level Schemas
+
+Keep schemas near where they're used:
+
+```typescript
+// app/server/modules/mymodule/routing.ts
+import * as z from 'zod';
+
+const MyModuleConfig = z.object({
+	// ...
+});
+
+export type MyModuleConfig = z.infer<typeof MyModuleConfig>;
+```
+
+### Shared Schemas
+
+For schemas used across modules, consider placing them in a shared location:
+
+```typescript
+// types/validation.ts or app/server/lib/validation.ts
+export const CommonSchemas = {
+	deviceId: z.string().uuid(),
+	ipAddress: z.string().ip(),
+	// ...
+};
+```
