@@ -699,6 +699,111 @@ const _OutsideTemperatureBubble = React.memo(
 	}
 );
 
+interface DeviceIconsOverlayProps {
+	devices: DeviceListWithValuesResponse;
+	stageTransform: { x: number; y: number; scale: number };
+	focusedRoomNameData: Data<string | null>;
+	zoomThreshold: number;
+	temperatureExpanded: boolean;
+	energyExpanded: boolean;
+	isDraggingRef: React.MutableRefObject<boolean>;
+	handleDeviceTap: (device: DeviceListWithValuesResponse[number]) => Promise<void>;
+	handleDeviceHold: (device: DeviceListWithValuesResponse[number]) => void;
+}
+
+const DeviceIconsOverlay = React.memo((props: DeviceIconsOverlayProps): JSX.Element | null => {
+	const focusedRoomName = useData(props.focusedRoomNameData);
+
+	// Hide when temperature or energy mode is active
+	if (props.temperatureExpanded || props.energyExpanded) {
+		return null;
+	}
+
+	// Check if we should show devices (zoomed in enough or have a focused room)
+	const showDevices =
+		props.stageTransform.scale >= props.zoomThreshold || focusedRoomName !== null;
+
+	if (!showDevices) {
+		return null;
+	}
+
+	// Filter devices based on focused room if set
+	const visibleDevices = focusedRoomName
+		? props.devices.filter((d) => d.room === focusedRoomName)
+		: props.devices;
+
+	return (
+		<>
+			{visibleDevices.map((device) => (
+				<DeviceIcon
+					key={`device-icon-${device.uniqueId}`}
+					device={device}
+					position={device.position!}
+					stageTransform={props.stageTransform}
+					onTap={() => void props.handleDeviceTap(device)}
+					onHold={() => props.handleDeviceHold(device)}
+					isDragging={props.isDraggingRef.current}
+				/>
+			))}
+		</>
+	);
+});
+
+interface GroupIconsOverlayProps {
+	groups: DeviceGroup[];
+	devices: DeviceListWithValuesResponse;
+	stageTransform: { x: number; y: number; scale: number };
+	focusedRoomNameData: Data<string | null>;
+	zoomThreshold: number;
+	temperatureExpanded: boolean;
+	energyExpanded: boolean;
+	isDraggingRef: React.MutableRefObject<boolean>;
+	handleGroupTap: (group: DeviceGroup) => Promise<void>;
+	handleGroupHold: (group: DeviceGroup) => void;
+}
+
+const GroupIconsOverlay = React.memo((props: GroupIconsOverlayProps): JSX.Element | null => {
+	const focusedRoomName = useData(props.focusedRoomNameData);
+
+	// Hide when temperature or energy mode is active
+	if (props.temperatureExpanded || props.energyExpanded) {
+		return null;
+	}
+
+	// Check if we should show groups (zoomed in enough or have a focused room)
+	const showGroups =
+		props.stageTransform.scale >= props.zoomThreshold || focusedRoomName !== null;
+
+	if (!showGroups) {
+		return null;
+	}
+
+	// Filter groups based on focused room if set (group is visible if any of its devices are in the room)
+	const visibleGroups = focusedRoomName
+		? props.groups.filter((g) => {
+				const groupDevices = props.devices.filter((d) => g.deviceIds.includes(d.uniqueId));
+				return groupDevices.some((d) => d.room === focusedRoomName);
+			})
+		: props.groups;
+
+	return (
+		<>
+			{visibleGroups.map((group) => (
+				<GroupIcon
+					key={`group-icon-${group.id}`}
+					group={group}
+					devices={props.devices}
+					position={group.position!}
+					stageTransform={props.stageTransform}
+					onTap={() => void props.handleGroupTap(group)}
+					onHold={() => props.handleGroupHold(group)}
+					isDragging={props.isDraggingRef.current}
+				/>
+			))}
+		</>
+	);
+});
+
 interface RoomProps {
 	roomData: {
 		room: { id: string; polygon: { x: number; y: number }[] };
@@ -706,14 +811,51 @@ interface RoomProps {
 		mappedRoomName: string;
 	};
 	hoveringRoomIdData: Data<string | null>;
+	isPinchingData: Data<boolean>;
+	isDraggingData: Data<boolean>;
 	handleRoomClick: (roomName: string) => void;
+	handleRoomLongPress: (roomName: string) => void;
 }
 
 const Room = React.memo((props: RoomProps): JSX.Element => {
+	const {
+		roomData,
+		hoveringRoomIdData,
+		isPinchingData,
+		isDraggingData,
+		handleRoomClick,
+		handleRoomLongPress,
+	} = props;
+
 	const isHovering = useData(
-		props.hoveringRoomIdData,
-		(hoveringRoomId) => hoveringRoomId === props.roomData.room.id
+		hoveringRoomIdData,
+		(hoveringRoomId) => hoveringRoomId === roomData.room.id
 	);
+
+	const holdTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+	const didHoldRef = React.useRef(false);
+
+	// Cancel long press when pinching or dragging starts
+	useEffect(() => {
+		const unsubPinch = isPinchingData.subscribe((isPinching) => {
+			if (isPinching && holdTimerRef.current) {
+				clearTimeout(holdTimerRef.current);
+				holdTimerRef.current = null;
+				didHoldRef.current = false;
+			}
+		});
+		const unsubDrag = isDraggingData.subscribe((isDragging) => {
+			if (isDragging && holdTimerRef.current) {
+				clearTimeout(holdTimerRef.current);
+				holdTimerRef.current = null;
+				didHoldRef.current = false;
+			}
+		});
+		return () => {
+			unsubPinch();
+			unsubDrag();
+		};
+	}, [isPinchingData, isDraggingData]);
 
 	const cursorPointer = React.useCallback((e: KonvaEventObject<MouseEvent>) => {
 		const stage = e.target.getStage();
@@ -729,25 +871,49 @@ const Room = React.memo((props: RoomProps): JSX.Element => {
 		}
 	}, []);
 
+	const handleInteractionStart = React.useCallback(() => {
+		hoveringRoomIdData.set(roomData.room.id);
+		didHoldRef.current = false;
+
+		// Start long press timer
+		holdTimerRef.current = setTimeout(() => {
+			didHoldRef.current = true;
+			handleRoomLongPress(roomData.mappedRoomName);
+		}, 500);
+	}, [hoveringRoomIdData, roomData.room.id, roomData.mappedRoomName, handleRoomLongPress]);
+
+	const handleInteractionEnd = React.useCallback(() => {
+		hoveringRoomIdData.set(null);
+
+		// Clear long press timer
+		if (holdTimerRef.current) {
+			clearTimeout(holdTimerRef.current);
+			holdTimerRef.current = null;
+		}
+
+		// If didn't hold, treat as single press (zoom to room)
+		if (!didHoldRef.current) {
+			handleRoomClick(roomData.mappedRoomName);
+		}
+	}, [hoveringRoomIdData, handleRoomClick, roomData.mappedRoomName]);
+
 	return (
 		<Line
-			points={props.roomData.room.polygon.map((p) => [p.x, p.y]).flat()}
+			points={roomData.room.polygon.map((p) => [p.x, p.y]).flat()}
 			fill={
-				props.roomData.roomInfo?.color
-					? `${props.roomData.roomInfo.color}${isHovering ? 'C0' : '80'}`
+				roomData.roomInfo?.color
+					? `${roomData.roomInfo.color}${isHovering ? 'C0' : '80'}`
 					: '#00000030'
 			}
-			stroke={props.roomData.roomInfo?.color || '#ccc'}
+			stroke={roomData.roomInfo?.color || '#ccc'}
 			strokeWidth={2}
 			closed
 			onMouseOver={cursorPointer}
 			onMouseOut={cursorDefault}
-			onMouseDown={() => props.hoveringRoomIdData.set(props.roomData.room.id)}
-			onMouseUp={() => props.hoveringRoomIdData.set(null)}
-			onTouchStart={() => props.hoveringRoomIdData.set(props.roomData.room.id)}
-			onTouchEnd={() => props.hoveringRoomIdData.set(null)}
-			onClick={() => props.handleRoomClick(props.roomData.mappedRoomName)}
-			onTap={() => props.handleRoomClick(props.roomData.mappedRoomName)}
+			onMouseDown={handleInteractionStart}
+			onMouseUp={handleInteractionEnd}
+			onTouchStart={handleInteractionStart}
+			onTouchEnd={handleInteractionEnd}
 		/>
 	);
 });
@@ -769,6 +935,12 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	const collapsingRoomIdData = useCreateData<string | null>(null);
 	const outsideTempData = useCreateData<number | null>(null);
 	const hoveringRoomIdData = useCreateData<string | null>(null);
+	const focusedRoomNameData = useCreateData<string | null>(null);
+	const isPinchingData = useCreateData<boolean>(false);
+	const isDraggingData = useCreateData<boolean>(false);
+
+	// Zoom level threshold for showing device icons (devices visible when zoomed in beyond this)
+	const DEVICE_VISIBILITY_ZOOM_THRESHOLD = 1.5;
 
 	const stageTransformData = useCreateData<{ x: number; y: number; scale: number }>({
 		x: 0,
@@ -895,8 +1067,13 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 			const pos = stageRef.current.position();
 			const scale = stageRef.current.scaleX();
 			stageTransformData.set({ x: pos.x, y: pos.y, scale });
+
+			// Clear focused room when zoomed out below threshold
+			if (scale < DEVICE_VISIBILITY_ZOOM_THRESHOLD && focusedRoomNameData.current()) {
+				focusedRoomNameData.set(null);
+			}
 		}
-	}, [stageTransformData]);
+	}, [stageTransformData, focusedRoomNameData]);
 
 	const handleWheel = React.useCallback(
 		(e: KonvaEventObject<WheelEvent>) => {
@@ -1040,6 +1217,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 						isPanning.current = true;
 						lastTouchPos.current = currentPos;
 						isDraggingRef.current = true;
+						isDraggingData.set(true); // Notify Room components to cancel long press
 					} else if (lastTouchPos.current) {
 						// Continue panning - calculate delta and update stage position
 						const deltaX = currentPos.x - lastTouchPos.current.x;
@@ -1058,46 +1236,54 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				e.evt.preventDefault();
 			}
 		},
-		[updateStageTransform]
+		[updateStageTransform, isDraggingData]
 	);
 
-	const handleTouchEnd = React.useCallback((e: KonvaEventObject<TouchEvent>) => {
-		const stage = stageRef.current;
-		if (e.evt.touches.length === 0) {
-			// All touches ended - reset all gesture states
-			lastDist.current = 0;
-			lastCenter.current = null;
-			isPinching.current = false;
-			isPanning.current = false;
-			touchStartPos.current = null;
-			lastTouchPos.current = null;
-			if (stage) {
-				stage.draggable(true);
+	const handleTouchEnd = React.useCallback(
+		(e: KonvaEventObject<TouchEvent>) => {
+			const stage = stageRef.current;
+			if (e.evt.touches.length === 0) {
+				// All touches ended - reset all gesture states
+				lastDist.current = 0;
+				lastCenter.current = null;
+				isPinching.current = false;
+				isPinchingData.set(false);
+				isPanning.current = false;
+				touchStartPos.current = null;
+				lastTouchPos.current = null;
+				if (stage) {
+					stage.draggable(true);
+				}
+				// Reset dragging state after a short delay to allow tap events to check it
+				setTimeout(() => {
+					isDraggingRef.current = false;
+					isDraggingData.set(false);
+				}, 50);
+			} else if (e.evt.touches.length === 1 && isPinching.current) {
+				// One finger lifted during pinch - reset pinch state and prepare for potential pan
+				lastDist.current = 0;
+				lastCenter.current = null;
+				isPinching.current = false;
+				isPinchingData.set(false);
+				// Record new touch start position for potential pan
+				const touch = e.evt.touches[0];
+				touchStartPos.current = { x: touch.clientX, y: touch.clientY };
+				lastTouchPos.current = null;
+				if (stage) {
+					stage.draggable(false);
+				}
+			} else if (e.evt.touches.length === 1 && touchStartPos.current) {
+				// Single touch ended - reset pan state
+				isPanning.current = false;
+				lastTouchPos.current = null;
+				touchStartPos.current = null;
+				if (stage) {
+					stage.draggable(true);
+				}
 			}
-			// Reset dragging state after a short delay to allow tap events to check it
-			setTimeout(() => (isDraggingRef.current = false), 50);
-		} else if (e.evt.touches.length === 1 && isPinching.current) {
-			// One finger lifted during pinch - reset pinch state and prepare for potential pan
-			lastDist.current = 0;
-			lastCenter.current = null;
-			isPinching.current = false;
-			// Record new touch start position for potential pan
-			const touch = e.evt.touches[0];
-			touchStartPos.current = { x: touch.clientX, y: touch.clientY };
-			lastTouchPos.current = null;
-			if (stage) {
-				stage.draggable(false);
-			}
-		} else if (e.evt.touches.length === 1 && touchStartPos.current) {
-			// Single touch ended - reset pan state
-			isPanning.current = false;
-			lastTouchPos.current = null;
-			touchStartPos.current = null;
-			if (stage) {
-				stage.draggable(true);
-			}
-		}
-	}, []);
+		},
+		[isPinchingData, isDraggingData]
+	);
 
 	const handleTouchStart = React.useCallback(
 		(e: KonvaEventObject<TouchEvent>) => {
@@ -1106,6 +1292,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				// Two finger touch - prepare for pinch zoom
 				e.evt.preventDefault();
 				isPinching.current = true;
+				isPinchingData.set(true); // Notify Room components to cancel long press
 				if (stage) {
 					stage.draggable(false);
 				}
@@ -1131,7 +1318,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				e.evt.preventDefault();
 			}
 		},
-		[handleStageMouseDown]
+		[handleStageMouseDown, isPinchingData]
 	);
 
 	// Group devices by room and calculate cluster representations
@@ -1209,17 +1396,121 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 			});
 	}, [detectedRooms, roomMappings, availableRooms, props.devices]);
 
-	const handleRoomClick = (roomName: string) => {
-		// Close expanded clusters
-		expandedRoomIdData.set(null);
-		// Only navigate if we didn't drag
-		if (!isDraggingRef.current) {
-			props.pushDetailView({
+	// Zoom out to show all rooms (overview)
+	const zoomOutToOverview = React.useCallback(() => {
+		if (!stageRef.current || walls.length === 0) {
+			return;
+		}
+
+		const bbox = calculateBoundingBox(walls);
+		const paddingHorizontal = 40;
+		const paddingTop = 40;
+		const paddingBottom = 40;
+		const scaleX = (width - paddingHorizontal * 2) / bbox.width;
+		const scaleY = (height - (paddingTop + paddingBottom)) / bbox.height;
+		const maxScale = window.innerWidth >= 900 ? 2 : 1;
+		const scale = Math.min(scaleX, scaleY, maxScale);
+
+		const posX = (width - bbox.width * scale) / 2 - bbox.minX * scale;
+		const posY =
+			(height - (paddingTop + paddingBottom) - bbox.height * scale) / 2 - bbox.minY * scale;
+
+		stageRef.current.scale({ x: scale, y: scale });
+		stageRef.current.position({ x: posX, y: posY });
+		stageTransformData.set({ x: posX, y: posY, scale });
+		focusedRoomNameData.set(null);
+	}, [walls, width, height, stageTransformData, focusedRoomNameData]);
+
+	// Zoom to a specific room
+	const zoomToRoom = React.useCallback(
+		(roomName: string) => {
+			const roomData = roomsWithClusters.find((r) => r.mappedRoomName === roomName);
+			if (!roomData || !stageRef.current) {
+				return;
+			}
+
+			// Calculate room bounding box from polygon
+			const polygon = roomData.room.polygon;
+			let minX = Infinity;
+			let minY = Infinity;
+			let maxX = -Infinity;
+			let maxY = -Infinity;
+
+			for (const point of polygon) {
+				minX = Math.min(minX, point.x);
+				minY = Math.min(minY, point.y);
+				maxX = Math.max(maxX, point.x);
+				maxY = Math.max(maxY, point.y);
+			}
+
+			const roomWidth = maxX - minX;
+			const roomHeight = maxY - minY;
+			const roomCenterX = (minX + maxX) / 2;
+			const roomCenterY = (minY + maxY) / 2;
+
+			// Calculate scale to fit room with padding
+			const padding = 60;
+			const scaleX = (width - padding * 2) / roomWidth;
+			const scaleY = (height - padding * 2) / roomHeight;
+			const targetScale = Math.min(scaleX, scaleY, 3); // Cap at 3x zoom
+
+			// Calculate position to center the room
+			const targetX = width / 2 - roomCenterX * targetScale;
+			const targetY = height / 2 - roomCenterY * targetScale;
+
+			// Push history state so back button can zoom out
+			if (!focusedRoomNameData.current()) {
+				window.history.pushState({ roomZoomed: true }, '');
+			}
+
+			// Animate zoom (simple version - direct set)
+			stageRef.current.scale({ x: targetScale, y: targetScale });
+			stageRef.current.position({ x: targetX, y: targetY });
+			stageTransformData.set({ x: targetX, y: targetY, scale: targetScale });
+
+			// Set focused room to show devices
+			focusedRoomNameData.set(roomName);
+		},
+		[roomsWithClusters, width, height, stageTransformData, focusedRoomNameData]
+	);
+
+	// Handle hardware back button (Android) - zoom out instead of navigating
+	useEffect(() => {
+		const handlePopState = (e: PopStateEvent) => {
+			// If we're zoomed into a room, zoom out instead of navigating back
+			if (focusedRoomNameData.current()) {
+				e.preventDefault();
+				zoomOutToOverview();
+			}
+		};
+
+		window.addEventListener('popstate', handlePopState);
+		return () => window.removeEventListener('popstate', handlePopState);
+	}, [focusedRoomNameData, zoomOutToOverview]);
+
+	const handleRoomClick = React.useCallback(
+		(roomName: string) => {
+			// Close expanded clusters
+			expandedRoomIdData.set(null);
+			// Only zoom if we didn't drag
+			if (!isDraggingRef.current) {
+				zoomToRoom(roomName);
+			}
+		},
+		[expandedRoomIdData, zoomToRoom]
+	);
+
+	const pushDetailViewForRoom = props.pushDetailView;
+	const handleRoomLongPress = React.useCallback(
+		(roomName: string) => {
+			// Navigate to room detail view on long press
+			pushDetailViewForRoom({
 				type: 'room',
 				roomName: roomName,
 			});
-		}
-	};
+		},
+		[pushDetailViewForRoom]
+	);
 
 	const handleClusterClick = (clusterName: DeviceClusterName, roomName: string) => {
 		// Navigate to cluster detail view
@@ -1509,7 +1800,10 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 								key={roomData.room.id}
 								roomData={roomData}
 								hoveringRoomIdData={hoveringRoomIdData}
+								isPinchingData={isPinchingData}
+								isDraggingData={isDraggingData}
 								handleRoomClick={handleRoomClick}
+								handleRoomLongPress={handleRoomLongPress}
 							/>
 						);
 					})}
@@ -1568,36 +1862,32 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 					);
 				})}
 
-				{/* Individual device icons - hidden when temperature or energy mode is active */}
-				{!props.temperatureExpanded && !props.energyExpanded
-					? devicesWithPositions.map((device) => (
-							<DeviceIcon
-								key={`device-icon-${device.uniqueId}`}
-								device={device}
-								position={device.position!}
-								stageTransform={stageTransform}
-								onTap={() => void handleDeviceTap(device)}
-								onHold={() => handleDeviceHold(device)}
-								isDragging={isDraggingRef.current}
-							/>
-						))
-					: null}
+				{/* Individual device icons - shown when zoomed into a room or above zoom threshold */}
+				<DeviceIconsOverlay
+					devices={devicesWithPositions}
+					stageTransform={stageTransform}
+					focusedRoomNameData={focusedRoomNameData}
+					zoomThreshold={DEVICE_VISIBILITY_ZOOM_THRESHOLD}
+					temperatureExpanded={props.temperatureExpanded}
+					energyExpanded={props.energyExpanded}
+					isDraggingRef={isDraggingRef}
+					handleDeviceTap={handleDeviceTap}
+					handleDeviceHold={handleDeviceHold}
+				/>
 
-				{/* Group icons - hidden when temperature or energy mode is active */}
-				{!props.temperatureExpanded && !props.energyExpanded
-					? groupsWithPositions.map((group) => (
-							<GroupIcon
-								key={`group-icon-${group.id}`}
-								group={group}
-								devices={props.devices}
-								position={group.position!}
-								stageTransform={stageTransform}
-								onTap={() => void handleGroupTap(group)}
-								onHold={() => handleGroupHold(group)}
-								isDragging={isDraggingRef.current}
-							/>
-						))
-					: null}
+				{/* Group icons - shown when zoomed into a room or above zoom threshold */}
+				<GroupIconsOverlay
+					groups={groupsWithPositions}
+					devices={props.devices}
+					stageTransform={stageTransform}
+					focusedRoomNameData={focusedRoomNameData}
+					zoomThreshold={DEVICE_VISIBILITY_ZOOM_THRESHOLD}
+					temperatureExpanded={props.temperatureExpanded}
+					energyExpanded={props.energyExpanded}
+					isDraggingRef={isDraggingRef}
+					handleGroupTap={handleGroupTap}
+					handleGroupHold={handleGroupHold}
+				/>
 
 				<OutsideTemperatureBubble
 					outsideTempData={outsideTempData}
