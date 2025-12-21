@@ -1818,13 +1818,21 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				}}
 			>
 				{roomsWithClusters.map((roomData) => {
+					// Filter out BooleanState clusters when zoomed in
+					const isZoomedIn = stageTransform.scale >= DEVICE_VISIBILITY_ZOOM_THRESHOLD;
+					const filteredClusterInfo = isZoomedIn
+						? roomData.clusterInfo.filter(
+								(cluster) => cluster.clusterName !== DeviceClusterName.BOOLEAN_STATE
+							)
+						: roomData.clusterInfo;
+
 					// Calculate cluster icon positions
 					const clusterIconSize = 48;
 					const clusterIconSpacingScreen = 56; // spacing in screen space
 					const clusterIconSpacing = clusterIconSpacingScreen / stageTransform.scale; // convert to world space
 					const totalClusterWidth =
-						roomData.clusterInfo.length * clusterIconSpacing -
-						(roomData.clusterInfo.length > 0
+						filteredClusterInfo.length * clusterIconSpacing -
+						(filteredClusterInfo.length > 0
 							? clusterIconSpacing - clusterIconSize / stageTransform.scale
 							: 0);
 					const clusterStartX = roomData.room.center.x - totalClusterWidth / 2;
@@ -1836,10 +1844,16 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 						!props.temperatureExpanded &&
 						!props.energyExpanded;
 
+					// Create filtered room data with BooleanState clusters removed when zoomed in
+					const filteredRoomData = {
+						...roomData,
+						clusterInfo: filteredClusterInfo,
+					};
+
 					return (
 						<RoomOverlay
 							key={`overlay-${roomData.room.id}`}
-							roomData={roomData}
+							roomData={filteredRoomData}
 							stageTransform={stageTransform}
 							expandedRoomIdData={expandedRoomIdData}
 							collapsingRoomIdData={collapsingRoomIdData}
