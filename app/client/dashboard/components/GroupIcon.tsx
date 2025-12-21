@@ -13,7 +13,7 @@ export interface GroupIconProps {
 	stageTransform: { x: number; y: number; scale: number };
 	onTap: () => void;
 	onHold: () => void;
-	isDragging: boolean;
+	isDraggingData: boolean;
 }
 
 // Check if any device in the group is "on"
@@ -75,7 +75,7 @@ export const GroupIcon = React.memo((props: GroupIconProps): JSX.Element | null 
 	const onHold = props.onHold;
 	const handlePointerDown = React.useCallback(
 		(e: React.PointerEvent) => {
-			if (props.isDragging) {
+			if (props.isDraggingData) {
 				return;
 			}
 			e.stopPropagation();
@@ -89,7 +89,7 @@ export const GroupIcon = React.memo((props: GroupIconProps): JSX.Element | null 
 				onHold();
 			}, 500);
 		},
-		[props.isDragging, onHold]
+		[props.isDraggingData, onHold]
 	);
 
 	const onTap = props.onTap;
@@ -105,11 +105,11 @@ export const GroupIcon = React.memo((props: GroupIconProps): JSX.Element | null 
 			}
 
 			// If didn't hold, treat as tap
-			if (!didHoldRef.current && !props.isDragging && canControl) {
+			if (!didHoldRef.current && !props.isDraggingData && canControl) {
 				onTap();
 			}
 		},
-		[props.isDragging, onTap, canControl]
+		[props.isDraggingData, onTap, canControl]
 	);
 
 	const handlePointerLeave = React.useCallback(() => {
@@ -126,7 +126,7 @@ export const GroupIcon = React.memo((props: GroupIconProps): JSX.Element | null 
 				position: 'absolute',
 				left: screenX - scaledSize / 2,
 				top: screenY - scaledSize / 2,
-				pointerEvents: props.isDragging ? 'none' : 'auto',
+				pointerEvents: props.isDraggingData ? 'none' : 'auto',
 			}}
 		>
 			<IconButton
