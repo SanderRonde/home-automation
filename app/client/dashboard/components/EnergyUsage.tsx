@@ -164,24 +164,17 @@ export const EnergyUsage = (): JSX.Element => {
 			events.sort((a, b) => a.timestamp - b.timestamp);
 		}
 
-		// Find time range first
-		let minTime = Infinity;
-		let maxTime = -Infinity;
-		for (const events of deviceEvents.values()) {
-			if (events.length > 0) {
-				minTime = Math.min(minTime, events[0].timestamp);
-				maxTime = Math.max(maxTime, events[events.length - 1].timestamp);
-			}
-		}
-
-		if (minTime === Infinity) {
-			return [];
-		}
+		// Use the requested timeframe to determine the time range, not the actual data range
+		// This ensures we always show the full requested period
+		const now = Date.now();
+		const timeframeMs = TIMEFRAME_MS[timeframe];
+		const minTime = now - timeframeMs;
+		const maxTime = now;
 
 		// Determine time interval based on timeframe (smaller intervals for shorter timeframes)
 		// Also ensure we don't have too many data points for performance
 		const maxDataPoints = 200;
-		const totalTime = maxTime - minTime;
+		const totalTime = timeframeMs;
 		const baseIntervalMs =
 			timeframe === '1h'
 				? 60 * 1000 // 1 minute
@@ -190,11 +183,11 @@ export const EnergyUsage = (): JSX.Element => {
 					: timeframe === '24h'
 						? 15 * 60 * 1000 // 15 minutes
 						: 60 * 60 * 1000; // 1 hour
-		
+
 		// Adjust interval to keep data points under limit
 		const intervalMs = Math.max(baseIntervalMs, Math.ceil(totalTime / maxDataPoints));
 
-		// Create time buckets
+		// Create time buckets from the start of the timeframe to now
 		const timeBuckets: number[] = [];
 		for (let t = minTime; t <= maxTime; t += intervalMs) {
 			timeBuckets.push(t);
@@ -203,8 +196,10 @@ export const EnergyUsage = (): JSX.Element => {
 		// For each device, create forward-filled values for each time bucket
 		const deviceValues = new Map<string, number[]>();
 		for (const [deviceId, events] of deviceEvents) {
-			if (events.length === 0) continue;
-			
+			if (events.length === 0) {
+				continue;
+			}
+
 			const values: number[] = [];
 			let eventIndex = 0;
 			let lastValue: number | null = null;
@@ -235,21 +230,24 @@ export const EnergyUsage = (): JSX.Element => {
 				time: timestamp,
 			};
 
-			// Main line: HomeWizard or sum of non-HomeWizard
+			// Main line: max(HomeWizard, sum of all other devices)
+			let homeWizardPower = 0;
 			if (homeWizardExists && homeWizardDeviceId && deviceValues.has(homeWizardDeviceId)) {
 				const homeWizardValues = deviceValues.get(homeWizardDeviceId)!;
-				point['HomeWizard Total'] = homeWizardValues[index] ?? 0;
-			} else {
-				// Sum all non-HomeWizard devices
-				let sum = 0;
-				for (const deviceId of nonHomeWizardDeviceIds) {
-					const values = deviceValues.get(deviceId);
-					if (values) {
-						sum += values[index] ?? 0;
-					}
-				}
-				point['Total Power'] = sum;
+				homeWizardPower = homeWizardValues[index] ?? 0;
 			}
+
+			// Sum all non-HomeWizard devices
+			let sumOfOthers = 0;
+			for (const deviceId of nonHomeWizardDeviceIds) {
+				const values = deviceValues.get(deviceId);
+				if (values) {
+					sumOfOthers += values[index] ?? 0;
+				}
+			}
+
+			// Use the maximum of HomeWizard and sum of others
+			point['Total Power'] = Math.max(homeWizardPower, sumOfOthers);
 
 			// Individual device lines (non-HomeWizard only)
 			for (const deviceId of nonHomeWizardDeviceIds) {
@@ -287,8 +285,6 @@ export const EnergyUsage = (): JSX.Element => {
 			return [];
 		}
 
-		const homeWizardDeviceId = homeWizardDevice?.uniqueId;
-		const homeWizardExists = !!homeWizardDeviceId;
 		const deviceNameMap = new Map<string, string>();
 		for (const device of devices ?? []) {
 			deviceNameMap.set(device.uniqueId, device.name);
@@ -318,8 +314,8 @@ export const EnergyUsage = (): JSX.Element => {
 
 		const lines: Array<{ name: string; color: string; isMain: boolean }> = [];
 
-		// Find main line (HomeWizard Total or Total Power)
-		const mainLineName = dataKeys.find((key) => key === 'HomeWizard Total' || key === 'Total Power');
+		// Find main line (Total Power)
+		const mainLineName = dataKeys.find((key) => key === 'Total Power');
 		if (mainLineName) {
 			lines.push({
 				name: mainLineName,
@@ -349,7 +345,7 @@ export const EnergyUsage = (): JSX.Element => {
 		}
 
 		return lines;
-	}, [chartData, devices, homeWizardDevice]);
+	}, [chartData, devices]);
 
 	const handleSaveConfig = async () => {
 		try {
@@ -476,7 +472,7 @@ export const EnergyUsage = (): JSX.Element => {
 											}}
 										/>
 										<Legend wrapperStyle={{ color: 'rgba(255,255,255,0.7)' }} />
-										{lineConfig.map((line, index) => (
+										{lineConfig.map((line) => (
 											<Line
 												key={line.name}
 												type="monotone"
