@@ -11,19 +11,51 @@ import {
 	DialogContent,
 	DialogActions,
 	Chip,
+	ToggleButtonGroup,
+	ToggleButton,
+	CircularProgress,
 } from '@mui/material';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
+import { DeviceSource } from '../../../server/modules/device/device';
 import { staggerContainer, staggerItem } from '../../lib/animations';
 import { Settings as SettingsIcon } from '@mui/icons-material';
-import { apiPost } from '../../lib/fetch';
-import React, { useState } from 'react';
+import { apiPost, apiGet } from '../../lib/fetch';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useDevices } from './Devices';
+import {
+	LineChart,
+	Line,
+	XAxis,
+	YAxis,
+	CartesianGrid,
+	Tooltip,
+	Legend,
+	ResponsiveContainer,
+} from 'recharts';
+
+type Timeframe = '1h' | '6h' | '24h' | '1week';
+
+const TIMEFRAME_MS: Record<Timeframe, number> = {
+	'1h': 60 * 60 * 1000,
+	'6h': 6 * 60 * 60 * 1000,
+	'24h': 24 * 60 * 60 * 1000,
+	'1week': 7 * 24 * 60 * 60 * 1000,
+};
+
+interface PowerEvent {
+	deviceId: string;
+	activePower: number;
+	timestamp: number;
+}
 
 export const EnergyUsage = (): JSX.Element => {
 	const [configDialogOpen, setConfigDialogOpen] = useState(false);
 	const [ip, setIp] = useState('');
 	const [token, setToken] = useState('');
+	const [timeframe, setTimeframe] = useState<Timeframe>('24h');
+	const [historicalData, setHistoricalData] = useState<PowerEvent[]>([]);
+	const [loadingHistory, setLoadingHistory] = useState(true);
 
 	const { devices } = useDevices();
 
@@ -46,6 +78,8 @@ export const EnergyUsage = (): JSX.Element => {
 						name: device.name,
 						energy: totalEnergy,
 						power: totalPower,
+						deviceId: device.uniqueId,
+						isHomeWizard: device.source.name === DeviceSource.HOMEWIZARD.value,
 					});
 				}
 			}
@@ -61,6 +95,261 @@ export const EnergyUsage = (): JSX.Element => {
 			return [];
 		}
 	}, [devices]);
+
+	const powerDevices = React.useMemo(() => {
+		return energies.filter((e) => e.power > 0);
+	}, [energies]);
+
+	const energyDevices = React.useMemo(() => {
+		return energies.filter((e) => e.energy > 0);
+	}, [energies]);
+
+	const homeWizardDevice = React.useMemo(() => {
+		return devices?.find((d) => d.source.name === DeviceSource.HOMEWIZARD.value);
+	}, [devices]);
+
+	const loadHistoricalData = useCallback(async () => {
+		try {
+			setLoadingHistory(true);
+			const response = await apiGet('device', '/power/all/:timeframe', {
+				timeframe: TIMEFRAME_MS[timeframe].toString(),
+			});
+			if (response.ok) {
+				const data = await response.json();
+				setHistoricalData(data.history || []);
+			} else {
+				setHistoricalData([]);
+			}
+		} catch (error) {
+			console.error('Failed to load historical power data:', error);
+			setHistoricalData([]);
+		} finally {
+			setLoadingHistory(false);
+		}
+	}, [timeframe]);
+
+	useEffect(() => {
+		void loadHistoricalData();
+	}, [loadHistoricalData]);
+
+	const chartData = React.useMemo(() => {
+		if (historicalData.length === 0) {
+			return [];
+		}
+
+		// Get device names map
+		const deviceNameMap = new Map<string, string>();
+		for (const device of devices ?? []) {
+			deviceNameMap.set(device.uniqueId, device.name);
+		}
+
+		// Identify HomeWizard device ID
+		const homeWizardDeviceId = homeWizardDevice?.uniqueId;
+		const homeWizardExists = !!homeWizardDeviceId;
+
+		// Group events by device, sorted by timestamp
+		const deviceEvents = new Map<string, Array<{ timestamp: number; power: number }>>();
+		for (const event of historicalData) {
+			if (!deviceEvents.has(event.deviceId)) {
+				deviceEvents.set(event.deviceId, []);
+			}
+			deviceEvents.get(event.deviceId)!.push({
+				timestamp: event.timestamp,
+				power: event.activePower,
+			});
+		}
+
+		// Sort events by timestamp for each device
+		for (const events of deviceEvents.values()) {
+			events.sort((a, b) => a.timestamp - b.timestamp);
+		}
+
+		// Find time range first
+		let minTime = Infinity;
+		let maxTime = -Infinity;
+		for (const events of deviceEvents.values()) {
+			if (events.length > 0) {
+				minTime = Math.min(minTime, events[0].timestamp);
+				maxTime = Math.max(maxTime, events[events.length - 1].timestamp);
+			}
+		}
+
+		if (minTime === Infinity) {
+			return [];
+		}
+
+		// Determine time interval based on timeframe (smaller intervals for shorter timeframes)
+		// Also ensure we don't have too many data points for performance
+		const maxDataPoints = 200;
+		const totalTime = maxTime - minTime;
+		const baseIntervalMs =
+			timeframe === '1h'
+				? 60 * 1000 // 1 minute
+				: timeframe === '6h'
+					? 5 * 60 * 1000 // 5 minutes
+					: timeframe === '24h'
+						? 15 * 60 * 1000 // 15 minutes
+						: 60 * 60 * 1000; // 1 hour
+		
+		// Adjust interval to keep data points under limit
+		const intervalMs = Math.max(baseIntervalMs, Math.ceil(totalTime / maxDataPoints));
+
+		// Create time buckets
+		const timeBuckets: number[] = [];
+		for (let t = minTime; t <= maxTime; t += intervalMs) {
+			timeBuckets.push(t);
+		}
+
+		// For each device, create forward-filled values for each time bucket
+		const deviceValues = new Map<string, number[]>();
+		for (const [deviceId, events] of deviceEvents) {
+			if (events.length === 0) continue;
+			
+			const values: number[] = [];
+			let eventIndex = 0;
+			let lastValue: number | null = null;
+
+			for (const bucketTime of timeBuckets) {
+				// Advance to the most recent event at or before this bucket time
+				while (
+					eventIndex < events.length &&
+					events[eventIndex].timestamp <= bucketTime
+				) {
+					lastValue = events[eventIndex].power;
+					eventIndex++;
+				}
+				// Use forward-filled value, or 0 if no data yet
+				values.push(lastValue ?? 0);
+			}
+			deviceValues.set(deviceId, values);
+		}
+
+		// Get all non-HomeWizard device IDs that have data
+		const nonHomeWizardDeviceIds = Array.from(deviceEvents.keys()).filter(
+			(id) => id !== homeWizardDeviceId && deviceValues.has(id)
+		);
+
+		// Create chart data points
+		const data = timeBuckets.map((timestamp, index) => {
+			const point: Record<string, number | string> = {
+				time: timestamp,
+			};
+
+			// Main line: HomeWizard or sum of non-HomeWizard
+			if (homeWizardExists && homeWizardDeviceId && deviceValues.has(homeWizardDeviceId)) {
+				const homeWizardValues = deviceValues.get(homeWizardDeviceId)!;
+				point['HomeWizard Total'] = homeWizardValues[index] ?? 0;
+			} else {
+				// Sum all non-HomeWizard devices
+				let sum = 0;
+				for (const deviceId of nonHomeWizardDeviceIds) {
+					const values = deviceValues.get(deviceId);
+					if (values) {
+						sum += values[index] ?? 0;
+					}
+				}
+				point['Total Power'] = sum;
+			}
+
+			// Individual device lines (non-HomeWizard only)
+			for (const deviceId of nonHomeWizardDeviceIds) {
+				const deviceName = deviceNameMap.get(deviceId) || deviceId;
+				const values = deviceValues.get(deviceId);
+				if (values) {
+					point[deviceName] = values[index] ?? 0;
+				}
+			}
+
+			return point;
+		});
+
+		return data;
+	}, [historicalData, devices, homeWizardDevice, timeframe]);
+
+	const formatTimeLabel = (timestamp: number | string): string => {
+		const date = new Date(typeof timestamp === 'string' ? parseInt(timestamp) : timestamp);
+		if (timeframe === '1h' || timeframe === '6h' || timeframe === '24h') {
+			return date.toLocaleTimeString('en-US', {
+				hour: '2-digit',
+				minute: '2-digit',
+			});
+		}
+		return date.toLocaleDateString('en-US', {
+			month: 'short',
+			day: 'numeric',
+			hour: '2-digit',
+		});
+	};
+
+	// Get line colors and names for rendering - only include lines that exist in chartData
+	const lineConfig = React.useMemo(() => {
+		if (chartData.length === 0) {
+			return [];
+		}
+
+		const homeWizardDeviceId = homeWizardDevice?.uniqueId;
+		const homeWizardExists = !!homeWizardDeviceId;
+		const deviceNameMap = new Map<string, string>();
+		for (const device of devices ?? []) {
+			deviceNameMap.set(device.uniqueId, device.name);
+		}
+
+		// Get all keys from the first data point (excluding 'time')
+		const dataKeys = Object.keys(chartData[0]).filter((key) => key !== 'time');
+
+		// Expanded color palette with more unique colors
+		const colors = [
+			'#3b82f6', // blue (main line)
+			'#f59e0b', // amber
+			'#10b981', // emerald
+			'#ef4444', // red
+			'#8b5cf6', // violet
+			'#ec4899', // pink
+			'#06b6d4', // cyan
+			'#84cc16', // lime
+			'#f97316', // orange
+			'#6366f1', // indigo
+			'#14b8a6', // teal
+			'#a855f7', // purple
+			'#eab308', // yellow
+			'#22c55e', // green
+			'#f43f5e', // rose
+		];
+
+		const lines: Array<{ name: string; color: string; isMain: boolean }> = [];
+
+		// Find main line (HomeWizard Total or Total Power)
+		const mainLineName = dataKeys.find((key) => key === 'HomeWizard Total' || key === 'Total Power');
+		if (mainLineName) {
+			lines.push({
+				name: mainLineName,
+				color: colors[0],
+				isMain: true,
+			});
+		}
+
+		// Individual device lines (exclude main line) - assign unique colors
+		const usedColors = new Set([colors[0]]); // Reserve first color for main line
+		let colorIndex = 1;
+		for (const key of dataKeys) {
+			if (key !== mainLineName) {
+				// Find next available unique color
+				while (usedColors.has(colors[colorIndex % colors.length])) {
+					colorIndex++;
+				}
+				const color = colors[colorIndex % colors.length];
+				usedColors.add(color);
+				lines.push({
+					name: key,
+					color: color,
+					isMain: false,
+				});
+				colorIndex++;
+			}
+		}
+
+		return lines;
+	}, [chartData, devices, homeWizardDevice]);
 
 	const handleSaveConfig = async () => {
 		try {
@@ -85,7 +374,7 @@ export const EnergyUsage = (): JSX.Element => {
 
 	return (
 		<Box sx={{ p: { xs: 2, sm: 3 } }}>
-			<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+			<Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
 				{/* Header */}
 				<Box
 					sx={{
@@ -108,71 +397,170 @@ export const EnergyUsage = (): JSX.Element => {
 					</Button>
 				</Box>
 
+				{/* Historical Graph */}
+				<Card
+					sx={{
+						borderRadius: 3,
+						boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+						background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(147, 197, 253, 0.05) 100%)',
+						border: '1px solid rgba(59, 130, 246, 0.1)',
+					}}
+				>
+					<CardContent>
+						<Box
+							sx={{
+								display: 'flex',
+								justifyContent: 'space-between',
+								alignItems: 'center',
+								flexWrap: 'wrap',
+								gap: 2,
+								mb: 2,
+							}}
+						>
+							<Typography variant="h6" sx={{ fontWeight: 600 }}>
+								Historical Power Usage
+							</Typography>
+							<ToggleButtonGroup
+								value={timeframe}
+								exclusive
+								onChange={(_, value) => value && setTimeframe(value)}
+								size="small"
+							>
+								<ToggleButton value="1h">1h</ToggleButton>
+								<ToggleButton value="6h">6h</ToggleButton>
+								<ToggleButton value="24h">24h</ToggleButton>
+								<ToggleButton value="1week">1 week</ToggleButton>
+							</ToggleButtonGroup>
+						</Box>
+						{loadingHistory ? (
+							<Box
+								sx={{
+									display: 'flex',
+									justifyContent: 'center',
+									alignItems: 'center',
+									height: 400,
+								}}
+							>
+								<CircularProgress />
+							</Box>
+						) : chartData.length > 0 ? (
+							<Box sx={{ height: 400, width: '100%', minHeight: 400, display: 'block' }}>
+								<ResponsiveContainer width="100%" height={400}>
+									<LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 60 }}>
+										<CartesianGrid strokeDasharray="3 3" stroke="rgba(128,128,128,0.2)" />
+										<XAxis
+											dataKey="time"
+											tickFormatter={formatTimeLabel}
+											angle={-45}
+											textAnchor="end"
+											height={60}
+											stroke="rgba(255,255,255,0.7)"
+											tick={{ fill: 'rgba(255,255,255,0.7)' }}
+										/>
+										<YAxis
+											label={{ value: 'Power (W)', angle: -90, position: 'insideLeft', fill: 'rgba(255,255,255,0.7)' }}
+											stroke="rgba(255,255,255,0.7)"
+											tick={{ fill: 'rgba(255,255,255,0.7)' }}
+										/>
+										<Tooltip
+											labelFormatter={(value) => formatTimeLabel(value)}
+											formatter={(value: number, name: string) => [`${value.toFixed(0)} W`, name]}
+											contentStyle={{
+												backgroundColor: 'rgba(255, 255, 255, 0.95)',
+												border: '1px solid rgba(0,0,0,0.1)',
+												borderRadius: '4px',
+												zIndex: 1000,
+											}}
+											wrapperStyle={{
+												zIndex: 1000,
+											}}
+										/>
+										<Legend wrapperStyle={{ color: 'rgba(255,255,255,0.7)' }} />
+										{lineConfig.map((line, index) => (
+											<Line
+												key={line.name}
+												type="monotone"
+												dataKey={line.name}
+												stroke={line.color}
+												strokeWidth={line.isMain ? 2.5 : 2}
+												dot={false}
+												activeDot={{ r: 4 }}
+												connectNulls
+											/>
+										))}
+									</LineChart>
+								</ResponsiveContainer>
+							</Box>
+						) : (
+							<Box
+								sx={{
+									display: 'flex',
+									alignItems: 'center',
+									justifyContent: 'center',
+									height: 400,
+								}}
+							>
+								<Typography color="text.secondary" variant="body2">
+									No historical data available
+								</Typography>
+							</Box>
+						)}
+					</CardContent>
+				</Card>
+
 				{/* Description */}
 				<Typography variant="body2" color="text.secondary">
-					Monitor real-time energy usage from your HomeWizard Energy device.
+					Monitor real-time energy usage from your devices.
 				</Typography>
 
-				<motion.div variants={staggerContainer} initial="initial" animate="animate">
-					<Grid container spacing={3}>
-						{energies.length === 0 ? (
-							<Grid size={12}>
-								<Typography
-									variant="body1"
-									color="text.secondary"
-									sx={{ textAlign: 'center', py: 4 }}
-								>
-									No energy data available. Make sure your HomeWizard Energy
-									device is configured.
-								</Typography>
-							</Grid>
-						) : (
-							energies.map((energy, index) => (
-								<Grid key={energy.name + index} size={{ xs: 12, md: 6, lg: 4 }}>
-									<motion.div variants={staggerItem}>
-										<Card
-											sx={{
-												borderRadius: 3,
-												boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-												background:
-													energy.power > 0
-														? 'linear-gradient(135deg, rgba(251, 191, 36, 0.05) 0%, rgba(252, 211, 77, 0.05) 100%)'
-														: 'linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(52, 211, 153, 0.05) 100%)',
-												border:
-													energy.power > 0
-														? '1px solid rgba(251, 191, 36, 0.1)'
-														: '1px solid rgba(16, 185, 129, 0.1)',
-												height: '100%',
-												display: 'flex',
-												flexDirection: 'column',
-											}}
-										>
-											<CardContent sx={{ flexGrow: 1 }}>
-												<Box
-													sx={{
-														display: 'flex',
-														flexDirection: 'column',
-														gap: 2,
-													}}
-												>
-													{/* Device Name */}
-													<Box>
-														<Typography
-															variant="h6"
-															sx={{ fontWeight: 600, mb: 0.5 }}
-														>
-															{energy.name}
-														</Typography>
-														<Chip
-															label="Live"
-															size="small"
-															variant="outlined"
-															sx={{ fontSize: '0.7rem' }}
-														/>
-													</Box>
+				{/* Current Power Section */}
+				{powerDevices.length > 0 && (
+					<Box>
+						<Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+							Current Power
+						</Typography>
+						<motion.div variants={staggerContainer} initial="initial" animate="animate">
+							<Grid container spacing={3}>
+								{powerDevices.map((energy, index) => (
+									<Grid key={energy.name + index} size={{ xs: 12, md: 6, lg: 4 }}>
+										<motion.div variants={staggerItem}>
+											<Card
+												sx={{
+													borderRadius: 3,
+													boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+													background:
+														'linear-gradient(135deg, rgba(251, 191, 36, 0.05) 0%, rgba(252, 211, 77, 0.05) 100%)',
+													border: '1px solid rgba(251, 191, 36, 0.1)',
+													height: '100%',
+													display: 'flex',
+													flexDirection: 'column',
+												}}
+											>
+												<CardContent sx={{ flexGrow: 1 }}>
+													<Box
+														sx={{
+															display: 'flex',
+															flexDirection: 'column',
+															gap: 2,
+														}}
+													>
+														{/* Device Name */}
+														<Box>
+															<Typography
+																variant="h6"
+																sx={{ fontWeight: 600, mb: 0.5 }}
+															>
+																{energy.name}
+															</Typography>
+															<Chip
+																label="Live"
+																size="small"
+																variant="outlined"
+																sx={{ fontSize: '0.7rem' }}
+															/>
+														</Box>
 
-													{/* Power Display */}
-													{energy.power > 0 && (
+														{/* Power Display */}
 														<Box
 															sx={{
 																display: 'flex',
@@ -214,10 +602,65 @@ export const EnergyUsage = (): JSX.Element => {
 																</Typography>
 															</Box>
 														</Box>
-													)}
+													</Box>
+												</CardContent>
+											</Card>
+										</motion.div>
+									</Grid>
+								))}
+							</Grid>
+						</motion.div>
+					</Box>
+				)}
 
-													{/* Energy Display */}
-													{energy.energy > 0 && (
+				{/* Total Energy Section */}
+				{energyDevices.length > 0 && (
+					<Box>
+						<Typography variant="h6" sx={{ mb: 2, fontWeight: 600, mt: 3 }}>
+							Total Energy
+						</Typography>
+						<motion.div variants={staggerContainer} initial="initial" animate="animate">
+							<Grid container spacing={3}>
+								{energyDevices.map((energy, index) => (
+									<Grid key={energy.name + index} size={{ xs: 12, md: 6, lg: 4 }}>
+										<motion.div variants={staggerItem}>
+											<Card
+												sx={{
+													borderRadius: 3,
+													boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+													background:
+														'linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(52, 211, 153, 0.05) 100%)',
+													border: '1px solid rgba(16, 185, 129, 0.1)',
+													height: '100%',
+													display: 'flex',
+													flexDirection: 'column',
+												}}
+											>
+												<CardContent sx={{ flexGrow: 1 }}>
+													<Box
+														sx={{
+															display: 'flex',
+															flexDirection: 'column',
+															gap: 2,
+														}}
+													>
+														{/* Device Name */}
+														<Box>
+															<Typography
+																variant="h6"
+																sx={{ fontWeight: 600, mb: 0.5 }}
+															>
+																{energy.name}
+															</Typography>
+															<Chip
+																label="Live"
+																size="small"
+																variant="outlined"
+																sx={{ fontSize: '0.7rem' }}
+															/>
+														</Box>
+
+														{/* Energy Display */}
 														<Box
 															sx={{
 																display: 'flex',
@@ -259,16 +702,31 @@ export const EnergyUsage = (): JSX.Element => {
 																</Typography>
 															</Box>
 														</Box>
-													)}
-												</Box>
-											</CardContent>
-										</Card>
-									</motion.div>
-								</Grid>
-							))
-						)}
+													</Box>
+												</CardContent>
+											</Card>
+										</motion.div>
+									</Grid>
+								))}
+							</Grid>
+						</motion.div>
+					</Box>
+				)}
+
+				{/* Empty State */}
+				{powerDevices.length === 0 && energyDevices.length === 0 && (
+					<Grid container spacing={3}>
+						<Grid size={12}>
+							<Typography
+								variant="body1"
+								color="text.secondary"
+								sx={{ textAlign: 'center', py: 4 }}
+							>
+								No energy data available. Make sure your devices are configured.
+							</Typography>
+						</Grid>
 					</Grid>
-				</motion.div>
+				)}
 			</Box>
 
 			{/* Configuration Dialog */}
@@ -343,3 +801,4 @@ export const EnergyUsage = (): JSX.Element => {
 		</Box>
 	);
 };
+

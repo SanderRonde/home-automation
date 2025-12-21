@@ -102,6 +102,7 @@
 		"react-chartjs-2": "^5.3.0",
 		"react-konva": "^19.2.0",
 		"react-markdown": "^10.1.0",
+		"recharts": "^3.6.0",
 		"reflect-metadata": "^0.2.2",
 		"rehype-highlight": "^7.0.2",
 		"remark-gfm": "^4.0.1",
