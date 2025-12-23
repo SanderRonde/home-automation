@@ -1,0 +1,323 @@
+---
+description: Temperature control system with scheduler, TRV control, and decision logic
+---
+
+# Temperature Control System
+
+The temperature module implements a sophisticated heating control system that manages central thermostats and individual room TRVs (Thermostatic Radiator Valves) based on room-by-room heating demand.
+
+## Architecture Overview
+
+The system consists of three main components:
+
+1. **Temperature Controllers** (`temp-controller.ts`) - Named temperature sensors that track and store temperatures
+2. **Scheduler** (`scheduler.ts`) - Runs every minute to check heating demand and update thermostats
+3. **Temperature Module** (`index.ts`) - Core logic for room status, targets, and TRV control
+
+## Temperature Controllers
+
+Temperature controllers are named instances that track temperatures from different sources:
+
+```typescript
+// Get or create a controller for a named location
+const controller = await getController(sqlDB, 'room');
+await controller.setLastTemp(21.5);
+
+// Controllers automatically:
+// - Store temperatures in SQLite database
+// - Log temperature changes (throttled to once per minute)
+// - Notify listeners when temperature changes
+```
+
+### Controller Features
+
+- **Named locations**: Each controller has a name (e.g., "room", "outside", "bedroom")
+- **SQLite storage**: Temperatures stored in `temperatures` table with timestamp and location
+- **Listener pattern**: Controllers can have listeners that fire on temperature updates
+- **Throttled logging**: Only logs when temperature changes by at least 1°C or after 60 seconds
+
+## Decision Logic: The "Magic"
+
+The system uses a simple but effective control strategy:
+
+### Central Thermostat Control
+
+**Rule**: Set central thermostat to **30°C** if ANY room needs heating, **15°C** if none need heating.
+
+```typescript
+// From scheduler.ts
+const roomStatuses = await Temperature.getAllRoomsStatus(modules);
+const roomsNeedingHeat = roomStatuses.filter((status) => status.needsHeating);
+const needsHeating = roomsNeedingHeat.length > 0;
+
+const targetCentralTemp = needsHeating ? 30 : 15;
+```
+
+**Why 30°C and 15°C?**
+- **30°C**: Forces the boiler to run continuously (above typical room temperature)
+- **15°C**: Forces the boiler off (below typical room temperature)
+- This binary approach simplifies control and avoids complex PID logic
+
+### TRV Control Strategy
+
+**Rule**: Set each room's TRVs to **30°C** if that room needs heating, **15°C** if not.
+
+```typescript
+// From index.ts - setRoomTRVTargets
+const targetTemp = needsHeating ? 30 : 15;
+await cluster.setTargetTemperature(targetTemp);
+```
+
+**Why bypass TRV logic?**
+- TRVs have their own control logic that can conflict with central control
+- By setting extreme values (30°C or 15°C), we force TRVs fully open or closed
+- This gives precise per-room control while maintaining central boiler control
+
+### Room Heating Demand
+
+A room "needs heating" when:
+
+```typescript
+// From index.ts - getRoomStatus
+const needsHeating = 
+  currentTemperature > 0 &&  // Has a valid sensor reading
+  currentTemperature < targetTemperature - 0.5;  // 0.5°C below target
+```
+
+**Key points:**
+- Uses **0.5°C hysteresis** to prevent rapid on/off cycling
+- Only rooms with temperature sensors can demand heating
+- Current temperature is averaged across all sensors in the room
+
+## Temperature Target Priority
+
+Temperature targets are determined by a priority system:
+
+1. **Room Override** (highest priority)
+   ```typescript
+   Temperature.setRoomOverride('bedroom', 22.5);
+   ```
+
+2. **Global Override**
+   ```typescript
+   Temperature.setGlobalOverride(21.0);
+   ```
+
+3. **Schedule Room Exception**
+   ```typescript
+   schedule.roomExceptions = { 'bedroom': 20.0 };
+   ```
+
+4. **Schedule Global Target** (lowest priority)
+   ```typescript
+   schedule.targetTemperature = 19.0;
+   ```
+
+## Schedule System
+
+Schedules define time-based temperature targets:
+
+```typescript
+interface TemperatureScheduleEntry {
+  id: string;
+  name: string;
+  days: number[];  // 0=Sunday, 1=Monday, etc.
+  startTime: string;  // "HH:MM" format
+  endTime: string;  // "HH:MM" format
+  targetTemperature: number;
+  roomExceptions?: Record<string, number>;  // Per-room overrides
+  enabled: boolean;
+}
+```
+
+### Schedule Logic
+
+- **Active schedule**: Determined by current day and time
+- **Cross-midnight support**: Schedules can span midnight (e.g., 22:00-06:00)
+- **Next schedule**: Calculated by looking up to 7 days ahead
+- **Multiple schedules**: Can have different schedules for different days
+
+```typescript
+// Get currently active schedule
+const active = Temperature.getCurrentActiveSchedule();
+
+// Get next scheduled change
+const next = Temperature.getNextScheduledChange();
+```
+
+## Scheduler Execution
+
+The scheduler runs every minute and:
+
+1. **Checks all rooms** for heating demand
+2. **Determines central thermostat target** (30°C or 15°C)
+3. **Updates central thermostat** if target changed
+4. **Updates all room TRVs** based on individual room needs
+
+```typescript
+// From scheduler.ts - _checkSchedule
+private async _checkSchedule(): Promise<void> {
+  // Avoid duplicate runs in same minute
+  if (currentMinute === this._lastCheckMinute) return;
+  
+  // Get room statuses
+  const roomStatuses = await Temperature.getAllRoomsStatus(modules);
+  const needsHeating = roomStatuses.some(r => r.needsHeating);
+  
+  // Update central thermostat
+  const targetCentralTemp = needsHeating ? 30 : 15;
+  await Temperature.setThermostatHardwareTarget(modules, targetCentralTemp);
+  
+  // Update all TRVs
+  await Temperature.updateAllRoomTRVs(modules, roomStatuses);
+}
+```
+
+## Test Mode
+
+Test mode allows dry-run testing without controlling real hardware:
+
+```typescript
+// Enable test mode
+Temperature.setTestMode(true);
+
+// In test mode:
+// - Central thermostat updates go to virtualThermostat state
+// - TRV updates are logged but not applied
+// - All decisions are logged to history
+```
+
+## Room Status Calculation
+
+Room status combines multiple data sources:
+
+```typescript
+interface RoomStatus {
+  name: string;
+  currentTemperature: number;  // Averaged from all sensors in room
+  targetTemperature: number;   // From priority system
+  isHeating: boolean;          // needsHeating && centralThermostatHeating
+  needsHeating: boolean;       // currentTemp < targetTemp - 0.5°C
+  overrideActive: boolean;     // Has room override
+}
+```
+
+### Temperature Sources
+
+1. **Device sensors**: Temperature clusters from Matter devices
+2. **Temperature controllers**: Named controllers (e.g., "room", "outside")
+3. **Averaging**: Multiple sensors in a room are averaged
+
+```typescript
+// Get inside temperature from configured sensors
+const temp = await Temperature.getInsideTemperature(modules);
+
+// Sensors can be:
+// - String: Temperature controller name
+// - Object: { type: 'device', deviceId: '...' }
+```
+
+## Central Thermostat vs TRVs
+
+The system distinguishes between:
+
+- **Central Thermostat**: Controls the boiler (one per system)
+- **TRVs**: Individual room valves (one per radiator)
+
+**Control strategy:**
+- Central thermostat: Binary control (30°C or 15°C) based on ANY room needing heat
+- TRVs: Per-room binary control (30°C or 15°C) based on that room needing heat
+
+This allows:
+- Boiler runs only when at least one room needs heating
+- Each room's TRV opens/closes independently
+- No conflicts between central and per-room control
+
+## History and Debugging
+
+The system maintains a debug history:
+
+```typescript
+// Add history entry
+Temperature.addHistoryEntry('Thermostat Action', 'Set to 30°C');
+
+// Get debug info
+const debug = Temperature.getDebugInfo();
+// Returns: history, lastDecision, roomOverrides, globalOverride, etc.
+```
+
+History entries include:
+- Thermostat actions
+- Override changes
+- Schedule updates
+- Test mode changes
+- Errors
+
+## Best Practices
+
+### When Adding Temperature Features
+
+1. **Use existing controllers** for named locations
+   ```typescript
+   const controller = await getController(sqlDB, 'my-location');
+   ```
+
+2. **Respect priority system** when calculating targets
+   ```typescript
+   const target = Temperature.getRoomTarget(roomName);
+   ```
+
+3. **Check room status** before making decisions
+   ```typescript
+   const status = await Temperature.getRoomStatus(modules, roomName);
+   if (status.needsHeating) { /* ... */ }
+   ```
+
+4. **Use test mode** for development
+   ```typescript
+   Temperature.setTestMode(true);
+   // Test your logic
+   Temperature.setTestMode(false);
+   ```
+
+### Common Patterns
+
+**Getting average temperature:**
+```typescript
+const avg = await Temperature.getAverageTargetTemperature(modules);
+```
+
+**Checking if heating is active:**
+```typescript
+const status = await Temperature.getCentralThermostatStatus(modules);
+const isHeating = status?.isHeating ?? false;
+```
+
+**Setting manual override:**
+```typescript
+// Room-specific
+Temperature.setRoomOverride('bedroom', 22.0);
+
+// Global
+Temperature.setGlobalOverride(21.0);
+
+// Clear override
+Temperature.setRoomOverride('bedroom', null);
+Temperature.setGlobalOverride(null);
+```
+
+## Key Files
+
+- [index.ts](mdc:app/server/modules/temperature/index.ts) - Main temperature module
+- [temp-controller.ts](mdc:app/server/modules/temperature/temp-controller.ts) - Temperature controller instances
+- [scheduler.ts](mdc:app/server/modules/temperature/scheduler.ts) - Minute-by-minute scheduler
+- [types.ts](mdc:app/server/modules/temperature/types.ts) - Type definitions
+- [routing.ts](mdc:app/server/modules/temperature/routing.ts) - API endpoints
+
+## Important Constants
+
+- **Heating threshold**: 0.5°C below target (prevents rapid cycling)
+- **Central thermostat targets**: 30°C (heating) or 15°C (off)
+- **TRV targets**: 30°C (fully open) or 15°C (fully closed)
+- **Scheduler interval**: 60 seconds (1 minute)
+- **Log interval**: 60 seconds (throttled temperature logging)

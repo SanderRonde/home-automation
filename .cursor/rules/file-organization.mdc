@@ -1,0 +1,190 @@
+---
+description: File organization, naming conventions, and directory structure patterns
+---
+
+# File Organization and Naming
+
+Follow these conventions for organizing and naming files in the project.
+
+## Module File Naming
+
+### Server Modules
+
+- **Main module file**: Use the module name as the filename (not `index.ts`)
+  - ✅ `app/server/modules/device/device.ts`
+  - ✅ `app/server/modules/temperature/index.ts` (exception for temperature module)
+  - ❌ `app/server/modules/device/index.ts` (unless it's a re-export)
+
+- **Supporting files**: Use descriptive camelCase names
+  - ✅ `temp-controller.ts`, `scheduler.ts`, `routing.ts`
+  - ✅ `hueDevices.ts`, `botHelpers.ts`, `cluster.ts`
+  - ❌ `tempController.ts` (use kebab-case for multi-word files)
+
+- **Type definitions**: Can be in the main file or separate `types.ts`
+  - ✅ `app/server/modules/temperature/types.ts`
+  - ✅ Types defined in main module file if small
+
+### Client Components
+
+- **Component files**: PascalCase matching component name
+  - ✅ `DeviceDetail.tsx`, `SceneCreateModal.tsx`, `HomeLayoutView.tsx`
+  - ❌ `deviceDetail.tsx`, `device-detail.tsx`
+
+- **Component directories**: Use for complex components with multiple files
+  ```
+  components/
+  ├── DeviceDetail.tsx          # Main component
+  ├── DeviceDetail.test.tsx     # Tests
+  └── DeviceDetail.styles.ts    # Styles (if needed)
+  ```
+
+- **Utility files**: camelCase
+  - ✅ `data-hooks.ts`, `fetch.ts`, `animations.ts`
+  - ✅ `resilient-socket.ts`, `offline-context.ts`
+
+## Directory Structure
+
+### Server Structure
+
+```
+app/server/
+├── modules/              # Feature modules
+│   ├── device/
+│   │   ├── device.ts     # Main module file
+│   │   ├── routing.ts    # API routes
+│   │   ├── cluster.ts    # Device cluster logic
+│   │   └── types.ts     # Module types (optional)
+│   └── temperature/
+│       ├── index.ts      # Main module (exception)
+│       ├── temp-controller.ts
+│       ├── scheduler.ts
+│       └── types.ts
+├── lib/                  # Shared utilities
+│   ├── database.ts
+│   ├── logging/
+│   └── routes.ts
+└── config/               # Configuration
+```
+
+### Client Structure
+
+```
+app/client/
+├── dashboard/            # Main dashboard app
+│   ├── components/       # React components
+│   │   ├── layout/       # Layout components
+│   │   └── *.tsx         # Feature components
+│   ├── lib/              # Dashboard utilities
+│   └── dashboard.tsx     # Entry point
+├── config/               # Configuration UI
+│   └── components/
+├── lib/                  # Shared client utilities
+└── shared/               # Shared client code
+```
+
+## File Organization Principles
+
+### Single Responsibility
+
+Each file should have a clear, single purpose:
+
+```typescript
+// ✅ Good - Clear purpose
+// device.ts - Main device module
+// routing.ts - API route handlers
+// cluster.ts - Device cluster logic
+
+// ❌ Bad - Mixed concerns
+// device.ts - Contains module, routes, clusters, types, everything
+```
+
+### Co-location
+
+Keep related files together:
+
+```
+temperature/
+├── index.ts              # Main module
+├── temp-controller.ts    # Temperature controller
+├── scheduler.ts          # Schedule management
+├── routing.ts            # API routes
+└── types.ts              # Type definitions
+```
+
+### Shared Code Location
+
+- **Shared types**: `types/` directory (importable by both client and server)
+- **Shared utilities**: 
+  - Server: `app/server/lib/`
+  - Client: `app/client/lib/` or `app/client/shared/`
+- **Module-specific types**: In module directory or `types.ts` file
+
+## Import Paths
+
+Always use relative imports (no path aliases):
+
+```typescript
+// ✅ Good - Relative imports
+import type { Device } from '../../../server/modules/device/device';
+import { apiGet } from '../../lib/fetch';
+
+// ❌ Bad - Absolute imports or aliases
+import { Device } from '@/server/modules/device';
+import { apiGet } from '@client/lib/fetch';
+```
+
+### Import Organization
+
+Imports are auto-sorted by Prettier, but general order:
+1. External packages
+2. Internal type imports (`import type`)
+3. Internal value imports
+4. Relative imports
+
+```typescript
+// External
+import React from 'react';
+import { Box, Typography } from '@mui/material';
+
+// Internal types
+import type { Device } from '../../../server/modules/device/device';
+import type { Scene } from '../../../../types/scene';
+
+// Internal values
+import { apiGet } from '../../lib/fetch';
+import { useData } from '../../lib/data-hooks';
+```
+
+## File Size Guidelines
+
+- **Target**: 200-500 lines per file
+- **Maximum**: ~1000 lines (consider splitting)
+- **Minimum**: No minimum, but avoid single-line files unless necessary
+
+If a file grows too large:
+1. Extract related functionality to separate files
+2. Split into logical sections (e.g., `routing.ts`, `types.ts`)
+3. Create sub-modules for complex features
+
+## Test File Organization
+
+- **Co-locate tests**: Place test files next to source files
+  - ✅ `device.test.ts` next to `device.ts`
+  - ✅ `DeviceDetail.test.tsx` next to `DeviceDetail.tsx`
+
+- **Test naming**: Match source file name with `.test.` or `.spec.`
+  - ✅ `device.test.ts`, `DeviceDetail.test.tsx`
+  - ✅ `device.spec.ts`, `DeviceDetail.spec.tsx`
+
+## Configuration Files
+
+- **Module config**: Store in module's JSON database
+- **Server config**: `app/server/config/`
+- **Client config**: `app/client/config/` or component-specific
+
+## Examples
+
+See existing structure:
+- [Device module](mdc:app/server/modules/device/) - Well-organized module structure
+- [Temperature module](mdc:app/server/modules/temperature/) - Module with multiple supporting files
+- [Dashboard components](mdc:app/client/dashboard/components/) - Component organization

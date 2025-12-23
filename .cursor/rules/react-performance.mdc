@@ -1,0 +1,208 @@
+---
+globs: app/client/**/*.tsx
+description: React performance optimization patterns with memoization and hooks
+---
+
+# React Performance Optimization
+
+This project uses React 19 with performance optimizations. Follow these patterns for efficient rendering.
+
+## React.memo
+
+Use `React.memo` for components that receive stable props and don't need to re-render frequently:
+
+```typescript
+interface MyComponentProps {
+	value: string;
+	onClick: () => void;
+}
+
+// ✅ Good - Memoize expensive components
+export const MyComponent = React.memo((props: MyComponentProps): JSX.Element => {
+	return <div onClick={props.onClick}>{props.value}</div>;
+});
+
+// ❌ Bad - Don't memoize if props change frequently or component is simple
+export const SimpleComponent = (props: { text: string }): JSX.Element => {
+	return <span>{props.text}</span>;
+};
+```
+
+**When to use `React.memo`:**
+- ✅ Component renders frequently with same props
+- ✅ Component has expensive rendering logic
+- ✅ Component is in a list and receives stable props
+- ❌ Don't use for simple components that always re-render
+- ❌ Don't use if props change on every render
+
+## useCallback
+
+Use `useCallback` to memoize function references passed as props:
+
+```typescript
+// ✅ Good - Memoize callbacks passed to memoized children
+const handleClick = React.useCallback(() => {
+	doSomething(props.id);
+}, [props.id]);
+
+return <MemoizedChild onClick={handleClick} />;
+
+// ✅ Good - Memoize callbacks with stable dependencies
+const handleSubmit = React.useCallback((data: FormData) => {
+	submitForm(data);
+}, []); // Empty deps if function doesn't depend on props/state
+
+// ❌ Bad - Don't memoize if dependencies change frequently
+const handleChange = React.useCallback((value: string) => {
+	setValue(value); // setValue is stable, but this is unnecessary
+}, []);
+```
+
+**When to use `useCallback`:**
+- ✅ Callback is passed to a memoized child component
+- ✅ Callback is used in dependency arrays (useEffect, useMemo)
+- ✅ Callback is expensive to create
+- ❌ Don't use for simple inline handlers that aren't passed down
+
+## useMemo
+
+Use `useMemo` for expensive computations:
+
+```typescript
+// ✅ Good - Expensive computation
+const sortedItems = React.useMemo(() => {
+	return items.sort((a, b) => a.name.localeCompare(b.name));
+}, [items]);
+
+// ✅ Good - Creating objects/arrays that are dependencies
+const chartData = React.useMemo(() => ({
+	labels: data.map(d => d.label),
+	values: data.map(d => d.value),
+}), [data]);
+
+// ❌ Bad - Don't memoize simple operations
+const doubled = React.useMemo(() => value * 2, [value]); // Unnecessary
+```
+
+**When to use `useMemo`:**
+- ✅ Expensive calculations (sorting, filtering, transformations)
+- ✅ Creating objects/arrays used in dependency arrays
+- ✅ Derived state that's expensive to compute
+- ❌ Don't use for simple operations or primitive values
+
+## useRef for Stable References
+
+Use `useRef` for values that don't trigger re-renders:
+
+```typescript
+// ✅ Good - Timer references
+const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+// ✅ Good - Previous values
+const prevValueRef = React.useRef<string>('');
+React.useEffect(() => {
+	if (prevValueRef.current !== props.value) {
+		// Value changed
+	}
+	prevValueRef.current = props.value;
+}, [props.value]);
+
+// ✅ Good - Mutable state that doesn't need re-renders
+const isPressingRef = React.useRef(false);
+```
+
+## Data Hooks Pattern
+
+The project uses a custom data subscription pattern for reactive state:
+
+```typescript
+import { useCreateData, useData } from '../../lib/data-hooks';
+
+// Create reactive data
+const roomData = useCreateData<RoomInfo>(initialRoom);
+
+// Subscribe to data changes
+const room = useData(roomData);
+
+// Transform data
+const roomName = useData(roomData, (room) => room.name);
+```
+
+This pattern provides:
+- Reactive updates without prop drilling
+- Efficient re-renders (only components using changed data update)
+- Type-safe subscriptions
+
+## Effect Dependencies
+
+Always include all dependencies in `useEffect`:
+
+```typescript
+// ✅ Good - All dependencies listed
+React.useEffect(() => {
+	fetchData(props.id);
+}, [props.id]);
+
+// ✅ Good - Empty array for mount-only effects
+React.useEffect(() => {
+	setupSubscription();
+	return () => cleanupSubscription();
+}, []);
+
+// ❌ Bad - Missing dependencies
+React.useEffect(() => {
+	fetchData(props.id, props.filter); // filter not in deps
+}, [props.id]);
+```
+
+## Performance Best Practices
+
+1. **Avoid inline object/array creation in render:**
+   ```typescript
+   // ❌ Bad - Creates new object every render
+   <Component style={{ margin: 10 }} />
+   
+   // ✅ Good - Stable reference
+   const style = React.useMemo(() => ({ margin: 10 }), []);
+   <Component style={style} />
+   ```
+
+2. **Lazy load heavy components:**
+   ```typescript
+   // ✅ Good - Code splitting
+   const [HeavyComponent, setHeavyComponent] = React.useState<React.ComponentType | null>(null);
+   
+   React.useEffect(() => {
+     import('./HeavyComponent').then(mod => {
+       setHeavyComponent(() => mod.HeavyComponent);
+     });
+   }, []);
+   ```
+
+3. **Use keys properly in lists:**
+   ```typescript
+   // ✅ Good - Stable, unique keys
+   {items.map(item => (
+     <ItemComponent key={item.id} item={item} />
+   ))}
+   ```
+
+4. **Avoid unnecessary state:**
+   ```typescript
+   // ❌ Bad - Storing derived state
+   const [doubled, setDoubled] = React.useState(0);
+   React.useEffect(() => {
+     setDoubled(value * 2);
+   }, [value]);
+   
+   // ✅ Good - Compute on render
+   const doubled = value * 2;
+   ```
+
+## Examples
+
+See existing components for reference:
+
+- [HomeLayoutView.tsx](mdc:app/client/dashboard/components/HomeLayoutView.tsx) - Uses `React.memo` and `useCallback` for room components
+- [DeviceIcon.tsx](mdc:app/client/dashboard/components/DeviceIcon.tsx) - Memoized component with callback optimization
+- [data-hooks.ts](mdc:app/client/dashboard/lib/data-hooks.ts) - Custom reactive data hooks

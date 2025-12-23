@@ -1,0 +1,445 @@
+---
+description: Overview of all server modules, their purposes, and how they work together
+---
+
+# Modules Overview
+
+The home automation system consists of 18 modules, each handling a specific aspect of the system. This document provides an overview of each module and how they interact.
+
+## Module Categories
+
+### Core Infrastructure Modules
+
+#### `auth` - Authentication & User Management
+**Purpose**: Handles user authentication, authorization, and user management.
+
+**Key Features**:
+- User registration and login
+- Session management with cookies
+- User roles and permissions
+- Secret key management for JWT tokens
+
+**Key Files**:
+- [index.ts](mdc:app/server/modules/auth/index.ts) - Main module
+- [user-management.ts](mdc:app/server/modules/auth/user-management.ts) - User CRUD operations
+- [routing.ts](mdc:app/server/modules/auth/routing.ts) - Auth API endpoints
+
+**Usage**:
+```typescript
+const userManagement = await modules.auth.userManagement;
+const user = await userManagement.getUser(userId);
+```
+
+#### `secret` - Secret Management
+**Purpose**: Manages encrypted secrets stored in the database.
+
+**Key Features**:
+- Encrypted secret storage
+- Secret sharing between modules
+- Environment variable integration
+
+**Key Files**:
+- [index.ts](mdc:app/server/modules/secret/index.ts) - Module initialization
+
+**Usage**: Other modules access secrets through the secret module's API.
+
+#### `dashboard` - Frontend Build & Serving
+**Purpose**: Builds and serves the React dashboard frontend.
+
+**Key Features**:
+- React app compilation (production mode)
+- Static asset serving
+- Development mode support
+
+**Key Files**:
+- [index.ts](mdc:app/server/modules/dashboard/index.ts) - Module initialization
+- [build.ts](mdc:app/server/modules/dashboard/build.ts) - Build process
+
+**Note**: In production, builds the React app on startup. In development, serves from source.
+
+---
+
+### Device Integration Modules
+
+#### `device` - Core Device Management
+**Purpose**: Central device registry and management system. All devices from various sources are unified here.
+
+**Key Features**:
+- Device registry and storage
+- Device clusters (on/off, color, temperature, etc.)
+- Scene management and execution
+- Device groups
+- Color palettes
+- Room management and house layout
+- Sensor tracking (occupancy, temperature, humidity, illuminance, power)
+- Cron-based scene triggers
+
+**Key Components**:
+- `DeviceAPI` - Main API for device operations
+- `SceneAPI` - Scene creation and execution
+- `GroupAPI` - Device grouping
+- `PaletteAPI` - Color palette management
+- Various trackers for sensor data
+
+**Key Files**:
+- [index.ts](mdc:app/server/modules/device/index.ts) - Main module
+- [api.ts](mdc:app/server/modules/device/api.ts) - Device API
+- [scene-api.ts](mdc:app/server/modules/device/scene-api.ts) - Scene management
+- [cluster.ts](mdc:app/server/modules/device/cluster.ts) - Device cluster definitions
+
+**Usage**:
+```typescript
+const deviceAPI = await modules.device.api.value;
+const devices = deviceAPI.devices.current();
+const scenes = deviceAPI.sceneAPI.getScenes();
+```
+
+**Device Sources**: Devices can come from Matter, WLED, EWeLink, Tuya, HomeWizard, or LED Art modules.
+
+#### `matter` - Matter.js Protocol
+**Purpose**: Integrates Matter.js (formerly Project CHIP) devices.
+
+**Key Features**:
+- Matter.js server implementation
+- Device discovery and pairing
+- Real-time device updates
+- Cluster-based device control
+
+**Key Files**:
+- [index.ts](mdc:app/server/modules/matter/index.ts) - Module initialization
+- [server/server.ts](mdc:app/server/modules/matter/server/server.ts) - Matter server
+
+**Usage**: Automatically discovers and adds Matter devices to the device module.
+
+#### `wled` - WLED LED Strip Control
+**Purpose**: Controls WLED-powered LED strips via HTTP API.
+
+**Key Features**:
+- WLED device discovery and management
+- Color and effect control
+- Automatic device updates (every 15 minutes)
+- HTTP-based communication
+
+**Key Files**:
+- [index.ts](mdc:app/server/modules/wled/index.ts) - Module initialization
+- [client/device.ts](mdc:app/server/modules/wled/client/device.ts) - WLED device wrapper
+
+**Configuration**: Devices configured via IP addresses in database.
+
+#### `ewelink` - EWeLink Cloud Integration
+**Purpose**: Integrates with EWeLink (Sonoff) cloud platform.
+
+**Key Features**:
+- OAuth authentication
+- WebSocket real-time updates
+- Device synchronization
+- Token refresh handling
+
+**Key Files**:
+- [index.ts](mdc:app/server/modules/ewelink/index.ts) - Module initialization
+- [api.ts](mdc:app/server/modules/ewelink/api.ts) - EWeLink API wrapper
+
+**Authentication**: Requires OAuth flow via `/ewelink/oauth` endpoint.
+
+#### `tuya` - Tuya Cloud Integration
+**Purpose**: Integrates with Tuya cloud platform.
+
+**Key Features**:
+- Tuya API authentication
+- Device discovery and control
+- Product-specific device handlers
+- Virtual device support
+
+**Key Files**:
+- [index.ts](mdc:app/server/modules/tuya/index.ts) - Module initialization
+- [client/api.ts](mdc:app/server/modules/tuya/client/api.ts) - Tuya API wrapper
+
+**Configuration**: Requires API credentials (key, secret, region, virtual device ID).
+
+#### `homewizard` - HomeWizard Energy Monitor
+**Purpose**: Integrates HomeWizard P1 energy meters.
+
+**Key Features**:
+- Energy consumption tracking
+- Power usage monitoring
+- Automatic polling with exponential backoff
+- Device state management
+
+**Key Files**:
+- [index.ts](mdc:app/server/modules/homewizard/index.ts) - Module initialization
+- [client/device.ts](mdc:app/server/modules/homewizard/client/device.ts) - HomeWizard device
+
+**Polling**: Starts at 15 seconds, backs off to 5 minutes on errors.
+
+#### `led-art` - LED Art Custom Protocol
+**Purpose**: Integrates custom LED Art devices via WebSocket.
+
+**Key Features**:
+- WebSocket-based communication
+- Device discovery and management
+- Color control
+- Automatic reconnection
+
+**Key Files**:
+- [index.ts](mdc:app/server/modules/led-art/led-art.ts) - Module initialization
+- [client/device.ts](mdc:app/server/modules/led-art/client/device.ts) - LED Art device
+
+**Configuration**: Devices configured via WebSocket URLs.
+
+---
+
+### Automation & Control Modules
+
+#### `temperature` - Temperature Control System
+**Purpose**: Intelligent heating control with central thermostat and per-room TRV management.
+
+**Key Features**:
+- Time-based temperature schedules
+- Room-by-room heating control
+- Central thermostat management
+- TRV (Thermostatic Radiator Valve) control
+- Temperature sensor aggregation
+- Manual overrides (room and global)
+- Test mode for dry-run testing
+
+**Key Files**:
+- [index.ts](mdc:app/server/modules/temperature/index.ts) - Main module
+- [scheduler.ts](mdc:app/server/modules/temperature/scheduler.ts) - Minute-by-minute scheduler
+- [temp-controller.ts](mdc:app/server/modules/temperature/temp-controller.ts) - Temperature tracking
+
+**Control Strategy**: 
+- Central thermostat: 30°C if ANY room needs heating, 15°C if none
+- TRVs: 30°C (fully open) or 15°C (fully closed) per room based on demand
+
+**See**: [temperature-control.mdc](mdc:.cursor/rules/temperature-control.mdc) for detailed documentation.
+
+#### `wakelight` - Wake Light Automation
+**Purpose**: Gradual light brightness increase for wake-up alarms.
+
+**Key Features**:
+- Scheduled wake-up alarms
+- Gradual brightness increase over configurable duration
+- Multi-device support
+- Manual cancellation detection
+- Color temperature control
+
+**Key Files**:
+- [index.ts](mdc:app/server/modules/wakelight/index.ts) - Module initialization
+- [wakelight-logic.ts](mdc:app/server/modules/wakelight/wakelight-logic.ts) - Core logic
+
+**Usage**:
+```typescript
+// Schedule alarm 30 minutes from now
+logic.scheduleAlarm(30);
+
+// Wakelight runs for configured duration, gradually increasing brightness
+```
+
+**Behavior**: Updates device brightness every 5 seconds. Cancels if devices are manually changed.
+
+#### `home-detector` - Presence Detection
+**Purpose**: Detects when people are home using various methods.
+
+**Key Features**:
+- Multiple detection methods:
+  - Door sensor monitoring
+  - Movement sensor monitoring
+  - Manual state setting
+- Per-person tracking
+- Home/away state management
+- Scene triggers on arrival/departure
+- SQLite event logging
+
+**Key Files**:
+- [index.ts](mdc:app/server/modules/home-detector/index.ts) - Main module
+- [classes.ts](mdc:app/server/modules/home-detector/classes.ts) - Detector classes
+- [bot.ts](mdc:app/server/modules/home-detector/bot.ts) - Telegram bot integration
+
+**States**: `HOME` or `AWAY` per person. Triggers scenes when:
+- Anybody arrives home
+- Nobody is home
+- Specific person arrives/leaves
+
+**Usage**:
+```typescript
+const detector = await modules.homeDetector.getDetector();
+detector.onUpdate((newState, name) => {
+  // Handle state change
+});
+```
+
+#### `notification` - Push Notifications
+**Purpose**: Sends push notifications to subscribed clients.
+
+**Key Features**:
+- Web Push API (PWA notifications)
+- Subscription management
+- Notification settings
+- Door sensor notifications
+
+**Key Files**:
+- [index.ts](mdc:app/server/modules/notification/index.ts) - Module initialization
+- [push-manager.ts](mdc:app/server/modules/notification/push-manager.ts) - Push notification logic
+
+**Usage**:
+```typescript
+await modules.notification.sendNotification('Title', 'Body');
+```
+
+---
+
+### Communication Modules
+
+#### `bot` - Telegram Bot
+**Purpose**: Telegram bot for home automation control and queries.
+
+**Key Features**:
+- Natural language command processing
+- Per-chat state management
+- Module-specific bot handlers
+- Question/answer system
+- Command matching with fuzzy matching
+
+**Key Files**:
+- [index.ts](mdc:app/server/modules/bot/index.ts) - Module initialization
+- [message/index.ts](mdc:app/server/modules/bot/message/index.ts) - Message handling
+- [routing.ts](mdc:app/server/modules/bot/routing.ts) - Webhook endpoint
+
+**Commands**: Each module can define bot commands via `Bot` class extension.
+
+**Usage**: Sends messages to Telegram via webhook at `/bot/msg`.
+
+#### `ai` - ChatGPT Integration
+**Purpose**: AI assistant with function calling and MCP (Model Context Protocol) support.
+
+**Key Features**:
+- ChatGPT API integration
+- Function calling for device control
+- MCP server support
+- Chat history management
+- Tool registration from other modules
+
+**Key Files**:
+- [index.ts](mdc:app/server/modules/ai/index.ts) - Module initialization
+- [chatgpt.ts](mdc:app/server/modules/ai/chatgpt.ts) - ChatGPT service
+- [tools.ts](mdc:app/server/modules/ai/tools.ts) - Function tool definitions
+- [routing.ts](mdc:app/server/modules/ai/routing.ts) - Chat API endpoints
+
+**Usage**: Provides `/ai/chat` endpoint for AI conversations with home automation control.
+
+**See**: [ai-integration.mdc](mdc:.cursor/rules/ai-integration.mdc) for detailed documentation.
+
+#### `webhook` - Webhook API
+**Purpose**: Provides webhook endpoints for external integrations.
+
+**Key Features**:
+- Custom webhook registration
+- Webhook execution
+- Payload transformation
+- Authentication support
+
+**Key Files**:
+- [index.ts](mdc:app/server/modules/webhook/index.ts) - Module initialization
+- [webhook-api.ts](mdc:app/server/modules/webhook/webhook-api.ts) - Webhook management
+
+**Usage**: Register webhooks that trigger on events or can be called externally.
+
+#### `kiosk` - Kiosk Display
+**Purpose**: Provides data for kiosk displays (calendar, weather, etc.).
+
+**Key Features**:
+- Calendar integration
+- External weather data
+- Temperature information
+- Display-optimized endpoints
+
+**Key Files**:
+- [index.ts](mdc:app/server/modules/kiosk/index.ts) - Module initialization
+- [calendar.ts](mdc:app/server/modules/kiosk/calendar.ts) - Calendar data
+- [temperature/external.ts](mdc:app/server/modules/kiosk/temperature/external.ts) - Weather data
+
+**Usage**: Provides endpoints for kiosk displays to show calendar, weather, and system status.
+
+---
+
+## Module Interactions
+
+### Device Flow
+1. **Device Sources** (Matter, WLED, EWeLink, etc.) discover devices
+2. Devices are registered with **device** module via `setDevices()`
+3. **device** module tracks sensors and provides unified API
+4. Other modules (temperature, wakelight, scenes) control devices through **device** module
+
+### Automation Flow
+1. **home-detector** detects presence changes
+2. Triggers scenes in **device** module
+3. **temperature** scheduler checks heating demand every minute
+4. Updates thermostats and TRVs based on room status
+5. **notification** sends alerts if configured
+
+### Communication Flow
+1. **bot** receives Telegram messages
+2. Routes to module-specific handlers
+3. **ai** provides ChatGPT interface with function calling
+4. Both can control devices through **device** module
+
+### Scene Execution
+1. Scenes defined in **device** module
+2. Triggered by:
+   - Cron schedules (via CronTracker)
+   - Home detection
+   - Button presses
+   - Manual triggers
+   - API calls
+3. Scenes execute device actions, HTTP requests, notifications, etc.
+
+## Module Dependencies
+
+**Core Dependencies** (no dependencies on other modules):
+- `auth`, `secret`, `dashboard`, `kiosk`
+
+**Device Integration** (depends on `device`):
+- `matter`, `wled`, `ewelink`, `tuya`, `homewizard`, `led-art`
+
+**Automation** (depends on `device`, may depend on others):
+- `temperature` (depends on `device`)
+- `wakelight` (depends on `device`)
+- `home-detector` (depends on `device`, triggers scenes)
+- `notification` (standalone, but used by others)
+
+**Communication** (may depend on `device` for control):
+- `bot` (depends on all modules for commands)
+- `ai` (depends on `device` for function calling)
+- `webhook` (standalone)
+
+## Accessing Modules
+
+All modules are accessible through the `AllModules` type:
+
+```typescript
+const modules = await this.getModules<AllModules>();
+
+// Access specific module
+const deviceAPI = await modules.device.api.value;
+const temperature = modules.temperature;
+const bot = modules.bot;
+```
+
+## Module Initialization Order
+
+1. All modules are registered via `getAllModules()`
+2. `notifyAllModules()` is called to set up module references
+3. Each module's `init()` is called with `ModuleConfig`
+4. Routes are collected and registered
+5. `postInit()` is called for modules that need it (e.g., CronTracker)
+
+## Adding a New Module
+
+1. Create module directory: `app/server/modules/my-module/`
+2. Create `index.ts` extending `ModuleMeta`
+3. Implement `init()` method returning routes
+4. Add to `modules.ts` exports
+5. Add to `types.ts` for TypeScript types
+6. Optionally implement `postInit()` for async initialization
+
+See [module-system.mdc](mdc:.cursor/rules/module-system.mdc) for detailed module creation guide.

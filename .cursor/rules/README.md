@@ -24,6 +24,7 @@ These rules apply automatically when working with specific file types:
 #### React/Client Rules
 
 - **`react-components.mdc`** (`app/client/**/*.tsx`) - React component patterns, MUI usage
+- **`react-performance.mdc`** (`app/client/**/*.tsx`) - React performance optimization with memoization and hooks
 - **`api-communication.mdc`** (`app/client/**/*.tsx`, `app/client/**/*.ts`) - Client-side API patterns
 
 #### Testing Rules
@@ -46,16 +47,19 @@ These rules can be fetched when needed by asking about specific topics:
 - **`validation-schemas.mdc`** - Zod validation patterns and schema design
 - **`security-patterns.mdc`** - Security and authentication best practices
 - **`async-patterns.mdc`** - Async operations, promises, queues, and concurrency
+- **`file-organization.mdc`** - File organization, naming conventions, and directory structure
+- **`temperature-control.mdc`** - Temperature control system with scheduler, TRV control, and decision logic
+- **`modules-overview.mdc`** - Overview of all server modules, their purposes, and how they work together
 
 ## Quick Reference
 
 ### Working on Server Code?
 
-→ Check: `bun-runtime.mdc`, `module-system.mdc`, `routing-patterns.mdc`, `database-patterns.mdc`, `validation-schemas.mdc`, `security-patterns.mdc`, `async-patterns.mdc`
+→ Check: `bun-runtime.mdc`, `module-system.mdc`, `modules-overview.mdc`, `routing-patterns.mdc`, `database-patterns.mdc`, `validation-schemas.mdc`, `security-patterns.mdc`, `async-patterns.mdc`
 
 ### Working on Client Code?
 
-→ Check: `react-components.mdc`, `api-communication.mdc`
+→ Check: `react-components.mdc`, `react-performance.mdc`, `api-communication.mdc`
 
 ### Adding Real-Time Features?
 
@@ -64,6 +68,10 @@ These rules can be fetched when needed by asking about specific topics:
 ### Working with Smart Devices?
 
 → Check: `matter-integration.mdc`, `device-clusters.mdc`
+
+### Working with Temperature Control?
+
+→ Check: `temperature-control.mdc`
 
 ### Creating Scenes or Automations?
 
@@ -88,6 +96,14 @@ These rules can be fetched when needed by asking about specific topics:
 ### Working with Async Operations?
 
 → Check: `async-patterns.mdc`
+
+### Optimizing React Performance?
+
+→ Check: `react-performance.mdc`
+
+### Organizing Files or Naming Conventions?
+
+→ Check: `file-organization.mdc`
 
 ### Writing Tests?
 
@@ -152,6 +168,10 @@ Rules should be updated when:
 ✅ Validation and schema patterns (Zod)
 ✅ Security and authentication patterns
 ✅ Async operations and concurrency patterns
+✅ React performance optimization patterns
+✅ File organization and naming conventions
+✅ Temperature control system and scheduler
+✅ Complete modules overview and architecture
 
 ## Contributing
 
