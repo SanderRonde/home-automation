@@ -1,6 +1,6 @@
 #!/bin/bash
 # Kiosk Chrome Wrapper Script
-# Kills and restarts Chrome every 6 hours
+# Kills and restarts Chrome every 4 hours
 
 set -e
 
@@ -12,7 +12,7 @@ fi
 # Configuration
 KIOSK_URL="${KIOSK_URL:-http://localhost:3000/dashboard#home-kiosk}"
 DISPLAY_NUM="${DISPLAY:-:0}"
-RESTART_INTERVAL="${RESTART_INTERVAL:-21600}"  # 6 hours in seconds
+RESTART_INTERVAL="${RESTART_INTERVAL:-14400}"  # 4 hours in seconds
 CHROME_BIN="${CHROME_BIN:-}"
 
 # Find Chrome/Chromium binary
@@ -93,7 +93,7 @@ log "Starting kiosk Chrome wrapper"
 log "Chrome binary: $CHROME"
 log "Kiosk URL: $KIOSK_URL"
 log "Display: $DISPLAY_NUM"
-log "Restart interval: $RESTART_INTERVAL seconds (6 hours)"
+log "Restart interval: $RESTART_INTERVAL seconds (4 hours)"
 
 # Main restart loop
 while true; do
