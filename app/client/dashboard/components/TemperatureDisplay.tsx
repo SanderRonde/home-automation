@@ -24,6 +24,7 @@ interface ThermostatData {
 	deviceId?: string;
 	currentTemperature?: number;
 	targetTemperature?: number;
+	hardwareTargetTemperature?: number;
 	isHeating?: boolean;
 	mode?: string;
 }
@@ -32,7 +33,16 @@ interface NextScheduleData {
 	hasNext: boolean;
 	nextTriggerTime?: string;
 	targetTemperature?: number;
+	averageTargetTemperature?: number;
 	name?: string;
+}
+
+interface RoomStatus {
+	name: string;
+	currentTemperature: number;
+	targetTemperature: number;
+	isHeating: boolean;
+	overrideActive: boolean;
 }
 
 interface TemperatureDisplayProps {
@@ -49,14 +59,17 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 	const [updating, setUpdating] = useState(false);
 	const [nextSchedule, setNextSchedule] = useState<NextScheduleData | null>(null);
 	const [timeUntilNext, setTimeUntilNext] = useState<string>('');
+	const [averageTarget, setAverageTarget] = useState<number | null>(null);
 
 	const loadData = useCallback(async () => {
 		try {
-			const [tempResponse, thermostatResponse, scheduleResponse] = await Promise.all([
-				apiGet('temperature', '/inside-temperature', {}),
-				apiGet('temperature', '/central-thermostat', {}),
-				apiGet('temperature', '/schedule/next', {}),
-			]);
+			const [tempResponse, thermostatResponse, scheduleResponse, roomsResponse] =
+				await Promise.all([
+					apiGet('temperature', '/inside-temperature', {}),
+					apiGet('temperature', '/central-thermostat', {}),
+					apiGet('temperature', '/schedule/next', {}),
+					apiGet('temperature', '/rooms', {}),
+				]);
 
 			if (tempResponse.ok) {
 				const data = await tempResponse.json();
@@ -66,6 +79,7 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 			if (thermostatResponse.ok) {
 				const data = await thermostatResponse.json();
 				setThermostatData(data);
+				// Initialize slider with the configured global target
 				if (data.configured && data.targetTemperature !== undefined) {
 					setNewTarget(data.targetTemperature);
 				}
@@ -74,6 +88,24 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 			if (scheduleResponse.ok) {
 				const data = await scheduleResponse.json();
 				setNextSchedule(data);
+			}
+
+			if (roomsResponse.ok) {
+				const data = await roomsResponse.json();
+				if (data.rooms && data.rooms.length > 0) {
+					const avg =
+						data.rooms.reduce(
+							(acc: number, r: RoomStatus) => acc + r.targetTemperature,
+							0
+						) / data.rooms.length;
+					setAverageTarget(avg);
+				} else if (thermostatResponse.ok) {
+					// Fallback to global target if no rooms
+					const tData = await thermostatResponse.json();
+					if (tData.configured && 'targetTemperature' in tData) {
+						setAverageTarget(tData.targetTemperature);
+					}
+				}
 			}
 		} catch (error) {
 			console.error('Failed to load temperature data:', error);
@@ -301,7 +333,10 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 											}}
 											title="Target temperature"
 										>
-											{formatTemp(thermostatData.targetTemperature)}°
+											{formatTemp(
+												averageTarget ?? thermostatData.targetTemperature
+											)}
+											°
 										</Typography>
 										{thermostatData.isHeating && (
 											<FireIcon
@@ -454,7 +489,12 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 												component="span"
 												sx={{ fontWeight: 600, color: 'primary.main' }}
 											>
-												{nextSchedule.targetTemperature}°
+												{nextSchedule.averageTargetTemperature
+													? formatTemp(
+															nextSchedule.averageTargetTemperature
+														)
+													: nextSchedule.targetTemperature}
+												°
 											</Box>
 											<Box
 												component="span"

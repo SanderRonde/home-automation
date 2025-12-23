@@ -5,5 +5,6 @@ export interface TemperatureScheduleEntry {
 	startTime: string; // "HH:MM" format
 	endTime: string; // "HH:MM" format
 	targetTemperature: number;
+	roomExceptions?: Record<string, number>;
 	enabled: boolean;
 }

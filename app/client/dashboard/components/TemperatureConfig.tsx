@@ -20,8 +20,21 @@ import {
 	Switch,
 	Chip,
 	Slider,
+	Select,
+	MenuItem,
+	InputLabel,
+	Dialog,
+	DialogTitle,
+	DialogContent,
+	DialogActions,
 } from '@mui/material';
-import { Save as SaveIcon, Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import {
+	Save as SaveIcon,
+	Add as AddIcon,
+	Delete as DeleteIcon,
+	BugReport as BugReportIcon,
+} from '@mui/icons-material';
+import { TemperatureDebugDialog } from './TemperatureDebugDialog';
 import React, { useState, useEffect } from 'react';
 import { apiGet, apiPost } from '../../lib/fetch';
 
@@ -40,6 +53,12 @@ interface TemperatureScheduleEntry {
 	endTime: string;
 	targetTemperature: number;
 	enabled: boolean;
+	roomExceptions?: Record<string, number>;
+}
+
+interface Room {
+	name: string;
+	// other properties we don't need right now
 }
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -58,17 +77,31 @@ export const TemperatureConfig = (): JSX.Element => {
 	>([]);
 	const [schedule, setSchedule] = useState<TemperatureScheduleEntry[]>([]);
 	const [savingSchedule, setSavingSchedule] = useState(false);
+	const [rooms, setRooms] = useState<Room[]>([]);
+	const [exceptionDialogOpen, setExceptionDialogOpen] = useState(false);
+	const [editingException, setEditingException] = useState<{
+		scheduleId: string;
+		roomName: string;
+		temperature: number;
+	} | null>(null);
+	const [debugOpen, setDebugOpen] = useState(false);
 
 	const loadData = async () => {
 		setLoading(true);
 		try {
-			const [sensorsResponse, configResponse, thermostatsResponse, scheduleResponse] =
-				await Promise.all([
-					apiGet('temperature', '/temperature-sensors', {}),
-					apiGet('temperature', '/inside-temperature-sensors', {}),
-					apiGet('temperature', '/thermostats', {}),
-					apiGet('temperature', '/schedule', {}),
-				]);
+			const [
+				sensorsResponse,
+				configResponse,
+				thermostatsResponse,
+				scheduleResponse,
+				roomsResponse,
+			] = await Promise.all([
+				apiGet('temperature', '/temperature-sensors', {}),
+				apiGet('temperature', '/inside-temperature-sensors', {}),
+				apiGet('temperature', '/thermostats', {}),
+				apiGet('temperature', '/schedule', {}),
+				apiGet('device', '/rooms', {}),
+			]);
 
 			if (sensorsResponse.ok) {
 				const sensorsData = await sensorsResponse.json();
@@ -92,6 +125,11 @@ export const TemperatureConfig = (): JSX.Element => {
 			if (scheduleResponse.ok) {
 				const scheduleData = await scheduleResponse.json();
 				setSchedule(scheduleData.schedule || []);
+			}
+
+			if (roomsResponse.ok) {
+				const roomsData = await roomsResponse.json();
+				setRooms(Object.values(roomsData.rooms ?? {}));
 			}
 		} catch (error) {
 			console.error('Failed to load temperature configuration:', error);
@@ -192,6 +230,7 @@ export const TemperatureConfig = (): JSX.Element => {
 			endTime: '22:00',
 			targetTemperature: 20,
 			enabled: true,
+			roomExceptions: {},
 		};
 		setSchedule((prev) => [...prev, newEntry]);
 	};
@@ -220,6 +259,47 @@ export const TemperatureConfig = (): JSX.Element => {
 		);
 	};
 
+	const handleAddException = (scheduleId: string) => {
+		setEditingException({
+			scheduleId,
+			roomName: '',
+			temperature: 20,
+		});
+		setExceptionDialogOpen(true);
+	};
+
+	const handleSaveException = () => {
+		if (!editingException?.roomName) {
+			return;
+		}
+
+		setSchedule((prev) =>
+			prev.map((entry) => {
+				if (entry.id !== editingException.scheduleId) {
+					return entry;
+				}
+				const exceptions = { ...entry.roomExceptions };
+				exceptions[editingException.roomName] = editingException.temperature;
+				return { ...entry, roomExceptions: exceptions };
+			})
+		);
+		setExceptionDialogOpen(false);
+		setEditingException(null);
+	};
+
+	const handleRemoveException = (scheduleId: string, roomName: string) => {
+		setSchedule((prev) =>
+			prev.map((entry) => {
+				if (entry.id !== scheduleId) {
+					return entry;
+				}
+				const exceptions = { ...entry.roomExceptions };
+				delete exceptions[roomName];
+				return { ...entry, roomExceptions: exceptions };
+			})
+		);
+	};
+
 	if (loading) {
 		return (
 			<Box
@@ -242,7 +322,17 @@ export const TemperatureConfig = (): JSX.Element => {
 				<Box
 					sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
 				>
-					<Typography variant="h5">Temperature Configuration</Typography>
+					<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+						<Typography variant="h5">Temperature Configuration</Typography>
+						<IconButton
+							size="small"
+							onClick={() => setDebugOpen(true)}
+							color="default"
+							title="Open Debug View"
+						>
+							<BugReportIcon />
+						</IconButton>
+					</Box>
 					<Button
 						variant="contained"
 						startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
@@ -584,7 +674,7 @@ export const TemperatureConfig = (): JSX.Element => {
 											</Box>
 
 											{/* Target temperature */}
-											<Box>
+											<Box sx={{ mb: 2 }}>
 												<Typography
 													variant="caption"
 													color="text.secondary"
@@ -616,6 +706,70 @@ export const TemperatureConfig = (): JSX.Element => {
 													/>
 													<Typography variant="body2">30°</Typography>
 												</Box>
+											</Box>
+
+											{/* Room Exceptions */}
+											<Box>
+												<Box
+													sx={{
+														display: 'flex',
+														justifyContent: 'space-between',
+														alignItems: 'center',
+														mb: 1,
+													}}
+												>
+													<Typography
+														variant="caption"
+														color="text.secondary"
+													>
+														Room Exceptions
+													</Typography>
+													<Button
+														startIcon={<AddIcon />}
+														size="small"
+														onClick={() => handleAddException(entry.id)}
+													>
+														Add Exception
+													</Button>
+												</Box>
+												{entry.roomExceptions &&
+													Object.keys(entry.roomExceptions).length >
+														0 && (
+														<Box
+															sx={{
+																display: 'flex',
+																flexWrap: 'wrap',
+																gap: 1,
+															}}
+														>
+															{Object.entries(
+																entry.roomExceptions
+															).map(([room, temp]) => (
+																<Chip
+																	key={room}
+																	label={`${room}: ${temp}°C`}
+																	onDelete={() =>
+																		handleRemoveException(
+																			entry.id,
+																			room
+																		)
+																	}
+																	onClick={() => {
+																		setEditingException({
+																			scheduleId: entry.id,
+																			roomName: room,
+																			temperature: temp,
+																		});
+																		setExceptionDialogOpen(
+																			true
+																		);
+																	}}
+																	size="small"
+																	variant="outlined"
+																/>
+															))}
+														</Box>
+													)}
 											</Box>
 										</Box>
 									))}
@@ -649,6 +803,83 @@ export const TemperatureConfig = (): JSX.Element => {
 						</Card>
 					)}
 			</Box>
+
+			{/* Exception Dialog */}
+			<Dialog
+				open={exceptionDialogOpen}
+				onClose={() => {
+					setExceptionDialogOpen(false);
+					setEditingException(null);
+				}}
+			>
+				<DialogTitle>
+					{editingException?.roomName &&
+					schedule.find((s) => s.id === editingException.scheduleId)?.roomExceptions?.[
+						editingException.roomName
+					]
+						? 'Edit Room Exception'
+						: 'Add Room Exception'}
+				</DialogTitle>
+				<DialogContent sx={{ minWidth: 300, pt: 1 }}>
+					<Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 1 }}>
+						<FormControl fullWidth>
+							<InputLabel>Room</InputLabel>
+							<Select
+								value={editingException?.roomName || ''}
+								label="Room"
+								onChange={(e) =>
+									setEditingException((prev) =>
+										prev ? { ...prev, roomName: e.target.value } : null
+									)
+								}
+							>
+								{rooms.map((room) => (
+									<MenuItem key={room.name} value={room.name}>
+										{room.name}
+									</MenuItem>
+								))}
+							</Select>
+						</FormControl>
+
+						<Box>
+							<Typography gutterBottom>
+								Target Temperature: {editingException?.temperature}°C
+							</Typography>
+							<Slider
+								value={editingException?.temperature || 20}
+								onChange={(_e, value) =>
+									setEditingException((prev) =>
+										prev ? { ...prev, temperature: value } : null
+									)
+								}
+								min={5}
+								max={30}
+								step={0.5}
+								valueLabelDisplay="auto"
+							/>
+						</Box>
+					</Box>
+				</DialogContent>
+				<DialogActions>
+					<Button
+						onClick={() => {
+							setExceptionDialogOpen(false);
+							setEditingException(null);
+						}}
+					>
+						Cancel
+					</Button>
+					<Button
+						onClick={handleSaveException}
+						variant="contained"
+						disabled={!editingException?.roomName}
+					>
+						Save
+					</Button>
+				</DialogActions>
+			</Dialog>
+
+			<TemperatureDebugDialog open={debugOpen} onClose={() => setDebugOpen(false)} />
 		</Box>
 	);
 };

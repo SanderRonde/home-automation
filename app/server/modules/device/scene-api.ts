@@ -16,6 +16,7 @@ import { SceneTriggerType, SceneConditionType } from '../../../../types/scene';
 import { applyPaletteToDevices } from './palette-executor';
 import { assertUnreachable } from '../../lib/assert';
 import { HOME_STATE } from '../home-detector/types';
+import { Temperature } from '../temperature/index';
 import { logTag } from '../../lib/logging/logger';
 import type { PaletteAPI } from './palette-api';
 import type { Database } from '../../lib/db';
@@ -432,6 +433,30 @@ export class SceneAPI {
 							return true;
 						} catch (error) {
 							logTag('scene', 'red', 'Notification send error:', error);
+							return false;
+						}
+					}
+
+					// Handle room temperature action
+					if (sceneAction.cluster === 'room-temperature') {
+						try {
+							const { roomName, mode, targetTemperature } = sceneAction.action;
+							logTag(
+								'scene',
+								'blue',
+								`Setting room temperature for ${roomName}: ${mode}`
+							);
+
+							if (mode === 'setTarget' && targetTemperature !== undefined) {
+								Temperature.setRoomOverride(roomName, targetTemperature);
+							} else if (mode === 'returnToSchedule') {
+								Temperature.setRoomOverride(roomName, null);
+							}
+
+							logTag('scene', 'green', `Room temperature updated for ${roomName}`);
+							return true;
+						} catch (error) {
+							logTag('scene', 'red', 'Room temperature update error:', error);
 							return false;
 						}
 					}

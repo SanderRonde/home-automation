@@ -143,6 +143,25 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 					}
 				),
 			},
+			'/rooms': async (_req, _server, { json }) => {
+				const rooms = await Temperature.getAllRoomsStatus(modules);
+				return json({ success: true, rooms });
+			},
+			'/room/:roomName/target': withRequestBody(
+				z.object({ target: z.number() }),
+				(body, req, _server, { json }) => {
+					const { roomName } = req.params;
+					Temperature.setRoomOverride(roomName, body.target);
+					return json({ success: true });
+				}
+			),
+			'/room/:roomName/clear': {
+				POST: (req, _server, { json }) => {
+					const { roomName } = req.params;
+					Temperature.setRoomOverride(roomName, null);
+					return json({ success: true });
+				},
+			},
 			'/thermostats': async (_req, _server, { json }) => {
 				const thermostats = await Temperature.getAvailableThermostats(modules);
 				return json({ success: true, thermostats });
@@ -153,25 +172,31 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 					if (!status) {
 						return json({ success: true, configured: false });
 					}
-					return json({ success: true, configured: true, ...status });
+					// Return logical target for UI, preserve hardware target for debug
+					const logicalTarget = Temperature.getGlobalTarget();
+					return json({
+						success: true,
+						configured: true,
+						...status,
+						targetTemperature: logicalTarget,
+						hardwareTargetTemperature: status.targetTemperature,
+					});
 				},
 				POST: withRequestBody(
 					z.object({
 						targetTemperature: z.number(),
 					}),
 					async (body, _req, _server, { json }) => {
-						const success = await Temperature.setCentralThermostatTarget(
-							modules,
-							body.targetTemperature
-						);
-						if (!success) {
-							return json({
-								success: false,
-								error: 'Failed to set target temperature',
-							});
-						}
+						// Set global override instead of hardware target
+						Temperature.setGlobalOverride(body.targetTemperature);
+
 						const status = await Temperature.getCentralThermostatStatus(modules);
-						return json({ success: true, ...status });
+						// Return updated logical target
+						return json({
+							success: true,
+							...status,
+							targetTemperature: body.targetTemperature,
+						});
 					}
 				),
 			},
@@ -190,6 +215,7 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 								startTime: z.string().regex(/^\d{2}:\d{2}$/),
 								endTime: z.string().regex(/^\d{2}:\d{2}$/),
 								targetTemperature: z.number().min(5).max(30),
+								roomExceptions: z.record(z.string(), z.number()).optional(),
 								enabled: z.boolean(),
 							})
 						),
@@ -201,7 +227,7 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 				),
 			},
 			'/schedule/next': {
-				GET: (_req, _server, { json }) => {
+				GET: async (_req, _server, { json }) => {
 					const nextChange: {
 						entry: TemperatureScheduleEntry;
 						nextTriggerTime: Date;
@@ -213,13 +239,21 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 						});
 					}
 					const { entry, nextTriggerTime } = nextChange;
+					const averageTargetTemperature =
+						await Temperature.getNextAverageTargetTemperature(modules);
 					return json({
 						success: true as const,
 						hasNext: true as const,
 						nextTriggerTime: nextTriggerTime.toISOString(),
 						targetTemperature: entry.targetTemperature,
+						averageTargetTemperature,
 						name: entry.name,
 					});
+				},
+			},
+			'/debug': {
+				GET: (_req, _server, { json }) => {
+					return json({ success: true, debug: Temperature.getDebugInfo() });
 				},
 			},
 		},

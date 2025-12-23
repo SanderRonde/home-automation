@@ -81,7 +81,7 @@ export const SceneActionChips = (props: SceneActionChipsProps): JSX.Element => {
 				}
 
 				// Handle group actions
-				if (action.groupId) {
+				if ('groupId' in action && action.groupId) {
 					const group = props.getGroupById(action.groupId);
 					if (!group) {
 						return null;
@@ -190,7 +190,11 @@ export const SceneActionChips = (props: SceneActionChipsProps): JSX.Element => {
 				}
 
 				// Handle device actions
-				const device = props.getDeviceById(action.deviceId || '');
+				let deviceId = '';
+				if ('deviceId' in action && action.deviceId) {
+					deviceId = action.deviceId;
+				}
+				const device = props.getDeviceById(deviceId);
 				if (!device) {
 					return null;
 				}
@@ -199,7 +203,7 @@ export const SceneActionChips = (props: SceneActionChipsProps): JSX.Element => {
 
 				return (
 					<Chip
-						key={`${action.deviceId}-${action.cluster}-${index}`}
+						key={`${deviceId}-${action.cluster}-${index}`}
 						icon={
 							cluster?.icon ? (
 								<IconComponent

@@ -2,9 +2,10 @@ import type {
 	DeviceListWithValuesResponse,
 	DashboardDeviceClusterColorControl,
 } from '../../../server/modules/device/routing';
+import { WbSunny, LocalFireDepartment as FireIcon, Close as CloseIcon } from '@mui/icons-material';
+import { Box, IconButton, Typography, Popover, Slider, Button } from '@mui/material';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import type { WallSegment, DoorSlot } from '../types/layout';
-import { Box, IconButton, Typography } from '@mui/material';
 import type { DeviceGroup } from '../../../../types/group';
 import { useCreateData, useData } from '../lib/data-hooks';
 // @ts-expect-error - konva ESM/CommonJS type resolution issue
@@ -18,7 +19,6 @@ import React, { useEffect, useState } from 'react';
 import { apiGet, apiPost } from '../../lib/fetch';
 import { Layer, Line, Stage } from 'react-konva';
 import type { IncludedIconNames } from './icon';
-import { WbSunny } from '@mui/icons-material';
 import type { HomeDetailView } from './Home';
 import { DeviceIcon } from './DeviceIcon';
 import { GroupIcon } from './GroupIcon';
@@ -33,6 +33,110 @@ interface HomeLayoutViewProps {
 	energyExpanded: boolean;
 	verticalSpacing: number;
 }
+
+interface RoomStatus {
+	name: string;
+	currentTemperature: number;
+	targetTemperature: number;
+	isHeating: boolean;
+	overrideActive: boolean;
+}
+
+interface RoomTemperaturePopoverProps {
+	open: boolean;
+	anchorEl: HTMLElement | null;
+	onClose: () => void;
+	roomName: string;
+	currentTemp: number;
+	targetTemp: number;
+	isOverride: boolean;
+	onSetTarget: (temp: number) => void;
+	onClearOverride: () => void;
+}
+
+const RoomTemperaturePopover = (props: RoomTemperaturePopoverProps) => {
+	const [sliderValue, setSliderValue] = useState(props.targetTemp);
+
+	useEffect(() => {
+		setSliderValue(props.targetTemp);
+	}, [props.targetTemp]);
+
+	const handleSliderChange = (_event: Event, value: number | number[]) => {
+		setSliderValue(value as number);
+	};
+
+	const handleSliderCommit = (_event: Event | React.SyntheticEvent, value: number | number[]) => {
+		props.onSetTarget(value as number);
+	};
+
+	return (
+		<Popover
+			open={props.open}
+			anchorEl={props.anchorEl}
+			onClose={props.onClose}
+			anchorOrigin={{
+				vertical: 'bottom',
+				horizontal: 'center',
+			}}
+			transformOrigin={{
+				vertical: 'top',
+				horizontal: 'center',
+			}}
+			PaperProps={{
+				sx: { p: 2, width: 250, borderRadius: 2 },
+			}}
+		>
+			<Box
+				sx={{
+					display: 'flex',
+					justifyContent: 'space-between',
+					alignItems: 'center',
+					mb: 2,
+				}}
+			>
+				<Typography variant="subtitle1" fontWeight="bold">
+					{props.roomName}
+				</Typography>
+				<IconButton size="small" onClick={props.onClose}>
+					<CloseIcon fontSize="small" />
+				</IconButton>
+			</Box>
+
+			<Typography variant="body2" color="text.secondary" gutterBottom>
+				Current: {Math.round(props.currentTemp * 10) / 10}°C
+			</Typography>
+
+			<Box sx={{ mb: 2 }}>
+				<Typography variant="caption" color="text.secondary">
+					Target: {sliderValue}°C
+				</Typography>
+				<Slider
+					value={sliderValue}
+					min={5}
+					max={30}
+					step={0.5}
+					onChange={handleSliderChange}
+					onChangeCommitted={handleSliderCommit}
+					valueLabelDisplay="auto"
+				/>
+			</Box>
+
+			{props.isOverride && (
+				<Button
+					fullWidth
+					variant="outlined"
+					size="small"
+					onClick={() => {
+						props.onClearOverride();
+						props.onClose();
+					}}
+				>
+					Return to Schedule
+				</Button>
+			)}
+		</Popover>
+	);
+};
 
 // Helper to filter clusters like ClusterIconButton does
 const getRelevantClusters = (clusterNames: DeviceClusterName[]): DeviceClusterName[] => {
@@ -269,7 +373,11 @@ interface RoomExpandButtonProps {
 		room: { id: string; center: { x: number; y: number } };
 		roomTemperature: number | null;
 		roomEnergy: number | null;
+		isHeating: boolean;
+		targetTemperature?: number;
+		overrideActive?: boolean;
 		clusterInfo: Array<{ clusterName: DeviceClusterName; icon: IncludedIconNames | null }>;
+		mappedRoomName: string;
 	};
 	stageTransform: { x: number; y: number; scale: number };
 	expandedRoomIdData: Data<string | null>;
@@ -278,6 +386,13 @@ interface RoomExpandButtonProps {
 	temperatureExpanded: boolean;
 	energyExpanded: boolean;
 	hideClusterButtons: boolean;
+	onTemperatureClick?: (
+		event: React.MouseEvent<HTMLElement>,
+		roomName: string,
+		currentTemp: number,
+		targetTemp: number,
+		isOverride: boolean
+	) => void;
 }
 
 const RoomExpandButton = React.memo((props: RoomExpandButtonProps): JSX.Element | null => {
@@ -286,41 +401,125 @@ const RoomExpandButton = React.memo((props: RoomExpandButtonProps): JSX.Element 
 		(expandedRoomId) => expandedRoomId === props.roomData.room.id
 	);
 
-	const handleToggle = React.useCallback(() => {
-		if (!props.isDraggingData.current()) {
-			if (props.expandedRoomIdData.current() === props.roomData.room.id) {
-				props.collapsingRoomIdData.set(props.roomData.room.id);
-				setTimeout(() => {
-					props.expandedRoomIdData.set(null);
-					props.collapsingRoomIdData.set(null);
-				}, 200);
-			} else {
-				props.expandedRoomIdData.set(props.roomData.room.id);
+	const handleToggle = React.useCallback(
+		(e?: React.MouseEvent<HTMLElement>) => {
+			if (!props.isDraggingData.current()) {
+				// If in temperature mode, handle click specially
+				if (props.temperatureExpanded && props.onTemperatureClick) {
+					if (
+						e &&
+						props.roomData.targetTemperature !== undefined &&
+						props.roomData.roomTemperature !== null
+					) {
+						props.onTemperatureClick(
+							e,
+							props.roomData.mappedRoomName,
+							props.roomData.roomTemperature,
+							props.roomData.targetTemperature,
+							!!props.roomData.overrideActive
+						);
+						return;
+					}
+				}
+
+				if (props.expandedRoomIdData.current() === props.roomData.room.id) {
+					props.collapsingRoomIdData.set(props.roomData.room.id);
+					setTimeout(() => {
+						props.expandedRoomIdData.set(null);
+						props.collapsingRoomIdData.set(null);
+					}, 200);
+				} else {
+					props.expandedRoomIdData.set(props.roomData.room.id);
+				}
 			}
-		}
-	}, [
-		props.expandedRoomIdData,
-		props.isDraggingData,
-		props.roomData.room.id,
-		props.collapsingRoomIdData,
-	]);
+		},
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[
+			props.expandedRoomIdData,
+			props.isDraggingData,
+			props.roomData.room.id,
+			props.collapsingRoomIdData,
+			props.temperatureExpanded,
+			props.onTemperatureClick,
+			props.roomData.mappedRoomName,
+			props.roomData.targetTemperature,
+			props.roomData.roomTemperature,
+			props.roomData.overrideActive,
+		]
+	);
 
 	if (props.roomData.clusterInfo.length === 0) {
 		return null;
 	}
 
-	let expandedContent = null;
-	if (props.temperatureExpanded && props.roomData.roomTemperature !== null) {
-		expandedContent = `${Math.round(props.roomData.roomTemperature * 10) / 10}°`;
+	let expandedContent: React.ReactNode = null;
+	// Only show temperature if there's a sensor (temperature > 0)
+	if (
+		props.temperatureExpanded &&
+		props.roomData.roomTemperature !== null &&
+		props.roomData.roomTemperature > 0
+	) {
+		const currentTemp = Math.round(props.roomData.roomTemperature * 10) / 10;
+		const targetTemp = props.roomData.targetTemperature;
+		expandedContent = (
+			<Box
+				sx={{
+					display: 'flex',
+					flexDirection: 'column',
+					alignItems: 'center',
+					gap: 0.25,
+					py: 0.5,
+					px: 1,
+				}}
+			>
+				<Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+					<span style={{ fontSize: '15px', fontWeight: 600 }}>{currentTemp}°</span>
+					{props.roomData.isHeating && (
+						<FireIcon
+							sx={{
+								fontSize: 14,
+								color: '#f97316',
+								animation: 'pulse 1.5s infinite',
+								'@keyframes pulse': {
+									'0%, 100%': { opacity: 1 },
+									'50%': { opacity: 0.5 },
+								},
+							}}
+						/>
+					)}
+				</Box>
+				{targetTemp !== undefined && (
+					<Box
+						sx={{
+							display: 'flex',
+							alignItems: 'center',
+							gap: 0.25,
+							opacity: 0.7,
+						}}
+					>
+						<span style={{ fontSize: '11px' }}>→ {targetTemp}°</span>
+					</Box>
+				)}
+			</Box>
+		);
 	}
 
 	// Hide cluster buttons when device icons are shown (but not when temperature/energy mode is active)
 	if (props.hideClusterButtons && !expandedContent) {
 		return null;
 	}
+
+	// Check if we're showing temperature (React element) vs energy (string)
+	const isTemperatureContent = props.temperatureExpanded && expandedContent !== null;
+
 	if (props.energyExpanded && props.roomData.roomEnergy !== null) {
 		expandedContent = `${Math.round(props.roomData.roomEnergy * 10) / 10}W`;
 	}
+
+	// Use different sizing for temperature display (needs more space for target temp)
+	const containerWidth = isTemperatureContent ? 60 : 48;
+	const containerHeight = isTemperatureContent ? 52 : 48;
+
 	return (
 		<Box
 			key={`${props.roomData.room.id}-ellipsis`}
@@ -329,14 +528,14 @@ const RoomExpandButton = React.memo((props: RoomExpandButtonProps): JSX.Element 
 				left:
 					props.roomData.room.center.x * props.stageTransform.scale +
 					props.stageTransform.x -
-					24,
+					containerWidth / 2,
 				top:
 					(props.roomData.room.center.y + 30 / props.stageTransform.scale) *
 						props.stageTransform.scale +
 					props.stageTransform.y -
-					24,
-				width: 48,
-				height: 48,
+					containerHeight / 2,
+				width: containerWidth,
+				height: containerHeight,
 				display: 'flex',
 				alignItems: 'center',
 				justifyContent: 'center',
@@ -348,17 +547,22 @@ const RoomExpandButton = React.memo((props: RoomExpandButtonProps): JSX.Element 
 		>
 			{expandedContent && !isExpanded ? (
 				<Box
+					onClick={(e) => {
+						e.stopPropagation();
+						handleToggle(e);
+					}}
 					sx={{
-						width: 48,
-						height: 48,
+						minWidth: containerWidth,
+						minHeight: containerHeight,
 						backgroundColor: 'rgba(255, 255, 255, 0.95)',
-						borderRadius: '50%',
+						borderRadius: isTemperatureContent ? 2 : '50%',
 						display: 'flex',
 						alignItems: 'center',
 						justifyContent: 'center',
 						boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
 						transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
 						animation: 'fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+						cursor: isTemperatureContent ? 'pointer' : 'default',
 						'@keyframes fadeInScale': {
 							from: {
 								opacity: 0,
@@ -371,11 +575,12 @@ const RoomExpandButton = React.memo((props: RoomExpandButtonProps): JSX.Element 
 						},
 						'&:hover': {
 							backgroundColor: '#ffffff',
-							transform: 'scale(1.1)',
+							transform: 'scale(1.05)',
 						},
 					}}
 				>
 					<Typography
+						component="div"
 						sx={{
 							fontSize: '14px',
 							fontWeight: 600,
@@ -404,17 +609,26 @@ const RoomExpandButton = React.memo((props: RoomExpandButtonProps): JSX.Element 
 					}}
 					onClick={(e) => {
 						e.stopPropagation();
-						handleToggle();
+						handleToggle(e);
 					}}
 					onPointerDown={(e) => {
 						e.stopPropagation();
 						e.preventDefault();
-						handleToggle();
+						// Only toggle on pointer down if NOT temperature mode (to avoid conflict with potential drag/click distinction)
+						// For temperature mode, we rely on onClick
+						if (!props.temperatureExpanded) {
+							handleToggle();
+						}
 					}}
 					onTouchStart={(e) => {
 						e.stopPropagation();
 						e.preventDefault();
-						handleToggle();
+						if (!props.temperatureExpanded) {
+							handleToggle();
+						} else {
+							// simulate click for touch in temp mode
+							handleToggle({} as unknown as React.MouseEvent<HTMLElement>);
+						}
 					}}
 				>
 					...
@@ -478,6 +692,9 @@ interface RoomOverlayProps {
 		clusterInfo: Array<{ clusterName: DeviceClusterName; icon: IncludedIconNames | null }>;
 		roomTemperature: number | null;
 		roomEnergy: number | null;
+		isHeating: boolean;
+		targetTemperature?: number;
+		overrideActive?: boolean;
 	};
 	stageTransform: { x: number; y: number; scale: number };
 	expandedRoomIdData: Data<string | null>;
@@ -495,6 +712,13 @@ interface RoomOverlayProps {
 		clusterName: DeviceClusterName,
 		roomDevices: DeviceListWithValuesResponse
 	) => Promise<void>;
+	onTemperatureClick?: (
+		event: React.MouseEvent<HTMLElement>,
+		roomName: string,
+		currentTemp: number,
+		targetTemp: number,
+		isOverride: boolean
+	) => void;
 }
 
 const RoomOverlay = React.memo((props: RoomOverlayProps): JSX.Element => {
@@ -557,6 +781,7 @@ const RoomOverlay = React.memo((props: RoomOverlayProps): JSX.Element => {
 					temperatureExpanded={props.temperatureExpanded}
 					energyExpanded={props.energyExpanded}
 					hideClusterButtons={props.hideClusterButtons}
+					onTemperatureClick={props.onTemperatureClick}
 				/>
 			)}
 
@@ -928,6 +1153,15 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	const [roomMappings, setRoomMappings] = useState<Record<string, string>>({});
 	const [availableRooms, setAvailableRooms] = useState<Record<string, RoomInfo>>({});
 	const [groups, setGroups] = useState<DeviceGroup[]>([]);
+	const [roomStatuses, setRoomStatuses] = useState<Record<string, RoomStatus>>({});
+	const [tempPopoverAnchor, setTempPopoverAnchor] = useState<HTMLElement | null>(null);
+	const [selectedRoomTemp, setSelectedRoomTemp] = useState<{
+		name: string;
+		current: number;
+		target: number;
+		isOverride: boolean;
+	} | null>(null);
+
 	const stageRef = React.useRef<StageType | null>(null);
 	const containerRef = React.useRef<HTMLDivElement | null>(null);
 	const dragStartPos = React.useRef<{ x: number; y: number } | null>(null);
@@ -999,12 +1233,34 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 		}
 	}, []);
 
+	const loadRoomStatuses = React.useCallback(async () => {
+		try {
+			const response = await apiGet('temperature', '/rooms', {});
+			if (response.ok) {
+				const data = await response.json();
+				const map: Record<string, RoomStatus> = {};
+				if (data.rooms) {
+					for (const r of data.rooms) {
+						map[r.name] = r;
+					}
+				}
+				setRoomStatuses(map);
+			}
+		} catch (error) {
+			console.error('Failed to load room statuses:', error);
+		}
+	}, []);
+
 	// Load layout, rooms, and groups on mount
 	useEffect(() => {
 		void loadLayout();
 		void loadRooms();
 		void loadGroups();
-	}, [loadRooms, loadLayout, loadGroups]);
+		void loadRoomStatuses();
+
+		const interval = setInterval(() => void loadRoomStatuses(), 60000);
+		return () => clearInterval(interval);
+	}, [loadRooms, loadLayout, loadGroups, loadRoomStatuses]);
 
 	// Fetch outside temperature periodically
 	useEffect(() => {
@@ -1367,11 +1623,31 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				// Find temperature sensor in this room
 				let roomTemperature: number | null = null;
 				let roomEnergy: number | null = null;
+				let isHeating = false;
+				let targetTemperature: number | undefined;
+				let overrideActive: boolean | undefined;
+
+				// Use room status from API if available
+				const roomStatus = roomStatuses[mappedRoomName];
+				if (roomStatus) {
+					roomTemperature = roomStatus.currentTemperature;
+					isHeating = roomStatus.isHeating;
+					targetTemperature = roomStatus.targetTemperature;
+					overrideActive = roomStatus.overrideActive;
+				} else {
+					// Fallback to device scraping
+					for (const device of roomDevices) {
+						for (const cluster of device.flatAllClusters) {
+							if (cluster.name === DeviceClusterName.TEMPERATURE_MEASUREMENT) {
+								roomTemperature = cluster.temperature;
+							}
+						}
+					}
+				}
+
+				// Always calc energy from devices
 				for (const device of roomDevices) {
 					for (const cluster of device.flatAllClusters) {
-						if (cluster.name === DeviceClusterName.TEMPERATURE_MEASUREMENT) {
-							roomTemperature = cluster.temperature;
-						}
 						if (cluster.name === DeviceClusterName.ELECTRICAL_POWER_MEASUREMENT) {
 							roomEnergy ??= 0;
 							roomEnergy += cluster.activePower;
@@ -1388,9 +1664,12 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 					clusterInfo,
 					roomTemperature,
 					roomEnergy,
+					isHeating,
+					targetTemperature,
+					overrideActive,
 				};
 			});
-	}, [detectedRooms, roomMappings, availableRooms, props.devices]);
+	}, [detectedRooms, roomMappings, availableRooms, props.devices, roomStatuses]);
 
 	// Zoom out to show all rooms (overview)
 	const zoomOutToOverview = React.useCallback(() => {
@@ -1734,6 +2013,58 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 		return groups.filter((group) => group.position !== undefined);
 	}, [groups]);
 
+	// Handle temperature click
+	const handleTemperatureClick = React.useCallback(
+		(
+			event: React.MouseEvent<HTMLElement>,
+			roomName: string,
+			currentTemp: number,
+			targetTemp: number,
+			isOverride: boolean
+		) => {
+			setTempPopoverAnchor(event.currentTarget);
+			setSelectedRoomTemp({
+				name: roomName,
+				current: currentTemp,
+				target: targetTemp,
+				isOverride,
+			});
+		},
+		[]
+	);
+
+	const handleSetRoomTarget = async (temp: number) => {
+		if (selectedRoomTemp) {
+			try {
+				await apiPost(
+					'temperature',
+					'/room/:roomName/target',
+					{ roomName: selectedRoomTemp.name },
+					{ target: temp }
+				);
+				void loadRoomStatuses();
+			} catch (error) {
+				console.error('Failed to set room target:', error);
+			}
+		}
+	};
+
+	const handleClearRoomOverride = async () => {
+		if (selectedRoomTemp) {
+			try {
+				await apiPost(
+					'temperature',
+					'/room/:roomName/clear',
+					{ roomName: selectedRoomTemp.name },
+					undefined
+				);
+				void loadRoomStatuses();
+			} catch (error) {
+				console.error('Failed to clear room override:', error);
+			}
+		}
+	};
+
 	return (
 		<Box
 			ref={containerRef}
@@ -1867,6 +2198,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 							clusterY={clusterY}
 							handleClusterClick={handleClusterClick}
 							handleClusterAction={handleClusterAction}
+							onTemperatureClick={handleTemperatureClick}
 						/>
 					);
 				})}
@@ -1904,6 +2236,23 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 					stageTransformData={stageTransformData}
 				/>
 			</Box>
+
+			{selectedRoomTemp && (
+				<RoomTemperaturePopover
+					open={Boolean(tempPopoverAnchor)}
+					anchorEl={tempPopoverAnchor}
+					onClose={() => {
+						setTempPopoverAnchor(null);
+						setSelectedRoomTemp(null);
+					}}
+					roomName={selectedRoomTemp.name}
+					currentTemp={selectedRoomTemp.current}
+					targetTemp={selectedRoomTemp.target}
+					isOverride={selectedRoomTemp.isOverride}
+					onSetTarget={handleSetRoomTarget}
+					onClearOverride={handleClearRoomOverride}
+				/>
+			)}
 		</Box>
 	);
 };

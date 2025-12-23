@@ -21,9 +21,26 @@ interface TemperatureDB {
 	schedule?: TemperatureScheduleEntry[];
 }
 
+interface HistoryEntry {
+	timestamp: number;
+	action: string;
+	details: string;
+}
+
 export const Temperature = new (class Temperature extends ModuleMeta {
 	public name = 'temperature';
 	private _db: ModuleConfig['db'] | null = null;
+
+	private _roomOverrides: Map<string, number> = new Map();
+	private _globalOverride: number | null = null;
+	private _history: HistoryEntry[] = [];
+	private _lastDecision: string = 'Initializing...';
+	private _testMode: boolean = false;
+	private _virtualThermostat: {
+		targetTemperature: number;
+		mode: ThermostatMode;
+		lastUpdate: number;
+	} | null = null;
 
 	public init(config: ModuleConfig) {
 		this._db = config.db;
@@ -34,6 +51,288 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		return {
 			serve: initRouting(config),
 		};
+	}
+
+	/**
+	 * Add an entry to the debug history
+	 */
+	public addHistoryEntry(action: string, details: string) {
+		this._history.unshift({
+			timestamp: Date.now(),
+			action,
+			details,
+		});
+		// Keep last 50 entries
+		if (this._history.length > 50) {
+			this._history = this._history.slice(0, 50);
+		}
+	}
+
+	/**
+	 * Set the last decision reason
+	 */
+	public setLastDecision(decision: string) {
+		this._lastDecision = decision;
+	}
+
+	/**
+	 * Get or set test mode (dry run - doesn't control real thermostats)
+	 */
+	public getTestMode(): boolean {
+		return this._testMode;
+	}
+
+	public setTestMode(enabled: boolean): void {
+		this._testMode = enabled;
+		this.addHistoryEntry(
+			'Test Mode',
+			enabled
+				? 'Test mode ENABLED - no real thermostat control'
+				: 'Test mode DISABLED - real thermostat control active'
+		);
+	}
+
+	/**
+	 * Get virtual thermostat state (what would be set in test mode)
+	 */
+	public getVirtualThermostat() {
+		return this._virtualThermostat;
+	}
+
+	/**
+	 * Set virtual thermostat (for test mode)
+	 */
+	public setVirtualThermostat(targetTemperature: number, mode: ThermostatMode): void {
+		this._virtualThermostat = {
+			targetTemperature,
+			mode,
+			lastUpdate: Date.now(),
+		};
+	}
+
+	/**
+	 * Get debug information
+	 */
+	public getDebugInfo() {
+		const activeSchedule = this.getCurrentActiveSchedule();
+		return {
+			history: this._history,
+			lastDecision: this._lastDecision,
+			roomOverrides: Object.fromEntries(this._roomOverrides),
+			globalOverride: this._globalOverride,
+			activeScheduleName: activeSchedule ? activeSchedule.name : 'None',
+			testMode: this._testMode,
+			virtualThermostat: this._virtualThermostat,
+		};
+	}
+
+	/**
+	 * Set a manual temperature override for a room
+	 */
+	public setRoomOverride(roomName: string, temperature: number | null): void {
+		if (temperature === null) {
+			this._roomOverrides.delete(roomName);
+			this.addHistoryEntry('Clear Override', `Cleared override for room ${roomName}`);
+		} else {
+			this._roomOverrides.set(roomName, temperature);
+			this.addHistoryEntry(
+				'Set Override',
+				`Set override for room ${roomName} to ${temperature}°C`
+			);
+		}
+	}
+
+	/**
+	 * Set a global manual temperature override
+	 */
+	public setGlobalOverride(temperature: number | null): void {
+		this._globalOverride = temperature;
+		this.addHistoryEntry(
+			'Set Global Override',
+			temperature ? `Set global override to ${temperature}°C` : 'Cleared global override'
+		);
+	}
+
+	/**
+	 * Get the global target temperature
+	 */
+	public getGlobalTarget(): number {
+		if (this._globalOverride !== null) {
+			return this._globalOverride;
+		}
+		const activeSchedule = this.getCurrentActiveSchedule();
+		return activeSchedule ? activeSchedule.targetTemperature : 15;
+	}
+
+	/**
+	 * Get the target temperature for a room based on:
+	 * 1. Manual override
+	 * 2. Schedule exception
+	 * 3. Schedule global target (or global override)
+	 */
+	public getRoomTarget(roomName: string): number {
+		if (this._roomOverrides.has(roomName)) {
+			return this._roomOverrides.get(roomName)!;
+		}
+
+		if (this._globalOverride !== null) {
+			return this._globalOverride;
+		}
+
+		const activeSchedule = this.getCurrentActiveSchedule();
+		if (!activeSchedule) {
+			return 15;
+		}
+
+		if (activeSchedule.roomExceptions?.[roomName] !== undefined) {
+			return activeSchedule.roomExceptions[roomName];
+		}
+
+		return activeSchedule.targetTemperature;
+	}
+
+	/**
+	 * Get the status of a specific room
+	 * @param centralThermostatHeating - Optional: whether the central thermostat is actively heating.
+	 *                                   If provided, isHeating will be true only if the room needs
+	 *                                   heating AND the central thermostat is on.
+	 */
+	public async getRoomStatus(
+		modules: AllModules,
+		roomName: string,
+		centralThermostatHeating?: boolean
+	): Promise<{
+		name: string;
+		currentTemperature: number;
+		targetTemperature: number;
+		isHeating: boolean;
+		needsHeating: boolean;
+		overrideActive: boolean;
+	}> {
+		const targetTemperature = this.getRoomTarget(roomName);
+		let currentTemperature = 0;
+
+		// Get current temperature for the room
+		const deviceApi = await modules.device.api.value;
+		const storedDevices = deviceApi.getStoredDevices();
+		const allDevices = deviceApi.devices.current();
+
+		const temps: number[] = [];
+
+		for (const deviceId in allDevices) {
+			const device = allDevices[deviceId];
+			const storedInfo = storedDevices[deviceId];
+
+			if (storedInfo?.room !== roomName) {
+				continue;
+			}
+
+			const clusters = device.getAllClustersByType(DeviceTemperatureMeasurementCluster);
+			for (const cluster of clusters) {
+				const temp = await cluster.temperature.get();
+				if (temp !== undefined && !Number.isNaN(temp)) {
+					temps.push(temp);
+				}
+			}
+		}
+
+		if (temps.length > 0) {
+			currentTemperature = temps.reduce((a, b) => a + b, 0) / temps.length;
+		} else {
+			// Fallback to central thermostat temp or default if no sensors in room
+			currentTemperature = 0;
+		}
+
+		// Room needs heating if it has a sensor and current temp is meaningfully below target
+		// Use 0.5°C threshold - only enable heating if current temp is >= 0.5°C below target
+		const needsHeating = currentTemperature > 0 && currentTemperature < targetTemperature - 0.5;
+
+		// Room is actively heating if it needs heating AND the central thermostat is on
+		// (i.e., TRV is set to 30 and boiler is running)
+		const isHeating =
+			centralThermostatHeating !== undefined
+				? needsHeating && centralThermostatHeating
+				: needsHeating;
+
+		return {
+			name: roomName,
+			currentTemperature,
+			targetTemperature,
+			isHeating,
+			needsHeating,
+			overrideActive: this._roomOverrides.has(roomName),
+		};
+	}
+
+	/**
+	 * Get status for all configured rooms
+	 */
+	public async getAllRoomsStatus(modules: AllModules): Promise<
+		Array<{
+			name: string;
+			currentTemperature: number;
+			targetTemperature: number;
+			isHeating: boolean;
+			needsHeating: boolean;
+			overrideActive: boolean;
+		}>
+	> {
+		const deviceApi = await modules.device.api.value;
+		const rooms = deviceApi.getRooms();
+		const roomNames = Object.keys(rooms);
+
+		// Get central thermostat status to determine if boiler is actually on
+		const centralStatus = await this.getCentralThermostatStatus(modules);
+		const centralThermostatHeating = centralStatus?.isHeating ?? false;
+
+		const statuses = await Promise.all(
+			roomNames.map((name) => this.getRoomStatus(modules, name, centralThermostatHeating))
+		);
+
+		return statuses;
+	}
+
+	/**
+	 * Get the average target temperature across all rooms (current)
+	 */
+	public async getAverageTargetTemperature(modules: AllModules): Promise<number> {
+		const statuses = await this.getAllRoomsStatus(modules);
+		if (statuses.length === 0) {
+			return 0;
+		}
+
+		const sum = statuses.reduce((acc, s) => acc + s.targetTemperature, 0);
+		return sum / statuses.length;
+	}
+
+	/**
+	 * Get the average target temperature for the NEXT schedule
+	 */
+	public async getNextAverageTargetTemperature(modules: AllModules): Promise<number> {
+		const nextChange = this.getNextScheduledChange();
+		if (!nextChange) {
+			return 0;
+		}
+
+		const { entry } = nextChange;
+		const deviceApi = await modules.device.api.value;
+		const rooms = deviceApi.getRooms();
+		const roomNames = Object.keys(rooms);
+
+		if (roomNames.length === 0) {
+			return entry.targetTemperature;
+		}
+
+		let sum = 0;
+		for (const roomName of roomNames) {
+			if (entry.roomExceptions?.[roomName] !== undefined) {
+				sum += entry.roomExceptions[roomName];
+			} else {
+				sum += entry.targetTemperature;
+			}
+		}
+
+		return sum / roomNames.length;
 	}
 
 	public async getTemp(name: string) {
@@ -85,6 +384,7 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 			...old,
 			schedule,
 		}));
+		this.addHistoryEntry('Update Schedule', 'Updated temperature schedule');
 	}
 
 	/**
@@ -445,12 +745,29 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 	}
 
 	/**
-	 * Set the target temperature on the central thermostat and switch to manual mode
+	 * Set the target temperature on the central thermostat hardware (switch to manual mode)
+	 * NOTE: This controls the physical device, not the logical schedule.
+	 * In test mode, this only updates the virtual thermostat state.
 	 */
-	public async setCentralThermostatTarget(
+	public async setThermostatHardwareTarget(
 		modules: AllModules,
 		targetTemperature: number
 	): Promise<boolean> {
+		// In test mode, only update virtual thermostat
+		if (this._testMode) {
+			this.setVirtualThermostat(targetTemperature, ThermostatMode.MANUAL);
+			logTag(
+				'temperature',
+				'yellow',
+				`[TEST MODE] Would set central thermostat to ${targetTemperature}°C (manual mode)`
+			);
+			this.addHistoryEntry(
+				'Thermostat Action (TEST)',
+				`Would set central thermostat to ${targetTemperature}°C (TEST MODE - not applied)`
+			);
+			return true;
+		}
+
 		const thermostatId = this.getThermostat();
 		if (!thermostatId) {
 			return false;
@@ -477,17 +794,108 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 			logTag(
 				'temperature',
 				'green',
-				`Set central thermostat target to ${targetTemperature}°C (manual mode)`
+				`Set central thermostat hardware target to ${targetTemperature}°C (manual mode)`
+			);
+			this.addHistoryEntry(
+				'Thermostat Action',
+				`Set central thermostat to ${targetTemperature}°C`
 			);
 			return true;
 		} catch (error) {
 			logTag(
 				'temperature',
 				'red',
-				`Failed to set central thermostat target: ${thermostatId}`,
+				`Failed to set central thermostat hardware target: ${thermostatId}`,
 				error
+			);
+			this.addHistoryEntry(
+				'Thermostat Error',
+				`Failed to set central thermostat: ${String(error)}`
 			);
 			return false;
 		}
+	}
+
+	/**
+	 * Set target temperature on all TRV devices in a specific room.
+	 * TRVs are set to 30°C when heating is needed, or 15°C when not,
+	 * to force them fully open or closed (bypassing their own control logic).
+	 */
+	public async setRoomTRVTargets(
+		modules: AllModules,
+		roomName: string,
+		needsHeating: boolean
+	): Promise<void> {
+		const targetTemp = needsHeating ? 30 : 15;
+
+		try {
+			const deviceApi = await modules.device.api.value;
+			const storedDevices = deviceApi.getStoredDevices();
+			const allDevices = deviceApi.devices.current();
+
+			// Find all thermostat/TRV devices in this room (excluding the central thermostat)
+			const centralThermostatId = this.getThermostat();
+
+			for (const deviceId in allDevices) {
+				// Skip the central thermostat - it's controlled separately
+				if (deviceId === centralThermostatId) {
+					continue;
+				}
+
+				const storedInfo = storedDevices[deviceId];
+				if (storedInfo?.room !== roomName) {
+					continue;
+				}
+
+				const device = allDevices[deviceId];
+				const thermostatClusters = device.getAllClustersByType(DeviceThermostatCluster);
+
+				for (const cluster of thermostatClusters) {
+					try {
+						const currentTarget = await cluster.targetTemperature.get();
+
+						// Only update if different
+						if (currentTarget !== targetTemp) {
+							if (this._testMode) {
+								logTag(
+									'temperature',
+									'yellow',
+									`[TEST MODE] Would set TRV ${storedInfo.name} in ${roomName} to ${targetTemp}°C`
+								);
+							} else {
+								await cluster.setTargetTemperature(targetTemp);
+								logTag(
+									'temperature',
+									needsHeating ? 'green' : 'blue',
+									`Set TRV ${storedInfo.name} in ${roomName} to ${targetTemp}°C`
+								);
+							}
+						}
+					} catch (error) {
+						logTag(
+							'temperature',
+							'red',
+							`Failed to set TRV target for ${storedInfo.name}:`,
+							error
+						);
+					}
+				}
+			}
+		} catch (error) {
+			logTag('temperature', 'red', `Failed to update TRVs in room ${roomName}:`, error);
+		}
+	}
+
+	/**
+	 * Update all room TRVs based on current heating demand.
+	 * Each room's TRVs are set to 30°C if that room needs heating, or 15°C if not.
+	 */
+	public async updateAllRoomTRVs(
+		modules: AllModules,
+		roomStatuses: Array<{ name: string; isHeating: boolean }>
+	): Promise<void> {
+		await Promise.all(
+			roomStatuses.map((room) => this.setRoomTRVTargets(modules, room.name, room.isHeating))
+		);
 	}
 })();

@@ -661,6 +661,14 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 									body: z.string(),
 								}),
 							}),
+							z.object({
+								cluster: z.literal('room-temperature'),
+								action: z.object({
+									roomName: z.string(),
+									mode: z.enum(['setTarget', 'returnToSchedule']),
+									targetTemperature: z.number().optional(),
+								}),
+							}),
 						])
 					),
 					triggers: z
@@ -858,6 +866,14 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 								action: z.object({
 									title: z.string(),
 									body: z.string(),
+								}),
+							}),
+							z.object({
+								cluster: z.literal('room-temperature'),
+								action: z.object({
+									roomName: z.string(),
+									mode: z.enum(['setTarget', 'returnToSchedule']),
+									targetTemperature: z.number().optional(),
 								}),
 							}),
 						])

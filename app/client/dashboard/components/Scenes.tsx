@@ -132,7 +132,7 @@ export const Scenes = (): JSX.Element => {
 					'device',
 					'/scenes/:sceneId/update',
 					{ sceneId: editingScene.id },
-					sceneData
+					sceneData as unknown as Parameters<typeof apiPost>[3]
 				);
 				if (response.ok) {
 					await loadScenes();
@@ -140,7 +140,12 @@ export const Scenes = (): JSX.Element => {
 				}
 			} else {
 				// Create new scene
-				const response = await apiPost('device', '/scenes/create', {}, sceneData);
+				const response = await apiPost(
+					'device',
+					'/scenes/create',
+					{},
+					sceneData as unknown as Parameters<typeof apiPost>[3]
+				);
 				if (response.ok) {
 					await loadScenes();
 					setModalOpen(false);

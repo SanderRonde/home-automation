@@ -15,14 +15,6 @@ import {
 	ToggleButton,
 	CircularProgress,
 } from '@mui/material';
-import { DeviceClusterName } from '../../../server/modules/device/cluster';
-import { DeviceSource } from '../../../server/modules/device/device';
-import { staggerContainer, staggerItem } from '../../lib/animations';
-import { Settings as SettingsIcon } from '@mui/icons-material';
-import { apiPost, apiGet } from '../../lib/fetch';
-import React, { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { useDevices } from './Devices';
 import {
 	LineChart,
 	Line,
@@ -33,6 +25,14 @@ import {
 	Legend,
 	ResponsiveContainer,
 } from 'recharts';
+import { DeviceClusterName } from '../../../server/modules/device/cluster';
+import { DeviceSource } from '../../../server/modules/device/device';
+import { staggerContainer, staggerItem } from '../../lib/animations';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Settings as SettingsIcon } from '@mui/icons-material';
+import { apiPost, apiGet } from '../../lib/fetch';
+import { motion } from 'framer-motion';
+import { useDevices } from './Devices';
 
 type Timeframe = '1h' | '6h' | '24h' | '1week';
 
@@ -206,10 +206,7 @@ export const EnergyUsage = (): JSX.Element => {
 
 			for (const bucketTime of timeBuckets) {
 				// Advance to the most recent event at or before this bucket time
-				while (
-					eventIndex < events.length &&
-					events[eventIndex].timestamp <= bucketTime
-				) {
+				while (eventIndex < events.length && events[eventIndex].timestamp <= bucketTime) {
 					lastValue = events[eventIndex].power;
 					eventIndex++;
 				}
@@ -398,7 +395,8 @@ export const EnergyUsage = (): JSX.Element => {
 					sx={{
 						borderRadius: 3,
 						boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-						background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(147, 197, 253, 0.05) 100%)',
+						background:
+							'linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(147, 197, 253, 0.05) 100%)',
 						border: '1px solid rgba(59, 130, 246, 0.1)',
 					}}
 				>
@@ -440,10 +438,23 @@ export const EnergyUsage = (): JSX.Element => {
 								<CircularProgress />
 							</Box>
 						) : chartData.length > 0 ? (
-							<Box sx={{ height: 400, width: '100%', minHeight: 400, display: 'block' }}>
+							<Box
+								sx={{
+									height: 400,
+									width: '100%',
+									minHeight: 400,
+									display: 'block',
+								}}
+							>
 								<ResponsiveContainer width="100%" height={400}>
-									<LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 60 }}>
-										<CartesianGrid strokeDasharray="3 3" stroke="rgba(128,128,128,0.2)" />
+									<LineChart
+										data={chartData}
+										margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
+									>
+										<CartesianGrid
+											strokeDasharray="3 3"
+											stroke="rgba(128,128,128,0.2)"
+										/>
 										<XAxis
 											dataKey="time"
 											tickFormatter={formatTimeLabel}
@@ -454,13 +465,21 @@ export const EnergyUsage = (): JSX.Element => {
 											tick={{ fill: 'rgba(255,255,255,0.7)' }}
 										/>
 										<YAxis
-											label={{ value: 'Power (W)', angle: -90, position: 'insideLeft', fill: 'rgba(255,255,255,0.7)' }}
+											label={{
+												value: 'Power (W)',
+												angle: -90,
+												position: 'insideLeft',
+												fill: 'rgba(255,255,255,0.7)',
+											}}
 											stroke="rgba(255,255,255,0.7)"
 											tick={{ fill: 'rgba(255,255,255,0.7)' }}
 										/>
 										<Tooltip
 											labelFormatter={(value) => formatTimeLabel(value)}
-											formatter={(value: number, name: string) => [`${value.toFixed(0)} W`, name]}
+											formatter={(value: number, name: string) => [
+												`${value.toFixed(0)} W`,
+												name,
+											]}
 											contentStyle={{
 												backgroundColor: 'rgba(255, 255, 255, 0.95)',
 												border: '1px solid rgba(0,0,0,0.1)',
@@ -797,4 +816,3 @@ export const EnergyUsage = (): JSX.Element => {
 		</Box>
 	);
 };
-

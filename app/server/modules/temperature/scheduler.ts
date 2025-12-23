@@ -1,4 +1,4 @@
-import type { TemperatureScheduleEntry } from './types';
+import { ThermostatMode } from '../device/cluster';
 import { logTag } from '../../lib/logging/logger';
 import { Temperature } from './index';
 import type { AllModules } from '..';
@@ -10,7 +10,6 @@ import type { AllModules } from '..';
 export class TemperatureScheduler {
 	private readonly _modules: AllModules;
 	private _intervalId: ReturnType<typeof setInterval> | null = null;
-	private _lastAppliedScheduleId: string | null = null;
 	private _lastCheckMinute: number = -1;
 
 	public constructor(modules: AllModules) {
@@ -48,7 +47,7 @@ export class TemperatureScheduler {
 	}
 
 	/**
-	 * Check if we need to apply a new schedule
+	 * Check if we need to apply a new schedule/update thermostat based on room demand
 	 */
 	private async _checkSchedule(): Promise<void> {
 		const now = new Date();
@@ -60,65 +59,51 @@ export class TemperatureScheduler {
 		}
 		this._lastCheckMinute = currentMinute;
 
-		const activeSchedule = Temperature.getCurrentActiveSchedule();
+		// Check heating demand from all rooms
+		// Use needsHeating (not isHeating) since isHeating depends on central thermostat status
+		const roomStatuses = await Temperature.getAllRoomsStatus(this._modules);
+		const roomsNeedingHeat = roomStatuses.filter((status) => status.needsHeating);
+		const needsHeating = roomsNeedingHeat.length > 0;
 
-		if (!activeSchedule) {
-			// No active schedule - reset tracking
-			this._lastAppliedScheduleId = null;
-			return;
+		// Logic from requirements:
+		// When a single room should be heating, set thermostat to 30.
+		// When none should be heating, set thermostat to 15.
+		const targetCentralTemp = needsHeating ? 30 : 15;
+
+		// Record decision reason
+		let decisionReason = '';
+		if (needsHeating) {
+			const roomNames = roomsNeedingHeat.map((r) => r.name).join(', ');
+			decisionReason = `Heating demanded by: ${roomNames}`;
+		} else {
+			decisionReason = 'No rooms require heating';
 		}
+		Temperature.setLastDecision(decisionReason);
 
-		// Check if this is a new schedule we haven't applied yet
-		// We need to detect schedule boundary crossings, not just "is there an active schedule"
-		const scheduleKey = this._getScheduleKey(activeSchedule, now);
+		// Check current status to avoid unnecessary calls
+		const currentStatus = await Temperature.getCentralThermostatStatus(this._modules);
 
-		if (scheduleKey === this._lastAppliedScheduleId) {
-			// Already applied this schedule for this time period
-			return;
-		}
+		// Check if we need to update
+		const needsUpdate =
+			currentStatus?.targetTemperature !== targetCentralTemp ||
+			currentStatus.mode !== ThermostatMode.MANUAL;
 
-		// Check if we just entered this schedule (within the first minute)
-		const [startHour, startMinute] = activeSchedule.startTime.split(':').map(Number);
-		const scheduleStartMinutes = startHour * 60 + startMinute;
-
-		// Only apply if we're within the first minute of the schedule start
-		// This prevents applying when the server restarts mid-schedule
-		if (Math.abs(currentMinute - scheduleStartMinutes) <= 1) {
+		if (needsUpdate) {
 			logTag(
 				'temperature',
-				'green',
-				`Applying scheduled temperature: ${activeSchedule.targetTemperature}°C (schedule: ${activeSchedule.startTime}-${activeSchedule.endTime})`
+				needsHeating ? 'green' : 'blue',
+				`Updating central thermostat: ${decisionReason} -> ${targetCentralTemp}°C`
 			);
 
-			const success = await Temperature.setCentralThermostatTarget(
-				this._modules,
-				activeSchedule.targetTemperature
-			);
-
-			if (success) {
-				this._lastAppliedScheduleId = scheduleKey;
-				logTag(
-					'temperature',
-					'green',
-					`Successfully applied scheduled temperature: ${activeSchedule.targetTemperature}°C`
-				);
-			} else {
-				logTag(
-					'temperature',
-					'red',
-					`Failed to apply scheduled temperature: ${activeSchedule.targetTemperature}°C`
-				);
-			}
+			await Temperature.setThermostatHardwareTarget(this._modules, targetCentralTemp);
 		}
-	}
 
-	/**
-	 * Generate a unique key for a schedule entry on a specific day
-	 * This helps track whether we've already applied a schedule
-	 */
-	private _getScheduleKey(schedule: TemperatureScheduleEntry, date: Date): string {
-		const dateStr = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-		return `${schedule.id}-${dateStr}-${schedule.startTime}`;
+		// Update individual room TRVs - set to 30 if room needs heating, 15 if not
+		// This bypasses the TRVs' own control logic which "sucks"
+		await Temperature.updateAllRoomTRVs(
+			this._modules,
+			roomStatuses.map((r) => ({ name: r.name, isHeating: r.needsHeating }))
+		);
 	}
 }
 

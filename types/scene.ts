@@ -177,6 +177,15 @@ export type SceneDeviceActionNotification = {
 	};
 };
 
+export type SceneDeviceActionRoomTemperature = {
+	cluster: 'room-temperature';
+	action: {
+		roomName: string;
+		mode: 'setTarget' | 'returnToSchedule';
+		targetTemperature?: number;
+	};
+};
+
 export type SceneDeviceAction =
 	| SceneDeviceActionOnOff
 	| SceneDeviceActionWindowCovering
@@ -184,7 +193,8 @@ export type SceneDeviceAction =
 	| SceneDeviceActionColorControl
 	| SceneDeviceActionColorControlPalette
 	| SceneDeviceActionHttpRequest
-	| SceneDeviceActionNotification;
+	| SceneDeviceActionNotification
+	| SceneDeviceActionRoomTemperature;
 
 export interface Scene {
 	id: SceneId;

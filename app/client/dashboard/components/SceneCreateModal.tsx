@@ -645,9 +645,10 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 									);
 								}
 
-								const group = action.groupId
-									? groups.find((g) => g.id === action.groupId)
-									: undefined;
+								const group =
+									'groupId' in action && action.groupId
+										? groups.find((g) => g.id === action.groupId)
+										: undefined;
 
 								return (
 									<ActionConfig
@@ -1024,7 +1025,11 @@ const ActionConfig = React.memo((props: ActionConfigProps) => {
 		| DeviceClusterName.LEVEL_CONTROL
 	> = {};
 
-	if (props.action.cluster === 'http-request' || props.action.cluster === 'notification') {
+	if (
+		props.action.cluster === 'http-request' ||
+		props.action.cluster === 'notification' ||
+		props.action.cluster === 'room-temperature'
+	) {
 		return null;
 	}
 
@@ -1196,10 +1201,20 @@ const ActionConfig = React.memo((props: ActionConfigProps) => {
 						(isGroup && props.group)) && (
 						<>
 							{isGroup && props.group ? (
-								<Autocomplete
+								<Autocomplete<DeviceClusterName>
 									options={props.getGroupCommonClusters(props.group.id)}
 									getOptionLabel={(option) => option}
-									value={props.action.cluster}
+									value={(() => {
+										const cluster = props.action.cluster;
+										const validClusters = props.getGroupCommonClusters(
+											props.group.id
+										);
+										return cluster &&
+											typeof cluster === 'string' &&
+											validClusters.includes(cluster as DeviceClusterName)
+											? (cluster as DeviceClusterName)
+											: null;
+									})()}
 									onChange={(_e, newValue) => {
 										if (newValue) {
 											props.handleActionChange(props.action.key, {
@@ -1222,7 +1237,12 @@ const ActionConfig = React.memo((props: ActionConfigProps) => {
 										)[]
 									}
 									getOptionLabel={(option) => option.name}
-									value={availableClusters[props.action.cluster] ?? null}
+									value={
+										props.action.cluster &&
+										props.action.cluster in availableClusters
+											? (availableClusters[props.action.cluster] ?? null)
+											: null
+									}
 									onChange={(_e, newValue) => {
 										if (newValue) {
 											props.handleActionChange(props.action.key, {
@@ -1237,35 +1257,45 @@ const ActionConfig = React.memo((props: ActionConfigProps) => {
 							)}
 
 							{/* Device Exclusions for Groups */}
-							{isGroup && props.group && props.action.cluster && (
-								<Autocomplete
-									multiple
-									options={props.group.deviceIds
-										.map((id) => props.devices.find((d) => d.uniqueId === id))
-										.filter((d) => d !== undefined)}
-									getOptionLabel={(option) => option.name}
-									value={
-										props.action.excludeDeviceIds
-											?.map((id) =>
+							{isGroup &&
+								props.group &&
+								props.action.cluster &&
+								'excludeDeviceIds' in props.action && (
+									<Autocomplete
+										multiple
+										options={props.group.deviceIds
+											.map((id: string) =>
 												props.devices.find((d) => d.uniqueId === id)
 											)
-											.filter((d) => d !== undefined) ?? []
-									}
-									onChange={(_e, newValue) => {
-										props.handleActionChange(props.action.key, {
-											excludeDeviceIds: newValue.map((d) => d.uniqueId),
-										});
-									}}
-									renderInput={(params) => (
-										<TextField
-											{...params}
-											label="Exclude Devices (Optional)"
-											size="small"
-										/>
-									)}
-									sx={{ mt: 1 }}
-								/>
-							)}
+											.filter(
+												(d): d is NonNullable<typeof d> => d !== undefined
+											)}
+										getOptionLabel={(option) => option.name}
+										value={
+											props.action.excludeDeviceIds
+												?.map((id: string) =>
+													props.devices.find((d) => d.uniqueId === id)
+												)
+												.filter(
+													(d): d is NonNullable<typeof d> =>
+														d !== undefined
+												) ?? []
+										}
+										onChange={(_e, newValue) => {
+											props.handleActionChange(props.action.key, {
+												excludeDeviceIds: newValue.map((d) => d.uniqueId),
+											});
+										}}
+										renderInput={(params) => (
+											<TextField
+												{...params}
+												label="Exclude Devices (Optional)"
+												size="small"
+											/>
+										)}
+										sx={{ mt: 1 }}
+									/>
+								)}
 
 							{/* Action Configuration */}
 							<ClusterActionControls
