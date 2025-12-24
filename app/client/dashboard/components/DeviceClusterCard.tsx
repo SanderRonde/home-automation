@@ -7,7 +7,7 @@ import type {
 	DashboardDeviceClusterRelativeHumidityMeasurement,
 	DashboardDeviceClusterIlluminanceMeasurement,
 	DashboardDeviceClusterBooleanState,
-	DashboardDeviceClusterColorControl,
+	DashboardDeviceClusterColorControlXY,
 	DashboardDeviceClusterActions,
 	DashboardDeviceClusterSensorGroup,
 	DashboardDeviceClusterThermostat,
@@ -357,16 +357,105 @@ const GroupedWindowCoveringCard = (props: GroupedWindowCoveringCardProps): JSX.E
 	);
 };
 
+// Convert Kelvin color temperature to RGB using a more accurate algorithm
+// Based on the Planckian locus approximation
+const kelvinToRgb = (kelvin: number): { r: number; g: number; b: number } => {
+	// Clamp to typical range
+	const temp = Math.max(2000, Math.min(6500, kelvin));
+	const temp100 = temp / 100;
+
+	let r: number;
+	let g: number;
+	let b: number;
+
+	// Red channel
+	if (temp <= 6600) {
+		r = 255;
+	} else {
+		r = temp100 - 60;
+		r = 329.698727446 * Math.pow(r, -0.1332047592);
+		r = Math.max(0, Math.min(255, r));
+	}
+
+	// Green channel
+	if (temp <= 6600) {
+		g = temp100 - 2;
+		g = 99.4708025861 * Math.log(g) - 161.1195681661;
+		g = Math.max(0, Math.min(255, g));
+	} else {
+		g = temp100 - 60;
+		g = 288.1221695283 * Math.pow(g, -0.0755148492);
+		g = Math.max(0, Math.min(255, g));
+	}
+
+	// Blue channel
+	if (temp >= 6600) {
+		b = 255;
+	} else if (temp <= 2000) {
+		b = 0;
+	} else {
+		b = temp100 - 10;
+		b = 138.5177312231 * Math.log(b) - 305.0447927307;
+		b = Math.max(0, Math.min(255, b));
+	}
+
+	return {
+		r: Math.round(r),
+		g: Math.round(g),
+		b: Math.round(b),
+	};
+};
+
 const OnOffCard = (props: DeviceClusterCardBaseProps<DashboardDeviceClusterOnOff>): JSX.Element => {
 	const energyCluster =
 		props.cluster.mergedClusters?.[DeviceClusterName.ELECTRICAL_ENERGY_MEASUREMENT];
 	const powerCluster =
 		props.cluster.mergedClusters?.[DeviceClusterName.ELECTRICAL_POWER_MEASUREMENT];
+	const colorControlCluster = props.cluster.mergedClusters?.[DeviceClusterName.COLOR_CONTROL];
+	const levelControlCluster = props.cluster.mergedClusters?.[DeviceClusterName.LEVEL_CONTROL];
 
-	// Color-code based on power usage if energy data is available
+	// Drag state for level control
+	const [dragLevel, setDragLevel] = React.useState<number | null>(null);
+	const [isDragging, setIsDragging] = React.useState(false);
+	const [hasMoved, setHasMoved] = React.useState(false);
+	const cardRef = React.useRef<HTMLDivElement>(null);
+	const dragStartX = React.useRef<number>(0);
+	const dragStartLevel = React.useRef<number>(0);
+	const longPressTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+	const didLongPressRef = React.useRef(false);
+
+	const currentLevel =
+		dragLevel !== null ? dragLevel : (levelControlCluster?.currentLevel ?? 100);
+
+	// Color-code based on color temperature, level control, or power usage
 	const getBackgroundColor = (): string => {
-		if (!energyCluster || !props.cluster.isOn) {
-			return props.cluster.isOn ? '#976c00' : '#422d00';
+		if (!props.cluster.isOn) {
+			return '#422d00';
+		}
+
+		// Check if color control with temperature is available
+		if (
+			colorControlCluster &&
+			'colorTemperature' in colorControlCluster &&
+			colorControlCluster.colorTemperature
+		) {
+			const { r, g, b } = kelvinToRgb(colorControlCluster.colorTemperature);
+			// Apply opacity based on level control if available
+			const opacity = levelControlCluster
+				? 0.3 + (currentLevel / 100) * 0.7 // Map 0-100 to 0.3-1.0
+				: 1.0;
+			return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+		}
+
+		// If level control exists but no color temperature, use opacity on default color
+		if (levelControlCluster) {
+			const opacity = 0.3 + (currentLevel / 100) * 0.7;
+			return `rgba(151, 108, 0, ${opacity})`; // Gold color with opacity
+		}
+
+		// Fallback to power-based coloring
+		if (!energyCluster) {
+			return '#976c00';
 		}
 
 		const power = powerCluster?.activePower ?? 0;
@@ -386,22 +475,140 @@ const OnOffCard = (props: DeviceClusterCardBaseProps<DashboardDeviceClusterOnOff
 		return `${watts} W`;
 	};
 
+	// Handle pointer down for drag and long press
+	const handlePointerDown = (e: React.PointerEvent) => {
+		didLongPressRef.current = false;
+		setIsDragging(true);
+		setHasMoved(false);
+		e.currentTarget.setPointerCapture(e.pointerId);
+		dragStartX.current = e.clientX;
+		dragStartLevel.current = levelControlCluster?.currentLevel ?? 100;
+
+		// Start long press timer
+		longPressTimerRef.current = setTimeout(() => {
+			if (!hasMoved) {
+				didLongPressRef.current = true;
+				props.pushDetailView({
+					type: 'device',
+					deviceId: props.device.uniqueId,
+					clusterName: props.cluster.name,
+				});
+			}
+		}, 500);
+	};
+
+	// Handle pointer move for drag
+	const handlePointerMove = (e: React.PointerEvent) => {
+		if (!isDragging || !cardRef.current || !levelControlCluster) {
+			return;
+		}
+
+		const deltaX = Math.abs(e.clientX - dragStartX.current);
+		// Only consider it a drag if moved more than 5 pixels
+		if (deltaX > 5) {
+			setHasMoved(true);
+			// Clear long press timer if we're dragging
+			if (longPressTimerRef.current) {
+				clearTimeout(longPressTimerRef.current);
+				longPressTimerRef.current = null;
+			}
+		}
+
+		const rect = cardRef.current.getBoundingClientRect();
+		const fullDeltaX = e.clientX - dragStartX.current;
+		const deltaPercentage = (fullDeltaX / rect.width) * 100 * 2; // 2x sensitivity
+		const newLevel = dragStartLevel.current + deltaPercentage;
+		const clampedLevel = Math.max(0, Math.min(100, newLevel));
+		setDragLevel(Math.round(clampedLevel));
+	};
+
+	// Handle pointer up
+	const handlePointerUp = async (e: React.PointerEvent) => {
+		if (!isDragging) {
+			return;
+		}
+		setIsDragging(false);
+		e.currentTarget.releasePointerCapture(e.pointerId);
+
+		// Clear long press timer
+		if (longPressTimerRef.current) {
+			clearTimeout(longPressTimerRef.current);
+			longPressTimerRef.current = null;
+		}
+
+		// If user did long press, detail view is already opened
+		if (didLongPressRef.current) {
+			setDragLevel(null);
+			return;
+		}
+
+		// If user dragged, update the level
+		if (hasMoved && dragLevel !== null && levelControlCluster) {
+			await apiPost(
+				'device',
+				'/cluster/LevelControl',
+				{},
+				{
+					deviceIds: [props.device.uniqueId],
+					level: dragLevel,
+				}
+			);
+			setDragLevel(null);
+			props.invalidate();
+			return;
+		}
+
+		// Otherwise, toggle on/off
+		if (!hasMoved) {
+			await apiPost(
+				'device',
+				'/cluster/OnOff',
+				{},
+				{
+					deviceIds: [props.device.uniqueId],
+					isOn: !props.cluster.isOn,
+				}
+			);
+			props.invalidate();
+		}
+	};
+
+	// Cleanup on unmount
+	React.useEffect(() => {
+		return () => {
+			if (longPressTimerRef.current) {
+				clearTimeout(longPressTimerRef.current);
+			}
+		};
+	}, []);
+
+	const hasLevelControl = !!levelControlCluster;
+	const cardBackground = getBackgroundColor();
+
 	return (
 		<DeviceClusterCardSkeleton
 			{...props}
-			cardBackground={getBackgroundColor()}
-			onPress={async () => {
-				await apiPost(
-					'device',
-					'/cluster/OnOff',
-					{},
-					{
-						deviceIds: [props.device.uniqueId],
-						isOn: !props.cluster.isOn,
-					}
-				);
-				props.invalidate();
-			}}
+			cardRef={cardRef}
+			cardBackground={cardBackground}
+			onPointerDown={hasLevelControl ? handlePointerDown : undefined}
+			onPointerMove={hasLevelControl ? handlePointerMove : undefined}
+			onPointerUp={hasLevelControl ? handlePointerUp : undefined}
+			onPress={
+				hasLevelControl
+					? undefined
+					: async () => {
+							await apiPost(
+								'device',
+								'/cluster/OnOff',
+								{},
+								{
+									deviceIds: [props.device.uniqueId],
+									isOn: !props.cluster.isOn,
+								}
+							);
+							props.invalidate();
+						}
+			}
 		>
 			{energyCluster ? (
 				<Box
@@ -1176,8 +1383,8 @@ const BooleanStateCard = (
 	);
 };
 
-const ColorControlCard = (
-	props: DeviceClusterCardBaseProps<DashboardDeviceClusterColorControl>
+const ColorControlXYCard = (
+	props: DeviceClusterCardBaseProps<DashboardDeviceClusterColorControlXY>
 ): JSX.Element => {
 	// Convert HSV to RGB for display
 	const hsvToRgb = (
@@ -1617,7 +1824,10 @@ export const DeviceClusterCard = (
 		return <BooleanStateCard {...regularProps} cluster={regularProps.cluster} />;
 	}
 	if (regularProps.cluster.name === DeviceClusterName.COLOR_CONTROL) {
-		return <ColorControlCard {...regularProps} cluster={regularProps.cluster} />;
+		if ('color' in regularProps.cluster) {
+			return <ColorControlXYCard {...regularProps} cluster={regularProps.cluster} />;
+		}
+		// No separate card for color temperature
 	}
 	if (regularProps.cluster.name === DeviceClusterName.ACTIONS) {
 		return <ActionsCard {...regularProps} cluster={regularProps.cluster} />;

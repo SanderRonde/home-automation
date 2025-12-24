@@ -6,8 +6,8 @@ import {
 	BridgedDeviceBasicInformationCluster,
 	GeneralCommissioning,
 } from '@matter/main/clusters';
+import type { Endpoint, PairedNode, RootEndpoint } from '@project-chip/matter.js/device';
 import { Crypto, Environment, LogLevel, Logger, StandardCrypto } from '@matter/main';
-import type { Endpoint, PairedNode } from '@project-chip/matter.js/device';
 import type { NodeCommissioningOptions } from '@project-chip/matter.js';
 import { CommissioningController } from '@project-chip/matter.js';
 import { ManualPairingCodeCodec } from '@matter/main/types';
@@ -30,11 +30,17 @@ if (globalThis.crypto?.subtle) {
 
 const environment = Environment.default;
 
-interface MatterDeviceInfo {
-	node: PairedNode;
-	endpoint: Endpoint;
-	type: 'device' | 'bridge';
-}
+type MatterDeviceInfo =
+	| {
+			node: PairedNode;
+			endpoint: RootEndpoint;
+			type: 'root';
+	  }
+	| {
+			node: PairedNode;
+			endpoint: Endpoint;
+			type: 'device';
+	  };
 
 class Disposable {
 	private _disposables: (() => void)[] = [];
@@ -186,38 +192,42 @@ export class MatterServer extends Disposable {
 	private _listNodeDevices(node: PairedNode): MatterDeviceInfo[] {
 		const deviceInfos: MatterDeviceInfo[] = [];
 		const recursiveEndpoints = this._getRecursiveEndpoints(node);
+		const rootEndpoint = node.getRootEndpoint() as RootEndpoint;
+
+		if (rootEndpoint?.number === undefined) {
+			return [];
+		}
+
 		if (
 			recursiveEndpoints.every(
 				(endpoint) =>
 					!endpoint.endpoint.getClusterClient(BridgedDeviceBasicInformationCluster)
 			)
 		) {
-			const rootEndpoint = node.getRootEndpoint();
-			if (rootEndpoint?.number === undefined) {
-				return [];
-			}
-
-			// This node is a normal device.
+			// Non-bridged device, this is a root node, add it and its children
 			return [
 				{
 					node: node,
 					endpoint: rootEndpoint,
-					type: 'device',
+					type: 'root',
 				},
+				...rootEndpoint.getChildEndpoints().map(
+					(endpoint) =>
+						({
+							node: node,
+							endpoint,
+							type: 'device',
+						}) satisfies MatterDeviceInfo
+				),
 			];
 		}
 
 		// This node is a matter bridge. It itself and all of its
 		// direct children are individual devices.
-		const rootEndpoint = node.getRootEndpoint();
-		if (rootEndpoint?.number === undefined) {
-			return [];
-		}
-
 		deviceInfos.push({
 			node: node,
 			endpoint: rootEndpoint,
-			type: 'bridge',
+			type: 'root',
 		});
 
 		this._walkEndpoints(rootEndpoint, (endpoint) => {
@@ -317,6 +327,15 @@ async function main() {
 		const devices = controller.listDevices();
 		// eslint-disable-next-line no-console
 		console.log('devices:', devices);
+		for (const device of devices) {
+			if (device.node.nodeId.toString() === '7679203057795182555') {
+				console.log('device:', device.endpoint);
+				for (const cluster of device.endpoint.getAllClusterClients()) {
+					console.log('cluster:', cluster.name);
+				}
+			}
+		}
+		process.exit(0);
 	}
 }
 

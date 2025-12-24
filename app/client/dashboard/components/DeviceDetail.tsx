@@ -5,13 +5,14 @@ import type {
 	DashboardDeviceClusterRelativeHumidityMeasurement,
 	DashboardDeviceClusterIlluminanceMeasurement,
 	DashboardDeviceClusterWindowCovering,
-	DashboardDeviceClusterColorControl,
+	DashboardDeviceClusterColorControlXY,
 	DashboardDeviceClusterActions,
 	DashboardDeviceClusterSensorGroup,
 	DashboardDeviceClusterThermostat,
 	DeviceListWithValuesResponse,
 	DashboardDeviceClusterSwitch,
 	DashboardDeviceClusterBooleanState,
+	DashboardDeviceClusterOnOff,
 } from '../../../server/modules/device/routing';
 import {
 	Chart as ChartJS,
@@ -2978,8 +2979,442 @@ const ActionsDetail = (props: ActionsDetailProps): JSX.Element => {
 	);
 };
 
+interface OnOffDetailProps extends DeviceDetailBaseProps<DashboardDeviceClusterOnOff> {}
+
+const OnOffDetail = (props: OnOffDetailProps): JSX.Element => {
+	const energyCluster =
+		props.cluster.mergedClusters?.[DeviceClusterName.ELECTRICAL_ENERGY_MEASUREMENT];
+	const powerCluster =
+		props.cluster.mergedClusters?.[DeviceClusterName.ELECTRICAL_POWER_MEASUREMENT];
+	const colorControlCluster = props.cluster.mergedClusters?.[DeviceClusterName.COLOR_CONTROL];
+	const levelControlCluster = props.cluster.mergedClusters?.[DeviceClusterName.LEVEL_CONTROL];
+
+	const [isOn, setIsOn] = useState(props.cluster.isOn);
+	const [level, setLevel] = useState(levelControlCluster?.currentLevel ?? 100);
+	const [colorTemperature, setColorTemperature] = useState(
+		colorControlCluster && 'colorTemperature' in colorControlCluster
+			? (colorControlCluster.colorTemperature ?? 3000)
+			: 3000
+	);
+	const [isUpdating, setIsUpdating] = useState(false);
+	const roomColor = props.device.roomColor || '#555';
+
+	const levelCommitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+	const colorTemperatureCommitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+	// Cleanup timeout on unmount
+	useEffect(() => {
+		return () => {
+			if (levelCommitTimeoutRef.current) {
+				clearTimeout(levelCommitTimeoutRef.current);
+			}
+			if (colorTemperatureCommitTimeoutRef.current) {
+				clearTimeout(colorTemperatureCommitTimeoutRef.current);
+			}
+		};
+	}, []);
+
+	// Sync state with props when they change
+	useEffect(() => {
+		setIsOn(props.cluster.isOn);
+	}, [props.cluster.isOn]);
+
+	useEffect(() => {
+		if (levelControlCluster?.currentLevel !== undefined) {
+			setLevel(levelControlCluster.currentLevel);
+		}
+	}, [levelControlCluster?.currentLevel]);
+
+	useEffect(() => {
+		if (
+			colorControlCluster &&
+			'colorTemperature' in colorControlCluster &&
+			colorControlCluster.colorTemperature !== undefined
+		) {
+			setColorTemperature(colorControlCluster.colorTemperature);
+		}
+	}, [colorControlCluster]);
+
+	const handleToggle = async (checked: boolean) => {
+		setIsUpdating(true);
+		try {
+			await apiPost(
+				'device',
+				'/cluster/OnOff',
+				{},
+				{
+					deviceIds: [props.device.uniqueId],
+					isOn: checked,
+				}
+			);
+			setIsOn(checked);
+		} catch (error) {
+			console.error('Failed to toggle device:', error);
+		} finally {
+			setIsUpdating(false);
+		}
+	};
+
+	const handleLevelChange = (_event: Event, newValue: number | number[]) => {
+		const newLevel = typeof newValue === 'number' ? newValue : newValue[0];
+		setLevel(newLevel);
+
+		// Debounce API call
+		if (levelCommitTimeoutRef.current) {
+			clearTimeout(levelCommitTimeoutRef.current);
+		}
+		levelCommitTimeoutRef.current = setTimeout(async () => {
+			try {
+				await apiPost(
+					'device',
+					'/cluster/LevelControl',
+					{},
+					{
+						deviceIds: [props.device.uniqueId],
+						level: newLevel,
+					}
+				);
+			} catch (error) {
+				console.error('Failed to update level:', error);
+			}
+		}, 300);
+	};
+
+	const handleColorTemperatureChange = (_event: Event, newValue: number | number[]) => {
+		const newTemp = typeof newValue === 'number' ? newValue : newValue[0];
+		setColorTemperature(newTemp);
+
+		// Debounce API call
+		if (colorTemperatureCommitTimeoutRef.current) {
+			clearTimeout(colorTemperatureCommitTimeoutRef.current);
+		}
+		colorTemperatureCommitTimeoutRef.current = setTimeout(async () => {
+			try {
+				await apiPost(
+					'device',
+					'/cluster/ColorControl',
+					{},
+					{
+						deviceIds: [props.device.uniqueId],
+						colorTemperature: newTemp,
+					}
+				);
+			} catch (error) {
+				console.error('Failed to update color temperature:', error);
+			}
+		}, 300);
+	};
+
+	const formatPower = (watts: number): string => {
+		if (watts >= 1000) {
+			return `${(watts / 1000).toFixed(1)} kW`;
+		}
+		return `${watts} W`;
+	};
+
+	const hasColorControl = !!colorControlCluster;
+	const hasColorTemperature = hasColorControl && 'colorTemperature' in colorControlCluster;
+	const hasLevelControl = !!levelControlCluster;
+	const hasEnergyData = !!energyCluster || !!powerCluster;
+	const minColorTemp =
+		hasColorTemperature && 'minColorTemperature' in colorControlCluster
+			? (colorControlCluster.minColorTemperature ?? 2000)
+			: 2000;
+	const maxColorTemp =
+		hasColorTemperature && 'maxColorTemperature' in colorControlCluster
+			? (colorControlCluster.maxColorTemperature ?? 6500)
+			: 6500;
+
+	return (
+		<motion.div
+			variants={pageVariants}
+			initial="initial"
+			animate="animate"
+			exit="exit"
+			style={{ height: '100%' }}
+		>
+			<Box
+				sx={{
+					backgroundColor: roomColor,
+					py: 1.5,
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
+					position: 'relative',
+					boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+				}}
+			>
+				<IconButton style={{ position: 'absolute', left: 0 }} onClick={props.onExit}>
+					<ArrowBackIcon style={{ fill: '#2f2f2f' }} />
+				</IconButton>
+				<Typography
+					style={{ color: '#2f2f2f', fontWeight: 600, letterSpacing: '-0.02em' }}
+					variant="h6"
+				>
+					{props.device.name}
+				</Typography>
+			</Box>
+
+			<Box sx={{ p: { xs: 2, sm: 3 } }}>
+				<motion.div
+					variants={cardVariants}
+					initial="initial"
+					animate="animate"
+					transition={{ delay: 0 }}
+				>
+					<Card
+						sx={{
+							mb: 3,
+							borderRadius: 3,
+							boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+							background: 'linear-gradient(135deg, #2a2a2a 0%, #353535 100%)',
+						}}
+					>
+						<CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+							<Box
+								sx={{
+									display: 'flex',
+									justifyContent: 'space-between',
+									alignItems: 'center',
+									mb: 4,
+								}}
+							>
+								<Typography
+									variant="h5"
+									sx={{
+										fontWeight: 600,
+										letterSpacing: '-0.02em',
+									}}
+								>
+									{props.device.name}
+								</Typography>
+								<FormControlLabel
+									control={
+										<Switch
+											checked={isOn}
+											onChange={(e) => void handleToggle(e.target.checked)}
+											disabled={isUpdating}
+											sx={{
+												'& .MuiSwitch-switchBase.Mui-checked': {
+													color: '#f59e0b',
+												},
+												'& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track':
+													{
+														backgroundColor: '#f59e0b',
+														opacity: 0.5,
+													},
+											}}
+										/>
+									}
+									label={
+										<Typography
+											sx={{
+												fontSize: '0.875rem',
+												fontWeight: 500,
+												opacity: 0.8,
+											}}
+										>
+											{isOn ? 'On' : 'Off'}
+										</Typography>
+									}
+								/>
+							</Box>
+
+							{/* Level Control Section */}
+							{hasLevelControl && (
+								<Box sx={{ mb: 4 }}>
+									<Typography
+										variant="h6"
+										sx={{
+											fontWeight: 600,
+											mb: 2,
+											opacity: 0.9,
+										}}
+									>
+										Brightness
+									</Typography>
+									<Box sx={{ px: 1 }}>
+										<Slider
+											value={level}
+											onChange={handleLevelChange}
+											min={0}
+											max={100}
+											step={1}
+											disabled={isUpdating || !isOn}
+											sx={{
+												color: '#f59e0b',
+												'& .MuiSlider-thumb': {
+													width: 20,
+													height: 20,
+												},
+											}}
+										/>
+										<Box
+											sx={{
+												display: 'flex',
+												justifyContent: 'space-between',
+												mt: 1,
+											}}
+										>
+											<Typography variant="caption" sx={{ opacity: 0.7 }}>
+												0%
+											</Typography>
+											<Typography
+												variant="h6"
+												sx={{
+													fontWeight: 'bold',
+													color: '#f59e0b',
+												}}
+											>
+												{Math.round(level)}%
+											</Typography>
+											<Typography variant="caption" sx={{ opacity: 0.7 }}>
+												100%
+											</Typography>
+										</Box>
+									</Box>
+								</Box>
+							)}
+
+							{/* Color Temperature Section */}
+							{hasColorTemperature && (
+								<Box sx={{ mb: 4 }}>
+									<Typography
+										variant="h6"
+										sx={{
+											fontWeight: 600,
+											mb: 2,
+											opacity: 0.9,
+										}}
+									>
+										Color Temperature
+									</Typography>
+									<Box sx={{ px: 1 }}>
+										<Slider
+											value={colorTemperature}
+											onChange={handleColorTemperatureChange}
+											min={minColorTemp}
+											max={maxColorTemp}
+											step={50}
+											disabled={isUpdating || !isOn}
+											sx={{
+												color: '#f59e0b',
+												'& .MuiSlider-thumb': {
+													width: 20,
+													height: 20,
+												},
+											}}
+										/>
+										<Box
+											sx={{
+												display: 'flex',
+												justifyContent: 'space-between',
+												mt: 1,
+											}}
+										>
+											<Typography variant="caption" sx={{ opacity: 0.7 }}>
+												Warm ({minColorTemp}K)
+											</Typography>
+											<Typography
+												variant="h6"
+												sx={{
+													fontWeight: 'bold',
+													color: '#f59e0b',
+												}}
+											>
+												{colorTemperature}K
+											</Typography>
+											<Typography variant="caption" sx={{ opacity: 0.7 }}>
+												Cool ({maxColorTemp}K)
+											</Typography>
+										</Box>
+									</Box>
+								</Box>
+							)}
+
+							{/* Energy/Power Display Section */}
+							{hasEnergyData && (
+								<Box>
+									<Typography
+										variant="h6"
+										sx={{
+											fontWeight: 600,
+											mb: 2,
+											opacity: 0.9,
+										}}
+									>
+										Energy Usage
+									</Typography>
+									<Box
+										sx={{
+											display: 'flex',
+											flexDirection: 'column',
+											gap: 2,
+										}}
+									>
+										{powerCluster && (
+											<Box
+												sx={{
+													display: 'flex',
+													justifyContent: 'space-between',
+													alignItems: 'center',
+													p: 2,
+													backgroundColor: 'rgba(0, 0, 0, 0.2)',
+													borderRadius: 2,
+												}}
+											>
+												<Typography variant="body1" sx={{ opacity: 0.9 }}>
+													Current Power
+												</Typography>
+												<Typography
+													variant="h5"
+													sx={{
+														fontWeight: 'bold',
+														color: '#f59e0b',
+													}}
+												>
+													{formatPower(powerCluster.activePower)}
+												</Typography>
+											</Box>
+										)}
+										{energyCluster && (
+											<Box
+												sx={{
+													display: 'flex',
+													justifyContent: 'space-between',
+													alignItems: 'center',
+													p: 2,
+													backgroundColor: 'rgba(0, 0, 0, 0.2)',
+													borderRadius: 2,
+												}}
+											>
+												<Typography variant="body1" sx={{ opacity: 0.9 }}>
+													Total Energy
+												</Typography>
+												<Typography
+													variant="h5"
+													sx={{
+														fontWeight: 'bold',
+														color: '#f59e0b',
+													}}
+												>
+													{energyCluster.totalEnergy} kWh
+												</Typography>
+											</Box>
+										)}
+									</Box>
+								</Box>
+							)}
+						</CardContent>
+					</Card>
+				</motion.div>
+			</Box>
+		</motion.div>
+	);
+};
+
 interface ColorControlDetailProps
-	extends DeviceDetailBaseProps<DashboardDeviceClusterColorControl> {}
+	extends DeviceDetailBaseProps<DashboardDeviceClusterColorControlXY> {}
 
 const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 	const [hue, setHue] = useState(props.cluster.color.hue);
@@ -3568,7 +4003,10 @@ export const DeviceDetail = (
 	if (props.cluster.name === DeviceClusterName.WINDOW_COVERING) {
 		return <WindowCoveringDetail {...props} cluster={props.cluster} />;
 	}
-	if (props.cluster.name === DeviceClusterName.COLOR_CONTROL) {
+	if (
+		props.cluster.name === DeviceClusterName.COLOR_CONTROL &&
+		props.cluster.clusterVariant === 'xy'
+	) {
 		return <ColorControlDetail {...props} cluster={props.cluster} />;
 	}
 	if (props.cluster.name === DeviceClusterName.ACTIONS) {
@@ -3579,6 +4017,9 @@ export const DeviceDetail = (
 	}
 	if (props.cluster.name === DeviceClusterName.SWITCH) {
 		return <SwitchDetail {...props} cluster={props.cluster} />;
+	}
+	if (props.cluster.name === DeviceClusterName.ON_OFF) {
+		return <OnOffDetail {...props} cluster={props.cluster} />;
 	}
 	return null;
 };

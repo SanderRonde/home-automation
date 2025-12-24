@@ -1,7 +1,7 @@
 import type {
 	DashboardDeviceClusterOnOff,
 	DashboardDeviceClusterLevelControl,
-	DashboardDeviceClusterColorControl,
+	DashboardDeviceClusterColorControlXY,
 	DashboardDeviceClusterWindowCovering,
 	DashboardDeviceClusterWithStateMap,
 	DeviceListWithValuesResponse,
@@ -1040,12 +1040,18 @@ const ActionConfig = React.memo((props: ActionConfigProps) => {
 				if (cluster.name === DeviceClusterName.COLOR_CONTROL) {
 					// @ts-ignore
 					availableClusters[cluster.name] = cluster;
-					if (cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL]) {
+					if (
+						cluster.clusterVariant === 'xy' &&
+						cluster.mergedClusters?.[DeviceClusterName.LEVEL_CONTROL]
+					) {
 						// @ts-ignore
 						availableClusters[DeviceClusterName.LEVEL_CONTROL] =
 							cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL];
 					}
-					if (cluster.mergedClusters[DeviceClusterName.ON_OFF]) {
+					if (
+						cluster.clusterVariant === 'xy' &&
+						cluster.mergedClusters?.[DeviceClusterName.ON_OFF]
+					) {
 						// @ts-ignore
 						availableClusters[DeviceClusterName.ON_OFF] =
 							cluster.mergedClusters[DeviceClusterName.ON_OFF];
@@ -1075,13 +1081,19 @@ const ActionConfig = React.memo((props: ActionConfigProps) => {
 				if (cluster.name === DeviceClusterName.COLOR_CONTROL) {
 					clusterMap[cluster.name] ??= [];
 					clusterMap[cluster.name]!.push(cluster);
-					if (cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL]) {
+					if (
+						cluster.clusterVariant === 'xy' &&
+						cluster.mergedClusters?.[DeviceClusterName.LEVEL_CONTROL]
+					) {
 						clusterMap[DeviceClusterName.LEVEL_CONTROL] ??= [];
 						clusterMap[DeviceClusterName.LEVEL_CONTROL].push(
 							cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL]
 						);
 					}
-					if (cluster.mergedClusters[DeviceClusterName.ON_OFF]) {
+					if (
+						cluster.clusterVariant === 'xy' &&
+						cluster.mergedClusters?.[DeviceClusterName.ON_OFF]
+					) {
 						clusterMap[DeviceClusterName.ON_OFF] ??= [];
 						clusterMap[DeviceClusterName.ON_OFF].push(
 							cluster.mergedClusters[DeviceClusterName.ON_OFF]
@@ -1232,7 +1244,7 @@ const ActionConfig = React.memo((props: ActionConfigProps) => {
 										Object.values(availableClusters) as (
 											| DashboardDeviceClusterLevelControl
 											| DashboardDeviceClusterWindowCovering
-											| DashboardDeviceClusterColorControl
+											| DashboardDeviceClusterColorControlXY
 											| DashboardDeviceClusterOnOff
 										)[]
 									}
@@ -1240,7 +1252,11 @@ const ActionConfig = React.memo((props: ActionConfigProps) => {
 									value={
 										props.action.cluster &&
 										props.action.cluster in availableClusters
-											? (availableClusters[props.action.cluster] ?? null)
+											? ((availableClusters[props.action.cluster] as
+													| DashboardDeviceClusterLevelControl
+													| DashboardDeviceClusterWindowCovering
+													| DashboardDeviceClusterColorControlXY
+													| DashboardDeviceClusterOnOff) ?? null)
 											: null
 									}
 									onChange={(_e, newValue) => {

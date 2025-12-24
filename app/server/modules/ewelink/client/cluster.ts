@@ -316,6 +316,10 @@ export class EwelinkSwitchCluster
 		return DeviceSwitchWithMultiPressCluster;
 	}
 
+	public getClusterVariant(): 'multiPress' {
+		return 'multiPress';
+	}
+
 	public onPress = this.getProxy().eventListener(
 		(value) => value.key === 0
 	) as unknown as EventEmitter<void>;
@@ -337,6 +341,10 @@ export class EwelinkOutletSwitchCluster
 {
 	public getBaseCluster(): typeof DeviceSwitchWithMultiPressCluster {
 		return DeviceSwitchWithMultiPressCluster;
+	}
+
+	public getClusterVariant(): 'multiPress' {
+		return 'multiPress';
 	}
 
 	public constructor(

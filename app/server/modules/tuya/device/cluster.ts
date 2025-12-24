@@ -15,7 +15,6 @@ import { Data, MappedData } from '../../../lib/data';
 class TuyaClusterProxy<PARAMS extends Record<string, TuyaPropertyValue>> {
 	protected readonly _listeners = new Set<(data: PARAMS | undefined, isNew: boolean) => void>();
 	private readonly _disposables = new Set<() => void>();
-	// TODO:(sander)
 	public onChange: EventEmitter<void> = new EventEmitter();
 
 	public constructor(

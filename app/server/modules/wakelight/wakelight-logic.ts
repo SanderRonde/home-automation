@@ -1,4 +1,4 @@
-import { DeviceColorControlCluster } from '../device/cluster';
+import { DeviceColorControlXYCluster } from '../device/cluster';
 import { DeviceLevelControlCluster } from '../device/cluster';
 import { logTag, warning } from '../../lib/logging/logger';
 import { DeviceOnOffCluster } from '../device/cluster';
@@ -178,7 +178,7 @@ export class WakelightLogic {
 				continue;
 			}
 
-			const colorControlCluster = device.getClusterByType(DeviceColorControlCluster);
+			const colorControlCluster = device.getClusterByType(DeviceColorControlXYCluster);
 			if (!colorControlCluster) {
 				warning(`Device does not support ColorControl: ${deviceId}`);
 				continue;
@@ -220,8 +220,9 @@ export class WakelightLogic {
 							await levelControlCluster.setLevel({ level: brightness });
 						} else {
 							// Fall back to ColorControl with current color but updated value
-							const colorControlCluster =
-								device.getClusterByType(DeviceColorControlCluster);
+							const colorControlCluster = device.getClusterByType(
+								DeviceColorControlXYCluster
+							);
 							if (colorControlCluster) {
 								const currentColor = await colorControlCluster.color.get();
 								if (currentColor) {

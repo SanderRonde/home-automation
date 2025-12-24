@@ -158,15 +158,18 @@ export abstract class DeviceSwitchCluster extends Cluster {
 
 export abstract class DeviceSwitchWithLongPressCluster extends DeviceSwitchCluster {
 	public abstract onLongPress: EventEmitter<void>;
+	public abstract getClusterVariant(): 'longPress';
 }
 
 export abstract class DeviceSwitchWithMultiPressCluster extends DeviceSwitchCluster {
 	public abstract onMultiPress: EventEmitter<{ pressCount: number }>;
+	public abstract getClusterVariant(): 'multiPress';
 }
 
 export abstract class DeviceSwitchWithLongPressAndMultiPressCluster extends DeviceSwitchCluster {
 	public abstract onLongPress: EventEmitter<void>;
 	public abstract onMultiPress: EventEmitter<{ pressCount: number }>;
+	public abstract getClusterVariant(): 'longPressAndMultiPress';
 }
 
 export abstract class DeviceIlluminanceMeasurementCluster extends Cluster {
@@ -175,8 +178,25 @@ export abstract class DeviceIlluminanceMeasurementCluster extends Cluster {
 	public abstract illuminance: Data<number>;
 }
 
-export abstract class DeviceColorControlCluster extends Cluster {
+export abstract class DeviceColorControlTemperatureCluster extends Cluster {
 	public static clusterName = DeviceClusterName.COLOR_CONTROL;
+	public abstract getClusterVariant(): 'temperature';
+
+	/** In Kelvin */
+	public abstract colorTemperature: Data<number | undefined>;
+	/** In Kelvin */
+	public abstract colorTemperatureMin: Data<number | undefined>;
+	/** In Kelvin */
+	public abstract colorTemperatureMax: Data<number | undefined>;
+	public abstract setColorTemperature(args: {
+		/** In Kelvin */
+		colorTemperature: number;
+	}): Promise<void>;
+}
+
+export abstract class DeviceColorControlXYCluster extends Cluster {
+	public static clusterName = DeviceClusterName.COLOR_CONTROL;
+	public abstract getClusterVariant(): 'xy';
 
 	public abstract color: Data<Color | undefined>;
 	public abstract setColor(args: { colors: Color[]; overDurationMs?: number }): Promise<void>;

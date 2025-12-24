@@ -94,6 +94,7 @@ const OnOffIconButton = (props: ClusterIconButtonProps) => {
 			(c) =>
 				c.name === DeviceClusterName.ON_OFF ||
 				(c.name === DeviceClusterName.COLOR_CONTROL &&
+					c.clusterVariant === 'xy' &&
 					c.mergedClusters[DeviceClusterName.ON_OFF])
 		)
 	);
@@ -103,6 +104,7 @@ const OnOffIconButton = (props: ClusterIconButtonProps) => {
 			(d) =>
 				(d.name === DeviceClusterName.ON_OFF && d.isOn) ||
 				(d.name === DeviceClusterName.COLOR_CONTROL &&
+					d.clusterVariant === 'xy' &&
 					d.mergedClusters[DeviceClusterName.ON_OFF]?.isOn)
 		);
 
@@ -114,6 +116,7 @@ const OnOffIconButton = (props: ClusterIconButtonProps) => {
 				break;
 			} else if (
 				cluster.name === DeviceClusterName.COLOR_CONTROL &&
+				cluster.clusterVariant === 'xy' &&
 				cluster.mergedClusters[DeviceClusterName.ON_OFF]
 			) {
 				icon = cluster.mergedClusters[DeviceClusterName.ON_OFF]?.icon ? (
@@ -163,6 +166,7 @@ const ColorControlIconButton = (props: ClusterIconButtonProps) => {
 			(c) =>
 				c.name === DeviceClusterName.ON_OFF ||
 				(c.name === DeviceClusterName.COLOR_CONTROL &&
+					c.clusterVariant === 'xy' &&
 					c.mergedClusters[DeviceClusterName.ON_OFF])
 		)
 	);
@@ -173,6 +177,7 @@ const ColorControlIconButton = (props: ClusterIconButtonProps) => {
 			(d) =>
 				(d.name === DeviceClusterName.ON_OFF && d.isOn) ||
 				(d.name === DeviceClusterName.COLOR_CONTROL &&
+					d.clusterVariant === 'xy' &&
 					d.mergedClusters[DeviceClusterName.ON_OFF]?.isOn)
 		);
 

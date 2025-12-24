@@ -1,9 +1,9 @@
 import {
 	DeviceActionsCluster,
-	DeviceColorControlCluster,
 	DeviceLevelControlCluster,
 	DeviceOnOffCluster,
 } from '../../device/cluster';
+import { DeviceColorControlXYCluster } from '../../device/cluster';
 import { CombinedData, Data, MappedData } from '../../../lib/data';
 import { EventEmitter } from '../../../lib/event-emitter';
 import type { DeviceAction } from '../../device/cluster';
@@ -101,10 +101,13 @@ export class LEDArtLevelControlCluster
 
 export class LEDArtColorControlCluster
 	extends ConfigurableCluster
-	implements DeviceColorControlCluster
+	implements DeviceColorControlXYCluster
 {
-	public getBaseCluster(): typeof DeviceColorControlCluster {
-		return DeviceColorControlCluster;
+	public getBaseCluster(): typeof DeviceColorControlXYCluster {
+		return DeviceColorControlXYCluster;
+	}
+	public getClusterVariant(): 'xy' {
+		return 'xy';
 	}
 
 	public color = new LEDArtMapper(this, this.client.effects, (effects) => {

@@ -231,6 +231,8 @@ export const ColorControlActionConfig = (props: ColorControlActionConfigProps): 
 						/>
 					</Box>
 					{'value' in props.action.action &&
+						props.availableClusters[DeviceClusterName.COLOR_CONTROL]?.clusterVariant ===
+							'xy' &&
 						!props.availableClusters[DeviceClusterName.COLOR_CONTROL]?.mergedClusters[
 							DeviceClusterName.LEVEL_CONTROL
 						] && (

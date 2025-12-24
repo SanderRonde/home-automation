@@ -16,12 +16,13 @@ import {
 	DeviceSwitchWithMultiPressCluster,
 	DeviceSwitchWithLongPressAndMultiPressCluster,
 	DeviceIlluminanceMeasurementCluster,
-	DeviceColorControlCluster,
+	DeviceColorControlTemperatureCluster,
 	DeviceActionsCluster,
 	DeviceThermostatCluster,
 	DeviceGroupId,
 	DeviceElectricalEnergyMeasurementCluster,
 	DeviceElectricalPowerMeasurementCluster,
+	DeviceColorControlXYCluster,
 } from './cluster';
 import { EventEmitter } from '../../lib/event-emitter';
 import { zodToJsonSchema } from 'zod-to-json-schema';
@@ -281,6 +282,8 @@ class DeviceSwitchWithLongPressClusterSpec extends DeviceSwitchWithLongPressClus
 	public getBaseCluster(): typeof DeviceSwitchWithLongPressCluster {
 		return DeviceSwitchWithLongPressCluster;
 	}
+	@DescribeMethod(z.literal('longPress'))
+	public getClusterVariant!: () => 'longPress';
 
 	@DescribeMethod(z.number())
 	public getTotalCount!: () => number;
@@ -299,6 +302,8 @@ class DeviceSwitchWithMultiPressClusterSpec extends DeviceSwitchWithMultiPressCl
 	public getBaseCluster(): typeof DeviceSwitchWithMultiPressCluster {
 		return DeviceSwitchWithMultiPressCluster;
 	}
+	@DescribeMethod(z.literal('multiPress'))
+	public getClusterVariant!: () => 'multiPress';
 
 	@DescribeMethod(z.number())
 	public getTotalCount!: () => number;
@@ -317,6 +322,8 @@ class DeviceSwitchWithLongPressAndMultiPressClusterSpec extends DeviceSwitchWith
 	public getBaseCluster(): typeof DeviceSwitchWithLongPressAndMultiPressCluster {
 		return DeviceSwitchWithLongPressAndMultiPressCluster;
 	}
+	@DescribeMethod(z.literal('longPressAndMultiPress'))
+	public getClusterVariant!: () => 'longPressAndMultiPress';
 
 	@DescribeMethod(z.number())
 	public getTotalCount!: () => number;
@@ -344,10 +351,39 @@ class DeviceIlluminanceMeasurementClusterSpec extends DeviceIlluminanceMeasureme
 	public [Symbol.dispose](): void {}
 }
 
-class DeviceColorControlClusterSpec extends DeviceColorControlCluster {
-	public getBaseCluster(): typeof DeviceColorControlCluster {
-		return DeviceColorControlCluster;
+class DeviceColorControlTemperatureClusterSpec extends DeviceColorControlTemperatureCluster {
+	public getBaseCluster(): typeof DeviceColorControlTemperatureCluster {
+		return DeviceColorControlTemperatureCluster;
 	}
+
+	@DescribeMethod(z.literal('temperature'))
+	public getClusterVariant!: () => 'temperature';
+
+	@DescribeProperty(z.number().optional())
+	public colorTemperature!: Data<number | undefined>;
+	@DescribeProperty(z.number().optional())
+	public colorTemperatureMin!: Data<number | undefined>;
+	@DescribeProperty(z.number().optional())
+	public colorTemperatureMax!: Data<number | undefined>;
+	@DescribeMethod(z.promise(z.void()), {
+		name: 'args',
+		type: z.object({
+			colorTemperature: z.number(),
+		}),
+	})
+	public setColorTemperature!: (args: { colorTemperature: number }) => Promise<void>;
+
+	public onChange!: EventEmitter<void>;
+	public [Symbol.dispose](): void {}
+}
+
+class DeviceColorControlXYClusterSpec extends DeviceColorControlXYCluster {
+	public getBaseCluster(): typeof DeviceColorControlXYCluster {
+		return DeviceColorControlXYCluster;
+	}
+
+	@DescribeMethod(z.literal('xy'))
+	public getClusterVariant!: () => 'xy';
 
 	@DescribeProperty(
 		z.union([
@@ -474,7 +510,8 @@ const CLUSTER_SPECS = [
 	DeviceSwitchWithMultiPressClusterSpec,
 	DeviceSwitchWithLongPressAndMultiPressClusterSpec,
 	DeviceIlluminanceMeasurementClusterSpec,
-	DeviceColorControlClusterSpec,
+	DeviceColorControlTemperatureClusterSpec,
+	DeviceColorControlXYClusterSpec,
 	DeviceActionsClusterSpec,
 	DeviceThermostatClusterSpec,
 	DeviceElectricalEnergyMeasurementClusterSpec,

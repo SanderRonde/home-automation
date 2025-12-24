@@ -1,6 +1,6 @@
 import type {
 	DeviceListWithValuesResponse,
-	DashboardDeviceClusterColorControl,
+	DashboardDeviceClusterColorControlXY,
 } from '../../../server/modules/device/routing';
 import { WbSunny, LocalFireDepartment as FireIcon, Close as CloseIcon } from '@mui/icons-material';
 import { Box, IconButton, Typography, Popover, Slider, Button } from '@mui/material';
@@ -186,6 +186,7 @@ const ClusterIconButton = (props: ClusterIconButtonProps): JSX.Element | null =>
 				(c) =>
 					c.name === DeviceClusterName.ON_OFF ||
 					(c.name === DeviceClusterName.COLOR_CONTROL &&
+						c.clusterVariant === 'xy' &&
 						c.mergedClusters[DeviceClusterName.ON_OFF])
 			)
 		);
@@ -195,6 +196,7 @@ const ClusterIconButton = (props: ClusterIconButtonProps): JSX.Element | null =>
 				(d) =>
 					(d.name === DeviceClusterName.ON_OFF && d.isOn) ||
 					(d.name === DeviceClusterName.COLOR_CONTROL &&
+						d.clusterVariant === 'xy' &&
 						d.mergedClusters[DeviceClusterName.ON_OFF]?.isOn)
 			);
 	} else if (props.clusterData.clusterName === DeviceClusterName.WINDOW_COVERING) {
@@ -211,6 +213,7 @@ const ClusterIconButton = (props: ClusterIconButtonProps): JSX.Element | null =>
 				(c) =>
 					c.name === DeviceClusterName.ON_OFF ||
 					(c.name === DeviceClusterName.COLOR_CONTROL &&
+						c.clusterVariant === 'xy' &&
 						c.mergedClusters[DeviceClusterName.ON_OFF])
 			)
 		);
@@ -220,6 +223,7 @@ const ClusterIconButton = (props: ClusterIconButtonProps): JSX.Element | null =>
 				(d) =>
 					(d.name === DeviceClusterName.ON_OFF && d.isOn) ||
 					(d.name === DeviceClusterName.COLOR_CONTROL &&
+						d.clusterVariant === 'xy' &&
 						d.mergedClusters[DeviceClusterName.ON_OFF]?.isOn)
 			);
 	}
@@ -1607,9 +1611,10 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 							if (
 								clusterName === DeviceClusterName.ON_OFF &&
 								cluster.name === DeviceClusterName.COLOR_CONTROL &&
-								cluster.mergedClusters[DeviceClusterName.ON_OFF]?.icon
+								cluster.clusterVariant === 'xy' &&
+								cluster.mergedClusters?.[DeviceClusterName.ON_OFF]?.icon
 							) {
-								icon = cluster.mergedClusters[DeviceClusterName.ON_OFF].icon;
+								icon = cluster.mergedClusters?.[DeviceClusterName.ON_OFF]?.icon;
 								break;
 							}
 						}
@@ -1805,7 +1810,8 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 					(c) =>
 						c.name === DeviceClusterName.ON_OFF ||
 						(c.name === DeviceClusterName.COLOR_CONTROL &&
-							c.mergedClusters[DeviceClusterName.ON_OFF])
+							c.clusterVariant === 'xy' &&
+							c.mergedClusters?.[DeviceClusterName.ON_OFF])
 				)
 			);
 			const anyEnabled = devices
@@ -1814,7 +1820,8 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 					(d) =>
 						(d.name === DeviceClusterName.ON_OFF && d.isOn) ||
 						(d.name === DeviceClusterName.COLOR_CONTROL &&
-							d.mergedClusters[DeviceClusterName.ON_OFF]?.isOn)
+							d.clusterVariant === 'xy' &&
+							d.mergedClusters?.[DeviceClusterName.ON_OFF]?.isOn)
 				);
 
 			await apiPost(
@@ -1868,7 +1875,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 			const colorControlCluster = device.mergedAllClusters.find(
 				(c) =>
 					c.name === DeviceClusterName.COLOR_CONTROL &&
-					(c as DashboardDeviceClusterColorControl).mergedClusters?.[
+					(c as DashboardDeviceClusterColorControlXY).mergedClusters?.[
 						DeviceClusterName.ON_OFF
 					]
 			);
@@ -1876,7 +1883,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 			if (onOffCluster || colorControlCluster) {
 				const isCurrentlyOn = onOffCluster
 					? onOffCluster.isOn
-					: (colorControlCluster as DashboardDeviceClusterColorControl)?.mergedClusters[
+					: (colorControlCluster as DashboardDeviceClusterColorControlXY)?.mergedClusters[
 							DeviceClusterName.ON_OFF
 						]?.isOn;
 
@@ -1951,14 +1958,14 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				const colorControlCluster = device.mergedAllClusters.find(
 					(c) =>
 						c.name === DeviceClusterName.COLOR_CONTROL &&
-						(c as DashboardDeviceClusterColorControl).mergedClusters?.[
+						(c as DashboardDeviceClusterColorControlXY).mergedClusters?.[
 							DeviceClusterName.ON_OFF
 						]
 				);
 
 				if (
 					onOffCluster?.isOn ||
-					(colorControlCluster as DashboardDeviceClusterColorControl)?.mergedClusters[
+					(colorControlCluster as DashboardDeviceClusterColorControlXY)?.mergedClusters[
 						DeviceClusterName.ON_OFF
 					]?.isOn
 				) {
@@ -1974,7 +1981,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 						(c) =>
 							c.name === DeviceClusterName.ON_OFF ||
 							(c.name === DeviceClusterName.COLOR_CONTROL &&
-								(c as DashboardDeviceClusterColorControl).mergedClusters?.[
+								(c as DashboardDeviceClusterColorControlXY).mergedClusters?.[
 									DeviceClusterName.ON_OFF
 								])
 					)

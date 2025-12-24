@@ -42,12 +42,12 @@ export class MatterEndpoint extends DeviceEndpoint {
 	protected async init(
 		node: PairedNode,
 		endpoint: Endpoint,
-		type: 'device' | 'bridge'
+		type: 'device' | 'root'
 	): Promise<void> {
 		this.endpoints = [];
-		if (type !== 'bridge') {
-			// For bridges don't add child endpoints. That would lead to us adding the same endpoint
-			// both as a top-level device and as a child of the bridge.
+		if (type !== 'root') {
+			// For root nodes don't add child endpoints. That would lead to us adding the same endpoint
+			// both as a top-level device and as a child of the root node.
 			for (const childEndpoint of endpoint.getChildEndpoints()) {
 				if (childEndpoint.number === undefined) {
 					continue;
@@ -92,7 +92,7 @@ export class MatterEndpoint extends DeviceEndpoint {
 	public static async createEndpoint(
 		node: PairedNode,
 		endpoint: Endpoint,
-		type: 'device' | 'bridge'
+		type: 'device' | 'root'
 	): Promise<MatterEndpoint> {
 		const matterEndpoint = new MatterEndpoint(node, endpoint);
 		await matterEndpoint.init(node, endpoint, type);
@@ -136,7 +136,7 @@ export class MatterDevice extends MatterEndpoint implements Device {
 	public static async createDevice(
 		node: PairedNode,
 		endpoint: Endpoint,
-		type: 'device' | 'bridge',
+		type: 'device' | 'root',
 		uniqueId: string | undefined
 	): Promise<MatterDevice> {
 		const matterDevice = new MatterDevice(node, endpoint, uniqueId);

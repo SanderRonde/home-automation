@@ -1,5 +1,5 @@
 import {
-	DeviceColorControlCluster,
+	DeviceColorControlXYCluster,
 	DeviceLevelControlCluster,
 	DeviceOnOffCluster,
 } from '../../device/cluster';
@@ -128,10 +128,13 @@ export class WLEDLevelControlCluster
 
 export class WLEDColorControlCluster
 	extends ConfigurableCluster
-	implements DeviceColorControlCluster
+	implements DeviceColorControlXYCluster
 {
-	public getBaseCluster(): typeof DeviceColorControlCluster {
-		return DeviceColorControlCluster;
+	public getBaseCluster(): typeof DeviceColorControlXYCluster {
+		return DeviceColorControlXYCluster;
+	}
+	public getClusterVariant(): 'xy' {
+		return 'xy';
 	}
 
 	public color = new WLEDMapper(this, this.proxy.state, (state) => {

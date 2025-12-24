@@ -1,6 +1,6 @@
 import {
 	DeviceClusterName,
-	DeviceColorControlCluster,
+	DeviceColorControlXYCluster,
 	DeviceLevelControlCluster,
 	DeviceOnOffCluster,
 	DeviceWindowCoveringCluster,
@@ -574,8 +574,9 @@ export class SceneAPI {
 									}
 
 									// Handle manual HSV color
-									const colorControlClusters =
-										device.getAllClustersByType(DeviceColorControlCluster);
+									const colorControlClusters = device.getAllClustersByType(
+										DeviceColorControlXYCluster
+									);
 									if (colorControlClusters.length === 0) {
 										logTag(
 											'scene',

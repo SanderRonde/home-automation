@@ -180,6 +180,7 @@ export const ClusterActionControls = (props: ClusterActionControlsProps): JSX.El
 			)}
 
 			{((props.action.cluster === DeviceClusterName.COLOR_CONTROL &&
+				props.availableClusters[DeviceClusterName.COLOR_CONTROL]?.clusterVariant === 'xy' &&
 				props.availableClusters[DeviceClusterName.COLOR_CONTROL]?.mergedClusters?.[
 					DeviceClusterName.ON_OFF
 				]) ||

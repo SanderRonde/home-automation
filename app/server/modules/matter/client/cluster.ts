@@ -7,9 +7,9 @@ import {
 	DeviceOccupancySensingCluster,
 	DeviceIlluminanceMeasurementCluster,
 	DeviceTemperatureMeasurementCluster,
-	DeviceColorControlCluster,
 	DeviceActionsCluster,
 	DeviceElectricalPowerMeasurementCluster,
+	DeviceColorControlTemperatureCluster,
 } from '../../device/cluster';
 import type {
 	ColorControl,
@@ -42,6 +42,7 @@ import {
 import { DeviceElectricalEnergyMeasurementCluster } from '../../device/cluster';
 import type { PairedNode, Endpoint } from '@project-chip/matter.js/device';
 import type { Cluster, DeviceGroupId } from '../../device/cluster';
+import { DeviceColorControlXYCluster } from '../../device/cluster';
 import { DeviceBooleanStateCluster } from '../../device/cluster';
 import type { Switch } from '@matter/types/clusters/switch';
 import { EventEmitter } from '../../../lib/event-emitter';
@@ -357,11 +358,14 @@ class MatterLevelControlCluster
 	);
 	private _maxLevel = this._proxy.attributeGetter(
 		'maxLevel',
-		(v: number | null | undefined) => v ?? 0
+		(v: number | null | undefined) => v ?? 255
 	);
 	private _valueToFloat(v: number | null | undefined) {
 		const value = v ?? 0;
-		const [minLevel, maxLevel] = [this._minLevel.current(), this._maxLevel.current()];
+		const [minLevel, maxLevel] = [
+			this._minLevel.current() ?? 0,
+			this._maxLevel.current() ?? 255,
+		];
 		return (value - minLevel) / (maxLevel - minLevel);
 	}
 	private async _floatToValue(f: number) {
@@ -369,7 +373,7 @@ class MatterLevelControlCluster
 			this._minLevel.get(),
 			this._maxLevel.get(),
 		]);
-		return minLevel + (maxLevel - minLevel) * f;
+		return (minLevel ?? 0) + ((maxLevel ?? 255) - (minLevel ?? 0)) * f;
 	}
 
 	/**
@@ -525,21 +529,65 @@ class MatterGroupsCluster
 	});
 }
 
-class MatterColorControlCluster
+class MatterColorControlTemperatureCluster
 	extends ConfigurableCluster<ColorControl.Complete>
-	implements DeviceColorControlCluster
+	implements DeviceColorControlTemperatureCluster
 {
-	public getBaseCluster(): typeof DeviceColorControlCluster {
-		return DeviceColorControlCluster;
+	public getBaseCluster(): typeof DeviceColorControlTemperatureCluster {
+		return DeviceColorControlTemperatureCluster;
+	}
+	public getClusterVariant(): 'temperature' {
+		return 'temperature';
+	}
+
+	public colorTemperature = this._proxy.attributeGetter('colorTemperatureMireds', (value) =>
+		typeof value === 'number' && value > 0 ? Math.round(1_000_000 / Number(value)) : undefined
+	);
+	public colorTemperatureMin = this._proxy.attributeGetter(
+		'colorTempPhysicalMaxMireds',
+		(value) =>
+			typeof value === 'number' && value > 0
+				? Math.round(1_000_000 / Number(value))
+				: undefined
+	);
+	public colorTemperatureMax = this._proxy.attributeGetter(
+		'colorTempPhysicalMinMireds',
+		(value) =>
+			typeof value === 'number' && value > 0
+				? Math.round(1_000_000 / Number(value))
+				: undefined
+	);
+
+	public setColorTemperature = this._proxy.command('moveToColorTemperature', {
+		input: ({ colorTemperature }: { colorTemperature: number }) => {
+			return {
+				colorTemperatureMireds: Math.round(1_000_000 / colorTemperature),
+				transitionTime: 0,
+				optionsMask: {},
+				optionsOverride: {},
+			};
+		},
+	});
+}
+
+class MatterColorControlXYCluster
+	extends ConfigurableCluster<ColorControl.Complete>
+	implements DeviceColorControlXYCluster
+{
+	public getBaseCluster(): typeof DeviceColorControlXYCluster {
+		return DeviceColorControlXYCluster;
+	}
+	public getClusterVariant(): 'xy' {
+		return 'xy';
 	}
 
 	private static readonly MAX_COLOR_VALUE = 65279;
 
 	private _currentX = this._proxy.attributeGetter('currentX', (value) =>
-		value ? value / MatterColorControlCluster.MAX_COLOR_VALUE : undefined
+		value ? value / MatterColorControlXYCluster.MAX_COLOR_VALUE : undefined
 	);
 	private _currentY = this._proxy.attributeGetter('currentY', (value) =>
-		value ? value / MatterColorControlCluster.MAX_COLOR_VALUE : undefined
+		value ? value / MatterColorControlXYCluster.MAX_COLOR_VALUE : undefined
 	);
 	public color = new MappedData(new CombinedData([this._currentX, this._currentY]), ([x, y]) => {
 		return x === undefined || y === undefined ? undefined : Color.fromCieXy(x, y);
@@ -550,8 +598,8 @@ class MatterColorControlCluster
 			const color = colors[0];
 			const { x, y } = color.toCieXy();
 			return {
-				colorX: Math.round(x * MatterColorControlCluster.MAX_COLOR_VALUE),
-				colorY: Math.round(y * MatterColorControlCluster.MAX_COLOR_VALUE),
+				colorX: Math.round(x * MatterColorControlXYCluster.MAX_COLOR_VALUE),
+				colorY: Math.round(y * MatterColorControlXYCluster.MAX_COLOR_VALUE),
 				transitionTime: overDurationMs ?? 0,
 				optionsMask: {},
 				optionsOverride: {},
@@ -615,6 +663,9 @@ class MatterSwitchWithLongPressCluster
 	extends MatterSwitchClusterBase
 	implements DeviceSwitchWithLongPressCluster
 {
+	public getClusterVariant(): 'longPress' {
+		return 'longPress';
+	}
 	public onPress = this._proxy.event('initialPress', voidMapper);
 	public onLongPress = this._proxy.event('longPress', voidMapper);
 
@@ -627,6 +678,9 @@ class MatterSwitchWithMultiPressCluster
 	extends MatterSwitchClusterBase
 	implements DeviceSwitchWithMultiPressCluster
 {
+	public getClusterVariant(): 'multiPress' {
+		return 'multiPress';
+	}
 	public onPress = this._proxy.event('initialPress', voidMapper);
 	public onMultiPress = this._proxy.event('multiPressComplete', {
 		output: ({ totalNumberOfPressesCounted }) => {
@@ -643,6 +697,9 @@ class MatterSwitchWithLongPressAndMultiPressCluster
 	extends MatterSwitchClusterBase
 	implements DeviceSwitchWithLongPressAndMultiPressCluster
 {
+	public getClusterVariant(): 'longPressAndMultiPress' {
+		return 'longPressAndMultiPress';
+	}
 	public onPress = this._proxy.event('initialPress', voidMapper);
 	public onLongPress = this._proxy.event('longPress', voidMapper);
 	public onMultiPress = this._proxy.event('multiPressComplete', {
@@ -749,11 +806,31 @@ export const MATTER_CLUSTERS = {
 		endpoint: Endpoint,
 		cluster: ClusterClientObj
 	): MatterGroupsCluster => new MatterGroupsCluster(node, endpoint, cluster),
-	[DeviceClusterName.COLOR_CONTROL]: (
+	[DeviceClusterName.COLOR_CONTROL]: async (
 		node: PairedNode,
 		endpoint: Endpoint,
 		cluster: ClusterClientObj
-	): MatterColorControlCluster => new MatterColorControlCluster(node, endpoint, cluster),
+	): Promise<MatterColorControlTemperatureCluster | MatterColorControlXYCluster | null> => {
+		const featureMap = await (
+			cluster as unknown as ClusterClientObj<ColorControl.Complete>
+		).attributes.featureMap.get();
+		if (!featureMap) {
+			console.error(
+				`Color control cluster on endpoint ${endpoint.number} has no feature map`
+			);
+			return null;
+		}
+		if (featureMap.xy) {
+			return new MatterColorControlXYCluster(node, endpoint, cluster);
+		}
+		if (featureMap.colorTemperature) {
+			return new MatterColorControlTemperatureCluster(node, endpoint, cluster);
+		}
+		console.error(
+			`Color control cluster on endpoint ${endpoint.number} is not a color temperature or XY control cluster`
+		);
+		return null;
+	},
 	[DeviceClusterName.ACTIONS]: (
 		node: PairedNode,
 		endpoint: Endpoint,
@@ -877,4 +954,8 @@ export const IGNORED_MATTER_CLUSTERS = [
 	'PowerSourceConfiguration',
 	'AccessControl',
 	'PowerTopology',
+	'OtaSoftwareUpdateRequestor',
+	'LocalizationConfiguration',
+	'TimeFormatLocalization',
+	'ThreadNetworkDiagnostics',
 ];

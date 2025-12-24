@@ -1,5 +1,5 @@
 import type { Palette } from '../../../../types/palette';
-import { DeviceColorControlCluster } from './cluster';
+import { DeviceColorControlXYCluster } from './cluster';
 import { logTag } from '../../lib/logging/logger';
 import { Color } from '../../lib/color';
 import type { Device } from './device';
@@ -52,8 +52,8 @@ function hexToHSV(hex: string): { hue: number; saturation: number; value: number
 export async function applyPaletteToDevices(devices: Device[], palette: Palette): Promise<boolean> {
 	const results: boolean[] = [];
 	for (const device of devices) {
-		const colorControlCluster = device.getClusterByType(DeviceColorControlCluster);
-		if (!colorControlCluster) {
+		const colorControlCluster = device.getClusterByType(DeviceColorControlXYCluster);
+		if (!colorControlCluster || !(colorControlCluster.getClusterVariant() === 'xy')) {
 			logTag(
 				'palette',
 				'yellow',

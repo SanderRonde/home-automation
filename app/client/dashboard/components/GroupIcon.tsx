@@ -27,6 +27,7 @@ const isGroupOn = (group: DeviceGroup, devices: DeviceListWithValuesResponse): b
 			}
 			if (
 				cluster.name === DeviceClusterName.COLOR_CONTROL &&
+				cluster.clusterVariant === 'xy' &&
 				cluster.mergedClusters[DeviceClusterName.ON_OFF]?.isOn
 			) {
 				return true;
@@ -49,6 +50,7 @@ const hasControllableDevices = (
 				c.name === DeviceClusterName.ON_OFF ||
 				c.name === DeviceClusterName.WINDOW_COVERING ||
 				(c.name === DeviceClusterName.COLOR_CONTROL &&
+					c.clusterVariant === 'xy' &&
 					c.mergedClusters[DeviceClusterName.ON_OFF])
 		)
 	);

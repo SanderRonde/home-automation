@@ -16,11 +16,12 @@ import {
 	DeviceOnOffCluster,
 	DeviceClusterName,
 	DeviceWindowCoveringCluster,
-	DeviceColorControlCluster,
 	DeviceLevelControlCluster,
 	DeviceActionsCluster,
 	DeviceThermostatCluster,
 	ThermostatMode,
+	DeviceColorControlXYCluster,
+	DeviceColorControlTemperatureCluster,
 } from './cluster';
 import { createDeduplicatedTypedWSPublish } from '../../lib/deduplicated-ws-publish';
 import type { IncludedIconNames } from '../../../client/dashboard/components/icon';
@@ -68,6 +69,8 @@ export type DashboardDeviceClusterOnOff = DashboardDeviceClusterBase & {
 	mergedClusters?: {
 		[DeviceClusterName.ELECTRICAL_ENERGY_MEASUREMENT]?: DashboardDeviceClusterElectricalEnergyMeasurement;
 		[DeviceClusterName.ELECTRICAL_POWER_MEASUREMENT]?: DashboardDeviceClusterElectricalPowerMeasurement;
+		[DeviceClusterName.COLOR_CONTROL]?: DashboardDeviceClusterColorControlTemperature;
+		[DeviceClusterName.LEVEL_CONTROL]?: DashboardDeviceClusterLevelControl;
 	};
 };
 
@@ -134,8 +137,9 @@ export type DashboardDeviceClusterActions = DashboardDeviceClusterBase & {
 	activeActionId?: number;
 };
 
-export type DashboardDeviceClusterColorControl = DashboardDeviceClusterBase & {
+export type DashboardDeviceClusterColorControlXY = DashboardDeviceClusterBase & {
 	name: DeviceClusterName.COLOR_CONTROL;
+	clusterVariant: 'xy';
 	color: {
 		hue: number;
 		saturation: number;
@@ -146,6 +150,14 @@ export type DashboardDeviceClusterColorControl = DashboardDeviceClusterBase & {
 		[DeviceClusterName.LEVEL_CONTROL]?: DashboardDeviceClusterLevelControl;
 		[DeviceClusterName.ACTIONS]?: DashboardDeviceClusterActions;
 	};
+};
+
+export type DashboardDeviceClusterColorControlTemperature = DashboardDeviceClusterBase & {
+	name: DeviceClusterName.COLOR_CONTROL;
+	clusterVariant: 'temperature';
+	colorTemperature: number | undefined;
+	minColorTemperature: number | undefined;
+	maxColorTemperature: number | undefined;
 };
 
 export type DashboardDeviceClusterSensorGroup = DashboardDeviceClusterBase & {
@@ -194,7 +206,8 @@ export type DashboardDeviceClusterWithState = DashboardDeviceClusterBase &
 		| DashboardDeviceClusterBooleanState
 		| DashboardDeviceClusterSwitch
 		| DashboardDeviceClusterLevelControl
-		| DashboardDeviceClusterColorControl
+		| DashboardDeviceClusterColorControlXY
+		| DashboardDeviceClusterColorControlTemperature
 		| DashboardDeviceClusterActions
 		| DashboardDeviceClusterThermostat
 		| DashboardDeviceClusterSensorGroup
@@ -513,29 +526,50 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 					)
 			),
 			[validateClusterRoute('/cluster/ColorControl')]: withRequestBody(
-				z.object({
-					deviceIds: z.array(z.string()),
-					hue: z.number().min(0).max(360),
-					saturation: z.number().min(0).max(100),
-					value: z.number().min(0).max(100).optional(),
-				}),
-				async (body, _req, _server, res) =>
-					performActionForDeviceCluster(
-						api,
-						res,
-						body.deviceIds,
-						DeviceColorControlCluster,
-						async (cluster) => {
-							const color = Color.fromHSV(
-								body.hue / 360,
-								body.saturation / 100,
-								(body.value ?? 100) / 100
-							);
-							await cluster.setColor({
-								colors: [color],
-							});
-						}
-					)
+				z.union([
+					z.object({
+						deviceIds: z.array(z.string()),
+						hue: z.number().min(0).max(360),
+						saturation: z.number().min(0).max(100),
+						value: z.number().min(0).max(100).optional(),
+					}),
+					z.object({
+						deviceIds: z.array(z.string()),
+						colorTemperature: z.number(),
+					}),
+				]),
+				async (body, _req, _server, res) => {
+					if ('hue' in body && 'saturation' in body) {
+						return performActionForDeviceCluster(
+							api,
+							res,
+							body.deviceIds,
+							DeviceColorControlXYCluster,
+							async (cluster) => {
+								const color = Color.fromHSV(
+									body.hue / 360,
+									body.saturation / 100,
+									(body.value ?? 100) / 100
+								);
+								await cluster.setColor({
+									colors: [color],
+								});
+							}
+						);
+					} else {
+						return performActionForDeviceCluster(
+							api,
+							res,
+							body.deviceIds,
+							DeviceColorControlTemperatureCluster,
+							async (cluster) => {
+								await cluster.setColorTemperature({
+									colorTemperature: body.colorTemperature,
+								});
+							}
+						);
+					}
+				}
 			),
 			[validateClusterRoute('/cluster/LevelControl')]: withRequestBody(
 				z.object({
@@ -1337,15 +1371,37 @@ const getClusterState = async (
 			totalCount: cluster.getTotalCount(),
 		};
 	}
-	if (clusterName === DeviceClusterName.COLOR_CONTROL) {
-		const cluster = _cluster as DeviceColorControlCluster;
+	if (
+		clusterName === DeviceClusterName.COLOR_CONTROL &&
+		(
+			_cluster as DeviceColorControlXYCluster | DeviceColorControlTemperatureCluster
+		).getClusterVariant() === 'xy'
+	) {
+		const cluster = _cluster as DeviceColorControlXYCluster;
 		const color = (await cluster.color.get()) ?? new Color(0, 0, 0);
 		const hsv = color.toHSV();
 		return {
 			name: clusterName,
 			icon: getClusterIconName(clusterName),
+			clusterVariant: 'xy',
 			color: hsv,
 			mergedClusters: {},
+		};
+	}
+	if (
+		clusterName === DeviceClusterName.COLOR_CONTROL &&
+		(
+			_cluster as DeviceColorControlXYCluster | DeviceColorControlTemperatureCluster
+		).getClusterVariant() === 'temperature'
+	) {
+		const cluster = _cluster as DeviceColorControlTemperatureCluster;
+		return {
+			name: clusterName,
+			icon: getClusterIconName(clusterName),
+			clusterVariant: 'temperature',
+			colorTemperature: await cluster.colorTemperature.get(),
+			minColorTemperature: await cluster.colorTemperatureMin.get(),
+			maxColorTemperature: await cluster.colorTemperatureMax.get(),
 		};
 	}
 	if (clusterName === DeviceClusterName.LEVEL_CONTROL) {
@@ -1468,10 +1524,14 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 			const mergedClusters: DashboardDeviceClusterWithState[] = [];
 			for (const clusters of clustersForEndpoints.values()) {
 				// Merge ColorControl with OnOff, LevelControl, and Actions clusters
-				if (clusters[DeviceClusterName.COLOR_CONTROL]) {
+				if (
+					clusters[DeviceClusterName.COLOR_CONTROL] &&
+					clusters[DeviceClusterName.COLOR_CONTROL].clusterVariant === 'xy'
+				) {
 					mergedClusters.push({
 						name: DeviceClusterName.COLOR_CONTROL,
 						icon: getClusterIconName(DeviceClusterName.COLOR_CONTROL),
+						clusterVariant: 'xy',
 						color: {
 							hue: clusters[DeviceClusterName.COLOR_CONTROL].color.hue,
 							saturation: clusters[DeviceClusterName.COLOR_CONTROL].color.saturation,
@@ -1495,8 +1555,19 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 				// Prefer power measurement for current power if available
 				const energyCluster = clusters[DeviceClusterName.ELECTRICAL_ENERGY_MEASUREMENT];
 				const powerCluster = clusters[DeviceClusterName.ELECTRICAL_POWER_MEASUREMENT];
+				const colorControlCluster =
+					clusters[DeviceClusterName.COLOR_CONTROL] &&
+					'colorTemperature' in clusters[DeviceClusterName.COLOR_CONTROL]
+						? (clusters[
+								DeviceClusterName.COLOR_CONTROL
+							] as DashboardDeviceClusterColorControlTemperature)
+						: undefined;
+				const levelControlCluster = clusters[DeviceClusterName.LEVEL_CONTROL];
 
-				if (clusters[DeviceClusterName.ON_OFF] && (energyCluster || powerCluster)) {
+				if (
+					clusters[DeviceClusterName.ON_OFF] &&
+					(energyCluster || powerCluster || colorControlCluster || levelControlCluster)
+				) {
 					mergedClusters.push({
 						name: DeviceClusterName.ON_OFF,
 						icon: getClusterIconName(DeviceClusterName.ON_OFF),
@@ -1504,12 +1575,16 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 						mergedClusters: {
 							[DeviceClusterName.ELECTRICAL_ENERGY_MEASUREMENT]: energyCluster,
 							[DeviceClusterName.ELECTRICAL_POWER_MEASUREMENT]: powerCluster,
+							[DeviceClusterName.COLOR_CONTROL]: colorControlCluster,
+							[DeviceClusterName.LEVEL_CONTROL]: levelControlCluster,
 						},
 					});
 					// Remove merged clusters so they don't appear separately
 					delete clusters[DeviceClusterName.ON_OFF];
 					delete clusters[DeviceClusterName.ELECTRICAL_ENERGY_MEASUREMENT];
 					delete clusters[DeviceClusterName.ELECTRICAL_POWER_MEASUREMENT];
+					delete clusters[DeviceClusterName.COLOR_CONTROL];
+					delete clusters[DeviceClusterName.LEVEL_CONTROL];
 				}
 
 				// Merge sensor clusters (OccupancySensing, TemperatureMeasurement, RelativeHumidityMeasurement, IlluminanceMeasurement)
