@@ -243,9 +243,37 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 			currentTemperature = 0;
 		}
 
-		// Room needs heating if it has a sensor and current temp is meaningfully below target
+		// Check if room has TRVs (excluding central thermostat)
+		// Rooms without TRVs cannot be heated, so they should not demand heating
+		const centralThermostatId = this.getThermostat();
+		let hasTRV = false;
+
+		for (const deviceId in allDevices) {
+			// Skip the central thermostat - it's controlled separately
+			if (deviceId === centralThermostatId) {
+				continue;
+			}
+
+			const storedInfo = storedDevices[deviceId];
+			if (storedInfo?.room !== roomName) {
+				continue;
+			}
+
+			const device = allDevices[deviceId];
+			const thermostatClusters = device.getAllClustersByType(DeviceThermostatCluster);
+			if (thermostatClusters.length > 0) {
+				hasTRV = true;
+				break;
+			}
+		}
+
+		// Room needs heating if it has:
+		// 1. A temperature sensor (currentTemperature > 0)
+		// 2. Current temp is meaningfully below target (0.5°C threshold)
+		// 3. At least one TRV to actually control heating
 		// Use 0.5°C threshold - only enable heating if current temp is >= 0.5°C below target
-		const needsHeating = currentTemperature > 0 && currentTemperature < targetTemperature - 0.5;
+		const needsHeating =
+			hasTRV && currentTemperature > 0 && currentTemperature < targetTemperature - 0.5;
 
 		// Room is actively heating if it needs heating AND the central thermostat is on
 		// (i.e., TRV is set to 30 and boiler is running)
