@@ -73,28 +73,47 @@ export class MatterServer extends Disposable {
 	private _nodes: PairedNode[] = [];
 
 	async #updateDevices(deviceInfos: MatterDeviceInfo[]) {
-		const devices: Record<string, MatterDevice> = {
-			...this.devices.current(),
-		};
+		const currentDevices = this.devices.current();
+
+		// Create a reverse lookup map: uniqueId (without "matter:" prefix) -> existing device
+		const devicesByUniqueId = new Map<string, MatterDevice>();
+		for (const device of Object.values(currentDevices)) {
+			const uniqueId = device.getUniqueId().replace(/^matter:/, '');
+			devicesByUniqueId.set(uniqueId, device);
+		}
+
+		const devices: Record<string, MatterDevice> = {};
 		for (const { node, endpoint, type } of deviceInfos) {
 			const id = `${node.nodeId}:${endpoint.number?.toString()}`;
-			if (devices[id]) {
-				continue;
-			}
 
-			const [uniqueId, uniqueIdBridged] = await Promise.all([
-				endpoint.getClusterClient(BasicInformationCluster)?.attributes.uniqueId?.get?.(),
-				endpoint
-					.getClusterClient(BridgedDeviceBasicInformationCluster)
-					?.attributes.uniqueId?.get?.(),
+			const basicInfo = endpoint.getClusterClient(BasicInformationCluster);
+			const bridgedInfo = endpoint.getClusterClient(BridgedDeviceBasicInformationCluster);
+			const info = basicInfo ?? bridgedInfo;
+
+			const [uniqueId, uniqueIdBridged, serialNumber] = await Promise.all([
+				basicInfo?.attributes.uniqueId?.get?.(),
+				bridgedInfo?.attributes.uniqueId?.get?.(),
+				info?.attributes.serialNumber?.get?.(),
 			]);
 
-			devices[id] = await MatterDevice.createDevice(
-				node,
-				endpoint,
-				type,
-				uniqueId ?? uniqueIdBridged
-			);
+			const deviceUniqueId =
+				uniqueId ??
+				uniqueIdBridged ??
+				serialNumber ??
+				`${node.nodeId}:${endpoint.number ?? 0}`;
+
+			// Try to find existing device by uniqueId (handles re-pairing with new nodeId)
+			const existingDevice = devicesByUniqueId.get(deviceUniqueId);
+			if (existingDevice) {
+				devices[id] = existingDevice;
+			} else {
+				devices[id] = await MatterDevice.createDevice(
+					node,
+					endpoint,
+					type,
+					uniqueId ?? uniqueIdBridged ?? serialNumber
+				);
+			}
 		}
 		this.devices.set(devices);
 	}
