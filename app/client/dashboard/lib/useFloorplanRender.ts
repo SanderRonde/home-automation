@@ -148,17 +148,12 @@ export function useDeviceStates(
 				if (cluster.name === DeviceClusterName.ON_OFF) {
 					isOn = cluster.isOn;
 				} else if (cluster.name === DeviceClusterName.LEVEL_CONTROL) {
-					// Level is 0-254, normalize to 0-1
-					brightness = cluster.currentLevel / 254;
+					brightness = cluster.currentLevel / 100;
 				} else if (
 					cluster.name === DeviceClusterName.COLOR_CONTROL &&
 					cluster.clusterVariant === 'xy'
 				) {
 					color = cluster.color;
-					// If no separate level control, use the value from color
-					if (brightness === 1.0 && cluster.color.value < 100) {
-						brightness = cluster.color.value / 100;
-					}
 				} else if (
 					cluster.name === DeviceClusterName.COLOR_CONTROL &&
 					cluster.clusterVariant === 'temperature'
@@ -167,10 +162,6 @@ export function useDeviceStates(
 					if (cluster.colorTemperature !== undefined) {
 						const rgb = kelvinToRgb(cluster.colorTemperature);
 						color = rgbToHsv(rgb.r, rgb.g, rgb.b);
-					}
-					// If no separate level control, use the value from color
-					if (brightness === 1.0 && color && color.value < 1.0) {
-						brightness = color.value;
 					}
 				}
 			}

@@ -41,11 +41,11 @@ const LightOverlayComponent = React.memo(
 				props.filter = `brightness(${overlay.brightness})`;
 			}
 			if (overlay.color) {
-				props.backgroundColor = hsvToHex(
+				props.backgroundColor = `${hsvToHex(
 					overlay.color.hue,
 					overlay.color.saturation,
 					overlay.color.value
-				);
+				)}99`; // Set hex color with 0.6 opacity (99 in hex)
 			}
 
 			return props;
