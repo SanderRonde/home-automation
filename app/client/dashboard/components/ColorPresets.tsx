@@ -1,5 +1,6 @@
 import { staggerContainer, staggerItem, bouncySpring } from '../../lib/animations';
 import { Box, Typography } from '@mui/material';
+import { hsvToHex } from '../../lib/color';
 import { motion } from 'framer-motion';
 import React from 'react';
 
@@ -20,63 +21,6 @@ const COLOR_PRESETS = [
 	{ name: 'Purple', hue: 270, saturation: 100 },
 	{ name: 'Pink', hue: 330, saturation: 100 },
 ];
-
-const hsvToHex = (h: number, s: number, v: number): string => {
-	const hNorm = h / 360;
-	const sNorm = s / 100;
-	const vNorm = v / 100;
-
-	const i = Math.floor(hNorm * 6);
-	const f = hNorm * 6 - i;
-	const p = vNorm * (1 - sNorm);
-	const q = vNorm * (1 - f * sNorm);
-	const t = vNorm * (1 - (1 - f) * sNorm);
-
-	let r: number, g: number, b: number;
-	switch (i % 6) {
-		case 0:
-			r = vNorm;
-			g = t;
-			b = p;
-			break;
-		case 1:
-			r = q;
-			g = vNorm;
-			b = p;
-			break;
-		case 2:
-			r = p;
-			g = vNorm;
-			b = t;
-			break;
-		case 3:
-			r = p;
-			g = q;
-			b = vNorm;
-			break;
-		case 4:
-			r = t;
-			g = p;
-			b = vNorm;
-			break;
-		case 5:
-			r = vNorm;
-			g = p;
-			b = q;
-			break;
-		default:
-			r = 0;
-			g = 0;
-			b = 0;
-	}
-
-	const toHex = (n: number) => {
-		const hex = Math.round(n * 255).toString(16);
-		return hex.length === 1 ? '0' + hex : hex;
-	};
-
-	return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-};
 
 export const ColorPresets = (props: ColorPresetsProps): JSX.Element => {
 	return (

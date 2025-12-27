@@ -23,6 +23,7 @@ import { DeviceClusterName, ThermostatMode } from '../../../server/modules/devic
 import { Card, CardActionArea, Box, Typography, IconButton } from '@mui/material';
 import { fadeInUpStaggered, staggerItem } from '../../lib/animations';
 import type { IncludedIconNames } from './icon';
+import { kelvinToRgb } from '../../lib/color';
 import type { HomeDetailView } from './Home';
 import { apiPost } from '../../lib/fetch';
 import { motion } from 'framer-motion';
@@ -355,55 +356,6 @@ const GroupedWindowCoveringCard = (props: GroupedWindowCoveringCardProps): JSX.E
 			onPointerUp={handlePointerUp}
 		/>
 	);
-};
-
-// Convert Kelvin color temperature to RGB using a more accurate algorithm
-// Based on the Planckian locus approximation
-const kelvinToRgb = (kelvin: number): { r: number; g: number; b: number } => {
-	// Clamp to typical range
-	const temp = Math.max(2000, Math.min(6500, kelvin));
-	const temp100 = temp / 100;
-
-	let r: number;
-	let g: number;
-	let b: number;
-
-	// Red channel
-	if (temp <= 6600) {
-		r = 255;
-	} else {
-		r = temp100 - 60;
-		r = 329.698727446 * Math.pow(r, -0.1332047592);
-		r = Math.max(0, Math.min(255, r));
-	}
-
-	// Green channel
-	if (temp <= 6600) {
-		g = temp100 - 2;
-		g = 99.4708025861 * Math.log(g) - 161.1195681661;
-		g = Math.max(0, Math.min(255, g));
-	} else {
-		g = temp100 - 60;
-		g = 288.1221695283 * Math.pow(g, -0.0755148492);
-		g = Math.max(0, Math.min(255, g));
-	}
-
-	// Blue channel
-	if (temp >= 6600) {
-		b = 255;
-	} else if (temp <= 2000) {
-		b = 0;
-	} else {
-		b = temp100 - 10;
-		b = 138.5177312231 * Math.log(b) - 305.0447927307;
-		b = Math.max(0, Math.min(255, b));
-	}
-
-	return {
-		r: Math.round(r),
-		g: Math.round(g),
-		b: Math.round(b),
-	};
 };
 
 const OnOffCard = (props: DeviceClusterCardBaseProps<DashboardDeviceClusterOnOff>): JSX.Element => {

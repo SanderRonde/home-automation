@@ -23,10 +23,18 @@ export interface DetectedRoom {
 	systemRoomName?: string; // mapped room name
 }
 
+export interface FloorplanAlignment {
+	x: number;
+	y: number;
+	scale: number;
+	rotation: number;
+}
+
 export interface HouseLayout {
 	walls: WallSegment[];
 	doors: DoorSlot[];
 	roomMappings: Record<string, string>;
+	floorplanAlignment?: FloorplanAlignment;
 }
 
 export enum DrawMode {
@@ -35,4 +43,5 @@ export enum DrawMode {
 	PLACE_DOORS = 'place_doors',
 	MAP_ROOMS = 'map_rooms',
 	PLACE_DEVICES = 'place_devices',
+	FLOORPLAN_PREVIEW = 'floorplan_preview',
 }

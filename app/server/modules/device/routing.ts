@@ -34,13 +34,16 @@ import { applyPaletteToDevices } from './palette-executor';
 import type { AllModules, ModuleConfig } from '..';
 import { logTag } from '../../lib/logging/logger';
 import { Actions } from '@matter/main/clusters';
+import { DB_FOLDER } from '../../lib/constants';
 import type { ClassEnum } from '../../lib/enum';
 import type { Database } from '../../lib/db';
 import { Color } from '../../lib/color';
 import type { DeviceAPI } from './api';
 import { wait } from '../../lib/time';
 import type { HouseLayout } from '.';
+import * as fs from 'fs/promises';
 import * as z from 'zod';
+import path from 'path';
 
 export interface DeviceInfo {
 	id: string;
@@ -471,6 +474,14 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 						})
 					),
 					roomMappings: z.record(z.string()),
+					floorplanAlignment: z
+						.object({
+							x: z.number(),
+							y: z.number(),
+							scale: z.number(),
+							rotation: z.number(),
+						})
+						.optional(),
 				}),
 				(body, _req, _server, { json }) => {
 					(db as Database<{ house_layout: HouseLayout }>).update((old) => ({
@@ -480,6 +491,59 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 					return json({ success: true });
 				}
 			),
+			'/location': (_req, _server, { json }) => {
+				const location = (
+					db as Database<{ location?: { latitude: number; longitude: number } }>
+				).current().location;
+				return json({ location: location || null });
+			},
+			'/location/save': withRequestBody(
+				z.object({
+					latitude: z.number().min(-90).max(90),
+					longitude: z.number().min(-180).max(180),
+				}),
+				(body, _req, _server, { json }) => {
+					(db as Database<{ location?: { latitude: number; longitude: number } }>).update(
+						(old) => ({
+							...old,
+							location: {
+								latitude: body.latitude,
+								longitude: body.longitude,
+							},
+						})
+					);
+					return json({ success: true });
+				}
+			),
+			'/floorplan-renders/info': async (_req, _server, { json }) => {
+				const floorplanDir = path.join(DB_FOLDER, 'floorplan-renders', 'floorplan');
+				try {
+					const entries = await fs.readdir(floorplanDir, { withFileTypes: true });
+					const timeFolders = entries
+						.filter((entry) => entry.isDirectory() && /^\d{4}$/.test(entry.name))
+						.map((entry) => entry.name)
+						.sort();
+
+					if (timeFolders.length === 0) {
+						return json({ hasRenders: false, timeFolders: [], lightIds: [] });
+					}
+
+					// Get light overlay IDs from the first time folder
+					const firstFolder = path.join(floorplanDir, timeFolders[0]);
+					const files = await fs.readdir(firstFolder);
+					const lightIds = files
+						.filter((f) => f.startsWith('light.') && f.endsWith('.png'))
+						.map((f) => f.slice(6, -4)); // Remove "light." prefix and ".png" suffix
+
+					return json({
+						hasRenders: true,
+						timeFolders,
+						lightIds,
+					});
+				} catch {
+					return json({ hasRenders: false, timeFolders: [], lightIds: [] });
+				}
+			},
 			[validateClusterRoute('/cluster/OnOff')]: withRequestBody(
 				z.object({
 					deviceIds: z.array(z.string()),

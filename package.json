@@ -107,6 +107,7 @@
 		"rehype-highlight": "^7.0.2",
 		"remark-gfm": "^4.0.1",
 		"socket.io-client": "^4.8.1",
+		"suncalc": "^1.9.0",
 		"use-image": "^1.1.4",
 		"wc-lib": "^1.2.8",
 		"web-push": "^3.6.7",

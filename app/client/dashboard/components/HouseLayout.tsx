@@ -12,6 +12,9 @@ import {
 	FileDownload as FileDownloadIcon,
 	FileUpload as FileUploadIcon,
 	DevicesOther as DevicesIcon,
+	PhotoCamera as PhotoCameraIcon,
+	LocationOn as LocationOnIcon,
+	MyLocation as MyLocationIcon,
 } from '@mui/icons-material';
 import {
 	Box,
@@ -31,9 +34,20 @@ import {
 	Alert,
 	Snackbar,
 } from '@mui/material';
-import type { Point, WallSegment, DoorSlot, HouseLayout as HouseLayoutType } from '../types/layout';
+import type {
+	Point,
+	WallSegment,
+	DoorSlot,
+	HouseLayout as HouseLayoutType,
+	FloorplanAlignment,
+} from '../types/layout';
 import type { DeviceListWithValuesResponse } from '../../../server/modules/device/routing';
 import { Circle, Image as KonvaImage, Layer, Line, Stage, Text } from 'react-konva';
+import { useDeviceStates, useFloorplanRender } from '../lib/useFloorplanRender';
+import { FloorplanAlignmentPanel } from './layout/FloorplanAlignmentPanel';
+import type { FloorPlanDeviceState } from '../lib/useFloorplanRender';
+import { FloorplanBackground } from './layout/FloorplanBackground';
+import { DevicePreviewPanel } from './layout/DevicePreviewPanel';
 import type { DeviceGroup } from '../../../../types/group';
 // @ts-expect-error - konva ESM/CommonJS type resolution issue
 import type { Stage as StageType } from 'konva/lib/Stage';
@@ -76,6 +90,23 @@ export const HouseLayout = (): JSX.Element => {
 	const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(null);
 	const [backgroundImage] = useImage(backgroundImageUrl || '');
 
+	// Floorplan preview state
+	const [floorplanAlignment, setFloorplanAlignment] = useState<FloorplanAlignment>({
+		x: 0,
+		y: 0,
+		scale: 1,
+		rotation: 0,
+	});
+	const [floorplanPreviewStates, setFloorplanPreviewStates] = useState<
+		Record<string, FloorPlanDeviceState>
+	>({});
+	const [floorplanRenderInfo, setFloorplanRenderInfo] = useState<{
+		hasRenders: boolean;
+		lightIds: string[];
+		timeFolders: string[];
+	}>({ hasRenders: false, lightIds: [], timeFolders: [] });
+	const [selectedTimeFolder, setSelectedTimeFolder] = useState<string | null>(null);
+
 	// Import/Export state
 	const [importError, setImportError] = useState<string | null>(null);
 
@@ -90,6 +121,20 @@ export const HouseLayout = (): JSX.Element => {
 		severity: 'success' | 'error' | 'info';
 	}>({ open: false, message: '', severity: 'success' });
 
+	// Location config state
+	const [locationDialogOpen, setLocationDialogOpen] = useState(false);
+	const [location, setLocation] = useState<{
+		latitude: number;
+		longitude: number;
+	} | null>(null);
+	const [locationInput, setLocationInput] = useState<{
+		latitude: string;
+		longitude: string;
+	}>({ latitude: '', longitude: '' });
+	const [locationLoading, setLocationLoading] = useState(false);
+	const [locationError, setLocationError] = useState<string | null>(null);
+	const [locationSuccess, setLocationSuccess] = useState(false);
+
 	const loadLayout = async () => {
 		try {
 			const response = await apiGet('device', '/layout', {});
@@ -99,6 +144,9 @@ export const HouseLayout = (): JSX.Element => {
 					setWalls(data.layout.walls || []);
 					setDoors(data.layout.doors || []);
 					setRoomMappings(data.layout.roomMappings || {});
+					if (data.layout.floorplanAlignment) {
+						setFloorplanAlignment(data.layout.floorplanAlignment);
+					}
 				}
 			}
 		} catch (error) {
@@ -142,13 +190,33 @@ export const HouseLayout = (): JSX.Element => {
 		}
 	}, []);
 
-	// Load layout, rooms, devices, and groups on mount
+	// Load location on mount
+	const loadLocation = React.useCallback(async () => {
+		try {
+			const response = await apiGet('device', '/location', {});
+			if (response.ok) {
+				const data = await response.json();
+				if (data.location) {
+					setLocation(data.location);
+					setLocationInput({
+						latitude: data.location.latitude.toString(),
+						longitude: data.location.longitude.toString(),
+					});
+				}
+			}
+		} catch (error) {
+			console.error('Failed to load location:', error);
+		}
+	}, []);
+
+	// Load layout, rooms, devices, groups, and location on mount
 	useEffect(() => {
 		void loadLayout();
 		void loadRooms();
 		void loadDevices();
 		void loadGroups();
-	}, [loadRooms, loadDevices, loadGroups]);
+		void loadLocation();
+	}, [loadRooms, loadDevices, loadGroups, loadLocation]);
 
 	const saveLayout = async () => {
 		try {
@@ -156,12 +224,48 @@ export const HouseLayout = (): JSX.Element => {
 				walls,
 				doors,
 				roomMappings,
+				floorplanAlignment,
 			};
 			await apiPost('device', '/layout/save', {}, layout);
 		} catch (error) {
 			console.error('Failed to save layout:', error);
 		}
 	};
+
+	const handleSaveFloorplanAlignment = async () => {
+		await saveLayout();
+	};
+
+	const handleResetFloorplanAlignment = () => {
+		setFloorplanAlignment({ x: 0, y: 0, scale: 1, rotation: 0 });
+	};
+
+	// Load floorplan render info
+	React.useEffect(() => {
+		const fetchInfo = async () => {
+			try {
+				const response = await apiGet('device', '/floorplan-renders/info', {});
+				if (response.ok) {
+					const data = await response.json();
+					setFloorplanRenderInfo({
+						hasRenders: data.hasRenders,
+						lightIds: data.lightIds ? [...data.lightIds] : [],
+						timeFolders: data.timeFolders ? [...data.timeFolders] : [],
+					});
+				}
+			} catch (error) {
+				console.error('Failed to fetch floorplan render info:', error);
+			}
+		};
+		void fetchInfo();
+	}, []);
+
+	// Apply preview states to devices and get floorplan render
+	const deviceStates = useDeviceStates(devices);
+	const deviceStatesWithPreview = React.useMemo(() => {
+		return { ...deviceStates, ...floorplanPreviewStates };
+	}, [deviceStates, floorplanPreviewStates]);
+	const floorplanRender = useFloorplanRender(deviceStatesWithPreview, selectedTimeFolder);
 
 	const handleZoomIn = () => {
 		const stage = stageRef.current;
@@ -170,6 +274,7 @@ export const HouseLayout = (): JSX.Element => {
 		}
 		const newScale = stage.scaleX() * 1.05;
 		stage.scale({ x: newScale, y: newScale });
+		updateStageTransform();
 	};
 
 	const handleZoomOut = () => {
@@ -179,11 +284,13 @@ export const HouseLayout = (): JSX.Element => {
 		}
 		const newScale = stage.scaleX() / 1.05;
 		stage.scale({ x: newScale, y: newScale });
+		updateStageTransform();
 	};
 
 	const handleResetView = () => {
 		stageRef.current?.position({ x: 0, y: 0 });
 		stageRef.current?.scale({ x: 1, y: 1 });
+		updateStageTransform();
 	};
 
 	const handleKeyDown = React.useCallback(
@@ -638,44 +745,71 @@ export const HouseLayout = (): JSX.Element => {
 	}, []);
 
 	const stageRef = React.useRef<StageType | null>(null);
-	const handleWheel = React.useCallback((e: KonvaEventObject<WheelEvent>) => {
-		e.evt.preventDefault();
+	const [stageTransform, setStageTransform] = React.useState<{
+		x: number;
+		y: number;
+		scale: number;
+	}>({
+		x: 0,
+		y: 0,
+		scale: 1,
+	});
 
-		const stage = stageRef.current;
-		if (!stage) {
-			return;
+	// Update stage transform state
+	const updateStageTransform = React.useCallback(() => {
+		if (stageRef.current) {
+			const pos = stageRef.current.position();
+			const scale = stageRef.current.scaleX();
+			setStageTransform({ x: pos.x, y: pos.y, scale });
 		}
-		const oldScale = stage.scaleX();
-		const pointer = stage.getPointerPosition();
-		if (!pointer) {
-			return;
-		}
-
-		const mousePointTo = {
-			x: (pointer.x - stage.x()) / oldScale,
-			y: (pointer.y - stage.y()) / oldScale,
-		};
-
-		// how to scale? Zoom in? Or zoom out?
-		let direction = e.evt.deltaY > 0 ? -1 : 1;
-
-		// when we zoom on trackpad, e.evt.ctrlKey is true
-		// in that case lets revert direction
-		if (e.evt.ctrlKey) {
-			direction = -direction;
-		}
-
-		const scaleBy = 1.05;
-		const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
-
-		stage.scale({ x: newScale, y: newScale });
-
-		const newPos = {
-			x: pointer.x - mousePointTo.x * newScale,
-			y: pointer.y - mousePointTo.y * newScale,
-		};
-		stage.position(newPos);
 	}, []);
+
+	const handleWheel = React.useCallback(
+		(e: KonvaEventObject<WheelEvent>) => {
+			e.evt.preventDefault();
+
+			const stage = stageRef.current;
+			if (!stage) {
+				return;
+			}
+			const oldScale = stage.scaleX();
+			const pointer = stage.getPointerPosition();
+			if (!pointer) {
+				return;
+			}
+
+			const mousePointTo = {
+				x: (pointer.x - stage.x()) / oldScale,
+				y: (pointer.y - stage.y()) / oldScale,
+			};
+
+			// how to scale? Zoom in? Or zoom out?
+			let direction = e.evt.deltaY > 0 ? -1 : 1;
+
+			// when we zoom on trackpad, e.evt.ctrlKey is true
+			// in that case lets revert direction
+			if (e.evt.ctrlKey) {
+				direction = -direction;
+			}
+
+			const scaleBy = 1.05;
+			const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
+
+			stage.scale({ x: newScale, y: newScale });
+
+			const newPos = {
+				x: pointer.x - mousePointTo.x * newScale,
+				y: pointer.y - mousePointTo.y * newScale,
+			};
+			stage.position(newPos);
+			updateStageTransform();
+		},
+		[updateStageTransform]
+	);
+
+	const handleStageDragEnd = React.useCallback(() => {
+		updateStageTransform();
+	}, [updateStageTransform]);
 
 	const width = window.innerWidth - 240;
 	const height = window.innerHeight - 205;
@@ -805,6 +939,81 @@ export const HouseLayout = (): JSX.Element => {
 		}
 	}, [selectedGroupId]);
 
+	// Location config handlers
+	const handleGetCurrentLocation = () => {
+		if (!navigator.geolocation) {
+			setLocationError('Geolocation is not supported by your browser');
+			return;
+		}
+
+		setLocationLoading(true);
+		setLocationError(null);
+
+		navigator.geolocation.getCurrentPosition(
+			(position) => {
+				const lat = position.coords.latitude;
+				const lng = position.coords.longitude;
+				setLocationInput({
+					latitude: lat.toString(),
+					longitude: lng.toString(),
+				});
+				setLocationLoading(false);
+			},
+			(error) => {
+				setLocationError(`Failed to get location: ${error.message}`);
+				setLocationLoading(false);
+			}
+		);
+	};
+
+	const handleSaveLocation = async () => {
+		const lat = parseFloat(locationInput.latitude);
+		const lng = parseFloat(locationInput.longitude);
+
+		if (isNaN(lat) || isNaN(lng)) {
+			setLocationError('Please enter valid latitude and longitude values');
+			return;
+		}
+
+		if (lat < -90 || lat > 90) {
+			setLocationError('Latitude must be between -90 and 90');
+			return;
+		}
+
+		if (lng < -180 || lng > 180) {
+			setLocationError('Longitude must be between -180 and 180');
+			return;
+		}
+
+		setLocationLoading(true);
+		setLocationError(null);
+
+		try {
+			const response = await apiPost(
+				'device',
+				'/location/save',
+				{},
+				{ latitude: lat, longitude: lng }
+			);
+			if (response.ok) {
+				setLocation({ latitude: lat, longitude: lng });
+				setLocationSuccess(true);
+				setTimeout(() => {
+					setLocationSuccess(false);
+					setLocationDialogOpen(false);
+				}, 1500);
+			} else {
+				const data = (await response.json()) as { error?: string };
+				setLocationError(data.error || 'Failed to save location');
+			}
+		} catch (error) {
+			setLocationError('Failed to save location');
+			console.error('Failed to save location:', error);
+		} finally {
+			setLocationLoading(false);
+		}
+	};
+
 	// Get devices and groups with positions for display
 	const devicesWithPositions = React.useMemo(() => {
 		return devices.filter((d) => d.position !== undefined);
@@ -824,6 +1033,14 @@ export const HouseLayout = (): JSX.Element => {
 						exclusive
 						onChange={(_e, newMode) => {
 							if (newMode !== null) {
+								// Clear preview states and time selection when exiting preview mode
+								if (
+									mode === DrawMode.FLOORPLAN_PREVIEW &&
+									newMode !== DrawMode.FLOORPLAN_PREVIEW
+								) {
+									setFloorplanPreviewStates({});
+									setSelectedTimeFolder(null);
+								}
 								setMode(newMode as DrawMode);
 							}
 						}}
@@ -852,6 +1069,11 @@ export const HouseLayout = (): JSX.Element => {
 						<ToggleButton value="place_devices">
 							<Tooltip title="Place Devices/Groups">
 								<DevicesIcon />
+							</Tooltip>
+						</ToggleButton>
+						<ToggleButton value="floorplan_preview">
+							<Tooltip title="Floorplan Preview">
+								<PhotoCameraIcon />
 							</Tooltip>
 						</ToggleButton>
 					</ToggleButtonGroup>
@@ -905,6 +1127,12 @@ export const HouseLayout = (): JSX.Element => {
 					)}
 
 					<Box sx={{ flexGrow: 1 }} />
+
+					<Tooltip title="Location Settings">
+						<IconButton onClick={() => setLocationDialogOpen(true)} size="small">
+							<LocationOnIcon />
+						</IconButton>
+					</Tooltip>
 
 					<Button variant="contained" startIcon={<SaveIcon />} onClick={saveLayout}>
 						Save Layout
@@ -1105,6 +1333,30 @@ export const HouseLayout = (): JSX.Element => {
 				tabIndex={0}
 				onKeyDown={handleKeyDown}
 			>
+				{/* Floorplan Background Layer - only in preview mode */}
+				{mode === DrawMode.FLOORPLAN_PREVIEW && (
+					<Box
+						sx={{
+							position: 'absolute',
+							top: 20,
+							left: 20,
+							right: 20,
+							bottom: 20,
+							overflow: 'hidden',
+							pointerEvents: 'none',
+							zIndex: 0,
+							border: '1px solid #ccc',
+							borderRadius: 10,
+						}}
+					>
+						<FloorplanBackground
+							floorplanRender={floorplanRender}
+							stageTransform={stageTransform}
+							floorplanAlignment={floorplanAlignment}
+						/>
+					</Box>
+				)}
+
 				<Stage
 					ref={stageRef}
 					width={width}
@@ -1120,6 +1372,7 @@ export const HouseLayout = (): JSX.Element => {
 					onMouseMove={handleMouseMove}
 					onMouseUp={handleMouseUp}
 					onWheel={handleWheel}
+					onDragEnd={handleStageDragEnd}
 					draggable={mode === DrawMode.VIEW}
 				>
 					<Layer>
@@ -1345,6 +1598,54 @@ export const HouseLayout = (): JSX.Element => {
 							))}
 					</Layer>
 				</Stage>
+
+				{/* Floorplan Preview Controls - only in preview mode */}
+				{mode === DrawMode.FLOORPLAN_PREVIEW && (
+					<Box
+						sx={{
+							position: 'absolute',
+							top: 20,
+							right: 20,
+							width: 350,
+							maxHeight: 'calc(100% - 40px)',
+							overflowY: 'auto',
+							zIndex: 10,
+							display: 'flex',
+							flexDirection: 'column',
+							gap: 2,
+						}}
+					>
+						<FloorplanAlignmentPanel
+							alignment={floorplanAlignment}
+							onAlignmentChange={setFloorplanAlignment}
+							onSave={handleSaveFloorplanAlignment}
+							onReset={handleResetFloorplanAlignment}
+							timeFolders={floorplanRenderInfo.timeFolders}
+							selectedTimeFolder={selectedTimeFolder}
+							onTimeFolderChange={setSelectedTimeFolder}
+						/>
+						<DevicePreviewPanel
+							devices={devices}
+							availableLightIds={new Set(floorplanRenderInfo.lightIds)}
+							previewStates={floorplanPreviewStates}
+							currentDeviceStates={deviceStates}
+							onDevicePreviewChange={(
+								deviceId: string,
+								state: FloorPlanDeviceState | undefined
+							) => {
+								setFloorplanPreviewStates((prev) => {
+									if (state === undefined) {
+										const next = { ...prev };
+										delete next[deviceId];
+										return next;
+									}
+									return { ...prev, [deviceId]: state };
+								});
+							}}
+							onClearAll={() => setFloorplanPreviewStates({})}
+						/>
+					</Box>
+				)}
 			</Box>
 
 			{/* Room Mapping Dialog */}
@@ -1410,6 +1711,94 @@ export const HouseLayout = (): JSX.Element => {
 					{placementSnackbar.message}
 				</Alert>
 			</Snackbar>
+
+			{/* Location Config Dialog */}
+			<Dialog
+				open={locationDialogOpen}
+				onClose={() => setLocationDialogOpen(false)}
+				maxWidth="sm"
+				fullWidth
+			>
+				<DialogTitle>Location Settings</DialogTitle>
+				<DialogContent>
+					<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+						<Box
+							sx={{
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'space-between',
+							}}
+						>
+							<Typography variant="body2">
+								Set your location for sun position calculations
+							</Typography>
+							<Button
+								size="small"
+								startIcon={<MyLocationIcon />}
+								onClick={handleGetCurrentLocation}
+								disabled={locationLoading}
+								variant="outlined"
+							>
+								Get Current
+							</Button>
+						</Box>
+						<Box sx={{ display: 'flex', gap: 1 }}>
+							<TextField
+								type="number"
+								size="small"
+								label="Latitude"
+								value={locationInput.latitude}
+								onChange={(e) =>
+									setLocationInput({ ...locationInput, latitude: e.target.value })
+								}
+								inputProps={{ step: 0.000001, min: -90, max: 90 }}
+								fullWidth
+								helperText="Range: -90 to 90"
+							/>
+							<TextField
+								type="number"
+								size="small"
+								label="Longitude"
+								value={locationInput.longitude}
+								onChange={(e) =>
+									setLocationInput({
+										...locationInput,
+										longitude: e.target.value,
+									})
+								}
+								inputProps={{ step: 0.000001, min: -180, max: 180 }}
+								fullWidth
+								helperText="Range: -180 to 180"
+							/>
+						</Box>
+						{location && (
+							<Typography variant="caption" sx={{ color: 'text.secondary' }}>
+								Current: {location.latitude.toFixed(6)},{' '}
+								{location.longitude.toFixed(6)}
+							</Typography>
+						)}
+						{locationError && (
+							<Alert severity="error" onClose={() => setLocationError(null)}>
+								{locationError}
+							</Alert>
+						)}
+						{locationSuccess && (
+							<Alert severity="success">Location saved successfully</Alert>
+						)}
+					</Box>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={() => setLocationDialogOpen(false)}>Cancel</Button>
+					<Button
+						onClick={handleSaveLocation}
+						variant="contained"
+						disabled={locationLoading}
+						startIcon={<SaveIcon />}
+					>
+						Save
+					</Button>
+				</DialogActions>
+			</Dialog>
 		</Box>
 	);
 };

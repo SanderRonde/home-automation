@@ -2,10 +2,12 @@ import type {
 	DeviceListWithValuesResponse,
 	DashboardDeviceClusterColorControlXY,
 } from '../../../server/modules/device/routing';
+import { useDeviceStates, useFloorplanRender, type LightOverlay } from '../lib/useFloorplanRender';
 import { WbSunny, LocalFireDepartment as FireIcon, Close as CloseIcon } from '@mui/icons-material';
 import { Box, IconButton, Typography, Popover, Slider, Button } from '@mui/material';
+import type { WallSegment, DoorSlot, FloorplanAlignment } from '../types/layout';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
-import type { WallSegment, DoorSlot } from '../types/layout';
+import { FloorplanBackground } from './layout/FloorplanBackground';
 import type { DeviceGroup } from '../../../../types/group';
 import { useCreateData, useData } from '../lib/data-hooks';
 // @ts-expect-error - konva ESM/CommonJS type resolution issue
@@ -1047,6 +1049,7 @@ interface RoomProps {
 	isDraggingData: Data<boolean>;
 	handleRoomClick: (roomName: string) => void;
 	handleRoomLongPress: (roomName: string) => void;
+	hideRoomFill: boolean;
 }
 
 const Room = React.memo((props: RoomProps): JSX.Element => {
@@ -1129,15 +1132,22 @@ const Room = React.memo((props: RoomProps): JSX.Element => {
 		}
 	}, [props.hoveringRoomIdData, props.roomData.mappedRoomName, handleRoomClick]);
 
+	// When hideRoomFill is true (floorplan background active), use transparent fill
+	const roomFill = props.hideRoomFill
+		? 'transparent'
+		: props.roomData.roomInfo?.color
+			? `${props.roomData.roomInfo.color}${isHovering ? 'C0' : '80'}`
+			: '#00000030';
+
+	const roomStroke = props.hideRoomFill
+		? 'transparent'
+		: props.roomData.roomInfo?.color || '#ccc';
+
 	return (
 		<Line
 			points={props.roomData.room.polygon.map((p) => [p.x, p.y]).flat()}
-			fill={
-				props.roomData.roomInfo?.color
-					? `${props.roomData.roomInfo.color}${isHovering ? 'C0' : '80'}`
-					: '#00000030'
-			}
-			stroke={props.roomData.roomInfo?.color || '#ccc'}
+			fill={roomFill}
+			stroke={roomStroke}
 			strokeWidth={2}
 			closed
 			onMouseOver={cursorPointer}
@@ -1171,6 +1181,10 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	const dragStartPos = React.useRef<{ x: number; y: number } | null>(null);
 	const touchStartPos = React.useRef<{ x: number; y: number } | null>(null);
 
+	// Floorplan render background
+	const deviceStates = useDeviceStates(props.devices);
+	const floorplanRender = useFloorplanRender(deviceStates);
+
 	const expandedRoomIdData = useCreateData<string | null>(null);
 	const collapsingRoomIdData = useCreateData<string | null>(null);
 	const outsideTempData = useCreateData<number | null>(null);
@@ -1197,6 +1211,10 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	const width = window.innerWidth > 900 ? window.innerWidth - 240 : window.innerWidth;
 	const height = window.innerHeight - props.verticalSpacing;
 
+	const [floorplanAlignment, setFloorplanAlignment] = React.useState<FloorplanAlignment | null>(
+		null
+	);
+
 	const loadLayout = React.useCallback(async () => {
 		try {
 			const response = await apiGet('device', '/layout', {});
@@ -1206,6 +1224,11 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 					wallsData.set(data.layout.walls || []);
 					setDoors(data.layout.doors || []);
 					setRoomMappings(data.layout.roomMappings || {});
+					if (data.layout.floorplanAlignment) {
+						setFloorplanAlignment(data.layout.floorplanAlignment);
+					} else {
+						setFloorplanAlignment(null);
+					}
 				}
 			}
 		} catch (error) {
@@ -2084,6 +2107,14 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				overflow: 'hidden',
 			}}
 		>
+			{/* Floorplan Background Layer */}
+			<FloorplanBackground
+				floorplanRender={floorplanRender}
+				stageTransform={stageTransform}
+				floorplanAlignment={floorplanAlignment}
+				containerStyle={{ width, height }}
+			/>
+
 			<Stage
 				ref={stageRef}
 				width={width}
@@ -2101,27 +2132,29 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				draggable={true}
 			>
 				<Layer>
-					{/* Walls */}
-					{walls.map((wall) => (
-						<Line
-							key={wall.id}
-							points={[wall.start.x, wall.start.y, wall.end.x, wall.end.y]}
-							stroke={WALL_COLOR}
-							strokeWidth={WALL_THICKNESS}
-						/>
-					))}
+					{/* Walls - only show when floorplan images are not present */}
+					{!floorplanRender.hasRenders &&
+						walls.map((wall) => (
+							<Line
+								key={wall.id}
+								points={[wall.start.x, wall.start.y, wall.end.x, wall.end.y]}
+								stroke={WALL_COLOR}
+								strokeWidth={WALL_THICKNESS}
+							/>
+						))}
 
-					{/* Doors */}
-					{doors.map((door) => (
-						<Line
-							key={door.id}
-							points={[door.start.x, door.start.y, door.end.x, door.end.y]}
-							stroke="#FFF"
-							opacity={0.8}
-							globalCompositeOperation="destination-out"
-							strokeWidth={WALL_THICKNESS + 1}
-						/>
-					))}
+					{/* Doors - only show when floorplan images are not present */}
+					{!floorplanRender.hasRenders &&
+						doors.map((door) => (
+							<Line
+								key={door.id}
+								points={[door.start.x, door.start.y, door.end.x, door.end.y]}
+								stroke="#FFF"
+								opacity={0.8}
+								globalCompositeOperation="destination-out"
+								strokeWidth={WALL_THICKNESS + 1}
+							/>
+						))}
 				</Layer>
 
 				<Layer>
@@ -2137,6 +2170,7 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 								isPanningData={isPanningData}
 								handleRoomClick={handleRoomClick}
 								handleRoomLongPress={handleRoomLongPress}
+								hideRoomFill={floorplanRender.hasRenders}
 							/>
 						);
 					})}

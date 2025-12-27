@@ -181,6 +181,10 @@ class WebServer {
 				...createServeOptions(
 					{
 						...(await serveStatic(CLIENT_FOLDER)),
+						...(await serveStatic(
+							path.join(DB_FOLDER, 'floorplan-renders'),
+							'floorplan-renders'
+						)),
 						// Bun quirk where it rewrites the path but doesn't actually bundle it...
 						'/manifest.json': staticResponse(
 							new Response(

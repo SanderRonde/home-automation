@@ -31,10 +31,18 @@ export interface DoorSlot {
 	end: Point;
 }
 
+export interface FloorplanAlignment {
+	x: number;
+	y: number;
+	scale: number;
+	rotation: number;
+}
+
 export interface HouseLayout {
 	walls: WallSegment[];
 	doors: DoorSlot[];
 	roomMappings: Record<string, string>;
+	floorplanAlignment?: FloorplanAlignment;
 }
 
 export interface DeviceDB {
@@ -47,6 +55,10 @@ export interface DeviceDB {
 	groups?: Record<string, DeviceGroup>;
 	palettes?: Record<string, Palette>;
 	house_layout?: HouseLayout;
+	location?: {
+		latitude: number;
+		longitude: number;
+	};
 }
 
 export const Device = new (class Device extends ModuleMeta {
