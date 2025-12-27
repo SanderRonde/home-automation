@@ -58,7 +58,6 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 			label: 'Dashboard',
 			items: [
 				{ text: 'Home', icon: <HomeIcon />, id: SidebarTab.HOME },
-				{ text: 'Layout', icon: <MapIcon />, id: SidebarTab.LAYOUT },
 				{
 					text: 'Temperatures',
 					icon: <DeviceThermostatIcon />,
@@ -104,7 +103,10 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 		},
 		{
 			label: 'Advanced',
-			items: [{ text: 'AI', icon: <SmartToyIcon />, id: SidebarTab.AI }],
+			items: [
+				{ text: 'Layout', icon: <MapIcon />, id: SidebarTab.LAYOUT },
+				{ text: 'AI', icon: <SmartToyIcon />, id: SidebarTab.AI },
+			],
 		},
 	];
 

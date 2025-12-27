@@ -172,8 +172,15 @@ class Pinger {
 				await wait(1000);
 				newState = await this._pingAll(false, newState.ip);
 				if (newState.state === HOME_STATE.HOME) {
-					// Is home after all
+					// Is home after all - update state to prevent logging duplicate HOME event
 					logTag('home-detector', 'yellow', this.name, 'Now home - ending grace period');
+					this._lastState = HOME_STATE.HOME;
+					this._state = HOME_STATE.HOME;
+					this.joinedAt = new Date();
+					this._db.update((old) => ({
+						...old,
+						[this._config.name]: HOME_STATE.HOME,
+					}));
 					return {
 						...newState,
 						waitFor: CHANGE_PING_INTERVAL,
