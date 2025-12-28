@@ -80,6 +80,7 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 	const [triggerButtonIndex, setTriggerButtonIndex] = useState<number | undefined>(undefined);
 	const [triggerHostId, setTriggerHostId] = useState<string>('');
 	const [triggerWebhookName, setTriggerWebhookName] = useState<string>('');
+	const [triggerOccupied, setTriggerOccupied] = useState<boolean>(true); // true = detect, false = removal
 
 	// Interval trigger state
 	const [intervalMinutes, setIntervalMinutes] = useState<number>(60);
@@ -149,6 +150,7 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 
 			if (trigger.type === SceneTriggerType.OCCUPANCY) {
 				setTriggerDeviceId(trigger.deviceId);
+				setTriggerOccupied(trigger.occupied);
 			} else if (trigger.type === SceneTriggerType.BUTTON_PRESS) {
 				setTriggerDeviceId(trigger.deviceId);
 				setTriggerButtonIndex(trigger.buttonIndex);
@@ -170,6 +172,7 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 			setTriggerButtonIndex(undefined);
 			setTriggerHostId('');
 			setTriggerWebhookName('');
+			setTriggerOccupied(true);
 			setConditions([]);
 		}
 		setErrors([]);
@@ -432,6 +435,7 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 			trigger = {
 				type: SceneTriggerType.OCCUPANCY,
 				deviceId: triggerDeviceId,
+				occupied: triggerOccupied,
 			};
 		} else if (triggerType === SceneTriggerType.BUTTON_PRESS) {
 			trigger = {
@@ -572,21 +576,36 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 
 							{/* Occupancy trigger */}
 							{triggerType === SceneTriggerType.OCCUPANCY && (
-								<Autocomplete
-									options={occupancyDevices}
-									getOptionLabel={(option) => option.name}
-									value={
-										occupancyDevices.find(
-											(d) => d.uniqueId === triggerDeviceId
-										) ?? null
-									}
-									onChange={(_e, newValue) => {
-										setTriggerDeviceId(newValue?.uniqueId ?? '');
-									}}
-									renderInput={(params) => (
-										<TextField {...params} label="Occupancy Sensor" required />
-									)}
-								/>
+								<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+									<Autocomplete
+										options={occupancyDevices}
+										getOptionLabel={(option) => option.name}
+										value={
+											occupancyDevices.find(
+												(d) => d.uniqueId === triggerDeviceId
+											) ?? null
+										}
+										onChange={(_e, newValue) => {
+											setTriggerDeviceId(newValue?.uniqueId ?? '');
+										}}
+										renderInput={(params) => (
+											<TextField {...params} label="Occupancy Sensor" required />
+										)}
+									/>
+									<FormControlLabel
+										control={
+											<Switch
+												checked={triggerOccupied}
+												onChange={(e) => setTriggerOccupied(e.target.checked)}
+											/>
+										}
+										label={
+											triggerOccupied
+												? 'Trigger on occupancy detected'
+												: 'Trigger on occupancy removed'
+										}
+									/>
+								</Box>
 							)}
 
 							{/* Button press trigger */}

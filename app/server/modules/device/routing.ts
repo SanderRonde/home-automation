@@ -712,6 +712,7 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 									z.object({
 										type: z.literal(SceneTriggerType.OCCUPANCY),
 										deviceId: z.string(),
+										occupied: z.boolean(),
 									}),
 									z.object({
 										type: z.literal(SceneTriggerType.BUTTON_PRESS),
@@ -919,6 +920,7 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 									z.object({
 										type: z.literal(SceneTriggerType.OCCUPANCY),
 										deviceId: z.string(),
+										occupied: z.boolean(),
 									}),
 									z.object({
 										type: z.literal(SceneTriggerType.BUTTON_PRESS),

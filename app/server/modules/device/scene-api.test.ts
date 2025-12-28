@@ -156,6 +156,7 @@ describe('SceneAPI', () => {
 			const trigger: SceneTrigger = {
 				type: SceneTriggerType.OCCUPANCY,
 				deviceId: 'sensor1',
+				occupied: true,
 			};
 
 			const sceneId = api.createScene({
@@ -410,6 +411,7 @@ describe('SceneAPI', () => {
 						trigger: {
 							type: SceneTriggerType.OCCUPANCY,
 							deviceId: 'sensor1',
+							occupied: true,
 						},
 					},
 				],
@@ -418,6 +420,7 @@ describe('SceneAPI', () => {
 			await api.onTrigger({
 				type: SceneTriggerType.OCCUPANCY,
 				deviceId: 'sensor1',
+				occupied: true,
 			});
 
 			// Give some time for async operations
@@ -447,6 +450,7 @@ describe('SceneAPI', () => {
 						trigger: {
 							type: SceneTriggerType.OCCUPANCY,
 							deviceId: 'sensor1',
+							occupied: true,
 						},
 					},
 				],
@@ -455,6 +459,7 @@ describe('SceneAPI', () => {
 			await api.onTrigger({
 				type: SceneTriggerType.OCCUPANCY,
 				deviceId: 'sensor2', // Different sensor
+				occupied: true,
 			});
 
 			// Wait a bit to ensure it doesn't trigger
@@ -489,6 +494,7 @@ describe('SceneAPI', () => {
 						trigger: {
 							type: SceneTriggerType.OCCUPANCY,
 							deviceId: 'sensor1',
+							occupied: true,
 						},
 					},
 				],
@@ -509,6 +515,7 @@ describe('SceneAPI', () => {
 						trigger: {
 							type: SceneTriggerType.OCCUPANCY,
 							deviceId: 'sensor1',
+							occupied: true,
 						},
 					},
 				],
@@ -517,6 +524,7 @@ describe('SceneAPI', () => {
 			await api.onTrigger({
 				type: SceneTriggerType.OCCUPANCY,
 				deviceId: 'sensor1',
+				occupied: true,
 			});
 
 			// Give some time for async operations
@@ -550,6 +558,7 @@ describe('SceneAPI', () => {
 			await api.onTrigger({
 				type: SceneTriggerType.OCCUPANCY,
 				deviceId: 'sensor1',
+				occupied: true,
 			});
 
 			// Wait a bit to ensure it doesn't trigger
@@ -579,6 +588,7 @@ describe('SceneAPI', () => {
 						trigger: {
 							type: SceneTriggerType.OCCUPANCY,
 							deviceId: 'sensor1',
+							occupied: true,
 						},
 					},
 					{
@@ -595,6 +605,7 @@ describe('SceneAPI', () => {
 			await api.onTrigger({
 				type: SceneTriggerType.OCCUPANCY,
 				deviceId: 'sensor1',
+				occupied: true,
 			});
 
 			await waitForCondition(() => onOffCluster.isOn.current() === true);
@@ -658,6 +669,7 @@ describe('SceneAPI', () => {
 			await api.onTrigger({
 				type: SceneTriggerType.OCCUPANCY,
 				deviceId: 'motion1',
+				occupied: true,
 			});
 
 			// Wait a bit
@@ -673,6 +685,7 @@ describe('SceneAPI', () => {
 			await api.onTrigger({
 				type: SceneTriggerType.OCCUPANCY,
 				deviceId: 'motion1',
+				occupied: true,
 			});
 
 			await waitForCondition(() => onOffCluster.isOn.current() === true);
@@ -703,6 +716,7 @@ describe('SceneAPI', () => {
 			await api.onTrigger({
 				type: SceneTriggerType.OCCUPANCY,
 				deviceId: 'sensor1',
+				occupied: true,
 			});
 
 			// Wait a bit

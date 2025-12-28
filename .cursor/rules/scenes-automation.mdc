@@ -67,11 +67,12 @@ Scenes can have multiple triggers with conditions. **Any trigger can fire the sc
 	trigger: {
 		type: 'occupancy';
 		deviceId: string; // Motion sensor device ID
+		occupied: boolean; // true = trigger on occupancy detected, false = trigger on occupancy removed
 	}
 }
 ```
 
-Fires when the specified sensor detects occupancy.
+Fires when the specified sensor detects occupancy (if `occupied: true`) or when occupancy is removed (if `occupied: false`).
 
 #### Button Press Trigger
 
@@ -146,6 +147,7 @@ triggers: [
 		trigger: {
 			type: 'occupancy',
 			deviceId: 'motion_hallway',
+			occupied: true, // Trigger on occupancy detected
 		},
 		conditions: [
 			{
@@ -196,10 +198,11 @@ const sceneId = api.sceneAPI.createScene({
 	],
 	triggers: [
 		{
-			trigger: {
-				type: 'occupancy',
-				deviceId: 'motion_1',
-			},
+		trigger: {
+			type: 'occupancy',
+			deviceId: 'motion_1',
+			occupied: true, // Trigger on occupancy detected
+		},
 			conditions: [
 				{
 					type: 'host-home',
@@ -234,6 +237,7 @@ await api.sceneAPI.triggerScene(sceneId);
 await api.sceneAPI.onTrigger({
 	type: 'occupancy',
 	deviceId: 'motion_1',
+	occupied: true, // or false for occupancy removal
 });
 ```
 

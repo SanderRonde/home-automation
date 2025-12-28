@@ -270,8 +270,10 @@ export class SceneAPI {
 					trigger.type === SceneTriggerType.OCCUPANCY &&
 					sceneTrigger.type === SceneTriggerType.OCCUPANCY
 				) {
-					triggerMatches = sceneTrigger.deviceId === trigger.deviceId;
-					triggerSource = trigger.deviceId;
+					triggerMatches =
+						sceneTrigger.deviceId === trigger.deviceId &&
+						sceneTrigger.occupied === trigger.occupied;
+					triggerSource = `${trigger.deviceId}:${trigger.occupied ? 'occupied' : 'cleared'}`;
 				} else if (
 					trigger.type === SceneTriggerType.BUTTON_PRESS &&
 					sceneTrigger.type === SceneTriggerType.BUTTON_PRESS

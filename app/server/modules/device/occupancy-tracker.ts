@@ -38,6 +38,7 @@ export class OccupancyTracker {
 						void this._sceneAPI.onTrigger({
 							type: SceneTriggerType.OCCUPANCY,
 							deviceId,
+							occupied,
 						});
 					}
 				});

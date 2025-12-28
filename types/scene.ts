@@ -19,6 +19,7 @@ export type SceneTrigger =
 	| {
 			type: SceneTriggerType.OCCUPANCY;
 			deviceId: string;
+			occupied: boolean; // true = trigger on occupancy detected, false = trigger on occupancy removed
 	  }
 	| {
 			type: SceneTriggerType.BUTTON_PRESS;

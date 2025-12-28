@@ -205,8 +205,9 @@ export const Scenes = (): JSX.Element => {
 			if (trigger.type === 'occupancy') {
 				const device = getDeviceById(trigger.deviceId);
 				const deviceName = device?.name || 'Unknown Device';
+				const triggerType = trigger.occupied ? 'Occupancy detected' : 'Occupancy removed';
 				return (
-					<Tooltip title={`Occupancy: ${deviceName}`} key={index}>
+					<Tooltip title={`${triggerType}: ${deviceName}`} key={index}>
 						<SensorsIcon
 							sx={{
 								fontSize: 20,
@@ -242,10 +243,18 @@ export const Scenes = (): JSX.Element => {
 
 		switch (execution.trigger_type) {
 			case SceneTriggerType.OCCUPANCY: {
-				const device = execution.trigger_source
-					? getDeviceById(execution.trigger_source)
-					: null;
-				const deviceName = device?.name || execution.trigger_source || 'Unknown';
+				// Parse trigger_source which may be "deviceId:occupied" or "deviceId:cleared" or just "deviceId" (for old executions)
+				const parts = execution.trigger_source?.split(':') || [];
+				const deviceId = parts[0] || execution.trigger_source || '';
+				const occupiedState = parts[1];
+				const device = deviceId ? getDeviceById(deviceId) : null;
+				const deviceName = device?.name || deviceId || 'Unknown';
+				if (occupiedState === 'occupied') {
+					return `Occupancy detected: ${deviceName}`;
+				} else if (occupiedState === 'cleared') {
+					return `Occupancy removed: ${deviceName}`;
+				}
+				// Fallback for old executions without state
 				return `Motion sensor: ${deviceName}`;
 			}
 			case SceneTriggerType.BUTTON_PRESS: {

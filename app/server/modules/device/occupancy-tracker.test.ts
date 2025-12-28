@@ -98,6 +98,7 @@ describe('OccupancyTracker', () => {
 			expect(sceneAPI.onTrigger).toHaveBeenCalledWith({
 				type: SceneTriggerType.OCCUPANCY,
 				deviceId: 'sensor1',
+				occupied: true,
 			});
 		});
 
