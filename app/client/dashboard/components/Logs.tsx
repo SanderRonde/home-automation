@@ -1,0 +1,881 @@
+import {
+	Refresh as RefreshIcon,
+	TouchApp as TouchAppIcon,
+	MovieFilter as MovieFilterIcon,
+	Webhook as WebhookIcon,
+	Home as HomeIcon,
+	ExitToApp as ExitToAppIcon,
+	Notifications as NotificationsIcon,
+	DeviceThermostat as DeviceThermostatIcon,
+	ExpandMore as ExpandMoreIcon,
+	CheckCircle as CheckCircleIcon,
+	Error as ErrorIcon,
+	History as HistoryIcon,
+} from '@mui/icons-material';
+import {
+	Box,
+	Typography,
+	Card,
+	CardContent,
+	CircularProgress,
+	IconButton,
+	FormGroup,
+	FormControlLabel,
+	Checkbox,
+	Chip,
+	Accordion,
+	AccordionSummary,
+	AccordionDetails,
+} from '@mui/material';
+import type { LogDescription } from '../../../server/modules/logs/describers';
+import React, { useState, useEffect, useCallback } from 'react';
+import type { IncludedIconNames } from './icon';
+import { hsvToHex } from './ColorPresets';
+import { apiGet } from '../../lib/fetch';
+import { IconComponent } from './icon';
+
+// Device info for enriching log descriptions
+interface DeviceInfo {
+	name: string;
+	room: string | null;
+	roomColor?: string;
+	roomIcon?: IncludedIconNames;
+}
+
+// Log type definitions
+type LogType = 'activity' | 'scene' | 'webhook' | 'homeDetection' | 'notification' | 'temperature';
+
+interface BaseLogEntry {
+	id: string | number;
+	timestamp: number;
+	type: LogType;
+}
+
+interface ActivityLogEntry extends BaseLogEntry {
+	type: 'activity';
+	description: LogDescription[];
+	username: string | null;
+	method: string;
+	endpoint: string;
+	params: string | null;
+	body: string | null;
+}
+
+interface SceneLogEntry extends BaseLogEntry {
+	type: 'scene';
+	scene_id: string;
+	scene_title: string;
+	trigger_type: string;
+	trigger_source?: string | null;
+	success: boolean;
+}
+
+interface WebhookLogEntry extends BaseLogEntry {
+	type: 'webhook';
+	webhookName: string;
+	method: string;
+	ip: string;
+	body: unknown;
+	headers: Record<string, string>;
+}
+
+interface HomeDetectionLogEntry extends BaseLogEntry {
+	type: 'homeDetection';
+	host_name: string;
+	state: string;
+	trigger_type?: string | null;
+}
+
+interface NotificationLogEntry extends BaseLogEntry {
+	type: 'notification';
+	title: string;
+	body: string;
+	success: boolean;
+	recipient_count: number;
+}
+
+interface TemperatureLogEntry extends BaseLogEntry {
+	type: 'temperature';
+	action: string;
+	details: string;
+}
+
+type LogEntry =
+	| ActivityLogEntry
+	| SceneLogEntry
+	| WebhookLogEntry
+	| HomeDetectionLogEntry
+	| NotificationLogEntry
+	| TemperatureLogEntry;
+
+const LOG_TYPE_CONFIG: Record<
+	LogType,
+	{ label: string; icon: React.ReactElement; defaultEnabled: boolean }
+> = {
+	activity: { label: 'UI Actions', icon: <TouchAppIcon />, defaultEnabled: true },
+	scene: { label: 'Scene Triggers', icon: <MovieFilterIcon />, defaultEnabled: false },
+	webhook: { label: 'Webhooks', icon: <WebhookIcon />, defaultEnabled: false },
+	homeDetection: {
+		label: 'Home Detection',
+		icon: <HomeIcon />,
+		defaultEnabled: false,
+	},
+	notification: {
+		label: 'Notifications',
+		icon: <NotificationsIcon />,
+		defaultEnabled: false,
+	},
+	temperature: {
+		label: 'Temperature',
+		icon: <DeviceThermostatIcon />,
+		defaultEnabled: false,
+	},
+};
+
+export const Logs = (): JSX.Element => {
+	const [loading, setLoading] = useState(true);
+	const [logs, setLogs] = useState<LogEntry[]>([]);
+	const [devices, setDevices] = useState<Map<string, DeviceInfo>>(new Map());
+	const [enabledTypes, setEnabledTypes] = useState<Record<LogType, boolean>>(() => {
+		const initial: Record<LogType, boolean> = {} as Record<LogType, boolean>;
+		for (const [type, config] of Object.entries(LOG_TYPE_CONFIG)) {
+			initial[type as LogType] = config.defaultEnabled;
+		}
+		return initial;
+	});
+
+	// Load devices for enriching log descriptions
+	useEffect(() => {
+		const loadDevices = async () => {
+			try {
+				const response = await apiGet('device', '/listWithValues', {});
+				if (response.ok) {
+					const data = await response.json();
+					const deviceMap = new Map<string, DeviceInfo>();
+					for (const device of data.devices) {
+						deviceMap.set(device.uniqueId, {
+							name: device.name || device.uniqueId,
+							room: device.room || null,
+							roomIcon: device.roomIcon,
+						});
+					}
+					setDevices(deviceMap);
+				}
+			} catch (error) {
+				console.error('Failed to load devices:', error);
+			}
+		};
+		void loadDevices();
+	}, []);
+
+	// Helper to enrich activity log descriptions with device names
+	const enrichDescription = useCallback(
+		(log: ActivityLogEntry): React.ReactNode => {
+			return (
+				<>
+					{log.description.map((description) => {
+						if (description.type === 'text') {
+							return (
+								<Typography key={description.text}>{description.text}</Typography>
+							);
+						}
+						if (description.type === 'devices') {
+							return (
+								<Box
+									key={description.deviceIds.join(', ')}
+									sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0.5 }}
+								>
+									{description.deviceIds.map((deviceId) => {
+										const device = devices.get(deviceId);
+										const deviceName = device?.name || deviceId;
+										const roomIcon = device?.roomIcon;
+
+										return (
+											<Chip
+												key={deviceId}
+												label={
+													<Box
+														sx={{
+															display: 'flex',
+															alignItems: 'center',
+															gap: 0.75,
+														}}
+													>
+														{roomIcon && (
+															<IconComponent
+																iconName={roomIcon}
+																sx={{ fontSize: 16 }}
+															/>
+														)}
+														{deviceName}
+													</Box>
+												}
+												size="small"
+												variant="outlined"
+											/>
+										);
+									})}
+								</Box>
+							);
+						}
+						if (description.type === 'color') {
+							const colorHex = hsvToHex(
+								description.color.hue,
+								description.color.saturation,
+								description.color.value
+							);
+							return (
+								<Box
+									key={`${description.color.hue}-${description.color.saturation}-${description.color.value}`}
+									sx={{
+										display: 'inline-block',
+										width: 24,
+										height: 24,
+										borderRadius: 1,
+										backgroundColor: colorHex,
+										border: '1px solid',
+										borderColor: 'divider',
+										ml: 0.5,
+										verticalAlign: 'middle',
+									}}
+								/>
+							);
+						}
+						return null;
+					})}
+				</>
+			);
+		},
+		[devices]
+	);
+
+	const loadLogs = useCallback(async () => {
+		setLoading(true);
+		const allLogs: LogEntry[] = [];
+
+		try {
+			// Load activity logs if enabled
+			if (enabledTypes.activity) {
+				const response = await apiGet('logs', '/activity', {});
+				if (response.ok) {
+					const data = await response.json();
+					for (const log of data.logs) {
+						allLogs.push({
+							...log,
+							type: 'activity' as const,
+							id: `activity-${log.id}`,
+						});
+					}
+				}
+			}
+
+			// Load scene history if enabled
+			if (enabledTypes.scene) {
+				const response = await apiGet('device', '/scenes/history', {});
+				if (response.ok) {
+					const data = await response.json();
+					for (const log of data.history) {
+						allLogs.push({
+							...log,
+							type: 'scene' as const,
+							id: `scene-${log.id}`,
+						});
+					}
+				}
+			}
+
+			// Load webhook triggers if enabled
+			if (enabledTypes.webhook) {
+				// First get list of webhooks, then get triggers for each
+				const listResponse = await apiGet('webhook', '/list', {});
+				if (listResponse.ok) {
+					const listData = await listResponse.json();
+					for (const webhook of listData.webhooks) {
+						const triggersResponse = await apiGet('webhook', '/:name/triggers', {
+							name: webhook.name,
+						});
+						if (triggersResponse.ok) {
+							const triggersData = await triggersResponse.json();
+							for (const trigger of triggersData.triggers) {
+								allLogs.push({
+									id: `webhook-${trigger.id}`,
+									timestamp: trigger.timestamp,
+									type: 'webhook' as const,
+									webhookName: webhook.name,
+									method: trigger.method,
+									ip: trigger.ip,
+									body: trigger.body,
+									headers: trigger.headers,
+								});
+							}
+						}
+					}
+				}
+			}
+
+			// Load home detection events if enabled
+			if (enabledTypes.homeDetection) {
+				const response = await apiGet('home-detector', '/events/history', {});
+				if (response.ok) {
+					const data = await response.json();
+					for (const event of data.events) {
+						allLogs.push({
+							...event,
+							type: 'homeDetection' as const,
+							id: `home-${event.id}`,
+						});
+					}
+				}
+			}
+
+			// Load notification history if enabled
+			if (enabledTypes.notification) {
+				const response = await apiGet('logs', '/notifications', {});
+				if (response.ok) {
+					const data = await response.json();
+					for (const log of data.logs) {
+						allLogs.push({
+							...log,
+							type: 'notification' as const,
+							id: `notification-${log.id}`,
+							success: log.success === 1,
+						});
+					}
+				}
+			}
+
+			// Load temperature action history if enabled
+			if (enabledTypes.temperature) {
+				const response = await apiGet('temperature', '/action-history', {});
+				if (response.ok) {
+					const data = await response.json();
+					for (let i = 0; i < data.history.length; i++) {
+						const entry = data.history[i];
+						allLogs.push({
+							id: `temp-${i}-${entry.timestamp}`,
+							timestamp: entry.timestamp,
+							type: 'temperature' as const,
+							action: entry.action,
+							details: entry.details,
+						});
+					}
+				}
+			}
+
+			// Sort by timestamp descending
+			allLogs.sort((a, b) => b.timestamp - a.timestamp);
+			setLogs(allLogs);
+		} catch (error) {
+			console.error('Failed to load logs:', error);
+		} finally {
+			setLoading(false);
+		}
+	}, [enabledTypes]);
+
+	useEffect(() => {
+		void loadLogs();
+	}, [loadLogs]);
+
+	const handleTypeToggle = (type: LogType) => {
+		setEnabledTypes((prev) => ({
+			...prev,
+			[type]: !prev[type],
+		}));
+	};
+
+	const formatTimestamp = (timestamp: number): string => {
+		const date = new Date(timestamp);
+		const now = new Date();
+		const diffMs = now.getTime() - date.getTime();
+		const diffMins = Math.floor(diffMs / 60000);
+		const diffHours = Math.floor(diffMs / 3600000);
+		const diffDays = Math.floor(diffMs / 86400000);
+
+		if (diffMins < 1) {
+			return 'Just now';
+		}
+		if (diffMins < 60) {
+			return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+		}
+		if (diffHours < 24) {
+			return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+		}
+		if (diffDays < 7) {
+			return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+		}
+		return date.toLocaleString();
+	};
+
+	const getLogIcon = (log: LogEntry): React.ReactElement => {
+		switch (log.type) {
+			case 'activity':
+				return <TouchAppIcon sx={{ fontSize: 20 }} />;
+			case 'scene':
+				return <MovieFilterIcon sx={{ fontSize: 20 }} />;
+			case 'webhook':
+				return <WebhookIcon sx={{ fontSize: 20 }} />;
+			case 'homeDetection':
+				return log.state.toLowerCase() === 'home' ? (
+					<HomeIcon sx={{ fontSize: 20 }} />
+				) : (
+					<ExitToAppIcon sx={{ fontSize: 20 }} />
+				);
+			case 'notification':
+				return <NotificationsIcon sx={{ fontSize: 20 }} />;
+			case 'temperature':
+				return <DeviceThermostatIcon sx={{ fontSize: 20 }} />;
+			default:
+				return <HistoryIcon sx={{ fontSize: 20 }} />;
+		}
+	};
+
+	const getLogTitle = useCallback(
+		(log: LogEntry): React.ReactNode => {
+			if (log.type === 'activity') {
+				return enrichDescription(log);
+			}
+
+			const text = (() => {
+				switch (log.type) {
+					case 'scene':
+						return `Scene: ${log.scene_title}`;
+					case 'webhook':
+						return `Webhook: ${log.webhookName}`;
+					case 'homeDetection':
+						return `${log.host_name}: ${log.state}`;
+					case 'notification':
+						return log.title;
+					case 'temperature':
+						return log.action;
+					default:
+						return 'Unknown event';
+				}
+			})();
+			return (
+				<Typography
+					variant="body2"
+					fontWeight={500}
+					sx={{
+						overflow: 'hidden',
+						textOverflow: 'ellipsis',
+						whiteSpace: 'nowrap',
+					}}
+				>
+					{text}
+				</Typography>
+			);
+		},
+		[enrichDescription]
+	);
+
+	const getLogSubtitle = (log: LogEntry): string | null => {
+		switch (log.type) {
+			case 'activity':
+				return log.username ? `by ${log.username}` : null;
+			case 'scene':
+				return log.trigger_type === 'manual'
+					? 'Manual trigger'
+					: `Triggered by ${log.trigger_type}`;
+			case 'webhook':
+				return `${log.method} from ${log.ip}`;
+			case 'homeDetection':
+				return log.trigger_type || null;
+			case 'notification':
+				return `${log.recipient_count} recipient${log.recipient_count !== 1 ? 's' : ''}`;
+			case 'temperature':
+				return log.details;
+			default:
+				return null;
+		}
+	};
+
+	const getLogColor = (log: LogEntry): string => {
+		switch (log.type) {
+			case 'activity':
+				return 'primary.main';
+			case 'scene':
+				return 'secondary.main';
+			case 'webhook':
+				return 'warning.main';
+			case 'homeDetection':
+				return log.state.toLowerCase() === 'home' ? 'success.main' : 'text.secondary';
+			case 'notification':
+				return 'info.main';
+			case 'temperature':
+				return 'error.main';
+			default:
+				return 'text.secondary';
+		}
+	};
+
+	const renderLogDetails = (log: LogEntry): React.ReactNode => {
+		switch (log.type) {
+			case 'activity':
+				return (
+					<Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+						<Typography variant="caption" color="text.secondary">
+							{log.method} {log.endpoint}
+						</Typography>
+						{log.params && (
+							<Box>
+								<Typography variant="caption" fontWeight="bold">
+									Params:
+								</Typography>
+								<Box
+									sx={{
+										bgcolor: 'action.hover',
+										p: 1,
+										borderRadius: 1,
+										fontFamily: 'monospace',
+										fontSize: '0.75rem',
+										overflow: 'auto',
+										maxHeight: 100,
+									}}
+								>
+									<pre style={{ margin: 0 }}>
+										{JSON.stringify(JSON.parse(log.params), null, 2)}
+									</pre>
+								</Box>
+							</Box>
+						)}
+						{log.body && (
+							<Box>
+								<Typography variant="caption" fontWeight="bold">
+									Body:
+								</Typography>
+								<Box
+									sx={{
+										bgcolor: 'action.hover',
+										p: 1,
+										borderRadius: 1,
+										fontFamily: 'monospace',
+										fontSize: '0.75rem',
+										overflow: 'auto',
+										maxHeight: 150,
+									}}
+								>
+									<pre style={{ margin: 0 }}>
+										{JSON.stringify(JSON.parse(log.body), null, 2)}
+									</pre>
+								</Box>
+							</Box>
+						)}
+					</Box>
+				);
+			case 'webhook':
+				return (
+					<Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+						<Box>
+							<Typography variant="caption" fontWeight="bold">
+								Request Body:
+							</Typography>
+							<Box
+								sx={{
+									bgcolor: 'action.hover',
+									p: 1,
+									borderRadius: 1,
+									fontFamily: 'monospace',
+									fontSize: '0.75rem',
+									overflow: 'auto',
+									maxHeight: 150,
+								}}
+							>
+								<pre style={{ margin: 0 }}>{JSON.stringify(log.body, null, 2)}</pre>
+							</Box>
+						</Box>
+					</Box>
+				);
+			case 'notification':
+				return (
+					<Typography variant="body2" color="text.secondary">
+						{log.body}
+					</Typography>
+				);
+			default:
+				return null;
+		}
+	};
+
+	const hasDetails = (log: LogEntry): boolean => {
+		switch (log.type) {
+			case 'activity':
+				return !!(log.params || log.body);
+			case 'webhook':
+				return true;
+			case 'notification':
+				return !!log.body;
+			default:
+				return false;
+		}
+	};
+
+	return (
+		<Box sx={{ p: { xs: 2, sm: 3 } }}>
+			<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+				{/* Header */}
+				<Box
+					sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+				>
+					<Typography variant="h5">Activity Logs</Typography>
+					<IconButton onClick={() => void loadLogs()} disabled={loading}>
+						<RefreshIcon />
+					</IconButton>
+				</Box>
+
+				{/* Filters */}
+				<Card sx={{ borderRadius: 2 }}>
+					<CardContent sx={{ py: 1.5 }}>
+						<Typography variant="subtitle2" sx={{ mb: 1 }}>
+							Show logs for:
+						</Typography>
+						<FormGroup row sx={{ flexWrap: 'wrap', gap: 1 }}>
+							{(
+								Object.entries(LOG_TYPE_CONFIG) as [
+									LogType,
+									(typeof LOG_TYPE_CONFIG)[LogType],
+								][]
+							).map(([type, config]) => (
+								<FormControlLabel
+									key={type}
+									control={
+										<Checkbox
+											size="small"
+											checked={enabledTypes[type]}
+											onChange={() => handleTypeToggle(type)}
+										/>
+									}
+									label={
+										<Box
+											sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
+										>
+											{config.icon}
+											<Typography variant="body2">{config.label}</Typography>
+										</Box>
+									}
+								/>
+							))}
+						</FormGroup>
+					</CardContent>
+				</Card>
+
+				{/* Logs List */}
+				{loading ? (
+					<Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+						<CircularProgress />
+					</Box>
+				) : logs.length === 0 ? (
+					<Card sx={{ borderRadius: 2 }}>
+						<CardContent>
+							<Typography variant="body2" color="text.secondary" textAlign="center">
+								No logs found. Try enabling more log types above.
+							</Typography>
+						</CardContent>
+					</Card>
+				) : (
+					<Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+						{logs.map((log) => {
+							const details = renderLogDetails(log);
+							const showDetails = hasDetails(log);
+
+							if (showDetails) {
+								return (
+									<Accordion key={log.id} sx={{ borderRadius: 2 }} disableGutters>
+										<AccordionSummary expandIcon={<ExpandMoreIcon />}>
+											<Box
+												sx={{
+													display: 'flex',
+													alignItems: 'center',
+													gap: 2,
+													width: '100%',
+													pr: 2,
+												}}
+											>
+												<Box
+													sx={{
+														display: 'flex',
+														alignItems: 'center',
+														justifyContent: 'center',
+														width: 36,
+														height: 36,
+														borderRadius: 1,
+														bgcolor: 'action.hover',
+														color: getLogColor(log),
+														flexShrink: 0,
+													}}
+												>
+													{getLogIcon(log)}
+												</Box>
+												<Box sx={{ flex: 1, minWidth: 0 }}>
+													<Box
+														sx={{
+															display: 'flex',
+															alignItems: 'center',
+															gap: 1,
+															flexWrap: 'wrap',
+														}}
+													>
+														{getLogTitle(log)}
+														{log.type === 'scene' && (
+															<>
+																{log.success ? (
+																	<CheckCircleIcon
+																		sx={{
+																			fontSize: 16,
+																			color: 'success.main',
+																		}}
+																	/>
+																) : (
+																	<ErrorIcon
+																		sx={{
+																			fontSize: 16,
+																			color: 'error.main',
+																		}}
+																	/>
+																)}
+															</>
+														)}
+														{log.type === 'notification' && (
+															<>
+																{log.success ? (
+																	<CheckCircleIcon
+																		sx={{
+																			fontSize: 16,
+																			color: 'success.main',
+																		}}
+																	/>
+																) : (
+																	<ErrorIcon
+																		sx={{
+																			fontSize: 16,
+																			color: 'error.main',
+																		}}
+																	/>
+																)}
+															</>
+														)}
+													</Box>
+													{getLogSubtitle(log) && (
+														<Typography
+															variant="caption"
+															color="text.secondary"
+														>
+															{getLogSubtitle(log)}
+														</Typography>
+													)}
+												</Box>
+												<Chip
+													label={LOG_TYPE_CONFIG[log.type].label}
+													size="small"
+													variant="outlined"
+													sx={{ flexShrink: 0 }}
+												/>
+												<Typography
+													variant="caption"
+													color="text.secondary"
+													sx={{
+														flexShrink: 0,
+														minWidth: 80,
+														textAlign: 'right',
+													}}
+												>
+													{formatTimestamp(log.timestamp)}
+												</Typography>
+											</Box>
+										</AccordionSummary>
+										<AccordionDetails>{details}</AccordionDetails>
+									</Accordion>
+								);
+							}
+
+							return (
+								<Card key={log.id} sx={{ borderRadius: 2 }}>
+									<CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+										<Box
+											sx={{
+												display: 'flex',
+												alignItems: 'center',
+												gap: 2,
+											}}
+										>
+											<Box
+												sx={{
+													display: 'flex',
+													alignItems: 'center',
+													justifyContent: 'center',
+													width: 36,
+													height: 36,
+													borderRadius: 1,
+													bgcolor: 'action.hover',
+													color: getLogColor(log),
+													flexShrink: 0,
+												}}
+											>
+												{getLogIcon(log)}
+											</Box>
+											<Box sx={{ flex: 1, minWidth: 0 }}>
+												<Box
+													sx={{
+														display: 'flex',
+														alignItems: 'center',
+														gap: 1,
+														flexWrap: 'wrap',
+													}}
+												>
+													{getLogTitle(log)}
+													{log.type === 'scene' && (
+														<>
+															{log.success ? (
+																<CheckCircleIcon
+																	sx={{
+																		fontSize: 16,
+																		color: 'success.main',
+																	}}
+																/>
+															) : (
+																<ErrorIcon
+																	sx={{
+																		fontSize: 16,
+																		color: 'error.main',
+																	}}
+																/>
+															)}
+														</>
+													)}
+												</Box>
+												{getLogSubtitle(log) && (
+													<Typography
+														variant="caption"
+														color="text.secondary"
+													>
+														{getLogSubtitle(log)}
+													</Typography>
+												)}
+											</Box>
+											<Chip
+												label={LOG_TYPE_CONFIG[log.type].label}
+												size="small"
+												variant="outlined"
+												sx={{ flexShrink: 0 }}
+											/>
+											<Typography
+												variant="caption"
+												color="text.secondary"
+												sx={{
+													flexShrink: 0,
+													minWidth: 80,
+													textAlign: 'right',
+												}}
+											>
+												{formatTimestamp(log.timestamp)}
+											</Typography>
+										</Box>
+									</CardContent>
+								</Card>
+							);
+						})}
+					</Box>
+				)}
+			</Box>
+		</Box>
+	);
+};

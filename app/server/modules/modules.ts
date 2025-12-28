@@ -13,6 +13,7 @@ import { Device } from './device';
 import { Kiosk } from './kiosk';
 import { WLed } from './wled';
 import { Tuya } from './tuya';
+import { Logs } from './logs';
 import { Auth } from './auth';
 import { Bot } from './bot';
 import { AI } from './ai';
@@ -39,6 +40,7 @@ const getModuleObj = () => ({
 	ai: AI,
 	bot: Bot,
 	auth: Auth,
+	logs: Logs,
 	wled: WLed,
 	tuya: Tuya,
 	kiosk: Kiosk,

@@ -21,7 +21,7 @@ const COLOR_PRESETS = [
 	{ name: 'Pink', hue: 330, saturation: 100 },
 ];
 
-const hsvToHex = (h: number, s: number, v: number): string => {
+export const hsvToHex = (h: number, s: number, v: number): string => {
 	const hNorm = h / 360;
 	const sNorm = s / 100;
 	const vNorm = v / 100;

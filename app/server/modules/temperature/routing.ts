@@ -256,6 +256,12 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 					return json({ success: true, debug: Temperature.getDebugInfo() });
 				},
 			},
+			'/action-history': {
+				GET: (_req, _server, { json }) => {
+					const debug = Temperature.getDebugInfo();
+					return json({ success: true, history: debug.history });
+				},
+			},
 		},
 		true
 	);

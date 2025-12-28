@@ -3,6 +3,7 @@ import { NotificationType } from '../../../../types/notification';
 import { logTag } from '../../lib/logging/logger';
 import type { Database } from '../../lib/db';
 import * as webpush from 'web-push';
+import { Logs } from '../logs';
 
 export interface NotificationDB {
 	subscriptions: PushSubscription[];
@@ -235,6 +236,15 @@ export class PushNotificationManager {
 			'cyan',
 			`Sent notification: ${successCount} successful, ${failCount} failed`
 		);
+
+		// Log notification to activity log
+		try {
+			const activityLog = await Logs.activityLog.value;
+			await activityLog.logNotification(title, body, successCount > 0, subscriptions.length);
+		} catch (error) {
+			// Don't let logging errors break notifications
+			console.error('Failed to log notification:', error);
+		}
 
 		return true;
 	}

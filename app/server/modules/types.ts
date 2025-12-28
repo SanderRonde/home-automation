@@ -18,6 +18,7 @@ import type { Device } from './device';
 import type { Kiosk } from './kiosk';
 import type { WLed } from './wled';
 import type { Tuya } from './tuya';
+import type { Logs } from './logs';
 import type { Auth } from './auth';
 import type { Bot } from './bot';
 import type { AI } from './ai';
@@ -28,6 +29,7 @@ export type AllModules = {
 	ai: typeof AI;
 	bot: typeof Bot;
 	auth: typeof Auth;
+	logs: typeof Logs;
 	wled: typeof WLed;
 	tuya: typeof Tuya;
 	kiosk: typeof Kiosk;

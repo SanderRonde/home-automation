@@ -6,10 +6,29 @@ import type {
 	Serve,
 	WebSocketServeOptions,
 } from 'bun';
+import { checkAuth, getAuthUser } from './auth';
+import { logActivity } from '../modules/logs';
 import { LogObj } from './logging/lob-obj';
 import type { z, ZodTypeAny } from 'zod';
-import { checkAuth } from './auth';
 import type { Server } from 'bun';
+
+// Store for request bodies to allow logging after the handler completes
+const requestBodyCache = new WeakMap<Request, unknown>();
+
+/**
+ * Cache a request body for later logging.
+ * Should be called before the body is consumed.
+ */
+export function cacheRequestBody(req: Request, body: unknown): void {
+	requestBodyCache.set(req, body);
+}
+
+/**
+ * Get cached request body for logging.
+ */
+export function getCachedRequestBody(req: Request): unknown {
+	return requestBodyCache.get(req);
+}
 
 const HTTP_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'];
 
@@ -33,79 +52,128 @@ export function createServeOptions<
 		fetch?: (this: Server, request: Request, server: Server) => Response | Promise<Response>;
 	})['routes'],
 	auth: boolean | Record<string, boolean>,
-	extraWebsocket?: ServeOptions<R>['websocket']
+	extraWebsocket?: ServeOptions<R>['websocket'],
+	/**
+	 * Module name for activity logging. If provided, route keys will be prefixed with /{moduleName}.
+	 */
+	moduleName?: string
 ): ServeOptions<R> {
-	const middleware = (
-		routeHandler:
+	// Middleware factory that includes the route key for logging
+	const createMiddleware = (routeKey: string) => {
+		return (
+			routeHandler:
+				| BrandedRouteHandler<string, unknown>
+				| RouterTypes.RouteHandlerWithWebSocketUpgrade<string>
+		):
 			| BrandedRouteHandler<string, unknown>
-			| RouterTypes.RouteHandlerWithWebSocketUpgrade<string>
-	):
-		| BrandedRouteHandler<string, unknown>
-		| RouterTypes.RouteHandlerWithWebSocketUpgrade<string> => {
-		return async (req: BunRequest, server: Server) => {
-			LogObj.fromIncomingReq(req);
+			| RouterTypes.RouteHandlerWithWebSocketUpgrade<string> => {
+			return async (req: BunRequest, server: Server) => {
+				LogObj.fromIncomingReq(req);
 
-			try {
-				// Check authentication if required
-				if (auth) {
-					const isAuthenticated = await checkAuth(req);
-					if (!isAuthenticated) {
-						// Check if this is an API request or a page request
-						const url = new URL(req.url);
-						const acceptHeader = req.headers.get('accept') || '';
-						const isApiRequest =
-							acceptHeader.includes('application/json') ||
-							url.pathname.startsWith('/api/') ||
-							req.method !== 'GET';
+				try {
+					// Check authentication if required
+					if (auth) {
+						const isAuthenticated = await checkAuth(req);
+						if (!isAuthenticated) {
+							// Check if this is an API request or a page request
+							const url = new URL(req.url);
+							const acceptHeader = req.headers.get('accept') || '';
+							const isApiRequest =
+								acceptHeader.includes('application/json') ||
+								url.pathname.startsWith('/api/') ||
+								req.method !== 'GET';
 
-						if (isApiRequest) {
-							// Return 401 for API requests
-							const unauthorizedRes = errorResponse('Unauthorized', 401);
-							LogObj.logOutgoingResponse(req, unauthorizedRes, server);
-							return unauthorizedRes;
-						} else {
-							// Redirect to login page for regular page requests
-							const loginUrl = `/auth/login-page?redirect=${encodeURIComponent(url.pathname + url.search)}`;
-							const redirectRes = Response.redirect(loginUrl, 302) as BrandedResponse<
-								unknown,
-								false
-							>;
-							LogObj.logOutgoingResponse(req, redirectRes, server);
-							return redirectRes;
+							if (isApiRequest) {
+								// Return 401 for API requests
+								const unauthorizedRes = errorResponse('Unauthorized', 401);
+								LogObj.logOutgoingResponse(req, unauthorizedRes, server);
+								return unauthorizedRes;
+							} else {
+								// Redirect to login page for regular page requests
+								const loginUrl = `/auth/login-page?redirect=${encodeURIComponent(url.pathname + url.search)}`;
+								const redirectRes = Response.redirect(
+									loginUrl,
+									302
+								) as BrandedResponse<unknown, false>;
+								LogObj.logOutgoingResponse(req, redirectRes, server);
+								return redirectRes;
+							}
 						}
 					}
-				}
 
-				const res = await routeHandler(req, server, {
-					json: jsonResponse,
-					error: errorResponse,
-					text: textResponse,
-				});
-				if (res) {
-					LogObj.logOutgoingResponse(req, res, server);
-				}
-				return res;
-			} catch (error) {
-				// Log the error
-				console.error('Error handling request:', error);
+					const res = await routeHandler(req, server, {
+						json: jsonResponse,
+						error: errorResponse,
+						text: textResponse,
+					});
+					if (res) {
+						LogObj.logOutgoingResponse(req, res, server);
 
-				// Return a 500 error response
-				const errorRes = errorResponse(
-					{
-						error: 'Internal Server Error',
-						message: error instanceof Error ? error.message : 'Unknown error',
-					},
-					500
-				);
-				LogObj.logOutgoingResponse(req, errorRes, server);
-				return errorRes;
-			}
+						// Log POST/DELETE requests to activity log (after successful response)
+						if (
+							(req.method === 'POST' || req.method === 'DELETE') &&
+							res.status >= 200 &&
+							res.status < 300
+						) {
+							// Get user info for logging
+							const user = await getAuthUser(req);
+
+							// Get cached body (set by withRequestBody) or null
+							const body = getCachedRequestBody(req);
+
+							// Extract params from the request
+							const params =
+								'params' in req && req.params
+									? (req.params as Record<string, string>)
+									: null;
+
+							// Derive full route key from URL pathname
+							// URL is like /device/scenes/abc123/trigger, routeKey is like /scenes/:sceneId/trigger
+							// Extract module name from pathname (first segment)
+							const url = new URL(req.url);
+							const pathParts = url.pathname.split('/').filter(Boolean);
+							const moduleNameFromPath = pathParts[0] || '';
+							const fullRouteKey = moduleName
+								? `/${moduleName}${routeKey}`
+								: moduleNameFromPath
+									? `/${moduleNameFromPath}${routeKey}`
+									: routeKey;
+
+							// Log asynchronously (don't block the response)
+							void logActivity(
+								req.method,
+								fullRouteKey,
+								params,
+								body,
+								user?.id ?? null,
+								user?.username ?? null
+							);
+						}
+					}
+					return res;
+				} catch (error) {
+					// Log the error
+					console.error('Error handling request:', error);
+
+					// Return a 500 error response
+					const errorRes = errorResponse(
+						{
+							error: 'Internal Server Error',
+							message: error instanceof Error ? error.message : 'Unknown error',
+						},
+						500
+					);
+					LogObj.logOutgoingResponse(req, errorRes, server);
+					return errorRes;
+				}
+			};
 		};
 	};
 
 	const loggedRoutes: Record<string, unknown> = {};
 	for (const key in routes) {
 		const route = routes[key];
+		const middleware = createMiddleware(key);
 		if (typeof route === 'function') {
 			loggedRoutes[key] = middleware(route);
 		} else if (typeof route === 'object' && HTTP_METHODS.some((method) => method in route)) {
@@ -163,6 +231,8 @@ export function withRequestBody<
 		if (!body.success) {
 			return response.error(body.error.message, 400);
 		}
+		// Cache the parsed body for activity logging
+		cacheRequestBody(req, body.data);
 		return handler(body.data, req, server, response);
 	}) as RouteBodyBrand<
 		(

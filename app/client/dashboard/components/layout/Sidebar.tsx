@@ -14,6 +14,7 @@ import {
 	Map as MapIcon,
 	DeviceThermostat as DeviceThermostatIcon,
 	BoltRounded as BoltRoundedIcon,
+	History as HistoryIcon,
 } from '@mui/icons-material';
 import {
 	Drawer,
@@ -106,6 +107,7 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 			items: [
 				{ text: 'Layout', icon: <MapIcon />, id: SidebarTab.LAYOUT },
 				{ text: 'AI', icon: <SmartToyIcon />, id: SidebarTab.AI },
+				{ text: 'Logs', icon: <HistoryIcon />, id: SidebarTab.LOGS },
 			],
 		},
 	];
@@ -184,4 +186,5 @@ export enum SidebarTab {
 	AI = 'ai',
 	NOTIFICATIONS = 'notifications',
 	TEMPERATURE = 'temperature',
+	LOGS = 'logs',
 }

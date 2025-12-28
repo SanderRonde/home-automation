@@ -3,6 +3,11 @@ import { verifyCookie } from '../modules/auth/cookie';
 import { Auth } from '../modules/auth';
 import type { CookieMap } from 'bun';
 
+export interface AuthUser {
+	id: number;
+	username: string;
+}
+
 export async function checkAuth(req: { cookies: CookieMap; url: string }): Promise<boolean> {
 	// Check session cookie first (new auth method)
 	const sessionId = req.cookies.get('session');
@@ -31,4 +36,20 @@ export async function checkAuth(req: { cookies: CookieMap; url: string }): Promi
 		return true;
 	}
 	return false;
+}
+
+/**
+ * Get authenticated user info from request cookies.
+ * Returns null if not authenticated via session.
+ */
+export async function getAuthUser(req: { cookies: CookieMap }): Promise<AuthUser | null> {
+	const sessionId = req.cookies.get('session');
+	if (sessionId) {
+		const userManagement = await Auth.userManagement;
+		const user = await userManagement.verifySession(sessionId);
+		if (user) {
+			return { id: user.id, username: user.username };
+		}
+	}
+	return null;
 }

@@ -12,6 +12,7 @@ import type { DeviceRoutes } from '../../server/modules/device/routing';
 import type { KioskRoutes } from '../../server/modules/kiosk/routing';
 import type { WledRoutes } from '../../server/modules/wled/routing';
 import type { TuyaRoutes } from '../../server/modules/tuya/routing';
+import type { LogsRoutes } from '../../server/modules/logs/routing';
 import type { AuthRoutes } from '../../server/modules/auth/routing';
 import type { BotRoutes } from '../../server/modules/bot/routing';
 import type { AIRoutes } from '../../server/modules/ai/routing';
@@ -217,13 +218,14 @@ export async function apiDelete<
 	)) as any;
 }
 
-type RoutesForModules = {
+export type RoutesForModules = {
 	auth: AuthRoutes;
 	bot: BotRoutes;
 	dashboard: DashboardRoutes;
 	device: DeviceRoutes;
 	kiosk: KioskRoutes;
 	ewelink: EwelinkRoutes;
+	logs: LogsRoutes;
 	tuya: TuyaRoutes;
 	'led-art': LedArtRoutes;
 	'home-detector': HomeDetectorRoutes;

@@ -21,6 +21,7 @@ import { createRoot } from 'react-dom/client';
 import { Scenes } from './components/Scenes';
 import { Groups } from './components/Groups';
 import { Kiosk } from './components/Kiosk';
+import { Logs } from './components/Logs';
 import { Home } from './components/Home';
 import { apiGet } from '../lib/fetch';
 
@@ -147,6 +148,8 @@ function DashboardApp() {
 				return <AIConfig />;
 			case SidebarTab.TEMPERATURE:
 				return <TemperatureConfig />;
+			case SidebarTab.LOGS:
+				return <Logs />;
 			default:
 				return <NotFoundPage onReturnToSettings={handleReturnToSettings} />;
 		}
