@@ -71,6 +71,7 @@
 	"dependencies": {
 		"@fseehawer/react-circular-slider": "^3.2.7",
 		"@matter/main": "^0.15.6",
+		"@matter/nodejs-ble": "^0.15.6",
 		"@modelcontextprotocol/sdk": "^1.18.2",
 		"@mui/icons-material": "^7.3.2",
 		"@mui/material": "^7.3.2",

@@ -17,8 +17,11 @@ import { DB_FOLDER } from '../../../lib/constants';
 import type { EndpointNumber } from '@matter/main';
 import type { NodeId } from '@matter/main/types';
 import { MatterDevice } from '../client/device';
+import { NodeJsBle } from '@matter/nodejs-ble';
 import { withFn } from '../../../lib/with';
 import { Data } from '../../../lib/data';
+import { Ble } from '@matter/protocol';
+import '@matter/nodejs-ble';
 import path from 'path';
 
 Logger.level = LogLevel.WARN;
@@ -63,6 +66,14 @@ export class MatterServer extends Disposable {
 
 	public constructor() {
 		super();
+
+		// Needs to happen before the import of @matter/nodejs-ble
+		environment.vars.set('ble.enable', true);
+		// Explicitly register the BLE provider
+		// @matter/nodejs-ble does not auto-register, so we must set Ble.get manually
+		if (environment.vars.get('ble.enable')) {
+			Ble.get = () => new NodeJsBle();
+		}
 
 		environment.vars.set('storage.path', path.join(DB_FOLDER, 'matter'));
 
