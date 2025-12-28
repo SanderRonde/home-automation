@@ -1111,14 +1111,9 @@ const IlluminanceMeasurementCard = (
 };
 
 const SensorGroupCard = (
-	props: DeviceClusterCardBaseProps<
-		DashboardDeviceClusterSensorGroup | DashboardDeviceClusterTemperatureMeasurement
-	>
+	props: DeviceClusterCardBaseProps<DashboardDeviceClusterSensorGroup>
 ): JSX.Element => {
-	const occupancy =
-		DeviceClusterName.OCCUPANCY_SENSING in props.cluster.mergedClusters
-			? props.cluster.mergedClusters[DeviceClusterName.OCCUPANCY_SENSING]
-			: undefined;
+	const occupancy = props.cluster.mergedClusters[DeviceClusterName.OCCUPANCY_SENSING];
 	const temperature = props.cluster.mergedClusters[DeviceClusterName.TEMPERATURE_MEASUREMENT];
 	const humidity = props.cluster.mergedClusters[DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT];
 
@@ -1817,12 +1812,6 @@ export const DeviceClusterCard = (
 		return <OccupancySensingCard {...regularProps} cluster={regularProps.cluster} />;
 	}
 	if (regularProps.cluster.name === DeviceClusterName.TEMPERATURE_MEASUREMENT) {
-		if (
-			'mergedClusters' in regularProps.cluster &&
-			Object.keys(regularProps.cluster.mergedClusters).length > 0
-		) {
-			return <SensorGroupCard {...regularProps} cluster={regularProps.cluster} />;
-		}
 		return <TemperatureMeasurementCard {...regularProps} cluster={regularProps.cluster} />;
 	}
 	if (regularProps.cluster.name === DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT) {
