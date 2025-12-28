@@ -93,6 +93,7 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 
 	const [groups, setGroups] = useState<DeviceGroup[]>([]);
 	const [palettes, setPalettes] = useState<Palette[]>([]);
+	const [rooms, setRooms] = useState<Array<{ name: string }>>([]);
 	const [title, setTitle] = useState(props.existingScene?.title ?? '');
 	const [selectedIcon, setSelectedIcon] = useState<IncludedIconNames>(
 		props.existingScene?.icon ?? 'Star'
@@ -100,13 +101,13 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 	const [actions, setActions] = useState<DeviceActionEntry[]>(
 		props.existingScene?.actions.map((action, index) => ({
 			...action,
-			key: `${'deviceId' in action ? action.deviceId : 'groupId' in action ? action.groupId : 'http'}-${action.cluster}-${index}`,
+			key: `${'deviceId' in action ? action.deviceId : 'groupId' in action ? action.groupId : action.cluster === 'room-temperature' ? 'room-temp' : 'http'}-${action.cluster}-${index}`,
 			targetType:
 				'groupId' in action && action.groupId ? ('group' as const) : ('device' as const),
 		})) ?? []
 	);
 
-	// Load groups and palettes
+	// Load groups, palettes, and rooms
 	React.useEffect(() => {
 		if (props.open) {
 			const loadGroups = async () => {
@@ -131,8 +132,21 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 					console.error('Failed to load palettes:', error);
 				}
 			};
+			const loadRooms = async () => {
+				try {
+					const response = await apiGet('device', '/rooms', {});
+					if (response.ok) {
+						const data = await response.json();
+						const roomNames = Object.keys(data.rooms || {}).map((name) => ({ name }));
+						setRooms(roomNames);
+					}
+				} catch (error) {
+					console.error('Failed to load rooms:', error);
+				}
+			};
 			void loadGroups();
 			void loadPalettes();
+			void loadRooms();
 		}
 	}, [props.open]);
 	const [triggers, setTriggers] = useState<SceneTriggerWithConditions[]>(
@@ -203,6 +217,19 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 				body: 'Notification message',
 			},
 			key: `notification-${Date.now()}`,
+		} as DeviceActionEntry;
+		setActions([...actions, newAction]);
+	};
+
+	const handleAddRoomTemperatureAction = () => {
+		const newAction = {
+			cluster: 'room-temperature' as const,
+			action: {
+				roomName: rooms.length > 0 ? rooms[0].name : '',
+				mode: 'setTarget' as const,
+				targetTemperature: 20,
+			},
+			key: `room-temp-${Date.now()}`,
 		} as DeviceActionEntry;
 		setActions([...actions, newAction]);
 	};
@@ -322,6 +349,7 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 				(action) =>
 					action.cluster !== 'http-request' &&
 					action.cluster !== 'notification' &&
+					action.cluster !== 'room-temperature' &&
 					!('deviceId' in action ? action.deviceId : false) &&
 					!('groupId' in action ? action.groupId : false)
 			)
@@ -343,6 +371,19 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 					action.cluster === 'notification' &&
 					!('title' in action.action ? action.action.title : false) &&
 					!('body' in action.action ? action.action.body : false)
+			)
+		) {
+			return;
+		}
+		if (
+			actions.some(
+				(action) =>
+					action.cluster === 'room-temperature' &&
+					(!('roomName' in action.action ? action.action.roomName : false) ||
+						(action.action.mode === 'setTarget' &&
+							!('targetTemperature' in action.action
+								? action.action.targetTemperature !== undefined
+								: false)))
 			)
 		) {
 			return;
@@ -645,6 +686,19 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 									);
 								}
 
+								// Render room-temperature action separately
+								if (action.cluster === 'room-temperature') {
+									return (
+										<RoomTemperatureActionConfig
+											action={action}
+											key={action.key}
+											rooms={rooms}
+											handleActionChange={handleActionChange}
+											handleRemoveAction={handleRemoveAction}
+										/>
+									);
+								}
+
 								const group =
 									'groupId' in action && action.groupId
 										? groups.find((g) => g.id === action.groupId)
@@ -691,6 +745,14 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 									sx={{ flex: 1, minWidth: '200px' }}
 								>
 									Add Notification
+								</Button>
+								<Button
+									variant="outlined"
+									startIcon={<AddIcon />}
+									onClick={handleAddRoomTemperatureAction}
+									sx={{ flex: 1, minWidth: '200px' }}
+								>
+									Add Room Temperature
 								</Button>
 							</Box>
 						</Box>
@@ -832,6 +894,7 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 							(a) =>
 								a.cluster !== 'http-request' &&
 								a.cluster !== 'notification' &&
+								a.cluster !== 'room-temperature' &&
 								!('deviceId' in a ? a.deviceId : false) &&
 								!('groupId' in a ? a.groupId : false)
 						) ||
@@ -845,6 +908,15 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 								a.cluster === 'notification' &&
 								!('title' in a.action ? a.action.title : false) &&
 								!('body' in a.action ? a.action.body : false)
+						) ||
+						actions.some(
+							(a) =>
+								a.cluster === 'room-temperature' &&
+								(!('roomName' in a.action ? a.action.roomName : false) ||
+									(a.action.mode === 'setTarget' &&
+										!('targetTemperature' in a.action
+											? a.action.targetTemperature !== undefined
+											: false)))
 						)
 					}
 				>
@@ -979,6 +1051,116 @@ const HttpActionConfig = React.memo((props: HttpActionConfigProps) => {
 	);
 });
 HttpActionConfig.displayName = 'HttpActionConfig';
+
+// Room Temperature Action Config Component
+interface RoomTemperatureActionConfigProps {
+	action: DeviceActionEntry;
+	rooms: Array<{ name: string }>;
+	handleActionChange: (key: string, updates: Partial<DeviceActionEntry>) => void;
+	handleRemoveAction: (key: string) => void;
+}
+
+const RoomTemperatureActionConfig = React.memo((props: RoomTemperatureActionConfigProps) => {
+	const roomTempAction = props.action.action as {
+		roomName: string;
+		mode: 'setTarget' | 'returnToSchedule';
+		targetTemperature?: number;
+	};
+
+	const handleRoomChange = (_e: unknown, newValue: { name: string } | null) => {
+		if (newValue) {
+			props.handleActionChange(props.action.key, {
+				action: { ...roomTempAction, roomName: newValue.name },
+			});
+		}
+	};
+
+	const handleModeChange = (_e: React.MouseEvent, mode: 'setTarget' | 'returnToSchedule' | null) => {
+		if (mode) {
+			props.handleActionChange(props.action.key, {
+				action: {
+					...roomTempAction,
+					mode,
+					targetTemperature: mode === 'setTarget' ? roomTempAction.targetTemperature ?? 20 : undefined,
+				},
+			});
+		}
+	};
+
+	const handleTemperatureChange = (temp: number) => {
+		props.handleActionChange(props.action.key, {
+			action: { ...roomTempAction, targetTemperature: temp },
+		});
+	};
+
+	return (
+		<Card variant="outlined">
+			<CardContent>
+				<Box
+					sx={{
+						display: 'flex',
+						justifyContent: 'space-between',
+						alignItems: 'flex-start',
+					}}
+				>
+					<Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+						<Typography variant="subtitle2" color="primary">
+							Room Temperature
+						</Typography>
+
+						<Autocomplete
+							options={props.rooms}
+							getOptionLabel={(option) => option.name}
+							value={props.rooms.find((r) => r.name === roomTempAction.roomName) ?? null}
+							onChange={handleRoomChange}
+							renderInput={(params) => (
+								<TextField {...params} label="Room" size="small" required />
+							)}
+							fullWidth
+						/>
+
+						<ToggleButtonGroup
+							value={roomTempAction.mode}
+							exclusive
+							onChange={handleModeChange}
+							size="small"
+							fullWidth
+						>
+							<ToggleButton value="setTarget">Set Target Temperature</ToggleButton>
+							<ToggleButton value="returnToSchedule">Return to Schedule</ToggleButton>
+						</ToggleButtonGroup>
+
+						{roomTempAction.mode === 'setTarget' && (
+							<TextField
+								label="Target Temperature (°C)"
+								type="number"
+								value={roomTempAction.targetTemperature ?? ''}
+								onChange={(e) => {
+									const temp = parseFloat(e.target.value);
+									if (!Number.isNaN(temp)) {
+										handleTemperatureChange(temp);
+									}
+								}}
+								inputProps={{ min: 5, max: 30, step: 0.5 }}
+								fullWidth
+								size="small"
+								required
+							/>
+						)}
+					</Box>
+					<IconButton
+						size="small"
+						onClick={() => props.handleRemoveAction(props.action.key)}
+						sx={{ ml: 1 }}
+					>
+						<DeleteIcon />
+					</IconButton>
+				</Box>
+			</CardContent>
+		</Card>
+	);
+});
+RoomTemperatureActionConfig.displayName = 'RoomTemperatureActionConfig';
 
 interface ActionConfigProps {
 	action: DeviceActionEntry;
