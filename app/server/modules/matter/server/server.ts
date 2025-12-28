@@ -327,14 +327,7 @@ async function main() {
 		const devices = controller.listDevices();
 		// eslint-disable-next-line no-console
 		console.log('devices:', devices);
-		for (const device of devices) {
-			if (device.node.nodeId.toString() === '7679203057795182555') {
-				console.log('device:', device.endpoint);
-				for (const cluster of device.endpoint.getAllClusterClients()) {
-					console.log('cluster:', cluster.name);
-				}
-			}
-		}
+		// eslint-disable-next-line n/no-process-exit
 		process.exit(0);
 	}
 }

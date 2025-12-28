@@ -111,8 +111,13 @@ function _initRouting(detector: Detector, config: ModuleConfig) {
 					return json({ success: true });
 				}
 			),
-			'/events/history': async (_req, _server, { json }) => {
-				const events = await detector.getEventHistory(100);
+			'/events/history': async (req, _server, { json }) => {
+				const url = new URL(req.url);
+				const limitParam = url.searchParams.get('limit');
+				const limit = limitParam ? parseInt(limitParam, 10) : 100;
+				// Cap at 10000 events max for safety
+				const safeLimit = Math.min(Math.max(limit, 1), 10000);
+				const events = await detector.getEventHistory(safeLimit);
 				return json({ events });
 			},
 			'/check-all': async (_req, _server, { json }) => {
