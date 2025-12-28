@@ -8,10 +8,10 @@ import {
 } from '@matter/main/clusters';
 import type { Endpoint, PairedNode, RootEndpoint } from '@project-chip/matter.js/device';
 import { Crypto, Environment, LogLevel, Logger, StandardCrypto } from '@matter/main';
+import { ManualPairingCodeCodec, QrPairingCodeCodec } from '@matter/main/types';
 import type { NodeCommissioningOptions } from '@project-chip/matter.js';
 import { CommissioningController } from '@project-chip/matter.js';
 import type { CommissionableDevice } from '@matter/protocol';
-import { ManualPairingCodeCodec } from '@matter/main/types';
 import { logTag } from '../../../lib/logging/logger';
 import { DB_FOLDER } from '../../../lib/constants';
 import type { EndpointNumber } from '@matter/main';
@@ -277,7 +277,48 @@ export class MatterServer extends Disposable {
 		);
 	}
 
-	async commission(pairingCode: string): Promise<PairedNode[]> {
+	async commissionQrCode(pairingCode: string): Promise<PairedNode[]> {
+		logTag('commissioning', 'magenta', 'commissioning device with QR code', pairingCode);
+		const pairingCodeCodec = QrPairingCodeCodec.decode(pairingCode)[0];
+		const setupPin = pairingCodeCodec.passcode;
+
+		const commissioningOptions: NodeCommissioningOptions['commissioning'] = {
+			regulatoryLocation: GeneralCommissioning.RegulatoryLocationType.IndoorOutdoor,
+			regulatoryCountryCode: 'NL',
+		};
+
+		const options: NodeCommissioningOptions = {
+			commissioning: commissioningOptions,
+			discovery: {
+				identifierData: { longDiscriminator: pairingCodeCodec.discriminator },
+				discoveryCapabilities: {},
+			},
+			passcode: setupPin,
+		};
+
+		logTag('commissioning', 'magenta', 'bumping log level to INFO');
+		Logger.level = LogLevel.INFO;
+		const nodeId = await withFn(
+			() => {
+				logTag(
+					'commissioning',
+					'magenta',
+					'commissioning device with pairing code',
+					pairingCode
+				);
+				return this.commissioningController.commissionNode(options);
+			},
+			() => {
+				logTag('commissioning', 'magenta', 'bumping log level back to ERROR');
+				// Logger.level = LogLevel.ERROR;
+			}
+		);
+
+		logTag('commissioning', 'magenta', 'watching node ids', nodeId);
+		return await this._watchNodeIds([nodeId]);
+	}
+
+	async commissionManual(pairingCode: string): Promise<PairedNode[]> {
 		logTag('commissioning', 'magenta', 'commissioning device with pairing code', pairingCode);
 		const pairingCodeCodec = ManualPairingCodeCodec.decode(pairingCode);
 		const shortDiscriminator = pairingCodeCodec.shortDiscriminator;
@@ -341,6 +382,12 @@ async function main() {
 		const devices = controller.listDevices();
 		// eslint-disable-next-line no-console
 		console.log('devices:', devices);
+		// eslint-disable-next-line n/no-process-exit
+		process.exit(0);
+	}
+	if (process.argv.includes('--commission-qr')) {
+		// eslint-disable-next-line no-console
+		console.log(await controller.commissionQrCode(process.argv[3]));
 		// eslint-disable-next-line n/no-process-exit
 		process.exit(0);
 	}

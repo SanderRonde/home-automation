@@ -20,7 +20,7 @@ async function _initRouting({ modules, wsPublish }: ModuleConfig) {
 			),
 			'/pair/:code': async (req, _server, { json }) => {
 				const matterClient = await modules.matter.server.value;
-				const pairedDevices = await matterClient.commission(req.params.code);
+				const pairedDevices = await matterClient.commissionManual(req.params.code);
 				return json(pairedDevices.length);
 			},
 			...(IS_PRODUCTION
@@ -62,7 +62,7 @@ async function _initRouting({ modules, wsPublish }: ModuleConfig) {
 								type: 'commissionableDevices',
 								device: {
 									id: device.deviceIdentifier,
-									discriminator: device.D,
+									discriminator: (device as unknown as { SD: number }).SD,
 								},
 							} satisfies DashboardWebsocketServerMessage)
 						);
