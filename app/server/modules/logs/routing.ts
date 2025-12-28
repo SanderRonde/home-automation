@@ -7,18 +7,14 @@ function _initRouting(_config: ModuleConfig, activityLog: ActivityLog) {
 	return createServeOptions(
 		{
 			'/activity': {
-				GET: async (req, _server, { json }) => {
-					const url = new URL(req.url);
-					const limit = parseInt(url.searchParams.get('limit') || '100', 10);
-					const logs = await activityLog.getActivityLogs(Math.min(limit, 500));
+				GET: async (_req, _server, { json }) => {
+					const logs = await activityLog.getActivityLogs(1000);
 					return json({ logs });
 				},
 			},
 			'/notifications': {
-				GET: async (req, _server, { json }) => {
-					const url = new URL(req.url);
-					const limit = parseInt(url.searchParams.get('limit') || '100', 10);
-					const logs = await activityLog.getNotificationLogs(Math.min(limit, 500));
+				GET: async (_req, _server, { json }) => {
+					const logs = await activityLog.getNotificationLogs(1000);
 					return json({ logs });
 				},
 			},
