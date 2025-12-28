@@ -10,6 +10,7 @@ import type { Endpoint, PairedNode, RootEndpoint } from '@project-chip/matter.js
 import { Crypto, Environment, LogLevel, Logger, StandardCrypto } from '@matter/main';
 import type { NodeCommissioningOptions } from '@project-chip/matter.js';
 import { CommissioningController } from '@project-chip/matter.js';
+import type { CommissionableDevice } from '@matter/protocol';
 import { ManualPairingCodeCodec } from '@matter/main/types';
 import { logTag } from '../../../lib/logging/logger';
 import { DB_FOLDER } from '../../../lib/constants';
@@ -261,6 +262,19 @@ export class MatterServer extends Disposable {
 		await this._watchNodeIds(this.commissioningController.getCommissionedNodes());
 		await new Promise((resolve) => setTimeout(resolve, 5000));
 		await this.#updateDevices(this.listDevices());
+	}
+
+	async discoverCommissionableDevices(
+		callback: (device: CommissionableDevice) => void
+	): Promise<CommissionableDevice[]> {
+		return this.commissioningController.discoverCommissionableDevices(
+			{},
+			{
+				ble: false,
+			},
+			callback,
+			60 * 5
+		);
 	}
 
 	async commission(pairingCode: string): Promise<PairedNode[]> {

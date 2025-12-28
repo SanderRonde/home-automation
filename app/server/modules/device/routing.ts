@@ -1243,7 +1243,6 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 		},
 		true,
 		{
-			// TODO: type this
 			open: async (ws) => {
 				ws.send(
 					JSON.stringify({

@@ -345,6 +345,17 @@ void new WebServer({
 	logTelegramBotCommands: hasArg('log-telegram-bot-commands'),
 }).init();
 
+// Global error handlers to prevent crashes
+process.on('unhandledRejection', (reason, promise) => {
+	console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+	// Don't exit - log and continue
+});
+
+process.on('uncaughtException', (error) => {
+	console.error('Uncaught Exception:', error);
+	// Don't exit - log and continue
+});
+
 let shuttingDown = false;
 process.on('SIGINT', () => {
 	if (shuttingDown) {

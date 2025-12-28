@@ -165,6 +165,7 @@ function useWebsocket<IN, OUT>(
 
 	const onMessageR = React.useRef(options.onMessage);
 	onMessageR.current = options.onMessage;
+	const queue = React.useRef<OUT[]>([]);
 
 	const [open, setOpen] = React.useState(false);
 
@@ -178,6 +179,10 @@ function useWebsocket<IN, OUT>(
 			url: `${protocol}//${location.host}${path}`,
 			onOpen() {
 				setOpen(true);
+				for (const message of queue.current) {
+					socket.current?.send(message);
+				}
+				queue.current = [];
 			},
 			onClose() {
 				if (mounted.current) {
@@ -194,8 +199,14 @@ function useWebsocket<IN, OUT>(
 		};
 	}, [path]);
 
+	const openRef = React.useRef(open);
+	openRef.current = open;
 	const sendMessage = React.useCallback((message: OUT) => {
-		socket.current?.send(message);
+		if (open) {
+			socket.current?.send(message);
+		} else {
+			queue.current.push(message);
+		}
 	}, []);
 
 	return { open, sendMessage };

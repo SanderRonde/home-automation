@@ -12,13 +12,19 @@ export const Matter = new (class Matter extends ModuleMeta {
 	public init(config: ModuleConfig) {
 		const matterServer = new MatterServer();
 		this.server.set(matterServer);
-		void matterServer.start();
+		matterServer.start().catch((error) => {
+			console.error('Matter server start error:', error);
+		});
 		matterServer.devices.subscribe(async (devices) => {
 			if (!devices) {
 				return;
 			}
-			const api = await config.modules.device.api.value;
-			api.setDevices(Object.values(devices), DeviceSource.MATTER);
+			try {
+				const api = await config.modules.device.api.value;
+				api.setDevices(Object.values(devices), DeviceSource.MATTER);
+			} catch (error) {
+				console.error('Error setting devices:', error);
+			}
 		});
 
 		return {

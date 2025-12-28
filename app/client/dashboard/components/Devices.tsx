@@ -36,6 +36,10 @@ import type {
 	DeviceWebsocketClientMessage,
 	DeviceWebsocketServerMessage,
 } from '../../../server/modules/device/routing';
+import type {
+	DashboardWebsocketClientMessage,
+	DashboardWebsocketServerMessage,
+} from '../../../server/modules/dashboard/routing';
 import { RoomAssignmentDialog } from './RoomAssignmentDialog';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import useWebsocket from '../../shared/resilient-socket';
@@ -604,8 +608,51 @@ export const Devices: React.FC = () => {
 	} | null>(null);
 	const [editingDeviceId, setEditingDeviceId] = useState<string | null>(null);
 	const [editedName, setEditedName] = useState('');
+	const [isDiscovering, setIsDiscovering] = useState(false);
+	const [discoveries, setDiscoveries] = useState<
+		{ id: string; discriminator: number; discoveredAt: Date }[]
+	>([]);
 
 	const { devices, loading, refresh } = useDevices();
+
+	const { sendMessage } = useWebsocket<
+		DashboardWebsocketServerMessage,
+		DashboardWebsocketClientMessage
+	>('/dashboard/ws', {
+		onMessage: (message) => {
+			if (message.type === 'startDiscovery') {
+				setIsDiscovering(true);
+			}
+			if (message.type === 'endDiscovery') {
+				setIsDiscovering(false);
+			}
+			if (message.type === 'commissionableDevices') {
+				setDiscoveries((prev) => {
+					// Check if device already exists to avoid duplicates
+					const exists = prev.some((d) => d.id === message.device.id);
+					if (exists) {
+						return prev;
+					}
+					return [
+						...prev,
+						{
+							id: message.device.id,
+							discriminator: message.device.discriminator,
+							discoveredAt: new Date(),
+						},
+					];
+				});
+			}
+		},
+	});
+
+	const handleStartDiscovery = React.useCallback(() => {
+		sendMessage({ type: 'startDiscovery' });
+	}, [sendMessage]);
+
+	React.useEffect(() => {
+		handleStartDiscovery();
+	}, [handleStartDiscovery]);
 
 	const handlePair = async () => {
 		if (!pairingCode.trim()) {
@@ -835,6 +882,127 @@ export const Devices: React.FC = () => {
 										</Alert>
 									)}
 								</Box>
+							</CardContent>
+						</Card>
+
+						{/* Discovering Devices Section */}
+						<Card>
+							<CardContent>
+								<Box
+									sx={{
+										display: 'flex',
+										alignItems: 'center',
+										justifyContent: 'space-between',
+										mb: 2,
+									}}
+								>
+									<Typography variant="h6">Discovering Devices</Typography>
+									{isDiscovering && <CircularProgress size={20} />}
+								</Box>
+								{isDiscovering ? (
+									<Box
+										sx={{
+											display: 'flex',
+											alignItems: 'center',
+											gap: 1,
+											py: 2,
+										}}
+									>
+										<CircularProgress size={16} />
+										<Typography variant="body2" color="text.secondary">
+											Scanning for Matter devices...
+										</Typography>
+									</Box>
+								) : discoveries.length === 0 ? (
+									<Box sx={{ py: 2 }}>
+										<Typography
+											variant="body2"
+											color="text.secondary"
+											sx={{ mb: 2 }}
+										>
+											No devices discovered yet. Start discovery to scan for
+											commissionable Matter devices.
+										</Typography>
+										<Button
+											variant="outlined"
+											onClick={handleStartDiscovery}
+											fullWidth
+										>
+											Start Discovery
+										</Button>
+									</Box>
+								) : (
+									<Box>
+										<Box
+											sx={{
+												display: 'flex',
+												justifyContent: 'space-between',
+												alignItems: 'center',
+												mb: 2,
+											}}
+										>
+											<Typography variant="body2" color="text.secondary">
+												{discoveries.length} device
+												{discoveries.length !== 1 ? 's' : ''} discovered
+											</Typography>
+											<Button
+												variant="outlined"
+												size="small"
+												onClick={handleStartDiscovery}
+											>
+												Restart Discovery
+											</Button>
+										</Box>
+										<Stack spacing={1.5}>
+											{discoveries.map((device) => (
+												<Box
+													key={device.id}
+													sx={{
+														p: 1.5,
+														border: '1px solid',
+														borderColor: 'divider',
+														borderRadius: 1,
+														display: 'flex',
+														justifyContent: 'space-between',
+														alignItems: 'center',
+													}}
+												>
+													<Box>
+														<Typography
+															variant="body2"
+															sx={{ fontWeight: 500 }}
+														>
+															Device ID: {device.id.slice(0, 15)}...
+														</Typography>
+														<Typography
+															variant="caption"
+															color="text.secondary"
+														>
+															Discriminator: {device.discriminator}
+														</Typography>
+														<Typography
+															variant="caption"
+															color="text.secondary"
+															sx={{ display: 'block', mt: 0.5 }}
+														>
+															Discovered:{' '}
+															{device.discoveredAt.toLocaleTimeString()}
+														</Typography>
+													</Box>
+													<Button
+														variant="contained"
+														size="small"
+														onClick={() => {
+															// TODO: Implement pairing handler
+														}}
+													>
+														Pair
+													</Button>
+												</Box>
+											))}
+										</Stack>
+									</Box>
+								)}
 							</CardContent>
 						</Card>
 
