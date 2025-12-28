@@ -1715,14 +1715,20 @@ const IlluminanceDetail = (props: IlluminanceDetailProps): JSX.Element => {
 	);
 };
 
-interface SensorGroupDetailProps extends DeviceDetailBaseProps<DashboardDeviceClusterSensorGroup> {}
+interface SensorGroupDetailProps
+	extends DeviceDetailBaseProps<
+		DashboardDeviceClusterSensorGroup | DashboardDeviceClusterTemperatureMeasurement
+	> {}
 
 const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 	const [timeframe, setTimeframe] = useState<Timeframe>('24h');
 	const [loading, setLoading] = useState(false);
 	const roomColor = props.device.roomColor || '#555';
 
-	const occupancy = props.cluster.mergedClusters[DeviceClusterName.OCCUPANCY_SENSING];
+	const occupancy =
+		DeviceClusterName.OCCUPANCY_SENSING in props.cluster.mergedClusters
+			? props.cluster.mergedClusters[DeviceClusterName.OCCUPANCY_SENSING]
+			: undefined;
 	const temperature = props.cluster.mergedClusters[DeviceClusterName.TEMPERATURE_MEASUREMENT];
 	const humidity = props.cluster.mergedClusters[DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT];
 	const illuminance = props.cluster.mergedClusters[DeviceClusterName.ILLUMINANCE_MEASUREMENT];
@@ -3992,6 +3998,12 @@ export const DeviceDetail = (
 		return <BooleanStateDetail {...props} cluster={props.cluster} />;
 	}
 	if (props.cluster.name === DeviceClusterName.TEMPERATURE_MEASUREMENT) {
+		if (
+			'mergedClusters' in props.cluster &&
+			Object.keys(props.cluster.mergedClusters).length > 0
+		) {
+			return <SensorGroupDetail {...props} cluster={props.cluster} />;
+		}
 		return <TemperatureDetail {...props} cluster={props.cluster} />;
 	}
 	if (props.cluster.name === DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT) {

@@ -94,6 +94,11 @@ export type DashboardDeviceClusterTemperatureMeasurement = DashboardDeviceCluste
 	name: DeviceClusterName.TEMPERATURE_MEASUREMENT;
 	temperature: number;
 	lastUpdated?: number;
+	mergedClusters: {
+		[DeviceClusterName.TEMPERATURE_MEASUREMENT]?: DashboardDeviceClusterTemperatureMeasurement;
+		[DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT]?: DashboardDeviceClusterRelativeHumidityMeasurement;
+		[DeviceClusterName.ILLUMINANCE_MEASUREMENT]?: DashboardDeviceClusterIlluminanceMeasurement;
+	};
 };
 
 export type DashboardDeviceClusterRelativeHumidityMeasurement = DashboardDeviceClusterBase & {
@@ -1329,6 +1334,7 @@ const getClusterState = async (
 			name: clusterName,
 			icon: getClusterIconName(clusterName),
 			temperature: temperature ?? 20.0,
+			mergedClusters: {},
 		};
 	}
 	if (clusterName === DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT) {
@@ -1588,12 +1594,11 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 
 				// Merge sensor clusters (OccupancySensing, TemperatureMeasurement, RelativeHumidityMeasurement, IlluminanceMeasurement)
 				const hasSensor =
-					clusters[DeviceClusterName.OCCUPANCY_SENSING] ||
 					clusters[DeviceClusterName.TEMPERATURE_MEASUREMENT] ||
 					clusters[DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT] ||
 					clusters[DeviceClusterName.ILLUMINANCE_MEASUREMENT];
 
-				if (hasSensor) {
+				if (clusters[DeviceClusterName.OCCUPANCY_SENSING] && hasSensor) {
 					// Use occupancy icon if present, otherwise temperature icon as primary
 					const primaryIcon = clusters[DeviceClusterName.OCCUPANCY_SENSING]
 						? getClusterIconName(DeviceClusterName.OCCUPANCY_SENSING)
@@ -1617,6 +1622,33 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 					} as DashboardDeviceClusterSensorGroup);
 					// Remove merged clusters so they don't appear separately
 					delete clusters[DeviceClusterName.OCCUPANCY_SENSING];
+					delete clusters[DeviceClusterName.TEMPERATURE_MEASUREMENT];
+					delete clusters[DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT];
+					delete clusters[DeviceClusterName.ILLUMINANCE_MEASUREMENT];
+				}
+
+				if (
+					(clusters[DeviceClusterName.TEMPERATURE_MEASUREMENT] &&
+						clusters[DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT]) ||
+					clusters[DeviceClusterName.ILLUMINANCE_MEASUREMENT]
+				) {
+					const primaryIcon = getClusterIconName(
+						DeviceClusterName.TEMPERATURE_MEASUREMENT
+					);
+
+					mergedClusters.push({
+						name: DeviceClusterName.TEMPERATURE_MEASUREMENT,
+						icon: primaryIcon,
+						mergedClusters: {
+							[DeviceClusterName.TEMPERATURE_MEASUREMENT]:
+								clusters[DeviceClusterName.TEMPERATURE_MEASUREMENT],
+							[DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT]:
+								clusters[DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT],
+							[DeviceClusterName.ILLUMINANCE_MEASUREMENT]:
+								clusters[DeviceClusterName.ILLUMINANCE_MEASUREMENT],
+						},
+					} as DashboardDeviceClusterTemperatureMeasurement);
+					// Remove merged clusters so they don't appear separately
 					delete clusters[DeviceClusterName.TEMPERATURE_MEASUREMENT];
 					delete clusters[DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT];
 					delete clusters[DeviceClusterName.ILLUMINANCE_MEASUREMENT];
