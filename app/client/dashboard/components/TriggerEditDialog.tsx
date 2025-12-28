@@ -589,14 +589,20 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 											setTriggerDeviceId(newValue?.uniqueId ?? '');
 										}}
 										renderInput={(params) => (
-											<TextField {...params} label="Occupancy Sensor" required />
+											<TextField
+												{...params}
+												label="Occupancy Sensor"
+												required
+											/>
 										)}
 									/>
 									<FormControlLabel
 										control={
 											<Switch
 												checked={triggerOccupied}
-												onChange={(e) => setTriggerOccupied(e.target.checked)}
+												onChange={(e) =>
+													setTriggerOccupied(e.target.checked)
+												}
 											/>
 										}
 										label={
