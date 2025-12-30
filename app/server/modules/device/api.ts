@@ -47,6 +47,9 @@ export class DeviceAPI {
 		this.occupancyTracker = new OccupancyTracker(sqlDB, this.sceneAPI);
 		this.temperatureTracker = new TemperatureTracker(sqlDB);
 		this.humidityTracker = new HumidityTracker(sqlDB);
+		// Set modules after initialization to avoid circular dependency
+		// This will be called in postInit
+
 		this.illuminanceTracker = new IlluminanceTracker(sqlDB);
 		this.buttonPressTracker = new SwitchTracker(sqlDB, this.sceneAPI);
 		this.booleanStateTracker = new BooleanStateTracker(sqlDB);

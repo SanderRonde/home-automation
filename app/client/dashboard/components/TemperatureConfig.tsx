@@ -78,6 +78,7 @@ export const TemperatureConfig = (): JSX.Element => {
 	const [schedule, setSchedule] = useState<TemperatureScheduleEntry[]>([]);
 	const [savingSchedule, setSavingSchedule] = useState(false);
 	const [rooms, setRooms] = useState<Room[]>([]);
+	const [roomOvershoots, setRoomOvershoots] = useState<Record<string, number>>({});
 	const [exceptionDialogOpen, setExceptionDialogOpen] = useState(false);
 	const [editingException, setEditingException] = useState<{
 		scheduleId: string;
@@ -95,12 +96,14 @@ export const TemperatureConfig = (): JSX.Element => {
 				thermostatsResponse,
 				scheduleResponse,
 				roomsResponse,
+				overshootsResponse,
 			] = await Promise.all([
 				apiGet('temperature', '/temperature-sensors', {}),
 				apiGet('temperature', '/inside-temperature-sensors', {}),
 				apiGet('temperature', '/thermostats', {}),
 				apiGet('temperature', '/schedule', {}),
 				apiGet('device', '/rooms', {}),
+				apiGet('temperature', '/rooms/overshoot', {}),
 			]);
 
 			if (sensorsResponse.ok) {
@@ -130,6 +133,11 @@ export const TemperatureConfig = (): JSX.Element => {
 			if (roomsResponse.ok) {
 				const roomsData = await roomsResponse.json();
 				setRooms(Object.values(roomsData.rooms ?? {}));
+			}
+
+			if (overshootsResponse.ok) {
+				const overshootsData = await overshootsResponse.json();
+				setRoomOvershoots(overshootsData.overshoots || {});
 			}
 		} catch (error) {
 			console.error('Failed to load temperature configuration:', error);
@@ -463,6 +471,130 @@ export const TemperatureConfig = (): JSX.Element => {
 									<FormControlLabel value="" control={<Radio />} label="None" />
 								</RadioGroup>
 							</FormControl>
+						</CardContent>
+					</Card>
+				)}
+
+				{/* Room Overshoot Configuration */}
+				{rooms.length > 0 && (
+					<Card>
+						<CardContent>
+							<Typography variant="h6" sx={{ mb: 2 }}>
+								Room Overshoot Configuration
+							</Typography>
+							<Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+								Configure how much above the target temperature each room can go
+								before heating stops. This prevents overshooting the target
+								temperature. Default is 0.5°C.
+							</Typography>
+							<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+								{rooms.map((room) => {
+									const currentOvershoot = roomOvershoots[room.name] ?? 0.5;
+									return (
+										<Box
+											key={room.name}
+											sx={{
+												p: 2,
+												border: '1px solid',
+												borderColor: 'divider',
+												borderRadius: 2,
+											}}
+										>
+											<Box
+												sx={{
+													display: 'flex',
+													justifyContent: 'space-between',
+													alignItems: 'center',
+													mb: 1,
+												}}
+											>
+												<Typography variant="subtitle2">
+													{room.name}
+												</Typography>
+												<Typography variant="body2" color="text.secondary">
+													{currentOvershoot}°C
+												</Typography>
+											</Box>
+											<Box
+												sx={{
+													display: 'flex',
+													alignItems: 'center',
+													gap: 2,
+												}}
+											>
+												<Typography variant="body2" sx={{ minWidth: 40 }}>
+													0°
+												</Typography>
+												<Slider
+													value={currentOvershoot}
+													onChange={async (_e, value) => {
+														const newOvershoot = value as number;
+														setRoomOvershoots((prev) => ({
+															...prev,
+															[room.name]: newOvershoot,
+														}));
+														try {
+															await apiPost(
+																'temperature',
+																`/room/${room.name}/overshoot`,
+																{ overshoot: newOvershoot }
+															);
+														} catch (error) {
+															console.error(
+																'Failed to update room overshoot:',
+																error
+															);
+															// Revert on error
+															setRoomOvershoots((prev) => ({
+																...prev,
+																[room.name]: currentOvershoot,
+															}));
+														}
+													}}
+													min={0}
+													max={5}
+													step={0.1}
+													valueLabelDisplay="auto"
+													valueLabelFormat={(v) => `${v}°C`}
+													sx={{ flexGrow: 1 }}
+												/>
+												<Typography variant="body2" sx={{ minWidth: 40 }}>
+													5°
+												</Typography>
+												<Button
+													size="small"
+													onClick={async () => {
+														setRoomOvershoots((prev) => {
+															const updated = { ...prev };
+															delete updated[room.name];
+															return updated;
+														});
+														try {
+															await apiPost(
+																'temperature',
+																`/room/${room.name}/overshoot`,
+																{ overshoot: null }
+															);
+														} catch (error) {
+															console.error(
+																'Failed to reset room overshoot:',
+																error
+															);
+															// Revert on error
+															setRoomOvershoots((prev) => ({
+																...prev,
+																[room.name]: currentOvershoot,
+															}));
+														}
+													}}
+												>
+													Reset
+												</Button>
+											</Box>
+										</Box>
+									);
+								})}
+							</Box>
 						</CardContent>
 					</Card>
 				)}

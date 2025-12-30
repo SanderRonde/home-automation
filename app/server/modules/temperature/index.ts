@@ -19,6 +19,7 @@ interface TemperatureDB {
 	insideTemperatureSensors?: TemperatureSensorConfig[];
 	thermostat?: string;
 	schedule?: TemperatureScheduleEntry[];
+	roomOvershoot?: Record<string, number>; // Per-room overshoot in °C (default: 0.5)
 }
 
 interface HistoryEntry {
@@ -192,6 +193,57 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 	}
 
 	/**
+	 * Get the overshoot value for a room (how much above target before stopping heating)
+	 * Defaults to 0.5°C if not configured
+	 */
+	public getRoomOvershoot(roomName: string): number {
+		if (!this._db) {
+			return 0.5; // Default overshoot
+		}
+		const data = this._db.current() as TemperatureDB;
+		return data.roomOvershoot?.[roomName] ?? 0.5;
+	}
+
+	/**
+	 * Set the overshoot value for a room
+	 */
+	public setRoomOvershoot(roomName: string, overshoot: number | null): void {
+		if (!this._db) {
+			return;
+		}
+		this._db.update((old) => {
+			const data = old as TemperatureDB;
+			const roomOvershoot = { ...(data.roomOvershoot || {}) };
+			if (overshoot === null) {
+				delete roomOvershoot[roomName];
+			} else {
+				roomOvershoot[roomName] = overshoot;
+			}
+			return {
+				...data,
+				roomOvershoot,
+			};
+		});
+		this.addHistoryEntry(
+			'Set Room Overshoot',
+			overshoot === null
+				? `Cleared overshoot for room ${roomName} (using default 0.5°C)`
+				: `Set overshoot for room ${roomName} to ${overshoot}°C`
+		);
+	}
+
+	/**
+	 * Get all room overshoot configurations
+	 */
+	public getAllRoomOvershoots(): Record<string, number> {
+		if (!this._db) {
+			return {};
+		}
+		const data = this._db.current() as TemperatureDB;
+		return data.roomOvershoot || {};
+	}
+
+	/**
 	 * Get the status of a specific room
 	 * @param centralThermostatHeating - Optional: whether the central thermostat is actively heating.
 	 *                                   If provided, isHeating will be true only if the room needs
@@ -269,11 +321,19 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 
 		// Room needs heating if it has:
 		// 1. A temperature sensor (currentTemperature > 0)
-		// 2. Current temp is meaningfully below target (0.5°C threshold)
-		// 3. At least one TRV to actually control heating
+		// 2. Current temp is meaningfully below target (0.5°C threshold to prevent rapid cycling)
+		// 3. Current temp is below target + overshoot (allows heating up to overshoot limit)
+		// 4. At least one TRV to actually control heating
 		// Use 0.5°C threshold - only enable heating if current temp is >= 0.5°C below target
+		// Stop heating when current temp reaches target + overshoot
+		const overshoot = this.getRoomOvershoot(roomName);
+		// Heat when: temp is below target - 0.5 (start threshold) AND below target + overshoot (stop threshold)
+		// If overshoot >= 0.5, the overshoot check is redundant but harmless
 		const needsHeating =
-			hasTRV && currentTemperature > 0 && currentTemperature < targetTemperature - 0.5;
+			hasTRV &&
+			currentTemperature > 0 &&
+			currentTemperature < targetTemperature - 0.5 &&
+			currentTemperature < targetTemperature + overshoot;
 
 		// Room is actively heating if it needs heating AND the central thermostat is on
 		// (i.e., TRV is set to 30 and boiler is running)
@@ -525,6 +585,76 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Get the active schedule entry for a specific timestamp
+	 */
+	public getActiveScheduleForTimestamp(timestamp: number): TemperatureScheduleEntry | null {
+		const schedule = this.getSchedule();
+		const enabledSchedules = schedule.filter((s) => s.enabled);
+
+		if (enabledSchedules.length === 0) {
+			return null;
+		}
+
+		const date = new Date(timestamp);
+		const day = date.getDay();
+		const minutes = date.getHours() * 60 + date.getMinutes();
+
+		for (const entry of enabledSchedules) {
+			if (!entry.days.includes(day)) {
+				continue;
+			}
+
+			const [startHour, startMinute] = entry.startTime.split(':').map(Number);
+			const [endHour, endMinute] = entry.endTime.split(':').map(Number);
+			const startMinutes = startHour * 60 + startMinute;
+			const endMinutes = endHour * 60 + endMinute;
+
+			// Handle schedules that cross midnight
+			if (endMinutes <= startMinutes) {
+				// Schedule crosses midnight
+				if (minutes >= startMinutes || minutes < endMinutes) {
+					return entry;
+				}
+			} else {
+				// Normal schedule within same day
+				if (minutes >= startMinutes && minutes < endMinutes) {
+					return entry;
+				}
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Get the target temperature for a room at a specific timestamp
+	 * Note: This uses current overrides if they exist, otherwise calculates from schedule
+	 */
+	public getRoomTargetForTimestamp(roomName: string, timestamp: number): number {
+		// Use current room override if it exists (we can't know historical overrides)
+		if (this._roomOverrides.has(roomName)) {
+			return this._roomOverrides.get(roomName)!;
+		}
+
+		// Use current global override if it exists
+		if (this._globalOverride !== null) {
+			return this._globalOverride;
+		}
+
+		// Calculate from schedule at that timestamp
+		const activeSchedule = this.getActiveScheduleForTimestamp(timestamp);
+		if (!activeSchedule) {
+			return 15;
+		}
+
+		if (activeSchedule.roomExceptions?.[roomName] !== undefined) {
+			return activeSchedule.roomExceptions[roomName];
+		}
+
+		return activeSchedule.targetTemperature;
 	}
 
 	/**

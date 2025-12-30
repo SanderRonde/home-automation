@@ -69,16 +69,47 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 
 				try {
 					// First, check if it's a temperature controller (stored in temperatures table)
-					const controllerHistory = await sqlDB<
-						Array<{ temperature: number; time: number }>
-					>`
-						SELECT temperature, time
-						FROM temperatures
-						WHERE location = ${deviceId}
-						AND time >= ${cutoffTime}
-						ORDER BY time DESC
-						LIMIT 1000
-					`;
+					// Try to get with new columns, fall back to old schema
+					let controllerHistory: Array<{
+						temperature: number;
+						time: number;
+						target_temperature?: number | null;
+						is_heating?: boolean | null;
+					}> = [];
+					try {
+						controllerHistory = await sqlDB<
+							Array<{
+								temperature: number;
+								time: number;
+								target_temperature: number | null;
+								is_heating: boolean | null;
+							}>
+						>`
+							SELECT temperature, time, target_temperature, is_heating
+							FROM temperatures
+							WHERE location = ${deviceId}
+							AND time >= ${cutoffTime}
+							ORDER BY time DESC
+							LIMIT 1000
+						`;
+					} catch {
+						// Fall back to old schema if columns don't exist
+						const oldHistory = await sqlDB<
+							Array<{ temperature: number; time: number }>
+						>`
+							SELECT temperature, time
+							FROM temperatures
+							WHERE location = ${deviceId}
+							AND time >= ${cutoffTime}
+							ORDER BY time DESC
+							LIMIT 1000
+						`;
+						controllerHistory = oldHistory.map((row) => ({
+							...row,
+							target_temperature: null,
+							is_heating: null,
+						}));
+					}
 
 					if (controllerHistory.length > 0) {
 						// It's a temperature controller
@@ -86,6 +117,8 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 							history: controllerHistory.map((row) => ({
 								temperature: row.temperature,
 								timestamp: row.time,
+								targetTemperature: row.target_temperature ?? null,
+								isHeating: row.is_heating ?? null,
 							})),
 						});
 					}
@@ -98,6 +131,8 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 							1000,
 							timeframeMs
 						);
+
+						// History already includes targetTemperature and isHeating from storage
 						return json({ history });
 					} catch {
 						// Device module might not be available or device doesn't exist
@@ -160,6 +195,27 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 					const { roomName } = req.params;
 					Temperature.setRoomOverride(roomName, null);
 					return json({ success: true });
+				},
+			},
+			'/room/:roomName/overshoot': {
+				GET: (req, _server, { json }) => {
+					const { roomName } = req.params;
+					const overshoot = Temperature.getRoomOvershoot(roomName);
+					return json({ success: true, overshoot });
+				},
+				POST: withRequestBody(
+					z.object({ overshoot: z.number().min(0).max(5).nullable() }),
+					(body, req, _server, { json }) => {
+						const { roomName } = req.params;
+						Temperature.setRoomOvershoot(roomName, body.overshoot);
+						return json({ success: true });
+					}
+				),
+			},
+			'/rooms/overshoot': {
+				GET: (_req, _server, { json }) => {
+					const overshoots = Temperature.getAllRoomOvershoots();
+					return json({ success: true, overshoots });
 				},
 			},
 			'/thermostats': async (_req, _server, { json }) => {

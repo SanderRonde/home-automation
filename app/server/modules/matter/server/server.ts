@@ -61,11 +61,41 @@ class Disposable {
 
 export class MatterServer extends Disposable {
 	private readonly commissioningController: CommissioningController;
+	private static consoleErrorFilterInstalled = false;
+	private static originalConsoleError: typeof console.error | null = null;
 
 	public devices = new Data<Record<EndpointNumber, MatterDevice>>({});
 
 	public constructor() {
 		super();
+
+		// Install console.error filter once (static to avoid multiple installations)
+		if (!MatterServer.consoleErrorFilterInstalled) {
+			MatterServer.originalConsoleError = console.error;
+			console.error = (...args: unknown[]) => {
+				const message = args[0];
+				if (
+					typeof message === 'string' &&
+					message.includes('AttributeDataDecoder') &&
+					message.includes('chunked element')
+				) {
+					// Silently ignore this specific error - it's a known Matter.js issue with
+					// devices sending null instead of undefined for chunked list indices
+					return;
+				}
+				MatterServer.originalConsoleError?.apply(console, args);
+			};
+			MatterServer.consoleErrorFilterInstalled = true;
+
+			// Restore original console.error when server is disposed
+			this.pushDisposable(() => {
+				if (MatterServer.originalConsoleError) {
+					console.error = MatterServer.originalConsoleError;
+					MatterServer.consoleErrorFilterInstalled = false;
+					MatterServer.originalConsoleError = null;
+				}
+			});
+		}
 
 		// Needs to happen before the import of @matter/nodejs-ble
 		environment.vars.set('ble.enable', true);

@@ -36,6 +36,8 @@ const TIMEFRAME_MS: Record<Timeframe, number> = {
 interface TemperatureEvent {
 	temperature: number;
 	timestamp: number;
+	targetTemperature?: number | null;
+	isHeating?: boolean | null;
 }
 
 interface DeviceSensor {
@@ -101,10 +103,7 @@ export const TemperatureHistory = (): JSX.Element => {
 						name: controllerId,
 						type: 'controller',
 						currentTemp,
-						history: (historyData.history || []) as {
-							temperature: number;
-							timestamp: number;
-						}[],
+						history: (historyData.history || []) as TemperatureEvent[],
 					});
 				}
 			}
@@ -140,10 +139,7 @@ export const TemperatureHistory = (): JSX.Element => {
 						name: deviceSensor.name,
 						type: 'device',
 						currentTemp,
-						history: (historyData.history ?? []) as {
-							temperature: number;
-							timestamp: number;
-						}[],
+						history: (historyData.history ?? []) as TemperatureEvent[],
 					});
 				}
 			}
@@ -188,37 +184,54 @@ export const TemperatureHistory = (): JSX.Element => {
 	};
 
 	const formatChartData = (history: TemperatureEvent[]) => {
+		const reversedHistory = history.slice().reverse();
+		const hasTargetData = reversedHistory.some(
+			(e) => e.targetTemperature !== null && e.targetTemperature !== undefined
+		);
+
+		const datasets = [
+			{
+				label: 'Temperature (°C)',
+				data: reversedHistory.map((e) => e.temperature),
+				borderColor: 'rgb(59, 130, 246)',
+				backgroundColor: 'rgba(59, 130, 246, 0.1)',
+				tension: 0.4,
+				fill: true,
+				yAxisID: 'y',
+			},
+		];
+
+		// Add target temperature line if we have target data
+		if (hasTargetData) {
+			datasets.push({
+				label: 'Target Temperature (°C)',
+				data: reversedHistory.map((e) => e.targetTemperature ?? null),
+				borderColor: 'rgb(239, 68, 68)',
+				backgroundColor: 'rgba(239, 68, 68, 0.1)',
+				borderDash: [5, 5],
+				tension: 0.4,
+				fill: false,
+				pointRadius: 0,
+				yAxisID: 'y',
+			} as any);
+		}
+
 		return {
-			labels: history
-				.slice()
-				.reverse()
-				.map((e) => {
-					const date = new Date(e.timestamp);
-					if (timeframe === '1h' || timeframe === '6h' || timeframe === '24h') {
-						return date.toLocaleTimeString('en-US', {
-							hour: '2-digit',
-							minute: '2-digit',
-						});
-					}
-					return date.toLocaleDateString('en-US', {
-						month: 'short',
-						day: 'numeric',
+			labels: reversedHistory.map((e) => {
+				const date = new Date(e.timestamp);
+				if (timeframe === '1h' || timeframe === '6h' || timeframe === '24h') {
+					return date.toLocaleTimeString('en-US', {
 						hour: '2-digit',
+						minute: '2-digit',
 					});
-				}),
-			datasets: [
-				{
-					label: 'Temperature (°C)',
-					data: history
-						.slice()
-						.reverse()
-						.map((e) => e.temperature),
-					borderColor: 'rgb(59, 130, 246)',
-					backgroundColor: 'rgba(59, 130, 246, 0.1)',
-					tension: 0.4,
-					fill: true,
-				},
-			],
+				}
+				return date.toLocaleDateString('en-US', {
+					month: 'short',
+					day: 'numeric',
+					hour: '2-digit',
+				});
+			}),
+			datasets,
 		};
 	};
 
@@ -376,10 +389,79 @@ export const TemperatureHistory = (): JSX.Element => {
 																	responsive: true,
 																	maintainAspectRatio: false,
 																	plugins: {
-																		legend: { display: false },
+																		legend: {
+																			display:
+																				sensor.history.some(
+																					(e) =>
+																						e.targetTemperature !==
+																							null &&
+																						e.targetTemperature !==
+																							undefined
+																				),
+																			position:
+																				'top' as const,
+																		},
 																		tooltip: {
 																			mode: 'index',
 																			intersect: false,
+																			callbacks: {
+																				afterBody: (
+																					context
+																				) => {
+																					// Get the entry for this point
+																					const index =
+																						context[0]
+																							?.dataIndex;
+																					if (
+																						index ===
+																							undefined ||
+																						index ===
+																							null
+																					) {
+																						return [];
+																					}
+																					const reversedHistory =
+																						sensor.history
+																							.slice()
+																							.reverse();
+																					const entry =
+																						reversedHistory[
+																							index
+																						];
+																					const labels: string[] =
+																						[];
+
+																					// Show target temperature and heating state if available
+																					if (
+																						entry.targetTemperature !==
+																							null &&
+																						entry.targetTemperature !==
+																							undefined
+																					) {
+																						labels.push(
+																							`Target: ${entry.targetTemperature.toFixed(
+																								1
+																							)}°C`
+																						);
+																					}
+																					if (
+																						entry.isHeating !==
+																							null &&
+																						entry.isHeating !==
+																							undefined
+																					) {
+																						labels.push(
+																							`Heating: ${
+																								entry.isHeating
+																									? 'On'
+																									: 'Off'
+																							}`
+																						);
+																					}
+
+																					return labels;
+																				},
+																			},
 																		},
 																	},
 																	scales: {
@@ -417,6 +499,51 @@ export const TemperatureHistory = (): JSX.Element => {
 															</Typography>
 														</Box>
 													)}
+
+													{/* Heating Status Summary */}
+													{sensor.history.length > 0 &&
+														sensor.history.some(
+															(e) =>
+																e.isHeating !== null &&
+																e.isHeating !== undefined
+														) && (
+															<Box
+																sx={{
+																	mt: 1.5,
+																	display: 'flex',
+																	gap: 1,
+																}}
+															>
+																{sensor.history.filter(
+																	(e) => e.isHeating === true
+																).length > 0 && (
+																	<Chip
+																		label={`Heating: ${sensor.history.filter((e) => e.isHeating === true).length} readings`}
+																		size="small"
+																		sx={{
+																			backgroundColor:
+																				'rgba(239, 68, 68, 0.1)',
+																			color: '#ef4444',
+																			fontSize: '0.7rem',
+																		}}
+																	/>
+																)}
+																{sensor.history.filter(
+																	(e) => e.isHeating === false
+																).length > 0 && (
+																	<Chip
+																		label={`Not Heating: ${sensor.history.filter((e) => e.isHeating === false).length} readings`}
+																		size="small"
+																		sx={{
+																			backgroundColor:
+																				'rgba(59, 130, 246, 0.1)',
+																			color: '#3b82f6',
+																			fontSize: '0.7rem',
+																		}}
+																	/>
+																)}
+															</Box>
+														)}
 												</CardContent>
 											</Card>
 										</motion.div>

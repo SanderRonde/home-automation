@@ -22,13 +22,32 @@ class TempControl {
 		return this.db;
 	}
 
-	public async setLastTemp(temp: number, store = true, doLog = true) {
+	public async setLastTemp(
+		temp: number,
+		store = true,
+		doLog = true,
+		targetTemperature: number | null = null,
+		isHeating: boolean | null = null
+	) {
 		this.lastTemp = temp;
 
 		// Write temp to database
 		if (store) {
-			await this
-				.sql`INSERT INTO temperatures (time, location, temperature) VALUES (${Date.now()}, ${this.name}, ${temp})`;
+			// Try to insert with new columns, fall back to old schema if columns don't exist
+			try {
+				await this.sql`
+					INSERT INTO temperatures (time, location, temperature, target_temperature, is_heating)
+					VALUES (${Date.now()}, ${this.name}, ${temp}, ${targetTemperature}, ${isHeating})
+				`;
+			} catch (error) {
+				// If columns don't exist, try without them (for backward compatibility)
+				try {
+					await this
+						.sql`INSERT INTO temperatures (time, location, temperature) VALUES (${Date.now()}, ${this.name}, ${temp})`;
+				} catch (fallbackError) {
+					console.error(`Failed to log temperature for ${this.name}:`, fallbackError);
+				}
+			}
 		}
 
 		if (
@@ -62,9 +81,27 @@ class TempControl {
 					id INTEGER PRIMARY KEY AUTOINCREMENT,
 					time INTEGER NOT NULL,
 					location TEXT NOT NULL,
-					temperature REAL NOT NULL
+					temperature REAL NOT NULL,
+					target_temperature REAL,
+					is_heating INTEGER
 				)
 			`;
+		} else {
+			// Try to add new columns if they don't exist (migration)
+			try {
+				await this.sql`
+					ALTER TABLE temperatures ADD COLUMN target_temperature REAL
+				`;
+			} catch {
+				// Column already exists, that's fine
+			}
+			try {
+				await this.sql`
+					ALTER TABLE temperatures ADD COLUMN is_heating INTEGER
+				`;
+			} catch {
+				// Column already exists, that's fine
+			}
 		}
 		const temp =
 			(

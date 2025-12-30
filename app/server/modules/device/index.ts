@@ -244,6 +244,11 @@ export const Device = new (class Device extends ModuleMeta {
 	}
 
 	public async postInit(): Promise<void> {
+		// Set modules on temperature tracker so it can access temperature module
+		const api = await this.api.value;
+		const modules = await this.getModules<AllModules>();
+		api.temperatureTracker.setModules(modules);
+
 		const cronTracker = await this._cronTracker.value;
 		await cronTracker.initialize();
 	}
