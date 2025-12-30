@@ -528,7 +528,7 @@ export const TemperatureConfig = (): JSX.Element => {
 												<Slider
 													value={currentOvershoot}
 													onChange={async (_e, value) => {
-														const newOvershoot = value as number;
+														const newOvershoot = value;
 														setRoomOvershoots((prev) => ({
 															...prev,
 															[room.name]: newOvershoot,
@@ -536,7 +536,8 @@ export const TemperatureConfig = (): JSX.Element => {
 														try {
 															await apiPost(
 																'temperature',
-																`/room/${room.name}/overshoot`,
+																'/room/:roomName/overshoot',
+																{ roomName: room.name },
 																{ overshoot: newOvershoot }
 															);
 														} catch (error) {
@@ -572,7 +573,8 @@ export const TemperatureConfig = (): JSX.Element => {
 														try {
 															await apiPost(
 																'temperature',
-																`/room/${room.name}/overshoot`,
+																'/room/:roomName/overshoot',
+																{ roomName: room.name },
 																{ overshoot: null }
 															);
 														} catch (error) {

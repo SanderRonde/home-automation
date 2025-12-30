@@ -653,6 +653,7 @@ describe('SceneAPI', () => {
 						trigger: {
 							type: SceneTriggerType.OCCUPANCY,
 							deviceId: 'motion1',
+							occupied: true,
 						},
 						conditions: [
 							{
