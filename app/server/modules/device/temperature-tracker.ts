@@ -166,7 +166,7 @@ export class TemperatureTracker {
 					INSERT INTO temperature_events (device_id, temperature, timestamp, target_temperature, is_heating)
 					VALUES (${deviceId}, ${temperature}, ${Date.now()}, ${targetTemperature}, ${isHeating})
 				`;
-			} catch (error) {
+			} catch {
 				// If columns don't exist, try without them (for backward compatibility)
 				try {
 					await this._sqlDB`
@@ -187,7 +187,6 @@ export class TemperatureTracker {
 
 	public async getHistory(
 		deviceId: string,
-		limit = 100,
 		timeframeMs?: number
 	): Promise<
 		Array<{
@@ -214,7 +213,6 @@ export class TemperatureTracker {
 					WHERE device_id = ${deviceId}
 					AND timestamp >= ${cutoffTime}
 					ORDER BY timestamp DESC
-					LIMIT ${limit}
 				`;
 				return results.map((row) => ({
 					temperature: row.temperature,
@@ -232,7 +230,6 @@ export class TemperatureTracker {
 					WHERE device_id = ${deviceId}
 					AND timestamp >= ${cutoffTime}
 					ORDER BY timestamp DESC
-					LIMIT ${limit}
 				`;
 				return results.map((row) => ({
 					temperature: row.temperature,

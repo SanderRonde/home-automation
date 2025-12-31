@@ -90,7 +90,6 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 							WHERE location = ${deviceId}
 							AND time >= ${cutoffTime}
 							ORDER BY time DESC
-							LIMIT 1000
 						`;
 					} catch {
 						// Fall back to old schema if columns don't exist
@@ -102,7 +101,6 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 							WHERE location = ${deviceId}
 							AND time >= ${cutoffTime}
 							ORDER BY time DESC
-							LIMIT 1000
 						`;
 						controllerHistory = oldHistory.map((row) => ({
 							...row,
@@ -128,7 +126,6 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 						const deviceApi = await modules.device.api.value;
 						const history = await deviceApi.temperatureTracker.getHistory(
 							deviceId,
-							1000,
 							timeframeMs
 						);
 
