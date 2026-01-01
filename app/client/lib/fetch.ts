@@ -9,6 +9,7 @@ import type { WebhookRoutes } from '../../server/modules/webhook/routing';
 import type { EwelinkRoutes } from '../../server/modules/ewelink/routing';
 import type { LedArtRoutes } from '../../server/modules/led-art/routing';
 import type { DeviceRoutes } from '../../server/modules/device/routing';
+import type { BackupRoutes } from '../../server/modules/backup/routing';
 import type { KioskRoutes } from '../../server/modules/kiosk/routing';
 import type { WledRoutes } from '../../server/modules/wled/routing';
 import type { TuyaRoutes } from '../../server/modules/tuya/routing';
@@ -220,6 +221,7 @@ export async function apiDelete<
 
 export type RoutesForModules = {
 	auth: AuthRoutes;
+	backup: BackupRoutes;
 	bot: BotRoutes;
 	dashboard: DashboardRoutes;
 	device: DeviceRoutes;

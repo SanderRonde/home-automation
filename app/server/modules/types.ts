@@ -15,6 +15,7 @@ import type { EWeLink } from './ewelink';
 import type { Secret } from './secret/';
 import type { Matter } from './matter';
 import type { Device } from './device';
+import type { Backup } from './backup';
 import type { Kiosk } from './kiosk';
 import type { WLed } from './wled';
 import type { Tuya } from './tuya';
@@ -45,6 +46,7 @@ export type AllModules = {
 	temperature: typeof Temperature;
 	homeDetector: typeof HomeDetector;
 	notification: typeof Notification;
+	backup: typeof Backup;
 };
 
 // Re-export ModuleConfig from modules (this should be safe as it doesn't depend on AllModules)

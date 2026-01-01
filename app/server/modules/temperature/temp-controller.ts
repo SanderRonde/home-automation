@@ -39,7 +39,7 @@ class TempControl {
 					INSERT INTO temperatures (time, location, temperature, target_temperature, is_heating)
 					VALUES (${Date.now()}, ${this.name}, ${temp}, ${targetTemperature}, ${isHeating})
 				`;
-			} catch (error) {
+			} catch {
 				// If columns don't exist, try without them (for backward compatibility)
 				try {
 					await this

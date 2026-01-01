@@ -8,6 +8,7 @@ import { AppLayout } from './components/layout/AppLayout';
 import { SidebarTab } from './components/layout/Sidebar';
 import { NotFoundPage } from './components/NotFoundPage';
 import { HomeDetector } from './components/HomeDetector';
+import { BackupConfig } from './components/BackupConfig';
 import { OfflineProvider } from '../lib/offline-context';
 import { HouseLayout } from './components/HouseLayout';
 import { EnergyUsage } from './components/EnergyUsage';
@@ -150,6 +151,8 @@ function DashboardApp() {
 				return <TemperatureConfig />;
 			case SidebarTab.LOGS:
 				return <Logs />;
+			case SidebarTab.BACKUP:
+				return <BackupConfig />;
 			default:
 				return <NotFoundPage onReturnToSettings={handleReturnToSettings} />;
 		}

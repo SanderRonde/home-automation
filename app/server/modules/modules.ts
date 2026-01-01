@@ -10,6 +10,7 @@ import { EWeLink } from './ewelink';
 import { Secret } from './secret/';
 import { Matter } from './matter';
 import { Device } from './device';
+import { Backup } from './backup';
 import { Kiosk } from './kiosk';
 import { WLed } from './wled';
 import { Tuya } from './tuya';
@@ -56,6 +57,7 @@ const getModuleObj = () => ({
 	temperature: Temperature,
 	homeDetector: HomeDetector,
 	notification: Notification,
+	backup: Backup,
 });
 
 let notified = false;
