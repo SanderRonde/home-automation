@@ -346,7 +346,6 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 				const timeframe = parseInt(req.params.timeframe, 10);
 				const history = await api.temperatureTracker.getHistory(
 					req.params.deviceId,
-					1000,
 					timeframe
 				);
 				return json({ history });
