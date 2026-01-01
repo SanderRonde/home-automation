@@ -35,8 +35,8 @@ import {
 	BugReport as BugReportIcon,
 } from '@mui/icons-material';
 import { TemperatureDebugDialog } from './TemperatureDebugDialog';
+import { apiGet, apiPost, apiDelete } from '../../lib/fetch';
 import React, { useState, useEffect } from 'react';
-import { apiGet, apiPost } from '../../lib/fetch';
 
 type TemperatureSensorConfig = string | { type: 'device'; deviceId: string };
 
@@ -79,6 +79,17 @@ export const TemperatureConfig = (): JSX.Element => {
 	const [savingSchedule, setSavingSchedule] = useState(false);
 	const [rooms, setRooms] = useState<Room[]>([]);
 	const [roomOvershoots, setRoomOvershoots] = useState<Record<string, number>>({});
+	const [roomPIDParameters, setRoomPIDParameters] = useState<
+		Record<
+			string,
+			{
+				heatingRate: number;
+				overshootTimeConstant: number;
+				lastUpdated: number;
+				measurementCount: number;
+			}
+		>
+	>({});
 	const [exceptionDialogOpen, setExceptionDialogOpen] = useState(false);
 	const [editingException, setEditingException] = useState<{
 		scheduleId: string;
@@ -132,7 +143,32 @@ export const TemperatureConfig = (): JSX.Element => {
 
 			if (roomsResponse.ok) {
 				const roomsData = await roomsResponse.json();
-				setRooms(Object.values(roomsData.rooms ?? {}));
+				const roomList = Object.values(roomsData.rooms ?? {});
+				setRooms(roomList);
+
+				// Load PID parameters for all rooms
+				const pidParams: Record<string, any> = {};
+				for (const room of roomList) {
+					const roomName = (room as Room).name;
+					try {
+						const pidResponse = await apiGet(
+							'temperature',
+							'/room/:roomName/pid-parameters',
+							{
+								roomName,
+							}
+						);
+						if (pidResponse.ok) {
+							const pidData = await pidResponse.json();
+							if (pidData.parameters) {
+								pidParams[roomName] = pidData.parameters;
+							}
+						}
+					} catch {
+						// Room might not have PID parameters, that's okay
+					}
+				}
+				setRoomPIDParameters(pidParams);
 			}
 
 			if (overshootsResponse.ok) {
@@ -593,6 +629,128 @@ export const TemperatureConfig = (): JSX.Element => {
 													Reset
 												</Button>
 											</Box>
+										</Box>
+									);
+								})}
+							</Box>
+						</CardContent>
+					</Card>
+				)}
+
+				{/* PID Parameters */}
+				{rooms.length > 0 && (
+					<Card>
+						<CardContent>
+							<Typography variant="h6" sx={{ mb: 2 }}>
+								PID Parameters
+							</Typography>
+							<Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+								PID parameters are automatically measured when you start a PID
+								measurement for a room. These parameters are used to predict when to
+								stop heating early to account for residual heat. Rooms without PID
+								parameters use "dumb mode" (binary 30/15°C control).
+							</Typography>
+							<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+								{rooms.map((room) => {
+									const pidParams = roomPIDParameters[room.name];
+									return (
+										<Box
+											key={room.name}
+											sx={{
+												p: 2,
+												border: '1px solid',
+												borderColor: pidParams ? 'success.main' : 'divider',
+												borderRadius: 2,
+												bgcolor: pidParams ? 'success.50' : undefined,
+											}}
+										>
+											<Box
+												sx={{
+													display: 'flex',
+													justifyContent: 'space-between',
+													alignItems: 'center',
+													mb: pidParams ? 1 : 0,
+												}}
+											>
+												<Typography variant="subtitle2">
+													{room.name}
+												</Typography>
+												{pidParams ? (
+													<Chip
+														label="PID Mode Active"
+														size="small"
+														color="success"
+													/>
+												) : (
+													<Chip label="Dumb Mode" size="small" />
+												)}
+											</Box>
+											{pidParams ? (
+												<Box>
+													<Typography
+														variant="body2"
+														color="text.secondary"
+														sx={{ mb: 0.5 }}
+													>
+														Heating Rate:{' '}
+														{pidParams.heatingRate.toFixed(2)}°C/min
+													</Typography>
+													<Typography
+														variant="body2"
+														color="text.secondary"
+														sx={{ mb: 0.5 }}
+													>
+														Overshoot Time Constant:{' '}
+														{pidParams.overshootTimeConstant.toFixed(1)}{' '}
+														min
+													</Typography>
+													<Typography
+														variant="body2"
+														color="text.secondary"
+														sx={{ mb: 1 }}
+													>
+														Measurements: {pidParams.measurementCount} |
+														Last Updated:{' '}
+														{new Date(
+															pidParams.lastUpdated
+														).toLocaleString()}
+													</Typography>
+													<Button
+														size="small"
+														color="error"
+														variant="outlined"
+														onClick={async () => {
+															try {
+																await apiDelete(
+																	'temperature',
+																	'/room/:roomName/pid-parameters',
+																	{
+																		roomName: room.name,
+																	}
+																);
+																setRoomPIDParameters((prev) => {
+																	const updated = { ...prev };
+																	delete updated[room.name];
+																	return updated;
+																});
+															} catch (error) {
+																console.error(
+																	'Failed to clear PID parameters:',
+																	error
+																);
+															}
+														}}
+													>
+														Clear Parameters
+													</Button>
+												</Box>
+											) : (
+												<Typography variant="body2" color="text.secondary">
+													No PID parameters available. Start a PID
+													measurement from the room temperature popover to
+													measure heating characteristics.
+												</Typography>
+											)}
 										</Box>
 									);
 								})}

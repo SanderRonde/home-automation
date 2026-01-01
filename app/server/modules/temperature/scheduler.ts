@@ -59,6 +59,12 @@ export class TemperatureScheduler {
 		}
 		this._lastCheckMinute = currentMinute;
 
+		// Check if PID measurement is active - if so, skip normal control
+		// The PID measurement manager handles control during measurement
+		if (Temperature.isPIDMeasurementActive()) {
+			return;
+		}
+
 		// Check heating demand from all rooms
 		// Use needsHeating (not isHeating) since isHeating depends on central thermostat status
 		const roomStatuses = await Temperature.getAllRoomsStatus(this._modules);

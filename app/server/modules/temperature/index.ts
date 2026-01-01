@@ -3,7 +3,8 @@ import {
 	DeviceThermostatCluster,
 	ThermostatMode,
 } from '../device/cluster';
-import type { TemperatureScheduleEntry } from './types';
+import type { TemperatureScheduleEntry, PIDParameters, MeasurementSession } from './types';
+import { PIDMeasurementManager } from './pid-measurement';
 import type { ModuleConfig, AllModules } from '..';
 import { logTag } from '../../lib/logging/logger';
 import { getController } from './temp-controller';
@@ -20,6 +21,7 @@ interface TemperatureDB {
 	thermostat?: string;
 	schedule?: TemperatureScheduleEntry[];
 	roomOvershoot?: Record<string, number>; // Per-room overshoot in °C (default: 0.5)
+	roomPIDParameters?: Record<string, import('./types').PIDParameters>;
 }
 
 interface HistoryEntry {
@@ -31,6 +33,7 @@ interface HistoryEntry {
 export const Temperature = new (class Temperature extends ModuleMeta {
 	public name = 'temperature';
 	private _db: ModuleConfig['db'] | null = null;
+	private _pidManager: PIDMeasurementManager | null = null;
 
 	private _roomOverrides: Map<string, number> = new Map();
 	private _globalOverride: number | null = null;
@@ -45,6 +48,7 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 
 	public init(config: ModuleConfig) {
 		this._db = config.db;
+		this._pidManager = new PIDMeasurementManager(config.modules, config.db);
 
 		// Initialize the temperature scheduler
 		initScheduler(config.modules);
@@ -260,6 +264,8 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		isHeating: boolean;
 		needsHeating: boolean;
 		overrideActive: boolean;
+		pidMeasurementActive?: boolean;
+		pidParametersAvailable?: boolean;
 	}> {
 		const targetTemperature = this.getRoomTarget(roomName);
 		let currentTemperature = 0;
@@ -319,21 +325,44 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 			}
 		}
 
-		// Room needs heating if it has:
-		// 1. A temperature sensor (currentTemperature > 0)
-		// 2. Current temp is meaningfully below target (0.5°C threshold to prevent rapid cycling)
-		// 3. Current temp is below target + overshoot (allows heating up to overshoot limit)
-		// 4. At least one TRV to actually control heating
-		// Use 0.5°C threshold - only enable heating if current temp is >= 0.5°C below target
-		// Stop heating when current temp reaches target + overshoot
-		const overshoot = this.getRoomOvershoot(roomName);
-		// Heat when: temp is below target - 0.5 (start threshold) AND below target + overshoot (stop threshold)
-		// If overshoot >= 0.5, the overshoot check is redundant but harmless
-		const needsHeating =
-			hasTRV &&
-			currentTemperature > 0 &&
-			currentTemperature < targetTemperature - 0.5 &&
-			currentTemperature < targetTemperature + overshoot;
+		// Check if PID measurement is active for this room
+		const pidMeasurementActive = this.isPIDMeasurementActiveForRoom(roomName);
+
+		// Check if PID parameters are available
+		const pidParameters = this.getPIDParameters(roomName);
+		const pidParametersAvailable = pidParameters !== null;
+
+		// Calculate needsHeating: use PID early stop if available, otherwise use dumb mode
+		let needsHeating: boolean;
+		if (pidParameters && !pidMeasurementActive) {
+			// PID mode: use early stop temperature
+			const earlyStopTemp = this.calculateEarlyStopTemperature(
+				roomName,
+				currentTemperature,
+				targetTemperature
+			);
+			if (earlyStopTemp !== null) {
+				// Use early stop temperature with 0.5°C hysteresis
+				needsHeating =
+					hasTRV && currentTemperature > 0 && currentTemperature < earlyStopTemp - 0.5;
+			} else {
+				// Fallback to dumb mode
+				const overshoot = this.getRoomOvershoot(roomName);
+				needsHeating =
+					hasTRV &&
+					currentTemperature > 0 &&
+					currentTemperature < targetTemperature - 0.5 &&
+					currentTemperature < targetTemperature + overshoot;
+			}
+		} else {
+			// Dumb mode: use target temperature with overshoot
+			const overshoot = this.getRoomOvershoot(roomName);
+			needsHeating =
+				hasTRV &&
+				currentTemperature > 0 &&
+				currentTemperature < targetTemperature - 0.5 &&
+				currentTemperature < targetTemperature + overshoot;
+		}
 
 		// Room is actively heating if it needs heating AND the central thermostat is on
 		// (i.e., TRV is set to 30 and boiler is running)
@@ -349,6 +378,8 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 			isHeating,
 			needsHeating,
 			overrideActive: this._roomOverrides.has(roomName),
+			pidMeasurementActive,
+			pidParametersAvailable,
 		};
 	}
 
@@ -363,6 +394,8 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 			isHeating: boolean;
 			needsHeating: boolean;
 			overrideActive: boolean;
+			pidMeasurementActive?: boolean;
+			pidParametersAvailable?: boolean;
 		}>
 	> {
 		const deviceApi = await modules.device.api.value;
@@ -1055,5 +1088,104 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		await Promise.all(
 			roomStatuses.map((room) => this.setRoomTRVTargets(modules, room.name, room.isHeating))
 		);
+	}
+
+	/**
+	 * Start PID measurement for a room
+	 */
+	public async startPIDMeasurement(
+		roomName: string,
+		targetTemperature: number
+	): Promise<{ success: boolean; error?: string }> {
+		if (!this._pidManager) {
+			return { success: false, error: 'PID manager not initialized' };
+		}
+		const result = await this._pidManager.startMeasurement(roomName, targetTemperature);
+		if (result.success) {
+			this.addHistoryEntry(
+				'PID Measurement',
+				`Started measurement for ${roomName} to ${targetTemperature}°C`
+			);
+		}
+		return result;
+	}
+
+	/**
+	 * Stop PID measurement for a room
+	 */
+	public async stopPIDMeasurement(roomName: string): Promise<{ success: boolean }> {
+		if (!this._pidManager) {
+			return { success: false };
+		}
+		const result = await this._pidManager.stopMeasurement(roomName);
+		if (result.success) {
+			this.addHistoryEntry('PID Measurement', `Stopped measurement for ${roomName}`);
+		}
+		return result;
+	}
+
+	/**
+	 * Get PID measurement status for a room
+	 */
+	public getPIDMeasurementStatus(roomName: string): MeasurementSession | null {
+		if (!this._pidManager) {
+			return null;
+		}
+		return this._pidManager.getMeasurementStatus(roomName);
+	}
+
+	/**
+	 * Check if PID measurement is active for any room
+	 */
+	public isPIDMeasurementActive(): boolean {
+		if (!this._pidManager) {
+			return false;
+		}
+		return this._pidManager.hasActiveMeasurement();
+	}
+
+	/**
+	 * Check if PID measurement is active for a specific room
+	 */
+	public isPIDMeasurementActiveForRoom(roomName: string): boolean {
+		if (!this._pidManager) {
+			return false;
+		}
+		return this._pidManager.isMeasurementActive(roomName);
+	}
+
+	/**
+	 * Get PID parameters for a room
+	 */
+	public getPIDParameters(roomName: string): PIDParameters | null {
+		if (!this._pidManager) {
+			return null;
+		}
+		return this._pidManager.getPIDParameters(roomName);
+	}
+
+	/**
+	 * Clear PID parameters for a room
+	 */
+	public clearPIDParameters(roomName: string): void {
+		if (!this._pidManager) {
+			return;
+		}
+		this._pidManager.clearPIDParameters(roomName);
+		this.addHistoryEntry('PID Parameters', `Cleared PID parameters for ${roomName}`);
+	}
+
+	/**
+	 * Calculate early stop temperature for a room using PID parameters
+	 */
+	public calculateEarlyStopTemperature(
+		roomName: string,
+		currentTemp: number,
+		targetTemp: number
+	): number | null {
+		if (!this._pidManager) {
+			return null;
+		}
+		return this._pidManager.calculateEarlyStopTemperature(roomName, currentTemp, targetTemp);
 	}
 })();

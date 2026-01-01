@@ -194,6 +194,46 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 					return json({ success: true });
 				},
 			},
+			'/room/:roomName/pid-measurement/start': withRequestBody(
+				z.object({ targetTemperature: z.number().min(5).max(30) }),
+				async (body, req, _server, { json, error }) => {
+					const { roomName } = req.params;
+					const result = await Temperature.startPIDMeasurement(
+						roomName,
+						body.targetTemperature
+					);
+					if (result.success) {
+						return json({ success: true });
+					}
+					return error(result.error || 'Failed to start measurement', 400);
+				}
+			),
+			'/room/:roomName/pid-measurement/stop': {
+				POST: async (req, _server, { json }) => {
+					const { roomName } = req.params;
+					const result = await Temperature.stopPIDMeasurement(roomName);
+					return json({ success: result.success });
+				},
+			},
+			'/room/:roomName/pid-measurement/status': {
+				GET: (req, _server, { json }) => {
+					const { roomName } = req.params;
+					const status = Temperature.getPIDMeasurementStatus(roomName);
+					return json({ success: true, status });
+				},
+			},
+			'/room/:roomName/pid-parameters': {
+				GET: (req, _server, { json }) => {
+					const { roomName } = req.params;
+					const parameters = Temperature.getPIDParameters(roomName);
+					return json({ success: true, parameters });
+				},
+				DELETE: (req, _server, { json }) => {
+					const { roomName } = req.params;
+					Temperature.clearPIDParameters(roomName);
+					return json({ success: true });
+				},
+			},
 			'/room/:roomName/overshoot': {
 				GET: (req, _server, { json }) => {
 					const { roomName } = req.params;

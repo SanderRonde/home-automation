@@ -2,8 +2,23 @@ import type {
 	DeviceListWithValuesResponse,
 	DashboardDeviceClusterColorControlXY,
 } from '../../../server/modules/device/routing';
-import { WbSunny, LocalFireDepartment as FireIcon, Close as CloseIcon } from '@mui/icons-material';
-import { Box, IconButton, Typography, Popover, Slider, Button } from '@mui/material';
+import {
+	WbSunny,
+	LocalFireDepartment as FireIcon,
+	Close as CloseIcon,
+	Science as ScienceIcon,
+} from '@mui/icons-material';
+import {
+	Box,
+	IconButton,
+	Typography,
+	Popover,
+	Slider,
+	Button,
+	CircularProgress,
+	Chip,
+	Divider,
+} from '@mui/material';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import type { WallSegment, DoorSlot } from '../types/layout';
 import type { DeviceGroup } from '../../../../types/group';
@@ -56,10 +71,50 @@ interface RoomTemperaturePopoverProps {
 
 const RoomTemperaturePopover = (props: RoomTemperaturePopoverProps) => {
 	const [sliderValue, setSliderValue] = useState(props.targetTemp);
+	const [pidMeasurementStatus, setPidMeasurementStatus] = useState<{
+		status: 'measuring' | 'completed' | 'cancelled' | null;
+		startTemperature?: number;
+		targetTemperature?: number;
+		heatingRate?: number;
+		lastTemperature?: number;
+	} | null>(null);
+	const [pidParameters, setPidParameters] = useState<{
+		heatingRate: number;
+		overshootTimeConstant: number;
+		lastUpdated: number;
+		measurementCount: number;
+	} | null>(null);
+	const [startingMeasurement, setStartingMeasurement] = useState(false);
 
-	useEffect(() => {
+	const loadPIDData = React.useCallback(async () => {
+		try {
+			const [statusResponse, paramsResponse] = await Promise.all([
+				apiGet('temperature', '/room/:roomName/pid-measurement/status', {
+					roomName: props.roomName,
+				}),
+				apiGet('temperature', '/room/:roomName/pid-parameters', {
+					roomName: props.roomName,
+				}),
+			]);
+
+			if (statusResponse.ok) {
+				const statusData = await statusResponse.json();
+				setPidMeasurementStatus(statusData.status || null);
+			}
+
+			if (paramsResponse.ok) {
+				const paramsData = await paramsResponse.json();
+				setPidParameters(paramsData.parameters || null);
+			}
+		} catch (error) {
+			console.error('Failed to load PID data:', error);
+		}
+	}, [props.roomName]);
+
+	React.useEffect(() => {
 		setSliderValue(props.targetTemp);
-	}, [props.targetTemp]);
+		void loadPIDData();
+	}, [props.targetTemp, props.roomName, loadPIDData]);
 
 	const handleSliderChange = (_event: Event, value: number | number[]) => {
 		setSliderValue(value as number);
@@ -67,6 +122,54 @@ const RoomTemperaturePopover = (props: RoomTemperaturePopoverProps) => {
 
 	const handleSliderCommit = (_event: Event | React.SyntheticEvent, value: number | number[]) => {
 		props.onSetTarget(value as number);
+	};
+
+	const handleStartPIDMeasurement = async () => {
+		try {
+			setStartingMeasurement(true);
+			const response = await apiPost(
+				'temperature',
+				'/room/:roomName/pid-measurement/start',
+				{ roomName: props.roomName },
+				{ targetTemperature: sliderValue }
+			);
+			if (response.ok) {
+				await loadPIDData();
+				// Start polling for status updates
+				const intervalId = setInterval(async () => {
+					await loadPIDData();
+					const statusResponse = await apiGet(
+						'temperature',
+						'/room/:roomName/pid-measurement/status',
+						{ roomName: props.roomName }
+					);
+					if (statusResponse.ok) {
+						const statusData = await statusResponse.json();
+						if (statusData.status?.status !== 'measuring') {
+							clearInterval(intervalId);
+							await loadPIDData();
+						}
+					}
+				}, 5000); // Poll every 5 seconds
+			}
+		} catch (error) {
+			console.error('Failed to start PID measurement:', error);
+		} finally {
+			setStartingMeasurement(false);
+		}
+	};
+
+	const handleStopPIDMeasurement = async () => {
+		try {
+			const response = await apiPost('temperature', '/room/:roomName/pid-measurement/stop', {
+				roomName: props.roomName,
+			});
+			if (response.ok) {
+				await loadPIDData();
+			}
+		} catch (error) {
+			console.error('Failed to stop PID measurement:', error);
+		}
 	};
 
 	return (
@@ -130,10 +233,110 @@ const RoomTemperaturePopover = (props: RoomTemperaturePopoverProps) => {
 						props.onClearOverride();
 						props.onClose();
 					}}
+					sx={{ mb: 1 }}
 				>
 					Return to Schedule
 				</Button>
 			)}
+
+			<Divider sx={{ my: 1.5 }} />
+
+			{/* PID Measurement Section */}
+			<Box>
+				<Typography
+					variant="caption"
+					color="text.secondary"
+					sx={{ mb: 1, display: 'block' }}
+				>
+					PID Measurement
+				</Typography>
+
+				{pidMeasurementStatus?.status === 'measuring' ? (
+					<Box>
+						<Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+							<CircularProgress size={16} />
+							<Typography variant="body2" color="primary">
+								Measuring...
+							</Typography>
+						</Box>
+						{pidMeasurementStatus.lastTemperature !== undefined && (
+							<Typography variant="caption" color="text.secondary">
+								Current: {pidMeasurementStatus.lastTemperature.toFixed(1)}°C →{' '}
+								{pidMeasurementStatus.targetTemperature}°C
+							</Typography>
+						)}
+						{pidMeasurementStatus.heatingRate !== undefined && (
+							<Typography
+								variant="caption"
+								color="text.secondary"
+								sx={{ display: 'block' }}
+							>
+								Rate: {pidMeasurementStatus.heatingRate.toFixed(2)}°C/min
+							</Typography>
+						)}
+						<Button
+							fullWidth
+							variant="outlined"
+							size="small"
+							color="error"
+							onClick={handleStopPIDMeasurement}
+							sx={{ mt: 1 }}
+						>
+							Cancel Measurement
+						</Button>
+					</Box>
+				) : (
+					<Button
+						fullWidth
+						variant="outlined"
+						size="small"
+						startIcon={<ScienceIcon />}
+						onClick={handleStartPIDMeasurement}
+						disabled={startingMeasurement || props.currentTemp >= sliderValue}
+					>
+						{startingMeasurement ? 'Starting...' : 'Start PID Measurement'}
+					</Button>
+				)}
+
+				{pidParameters && (
+					<Box sx={{ mt: 1.5, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+						<Typography
+							variant="caption"
+							fontWeight="bold"
+							sx={{ display: 'block', mb: 0.5 }}
+						>
+							PID Parameters
+						</Typography>
+						<Typography
+							variant="caption"
+							color="text.secondary"
+							sx={{ display: 'block' }}
+						>
+							Heating Rate: {pidParameters.heatingRate.toFixed(2)}°C/min
+						</Typography>
+						<Typography
+							variant="caption"
+							color="text.secondary"
+							sx={{ display: 'block' }}
+						>
+							Overshoot: {pidParameters.overshootTimeConstant.toFixed(1)} min
+						</Typography>
+						<Typography
+							variant="caption"
+							color="text.secondary"
+							sx={{ display: 'block' }}
+						>
+							Measurements: {pidParameters.measurementCount}
+						</Typography>
+						<Chip
+							label="PID Mode Active"
+							size="small"
+							color="success"
+							sx={{ mt: 0.5, fontSize: '0.65rem', height: 20 }}
+						/>
+					</Box>
+				)}
+			</Box>
 		</Popover>
 	);
 };

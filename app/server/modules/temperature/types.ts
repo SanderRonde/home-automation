@@ -8,3 +8,25 @@ export interface TemperatureScheduleEntry {
 	roomExceptions?: Record<string, number>;
 	enabled: boolean;
 }
+
+export interface PIDParameters {
+	heatingRate: number; // °C per minute
+	overshootTimeConstant: number; // minutes of residual heating after stop
+	lastUpdated: number; // timestamp
+	measurementCount: number; // number of successful measurements
+	startTemperature?: number; // temperature at start of measurement
+	targetTemperature?: number; // target temperature used in measurement
+	completionTime?: number; // minutes to reach target
+}
+
+export interface MeasurementSession {
+	startTime: number; // timestamp
+	startTemperature: number; // initial room temperature
+	targetTemperature: number; // target to reach
+	roomName: string; // room being measured
+	status: 'measuring' | 'completed' | 'cancelled';
+	heatingRate?: number; // calculated rate (°C/min)
+	completionTime?: number; // when target was reached (timestamp)
+	lastTemperature?: number; // last recorded temperature
+	lastUpdateTime?: number; // last update timestamp
+}
