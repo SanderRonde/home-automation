@@ -1,6 +1,7 @@
 import { createServeOptions, staticResponse } from '../../lib/routes';
 import dashboardHtml from '../../../client/dashboard/index.html';
 import { CLIENT_FOLDER, ROOT } from '../../lib/constants';
+import { QrPairingCodeCodec } from '@matter/main/types';
 import { serveStatic } from '../../lib/serve-static';
 import type { ServeOptions } from '../../lib/routes';
 import { logDev } from '../../lib/logging/log-dev';
@@ -20,7 +21,25 @@ async function _initRouting({ modules, wsPublish }: ModuleConfig) {
 			),
 			'/pair/:code': async (req, _server, { json }) => {
 				const matterClient = await modules.matter.server.value;
-				const pairedDevices = await matterClient.commissionManual(req.params.code);
+				const pairingCode = req.params.code;
+
+				// Detect if this is a QR code or manual pairing code
+				// QR codes typically start with "MT:" and can be decoded with QrPairingCodeCodec
+				let isQrCode = false;
+				if (pairingCode.startsWith('MT:')) {
+					try {
+						// Try to decode as QR code to validate format
+						QrPairingCodeCodec.decode(pairingCode);
+						isQrCode = true;
+					} catch {
+						// If decoding fails, treat as manual code
+						isQrCode = false;
+					}
+				}
+
+				const pairedDevices = isQrCode
+					? await matterClient.commissionQrCode(pairingCode)
+					: await matterClient.commissionManual(pairingCode);
 				return json(pairedDevices.length);
 			},
 			...(IS_PRODUCTION

@@ -96,6 +96,7 @@
 		"googleapis": "^73.0.0",
 		"happy-dom": "^20.0.0",
 		"highlight.js": "^11.11.1",
+		"html5-qrcode": "^2.3.8",
 		"konva": "^10.0.8",
 		"lit-html": "1.1.0",
 		"openai": "^6.8.1",

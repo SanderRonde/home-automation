@@ -51,7 +51,6 @@ function getLocalNetwork(): { interfaceName: string; network: string; ip: string
 	}
 }
 
-
 /**
  * Get ARP entries using ip neigh command (alternative method)
  */
@@ -69,7 +68,8 @@ function getARPEntries(): NetworkDevice[] {
 				continue;
 			}
 			// Format: IP_ADDR dev INTERFACE lladdr MAC_ADDR STALE|REACHABLE
-			const match = /(\d+\.\d+\.\d+\.\d+)\s+dev\s+(\w+)\s+lladdr\s+([0-9a-f:]+)\s+(\w+)/i.exec(line);
+			const match =
+				/(\d+\.\d+\.\d+\.\d+)\s+dev\s+(\w+)\s+lladdr\s+([0-9a-f:]+)\s+(\w+)/i.exec(line);
 			if (match) {
 				devices.push({
 					ip: match[1],
@@ -273,4 +273,3 @@ void (async () => {
 })();
 
 export { getARPEntries, findDeviceByMAC, scanNetwork, normalizeMAC, type NetworkDevice };
-

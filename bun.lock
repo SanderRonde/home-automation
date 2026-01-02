@@ -31,6 +31,7 @@
         "googleapis": "^73.0.0",
         "happy-dom": "^20.0.0",
         "highlight.js": "^11.11.1",
+        "html5-qrcode": "^2.3.8",
         "konva": "^10.0.8",
         "lit-html": "1.1.0",
         "openai": "^6.8.1",
@@ -1052,6 +1053,8 @@
     "hosted-git-info": ["hosted-git-info@4.1.0", "", { "dependencies": { "lru-cache": "^6.0.0" } }, "sha512-kyCuEOWjJqZuDbRHzL8V93NzQhwIB71oFWSyzVo+KPZI+pnQPPxucdkrOZvkLRnrf5URsQM+IJ09Dw29cRALIA=="],
 
     "html-url-attributes": ["html-url-attributes@3.0.1", "", {}, "sha512-ol6UPyBWqsrO6EJySPz2O7ZSr856WDrEzM5zMqp+FJJLGMW35cLYmmZnl0vztAZxRUoNZJFTCohfjuIJ8I4QBQ=="],
+
+    "html5-qrcode": ["html5-qrcode@2.3.8", "", {}, "sha512-jsr4vafJhwoLVEDW3n1KvPnCCXWaQfRng0/EEYk1vNcQGcG/htAdhJX0be8YyqMoSz7+hZvOZSTAepsabiuhiQ=="],
 
     "htmlparser2": ["htmlparser2@4.1.0", "", { "dependencies": { "domelementtype": "^2.0.1", "domhandler": "^3.0.0", "domutils": "^2.0.0", "entities": "^2.0.0" } }, "sha512-4zDq1a1zhE4gQso/c5LP1OtrhYTncXNSpvJYtWJBtXAETPlMfi3IFNjGuQbYLuVY4ZR0QMqRVvo4Pdy9KLyP8Q=="],
 

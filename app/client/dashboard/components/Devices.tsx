@@ -32,6 +32,7 @@ import {
 	Battery90 as BatteryIcon,
 	CloudOff as CloudOffIcon,
 	Delete as DeleteIcon,
+	QrCode as QrCodeIcon,
 } from '@mui/icons-material';
 import type {
 	DeviceListWithValuesResponse,
@@ -47,6 +48,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import useWebsocket from '../../shared/resilient-socket';
 import { fadeInUpStaggered } from '../../lib/animations';
 import { apiPost, apiDelete } from '../../lib/fetch';
+import { QrScanner } from './QrScanner';
 import React, { useState } from 'react';
 import { IconComponent } from './icon';
 
@@ -665,6 +667,8 @@ export const Devices: React.FC = () => {
 		id: string;
 		name: string;
 	} | null>(null);
+	const [qrScannerOpen, setQrScannerOpen] = useState(false);
+	const [hasCamera, setHasCamera] = useState<boolean | null>(null);
 
 	const { devices, loading, refresh } = useDevices();
 
@@ -707,46 +711,86 @@ export const Devices: React.FC = () => {
 		handleStartDiscovery();
 	}, [handleStartDiscovery]);
 
-	const handlePair = async () => {
-		if (!pairingCode.trim()) {
-			return;
-		}
-
-		setPairingLoading(true);
-		setPairingMessage(null);
-
-		try {
-			const response = await apiPost('dashboard', '/pair/:code', {
-				code: pairingCode,
-			});
-
-			if (!response.ok) {
-				throw new Error(`Failed to pair device: ${await response.text()}`);
+	// Check camera availability
+	React.useEffect(() => {
+		const checkCamera = async () => {
+			if (!navigator.mediaDevices?.getUserMedia) {
+				setHasCamera(false);
+				return;
 			}
 
-			const pairedDevices = await response.json();
-			setPairingMessage({
-				type: 'success',
-				text: `Device pairing initiated successfully. ${pairedDevices} device${pairedDevices !== 1 ? 's' : ''} paired.`,
-			});
-			setPairingCode('');
+			try {
+				const devices = await navigator.mediaDevices.enumerateDevices();
+				const videoDevices = devices.filter((device) => device.kind === 'videoinput');
+				setHasCamera(videoDevices.length > 0);
+			} catch (err) {
+				console.error('Error checking camera:', err);
+				setHasCamera(false);
+			}
+		};
 
-			// Refresh the device list immediately and clear message after delay
-			refresh(true);
-			setTimeout(() => setPairingMessage(null), 3000);
-		} catch (error) {
-			console.error('Failed to pair Matter device:', error);
-			setPairingMessage({
-				type: 'error',
-				text: error instanceof Error ? error.message : 'Failed to pair device',
-			});
+		void checkCamera();
+	}, []);
 
-			// Clear error message after delay
-			setTimeout(() => setPairingMessage(null), 5000);
-		} finally {
-			setPairingLoading(false);
-		}
-	};
+	const pairDevice = React.useCallback(
+		async (code: string) => {
+			if (!code.trim()) {
+				return;
+			}
+
+			setPairingLoading(true);
+			setPairingMessage(null);
+
+			try {
+				const response = await apiPost('dashboard', '/pair/:code', {
+					code,
+				});
+
+				if (!response.ok) {
+					throw new Error(`Failed to pair device: ${await response.text()}`);
+				}
+
+				const pairedDevices = await response.json();
+				setPairingMessage({
+					type: 'success',
+					text: `Device pairing initiated successfully. ${pairedDevices} device${pairedDevices !== 1 ? 's' : ''} paired.`,
+				});
+				setPairingCode('');
+
+				// Refresh the device list immediately and clear message after delay
+				refresh(true);
+				setTimeout(() => setPairingMessage(null), 3000);
+			} catch (error) {
+				console.error('Failed to pair Matter device:', error);
+				setPairingMessage({
+					type: 'error',
+					text: error instanceof Error ? error.message : 'Failed to pair device',
+				});
+
+				// Clear error message after delay
+				setTimeout(() => setPairingMessage(null), 5000);
+			} finally {
+				setPairingLoading(false);
+			}
+		},
+		[refresh]
+	);
+
+	const handlePair = React.useCallback(async () => {
+		await pairDevice(pairingCode);
+	}, [pairingCode, pairDevice]);
+
+	const handleQrScan = React.useCallback(
+		(qrCode: string) => {
+			setPairingCode(qrCode);
+			setQrScannerOpen(false);
+			// Small delay to ensure state update is visible before pairing
+			setTimeout(() => {
+				void pairDevice(qrCode);
+			}, 100);
+		},
+		[pairDevice]
+	);
 
 	const toggleDeviceExpansion = React.useCallback((deviceId: string) => {
 		setExpandedDevices((prev) => {
@@ -952,6 +996,17 @@ export const Devices: React.FC = () => {
 										disabled={pairingLoading}
 										size="small"
 									/>
+									{hasCamera === true && (
+										<Button
+											variant="outlined"
+											onClick={() => setQrScannerOpen(true)}
+											disabled={pairingLoading}
+											startIcon={<QrCodeIcon />}
+											fullWidth
+										>
+											Scan QR Code
+										</Button>
+									)}
 									<Button
 										variant="contained"
 										onClick={handlePair}
@@ -1148,6 +1203,13 @@ export const Devices: React.FC = () => {
 					</Button>
 				</DialogActions>
 			</Dialog>
+
+			{/* QR Scanner Dialog */}
+			<QrScanner
+				open={qrScannerOpen}
+				onClose={() => setQrScannerOpen(false)}
+				onScan={handleQrScan}
+			/>
 		</Box>
 	);
 };
