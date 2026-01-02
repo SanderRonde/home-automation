@@ -414,18 +414,7 @@ const OnOffCard = (props: DeviceClusterCardBaseProps<DashboardDeviceClusterOnOff
 	const colorControlCluster = props.cluster.mergedClusters?.[DeviceClusterName.COLOR_CONTROL];
 	const levelControlCluster = props.cluster.mergedClusters?.[DeviceClusterName.LEVEL_CONTROL];
 
-	// Drag state for level control
-	const [dragLevel, setDragLevel] = React.useState<number | null>(null);
-	const [isDragging, setIsDragging] = React.useState(false);
-	const [hasMoved, setHasMoved] = React.useState(false);
-	const cardRef = React.useRef<HTMLDivElement>(null);
-	const dragStartX = React.useRef<number>(0);
-	const dragStartLevel = React.useRef<number>(0);
-	const longPressTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-	const didLongPressRef = React.useRef(false);
-
-	const currentLevel =
-		dragLevel !== null ? dragLevel : (levelControlCluster?.currentLevel ?? 100);
+	const currentLevel = levelControlCluster?.currentLevel ?? 100;
 
 	// Color-code based on color temperature, level control, or power usage
 	const getBackgroundColor = (): string => {
@@ -475,140 +464,60 @@ const OnOffCard = (props: DeviceClusterCardBaseProps<DashboardDeviceClusterOnOff
 		return `${watts} W`;
 	};
 
-	// Handle pointer down for drag and long press
-	const handlePointerDown = (e: React.PointerEvent) => {
-		didLongPressRef.current = false;
-		setIsDragging(true);
-		setHasMoved(false);
-		e.currentTarget.setPointerCapture(e.pointerId);
-		dragStartX.current = e.clientX;
-		dragStartLevel.current = levelControlCluster?.currentLevel ?? 100;
-
-		// Start long press timer
-		longPressTimerRef.current = setTimeout(() => {
-			if (!hasMoved) {
-				didLongPressRef.current = true;
-				props.pushDetailView({
-					type: 'device',
-					deviceId: props.device.uniqueId,
-					clusterName: props.cluster.name,
-				});
-			}
-		}, 500);
-	};
-
-	// Handle pointer move for drag
-	const handlePointerMove = (e: React.PointerEvent) => {
-		if (!isDragging || !cardRef.current || !levelControlCluster) {
-			return;
-		}
-
-		const deltaX = Math.abs(e.clientX - dragStartX.current);
-		// Only consider it a drag if moved more than 5 pixels
-		if (deltaX > 5) {
-			setHasMoved(true);
-			// Clear long press timer if we're dragging
-			if (longPressTimerRef.current) {
-				clearTimeout(longPressTimerRef.current);
-				longPressTimerRef.current = null;
-			}
-		}
-
-		const rect = cardRef.current.getBoundingClientRect();
-		const fullDeltaX = e.clientX - dragStartX.current;
-		const deltaPercentage = (fullDeltaX / rect.width) * 100 * 2; // 2x sensitivity
-		const newLevel = dragStartLevel.current + deltaPercentage;
-		const clampedLevel = Math.max(0, Math.min(100, newLevel));
-		setDragLevel(Math.round(clampedLevel));
-	};
-
-	// Handle pointer up
-	const handlePointerUp = async (e: React.PointerEvent) => {
-		if (!isDragging) {
-			return;
-		}
-		setIsDragging(false);
-		e.currentTarget.releasePointerCapture(e.pointerId);
-
-		// Clear long press timer
-		if (longPressTimerRef.current) {
-			clearTimeout(longPressTimerRef.current);
-			longPressTimerRef.current = null;
-		}
-
-		// If user did long press, detail view is already opened
-		if (didLongPressRef.current) {
-			setDragLevel(null);
-			return;
-		}
-
-		// If user dragged, update the level
-		if (hasMoved && dragLevel !== null && levelControlCluster) {
-			await apiPost(
-				'device',
-				'/cluster/LevelControl',
-				{},
-				{
-					deviceIds: [props.device.uniqueId],
-					level: dragLevel,
-				}
-			);
-			setDragLevel(null);
-			props.invalidate();
-			return;
-		}
-
-		// Otherwise, toggle on/off
-		if (!hasMoved) {
-			await apiPost(
-				'device',
-				'/cluster/OnOff',
-				{},
-				{
-					deviceIds: [props.device.uniqueId],
-					isOn: !props.cluster.isOn,
-				}
-			);
-			props.invalidate();
-		}
-	};
-
-	// Cleanup on unmount
-	React.useEffect(() => {
-		return () => {
-			if (longPressTimerRef.current) {
-				clearTimeout(longPressTimerRef.current);
-			}
-		};
-	}, []);
-
-	const hasLevelControl = !!levelControlCluster;
 	const cardBackground = getBackgroundColor();
+	const hasDetailPage =
+		energyCluster || powerCluster || colorControlCluster || levelControlCluster;
+
+	const onOffElement = hasDetailPage ? (
+		<IconButton
+			onClick={async (e) => {
+				e.stopPropagation();
+				await apiPost(
+					'device',
+					'/cluster/OnOff',
+					{},
+					{
+						deviceIds: [props.device.uniqueId],
+						isOn: !props.cluster.isOn,
+					}
+				);
+			}}
+			size="small"
+			sx={{
+				color: 'white',
+				opacity: props.cluster.isOn ? 1 : 0.5,
+				'&:hover': {
+					backgroundColor: 'rgba(0, 0, 0, 0.12)',
+				},
+			}}
+		>
+			<PowerIcon fontSize="small" />
+		</IconButton>
+	) : null;
 
 	return (
 		<DeviceClusterCardSkeleton
 			{...props}
-			cardRef={cardRef}
 			cardBackground={cardBackground}
-			onPointerDown={hasLevelControl ? handlePointerDown : undefined}
-			onPointerMove={hasLevelControl ? handlePointerMove : undefined}
-			onPointerUp={hasLevelControl ? handlePointerUp : undefined}
-			onPress={
-				hasLevelControl
-					? undefined
-					: async () => {
-							await apiPost(
-								'device',
-								'/cluster/OnOff',
-								{},
-								{
-									deviceIds: [props.device.uniqueId],
-									isOn: !props.cluster.isOn,
-								}
-							);
-							props.invalidate();
+			onPress={async () => {
+				if (hasDetailPage) {
+					props.pushDetailView({
+						type: 'device',
+						deviceId: props.device.uniqueId,
+						clusterName: props.cluster.name,
+					});
+				} else {
+					await apiPost(
+						'device',
+						'/cluster/OnOff',
+						{},
+						{
+							deviceIds: [props.device.uniqueId],
+							isOn: !props.cluster.isOn,
 						}
-			}
+					);
+				}
+			}}
 		>
 			{energyCluster ? (
 				<Box
@@ -668,6 +577,7 @@ const OnOffCard = (props: DeviceClusterCardBaseProps<DashboardDeviceClusterOnOff
 							{formatPower(powerCluster?.activePower ?? 0)}
 						</Typography>
 					</Box>
+					{onOffElement}
 				</Box>
 			) : (
 				<Box
@@ -701,6 +611,7 @@ const OnOffCard = (props: DeviceClusterCardBaseProps<DashboardDeviceClusterOnOff
 					>
 						{props.device.name}
 					</Typography>
+					{onOffElement}
 				</Box>
 			)}
 		</DeviceClusterCardSkeleton>
