@@ -16,6 +16,11 @@ export interface DeviceIconProps {
 
 // Get primary icon from device clusters
 const getDeviceIcon = (device: DeviceListWithValuesResponse[number]): IncludedIconNames | null => {
+	// For offline devices, show CloudOff icon
+	if (device.status === 'offline') {
+		return 'CloudOff';
+	}
+
 	// Priority: ColorControl > OnOff > WindowCovering > others
 	const clusterPriority = [
 		DeviceClusterName.COLOR_CONTROL,
@@ -79,7 +84,8 @@ export const DeviceIcon = React.memo((props: DeviceIconProps): JSX.Element | nul
 
 	const icon = getDeviceIcon(props.device);
 	const isOn = isDeviceOn(props.device);
-	const canControl = hasControllableCluster(props.device);
+	const isOffline = props.device.status === 'offline';
+	const canControl = !isOffline && hasControllableCluster(props.device);
 
 	// Calculate screen position from floor plan coordinates
 	const screenX = props.position.x * props.stageTransform.scale + props.stageTransform.x;
@@ -156,22 +162,36 @@ export const DeviceIcon = React.memo((props: DeviceIconProps): JSX.Element | nul
 				sx={{
 					width: scaledSize,
 					height: scaledSize,
-					backgroundColor: isOn ? '#ffffff' : 'rgba(255, 255, 255, 0.6)',
-					color: isOn ? '#2a2a2a' : 'rgba(0, 0, 0, 0.5)',
+					backgroundColor: isOffline
+						? 'rgba(158, 158, 158, 0.3)'
+						: isOn
+							? '#ffffff'
+							: 'rgba(255, 255, 255, 0.6)',
+					color: isOffline
+						? 'rgba(0, 0, 0, 0.4)'
+						: isOn
+							? '#2a2a2a'
+							: 'rgba(0, 0, 0, 0.5)',
 					fontSize: `${scaledSize * 0.5}px`,
 					boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+					opacity: isOffline ? 0.6 : 1,
 					transition: 'background-color 0.2s ease, transform 0.1s ease',
+					pointerEvents: isOffline ? 'none' : 'auto',
 					'&:hover': {
-						backgroundColor: isOn ? '#f0f0f0' : 'rgba(255, 255, 255, 0.8)',
-						transform: 'scale(1.1)',
+						backgroundColor: isOffline
+							? 'rgba(158, 158, 158, 0.3)'
+							: isOn
+								? '#f0f0f0'
+								: 'rgba(255, 255, 255, 0.8)',
+						transform: isOffline ? 'none' : 'scale(1.1)',
 					},
 					'&:active': {
-						transform: 'scale(0.95)',
+						transform: isOffline ? 'none' : 'scale(0.95)',
 					},
 				}}
-				onPointerDown={handlePointerDown}
-				onPointerUp={handlePointerUp}
-				onPointerLeave={handlePointerLeave}
+				onPointerDown={isOffline ? undefined : handlePointerDown}
+				onPointerUp={isOffline ? undefined : handlePointerUp}
+				onPointerLeave={isOffline ? undefined : handlePointerLeave}
 			>
 				<IconComponent iconName={icon} />
 			</IconButton>

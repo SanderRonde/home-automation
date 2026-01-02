@@ -30,6 +30,8 @@ import {
 	Check as CheckIcon,
 	Close as CloseIcon,
 	Battery90 as BatteryIcon,
+	CloudOff as CloudOffIcon,
+	Delete as DeleteIcon,
 } from '@mui/icons-material';
 import type {
 	DeviceListWithValuesResponse,
@@ -44,7 +46,7 @@ import { RoomAssignmentDialog } from './RoomAssignmentDialog';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import useWebsocket from '../../shared/resilient-socket';
 import { fadeInUpStaggered } from '../../lib/animations';
-import { apiPost } from '../../lib/fetch';
+import { apiPost, apiDelete } from '../../lib/fetch';
 import React, { useState } from 'react';
 import { IconComponent } from './icon';
 
@@ -125,6 +127,7 @@ interface DeviceCardProps {
 	onCancelEdit: () => void;
 	onEditedNameChange: (name: string) => void;
 	onOpenRoomDialog: (deviceId: string, deviceName: string, room?: string) => void;
+	onDeleteDevice?: (deviceId: string) => void;
 	isMobile: boolean;
 	animationIndex?: number;
 }
@@ -283,6 +286,30 @@ const DeviceCard = React.memo<DeviceCardProps>((props) => {
 									</Box>
 								</Tooltip>
 							)}
+							{props.device.status === 'offline' && (
+								<Tooltip title="Device is offline">
+									<Box
+										sx={{
+											display: 'flex',
+											alignItems: 'center',
+											gap: 0.5,
+											px: 1,
+											py: 0.5,
+											borderRadius: 1,
+											backgroundColor: 'action.hover',
+											flexShrink: 0,
+											opacity: 0.7,
+										}}
+									>
+										<CloudOffIcon
+											sx={{
+												fontSize: '1.2rem',
+												color: 'text.secondary',
+											}}
+										/>
+									</Box>
+								</Tooltip>
+							)}
 							<Tooltip title="Edit name">
 								<IconButton
 									size="small"
@@ -300,6 +327,28 @@ const DeviceCard = React.memo<DeviceCardProps>((props) => {
 									<EditIcon fontSize="small" />
 								</IconButton>
 							</Tooltip>
+							{props.device.status === 'offline' && (
+								<Tooltip title="Delete offline device">
+									<IconButton
+										size="small"
+										onClick={(e) => {
+											e.stopPropagation();
+											props.onDeleteDevice?.(props.device.uniqueId);
+										}}
+										sx={{
+											opacity: 0.6,
+											flexShrink: 0,
+											color: 'error.main',
+											'&:hover': {
+												opacity: 1,
+												backgroundColor: 'error.light',
+											},
+										}}
+									>
+										<DeleteIcon fontSize="small" />
+									</IconButton>
+								</Tooltip>
+							)}
 						</Box>
 						<Tooltip title={props.device.room ? 'Change room' : 'Assign to room'}>
 							<Box
@@ -612,6 +661,10 @@ export const Devices: React.FC = () => {
 	const [discoveries, setDiscoveries] = useState<
 		{ id: string; discriminator: number; discoveredAt: Date }[]
 	>([]);
+	const [deleteConfirmDevice, setDeleteConfirmDevice] = useState<{
+		id: string;
+		name: string;
+	} | null>(null);
 
 	const { devices, loading, refresh } = useDevices();
 
@@ -769,6 +822,40 @@ export const Devices: React.FC = () => {
 		[devices, handleCancelEdit, refresh]
 	);
 
+	const handleDeleteDevice = React.useCallback(
+		(deviceId: string) => {
+			const device = devices.find((d) => d.uniqueId === deviceId);
+			if (device) {
+				setDeleteConfirmDevice({ id: deviceId, name: device.name });
+			}
+		},
+		[devices]
+	);
+
+	const handleConfirmDelete = React.useCallback(async () => {
+		if (!deleteConfirmDevice) {
+			return;
+		}
+
+		try {
+			const response = await apiDelete('device', '/device/:deviceId/delete', {
+				deviceId: deleteConfirmDevice.id,
+			});
+
+			if (response.ok) {
+				refresh();
+				setDeleteConfirmDevice(null);
+			} else {
+				const error = (await response.json()) as { error?: string };
+				console.error('Failed to delete device:', error);
+				alert(`Failed to delete device: ${error.error || 'Unknown error'}`);
+			}
+		} catch (error) {
+			console.error('Failed to delete device:', error);
+			alert('Failed to delete device. Please try again.');
+		}
+	}, [deleteConfirmDevice, refresh]);
+
 	return (
 		<Box sx={{ p: { xs: 2, sm: 3 } }}>
 			<Grid container spacing={{ xs: 2, md: 3 }}>
@@ -822,6 +909,7 @@ export const Devices: React.FC = () => {
 									animationIndex={index}
 									onEditedNameChange={setEditedName}
 									onOpenRoomDialog={handleOpenRoomDialog}
+									onDeleteDevice={handleDeleteDevice}
 									isMobile={isMobile}
 								/>
 							))}
@@ -1040,6 +1128,26 @@ export const Devices: React.FC = () => {
 					onRoomAssigned={handleRoomAssigned}
 				/>
 			)}
+
+			{/* Delete Confirmation Dialog */}
+			<Dialog
+				open={deleteConfirmDevice !== null}
+				onClose={() => setDeleteConfirmDevice(null)}
+			>
+				<DialogTitle>Delete Offline Device</DialogTitle>
+				<DialogContent>
+					<Typography>
+						Are you sure you want to delete the offline device "
+						{deleteConfirmDevice?.name}"? This action cannot be undone.
+					</Typography>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={() => setDeleteConfirmDevice(null)}>Cancel</Button>
+					<Button onClick={handleConfirmDelete} color="error" variant="contained">
+						Delete
+					</Button>
+				</DialogActions>
+			</Dialog>
 		</Box>
 	);
 };

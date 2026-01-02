@@ -49,6 +49,8 @@ export interface DeviceInfo {
 	name?: string;
 	room?: string;
 	position?: { x: number; y: number };
+	clusterNames?: DeviceClusterName[];
+	source?: string; // DeviceSource value as string
 }
 
 export interface RoomInfo {
@@ -242,6 +244,7 @@ interface DashboardDeviceResponse extends DashboardDeviceEndpointResponse {
 	roomIcon?: IncludedIconNames;
 	managementUrl?: string;
 	position?: { x: number; y: number };
+	status?: 'online' | 'offline';
 }
 
 function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api: DeviceAPI) {
@@ -433,6 +436,31 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 					return json({ error: 'Device not found' }, { status: 404 });
 				}
 			),
+			'/device/:deviceId/delete': (req, _server, { json }) => {
+				const { deviceId } = req.params;
+				const storedDevices = api.getStoredDevices();
+				const device = storedDevices[deviceId];
+
+				if (!device) {
+					return json({ error: 'Device not found' }, { status: 404 });
+				}
+
+				// Only allow deleting offline devices
+				if (device.status !== 'offline') {
+					return json({ error: 'Can only delete offline devices' }, { status: 400 });
+				}
+
+				// Remove device from registry
+				const updatedDevices = { ...storedDevices };
+				delete updatedDevices[deviceId];
+
+				db.update((old) => ({
+					...old,
+					device_registry: updatedDevices,
+				}));
+
+				return json({ success: true });
+			},
 			'/rooms': (_req, _server, { json }) => {
 				const rooms = api.getRooms();
 				return json({ rooms });
@@ -1726,10 +1754,131 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 				name: storedDevice?.name ?? endpointResponse.name,
 				managementUrl: await device.getManagementUrl(),
 				position: storedDevice?.position,
+				status: 'online',
 			};
 			responseDevices.push(responseDevice);
 		})
 	);
+
+	// Add offline devices
+	const onlineDeviceIds = new Set(devices.map((d) => d.getUniqueId()));
+	for (const [deviceId, storedDevice] of Object.entries(storedDevices)) {
+		if (storedDevice.status === 'offline' && !onlineDeviceIds.has(deviceId)) {
+			const room = storedDevice.room;
+			const roomInfo = room ? rooms[room] : undefined;
+			const clusterNames = storedDevice.clusterNames ?? [];
+
+			// Create minimal cluster representations for offline devices
+			const offlineClusters: DashboardDeviceClusterWithState[] = clusterNames.map(
+				(clusterName) => {
+					const icon = getClusterIconName(clusterName);
+					// Create minimal cluster state based on cluster type
+					const baseCluster: DashboardDeviceClusterBase = {
+						name: clusterName,
+						icon,
+					};
+
+					// Add type-specific defaults for offline devices
+					switch (clusterName) {
+						case DeviceClusterName.ON_OFF:
+							return { ...baseCluster, isOn: false } as DashboardDeviceClusterOnOff;
+						case DeviceClusterName.WINDOW_COVERING:
+							return {
+								...baseCluster,
+								targetPositionLiftPercentage: 0,
+							} as DashboardDeviceClusterWindowCovering;
+						case DeviceClusterName.TEMPERATURE_MEASUREMENT:
+							return {
+								...baseCluster,
+								temperature: 0,
+							} as DashboardDeviceClusterTemperatureMeasurement;
+						case DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT:
+							return {
+								...baseCluster,
+								humidity: 0,
+							} as DashboardDeviceClusterRelativeHumidityMeasurement;
+						case DeviceClusterName.ILLUMINANCE_MEASUREMENT:
+							return {
+								...baseCluster,
+								illuminance: 0,
+							} as DashboardDeviceClusterIlluminanceMeasurement;
+						case DeviceClusterName.BOOLEAN_STATE:
+							return {
+								...baseCluster,
+								state: false,
+							} as DashboardDeviceClusterBooleanState;
+						case DeviceClusterName.LEVEL_CONTROL:
+							return {
+								...baseCluster,
+								currentLevel: 0,
+							} as DashboardDeviceClusterLevelControl;
+						case DeviceClusterName.THERMOSTAT:
+							return {
+								...baseCluster,
+								currentTemperature: 0,
+								targetTemperature: 0,
+								mode: ThermostatMode.OFF,
+								isHeating: false,
+								minTemperature: 0,
+								maxTemperature: 0,
+							} as DashboardDeviceClusterThermostat;
+						case DeviceClusterName.ELECTRICAL_POWER_MEASUREMENT:
+							return {
+								...baseCluster,
+								activePower: 0,
+							} as DashboardDeviceClusterElectricalPowerMeasurement;
+						case DeviceClusterName.ELECTRICAL_ENERGY_MEASUREMENT:
+							return {
+								...baseCluster,
+								totalEnergy: '0.00',
+							} as DashboardDeviceClusterElectricalEnergyMeasurement;
+						default:
+							return baseCluster as DashboardDeviceClusterWithState;
+					}
+				}
+			);
+
+			// Get source info from stored device or default to unknown
+			const sourceName = storedDevice.source ?? 'unknown';
+			const getSourceEmoji = (name: string): string => {
+				switch (name) {
+					case 'matter':
+						return '⚛️';
+					case 'ewelink':
+						return '🔗';
+					case 'wled':
+						return '💡';
+					case 'led-art':
+						return '🔷';
+					case 'homewizard':
+						return '⚡';
+					case 'tuya':
+						return '🌐';
+					default:
+						return '❓';
+				}
+			};
+
+			const offlineDevice: DashboardDeviceResponse = {
+				uniqueId: deviceId,
+				name: storedDevice.name ?? `Device ${deviceId}`,
+				source: {
+					name: sourceName as never,
+					emoji: getSourceEmoji(sourceName),
+				},
+				childClusters: offlineClusters,
+				endpoints: [],
+				mergedAllClusters: offlineClusters,
+				flatAllClusters: offlineClusters,
+				room: room,
+				roomColor: roomInfo?.color,
+				roomIcon: roomInfo?.icon,
+				position: storedDevice.position,
+				status: 'offline',
+			};
+			responseDevices.push(offlineDevice);
+		}
+	}
 
 	return responseDevices;
 }

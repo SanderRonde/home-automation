@@ -1,3 +1,8 @@
+import type {
+	DashboardDeviceClusterWithState,
+	DashboardDeviceClusterOnOff,
+	DeviceListWithValuesResponse,
+} from '../../../server/modules/device/routing';
 import {
 	Box,
 	Card,
@@ -9,10 +14,6 @@ import {
 	Fab,
 	Portal,
 } from '@mui/material';
-import type {
-	DashboardDeviceClusterWithState,
-	DeviceListWithValuesResponse,
-} from '../../../server/modules/device/routing';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import { Map as MapIcon, ViewList as ListIcon } from '@mui/icons-material';
 import type { DeviceClusterCardBaseProps } from './DeviceClusterCard';
@@ -853,6 +854,25 @@ const RoomDetail = (props: RoomDetailProps) => {
 						cluster,
 					});
 				}
+			}
+		}
+
+		// Add offline devices with no clusters as a fallback
+		for (const device of props.devices) {
+			if (
+				device.status === 'offline' &&
+				device.mergedAllClusters.length === 0 &&
+				!coveredDeviceIds.has(device.uniqueId)
+			) {
+				// Create a minimal cluster entry for offline devices with no clusters
+				entries.push({
+					device,
+					cluster: {
+						name: DeviceClusterName.ON_OFF,
+						icon: 'CloudOff' as IncludedIconNames,
+						isOn: false,
+					} as DashboardDeviceClusterOnOff,
+				});
 			}
 		}
 

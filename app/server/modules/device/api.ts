@@ -6,6 +6,7 @@ import { IlluminanceTracker } from './illuminance-tracker';
 import { OccupancyTracker } from './occupancy-tracker';
 import type { DeviceInfo, RoomInfo } from './routing';
 import { HumidityTracker } from './humidity-tracker';
+import type { DeviceClusterName } from './cluster';
 import { SwitchTracker } from './switch-tracker';
 import { PowerTracker } from './power-tracker';
 import type { Database } from '../../lib/db';
@@ -229,14 +230,23 @@ export class DeviceAPI {
 	public updateDeviceStatus(onlineDeviceIds: string[], previousDeviceIds: string[]): void {
 		const now = Date.now();
 		const knownDevices = { ...this.getStoredDevices() };
+		const currentDevices = this.devices.current();
 
-		// Mark currently online devices
+		// Mark currently online devices and extract cluster names
 		for (const deviceId of onlineDeviceIds) {
+			const device = currentDevices[deviceId];
+			const clusterNames: DeviceClusterName[] = device
+				? device.allClusters.map(({ cluster }) => cluster.getBaseCluster().clusterName)
+				: (knownDevices[deviceId]?.clusterNames ?? []);
+			const source = device ? device.getSource().value : knownDevices[deviceId]?.source;
+
 			knownDevices[deviceId] = {
 				...knownDevices[deviceId],
 				id: deviceId,
 				status: 'online',
 				lastSeen: now,
+				clusterNames,
+				source,
 			};
 		}
 
@@ -245,6 +255,7 @@ export class DeviceAPI {
 			if (!onlineDeviceIds.includes(deviceId) && knownDevices[deviceId]) {
 				knownDevices[deviceId].status = 'offline';
 				// Don't update lastSeen for offline devices
+				// Keep clusterNames and source from when device was online
 			}
 		}
 

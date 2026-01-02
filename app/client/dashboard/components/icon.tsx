@@ -43,6 +43,7 @@ import {
 	Shower,
 	Deck,
 	Cottage,
+	CloudOff,
 } from '@mui/icons-material';
 import type { SxProps } from '@mui/material';
 import React from 'react';
@@ -92,6 +93,7 @@ const iconsByKey = {
 	Shower,
 	Deck,
 	Cottage,
+	CloudOff,
 };
 
 export type IncludedIconNames = keyof typeof iconsByKey;

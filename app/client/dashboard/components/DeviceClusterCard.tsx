@@ -18,9 +18,10 @@ import {
 	MyLocation as MyLocationIcon,
 	Thermostat as ThermostatIcon,
 	PowerSettingsNew as PowerIcon,
+	CloudOff as CloudOffIcon,
 } from '@mui/icons-material';
 import { DeviceClusterName, ThermostatMode } from '../../../server/modules/device/cluster';
-import { Card, CardActionArea, Box, Typography, IconButton } from '@mui/material';
+import { Card, CardActionArea, Box, Typography, IconButton, Chip } from '@mui/material';
 import { fadeInUpStaggered, staggerItem } from '../../lib/animations';
 import type { IncludedIconNames } from './icon';
 import type { HomeDetailView } from './Home';
@@ -77,6 +78,7 @@ interface DeviceClusterCardProps
 }
 
 const DeviceClusterCardSkeleton = (props: DeviceClusterCardProps) => {
+	const isOffline = props.device.status === 'offline';
 	const cardContent = props.children ?? (
 		<Box
 			sx={{
@@ -96,19 +98,34 @@ const DeviceClusterCardSkeleton = (props: DeviceClusterCardProps) => {
 					height: 48,
 					fontSize: '1.5rem',
 					color: 'text.secondary',
+					opacity: isOffline ? 0.5 : 1,
 				}}
 			>
-				<IconOrNull icon={props.cluster.icon} />
+				<IconOrNull icon={isOffline ? 'CloudOff' : props.cluster.icon} />
 			</Box>
 			<Typography
 				variant="body1"
 				sx={{
 					fontWeight: 500,
 					flexGrow: 1,
+					opacity: isOffline ? 0.6 : 1,
 				}}
 			>
 				{props.device.name}
 			</Typography>
+			{isOffline && (
+				<Chip
+					icon={<CloudOffIcon />}
+					label="Offline"
+					size="small"
+					sx={{
+						opacity: 0.8,
+						'& .MuiChip-icon': {
+							fontSize: '1rem',
+						},
+					}}
+				/>
+			)}
 		</Box>
 	);
 
@@ -134,6 +151,7 @@ const DeviceClusterCardSkeleton = (props: DeviceClusterCardProps) => {
 					userSelect: isDraggable ? 'none' : undefined,
 					boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
 					transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+					opacity: isOffline ? 0.7 : 1,
 					'&:hover': {
 						boxShadow: isDraggable
 							? '0 2px 8px rgba(0,0,0,0.08)'
@@ -146,9 +164,17 @@ const DeviceClusterCardSkeleton = (props: DeviceClusterCardProps) => {
 				onPointerUp={props.onPointerUp}
 			>
 				{useCardActionArea ? (
-					<CardActionArea sx={{ p: 2 }}>{cardContent}</CardActionArea>
+					<CardActionArea sx={{ p: 2, pointerEvents: isOffline ? 'none' : 'auto' }}>
+						{cardContent}
+					</CardActionArea>
 				) : (
-					<Box sx={{ p: 2, cursor: props.onPress ? 'pointer' : undefined }}>
+					<Box
+						sx={{
+							p: 2,
+							cursor: props.onPress && !isOffline ? 'pointer' : undefined,
+							pointerEvents: isOffline ? 'none' : 'auto',
+						}}
+					>
 						{cardContent}
 					</Box>
 				)}
