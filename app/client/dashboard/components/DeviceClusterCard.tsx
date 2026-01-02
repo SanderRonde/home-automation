@@ -73,6 +73,7 @@ interface DeviceClusterCardProps
 	onPointerMove?: (e: React.PointerEvent) => void;
 	onPointerUp?: (e: React.PointerEvent) => void;
 	children?: React.ReactNode;
+	hasInteractiveChildren?: boolean;
 }
 
 const DeviceClusterCardSkeleton = (props: DeviceClusterCardProps) => {
@@ -112,6 +113,9 @@ const DeviceClusterCardSkeleton = (props: DeviceClusterCardProps) => {
 	);
 
 	const isDraggable = !!props.onPointerMove;
+	const hasInteractiveChildren = props.hasInteractiveChildren ?? false;
+	const useCardActionArea = !isDraggable && !hasInteractiveChildren;
+
 	return (
 		<motion.div
 			variants={staggerItem}
@@ -141,10 +145,12 @@ const DeviceClusterCardSkeleton = (props: DeviceClusterCardProps) => {
 				onPointerMove={props.onPointerMove}
 				onPointerUp={props.onPointerUp}
 			>
-				{isDraggable ? (
-					<Box sx={{ p: 2, cursor: 'pointer' }}>{cardContent}</Box>
-				) : (
+				{useCardActionArea ? (
 					<CardActionArea sx={{ p: 2 }}>{cardContent}</CardActionArea>
+				) : (
+					<Box sx={{ p: 2, cursor: props.onPress ? 'pointer' : undefined }}>
+						{cardContent}
+					</Box>
 				)}
 			</Card>
 		</motion.div>
@@ -499,6 +505,7 @@ const OnOffCard = (props: DeviceClusterCardBaseProps<DashboardDeviceClusterOnOff
 		<DeviceClusterCardSkeleton
 			{...props}
 			cardBackground={cardBackground}
+			hasInteractiveChildren={!!onOffElement}
 			onPress={async () => {
 				if (hasDetailPage) {
 					props.pushDetailView({
@@ -1416,6 +1423,7 @@ const ColorControlXYCard = (
 		<DeviceClusterCardSkeleton
 			{...props}
 			cardBackground={isDeviceOn ? color : '#2f2f2f'}
+			hasInteractiveChildren={hasOnOff}
 			onPress={() => {
 				props.pushDetailView({
 					type: 'device',
