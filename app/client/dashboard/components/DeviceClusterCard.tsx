@@ -448,19 +448,7 @@ const OnOffCard = (props: DeviceClusterCardBaseProps<DashboardDeviceClusterOnOff
 			return `rgba(151, 108, 0, ${opacity})`; // Gold color with opacity
 		}
 
-		// Fallback to power-based coloring
-		if (!energyCluster) {
-			return '#976c00';
-		}
-
-		const power = powerCluster?.activePower ?? 0;
-		if (power < 100) {
-			return '#976c00'; // Low power - gold
-		} else if (power < 1000) {
-			return '#b85c00'; // Medium power - orange
-		} else {
-			return '#c73e1d'; // High power - red-orange
-		}
+		return '#976c00';
 	};
 
 	const formatPower = (watts: number): string => {
