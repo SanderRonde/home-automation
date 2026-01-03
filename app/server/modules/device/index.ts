@@ -47,6 +47,7 @@ export interface DeviceDB {
 	groups?: Record<string, DeviceGroup>;
 	palettes?: Record<string, Palette>;
 	house_layout?: HouseLayout;
+	variables?: Record<string, boolean>;
 }
 
 export const Device = new (class Device extends ModuleMeta {

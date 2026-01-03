@@ -42,6 +42,7 @@ export class SceneAPI {
 	private _gradualLevelIntervals: Map<string, Timer> = new Map();
 	private _gradualLevelSubscriptions: Map<string, Array<() => void>> = new Map();
 	private _isUpdatingGradualLevels: Set<string> = new Set();
+	private _onVariableChange?: () => void;
 
 	public constructor(
 		private readonly _db: Database<DeviceDB>,
@@ -53,6 +54,10 @@ export class SceneAPI {
 		private readonly _modules: unknown,
 		private readonly _sqlDB: SQL
 	) {}
+
+	public setOnVariableChange(callback: () => void): void {
+		this._onVariableChange = callback;
+	}
 
 	public listScenes(): Scene[] {
 		const scenes = this._db.current().scenes ?? {};
@@ -117,6 +122,46 @@ export class SceneAPI {
 		}));
 
 		return true;
+	}
+
+	public getVariable(variableName: string): boolean | undefined {
+		const variables = this._db.current().variables ?? {};
+		return variables[variableName];
+	}
+
+	public setVariable(variableName: string, value: boolean): void {
+		this._db.update((old) => ({
+			...old,
+			variables: {
+				...(old.variables ?? {}),
+				[variableName]: value,
+			},
+		}));
+		if (this._onVariableChange) {
+			this._onVariableChange();
+		}
+	}
+
+	public clearVariable(variableName: string): void {
+		const variables = this._db.current().variables ?? {};
+		if (!(variableName in variables)) {
+			return;
+		}
+
+		const newVariables = { ...variables };
+		delete newVariables[variableName];
+
+		this._db.update((old) => ({
+			...old,
+			variables: newVariables,
+		}));
+		if (this._onVariableChange) {
+			this._onVariableChange();
+		}
+	}
+
+	public getAllVariables(): Record<string, boolean> {
+		return this._db.current().variables ?? {};
 	}
 
 	private async _evaluateConditions(
@@ -239,6 +284,31 @@ export class SceneAPI {
 					logTag('scene', 'red', 'Custom JS condition error:', error);
 					return false;
 				}
+			} else if (condition.type === SceneConditionType.VARIABLE) {
+				const variableValue = this.getVariable(condition.variableName);
+				// Default to false if variable doesn't exist
+				const isTrue = variableValue === true;
+				let matches = isTrue === condition.shouldBeTrue;
+
+				// Apply inversion if specified
+				if (condition.invert) {
+					matches = !matches;
+				}
+
+				if (!matches) {
+					logTag(
+						'scene',
+						'yellow',
+						`Variable condition failed: "${condition.variableName}" is ${isTrue}, expected ${condition.shouldBeTrue}${condition.invert ? ' (inverted)' : ''}`
+					);
+					return false;
+				}
+
+				logTag(
+					'scene',
+					'green',
+					`Variable condition passed: "${condition.variableName}" is ${isTrue}`
+				);
 			} else {
 				assertUnreachable(condition);
 			}
@@ -459,6 +529,24 @@ export class SceneAPI {
 							return true;
 						} catch (error) {
 							logTag('scene', 'red', 'Room temperature update error:', error);
+							return false;
+						}
+					}
+
+					// Handle set variable action
+					if (sceneAction.cluster === 'set-variable') {
+						try {
+							const { variableName, value } = sceneAction.action;
+							logTag(
+								'scene',
+								'blue',
+								`Setting variable "${variableName}" to ${value}`
+							);
+							this.setVariable(variableName, value);
+							logTag('scene', 'green', `Variable "${variableName}" set to ${value}`);
+							return true;
+						} catch (error) {
+							logTag('scene', 'red', 'Set variable error:', error);
 							return false;
 						}
 					}

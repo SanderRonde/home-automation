@@ -101,6 +101,10 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 	const [conditionCustomJsCode, setConditionCustomJsCode] = useState<string>(
 		'// Custom condition code\n// Return true to pass, false to fail\nreturn true;'
 	);
+	const [conditionVariableName, setConditionVariableName] = useState<string>('');
+	const [conditionShouldBeTrue, setConditionShouldBeTrue] = useState(true);
+	const [conditionInvert, setConditionInvert] = useState(false);
+	const [variables, setVariables] = useState<Record<string, boolean>>({});
 
 	// Time window state
 	type DayOfWeek =
@@ -141,6 +145,24 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 
 	// Validation
 	const [errors, setErrors] = useState<string[]>([]);
+
+	// Load variables
+	useEffect(() => {
+		if (props.open) {
+			const loadVariables = async () => {
+				try {
+					const response = await apiGet('device', '/variables/list', {});
+					if (response.ok) {
+						const data = await response.json();
+						setVariables(data.variables || {});
+					}
+				} catch (error) {
+					console.error('Failed to load variables:', error);
+				}
+			};
+			void loadVariables();
+		}
+	}, [props.open]);
 
 	// Initialize from existing trigger
 	useEffect(() => {
@@ -288,6 +310,13 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 				type: SceneConditionType.CUSTOM_JS,
 				code: conditionCustomJsCode,
 			};
+		} else if (conditionType === SceneConditionType.VARIABLE) {
+			newCondition = {
+				type: SceneConditionType.VARIABLE,
+				variableName: conditionVariableName,
+				shouldBeTrue: conditionShouldBeTrue,
+				invert: conditionInvert || undefined,
+			};
 		} else {
 			// TIME_WINDOW
 			const windows: Record<string, { start: string; end: string }> = {};
@@ -320,6 +349,9 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 		setConditionDeviceId('');
 		setConditionShouldBeHome(true);
 		setConditionShouldBeOn(true);
+		setConditionVariableName('');
+		setConditionShouldBeTrue(true);
+		setConditionInvert(false);
 		// Reset time window state
 		setTimeWindowDays({
 			monday: false,
@@ -390,6 +422,9 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 			return formatted.join(', ');
 		} else if (condition.type === SceneConditionType.CUSTOM_JS) {
 			return 'Custom JavaScript condition';
+		} else if (condition.type === SceneConditionType.VARIABLE) {
+			const invertText = condition.invert ? ' (inverted)' : '';
+			return `Variable "${condition.variableName}" is ${condition.shouldBeTrue ? 'TRUE' : 'FALSE'}${invertText}`;
 		}
 		return '';
 	};
@@ -485,7 +520,9 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 		conditionType === SceneConditionType.ANYONE_HOME ||
 		(conditionType === SceneConditionType.TIME_WINDOW &&
 			Object.values(timeWindowDays).some((enabled) => enabled)) ||
-		(conditionType === SceneConditionType.CUSTOM_JS && conditionCustomJsCode.trim().length > 0);
+		(conditionType === SceneConditionType.CUSTOM_JS &&
+			conditionCustomJsCode.trim().length > 0) ||
+		(conditionType === SceneConditionType.VARIABLE && conditionVariableName.trim().length > 0);
 
 	return (
 		<LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -847,6 +884,9 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 											<ToggleButton value={SceneConditionType.CUSTOM_JS}>
 												Custom JS
 											</ToggleButton>
+											<ToggleButton value={SceneConditionType.VARIABLE}>
+												Variable
+											</ToggleButton>
 										</ToggleButtonGroup>
 
 										{conditionType === SceneConditionType.HOST_HOME && (
@@ -1098,6 +1138,57 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 												helperText="Return true to pass, false to fail the condition"
 												sx={{ fontFamily: 'monospace' }}
 											/>
+										)}
+
+										{conditionType === SceneConditionType.VARIABLE && (
+											<>
+												<Autocomplete
+													options={Object.keys(variables)}
+													freeSolo
+													value={conditionVariableName}
+													onChange={(_e, newValue) => {
+														setConditionVariableName(newValue || '');
+													}}
+													onInputChange={(_e, newValue) => {
+														setConditionVariableName(newValue);
+													}}
+													renderInput={(params) => (
+														<TextField
+															{...params}
+															label="Variable Name"
+															required
+														/>
+													)}
+												/>
+												<FormControlLabel
+													control={
+														<Switch
+															checked={conditionShouldBeTrue}
+															onChange={(e) =>
+																setConditionShouldBeTrue(
+																	e.target.checked
+																)
+															}
+														/>
+													}
+													label={
+														conditionShouldBeTrue
+															? 'Variable should be TRUE'
+															: 'Variable should be FALSE'
+													}
+												/>
+												<FormControlLabel
+													control={
+														<Checkbox
+															checked={conditionInvert}
+															onChange={(e) =>
+																setConditionInvert(e.target.checked)
+															}
+														/>
+													}
+													label="Invert condition"
+												/>
+											</>
 										)}
 
 										<Box

@@ -50,6 +50,7 @@ export const Scenes = (): JSX.Element => {
 	const [triggeringSceneId, setTriggeringSceneId] = useState<string | null>(null);
 	const [history, setHistory] = useState<SceneExecution[]>([]);
 	const [loadingHistory, setLoadingHistory] = useState(false);
+	const [variables, setVariables] = useState<Record<string, boolean>>({});
 
 	const loadScenes = async () => {
 		try {
@@ -80,8 +81,47 @@ export const Scenes = (): JSX.Element => {
 		}
 	};
 
+	const loadVariables = async () => {
+		try {
+			const response = await apiGet('device', '/variables/list', {});
+			if (response.ok) {
+				const data = await response.json();
+				setVariables(data.variables || {});
+			}
+		} catch (error) {
+			console.error('Failed to load variables:', error);
+		}
+	};
+
+	const handleSetVariable = async (variableName: string) => {
+		try {
+			const response = await apiPost('device', '/variables/:variableName/set', {
+				variableName,
+			});
+			if (response.ok) {
+				await loadVariables();
+			}
+		} catch (error) {
+			console.error('Failed to set variable:', error);
+		}
+	};
+
+	const handleClearVariable = async (variableName: string) => {
+		try {
+			const response = await apiPost('device', '/variables/:variableName/clear', {
+				variableName,
+			});
+			if (response.ok) {
+				await loadVariables();
+			}
+		} catch (error) {
+			console.error('Failed to clear variable:', error);
+		}
+	};
+
 	useEffect(() => {
 		void loadScenes();
+		void loadVariables();
 		const loadGroups = async () => {
 			try {
 				const response = await apiGet('device', '/groups/list', {});
@@ -111,8 +151,43 @@ export const Scenes = (): JSX.Element => {
 	useEffect(() => {
 		if (currentTab === 1) {
 			void loadHistory();
+		} else if (currentTab === 2) {
+			void loadVariables();
 		}
 	}, [currentTab]);
+
+	// WebSocket listener for variable updates
+	useEffect(() => {
+		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+		const ws = new WebSocket(`${protocol}//${window.location.host}/ws/device`);
+
+		ws.onmessage = (event) => {
+			try {
+				const message = JSON.parse(event.data);
+				if (
+					typeof message === 'object' &&
+					message !== null &&
+					'type' in message &&
+					message.type === 'variables' &&
+					'variables' in message &&
+					typeof message.variables === 'object' &&
+					message.variables !== null
+				) {
+					setVariables((message.variables as Record<string, boolean>) || {});
+				}
+			} catch (error) {
+				console.error('Failed to parse WebSocket message:', error);
+			}
+		};
+
+		ws.onerror = (error) => {
+			console.error('WebSocket error:', error);
+		};
+
+		return () => {
+			ws.close();
+		};
+	}, []);
 
 	const handleCreateScene = () => {
 		setEditingScene(undefined);
@@ -367,6 +442,7 @@ export const Scenes = (): JSX.Element => {
 				<Tabs value={currentTab} onChange={(_e, newValue) => setCurrentTab(newValue)}>
 					<Tab label="Scenes" />
 					<Tab label="History" />
+					<Tab label="Variables" />
 				</Tabs>
 
 				{/* Scenes Tab */}
@@ -668,6 +744,92 @@ export const Scenes = (): JSX.Element => {
 										</Card>
 									);
 								})}
+							</Box>
+						)}
+					</Box>
+				)}
+
+				{/* Variables Tab */}
+				{currentTab === 2 && (
+					<Box>
+						<Box
+							sx={{
+								display: 'flex',
+								justifyContent: 'space-between',
+								alignItems: 'center',
+								mb: 2,
+							}}
+						>
+							<Typography variant="h6">Variables</Typography>
+							<IconButton onClick={() => void loadVariables()}>
+								<RefreshIcon />
+							</IconButton>
+						</Box>
+
+						{Object.keys(variables).length === 0 ? (
+							<Card sx={{ borderRadius: 2 }}>
+								<CardContent>
+									<Typography
+										variant="body2"
+										color="text.secondary"
+										textAlign="center"
+									>
+										No variables defined yet
+									</Typography>
+								</CardContent>
+							</Card>
+						) : (
+							<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+								{Object.entries(variables).map(([variableName, value]) => (
+									<Card key={variableName} sx={{ borderRadius: 2 }}>
+										<CardContent>
+											<Box
+												sx={{
+													display: 'flex',
+													alignItems: 'center',
+													justifyContent: 'space-between',
+													gap: 2,
+												}}
+											>
+												<Box sx={{ flex: 1, minWidth: 0 }}>
+													<Typography
+														variant="subtitle1"
+														fontWeight={500}
+													>
+														{variableName}
+													</Typography>
+													<Chip
+														label={value ? 'TRUE' : 'FALSE'}
+														color={value ? 'success' : 'default'}
+														size="small"
+														sx={{ mt: 1 }}
+													/>
+												</Box>
+												<Box sx={{ display: 'flex', gap: 1 }}>
+													<Button
+														variant={value ? 'contained' : 'outlined'}
+														size="small"
+														onClick={() =>
+															void handleSetVariable(variableName)
+														}
+													>
+														Set TRUE
+													</Button>
+													<Button
+														variant={!value ? 'contained' : 'outlined'}
+														size="small"
+														color="error"
+														onClick={() =>
+															void handleClearVariable(variableName)
+														}
+													>
+														Set FALSE
+													</Button>
+												</Box>
+											</Box>
+										</CardContent>
+									</Card>
+								))}
 							</Box>
 						)}
 					</Box>

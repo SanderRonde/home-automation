@@ -48,6 +48,16 @@ This is a TypeScript home automation system using Bun runtime with a modular arc
 - `bun lint` - Run linters and type checking
 - `bun format` - Format code with Prettier
 
+## Development Workflow
+
+**IMPORTANT**: When implementing a feature or making code changes, you MUST run `bun lint` to validate your changes before considering the task complete. This ensures:
+
+- TypeScript type checking passes
+- ESLint rules are followed
+- Code quality standards are maintained
+
+Fix any linting errors before marking the implementation as complete.
+
 ## Important Paths
 
 - Main entry: [app/server/app.ts](mdc:app/server/app.ts)

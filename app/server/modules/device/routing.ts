@@ -258,6 +258,16 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 		});
 	};
 
+	const notifyVariableChanges = () => {
+		void wsPublish({
+			type: 'variables',
+			variables: api.sceneAPI.getAllVariables(),
+		});
+	};
+
+	// Set up variable change notification
+	api.sceneAPI.setOnVariableChange(notifyVariableChanges);
+
 	// Subscribe to device changes and notify via WebSocket
 	const subscribedDevices = new Set<Device>();
 	api.devices.subscribe((devices) => {
@@ -845,6 +855,13 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 												code: z.string(),
 												checkOnManual: z.boolean().optional(),
 											}),
+											z.object({
+												type: z.literal(SceneConditionType.VARIABLE),
+												variableName: z.string().min(1),
+												shouldBeTrue: z.boolean(),
+												invert: z.boolean().optional(),
+												checkOnManual: z.boolean().optional(),
+											}),
 										])
 									)
 									.optional(),
@@ -936,6 +953,13 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 									roomName: z.string(),
 									mode: z.enum(['setTarget', 'returnToSchedule']),
 									targetTemperature: z.number().optional(),
+								}),
+							}),
+							z.object({
+								cluster: z.literal('set-variable'),
+								action: z.object({
+									variableName: z.string().min(1),
+									value: z.boolean(),
 								}),
 							}),
 						])
@@ -1053,6 +1077,13 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 												code: z.string(),
 												checkOnManual: z.boolean().optional(),
 											}),
+											z.object({
+												type: z.literal(SceneConditionType.VARIABLE),
+												variableName: z.string().min(1),
+												shouldBeTrue: z.boolean(),
+												invert: z.boolean().optional(),
+												checkOnManual: z.boolean().optional(),
+											}),
 										])
 									)
 									.optional(),
@@ -1096,6 +1127,48 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 				const history = await api.sceneAPI.getSceneHistory(limit, req.params.sceneId);
 				return json({ history });
 			},
+			'/variables/list': (_req, _server, { json }) => {
+				const variables = api.sceneAPI.getAllVariables();
+				return json({ variables });
+			},
+			'/variables/:variableName/set': (req, _server, { json }) => {
+				if (!req.params.variableName || req.params.variableName.trim() === '') {
+					return json({ error: 'Variable name is required' }, { status: 400 });
+				}
+				api.sceneAPI.setVariable(req.params.variableName, true);
+				void wsPublish({
+					type: 'variables',
+					variables: api.sceneAPI.getAllVariables(),
+				});
+				return json({ success: true });
+			},
+			'/variables/:variableName/clear': (req, _server, { json }) => {
+				if (!req.params.variableName || req.params.variableName.trim() === '') {
+					return json({ error: 'Variable name is required' }, { status: 400 });
+				}
+				api.sceneAPI.clearVariable(req.params.variableName);
+				void wsPublish({
+					type: 'variables',
+					variables: api.sceneAPI.getAllVariables(),
+				});
+				return json({ success: true });
+			},
+			'/variables/:variableName': withRequestBody(
+				z.object({
+					value: z.boolean(),
+				}),
+				(body, req, _server, { json }) => {
+					if (!req.params.variableName || req.params.variableName.trim() === '') {
+						return json({ error: 'Variable name is required' }, { status: 400 });
+					}
+					api.sceneAPI.setVariable(req.params.variableName, body.value);
+					void wsPublish({
+						type: 'variables',
+						variables: api.sceneAPI.getAllVariables(),
+					});
+					return json({ success: true });
+				}
+			),
 			'/groups/list': (_req, _server, { json }) => {
 				const groups = api.groupAPI.listGroups();
 				return json({ groups });
@@ -1297,10 +1370,15 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 	);
 }
 
-export type DeviceWebsocketServerMessage = {
-	type: 'devices';
-	devices: DeviceListWithValuesResponse;
-};
+export type DeviceWebsocketServerMessage =
+	| {
+			type: 'devices';
+			devices: DeviceListWithValuesResponse;
+	  }
+	| {
+			type: 'variables';
+			variables: Record<string, boolean>;
+	  };
 
 export type DeviceWebsocketClientMessage = {
 	type: 'refreshDevices';

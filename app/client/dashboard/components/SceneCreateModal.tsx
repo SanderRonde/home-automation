@@ -1,13 +1,3 @@
-import type {
-	DashboardDeviceClusterOnOff,
-	DashboardDeviceClusterLevelControl,
-	DashboardDeviceClusterColorControlXY,
-	DashboardDeviceClusterWindowCovering,
-	DashboardDeviceClusterWithStateMap,
-	DeviceListWithValuesResponse,
-	DashboardDeviceClusterWithState,
-	DashboardDeviceClusterSwitch,
-} from '../../../server/modules/device/routing';
 import {
 	Dialog,
 	DialogTitle,
@@ -29,9 +19,20 @@ import {
 	ToggleButtonGroup,
 	ToggleButton,
 	CircularProgress,
+	Switch,
 	type ListItemProps,
 	type TextFieldProps,
 } from '@mui/material';
+import type {
+	DashboardDeviceClusterOnOff,
+	DashboardDeviceClusterLevelControl,
+	DashboardDeviceClusterColorControlXY,
+	DashboardDeviceClusterWindowCovering,
+	DashboardDeviceClusterWithStateMap,
+	DeviceListWithValuesResponse,
+	DashboardDeviceClusterWithState,
+	DashboardDeviceClusterSwitch,
+} from '../../../server/modules/device/routing';
 import type {
 	Scene,
 	SceneDeviceAction,
@@ -217,6 +218,15 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 		setActions([...actions, newAction]);
 	};
 
+	const handleAddSetVariableAction = () => {
+		const newAction = {
+			cluster: 'set-variable' as const,
+			action: { variableName: '', value: true },
+			key: `set-variable-${Date.now()}`,
+		} as DeviceActionEntry;
+		setActions([...actions, newAction]);
+	};
+
 	// Get common clusters for a group
 	const getGroupCommonClusters = React.useCallback(
 		(groupId: string): DeviceClusterName[] => {
@@ -333,6 +343,7 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 					action.cluster !== 'http-request' &&
 					action.cluster !== 'notification' &&
 					action.cluster !== 'room-temperature' &&
+					action.cluster !== 'set-variable' &&
 					!('deviceId' in action ? action.deviceId : false) &&
 					!('groupId' in action ? action.groupId : false)
 			)
@@ -368,6 +379,18 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 							!('targetTemperature' in action.action
 								? action.action.targetTemperature !== undefined
 								: false)))
+			)
+		) {
+			return;
+		}
+		if (
+			actions.some(
+				(action) =>
+					action.cluster === 'set-variable' &&
+					(!('variableName' in action.action ? action.action.variableName : false) ||
+						!('value' in action.action
+							? typeof action.action.value === 'boolean'
+							: false))
 			)
 		) {
 			return;
@@ -618,6 +641,85 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 									);
 								}
 
+								// Render set-variable action separately
+								if (action.cluster === 'set-variable') {
+									return (
+										<Card key={action.key} variant="outlined" sx={{ p: 2 }}>
+											<Box
+												sx={{
+													display: 'flex',
+													flexDirection: 'column',
+													gap: 2,
+												}}
+											>
+												<Box
+													sx={{
+														display: 'flex',
+														justifyContent: 'space-between',
+														alignItems: 'center',
+													}}
+												>
+													<Typography variant="h6">
+														Set Variable
+													</Typography>
+													<IconButton
+														onClick={() =>
+															handleRemoveAction(action.key)
+														}
+														size="small"
+													>
+														<DeleteIcon />
+													</IconButton>
+												</Box>
+												<TextField
+													label="Variable Name"
+													value={
+														'variableName' in action.action
+															? action.action.variableName
+															: ''
+													}
+													onChange={(e) =>
+														handleActionChange(action.key, {
+															action: {
+																...action.action,
+																variableName: e.target.value,
+															},
+														})
+													}
+													fullWidth
+												/>
+												<FormControlLabel
+													control={
+														<Switch
+															checked={
+																'value' in action.action
+																	? action.action.value
+																	: true
+															}
+															onChange={(
+																e: React.ChangeEvent<HTMLInputElement>
+															) =>
+																handleActionChange(action.key, {
+																	action: {
+																		...action.action,
+																		value: e.target.checked,
+																	},
+																})
+															}
+														/>
+													}
+													label={
+														'value' in action.action &&
+														action.action.value
+															? 'Set to TRUE'
+															: 'Set to FALSE'
+													}
+												/>
+											</Box>
+										</Card>
+									);
+								}
+
 								// Render notification action separately
 								if (action.cluster === 'notification') {
 									return (
@@ -737,6 +839,14 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 									sx={{ flex: 1, minWidth: '200px' }}
 								>
 									Add Room Temperature Action
+								</Button>
+								<Button
+									variant="outlined"
+									startIcon={<AddIcon />}
+									onClick={handleAddSetVariableAction}
+									sx={{ flex: 1, minWidth: '200px' }}
+								>
+									Add Set Variable Action
 								</Button>
 							</Box>
 						</Box>
@@ -879,6 +989,7 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 								a.cluster !== 'http-request' &&
 								a.cluster !== 'notification' &&
 								a.cluster !== 'room-temperature' &&
+								a.cluster !== 'set-variable' &&
 								!('deviceId' in a ? a.deviceId : false) &&
 								!('groupId' in a ? a.groupId : false)
 						) ||
@@ -902,6 +1013,14 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 										!('targetTemperature' in a.action
 											? a.action.targetTemperature !== undefined
 											: false)))
+						) ||
+						actions.some(
+							(a) =>
+								a.cluster === 'set-variable' &&
+								(!('variableName' in a.action ? a.action.variableName : false) ||
+									!('value' in a.action
+										? typeof a.action.value === 'boolean'
+										: false))
 						)
 					}
 				>
@@ -1243,7 +1362,8 @@ const ActionConfig = React.memo((props: ActionConfigProps) => {
 	if (
 		props.action.cluster === 'http-request' ||
 		props.action.cluster === 'notification' ||
-		props.action.cluster === 'room-temperature'
+		props.action.cluster === 'room-temperature' ||
+		props.action.cluster === 'set-variable'
 	) {
 		return null;
 	}

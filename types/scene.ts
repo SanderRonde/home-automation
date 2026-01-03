@@ -58,6 +58,7 @@ export enum SceneConditionType {
 	TIME_WINDOW = 'time-window',
 	ANYONE_HOME = 'anyone-home',
 	CUSTOM_JS = 'custom-js',
+	VARIABLE = 'variable',
 }
 
 export type TimeWindow = {
@@ -99,6 +100,13 @@ export type SceneCondition =
 	| {
 			type: SceneConditionType.CUSTOM_JS;
 			code: string;
+			checkOnManual?: boolean; // Default false - whether to check this condition on manual trigger
+	  }
+	| {
+			type: SceneConditionType.VARIABLE;
+			variableName: string;
+			shouldBeTrue: boolean; // true = check if variable is true, false = check if variable is false
+			invert?: boolean; // Optional: invert the condition
 			checkOnManual?: boolean; // Default false - whether to check this condition on manual trigger
 	  };
 
@@ -187,6 +195,14 @@ export type SceneDeviceActionRoomTemperature = {
 	};
 };
 
+export type SceneDeviceActionSetVariable = {
+	cluster: 'set-variable';
+	action: {
+		variableName: string;
+		value: boolean;
+	};
+};
+
 export type SceneDeviceAction =
 	| SceneDeviceActionOnOff
 	| SceneDeviceActionWindowCovering
@@ -195,7 +211,8 @@ export type SceneDeviceAction =
 	| SceneDeviceActionColorControlPalette
 	| SceneDeviceActionHttpRequest
 	| SceneDeviceActionNotification
-	| SceneDeviceActionRoomTemperature;
+	| SceneDeviceActionRoomTemperature
+	| SceneDeviceActionSetVariable;
 
 export interface Scene {
 	id: SceneId;
