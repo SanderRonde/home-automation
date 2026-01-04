@@ -2,16 +2,19 @@ import {
 	Box,
 	Button,
 	Checkbox,
+	Collapse,
 	Dialog,
 	DialogActions,
 	DialogContent,
 	DialogTitle,
 	FormControlLabel,
+	IconButton,
 	TextField,
 	Typography,
 	Autocomplete,
 } from '@mui/material';
 import type { DeviceListWithValuesResponse } from '../../../server/modules/device/routing';
+import { ExpandMore, ExpandLess } from '@mui/icons-material';
 import type { DeviceGroup } from '../../../../types/group';
 import React, { useState, useEffect } from 'react';
 import type { IncludedIconNames } from './icon';
@@ -80,6 +83,8 @@ export const GroupCreateModal = React.memo((props: GroupCreateModalProps): JSX.E
 	const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
 	const [selectedIcon, setSelectedIcon] = useState<IncludedIconNames>('Group');
 	const [showOnHome, setShowOnHome] = useState(false);
+	const [deviceSearch, setDeviceSearch] = useState('');
+	const [expandedClusters, setExpandedClusters] = useState<Set<string>>(new Set());
 
 	useEffect(() => {
 		if (props.open) {
@@ -94,6 +99,8 @@ export const GroupCreateModal = React.memo((props: GroupCreateModalProps): JSX.E
 				setSelectedIcon('Group');
 				setShowOnHome(false);
 			}
+			setDeviceSearch('');
+			setExpandedClusters(new Set());
 		}
 	}, [props.open, props.group]);
 
@@ -129,14 +136,56 @@ export const GroupCreateModal = React.memo((props: GroupCreateModalProps): JSX.E
 	// Calculate common clusters for preview
 	const selectedDevices = props.devices.filter((d) => selectedDeviceIds.includes(d.uniqueId));
 	const clusterMap = new Map<string, number>();
+	const clusterDeviceMap = new Map<string, Set<string>>();
+
 	for (const device of selectedDevices) {
-		for (const cluster of device.flatAllClusters) {
-			clusterMap.set(cluster.name, (clusterMap.get(cluster.name) || 0) + 1);
+		const deviceClusters = new Set(device.flatAllClusters.map((c) => c.name));
+		for (const clusterName of deviceClusters) {
+			clusterMap.set(clusterName, (clusterMap.get(clusterName) || 0) + 1);
+			if (!clusterDeviceMap.has(clusterName)) {
+				clusterDeviceMap.set(clusterName, new Set());
+			}
+			clusterDeviceMap.get(clusterName)!.add(device.uniqueId);
 		}
 	}
+
 	const commonClusters = Array.from(clusterMap.entries())
 		.filter(([, count]) => count === selectedDevices.length)
 		.map(([name]) => name);
+
+	// Calculate which devices don't have each cluster
+	const getDevicesWithoutCluster = (
+		clusterName: string
+	): DeviceListWithValuesResponse[number][] => {
+		const devicesWithCluster = clusterDeviceMap.get(clusterName) || new Set();
+		return selectedDevices.filter((d) => !devicesWithCluster.has(d.uniqueId));
+	};
+
+	// Filter devices based on search
+	const filteredDevices = React.useMemo(() => {
+		if (!deviceSearch.trim()) {
+			return props.devices;
+		}
+		const searchLower = deviceSearch.toLowerCase();
+		return props.devices.filter(
+			(d) =>
+				d.name?.toLowerCase().includes(searchLower) ||
+				d.uniqueId.toLowerCase().includes(searchLower) ||
+				d.room?.toLowerCase().includes(searchLower)
+		);
+	}, [props.devices, deviceSearch]);
+
+	const toggleClusterExpanded = (clusterName: string) => {
+		setExpandedClusters((prev) => {
+			const next = new Set(prev);
+			if (next.has(clusterName)) {
+				next.delete(clusterName);
+			} else {
+				next.add(clusterName);
+			}
+			return next;
+		});
+	};
 
 	return (
 		<Dialog
@@ -218,6 +267,14 @@ export const GroupCreateModal = React.memo((props: GroupCreateModalProps): JSX.E
 					<Typography variant="subtitle2" sx={{ mt: 1 }}>
 						Select Devices:
 					</Typography>
+					<TextField
+						label="Search devices"
+						value={deviceSearch}
+						onChange={(e) => setDeviceSearch(e.target.value)}
+						fullWidth
+						size="small"
+						sx={{ mb: 1 }}
+					/>
 					<Box
 						sx={{
 							display: 'flex',
@@ -226,7 +283,7 @@ export const GroupCreateModal = React.memo((props: GroupCreateModalProps): JSX.E
 							overflowY: 'auto',
 						}}
 					>
-						{props.devices.map((device) => (
+						{filteredDevices.map((device) => (
 							<GroupDeviceItem
 								key={device.uniqueId}
 								device={device}
@@ -251,12 +308,97 @@ export const GroupCreateModal = React.memo((props: GroupCreateModalProps): JSX.E
 								</Typography>
 							)}
 							{commonClusters.length === 0 && selectedDevices.length > 1 && (
-								<Typography
-									variant="caption"
-									sx={{ display: 'block', mt: 0.5, color: 'warning.main' }}
-								>
-									No common clusters - this group can't be used in scenes
-								</Typography>
+								<Box sx={{ mt: 0.5 }}>
+									<Typography
+										variant="caption"
+										sx={{ display: 'block', color: 'warning.main', mb: 0.5 }}
+									>
+										No common clusters - this group can't be used in scenes
+									</Typography>
+									{Array.from(clusterMap.entries())
+										.sort((a, b) => b[1] - a[1])
+										.map(([clusterName, count]) => {
+											const missingDevices =
+												getDevicesWithoutCluster(clusterName);
+											const isExpanded = expandedClusters.has(clusterName);
+											return (
+												<Box key={clusterName} sx={{ mb: 0.5 }}>
+													<Box
+														sx={{
+															display: 'flex',
+															alignItems: 'center',
+															cursor: 'pointer',
+														}}
+														onClick={() =>
+															toggleClusterExpanded(clusterName)
+														}
+													>
+														<IconButton
+															size="small"
+															sx={{ p: 0.25, mr: 0.5 }}
+														>
+															{isExpanded ? (
+																<ExpandLess fontSize="small" />
+															) : (
+																<ExpandMore fontSize="small" />
+															)}
+														</IconButton>
+														<Typography
+															variant="caption"
+															sx={{
+																color: 'text.secondary',
+																flex: 1,
+															}}
+														>
+															{clusterName}: {count} /{' '}
+															{selectedDevices.length}
+															{missingDevices.length > 0 && (
+																<span
+																	style={{
+																		color: 'warning.main',
+																	}}
+																>
+																	{' '}
+																	({missingDevices.length}{' '}
+																	missing)
+																</span>
+															)}
+														</Typography>
+													</Box>
+													<Collapse in={isExpanded}>
+														{missingDevices.length > 0 && (
+															<Box sx={{ pl: 4, mt: 0.5 }}>
+																<Typography
+																	variant="caption"
+																	sx={{
+																		color: 'text.secondary',
+																		display: 'block',
+																	}}
+																>
+																	Missing from:
+																</Typography>
+																{missingDevices.map((device) => (
+																	<Typography
+																		key={device.uniqueId}
+																		variant="caption"
+																		sx={{
+																			display: 'block',
+																			color: 'warning.main',
+																			pl: 1,
+																		}}
+																	>
+																		•{' '}
+																		{device.name ||
+																			device.uniqueId}
+																	</Typography>
+																))}
+															</Box>
+														)}
+													</Collapse>
+												</Box>
+											);
+										})}
+								</Box>
 							)}
 						</Box>
 					)}
