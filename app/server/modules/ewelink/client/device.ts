@@ -10,7 +10,7 @@ import {
 import { EwelinkBooleanStateDoorSensorCluster } from './clusters/boolean-state/door-sensor';
 import { DeviceEndpoint, DeviceSource, type Device } from '../../device/device';
 import { EwelinkOnOffClusterSimplePower } from './clusters/power/simple-power';
-import { EwelinkOnOffClusterM51CSingle } from './clusters/power/M5-1C';
+import { EwelinkMultiOnOffCluster } from './clusters/power/multi-on-off';
 import { EventEmitter } from '../../../lib/event-emitter';
 import type { EWeLinkConfig } from './clusters/shared';
 import { logTag } from '../../../lib/logging/logger';
@@ -88,7 +88,7 @@ class EwelinkM51CDevice extends EwelinkDevice {
 			(_, i) =>
 				new EwelinkEndpoint(
 					eWeLinkConfig,
-					[new EwelinkOnOffClusterM51CSingle(eWeLinkConfig, i)],
+					[new EwelinkMultiOnOffCluster(eWeLinkConfig, i)],
 					[]
 				)
 		);
@@ -102,6 +102,25 @@ class EwelinkZBMiniDevice extends EwelinkDevice {
 
 	public constructor(eWeLinkConfig: EWeLinkConfig) {
 		super(eWeLinkConfig, [new EwelinkOnOffClusterSimplePower(eWeLinkConfig)]);
+	}
+}
+
+class EwelinkMiniExtremeDevice extends EwelinkDevice {
+	public static readonly modelName = 'MINIR4M';
+
+	public constructor(eWeLinkConfig: EWeLinkConfig) {
+		super(eWeLinkConfig, [new EwelinkMultiOnOffCluster(eWeLinkConfig, 0)]);
+	}
+}
+
+class EwelinkSmartSwitchDevice extends EwelinkDevice {
+	public static readonly modelName = 'ZBM5-2C-120';
+
+	public constructor(eWeLinkConfig: EWeLinkConfig) {
+		super(eWeLinkConfig, [
+			new EwelinkMultiOnOffCluster(eWeLinkConfig, 0),
+			// new EwelinkMultiOnOffCluster(eWeLinkConfig, 1),
+		]);
 	}
 }
 
@@ -184,6 +203,8 @@ const DEVICES = [
 	EwelinkOnOffSwitchDevice,
 	EwelinkR5SceneControllerDevice,
 	EwelinkZBMiniDevice,
+	EwelinkMiniExtremeDevice,
+	EwelinkSmartSwitchDevice,
 ] satisfies {
 	modelName: string;
 }[];

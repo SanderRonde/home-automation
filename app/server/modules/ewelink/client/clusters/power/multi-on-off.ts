@@ -10,7 +10,7 @@ interface Params {
 	}[];
 }
 
-export class EwelinkOnOffClusterM51CSingle extends EwelinkOnOffCluster<Params> {
+export class EwelinkMultiOnOffCluster extends EwelinkOnOffCluster<Params> {
 	public isOn = this.getProxy().attributeGetter(
 		(value) => value?.switches[this.outlet].switch === 'on'
 	);
