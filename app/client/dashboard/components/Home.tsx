@@ -186,6 +186,8 @@ interface SceneQuickActionsProps {
 	scenes: Scene[];
 	triggeringSceneId: string | null;
 	onTrigger: (sceneId: string) => void;
+	short?: boolean;
+	vertical?: boolean;
 }
 
 const SceneQuickActions = (props: SceneQuickActionsProps): JSX.Element | null => {
@@ -200,13 +202,14 @@ const SceneQuickActions = (props: SceneQuickActionsProps): JSX.Element | null =>
 				flexWrap: 'wrap',
 				gap: 1.5,
 				pointerEvents: 'none',
+				flexDirection: props.vertical ? 'column' : 'row',
 			}}
 		>
 			{props.scenes.map((scene) => (
 				<Chip
 					key={scene.id}
 					icon={<IconComponent iconName={scene.icon} />}
-					label={scene.title}
+					label={props.short ? undefined : scene.title}
 					onClick={() => props.onTrigger(scene.id)}
 					disabled={props.triggeringSceneId === scene.id}
 					sx={{
@@ -220,6 +223,10 @@ const SceneQuickActions = (props: SceneQuickActionsProps): JSX.Element | null =>
 						pointerEvents: 'all',
 						'& .MuiChip-icon': {
 							fontSize: '1.4rem',
+						},
+						'& .MuiChip-label': {
+							paddingLeft: props.short ? 0 : undefined,
+							paddingRight: props.short ? 0 : undefined,
 						},
 						'&:hover': {
 							backgroundColor: 'action.hover',
@@ -585,6 +592,8 @@ export const Home = React.memo((props: HomeProps): React.ReactNode => {
 								scenes={scenes}
 								triggeringSceneId={triggeringSceneId}
 								onTrigger={handleTriggerScene}
+								short
+								vertical
 							/>
 						</Box>
 					</Box>
