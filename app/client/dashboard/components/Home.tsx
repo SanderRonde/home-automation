@@ -199,6 +199,7 @@ const SceneQuickActions = (props: SceneQuickActionsProps): JSX.Element | null =>
 				display: 'flex',
 				flexWrap: 'wrap',
 				gap: 1.5,
+				pointerEvents: 'none',
 			}}
 		>
 			{props.scenes.map((scene) => (
@@ -216,6 +217,7 @@ const SceneQuickActions = (props: SceneQuickActionsProps): JSX.Element | null =>
 						backgroundColor: 'background.paper',
 						border: '1px solid',
 						borderColor: 'divider',
+						pointerEvents: 'all',
 						'& .MuiChip-icon': {
 							fontSize: '1.4rem',
 						},
@@ -571,7 +573,7 @@ export const Home = React.memo((props: HomeProps): React.ReactNode => {
 					>
 						<Box
 							sx={{
-								pointerEvents: 'auto',
+								pointerEvents: 'none',
 								borderRadius: 4,
 								px: { xs: 1.5, sm: 2 },
 								py: { xs: 1, sm: 1.5 },
