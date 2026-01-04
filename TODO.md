@@ -41,4 +41,4 @@
 - [x] Bump matter.js
 - [ ] Local Tuya
 - [x] Smarter heating - when staying up late, keep heating
-- [ ] Don't heat when not home - but do somehow pre-heat before getting home
+- [x] Don't heat when not home - but do somehow pre-heat before getting home
