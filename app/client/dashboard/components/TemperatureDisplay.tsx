@@ -61,15 +61,26 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 	const [timeUntilNext, setTimeUntilNext] = useState<string>('');
 	const [averageTarget, setAverageTarget] = useState<number | null>(null);
 
+	const [activeState, setActiveState] = useState<{
+		state: { id: string; name: string } | null;
+		activeStateId: string | null;
+	} | null>(null);
+
 	const loadData = useCallback(async () => {
 		try {
-			const [tempResponse, thermostatResponse, scheduleResponse, roomsResponse] =
-				await Promise.all([
-					apiGet('temperature', '/inside-temperature', {}),
-					apiGet('temperature', '/central-thermostat', {}),
-					apiGet('temperature', '/schedule/next', {}),
-					apiGet('temperature', '/rooms', {}),
-				]);
+			const [
+				tempResponse,
+				thermostatResponse,
+				scheduleResponse,
+				roomsResponse,
+				activeStateResponse,
+			] = await Promise.all([
+				apiGet('temperature', '/inside-temperature', {}),
+				apiGet('temperature', '/central-thermostat', {}),
+				apiGet('temperature', '/schedule/next', {}),
+				apiGet('temperature', '/rooms', {}),
+				apiGet('temperature', '/states/active', {}),
+			]);
 
 			if (tempResponse.ok) {
 				const data = await tempResponse.json();
@@ -106,6 +117,14 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 						setAverageTarget(tData.targetTemperature);
 					}
 				}
+			}
+
+			if (activeStateResponse.ok) {
+				const data = await activeStateResponse.json();
+				setActiveState({
+					state: data.state,
+					activeStateId: data.activeStateId,
+				});
 			}
 		} catch (error) {
 			console.error('Failed to load temperature data:', error);
@@ -454,6 +473,26 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 											</Box>
 										)}
 									</>
+								)}
+
+								{/* Active state indicator */}
+								{activeState?.activeStateId && activeState.state && (
+									<Box
+										sx={{
+											display: 'flex',
+											alignItems: 'center',
+											gap: 1,
+											mb: 1,
+											p: 1,
+											bgcolor: 'primary.50',
+											borderRadius: 1,
+										}}
+									>
+										<ScheduleIcon fontSize="small" color="primary" />
+										<Typography variant="caption" color="primary.main">
+											Active State: <strong>{activeState.state.name}</strong>
+										</Typography>
+									</Box>
 								)}
 
 								{/* Next scheduled temperature */}

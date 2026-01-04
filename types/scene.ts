@@ -189,9 +189,10 @@ export type SceneDeviceActionNotification = {
 export type SceneDeviceActionRoomTemperature = {
 	cluster: 'room-temperature';
 	action: {
-		roomName: string;
-		mode: 'setTarget' | 'returnToSchedule';
-		targetTemperature?: number;
+		roomName?: string; // Optional for activateState mode
+		mode: 'setTarget' | 'returnToSchedule' | 'activateState';
+		targetTemperature?: number; // Required for setTarget mode
+		stateId?: string; // Required for activateState mode
 	};
 };
 

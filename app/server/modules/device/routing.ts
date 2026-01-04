@@ -949,11 +949,17 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 							}),
 							z.object({
 								cluster: z.literal('room-temperature'),
-								action: z.object({
-									roomName: z.string(),
-									mode: z.enum(['setTarget', 'returnToSchedule']),
-									targetTemperature: z.number().optional(),
-								}),
+								action: z.union([
+									z.object({
+										roomName: z.string(),
+										mode: z.enum(['setTarget', 'returnToSchedule']),
+										targetTemperature: z.number().optional(),
+									}),
+									z.object({
+										mode: z.literal('activateState'),
+										stateId: z.string(),
+									}),
+								]),
 							}),
 							z.object({
 								cluster: z.literal('set-variable'),

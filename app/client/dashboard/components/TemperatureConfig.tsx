@@ -45,7 +45,7 @@ interface AvailableSensors {
 	deviceSensors: Array<{ deviceId: string; name: string }>;
 }
 
-interface TemperatureScheduleEntry {
+interface TemperatureTimeRange {
 	id: string;
 	name: string;
 	days: number[];
@@ -54,6 +54,13 @@ interface TemperatureScheduleEntry {
 	targetTemperature: number;
 	enabled: boolean;
 	roomExceptions?: Record<string, number>;
+}
+
+interface TemperatureState {
+	id: string;
+	name: string;
+	timeRanges: TemperatureTimeRange[];
+	isDefault?: boolean;
 }
 
 interface Room {
@@ -75,8 +82,8 @@ export const TemperatureConfig = (): JSX.Element => {
 	const [availableThermostats, setAvailableThermostats] = useState<
 		Array<{ deviceId: string; name: string }>
 	>([]);
-	const [schedule, setSchedule] = useState<TemperatureScheduleEntry[]>([]);
-	const [savingSchedule, setSavingSchedule] = useState(false);
+	const [states, setStates] = useState<TemperatureState[]>([]);
+	const [savingStates, setSavingStates] = useState(false);
 	const [rooms, setRooms] = useState<Room[]>([]);
 	const [roomOvershoots, setRoomOvershoots] = useState<Record<string, number>>({});
 	const [roomPIDParameters, setRoomPIDParameters] = useState<
@@ -92,7 +99,8 @@ export const TemperatureConfig = (): JSX.Element => {
 	>({});
 	const [exceptionDialogOpen, setExceptionDialogOpen] = useState(false);
 	const [editingException, setEditingException] = useState<{
-		scheduleId: string;
+		stateId: string;
+		rangeId: string;
 		roomName: string;
 		temperature: number;
 	} | null>(null);
@@ -105,14 +113,14 @@ export const TemperatureConfig = (): JSX.Element => {
 				sensorsResponse,
 				configResponse,
 				thermostatsResponse,
-				scheduleResponse,
+				statesResponse,
 				roomsResponse,
 				overshootsResponse,
 			] = await Promise.all([
 				apiGet('temperature', '/temperature-sensors', {}),
 				apiGet('temperature', '/inside-temperature-sensors', {}),
 				apiGet('temperature', '/thermostats', {}),
-				apiGet('temperature', '/schedule', {}),
+				apiGet('temperature', '/states', {}),
 				apiGet('device', '/rooms', {}),
 				apiGet('temperature', '/rooms/overshoot', {}),
 			]);
@@ -136,9 +144,9 @@ export const TemperatureConfig = (): JSX.Element => {
 				setAvailableThermostats(thermostatsData.thermostats || []);
 			}
 
-			if (scheduleResponse.ok) {
-				const scheduleData = await scheduleResponse.json();
-				setSchedule(scheduleData.schedule || []);
+			if (statesResponse.ok) {
+				const statesData = await statesResponse.json();
+				setStates(statesData.states || []);
 			}
 
 			if (roomsResponse.ok) {
@@ -250,25 +258,70 @@ export const TemperatureConfig = (): JSX.Element => {
 		}
 	};
 
-	const handleSaveSchedule = async () => {
+	const handleSaveStates = async () => {
 		try {
-			setSavingSchedule(true);
-			const response = await apiPost('temperature', '/schedule', {}, { schedule });
+			setSavingStates(true);
+			const response = await apiPost('temperature', '/states', {}, { states });
 			if (response.ok) {
 				// Success
 				await loadData();
 			}
 		} catch (error) {
-			console.error('Failed to save schedule:', error);
+			console.error('Failed to save states:', error);
 		} finally {
-			setSavingSchedule(false);
+			setSavingStates(false);
 		}
 	};
 
-	const handleAddScheduleEntry = () => {
-		const newEntry: TemperatureScheduleEntry = {
-			id: `schedule-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-			name: `Schedule ${schedule.length + 1}`,
+	const handleAddState = () => {
+		const newState: TemperatureState = {
+			id: `state-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+			name: `State ${states.length + 1}`,
+			timeRanges: [],
+			isDefault: states.length === 0, // First state is default
+		};
+		setStates((prev) => [...prev, newState]);
+	};
+
+	const handleRemoveState = (stateId: string) => {
+		setStates((prev) => {
+			const filtered = prev.filter((state) => state.id !== stateId);
+			// If we removed the default and there are other states, make the first one default
+			if (filtered.length > 0 && prev.find((s) => s.id === stateId)?.isDefault) {
+				filtered[0].isDefault = true;
+			}
+			return filtered;
+		});
+	};
+
+	const handleUpdateState = (stateId: string, updates: Partial<TemperatureState>) => {
+		setStates((prev) =>
+			prev.map((state) => {
+				if (state.id !== stateId) {
+					// If setting a new default, unset others
+					if (updates.isDefault) {
+						return { ...state, isDefault: false };
+					}
+					return state;
+				}
+				return { ...state, ...updates };
+			})
+		);
+	};
+
+	const handleSetDefaultState = (stateId: string) => {
+		setStates((prev) =>
+			prev.map((state) => ({
+				...state,
+				isDefault: state.id === stateId,
+			}))
+		);
+	};
+
+	const handleAddTimeRange = (stateId: string) => {
+		const newRange: TemperatureTimeRange = {
+			id: `range-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+			name: 'Time Range',
 			days: [1, 2, 3, 4, 5], // Weekdays by default
 			startTime: '07:00',
 			endTime: '22:00',
@@ -276,36 +329,72 @@ export const TemperatureConfig = (): JSX.Element => {
 			enabled: true,
 			roomExceptions: {},
 		};
-		setSchedule((prev) => [...prev, newEntry]);
-	};
-
-	const handleRemoveScheduleEntry = (id: string) => {
-		setSchedule((prev) => prev.filter((entry) => entry.id !== id));
-	};
-
-	const handleUpdateScheduleEntry = (id: string, updates: Partial<TemperatureScheduleEntry>) => {
-		setSchedule((prev) =>
-			prev.map((entry) => (entry.id === id ? { ...entry, ...updates } : entry))
+		setStates((prev) =>
+			prev.map((state) =>
+				state.id === stateId
+					? { ...state, timeRanges: [...state.timeRanges, newRange] }
+					: state
+			)
 		);
 	};
 
-	const handleToggleDay = (entryId: string, day: number) => {
-		setSchedule((prev) =>
-			prev.map((entry) => {
-				if (entry.id !== entryId) {
-					return entry;
-				}
-				const newDays = entry.days.includes(day)
-					? entry.days.filter((d) => d !== day)
-					: [...entry.days, day].sort();
-				return { ...entry, days: newDays };
-			})
+	const handleRemoveTimeRange = (stateId: string, rangeId: string) => {
+		setStates((prev) =>
+			prev.map((state) =>
+				state.id === stateId
+					? {
+							...state,
+							timeRanges: state.timeRanges.filter((r) => r.id !== rangeId),
+						}
+					: state
+			)
 		);
 	};
 
-	const handleAddException = (scheduleId: string) => {
+	const handleUpdateTimeRange = (
+		stateId: string,
+		rangeId: string,
+		updates: Partial<TemperatureTimeRange>
+	) => {
+		setStates((prev) =>
+			prev.map((state) =>
+				state.id === stateId
+					? {
+							...state,
+							timeRanges: state.timeRanges.map((r) =>
+								r.id === rangeId ? { ...r, ...updates } : r
+							),
+						}
+					: state
+			)
+		);
+	};
+
+	const handleToggleDay = (stateId: string, rangeId: string, day: number) => {
+		setStates((prev) =>
+			prev.map((state) =>
+				state.id === stateId
+					? {
+							...state,
+							timeRanges: state.timeRanges.map((r) => {
+								if (r.id !== rangeId) {
+									return r;
+								}
+								const newDays = r.days.includes(day)
+									? r.days.filter((d) => d !== day)
+									: [...r.days, day].sort();
+								return { ...r, days: newDays };
+							}),
+						}
+					: state
+			)
+		);
+	};
+
+	const handleAddException = (stateId: string, rangeId: string) => {
 		setEditingException({
-			scheduleId,
+			stateId,
+			rangeId,
 			roomName: '',
 			temperature: 20,
 		});
@@ -317,29 +406,45 @@ export const TemperatureConfig = (): JSX.Element => {
 			return;
 		}
 
-		setSchedule((prev) =>
-			prev.map((entry) => {
-				if (entry.id !== editingException.scheduleId) {
-					return entry;
+		setStates((prev) =>
+			prev.map((state) => {
+				if (state.id !== editingException.stateId) {
+					return state;
 				}
-				const exceptions = { ...entry.roomExceptions };
-				exceptions[editingException.roomName] = editingException.temperature;
-				return { ...entry, roomExceptions: exceptions };
+				return {
+					...state,
+					timeRanges: state.timeRanges.map((range) => {
+						if (range.id !== editingException.rangeId) {
+							return range;
+						}
+						const exceptions = { ...range.roomExceptions };
+						exceptions[editingException.roomName] = editingException.temperature;
+						return { ...range, roomExceptions: exceptions };
+					}),
+				};
 			})
 		);
 		setExceptionDialogOpen(false);
 		setEditingException(null);
 	};
 
-	const handleRemoveException = (scheduleId: string, roomName: string) => {
-		setSchedule((prev) =>
-			prev.map((entry) => {
-				if (entry.id !== scheduleId) {
-					return entry;
+	const handleRemoveException = (stateId: string, rangeId: string, roomName: string) => {
+		setStates((prev) =>
+			prev.map((state) => {
+				if (state.id !== stateId) {
+					return state;
 				}
-				const exceptions = { ...entry.roomExceptions };
-				delete exceptions[roomName];
-				return { ...entry, roomExceptions: exceptions };
+				return {
+					...state,
+					timeRanges: state.timeRanges.map((range) => {
+						if (range.id !== rangeId) {
+							return range;
+						}
+						const exceptions = { ...range.roomExceptions };
+						delete exceptions[roomName];
+						return { ...range, roomExceptions: exceptions };
+					}),
+				};
 			})
 		);
 	};
@@ -771,40 +876,41 @@ export const TemperatureConfig = (): JSX.Element => {
 									mb: 2,
 								}}
 							>
-								<Typography variant="h6">Temperature Schedule</Typography>
+								<Typography variant="h6">Temperature States</Typography>
 								<Box sx={{ display: 'flex', gap: 1 }}>
 									<Button
 										variant="outlined"
 										startIcon={<AddIcon />}
-										onClick={handleAddScheduleEntry}
+										onClick={handleAddState}
 										size="small"
 									>
-										Add
+										Add State
 									</Button>
 									<Button
 										variant="contained"
 										startIcon={
-											savingSchedule ? (
+											savingStates ? (
 												<CircularProgress size={16} />
 											) : (
 												<SaveIcon />
 											)
 										}
-										onClick={handleSaveSchedule}
-										disabled={savingSchedule}
+										onClick={handleSaveStates}
+										disabled={savingStates}
 										size="small"
 									>
-										Save Schedule
+										Save States
 									</Button>
 								</Box>
 							</Box>
 							<Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-								Configure automatic temperature schedules. When a schedule starts,
-								the thermostat will be set to the target temperature. Manual
-								adjustments will override until the next schedule triggers.
+								Configure temperature states that can be activated through scenes.
+								Each state contains one or more time ranges that define when
+								different temperatures should be active. The default state is used
+								for time-based scheduling.
 							</Typography>
 
-							{schedule.length === 0 ? (
+							{states.length === 0 ? (
 								<Box
 									sx={{
 										textAlign: 'center',
@@ -813,24 +919,25 @@ export const TemperatureConfig = (): JSX.Element => {
 									}}
 								>
 									<Typography variant="body2">
-										No schedules configured. Click "Add" to create one.
+										No states configured. Click "Add State" to create one.
 									</Typography>
 								</Box>
 							) : (
-								<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-									{schedule.map((entry) => (
+								<Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+									{states.map((state) => (
 										<Box
-											key={entry.id}
+											key={state.id}
 											sx={{
 												p: 2,
-												border: '1px solid',
-												borderColor: entry.enabled
+												border: '2px solid',
+												borderColor: state.isDefault
 													? 'primary.main'
 													: 'divider',
 												borderRadius: 2,
-												opacity: entry.enabled ? 1 : 0.6,
+												bgcolor: state.isDefault ? 'primary.50' : undefined,
 											}}
 										>
+											{/* State Header */}
 											<Box
 												sx={{
 													display: 'flex',
@@ -845,38 +952,50 @@ export const TemperatureConfig = (): JSX.Element => {
 														display: 'flex',
 														alignItems: 'center',
 														gap: 1,
+														flexGrow: 1,
 													}}
 												>
-													<Switch
-														checked={entry.enabled}
+													{state.isDefault && (
+														<Chip
+															label="Default"
+															size="small"
+															color="primary"
+															variant="filled"
+														/>
+													)}
+													<TextField
+														value={state.name}
 														onChange={(e) =>
-															handleUpdateScheduleEntry(entry.id, {
-																enabled: e.target.checked,
+															handleUpdateState(state.id, {
+																name: e.target.value,
 															})
 														}
 														size="small"
+														placeholder="State name"
+														sx={{ flexGrow: 1 }}
+														slotProps={{
+															input: {
+																sx: {
+																	fontWeight: 600,
+																	fontSize: '1.1rem',
+																},
+															},
+														}}
 													/>
 												</Box>
-												<TextField
-													value={entry.name}
-													onChange={(e) =>
-														handleUpdateScheduleEntry(entry.id, {
-															name: e.target.value,
-														})
-													}
-													size="small"
-													placeholder="Schedule name"
-													sx={{ flexGrow: 1 }}
-													slotProps={{
-														input: {
-															sx: { fontWeight: 500 },
-														},
-													}}
-												/>
+												{!state.isDefault && (
+													<Button
+														size="small"
+														variant="outlined"
+														onClick={() =>
+															handleSetDefaultState(state.id)
+														}
+													>
+														Set as Default
+													</Button>
+												)}
 												<IconButton
-													onClick={() =>
-														handleRemoveScheduleEntry(entry.id)
-													}
+													onClick={() => handleRemoveState(state.id)}
 													size="small"
 													color="error"
 												>
@@ -884,124 +1003,14 @@ export const TemperatureConfig = (): JSX.Element => {
 												</IconButton>
 											</Box>
 
-											{/* Days selection */}
-											<Box sx={{ mb: 2 }}>
-												<Typography
-													variant="caption"
-													color="text.secondary"
-													sx={{ display: 'block', mb: 1 }}
-												>
-													Days
-												</Typography>
-												<Box
-													sx={{
-														display: 'flex',
-														gap: 0.5,
-														flexWrap: 'wrap',
-													}}
-												>
-													{DAY_NAMES.map((dayName, dayIndex) => (
-														<Chip
-															key={dayIndex}
-															label={dayName}
-															size="small"
-															onClick={() =>
-																handleToggleDay(entry.id, dayIndex)
-															}
-															color={
-																entry.days.includes(dayIndex)
-																	? 'primary'
-																	: 'default'
-															}
-															variant={
-																entry.days.includes(dayIndex)
-																	? 'filled'
-																	: 'outlined'
-															}
-															sx={{ minWidth: 45 }}
-														/>
-													))}
-												</Box>
-											</Box>
-
-											{/* Time range */}
+											{/* Time Ranges */}
 											<Box
 												sx={{
 													display: 'flex',
+													flexDirection: 'column',
 													gap: 2,
-													mb: 2,
-													flexWrap: 'wrap',
 												}}
 											>
-												<TextField
-													label="Start Time"
-													type="time"
-													value={entry.startTime}
-													onChange={(e) =>
-														handleUpdateScheduleEntry(entry.id, {
-															startTime: e.target.value,
-														})
-													}
-													size="small"
-													sx={{ width: 140 }}
-													slotProps={{
-														inputLabel: { shrink: true },
-													}}
-												/>
-												<TextField
-													label="End Time"
-													type="time"
-													value={entry.endTime}
-													onChange={(e) =>
-														handleUpdateScheduleEntry(entry.id, {
-															endTime: e.target.value,
-														})
-													}
-													size="small"
-													sx={{ width: 140 }}
-													slotProps={{
-														inputLabel: { shrink: true },
-													}}
-												/>
-											</Box>
-
-											{/* Target temperature */}
-											<Box sx={{ mb: 2 }}>
-												<Typography
-													variant="caption"
-													color="text.secondary"
-													sx={{ display: 'block', mb: 1 }}
-												>
-													Target Temperature: {entry.targetTemperature}°C
-												</Typography>
-												<Box
-													sx={{
-														display: 'flex',
-														alignItems: 'center',
-														gap: 2,
-													}}
-												>
-													<Typography variant="body2">5°</Typography>
-													<Slider
-														value={entry.targetTemperature}
-														onChange={(_e, value) =>
-															handleUpdateScheduleEntry(entry.id, {
-																targetTemperature: value,
-															})
-														}
-														min={5}
-														max={30}
-														step={0.5}
-														valueLabelDisplay="auto"
-														valueLabelFormat={(v) => `${v}°C`}
-														sx={{ flexGrow: 1 }}
-													/>
-													<Typography variant="body2">30°</Typography>
-												</Box>
-											</Box>
-
-											{/* Room Exceptions */}
-											<Box>
 												<Box
 													sx={{
 														display: 'flex',
@@ -1011,57 +1020,354 @@ export const TemperatureConfig = (): JSX.Element => {
 													}}
 												>
 													<Typography
-														variant="caption"
+														variant="subtitle2"
 														color="text.secondary"
 													>
-														Room Exceptions
+														Time Ranges
 													</Typography>
 													<Button
-														startIcon={<AddIcon />}
 														size="small"
-														onClick={() => handleAddException(entry.id)}
+														startIcon={<AddIcon />}
+														onClick={() => handleAddTimeRange(state.id)}
 													>
-														Add Exception
+														Add Range
 													</Button>
 												</Box>
-												{entry.roomExceptions &&
-													Object.keys(entry.roomExceptions).length >
-														0 && (
+
+												{state.timeRanges.length === 0 ? (
+													<Box
+														sx={{
+															textAlign: 'center',
+															py: 2,
+															color: 'text.secondary',
+														}}
+													>
+														<Typography variant="body2">
+															No time ranges. Click "Add Range" to add
+															one.
+														</Typography>
+													</Box>
+												) : (
+													state.timeRanges.map((range) => (
 														<Box
+															key={range.id}
 															sx={{
-																display: 'flex',
-																flexWrap: 'wrap',
-																gap: 1,
+																p: 2,
+																border: '1px solid',
+																borderColor: range.enabled
+																	? 'primary.main'
+																	: 'divider',
+																borderRadius: 2,
+																opacity: range.enabled ? 1 : 0.6,
+																bgcolor: 'background.paper',
 															}}
 														>
-															{Object.entries(
-																entry.roomExceptions
-															).map(([room, temp]) => (
-																<Chip
-																	key={room}
-																	label={`${room}: ${temp}°C`}
-																	onDelete={() =>
-																		handleRemoveException(
-																			entry.id,
-																			room
+															<Box
+																sx={{
+																	display: 'flex',
+																	justifyContent: 'space-between',
+																	alignItems: 'center',
+																	mb: 2,
+																	gap: 2,
+																}}
+															>
+																<Box
+																	sx={{
+																		display: 'flex',
+																		alignItems: 'center',
+																		gap: 1,
+																	}}
+																>
+																	<Switch
+																		checked={range.enabled}
+																		onChange={(e) =>
+																			handleUpdateTimeRange(
+																				state.id,
+																				range.id,
+																				{
+																					enabled:
+																						e.target
+																							.checked,
+																				}
+																			)
+																		}
+																		size="small"
+																	/>
+																</Box>
+																<TextField
+																	value={range.name}
+																	onChange={(e) =>
+																		handleUpdateTimeRange(
+																			state.id,
+																			range.id,
+																			{
+																				name: e.target
+																					.value,
+																			}
 																		)
 																	}
-																	onClick={() => {
-																		setEditingException({
-																			scheduleId: entry.id,
-																			roomName: room,
-																			temperature: temp,
-																		});
-																		setExceptionDialogOpen(
-																			true
-																		);
-																	}}
 																	size="small"
-																	variant="outlined"
+																	placeholder="Time range name"
+																	sx={{ flexGrow: 1 }}
+																	slotProps={{
+																		input: {
+																			sx: { fontWeight: 500 },
+																		},
+																	}}
 																/>
-															))}
+																<IconButton
+																	onClick={() =>
+																		handleRemoveTimeRange(
+																			state.id,
+																			range.id
+																		)
+																	}
+																	size="small"
+																	color="error"
+																>
+																	<DeleteIcon />
+																</IconButton>
+															</Box>
+
+															{/* Days selection */}
+															<Box sx={{ mb: 2 }}>
+																<Typography
+																	variant="caption"
+																	color="text.secondary"
+																	sx={{ display: 'block', mb: 1 }}
+																>
+																	Days
+																</Typography>
+																<Box
+																	sx={{
+																		display: 'flex',
+																		gap: 0.5,
+																		flexWrap: 'wrap',
+																	}}
+																>
+																	{DAY_NAMES.map(
+																		(dayName, dayIndex) => (
+																			<Chip
+																				key={dayIndex}
+																				label={dayName}
+																				size="small"
+																				onClick={() =>
+																					handleToggleDay(
+																						state.id,
+																						range.id,
+																						dayIndex
+																					)
+																				}
+																				color={
+																					range.days.includes(
+																						dayIndex
+																					)
+																						? 'primary'
+																						: 'default'
+																				}
+																				variant={
+																					range.days.includes(
+																						dayIndex
+																					)
+																						? 'filled'
+																						: 'outlined'
+																				}
+																				sx={{
+																					minWidth: 45,
+																				}}
+																			/>
+																		)
+																	)}
+																</Box>
+															</Box>
+
+															{/* Time range */}
+															<Box
+																sx={{
+																	display: 'flex',
+																	gap: 2,
+																	mb: 2,
+																	flexWrap: 'wrap',
+																}}
+															>
+																<TextField
+																	label="Start Time"
+																	type="time"
+																	value={range.startTime}
+																	onChange={(e) =>
+																		handleUpdateTimeRange(
+																			state.id,
+																			range.id,
+																			{
+																				startTime:
+																					e.target.value,
+																			}
+																		)
+																	}
+																	size="small"
+																	sx={{ width: 140 }}
+																	slotProps={{
+																		inputLabel: {
+																			shrink: true,
+																		},
+																	}}
+																/>
+																<TextField
+																	label="End Time"
+																	type="time"
+																	value={range.endTime}
+																	onChange={(e) =>
+																		handleUpdateTimeRange(
+																			state.id,
+																			range.id,
+																			{
+																				endTime:
+																					e.target.value,
+																			}
+																		)
+																	}
+																	size="small"
+																	sx={{ width: 140 }}
+																	slotProps={{
+																		inputLabel: {
+																			shrink: true,
+																		},
+																	}}
+																/>
+															</Box>
+
+															{/* Target temperature */}
+															<Box sx={{ mb: 2 }}>
+																<Typography
+																	variant="caption"
+																	color="text.secondary"
+																	sx={{ display: 'block', mb: 1 }}
+																>
+																	Target Temperature:{' '}
+																	{range.targetTemperature}°C
+																</Typography>
+																<Box
+																	sx={{
+																		display: 'flex',
+																		alignItems: 'center',
+																		gap: 2,
+																	}}
+																>
+																	<Typography variant="body2">
+																		5°
+																	</Typography>
+																	<Slider
+																		value={
+																			range.targetTemperature
+																		}
+																		onChange={(_e, value) =>
+																			handleUpdateTimeRange(
+																				state.id,
+																				range.id,
+																				{
+																					targetTemperature:
+																						value,
+																				}
+																			)
+																		}
+																		min={5}
+																		max={30}
+																		step={0.5}
+																		valueLabelDisplay="auto"
+																		valueLabelFormat={(v) =>
+																			`${v}°C`
+																		}
+																		sx={{ flexGrow: 1 }}
+																	/>
+																	<Typography variant="body2">
+																		30°
+																	</Typography>
+																</Box>
+															</Box>
+
+															{/* Room Exceptions */}
+															<Box>
+																<Box
+																	sx={{
+																		display: 'flex',
+																		justifyContent:
+																			'space-between',
+																		alignItems: 'center',
+																		mb: 1,
+																	}}
+																>
+																	<Typography
+																		variant="caption"
+																		color="text.secondary"
+																	>
+																		Room Exceptions
+																	</Typography>
+																	<Button
+																		startIcon={<AddIcon />}
+																		size="small"
+																		onClick={() =>
+																			handleAddException(
+																				state.id,
+																				range.id
+																			)
+																		}
+																	>
+																		Add Exception
+																	</Button>
+																</Box>
+																{range.roomExceptions &&
+																	Object.keys(
+																		range.roomExceptions
+																	).length > 0 && (
+																		<Box
+																			sx={{
+																				display: 'flex',
+																				flexWrap: 'wrap',
+																				gap: 1,
+																			}}
+																		>
+																			{Object.entries(
+																				range.roomExceptions
+																			).map(
+																				([room, temp]) => (
+																					<Chip
+																						key={room}
+																						label={`${room}: ${temp}°C`}
+																						onDelete={() =>
+																							handleRemoveException(
+																								state.id,
+																								range.id,
+																								room
+																							)
+																						}
+																						onClick={() => {
+																							setEditingException(
+																								{
+																									stateId:
+																										state.id,
+																									rangeId:
+																										range.id,
+																									roomName:
+																										room,
+																									temperature:
+																										temp,
+																								}
+																							);
+																							setExceptionDialogOpen(
+																								true
+																							);
+																						}}
+																						size="small"
+																						variant="outlined"
+																					/>
+																				)
+																			)}
+																		</Box>
+																	)}
+															</Box>
 														</Box>
-													)}
+													))
+												)}
 											</Box>
 										</Box>
 									))}
@@ -1105,12 +1411,7 @@ export const TemperatureConfig = (): JSX.Element => {
 				}}
 			>
 				<DialogTitle>
-					{editingException?.roomName &&
-					schedule.find((s) => s.id === editingException.scheduleId)?.roomExceptions?.[
-						editingException.roomName
-					]
-						? 'Edit Room Exception'
-						: 'Add Room Exception'}
+					{editingException?.roomName ? 'Edit Room Exception' : 'Add Room Exception'}
 				</DialogTitle>
 				<DialogContent sx={{ minWidth: 300, pt: 1 }}>
 					<Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 1 }}>
@@ -1119,11 +1420,13 @@ export const TemperatureConfig = (): JSX.Element => {
 							<Select
 								value={editingException?.roomName || ''}
 								label="Room"
-								onChange={(e) =>
-									setEditingException((prev) =>
-										prev ? { ...prev, roomName: e.target.value } : null
-									)
-								}
+								onChange={(e) => {
+									if (editingException) {
+										setEditingException((prev) =>
+											prev ? { ...prev, roomName: e.target.value } : null
+										);
+									}
+								}}
 							>
 								{rooms.map((room) => (
 									<MenuItem key={room.name} value={room.name}>
@@ -1135,15 +1438,18 @@ export const TemperatureConfig = (): JSX.Element => {
 
 						<Box>
 							<Typography gutterBottom>
-								Target Temperature: {editingException?.temperature}°C
+								Target Temperature: {editingException?.temperature || 20}
+								°C
 							</Typography>
 							<Slider
 								value={editingException?.temperature || 20}
-								onChange={(_e, value) =>
-									setEditingException((prev) =>
-										prev ? { ...prev, temperature: value } : null
-									)
-								}
+								onChange={(_e, value) => {
+									if (editingException) {
+										setEditingException((prev) =>
+											prev ? { ...prev, temperature: value } : null
+										);
+									}
+								}}
 								min={5}
 								max={30}
 								step={0.5}
@@ -1162,7 +1468,11 @@ export const TemperatureConfig = (): JSX.Element => {
 						Cancel
 					</Button>
 					<Button
-						onClick={handleSaveException}
+						onClick={() => {
+							if (editingException) {
+								handleSaveException();
+							}
+						}}
 						variant="contained"
 						disabled={!editingException?.roomName}
 					>

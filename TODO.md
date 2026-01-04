@@ -40,5 +40,5 @@
 - [x] Wakelight does not appear to work
 - [x] Bump matter.js
 - [ ] Local Tuya
-- [ ] Smarter heating - when staying up late, keep heating
+- [x] Smarter heating - when staying up late, keep heating
 - [ ] Don't heat when not home - but do somehow pre-heat before getting home

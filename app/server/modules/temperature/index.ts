@@ -1,9 +1,15 @@
+import type {
+	TemperatureScheduleEntry,
+	TemperatureTimeRange,
+	TemperatureState,
+	PIDParameters,
+	MeasurementSession,
+} from './types';
 import {
 	DeviceTemperatureMeasurementCluster,
 	DeviceThermostatCluster,
 	ThermostatMode,
 } from '../device/cluster';
-import type { TemperatureScheduleEntry, PIDParameters, MeasurementSession } from './types';
 import { PIDMeasurementManager } from './pid-measurement';
 import type { ModuleConfig, AllModules } from '..';
 import { logTag } from '../../lib/logging/logger';
@@ -19,7 +25,9 @@ type TemperatureSensorConfig = string | { type: 'device'; deviceId: string };
 interface TemperatureDB {
 	insideTemperatureSensors?: TemperatureSensorConfig[];
 	thermostat?: string;
-	schedule?: TemperatureScheduleEntry[];
+	schedule?: TemperatureScheduleEntry[]; // Legacy - for migration
+	states?: TemperatureState[];
+	activeStateId?: string | null; // Scene-activated state (null = use time-based default)
 	roomOvershoot?: Record<string, number>; // Per-room overshoot in °C (default: 0.5)
 	roomPIDParameters?: Record<string, import('./types').PIDParameters>;
 }
@@ -50,12 +58,67 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		this._db = config.db;
 		this._pidManager = new PIDMeasurementManager(config.modules, config.db);
 
+		// Migrate old schedule format to states if needed
+		this._migrateScheduleToStates();
+
 		// Initialize the temperature scheduler
 		initScheduler(config.modules);
 
 		return {
 			serve: initRouting(config),
 		};
+	}
+
+	/**
+	 * Migrate old schedule format to new states format
+	 */
+	private _migrateScheduleToStates(): void {
+		if (!this._db) {
+			return;
+		}
+
+		const data = this._db.current() as TemperatureDB;
+
+		// If states already exist, no migration needed
+		if (data.states && data.states.length > 0) {
+			return;
+		}
+
+		// If no old schedule exists, create empty states array
+		if (!data.schedule || data.schedule.length === 0) {
+			this._db.update((old) => ({
+				...(old as TemperatureDB),
+				states: [],
+			}));
+			return;
+		}
+
+		// Migrate: Create a default state with all existing schedule entries
+		const defaultState: TemperatureState = {
+			id: 'default',
+			name: 'Default',
+			timeRanges: data.schedule,
+			isDefault: true,
+		};
+
+		this._db.update((old) => {
+			const oldData = old as TemperatureDB;
+			return {
+				...oldData,
+				states: [defaultState],
+				// Keep schedule for backward compatibility during transition
+			};
+		});
+
+		logTag(
+			'temperature',
+			'blue',
+			`Migrated ${data.schedule.length} schedule entries to default state`
+		);
+		this.addHistoryEntry(
+			'Migration',
+			`Migrated ${data.schedule.length} schedule entries to default state`
+		);
 	}
 
 	/**
@@ -120,12 +183,17 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 	 */
 	public getDebugInfo() {
 		const activeSchedule = this.getCurrentActiveSchedule();
+		const activeState = this.getActiveState();
+		const data = this._db?.current() as TemperatureDB | undefined;
+		const activeStateId = data?.activeStateId;
 		return {
 			history: this._history,
 			lastDecision: this._lastDecision,
 			roomOverrides: Object.fromEntries(this._roomOverrides),
 			globalOverride: this._globalOverride,
 			activeScheduleName: activeSchedule ? activeSchedule.name : 'None',
+			activeStateId: activeStateId ?? null,
+			activeStateName: activeState ? activeState.name : 'None',
 			testMode: this._testMode,
 			virtualThermostat: this._virtualThermostat,
 		};
@@ -484,42 +552,152 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 	}
 
 	/**
-	 * Get the configured temperature schedule from the database
+	 * Get all temperature states
 	 */
-	public getSchedule(): TemperatureScheduleEntry[] {
+	public getStates(): TemperatureState[] {
 		if (!this._db) {
 			return [];
 		}
 		const data = this._db.current() as TemperatureDB;
-		return data.schedule ?? [];
+		return data.states ?? [];
 	}
 
 	/**
-	 * Save the temperature schedule to the database
+	 * Get a specific temperature state by ID
 	 */
-	public setSchedule(schedule: TemperatureScheduleEntry[]): void {
+	public getState(stateId: string): TemperatureState | null {
+		const states = this.getStates();
+		return states.find((s) => s.id === stateId) ?? null;
+	}
+
+	/**
+	 * Get the default state (for time-based fallback)
+	 */
+	public getDefaultState(): TemperatureState | null {
+		const states = this.getStates();
+		return states.find((s) => s.isDefault) ?? states[0] ?? null;
+	}
+
+	/**
+	 * Get the currently active state (scene-activated or default)
+	 */
+	public getActiveState(): TemperatureState | null {
+		if (!this._db) {
+			return null;
+		}
+		const data = this._db.current() as TemperatureDB;
+		const activeStateId = data.activeStateId;
+
+		if (activeStateId !== null && activeStateId !== undefined) {
+			// Scene-activated state
+			const state = this.getState(activeStateId);
+			if (state) {
+				return state;
+			}
+		}
+
+		// Fall back to default state (time-based)
+		return this.getDefaultState();
+	}
+
+	/**
+	 * Set all temperature states
+	 */
+	public setStates(states: TemperatureState[]): void {
 		if (!this._db) {
 			return;
 		}
 		this._db.update((old) => ({
-			...old,
-			schedule,
+			...(old as TemperatureDB),
+			states,
 		}));
-		this.addHistoryEntry('Update Schedule', 'Updated temperature schedule');
+		this.addHistoryEntry('Update States', 'Updated temperature states');
+	}
+
+	/**
+	 * Update a specific state
+	 */
+	public updateState(stateId: string, updates: Partial<TemperatureState>): void {
+		if (!this._db) {
+			return;
+		}
+		const states = this.getStates();
+		const index = states.findIndex((s) => s.id === stateId);
+		if (index === -1) {
+			return;
+		}
+		const updatedStates = [...states];
+		updatedStates[index] = { ...updatedStates[index], ...updates };
+		this.setStates(updatedStates);
+		this.addHistoryEntry('Update State', `Updated state ${stateId}`);
+	}
+
+	/**
+	 * Activate a state (via scene). Set to null to return to time-based default.
+	 */
+	public activateState(stateId: string | null): void {
+		if (!this._db) {
+			return;
+		}
+		this._db.update((old) => ({
+			...(old as TemperatureDB),
+			activeStateId: stateId,
+		}));
+		if (stateId === null) {
+			this.addHistoryEntry('State Activation', 'Returned to time-based schedule');
+		} else {
+			const state = this.getState(stateId);
+			const stateName = state ? state.name : stateId;
+			this.addHistoryEntry('State Activation', `Activated state: ${stateName}`);
+		}
+	}
+
+	/**
+	 * Get the configured temperature schedule from the database (legacy - for backward compatibility)
+	 * Returns time ranges from the default state
+	 */
+	public getSchedule(): TemperatureScheduleEntry[] {
+		const defaultState = this.getDefaultState();
+		return defaultState?.timeRanges ?? [];
+	}
+
+	/**
+	 * Save the temperature schedule to the database (legacy - for backward compatibility)
+	 * Updates the default state's time ranges
+	 */
+	public setSchedule(schedule: TemperatureScheduleEntry[]): void {
+		const defaultState = this.getDefaultState();
+		if (defaultState) {
+			this.updateState(defaultState.id, { timeRanges: schedule });
+		} else {
+			// Create default state if it doesn't exist
+			const newState: TemperatureState = {
+				id: 'default',
+				name: 'Default',
+				timeRanges: schedule,
+				isDefault: true,
+			};
+			const states = this.getStates();
+			this.setStates([...states, newState]);
+		}
 	}
 
 	/**
 	 * Get the next scheduled temperature change
-	 * Returns the next schedule entry that will trigger, along with when it triggers
+	 * Returns the next schedule entry (time range) that will trigger, along with when it triggers
+	 * Uses the active state (scene-activated or default)
 	 */
 	public getNextScheduledChange(): {
 		entry: TemperatureScheduleEntry;
 		nextTriggerTime: Date;
 	} | null {
-		const schedule = this.getSchedule();
-		const enabledSchedules = schedule.filter((s) => s.enabled);
+		const activeState = this.getActiveState();
+		if (!activeState) {
+			return null;
+		}
 
-		if (enabledSchedules.length === 0) {
+		const enabledRanges = activeState.timeRanges.filter((r) => r.enabled);
+		if (enabledRanges.length === 0) {
 			return null;
 		}
 
@@ -537,12 +715,12 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 			const checkDate = new Date(now);
 			checkDate.setDate(checkDate.getDate() + dayOffset);
 
-			for (const entry of enabledSchedules) {
-				if (!entry.days.includes(checkDay)) {
+			for (const range of enabledRanges) {
+				if (!range.days.includes(checkDay)) {
 					continue;
 				}
 
-				const [startHour, startMinute] = entry.startTime.split(':').map(Number);
+				const [startHour, startMinute] = range.startTime.split(':').map(Number);
 				const startMinutes = startHour * 60 + startMinute;
 
 				// Calculate time until this schedule triggers
@@ -561,7 +739,7 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 
 				if (diff < minDiff) {
 					minDiff = diff;
-					closestEntry = entry;
+					closestEntry = range;
 					closestTime = new Date(checkDate);
 					closestTime.setHours(startHour, startMinute, 0, 0);
 				}
@@ -579,13 +757,16 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 	}
 
 	/**
-	 * Get the currently active schedule entry (if any)
+	 * Get the currently active schedule entry (time range) from the active state
 	 */
 	public getCurrentActiveSchedule(): TemperatureScheduleEntry | null {
-		const schedule = this.getSchedule();
-		const enabledSchedules = schedule.filter((s) => s.enabled);
+		const activeState = this.getActiveState();
+		if (!activeState) {
+			return null;
+		}
 
-		if (enabledSchedules.length === 0) {
+		const enabledRanges = activeState.timeRanges.filter((r) => r.enabled);
+		if (enabledRanges.length === 0) {
 			return null;
 		}
 
@@ -593,13 +774,13 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		const currentDay = now.getDay();
 		const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-		for (const entry of enabledSchedules) {
-			if (!entry.days.includes(currentDay)) {
+		for (const range of enabledRanges) {
+			if (!range.days.includes(currentDay)) {
 				continue;
 			}
 
-			const [startHour, startMinute] = entry.startTime.split(':').map(Number);
-			const [endHour, endMinute] = entry.endTime.split(':').map(Number);
+			const [startHour, startMinute] = range.startTime.split(':').map(Number);
+			const [endHour, endMinute] = range.endTime.split(':').map(Number);
 			const startMinutes = startHour * 60 + startMinute;
 			const endMinutes = endHour * 60 + endMinute;
 
@@ -607,12 +788,12 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 			if (endMinutes <= startMinutes) {
 				// Schedule crosses midnight
 				if (currentMinutes >= startMinutes || currentMinutes < endMinutes) {
-					return entry;
+					return range;
 				}
 			} else {
 				// Normal schedule within same day
 				if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
-					return entry;
+					return range;
 				}
 			}
 		}
@@ -621,13 +802,17 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 	}
 
 	/**
-	 * Get the active schedule entry for a specific timestamp
+	 * Get the active schedule entry (time range) for a specific timestamp
+	 * Uses the active state (scene-activated or default)
 	 */
 	public getActiveScheduleForTimestamp(timestamp: number): TemperatureScheduleEntry | null {
-		const schedule = this.getSchedule();
-		const enabledSchedules = schedule.filter((s) => s.enabled);
+		const activeState = this.getActiveState();
+		if (!activeState) {
+			return null;
+		}
 
-		if (enabledSchedules.length === 0) {
+		const enabledRanges = activeState.timeRanges.filter((r) => r.enabled);
+		if (enabledRanges.length === 0) {
 			return null;
 		}
 
@@ -635,13 +820,13 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		const day = date.getDay();
 		const minutes = date.getHours() * 60 + date.getMinutes();
 
-		for (const entry of enabledSchedules) {
-			if (!entry.days.includes(day)) {
+		for (const range of enabledRanges) {
+			if (!range.days.includes(day)) {
 				continue;
 			}
 
-			const [startHour, startMinute] = entry.startTime.split(':').map(Number);
-			const [endHour, endMinute] = entry.endTime.split(':').map(Number);
+			const [startHour, startMinute] = range.startTime.split(':').map(Number);
+			const [endHour, endMinute] = range.endTime.split(':').map(Number);
 			const startMinutes = startHour * 60 + startMinute;
 			const endMinutes = endHour * 60 + endMinute;
 
@@ -649,12 +834,12 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 			if (endMinutes <= startMinutes) {
 				// Schedule crosses midnight
 				if (minutes >= startMinutes || minutes < endMinutes) {
-					return entry;
+					return range;
 				}
 			} else {
 				// Normal schedule within same day
 				if (minutes >= startMinutes && minutes < endMinutes) {
-					return entry;
+					return range;
 				}
 			}
 		}

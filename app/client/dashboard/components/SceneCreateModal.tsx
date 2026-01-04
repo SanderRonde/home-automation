@@ -369,20 +369,7 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 		) {
 			return;
 		}
-		if (
-			actions.some(
-				(action) =>
-					action.cluster === 'room-temperature' &&
-					(!('roomName' in action.action ? action.action.roomName : false) ||
-						!('mode' in action.action ? action.action.mode : false) ||
-						(action.action.mode === 'setTarget' &&
-							!('targetTemperature' in action.action
-								? action.action.targetTemperature !== undefined
-								: false)))
-			)
-		) {
-			return;
-		}
+
 		if (
 			actions.some(
 				(action) =>
@@ -1007,12 +994,14 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 						actions.some(
 							(a) =>
 								a.cluster === 'room-temperature' &&
-								(!('roomName' in a.action ? a.action.roomName : false) ||
-									!('mode' in a.action ? a.action.mode : false) ||
+								(!('mode' in a.action ? a.action.mode : false) ||
 									(a.action.mode === 'setTarget' &&
-										!('targetTemperature' in a.action
-											? a.action.targetTemperature !== undefined
-											: false)))
+										(!('roomName' in a.action ? a.action.roomName : false) ||
+											!('targetTemperature' in a.action
+												? a.action.targetTemperature !== undefined
+												: false))) ||
+									(a.action.mode === 'activateState' &&
+										!('stateId' in a.action ? a.action.stateId : false)))
 						) ||
 						actions.some(
 							(a) =>
@@ -1173,12 +1162,15 @@ interface RoomInfo {
 
 const RoomTemperatureActionConfig = React.memo((props: RoomTemperatureActionConfigProps) => {
 	const roomTemperatureAction = props.action.action as {
-		roomName: string;
-		mode: 'setTarget' | 'returnToSchedule';
+		roomName?: string;
+		mode: 'setTarget' | 'returnToSchedule' | 'activateState';
 		targetTemperature?: number;
+		stateId?: string;
 	};
 	const [rooms, setRooms] = React.useState<RoomInfo[]>([]);
+	const [states, setStates] = React.useState<Array<{ id: string; name: string }>>([]);
 	const [loading, setLoading] = React.useState(true);
+	const [loadingStates, setLoadingStates] = React.useState(true);
 
 	React.useEffect(() => {
 		const loadRooms = async () => {
@@ -1194,7 +1186,21 @@ const RoomTemperatureActionConfig = React.memo((props: RoomTemperatureActionConf
 				setLoading(false);
 			}
 		};
+		const loadStates = async () => {
+			try {
+				const response = await apiGet('temperature', '/states', {});
+				if (response.ok) {
+					const data = await response.json();
+					setStates(data.states || []);
+				}
+			} catch (error) {
+				console.error('Failed to load states:', error);
+			} finally {
+				setLoadingStates(false);
+			}
+		};
 		void loadRooms();
+		void loadStates();
 	}, []);
 
 	const handleRoomChange = (_e: unknown, newValue: RoomInfo | null) => {
@@ -1210,19 +1216,25 @@ const RoomTemperatureActionConfig = React.memo((props: RoomTemperatureActionConf
 
 	const handleModeChange = (
 		_e: React.MouseEvent,
-		mode: 'setTarget' | 'returnToSchedule' | null
+		mode: 'setTarget' | 'returnToSchedule' | 'activateState' | null
 	) => {
 		if (mode) {
 			const updatedAction: typeof roomTemperatureAction = {
 				...roomTemperatureAction,
 				mode,
 			};
-			// Clear targetTemperature when switching to returnToSchedule
+			// Clear fields when switching modes
 			if (mode === 'returnToSchedule') {
 				delete updatedAction.targetTemperature;
-			} else if (mode === 'setTarget' && !updatedAction.targetTemperature) {
-				// Set default target temperature when switching to setTarget
-				updatedAction.targetTemperature = 20;
+				delete updatedAction.stateId;
+			} else if (mode === 'setTarget') {
+				delete updatedAction.stateId;
+				if (!updatedAction.targetTemperature) {
+					updatedAction.targetTemperature = 20;
+				}
+			} else if (mode === 'activateState') {
+				delete updatedAction.targetTemperature;
+				delete updatedAction.roomName;
 			}
 			props.handleActionChange(props.action.key, {
 				action: updatedAction,
@@ -1256,21 +1268,6 @@ const RoomTemperatureActionConfig = React.memo((props: RoomTemperatureActionConf
 							Room Temperature
 						</Typography>
 
-						{loading ? (
-							<CircularProgress size={24} />
-						) : (
-							<Autocomplete
-								options={rooms}
-								getOptionLabel={(option) => option.name}
-								value={selectedRoom}
-								onChange={handleRoomChange}
-								renderInput={(params) => (
-									<TextField {...params} label="Room" size="small" required />
-								)}
-								fullWidth
-							/>
-						)}
-
 						<ToggleButtonGroup
 							value={roomTemperatureAction.mode}
 							exclusive
@@ -1278,26 +1275,86 @@ const RoomTemperatureActionConfig = React.memo((props: RoomTemperatureActionConf
 							size="small"
 							fullWidth
 						>
-							<ToggleButton value="setTarget">Set Target Temperature</ToggleButton>
+							<ToggleButton value="setTarget">Set Target</ToggleButton>
+							<ToggleButton value="activateState">Activate State</ToggleButton>
 							<ToggleButton value="returnToSchedule">Return to Schedule</ToggleButton>
 						</ToggleButtonGroup>
 
-						{roomTemperatureAction.mode === 'setTarget' && (
-							<TextField
-								label="Target Temperature (°C)"
-								type="number"
-								value={roomTemperatureAction.targetTemperature ?? 20}
-								onChange={(e) => {
-									const value = parseFloat(e.target.value);
-									if (!Number.isNaN(value)) {
-										handleTargetTemperatureChange(value);
-									}
-								}}
-								inputProps={{ min: 5, max: 30, step: 0.5 }}
-								fullWidth
-								size="small"
-								required
-							/>
+						{(roomTemperatureAction.mode === 'setTarget' ||
+							roomTemperatureAction.mode === 'returnToSchedule') && (
+							<>
+								{loading ? (
+									<CircularProgress size={24} />
+								) : (
+									<Autocomplete
+										options={rooms}
+										getOptionLabel={(option) => option.name}
+										value={selectedRoom}
+										onChange={handleRoomChange}
+										renderInput={(params) => (
+											<TextField
+												{...params}
+												label="Room"
+												size="small"
+												required
+											/>
+										)}
+										fullWidth
+									/>
+								)}
+								{roomTemperatureAction.mode === 'setTarget' && (
+									<TextField
+										label="Target Temperature (°C)"
+										type="number"
+										value={roomTemperatureAction.targetTemperature ?? 20}
+										onChange={(e) => {
+											const value = parseFloat(e.target.value);
+											if (!Number.isNaN(value)) {
+												handleTargetTemperatureChange(value);
+											}
+										}}
+										inputProps={{ min: 5, max: 30, step: 0.5 }}
+										fullWidth
+										size="small"
+										required
+									/>
+								)}
+							</>
+						)}
+
+						{roomTemperatureAction.mode === 'activateState' && (
+							<>
+								{loadingStates ? (
+									<CircularProgress size={24} />
+								) : (
+									<Autocomplete
+										options={states}
+										getOptionLabel={(option) => option.name}
+										value={
+											states.find(
+												(s) => s.id === roomTemperatureAction.stateId
+											) ?? null
+										}
+										onChange={(_e, newValue) => {
+											props.handleActionChange(props.action.key, {
+												action: {
+													...roomTemperatureAction,
+													stateId: newValue?.id,
+												},
+											});
+										}}
+										renderInput={(params) => (
+											<TextField
+												{...params}
+												label="Temperature State"
+												size="small"
+												required
+											/>
+										)}
+										fullWidth
+									/>
+								)}
+							</>
 						)}
 					</Box>
 					<IconButton

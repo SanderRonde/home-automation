@@ -512,20 +512,56 @@ export class SceneAPI {
 					// Handle room temperature action
 					if (sceneAction.cluster === 'room-temperature') {
 						try {
-							const { roomName, mode, targetTemperature } = sceneAction.action;
-							logTag(
-								'scene',
-								'blue',
-								`Setting room temperature for ${roomName}: ${mode}`
-							);
+							const { roomName, mode, targetTemperature, stateId } =
+								sceneAction.action;
+							logTag('scene', 'blue', `Room temperature action: ${mode}`);
 
-							if (mode === 'setTarget' && targetTemperature !== undefined) {
+							if (mode === 'setTarget') {
+								if (!roomName || targetTemperature === undefined) {
+									logTag(
+										'scene',
+										'red',
+										'Room temperature setTarget requires roomName and targetTemperature'
+									);
+									return false;
+								}
 								Temperature.setRoomOverride(roomName, targetTemperature);
+								logTag(
+									'scene',
+									'green',
+									`Set room ${roomName} to ${targetTemperature}°C`
+								);
 							} else if (mode === 'returnToSchedule') {
-								Temperature.setRoomOverride(roomName, null);
+								if (roomName) {
+									Temperature.setRoomOverride(roomName, null);
+									logTag(
+										'scene',
+										'green',
+										`Returned room ${roomName} to schedule`
+									);
+								}
+								// Also clear scene-activated state
+								Temperature.activateState(null);
+								logTag('scene', 'green', 'Returned to time-based schedule');
+							} else if (mode === 'activateState') {
+								if (!stateId) {
+									logTag(
+										'scene',
+										'red',
+										'Room temperature activateState requires stateId'
+									);
+									return false;
+								}
+								Temperature.activateState(stateId);
+								const state = Temperature.getState(stateId);
+								const stateName = state ? state.name : stateId;
+								logTag(
+									'scene',
+									'green',
+									`Activated temperature state: ${stateName}`
+								);
 							}
 
-							logTag('scene', 'green', `Room temperature updated for ${roomName}`);
 							return true;
 						} catch (error) {
 							logTag('scene', 'red', 'Room temperature update error:', error);

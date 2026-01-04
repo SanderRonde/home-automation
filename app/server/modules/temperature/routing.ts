@@ -355,6 +355,120 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 					return json({ success: true, history: debug.history });
 				},
 			},
+			'/states': {
+				GET: (_req, _server, { json }) => {
+					const states = Temperature.getStates();
+					return json({ success: true, states });
+				},
+				POST: withRequestBody(
+					z.object({
+						states: z.array(
+							z.object({
+								id: z.string(),
+								name: z.string(),
+								timeRanges: z.array(
+									z.object({
+										id: z.string(),
+										name: z.string(),
+										days: z.array(z.number().min(0).max(6)),
+										startTime: z.string().regex(/^\d{2}:\d{2}$/),
+										endTime: z.string().regex(/^\d{2}:\d{2}$/),
+										targetTemperature: z.number().min(5).max(30),
+										roomExceptions: z.record(z.string(), z.number()).optional(),
+										enabled: z.boolean(),
+									})
+								),
+								isDefault: z.boolean().optional(),
+							})
+						),
+					}),
+					(body, _req, _server, { json }) => {
+						Temperature.setStates(body.states);
+						return json({ success: true, states: body.states });
+					}
+				),
+			},
+			'/states/:stateId': {
+				GET: (req, _server, { json, error }) => {
+					const { stateId } = req.params;
+					const state = Temperature.getState(stateId);
+					if (!state) {
+						return error(`State not found: ${stateId}`, 404);
+					}
+					return json({ success: true, state });
+				},
+				POST: withRequestBody(
+					z.object({
+						name: z.string().optional(),
+						timeRanges: z
+							.array(
+								z.object({
+									id: z.string(),
+									name: z.string(),
+									days: z.array(z.number().min(0).max(6)),
+									startTime: z.string().regex(/^\d{2}:\d{2}$/),
+									endTime: z.string().regex(/^\d{2}:\d{2}$/),
+									targetTemperature: z.number().min(5).max(30),
+									roomExceptions: z.record(z.string(), z.number()).optional(),
+									enabled: z.boolean(),
+								})
+							)
+							.optional(),
+						isDefault: z.boolean().optional(),
+					}),
+					(body, req, _server, { json, error }) => {
+						const { stateId } = req.params;
+						const state = Temperature.getState(stateId);
+						if (!state) {
+							return error(`State not found: ${stateId}`, 404);
+						}
+						Temperature.updateState(stateId, body);
+						return json({ success: true, state: Temperature.getState(stateId) });
+					}
+				),
+				DELETE: (req, _server, { json, error }) => {
+					const { stateId } = req.params;
+					const states = Temperature.getStates();
+					const index = states.findIndex((s) => s.id === stateId);
+					if (index === -1) {
+						return error(`State not found: ${stateId}`, 404);
+					}
+					// Don't allow deleting the default state if it's the only one
+					const state = states[index];
+					if (state.isDefault && states.length === 1) {
+						return error('Cannot delete the last default state', 400);
+					}
+					const updatedStates = states.filter((s) => s.id !== stateId);
+					Temperature.setStates(updatedStates);
+					return json({ success: true });
+				},
+			},
+			'/states/active': {
+				GET: (_req, _server, { json }) => {
+					const activeState = Temperature.getActiveState();
+					const data = db.current() as { activeStateId?: string | null };
+					return json({
+						success: true,
+						state: activeState,
+						activeStateId: data.activeStateId ?? null,
+					});
+				},
+				POST: withRequestBody(
+					z.object({
+						stateId: z.string().nullable(),
+					}),
+					(body, _req, _server, { json, error }) => {
+						if (body.stateId !== null) {
+							const state = Temperature.getState(body.stateId);
+							if (!state) {
+								return error(`State not found: ${body.stateId}`, 404);
+							}
+						}
+						Temperature.activateState(body.stateId);
+						return json({ success: true, activeStateId: body.stateId });
+					}
+				),
+			},
 		},
 		true
 	);

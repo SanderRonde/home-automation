@@ -1,4 +1,5 @@
-export interface TemperatureScheduleEntry {
+// Time range within a temperature state
+export interface TemperatureTimeRange {
 	id: string;
 	name: string;
 	days: number[]; // 0=Sunday, 1=Monday, 2=Tuesday, etc.
@@ -7,6 +8,17 @@ export interface TemperatureScheduleEntry {
 	targetTemperature: number;
 	roomExceptions?: Record<string, number>;
 	enabled: boolean;
+}
+
+// Legacy type alias for backward compatibility
+export type TemperatureScheduleEntry = TemperatureTimeRange;
+
+// Temperature state containing multiple time ranges
+export interface TemperatureState {
+	id: string;
+	name: string;
+	timeRanges: TemperatureTimeRange[];
+	isDefault?: boolean; // One state can be the default (time-based fallback)
 }
 
 export interface PIDParameters {
