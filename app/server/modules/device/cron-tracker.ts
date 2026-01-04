@@ -1,6 +1,7 @@
 import type { SceneTrigger, SceneId } from '../../../../types/scene';
 import { SceneTriggerType } from '../../../../types/scene';
 import { logTag } from '../../lib/logging/logger';
+import type { AllModules } from '../modules';
 import type { SceneAPI } from './scene-api';
 import type { SQL } from 'bun';
 
@@ -10,12 +11,20 @@ interface CronState {
 	last_execution_timestamp: number;
 }
 
+interface LocationTriggerState {
+	wasInRange: boolean;
+}
+
 export class CronTracker {
 	private _checkInterval?: Timer;
+	// Track previous "in range" state for location triggers
+	// Key: `${sceneId}:${triggerIndex}`
+	private readonly _locationTriggerStates = new Map<string, LocationTriggerState>();
 
 	public constructor(
 		private readonly _sceneAPI: SceneAPI,
-		private readonly _sqlDB: SQL
+		private readonly _sqlDB: SQL,
+		private readonly _modules: AllModules
 	) {}
 
 	public async initialize(): Promise<void> {
@@ -36,11 +45,52 @@ export class CronTracker {
 			logTag('CRON', 'blue', 'Created cron_executions table');
 		}
 
+		// Initialize location trigger states
+		await this._initializeLocationTriggerStates();
+
 		// Check for missed executions on startup
 		await this._checkMissedExecutions();
 
 		// Start the periodic check (every 10 seconds)
 		this._startScheduler();
+	}
+
+	private async _initializeLocationTriggerStates(): Promise<void> {
+		// Initialize state for all existing location triggers
+		const scenes = this._sceneAPI.listScenes();
+
+		for (const scene of scenes) {
+			if (!scene.triggers || scene.triggers.length === 0) {
+				continue;
+			}
+
+			for (let triggerIndex = 0; triggerIndex < scene.triggers.length; triggerIndex++) {
+				const triggerWithConditions = scene.triggers[triggerIndex];
+				const trigger = triggerWithConditions.trigger;
+
+				if (trigger.type === SceneTriggerType.LOCATION_WITHIN_RANGE) {
+					const stateKey = `${scene.id}:${triggerIndex}`;
+					try {
+						const locationAPI = await this._modules.location.api.value;
+						const isWithinRange = await locationAPI.isDeviceWithinRangeOfTarget(
+							trigger.deviceId,
+							trigger.targetId,
+							trigger.rangeKm
+						);
+						this._locationTriggerStates.set(stateKey, { wasInRange: isWithinRange });
+					} catch (error) {
+						// If we can't determine initial state, default to false (not in range)
+						// This ensures we'll trigger when entering range
+						this._locationTriggerStates.set(stateKey, { wasInRange: false });
+						logTag(
+							'location',
+							'yellow',
+							`Could not determine initial location state for scene "${scene.title}", defaulting to not in range`
+						);
+					}
+				}
+			}
+		}
 	}
 
 	private async _checkMissedExecutions(): Promise<void> {
@@ -164,30 +214,72 @@ export class CronTracker {
 				const triggerWithConditions = scene.triggers[triggerIndex];
 				const trigger = triggerWithConditions.trigger;
 
-				if (trigger.type !== SceneTriggerType.CRON) {
-					continue;
-				}
+				if (trigger.type === SceneTriggerType.CRON) {
+					const lastExecution = await this._getLastExecution(scene.id, triggerIndex);
 
-				const lastExecution = await this._getLastExecution(scene.id, triggerIndex);
-
-				if (!lastExecution) {
-					// Never executed, run now
-					logTag(
-						'CRON',
-						'blue',
-						`Triggering scene "${scene.title}" (interval: ${trigger.intervalMinutes} min - first run)`
-					);
-					await this._executeCronTrigger(scene.id, triggerIndex, trigger);
-				} else {
-					// Check if interval has elapsed
-					const minutesSinceLastExecution = (now - lastExecution) / (1000 * 60);
-					if (minutesSinceLastExecution >= trigger.intervalMinutes) {
+					if (!lastExecution) {
+						// Never executed, run now
 						logTag(
 							'CRON',
 							'blue',
-							`Triggering scene "${scene.title}" (interval: ${trigger.intervalMinutes} min elapsed)`
+							`Triggering scene "${scene.title}" (interval: ${trigger.intervalMinutes} min - first run)`
 						);
 						await this._executeCronTrigger(scene.id, triggerIndex, trigger);
+					} else {
+						// Check if interval has elapsed
+						const minutesSinceLastExecution = (now - lastExecution) / (1000 * 60);
+						if (minutesSinceLastExecution >= trigger.intervalMinutes) {
+							logTag(
+								'CRON',
+								'blue',
+								`Triggering scene "${scene.title}" (interval: ${trigger.intervalMinutes} min elapsed)`
+							);
+							await this._executeCronTrigger(scene.id, triggerIndex, trigger);
+						}
+					}
+				} else if (trigger.type === SceneTriggerType.LOCATION_WITHIN_RANGE) {
+					// Check location triggers periodically
+					// Only trigger when entering range (transition from false to true)
+					// and only if enteredRange is true
+					try {
+						const locationAPI = await this._modules.location.api.value;
+						const isWithinRange = await locationAPI.isDeviceWithinRangeOfTarget(
+							trigger.deviceId,
+							trigger.targetId,
+							trigger.rangeKm
+						);
+
+						const stateKey = `${scene.id}:${triggerIndex}`;
+						const previousState = this._locationTriggerStates.get(stateKey);
+
+						// Initialize state if it doesn't exist
+						if (!previousState) {
+							this._locationTriggerStates.set(stateKey, {
+								wasInRange: isWithinRange,
+							});
+							continue; // Don't trigger on first check
+						}
+
+						// Check if state changed from "not in range" to "in range"
+						const enteredRange = !previousState.wasInRange && isWithinRange;
+
+						// Only trigger if:
+						// 1. State changed from false to true (entered range)
+						// 2. The trigger is configured to fire on entry (enteredRange === true)
+						if (enteredRange && trigger.enteredRange) {
+							logTag(
+								'location',
+								'green',
+								`Location trigger: "${scene.title}" - device "${trigger.deviceId}" entered range (within ${trigger.rangeKm}km of target "${trigger.targetId}")`
+							);
+							await this._sceneAPI.onTrigger(trigger);
+							await this._updateLastExecution(scene.id, triggerIndex, now);
+						}
+
+						// Update stored state
+						this._locationTriggerStates.set(stateKey, { wasInRange: isWithinRange });
+					} catch (error) {
+						logTag('location', 'red', 'Failed to check location trigger:', error);
 					}
 				}
 			}

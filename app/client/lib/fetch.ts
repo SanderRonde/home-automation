@@ -5,6 +5,7 @@ import type { HomeWizardRoutes } from '../../server/modules/homewizard/routing';
 import type { BrandedResponse, RouteBodyBrand } from '../../server/lib/routes';
 import type { WakelightRoutes } from '../../server/modules/wakelight/routing';
 import type { DashboardRoutes } from '../../server/modules/dashboard/routing';
+import type { LocationRoutes } from '../../server/modules/location/routing';
 import type { WebhookRoutes } from '../../server/modules/webhook/routing';
 import type { EwelinkRoutes } from '../../server/modules/ewelink/routing';
 import type { LedArtRoutes } from '../../server/modules/led-art/routing';
@@ -229,6 +230,7 @@ export type RoutesForModules = {
 	ewelink: EwelinkRoutes;
 	logs: LogsRoutes;
 	tuya: TuyaRoutes;
+	location: LocationRoutes;
 	'led-art': LedArtRoutes;
 	'home-detector': HomeDetectorRoutes;
 	ai: AIRoutes;

@@ -13,6 +13,7 @@ export enum SceneTriggerType {
 	NOBODY_HOME = 'nobody-home',
 	NOBODY_HOME_TIMEOUT = 'nobody-home-timeout',
 	CRON = 'cron',
+	LOCATION_WITHIN_RANGE = 'location-within-range',
 }
 
 export type SceneTrigger =
@@ -50,6 +51,13 @@ export type SceneTrigger =
 	| {
 			type: SceneTriggerType.CRON;
 			intervalMinutes: number; // Run every X minutes
+	  }
+	| {
+			type: SceneTriggerType.LOCATION_WITHIN_RANGE;
+			deviceId: string; // Device to track (e.g., "my-phone")
+			targetId: string; // Target to check distance from (e.g., "home")
+			rangeKm: number;
+			enteredRange: boolean;
 	  };
 
 export enum SceneConditionType {

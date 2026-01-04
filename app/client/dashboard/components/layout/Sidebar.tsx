@@ -85,6 +85,7 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 			items: [
 				{ text: 'Webhooks', icon: <WebhookIcon />, id: SidebarTab.WEBHOOKS },
 				{ text: 'Home Detection', icon: <SensorsIcon />, id: SidebarTab.HOME_DETECTOR },
+				{ text: 'Location', icon: <MapIcon />, id: SidebarTab.LOCATION },
 				{ text: 'Wakelight', icon: <AlarmIcon />, id: SidebarTab.WAKELIGHT },
 				{
 					text: 'Notifications',
@@ -188,6 +189,7 @@ export enum SidebarTab {
 	AI = 'ai',
 	NOTIFICATIONS = 'notifications',
 	TEMPERATURE = 'temperature',
+	LOCATION = 'location',
 	LOGS = 'logs',
 	BACKUP = 'backup',
 }

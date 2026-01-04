@@ -72,11 +72,14 @@ export function createServeOptions<
 
 				try {
 					// Check authentication if required
-					if (auth) {
+					const url = new URL(req.url);
+					if (
+						auth === true ||
+						(typeof auth === 'object' && auth[url.pathname] !== false)
+					) {
 						const isAuthenticated = await checkAuth(req);
 						if (!isAuthenticated) {
 							// Check if this is an API request or a page request
-							const url = new URL(req.url);
 							const acceptHeader = req.headers.get('accept') || '';
 							const isApiRequest =
 								acceptHeader.includes('application/json') ||

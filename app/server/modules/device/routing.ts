@@ -247,6 +247,232 @@ interface DashboardDeviceResponse extends DashboardDeviceEndpointResponse {
 	status?: 'online' | 'offline';
 }
 
+const sceneActions = z.array(
+	z.union([
+		z.object({
+			deviceId: z.string().optional(),
+			groupId: z.string().optional(),
+			cluster: z.literal(DeviceClusterName.ON_OFF),
+			action: z.object({
+				isOn: z.boolean(),
+			}),
+			excludeDeviceIds: z.array(z.string()).optional(),
+		}),
+		z.object({
+			deviceId: z.string().optional(),
+			groupId: z.string().optional(),
+			cluster: z.literal(DeviceClusterName.WINDOW_COVERING),
+			action: z.object({
+				targetPositionLiftPercentage: z.number(),
+			}),
+			excludeDeviceIds: z.array(z.string()).optional(),
+		}),
+		z.object({
+			deviceId: z.string().optional(),
+			groupId: z.string().optional(),
+			cluster: z.literal(DeviceClusterName.COLOR_CONTROL),
+			action: z.object({
+				hue: z.number(),
+				saturation: z.number(),
+				value: z.number(),
+			}),
+			excludeDeviceIds: z.array(z.string()).optional(),
+		}),
+		z.object({
+			deviceId: z.string().optional(),
+			groupId: z.string().optional(),
+			cluster: z.literal(DeviceClusterName.COLOR_CONTROL),
+			action: z.object({
+				paletteId: z.string(),
+			}),
+			excludeDeviceIds: z.array(z.string()).optional(),
+		}),
+		z.object({
+			deviceId: z.string().optional(),
+			groupId: z.string().optional(),
+			cluster: z.literal(DeviceClusterName.LEVEL_CONTROL),
+			action: z.object({
+				level: z.number(),
+			}),
+			excludeDeviceIds: z.array(z.string()).optional(),
+		}),
+		z.object({
+			deviceId: z.string().optional(),
+			groupId: z.string().optional(),
+			cluster: z.literal('http-request'),
+			action: z.object({
+				url: z.string(),
+				method: z.enum(['GET', 'POST']),
+				body: z.record(z.string(), z.unknown()).optional(),
+				headers: z.record(z.string(), z.string()).optional(),
+			}),
+			excludeDeviceIds: z.array(z.string()).optional(),
+		}),
+		z.object({
+			cluster: z.literal('notification'),
+			action: z.object({
+				title: z.string(),
+				body: z.string(),
+			}),
+		}),
+		z.object({
+			cluster: z.literal('room-temperature'),
+			action: z.union([
+				z.object({
+					roomName: z.string(),
+					mode: z.enum(['setTarget', 'returnToSchedule']),
+					targetTemperature: z.number().optional(),
+				}),
+				z.object({
+					mode: z.literal('activateState'),
+					stateId: z.string(),
+				}),
+			]),
+		}),
+		z.object({
+			cluster: z.literal('set-variable'),
+			action: z.object({
+				variableName: z.string().min(1),
+				value: z.boolean(),
+			}),
+		}),
+	])
+);
+
+const sceneTriggers = z
+	.array(
+		z.object({
+			trigger: z.union([
+				z.object({
+					type: z.literal(SceneTriggerType.OCCUPANCY),
+					deviceId: z.string(),
+					occupied: z.boolean(),
+				}),
+				z.object({
+					type: z.literal(SceneTriggerType.BUTTON_PRESS),
+					deviceId: z.string(),
+					buttonIndex: z.number(),
+				}),
+				z.object({
+					type: z.literal(SceneTriggerType.HOST_ARRIVAL),
+					hostId: z.string(),
+				}),
+				z.object({
+					type: z.literal(SceneTriggerType.HOST_DEPARTURE),
+					hostId: z.string(),
+				}),
+				z.object({
+					type: z.literal(SceneTriggerType.WEBHOOK),
+					webhookName: z.string(),
+				}),
+				z.object({
+					type: z.literal(SceneTriggerType.ANYBODY_HOME),
+				}),
+				z.object({
+					type: z.literal(SceneTriggerType.NOBODY_HOME),
+				}),
+				z.object({
+					type: z.literal(SceneTriggerType.NOBODY_HOME_TIMEOUT),
+				}),
+				z.object({
+					type: z.literal(SceneTriggerType.CRON),
+					intervalMinutes: z.number().min(1),
+				}),
+				z.object({
+					type: z.literal(SceneTriggerType.LOCATION_WITHIN_RANGE),
+					deviceId: z.string(),
+					targetId: z.string(),
+					rangeKm: z.number(),
+					enteredRange: z.boolean(),
+				}),
+			]),
+			conditions: z
+				.array(
+					z.union([
+						z.object({
+							type: z.literal(SceneConditionType.HOST_HOME),
+							hostId: z.string(),
+							shouldBeHome: z.boolean(),
+							checkOnManual: z.boolean().optional(),
+						}),
+						z.object({
+							type: z.literal(SceneConditionType.DEVICE_ON),
+							deviceId: z.string(),
+							shouldBeOn: z.boolean(),
+							checkOnManual: z.boolean().optional(),
+						}),
+						z.object({
+							type: z.literal(SceneConditionType.TIME_WINDOW),
+							checkOnManual: z.boolean().optional(),
+							windows: z.object({
+								monday: z
+									.object({
+										start: z.string(),
+										end: z.string(),
+									})
+									.optional(),
+								tuesday: z
+									.object({
+										start: z.string(),
+										end: z.string(),
+									})
+									.optional(),
+								wednesday: z
+									.object({
+										start: z.string(),
+										end: z.string(),
+									})
+									.optional(),
+								thursday: z
+									.object({
+										start: z.string(),
+										end: z.string(),
+									})
+									.optional(),
+								friday: z
+									.object({
+										start: z.string(),
+										end: z.string(),
+									})
+									.optional(),
+								saturday: z
+									.object({
+										start: z.string(),
+										end: z.string(),
+									})
+									.optional(),
+								sunday: z
+									.object({
+										start: z.string(),
+										end: z.string(),
+									})
+									.optional(),
+							}),
+						}),
+						z.object({
+							type: z.literal(SceneConditionType.ANYONE_HOME),
+							shouldBeHome: z.boolean(),
+							checkOnManual: z.boolean().optional(),
+						}),
+						z.object({
+							type: z.literal(SceneConditionType.CUSTOM_JS),
+							code: z.string(),
+							checkOnManual: z.boolean().optional(),
+						}),
+						z.object({
+							type: z.literal(SceneConditionType.VARIABLE),
+							variableName: z.string().min(1),
+							shouldBeTrue: z.boolean(),
+							invert: z.boolean().optional(),
+							checkOnManual: z.boolean().optional(),
+						}),
+					])
+				)
+				.optional(),
+		})
+	)
+	.optional();
+
 function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api: DeviceAPI) {
 	// Create a deduplicated WebSocket publisher to avoid sending duplicate messages
 	const wsPublish = createDeduplicatedTypedWSPublish<DeviceWebsocketServerMessage>(_wsPublish);
@@ -672,202 +898,8 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 				z.object({
 					title: z.string(),
 					icon: z.string() as z.ZodType<IncludedIconNames>,
-					actions: z.array(
-						z.union([
-							z.object({
-								deviceId: z.string().optional(),
-								groupId: z.string().optional(),
-								cluster: z.literal(DeviceClusterName.ON_OFF),
-								action: z.object({
-									isOn: z.boolean(),
-								}),
-							}),
-							z.object({
-								deviceId: z.string().optional(),
-								groupId: z.string().optional(),
-								cluster: z.literal(DeviceClusterName.WINDOW_COVERING),
-								action: z.object({
-									targetPositionLiftPercentage: z.number(),
-								}),
-							}),
-							z.object({
-								deviceId: z.string().optional(),
-								groupId: z.string().optional(),
-								cluster: z.literal(DeviceClusterName.COLOR_CONTROL),
-								action: z.object({
-									hue: z.number(),
-									saturation: z.number(),
-									value: z.number(),
-								}),
-							}),
-							z.object({
-								deviceId: z.string().optional(),
-								groupId: z.string().optional(),
-								cluster: z.literal(DeviceClusterName.COLOR_CONTROL),
-								action: z.object({
-									paletteId: z.string(),
-								}),
-							}),
-							z.object({
-								deviceId: z.string().optional(),
-								groupId: z.string().optional(),
-								cluster: z.literal(DeviceClusterName.LEVEL_CONTROL),
-								action: z.object({
-									level: z.number(),
-								}),
-							}),
-							z.object({
-								cluster: z.literal('http-request'),
-								action: z.object({
-									url: z.string(),
-									method: z.enum(['GET', 'POST']),
-									body: z.record(z.string(), z.unknown()).optional(),
-									headers: z.record(z.string(), z.string()).optional(),
-								}),
-							}),
-							z.object({
-								cluster: z.literal('notification'),
-								action: z.object({
-									title: z.string(),
-									body: z.string(),
-								}),
-							}),
-							z.object({
-								cluster: z.literal('room-temperature'),
-								action: z.object({
-									roomName: z.string(),
-									mode: z.enum(['setTarget', 'returnToSchedule']),
-									targetTemperature: z.number().optional(),
-								}),
-							}),
-						])
-					),
-					triggers: z
-						.array(
-							z.object({
-								trigger: z.union([
-									z.object({
-										type: z.literal(SceneTriggerType.OCCUPANCY),
-										deviceId: z.string(),
-										occupied: z.boolean(),
-									}),
-									z.object({
-										type: z.literal(SceneTriggerType.BUTTON_PRESS),
-										deviceId: z.string(),
-										buttonIndex: z.number(),
-									}),
-									z.object({
-										type: z.literal(SceneTriggerType.HOST_ARRIVAL),
-										hostId: z.string(),
-									}),
-									z.object({
-										type: z.literal(SceneTriggerType.HOST_DEPARTURE),
-										hostId: z.string(),
-									}),
-									z.object({
-										type: z.literal(SceneTriggerType.WEBHOOK),
-										webhookName: z.string(),
-									}),
-									z.object({
-										type: z.literal(SceneTriggerType.ANYBODY_HOME),
-									}),
-									z.object({
-										type: z.literal(SceneTriggerType.NOBODY_HOME),
-									}),
-									z.object({
-										type: z.literal(SceneTriggerType.NOBODY_HOME_TIMEOUT),
-									}),
-									z.object({
-										type: z.literal(SceneTriggerType.CRON),
-										intervalMinutes: z.number().min(1),
-									}),
-								]),
-								conditions: z
-									.array(
-										z.union([
-											z.object({
-												type: z.literal(SceneConditionType.HOST_HOME),
-												hostId: z.string(),
-												shouldBeHome: z.boolean(),
-												checkOnManual: z.boolean().optional(),
-											}),
-											z.object({
-												type: z.literal(SceneConditionType.DEVICE_ON),
-												deviceId: z.string(),
-												shouldBeOn: z.boolean(),
-												checkOnManual: z.boolean().optional(),
-											}),
-											z.object({
-												type: z.literal(SceneConditionType.TIME_WINDOW),
-												checkOnManual: z.boolean().optional(),
-												windows: z.object({
-													monday: z
-														.object({
-															start: z.string(),
-															end: z.string(),
-														})
-														.optional(),
-													tuesday: z
-														.object({
-															start: z.string(),
-															end: z.string(),
-														})
-														.optional(),
-													wednesday: z
-														.object({
-															start: z.string(),
-															end: z.string(),
-														})
-														.optional(),
-													thursday: z
-														.object({
-															start: z.string(),
-															end: z.string(),
-														})
-														.optional(),
-													friday: z
-														.object({
-															start: z.string(),
-															end: z.string(),
-														})
-														.optional(),
-													saturday: z
-														.object({
-															start: z.string(),
-															end: z.string(),
-														})
-														.optional(),
-													sunday: z
-														.object({
-															start: z.string(),
-															end: z.string(),
-														})
-														.optional(),
-												}),
-											}),
-											z.object({
-												type: z.literal(SceneConditionType.ANYONE_HOME),
-												shouldBeHome: z.boolean(),
-												checkOnManual: z.boolean().optional(),
-											}),
-											z.object({
-												type: z.literal(SceneConditionType.CUSTOM_JS),
-												code: z.string(),
-												checkOnManual: z.boolean().optional(),
-											}),
-											z.object({
-												type: z.literal(SceneConditionType.VARIABLE),
-												variableName: z.string().min(1),
-												shouldBeTrue: z.boolean(),
-												invert: z.boolean().optional(),
-												checkOnManual: z.boolean().optional(),
-											}),
-										])
-									)
-									.optional(),
-							})
-						)
-						.optional(),
+					actions: sceneActions,
+					triggers: sceneTriggers,
 					showOnHome: z.boolean().optional(),
 				}),
 				(body, _req, _server, { json }) => {
@@ -879,223 +911,8 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 				z.object({
 					title: z.string(),
 					icon: z.string() as z.ZodType<IncludedIconNames>,
-					actions: z.array(
-						z.union([
-							z.object({
-								deviceId: z.string().optional(),
-								groupId: z.string().optional(),
-								cluster: z.literal(DeviceClusterName.ON_OFF),
-								action: z.object({
-									isOn: z.boolean(),
-								}),
-								excludeDeviceIds: z.array(z.string()).optional(),
-							}),
-							z.object({
-								deviceId: z.string().optional(),
-								groupId: z.string().optional(),
-								cluster: z.literal(DeviceClusterName.WINDOW_COVERING),
-								action: z.object({
-									targetPositionLiftPercentage: z.number(),
-								}),
-								excludeDeviceIds: z.array(z.string()).optional(),
-							}),
-							z.object({
-								deviceId: z.string().optional(),
-								groupId: z.string().optional(),
-								cluster: z.literal(DeviceClusterName.COLOR_CONTROL),
-								action: z.object({
-									hue: z.number(),
-									saturation: z.number(),
-									value: z.number(),
-								}),
-								excludeDeviceIds: z.array(z.string()).optional(),
-							}),
-							z.object({
-								deviceId: z.string().optional(),
-								groupId: z.string().optional(),
-								cluster: z.literal(DeviceClusterName.COLOR_CONTROL),
-								action: z.object({
-									paletteId: z.string(),
-								}),
-								excludeDeviceIds: z.array(z.string()).optional(),
-							}),
-							z.object({
-								deviceId: z.string().optional(),
-								groupId: z.string().optional(),
-								cluster: z.literal(DeviceClusterName.LEVEL_CONTROL),
-								action: z.object({
-									level: z.number(),
-								}),
-								excludeDeviceIds: z.array(z.string()).optional(),
-							}),
-							z.object({
-								deviceId: z.string().optional(),
-								groupId: z.string().optional(),
-								cluster: z.literal('http-request'),
-								action: z.object({
-									url: z.string(),
-									method: z.enum(['GET', 'POST']),
-									body: z.record(z.string(), z.unknown()).optional(),
-									headers: z.record(z.string(), z.string()).optional(),
-								}),
-								excludeDeviceIds: z.array(z.string()).optional(),
-							}),
-							z.object({
-								cluster: z.literal('notification'),
-								action: z.object({
-									title: z.string(),
-									body: z.string(),
-								}),
-							}),
-							z.object({
-								cluster: z.literal('room-temperature'),
-								action: z.union([
-									z.object({
-										roomName: z.string(),
-										mode: z.enum(['setTarget', 'returnToSchedule']),
-										targetTemperature: z.number().optional(),
-									}),
-									z.object({
-										mode: z.literal('activateState'),
-										stateId: z.string(),
-									}),
-								]),
-							}),
-							z.object({
-								cluster: z.literal('set-variable'),
-								action: z.object({
-									variableName: z.string().min(1),
-									value: z.boolean(),
-								}),
-							}),
-						])
-					),
-					triggers: z
-						.array(
-							z.object({
-								trigger: z.union([
-									z.object({
-										type: z.literal(SceneTriggerType.OCCUPANCY),
-										deviceId: z.string(),
-										occupied: z.boolean(),
-									}),
-									z.object({
-										type: z.literal(SceneTriggerType.BUTTON_PRESS),
-										deviceId: z.string(),
-										buttonIndex: z.number(),
-									}),
-									z.object({
-										type: z.literal(SceneTriggerType.HOST_ARRIVAL),
-										hostId: z.string(),
-									}),
-									z.object({
-										type: z.literal(SceneTriggerType.HOST_DEPARTURE),
-										hostId: z.string(),
-									}),
-									z.object({
-										type: z.literal(SceneTriggerType.WEBHOOK),
-										webhookName: z.string(),
-									}),
-									z.object({
-										type: z.literal(SceneTriggerType.ANYBODY_HOME),
-									}),
-									z.object({
-										type: z.literal(SceneTriggerType.NOBODY_HOME),
-									}),
-									z.object({
-										type: z.literal(SceneTriggerType.NOBODY_HOME_TIMEOUT),
-									}),
-									z.object({
-										type: z.literal(SceneTriggerType.CRON),
-										intervalMinutes: z.number().min(1),
-									}),
-								]),
-								conditions: z
-									.array(
-										z.union([
-											z.object({
-												type: z.literal(SceneConditionType.HOST_HOME),
-												hostId: z.string(),
-												shouldBeHome: z.boolean(),
-												checkOnManual: z.boolean().optional(),
-											}),
-											z.object({
-												type: z.literal(SceneConditionType.DEVICE_ON),
-												deviceId: z.string(),
-												shouldBeOn: z.boolean(),
-												checkOnManual: z.boolean().optional(),
-											}),
-											z.object({
-												type: z.literal(SceneConditionType.TIME_WINDOW),
-												checkOnManual: z.boolean().optional(),
-												windows: z.object({
-													monday: z
-														.object({
-															start: z.string(),
-															end: z.string(),
-														})
-														.optional(),
-													tuesday: z
-														.object({
-															start: z.string(),
-															end: z.string(),
-														})
-														.optional(),
-													wednesday: z
-														.object({
-															start: z.string(),
-															end: z.string(),
-														})
-														.optional(),
-													thursday: z
-														.object({
-															start: z.string(),
-															end: z.string(),
-														})
-														.optional(),
-													friday: z
-														.object({
-															start: z.string(),
-															end: z.string(),
-														})
-														.optional(),
-													saturday: z
-														.object({
-															start: z.string(),
-															end: z.string(),
-														})
-														.optional(),
-													sunday: z
-														.object({
-															start: z.string(),
-															end: z.string(),
-														})
-														.optional(),
-												}),
-											}),
-											z.object({
-												type: z.literal(SceneConditionType.ANYONE_HOME),
-												shouldBeHome: z.boolean(),
-												checkOnManual: z.boolean().optional(),
-											}),
-											z.object({
-												type: z.literal(SceneConditionType.CUSTOM_JS),
-												code: z.string(),
-												checkOnManual: z.boolean().optional(),
-											}),
-											z.object({
-												type: z.literal(SceneConditionType.VARIABLE),
-												variableName: z.string().min(1),
-												shouldBeTrue: z.boolean(),
-												invert: z.boolean().optional(),
-												checkOnManual: z.boolean().optional(),
-											}),
-										])
-									)
-									.optional(),
-							})
-						)
-						.optional(),
+					actions: sceneActions,
+					triggers: sceneTriggers,
 					showOnHome: z.boolean().optional(),
 				}),
 				(body, req, _server, { json }) => {

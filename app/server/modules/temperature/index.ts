@@ -1,15 +1,14 @@
-import type {
-	TemperatureScheduleEntry,
-	TemperatureTimeRange,
-	TemperatureState,
-	PIDParameters,
-	MeasurementSession,
-} from './types';
 import {
 	DeviceTemperatureMeasurementCluster,
 	DeviceThermostatCluster,
 	ThermostatMode,
 } from '../device/cluster';
+import type {
+	TemperatureScheduleEntry,
+	TemperatureState,
+	PIDParameters,
+	MeasurementSession,
+} from './types';
 import { PIDMeasurementManager } from './pid-measurement';
 import type { ModuleConfig, AllModules } from '..';
 import { logTag } from '../../lib/logging/logger';

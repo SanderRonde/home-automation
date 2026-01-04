@@ -5,6 +5,7 @@ import { LedArt } from './led-art/led-art';
 import { HomeWizard } from './homewizard';
 import { Wakelight } from './wakelight';
 import { Dashboard } from './dashboard';
+import { Location } from './location';
 import { Webhook } from './webhook';
 import { EWeLink } from './ewelink';
 import { Secret } from './secret/';
@@ -56,6 +57,7 @@ const getModuleObj = () => ({
 	homewizard: HomeWizard,
 	temperature: Temperature,
 	homeDetector: HomeDetector,
+	location: Location,
 	notification: Notification,
 	backup: Backup,
 });

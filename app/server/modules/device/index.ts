@@ -219,12 +219,12 @@ export const Device = new (class Device extends ModuleMeta {
 		const api = new DeviceAPI(config.db, config.sqlDB, this.getModules() as unknown);
 		this.api.set(api);
 
-		// Initialize CronTracker
-		const cronTracker = new CronTracker(api.sceneAPI, config.sqlDB);
-		this._cronTracker.set(cronTracker);
-
 		// Subscribe to home-detector state changes to trigger scenes
 		const modules = await this.getModules<AllModules>();
+
+		// Initialize CronTracker
+		const cronTracker = new CronTracker(api.sceneAPI, config.sqlDB, modules);
+		this._cronTracker.set(cronTracker);
 		void modules.homeDetector.onUpdate(async (newState: HOME_STATE, hostId: string) => {
 			if (newState === HOME_STATE.HOME) {
 				await api.sceneAPI.onTrigger({

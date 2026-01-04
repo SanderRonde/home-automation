@@ -3,6 +3,7 @@ import { TemperatureConfig } from './components/TemperatureConfig';
 import { LEDSourcesConfig } from './components/LEDSourcesConfig';
 import { WakelightConfig } from './components/WakelightConfig';
 import { Notifications } from './components/Notifications';
+import { LocationPanel } from './components/LocationPanel';
 import { EweLinkConfig } from './components/EweLinkConfig';
 import { AppLayout } from './components/layout/AppLayout';
 import { SidebarTab } from './components/layout/Sidebar';
@@ -133,6 +134,8 @@ function DashboardApp() {
 				return <Webhooks />;
 			case SidebarTab.HOME_DETECTOR:
 				return <HomeDetector />;
+			case SidebarTab.LOCATION:
+				return <LocationPanel />;
 			case SidebarTab.WAKELIGHT:
 				return <WakelightConfig />;
 			case SidebarTab.NOTIFICATIONS:

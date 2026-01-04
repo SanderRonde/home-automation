@@ -10,6 +10,7 @@ import type { HomeWizard } from './homewizard';
 // This should work because we're only using it as a type, not a value
 import type { Wakelight } from './wakelight';
 import type { Dashboard } from './dashboard';
+import type { Location } from './location';
 import type { Webhook } from './webhook';
 import type { EWeLink } from './ewelink';
 import type { Secret } from './secret/';
@@ -45,6 +46,7 @@ export type AllModules = {
 	homewizard: typeof HomeWizard;
 	temperature: typeof Temperature;
 	homeDetector: typeof HomeDetector;
+	location: typeof Location;
 	notification: typeof Notification;
 	backup: typeof Backup;
 };

@@ -395,6 +395,16 @@ export class SceneAPI {
 					// For interval triggers, they match if they have the same interval
 					triggerMatches = sceneTrigger.intervalMinutes === trigger.intervalMinutes;
 					triggerSource = `Every ${trigger.intervalMinutes} min`;
+				} else if (
+					trigger.type === SceneTriggerType.LOCATION_WITHIN_RANGE &&
+					sceneTrigger.type === SceneTriggerType.LOCATION_WITHIN_RANGE
+				) {
+					// Location triggers match if device, target, and range all match
+					triggerMatches =
+						sceneTrigger.deviceId === trigger.deviceId &&
+						sceneTrigger.targetId === trigger.targetId &&
+						sceneTrigger.rangeKm === trigger.rangeKm;
+					triggerSource = `${trigger.deviceId} within ${trigger.rangeKm}km of ${trigger.targetId}`;
 				}
 
 				if (!triggerMatches) {

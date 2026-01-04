@@ -19,6 +19,7 @@ import {
 	useMediaQuery,
 	useTheme,
 	Alert,
+	CircularProgress,
 } from '@mui/material';
 import type {
 	DeviceListWithValuesResponse,
@@ -35,10 +36,42 @@ import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import type { Host } from '../../../server/modules/home-detector/routing';
 import type { Webhook } from '../../../server/modules/webhook/types';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import React, { useState, useEffect, useMemo } from 'react';
 import { LocalizationProvider } from '@mui/x-date-pickers';
-import React, { useState, useEffect } from 'react';
 import { TimePicker } from '@mui/x-date-pickers';
 import { apiGet } from '../../lib/fetch';
+import 'leaflet/dist/leaflet.css';
+
+// Dynamic import for react-leaflet to handle ESM module
+let MapContainer: React.ComponentType<any>;
+let TileLayer: React.ComponentType<any>;
+let Marker: React.ComponentType<any>;
+let Popup: React.ComponentType<any>;
+let Circle: React.ComponentType<any>;
+let L: any;
+
+// Lazy load leaflet and react-leaflet
+const loadLeaflet = async () => {
+	if (!MapContainer) {
+		const leaflet = await import('leaflet');
+		L = leaflet.default;
+		// Fix for default marker icons in Leaflet with bundlers
+		delete (L.Icon.Default.prototype as { _getIconUrl?: unknown })._getIconUrl;
+		L.Icon.Default.mergeOptions({
+			iconRetinaUrl:
+				'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+			iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+			shadowUrl:
+				'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+		});
+		const reactLeaflet = await import('react-leaflet');
+		MapContainer = reactLeaflet.MapContainer;
+		TileLayer = reactLeaflet.TileLayer;
+		Marker = reactLeaflet.Marker;
+		Popup = reactLeaflet.Popup;
+		Circle = reactLeaflet.Circle;
+	}
+};
 
 interface TriggerEditDialogProps {
 	open: boolean;
@@ -67,6 +100,158 @@ const dateToTimeString = (date: Date | null): string => {
 	const hours = date.getHours().toString().padStart(2, '0');
 	const minutes = date.getMinutes().toString().padStart(2, '0');
 	return `${hours}:${minutes}`;
+};
+
+interface LocationTriggerMapPreviewProps {
+	deviceId: string;
+	targetId: string;
+	rangeKm: string;
+	devices: Array<{
+		id: string;
+		name: string;
+		lastKnownLocation: {
+			latitude: number;
+			longitude: number;
+			accuracy: number | null;
+			timestamp: number;
+		} | null;
+	}>;
+	targets: Array<{
+		id: string;
+		name: string;
+		coordinates: { latitude: number; longitude: number };
+	}>;
+}
+
+const LocationTriggerMapPreview = ({
+	deviceId,
+	targetId,
+	rangeKm,
+	devices,
+	targets,
+}: LocationTriggerMapPreviewProps): JSX.Element => {
+	const [mapLoaded, setMapLoaded] = useState(false);
+
+	useEffect(() => {
+		void loadLeaflet().then(() => {
+			setMapLoaded(true);
+		});
+	}, []);
+
+	const device = useMemo(() => devices.find((d) => d.id === deviceId), [devices, deviceId]);
+	const target = useMemo(() => targets.find((t) => t.id === targetId), [targets, targetId]);
+
+	const range = useMemo(() => {
+		const parsed = parseFloat(rangeKm);
+		return isNaN(parsed) || parsed <= 0 ? null : parsed;
+	}, [rangeKm]);
+
+	const mapCenter = useMemo((): [number, number] | null => {
+		if (target) {
+			return [target.coordinates.latitude, target.coordinates.longitude];
+		}
+		if (device?.lastKnownLocation) {
+			return [device.lastKnownLocation.latitude, device.lastKnownLocation.longitude];
+		}
+		return null;
+	}, [device, target]);
+
+	if (!mapLoaded || !MapContainer || !mapCenter) {
+		if (!deviceId || !targetId) {
+			return (
+				<Box
+					sx={{
+						height: '300px',
+						width: '100%',
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						bgcolor: 'action.hover',
+						borderRadius: 1,
+					}}
+				>
+					<Typography variant="body2" color="text.secondary">
+						Select a device and target to see map preview
+					</Typography>
+				</Box>
+			);
+		}
+		return (
+			<Box
+				sx={{
+					height: '300px',
+					width: '100%',
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
+				}}
+			>
+				<CircularProgress />
+			</Box>
+		);
+	}
+
+	const zoom = range && range < 1 ? 13 : range && range < 5 ? 12 : 11;
+
+	return (
+		<Box sx={{ height: '300px', width: '100%', borderRadius: 1, overflow: 'hidden' }}>
+			<MapContainer center={mapCenter} zoom={zoom} style={{ height: '100%', width: '100%' }}>
+				<TileLayer
+					attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+					url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+				/>
+				{target && (
+					<>
+						<Marker
+							position={[target.coordinates.latitude, target.coordinates.longitude]}
+						>
+							<Popup>
+								<strong>{target.name}</strong>
+								<br />
+								Target
+								<br />
+								{target.coordinates.latitude.toFixed(6)},{' '}
+								{target.coordinates.longitude.toFixed(6)}
+							</Popup>
+						</Marker>
+						{range && (
+							<Circle
+								center={[target.coordinates.latitude, target.coordinates.longitude]}
+								radius={range * 1000} // Convert km to meters
+								pathOptions={{
+									color: '#1976d2',
+									fillColor: '#1976d2',
+									fillOpacity: 0.2,
+									weight: 2,
+								}}
+							>
+								<Popup>
+									<strong>Range: {range.toFixed(2)}km</strong>
+								</Popup>
+							</Circle>
+						)}
+					</>
+				)}
+				{device?.lastKnownLocation && (
+					<Marker
+						position={[
+							device.lastKnownLocation.latitude,
+							device.lastKnownLocation.longitude,
+						]}
+					>
+						<Popup>
+							<strong>{device.name}</strong>
+							<br />
+							Device
+							<br />
+							{device.lastKnownLocation.latitude.toFixed(6)},{' '}
+							{device.lastKnownLocation.longitude.toFixed(6)}
+						</Popup>
+					</Marker>
+				)}
+			</MapContainer>
+		</Box>
+	);
 };
 
 export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element => {
@@ -105,6 +290,33 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 	const [conditionShouldBeTrue, setConditionShouldBeTrue] = useState(true);
 	const [conditionInvert, setConditionInvert] = useState(false);
 	const [variables, setVariables] = useState<Record<string, boolean>>({});
+
+	// Location trigger state
+	const [locationDeviceId, setLocationDeviceId] = useState<string>('');
+	const [locationTargetId, setLocationTargetId] = useState<string>('');
+	const [locationRangeKm, setLocationRangeKm] = useState<string>('');
+	const [locationEnteredRange, setLocationEnteredRange] = useState(false);
+	const [locationTargets, setLocationTargets] = useState<Array<{ id: string; name: string }>>([]);
+	const [locationDevices, setLocationDevices] = useState<Array<{ id: string; name: string }>>([]);
+	const [locationTargetsFull, setLocationTargetsFull] = useState<
+		Array<{
+			id: string;
+			name: string;
+			coordinates: { latitude: number; longitude: number };
+		}>
+	>([]);
+	const [locationDevicesFull, setLocationDevicesFull] = useState<
+		Array<{
+			id: string;
+			name: string;
+			lastKnownLocation: {
+				latitude: number;
+				longitude: number;
+				accuracy: number | null;
+				timestamp: number;
+			} | null;
+		}>
+	>([]);
 
 	// Time window state
 	type DayOfWeek =
@@ -146,7 +358,7 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 	// Validation
 	const [errors, setErrors] = useState<string[]>([]);
 
-	// Load variables
+	// Load variables and location targets
 	useEffect(() => {
 		if (props.open) {
 			const loadVariables = async () => {
@@ -160,7 +372,69 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 					console.error('Failed to load variables:', error);
 				}
 			};
+			const loadLocationData = async () => {
+				try {
+					const [targetsResponse, devicesResponse] = await Promise.all([
+						apiGet('location', '/targets', {}),
+						apiGet('location', '/devices', {}),
+					]);
+					if (targetsResponse.ok) {
+						const data = await targetsResponse.json();
+						const targets = data.targets || [];
+						setLocationTargets(
+							targets.map((t: { id: string; name: string }) => ({
+								id: t.id,
+								name: t.name,
+							}))
+						);
+						setLocationTargetsFull(
+							targets.map(
+								(t: {
+									id: string;
+									name: string;
+									coordinates: { latitude: number; longitude: number };
+								}) => ({
+									id: t.id,
+									name: t.name,
+									coordinates: t.coordinates,
+								})
+							)
+						);
+					}
+					if (devicesResponse.ok) {
+						const data = await devicesResponse.json();
+						const devices = data.devices || [];
+						setLocationDevices(
+							devices.map((d: { id: string; name: string }) => ({
+								id: d.id,
+								name: d.name,
+							}))
+						);
+						setLocationDevicesFull(
+							devices.map(
+								(d: {
+									id: string;
+									name: string;
+									lastKnownLocation: {
+										latitude: number;
+										longitude: number;
+										accuracy: number | null;
+										timestamp: number;
+									} | null;
+								}) => ({
+									id: d.id,
+									name: d.name,
+									lastKnownLocation: d.lastKnownLocation,
+								})
+							)
+						);
+					}
+				} catch (error) {
+					console.error('Failed to load location data:', error);
+				}
+			};
 			void loadVariables();
+			void loadLocationData();
 		}
 	}, [props.open]);
 
@@ -184,6 +458,10 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 				setTriggerWebhookName(trigger.webhookName);
 			} else if (trigger.type === SceneTriggerType.CRON) {
 				setIntervalMinutes(trigger.intervalMinutes);
+			} else if (trigger.type === SceneTriggerType.LOCATION_WITHIN_RANGE) {
+				setLocationDeviceId(trigger.deviceId);
+				setLocationTargetId(trigger.targetId);
+				setLocationRangeKm(trigger.rangeKm.toString());
 			}
 
 			setConditions(props.trigger.conditions || []);
@@ -195,6 +473,9 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 			setTriggerHostId('');
 			setTriggerWebhookName('');
 			setTriggerOccupied(true);
+			setLocationDeviceId('');
+			setLocationTargetId('');
+			setLocationRangeKm('');
 			setConditions([]);
 		}
 		setErrors([]);
@@ -502,6 +783,32 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 				type: SceneTriggerType.CRON,
 				intervalMinutes: intervalMinutes,
 			};
+		} else if (triggerType === SceneTriggerType.LOCATION_WITHIN_RANGE) {
+			const range = parseFloat(locationRangeKm);
+			const locationErrors: string[] = [];
+
+			if (isNaN(range) || range <= 0) {
+				locationErrors.push('Range must be a positive number');
+			}
+			if (!locationDeviceId) {
+				locationErrors.push('Please select a device');
+			}
+			if (!locationTargetId) {
+				locationErrors.push('Please select a target');
+			}
+
+			if (locationErrors.length === 0) {
+				trigger = {
+					type: SceneTriggerType.LOCATION_WITHIN_RANGE,
+					deviceId: locationDeviceId,
+					targetId: locationTargetId,
+					rangeKm: range,
+					enteredRange: locationEnteredRange,
+				};
+			} else {
+				// Set a default trigger to avoid "used before assigned" error
+				trigger = { type: SceneTriggerType.NOBODY_HOME_TIMEOUT };
+			}
 		} else {
 			trigger = { type: SceneTriggerType.NOBODY_HOME_TIMEOUT };
 		}
@@ -609,6 +916,9 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 									Nobody Home Timeout
 								</ToggleButton>
 								<ToggleButton value={SceneTriggerType.CRON}>Interval</ToggleButton>
+								<ToggleButton value={SceneTriggerType.LOCATION_WITHIN_RANGE}>
+									Location
+								</ToggleButton>
 							</ToggleButtonGroup>
 
 							{/* Occupancy trigger */}
@@ -763,6 +1073,72 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 									helperText="Scene will trigger every X minutes"
 									fullWidth
 								/>
+							)}
+
+							{/* Location trigger */}
+							{triggerType === SceneTriggerType.LOCATION_WITHIN_RANGE && (
+								<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+									<Autocomplete
+										options={locationDevices}
+										getOptionLabel={(option) => `${option.name} (${option.id})`}
+										value={
+											locationDevices.find(
+												(d) => d.id === locationDeviceId
+											) ?? null
+										}
+										onChange={(_e, newValue) => {
+											setLocationDeviceId(newValue?.id ?? '');
+										}}
+										renderInput={(params) => (
+											<TextField {...params} label="Device" required />
+										)}
+									/>
+									<Autocomplete
+										options={locationTargets}
+										getOptionLabel={(option) => `${option.name} (${option.id})`}
+										value={
+											locationTargets.find(
+												(t) => t.id === locationTargetId
+											) ?? null
+										}
+										onChange={(_e, newValue) => {
+											setLocationTargetId(newValue?.id ?? '');
+										}}
+										renderInput={(params) => (
+											<TextField {...params} label="Target" required />
+										)}
+									/>
+									<TextField
+										label="Range (km)"
+										type="number"
+										value={locationRangeKm}
+										onChange={(e) => setLocationRangeKm(e.target.value)}
+										inputProps={{ step: '0.1', min: 0.01 }}
+										required
+									/>
+									<FormControlLabel
+										control={
+											<Switch
+												checked={locationEnteredRange}
+												onChange={(e) =>
+													setLocationEnteredRange(e.target.checked)
+												}
+											/>
+										}
+										label="Entered Range"
+									/>
+									<Typography variant="caption" color="text.secondary">
+										Trigger when {locationDeviceId || 'device'} is within{' '}
+										{locationRangeKm || 'X'}km of {locationTargetId || 'target'}
+									</Typography>
+									<LocationTriggerMapPreview
+										deviceId={locationDeviceId}
+										targetId={locationTargetId}
+										rangeKm={locationRangeKm}
+										devices={locationDevicesFull}
+										targets={locationTargetsFull}
+									/>
+								</Box>
 							)}
 						</Box>
 
