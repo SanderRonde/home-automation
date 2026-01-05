@@ -60,7 +60,6 @@ interface TemperatureState {
 	id: string;
 	name: string;
 	timeRanges: TemperatureTimeRange[];
-	isDefault?: boolean;
 }
 
 interface Room {
@@ -278,19 +277,13 @@ export const TemperatureConfig = (): JSX.Element => {
 			id: `state-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
 			name: `State ${states.length + 1}`,
 			timeRanges: [],
-			isDefault: states.length === 0, // First state is default
 		};
 		setStates((prev) => [...prev, newState]);
 	};
 
 	const handleRemoveState = (stateId: string) => {
 		setStates((prev) => {
-			const filtered = prev.filter((state) => state.id !== stateId);
-			// If we removed the default and there are other states, make the first one default
-			if (filtered.length > 0 && prev.find((s) => s.id === stateId)?.isDefault) {
-				filtered[0].isDefault = true;
-			}
-			return filtered;
+			return prev.filter((state) => state.id !== stateId);
 		});
 	};
 
@@ -298,23 +291,10 @@ export const TemperatureConfig = (): JSX.Element => {
 		setStates((prev) =>
 			prev.map((state) => {
 				if (state.id !== stateId) {
-					// If setting a new default, unset others
-					if (updates.isDefault) {
-						return { ...state, isDefault: false };
-					}
 					return state;
 				}
 				return { ...state, ...updates };
 			})
-		);
-	};
-
-	const handleSetDefaultState = (stateId: string) => {
-		setStates((prev) =>
-			prev.map((state) => ({
-				...state,
-				isDefault: state.id === stateId,
-			}))
 		);
 	};
 
@@ -930,11 +910,8 @@ export const TemperatureConfig = (): JSX.Element => {
 											sx={{
 												p: 2,
 												border: '2px solid',
-												borderColor: state.isDefault
-													? 'primary.main'
-													: 'divider',
+												borderColor: 'divider',
 												borderRadius: 2,
-												bgcolor: state.isDefault ? 'primary.50' : undefined,
 											}}
 										>
 											{/* State Header */}
@@ -955,14 +932,6 @@ export const TemperatureConfig = (): JSX.Element => {
 														flexGrow: 1,
 													}}
 												>
-													{state.isDefault && (
-														<Chip
-															label="Default"
-															size="small"
-															color="primary"
-															variant="filled"
-														/>
-													)}
 													<TextField
 														value={state.name}
 														onChange={(e) =>
@@ -983,17 +952,6 @@ export const TemperatureConfig = (): JSX.Element => {
 														}}
 													/>
 												</Box>
-												{!state.isDefault && (
-													<Button
-														size="small"
-														variant="outlined"
-														onClick={() =>
-															handleSetDefaultState(state.id)
-														}
-													>
-														Set as Default
-													</Button>
-												)}
 												<IconButton
 													onClick={() => handleRemoveState(state.id)}
 													size="small"

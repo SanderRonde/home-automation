@@ -15,6 +15,7 @@ import {
 	IconButton,
 	Collapse,
 	Slider,
+	Chip,
 } from '@mui/material';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { apiGet, apiPost } from '../../lib/fetch';
@@ -65,6 +66,8 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 		state: { id: string; name: string } | null;
 		activeStateId: string | null;
 	} | null>(null);
+	const [allStates, setAllStates] = useState<Array<{ id: string; name: string }>>([]);
+	const [updatingState, setUpdatingState] = useState(false);
 
 	const loadData = useCallback(async () => {
 		try {
@@ -74,12 +77,14 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 				scheduleResponse,
 				roomsResponse,
 				activeStateResponse,
+				statesResponse,
 			] = await Promise.all([
 				apiGet('temperature', '/inside-temperature', {}),
 				apiGet('temperature', '/central-thermostat', {}),
 				apiGet('temperature', '/schedule/next', {}),
 				apiGet('temperature', '/rooms', {}),
 				apiGet('temperature', '/states/active', {}),
+				apiGet('temperature', '/states', {}),
 			]);
 
 			if (tempResponse.ok) {
@@ -125,6 +130,18 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 					state: data.state,
 					activeStateId: data.activeStateId,
 				});
+			}
+
+			if (statesResponse.ok) {
+				const data = await statesResponse.json();
+				if (data.states && Array.isArray(data.states)) {
+					setAllStates(
+						data.states.map((s: { id: string; name: string }) => ({
+							id: s.id,
+							name: s.name,
+						}))
+					);
+				}
 			}
 		} catch (error) {
 			console.error('Failed to load temperature data:', error);
@@ -274,6 +291,46 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 		}
 		return `${Math.round(temp * 10) / 10}`;
 	};
+
+	const handleStateActivation = useCallback(
+		async (stateId: string) => {
+			if (updatingState) {
+				return;
+			}
+			setUpdatingState(true);
+			try {
+				const response = await apiPost(
+					'temperature',
+					'/states/active',
+					{},
+					{ stateId }
+				);
+				if (response.ok) {
+					const data = await response.json();
+					if (data.success) {
+						// Refresh active state data
+						const activeStateResponse = await apiGet(
+							'temperature',
+							'/states/active',
+							{}
+						);
+						if (activeStateResponse.ok) {
+							const activeData = await activeStateResponse.json();
+							setActiveState({
+								state: activeData.state,
+								activeStateId: activeData.activeStateId,
+							});
+						}
+					}
+				}
+			} catch (error) {
+				console.error('Failed to activate temperature state:', error);
+			} finally {
+				setUpdatingState(false);
+			}
+		},
+		[updatingState]
+	);
 
 	const hasThermostat = thermostatData?.configured && !!thermostatData.deviceId;
 
@@ -492,6 +549,76 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 										<Typography variant="caption" color="primary.main">
 											Active State: <strong>{activeState.state.name}</strong>
 										</Typography>
+									</Box>
+								)}
+
+								{/* Temperature States Selector */}
+								{allStates.length > 0 && (
+									<Box
+										sx={{
+											mt: props.kiosk ? 0 : 1,
+											mb: props.kiosk ? 0 : 1,
+											pt: props.kiosk ? 0 : 1,
+											borderTop: props.kiosk ? 'none' : '1px solid',
+											borderColor: 'divider',
+										}}
+									>
+										<Typography
+											variant="caption"
+											sx={{
+												color: 'text.secondary',
+												mb: 1,
+												display: 'block',
+											}}
+										>
+											Temperature States
+										</Typography>
+										<Box
+											sx={{
+												display: 'flex',
+												flexWrap: 'wrap',
+												gap: 0.75,
+											}}
+										>
+											{allStates.map((state) => {
+												const isActive =
+													activeState?.activeStateId === state.id;
+												return (
+													<Chip
+														key={state.id}
+														label={state.name}
+														onClick={() => {
+															if (!isActive && !updatingState) {
+																void handleStateActivation(state.id);
+															}
+														}}
+														variant={isActive ? 'filled' : 'outlined'}
+														color={isActive ? 'primary' : 'default'}
+														size="small"
+														disabled={updatingState}
+														sx={{
+															cursor: isActive ? 'default' : 'pointer',
+															'&:hover': {
+																backgroundColor: isActive
+																	? undefined
+																	: 'action.hover',
+															},
+														}}
+													/>
+												);
+											})}
+										</Box>
+										{updatingState && (
+											<Box
+												sx={{
+													display: 'flex',
+													justifyContent: 'center',
+													mt: 1,
+												}}
+											>
+												<CircularProgress size={16} />
+											</Box>
+										)}
 									</Box>
 								)}
 

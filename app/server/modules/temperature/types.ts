@@ -18,7 +18,6 @@ export interface TemperatureState {
 	id: string;
 	name: string;
 	timeRanges: TemperatureTimeRange[];
-	isDefault?: boolean; // One state can be the default (time-based fallback)
 }
 
 export interface PIDParameters {

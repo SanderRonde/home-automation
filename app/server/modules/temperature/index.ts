@@ -57,67 +57,12 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		this._db = config.db;
 		this._pidManager = new PIDMeasurementManager(config.modules, config.db);
 
-		// Migrate old schedule format to states if needed
-		this._migrateScheduleToStates();
-
 		// Initialize the temperature scheduler
 		initScheduler(config.modules);
 
 		return {
 			serve: initRouting(config),
 		};
-	}
-
-	/**
-	 * Migrate old schedule format to new states format
-	 */
-	private _migrateScheduleToStates(): void {
-		if (!this._db) {
-			return;
-		}
-
-		const data = this._db.current() as TemperatureDB;
-
-		// If states already exist, no migration needed
-		if (data.states && data.states.length > 0) {
-			return;
-		}
-
-		// If no old schedule exists, create empty states array
-		if (!data.schedule || data.schedule.length === 0) {
-			this._db.update((old) => ({
-				...(old as TemperatureDB),
-				states: [],
-			}));
-			return;
-		}
-
-		// Migrate: Create a default state with all existing schedule entries
-		const defaultState: TemperatureState = {
-			id: 'default',
-			name: 'Default',
-			timeRanges: data.schedule,
-			isDefault: true,
-		};
-
-		this._db.update((old) => {
-			const oldData = old as TemperatureDB;
-			return {
-				...oldData,
-				states: [defaultState],
-				// Keep schedule for backward compatibility during transition
-			};
-		});
-
-		logTag(
-			'temperature',
-			'blue',
-			`Migrated ${data.schedule.length} schedule entries to default state`
-		);
-		this.addHistoryEntry(
-			'Migration',
-			`Migrated ${data.schedule.length} schedule entries to default state`
-		);
 	}
 
 	/**
@@ -570,14 +515,6 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 	}
 
 	/**
-	 * Get the default state (for time-based fallback)
-	 */
-	public getDefaultState(): TemperatureState | null {
-		const states = this.getStates();
-		return states.find((s) => s.isDefault) ?? states[0] ?? null;
-	}
-
-	/**
 	 * Get the currently active state (scene-activated or default)
 	 */
 	public getActiveState(): TemperatureState | null {
@@ -595,8 +532,9 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 			}
 		}
 
-		// Fall back to default state (time-based)
-		return this.getDefaultState();
+		// Fall back to the first one
+		const states = this.getStates();
+		return states[0] ?? null;
 	}
 
 	/**
@@ -648,36 +586,6 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 			const state = this.getState(stateId);
 			const stateName = state ? state.name : stateId;
 			this.addHistoryEntry('State Activation', `Activated state: ${stateName}`);
-		}
-	}
-
-	/**
-	 * Get the configured temperature schedule from the database (legacy - for backward compatibility)
-	 * Returns time ranges from the default state
-	 */
-	public getSchedule(): TemperatureScheduleEntry[] {
-		const defaultState = this.getDefaultState();
-		return defaultState?.timeRanges ?? [];
-	}
-
-	/**
-	 * Save the temperature schedule to the database (legacy - for backward compatibility)
-	 * Updates the default state's time ranges
-	 */
-	public setSchedule(schedule: TemperatureScheduleEntry[]): void {
-		const defaultState = this.getDefaultState();
-		if (defaultState) {
-			this.updateState(defaultState.id, { timeRanges: schedule });
-		} else {
-			// Create default state if it doesn't exist
-			const newState: TemperatureState = {
-				id: 'default',
-				name: 'Default',
-				timeRanges: schedule,
-				isDefault: true,
-			};
-			const states = this.getStates();
-			this.setStates([...states, newState]);
 		}
 	}
 

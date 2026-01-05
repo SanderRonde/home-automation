@@ -293,32 +293,6 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 					}
 				),
 			},
-			'/schedule': {
-				GET: (_req, _server, { json }) => {
-					const schedule = Temperature.getSchedule();
-					return json({ success: true, schedule });
-				},
-				POST: withRequestBody(
-					z.object({
-						schedule: z.array(
-							z.object({
-								id: z.string(),
-								name: z.string(),
-								days: z.array(z.number().min(0).max(6)),
-								startTime: z.string().regex(/^\d{2}:\d{2}$/),
-								endTime: z.string().regex(/^\d{2}:\d{2}$/),
-								targetTemperature: z.number().min(5).max(30),
-								roomExceptions: z.record(z.string(), z.number()).optional(),
-								enabled: z.boolean(),
-							})
-						),
-					}),
-					(body, _req, _server, { json }) => {
-						Temperature.setSchedule(body.schedule);
-						return json({ success: true, schedule: body.schedule });
-					}
-				),
-			},
 			'/schedule/next': {
 				GET: async (_req, _server, { json }) => {
 					const nextChange: {
@@ -378,7 +352,6 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 										enabled: z.boolean(),
 									})
 								),
-								isDefault: z.boolean().optional(),
 							})
 						),
 					}),
@@ -414,7 +387,6 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 								})
 							)
 							.optional(),
-						isDefault: z.boolean().optional(),
 					}),
 					(body, req, _server, { json, error }) => {
 						const { stateId } = req.params;
@@ -432,11 +404,6 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 					const index = states.findIndex((s) => s.id === stateId);
 					if (index === -1) {
 						return error(`State not found: ${stateId}`, 404);
-					}
-					// Don't allow deleting the default state if it's the only one
-					const state = states[index];
-					if (state.isDefault && states.length === 1) {
-						return error('Cannot delete the last default state', 400);
 					}
 					const updatedStates = states.filter((s) => s.id !== stateId);
 					Temperature.setStates(updatedStates);
