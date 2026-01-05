@@ -44,6 +44,14 @@ import {
 	Deck,
 	Cottage,
 	CloudOff,
+	BlindsClosed,
+	Blinds,
+	DirectionsCar,
+	Login,
+	ExitToApp,
+	Alarm,
+	AcUnit,
+	Whatshot,
 } from '@mui/icons-material';
 import type { SxProps } from '@mui/material';
 import React from 'react';
@@ -94,6 +102,14 @@ const iconsByKey = {
 	Deck,
 	Cottage,
 	CloudOff,
+	BlindsClosed,
+	Blinds,
+	DirectionsCar,
+	Login,
+	ExitToApp,
+	Alarm,
+	AcUnit,
+	Whatshot,
 };
 
 export type IncludedIconNames = keyof typeof iconsByKey;

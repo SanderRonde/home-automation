@@ -74,6 +74,7 @@ type DeviceActionEntry = SceneDeviceAction & {
 const SCENE_ICONS: Array<{ icon: IncludedIconNames; label: string }> = [
 	{ icon: 'Nightlight', label: 'Sleep' },
 	{ icon: 'WbSunny', label: 'Wake up' },
+	{ icon: 'Alarm', label: 'Waking up' },
 	{ icon: 'Home', label: 'Home' },
 	{ icon: 'DirectionsRun', label: 'Away' },
 	{ icon: 'LocalMovies', label: 'Movie' },
@@ -87,6 +88,18 @@ const SCENE_ICONS: Array<{ icon: IncludedIconNames; label: string }> = [
 	{ icon: 'DarkMode', label: 'Dark' },
 	{ icon: 'Star', label: 'Favorite' },
 	{ icon: 'Bed', label: 'Bed' },
+	{ icon: 'BlindsClosed', label: 'Blinds Closed' },
+	{ icon: 'Blinds', label: 'Blinds Opened' },
+	{ icon: 'DirectionsCar', label: 'Car' },
+	{ icon: 'Wc', label: 'Toilet' },
+	{ icon: 'Login', label: 'Enter Toilet' },
+	{ icon: 'ExitToApp', label: 'Exit Toilet' },
+	{ icon: 'Shower', label: 'Shower' },
+	{ icon: 'Login', label: 'Enter Shower' },
+	{ icon: 'ExitToApp', label: 'Exit Shower' },
+	{ icon: 'AcUnit', label: 'Temperature Cold' },
+	{ icon: 'DeviceThermostat', label: 'Temperature Medium' },
+	{ icon: 'Whatshot', label: 'Temperature Hot' },
 ];
 
 export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.Element => {
