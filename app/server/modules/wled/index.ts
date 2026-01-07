@@ -18,6 +18,7 @@ export const WLed = new (class WLed extends ModuleMeta {
 	}>({});
 
 	public name = 'wled';
+	private _db: Database<WLEDDB> | null = null;
 
 	private async _updateDevices(
 		config: ModuleConfig,
@@ -62,8 +63,8 @@ export const WLed = new (class WLed extends ModuleMeta {
 	}
 
 	public init(config: ModuleConfig) {
-		const db = config.db as Database<WLEDDB>;
-		db.subscribe(async (data) => {
+		this._db = config.db as Database<WLEDDB>;
+		this._db.subscribe(async (data) => {
 			if (!data) {
 				return;
 			}
@@ -76,7 +77,14 @@ export const WLed = new (class WLed extends ModuleMeta {
 			60 * 1000 * 15
 		);
 		return {
-			serve: initRouting(db),
+			serve: initRouting(this._db),
 		};
+	}
+
+	public refresh() {
+		if (!this._db) {
+			return;
+		}
+		this._db.update((old) => ({ ...old }));
 	}
 })();

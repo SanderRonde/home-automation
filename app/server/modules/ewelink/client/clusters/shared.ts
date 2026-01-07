@@ -30,7 +30,7 @@ export class EWeLinkWSConnection extends EventEmitter<EWeLinkWebSocketMessage<un
 export class EWeLinkConfig {
 	public constructor(
 		public readonly connection: WrappedEWeLinkAPI,
-		public readonly device: EwelinkDeviceResponse,
+		public device: EwelinkDeviceResponse,
 		public readonly wsConnection: EWeLinkWSConnection,
 		public readonly periodicFetcher: Data<EwelinkDeviceResponse | undefined>
 	) {}

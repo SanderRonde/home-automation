@@ -18,6 +18,7 @@ import type { EwelinkCluster } from './cluster';
 
 class EwelinkEndpoint extends DeviceEndpoint implements Disposable {
 	public readonly onChange: EventEmitter<void> = new EventEmitter();
+	private _disposables: (() => void)[] = [];
 
 	public constructor(
 		protected readonly _eWeLinkConfig: EWeLinkConfig,
@@ -31,10 +32,24 @@ class EwelinkEndpoint extends DeviceEndpoint implements Disposable {
 		for (const endpoint of this.endpoints) {
 			endpoint.onChange.listen(() => this.onChange.emit(undefined));
 		}
+		this._disposables.push(
+			_eWeLinkConfig.periodicFetcher.subscribe((data) => {
+				if (!data) {
+					return;
+				}
+				_eWeLinkConfig.device = data;
+			})
+		);
 	}
 
 	public getDeviceName(): Promise<string> {
 		return Promise.resolve(this._eWeLinkConfig.device.itemData.name);
+	}
+
+	public [Symbol.dispose](): void {
+		for (const disposable of this._disposables) {
+			disposable();
+		}
 	}
 }
 
@@ -71,6 +86,12 @@ export abstract class EwelinkDevice extends EwelinkEndpoint implements Device, D
 	public getManagementUrl(): Promise<string | undefined> {
 		return Promise.resolve(undefined);
 	}
+
+	public getDeviceStatus(): 'online' | 'offline' {
+		return this._eWeLinkConfig.device.itemData.online ? 'online' : 'offline';
+	}
+
+	public reconnect = null;
 }
 
 class EwelinkM51CDevice extends EwelinkDevice {

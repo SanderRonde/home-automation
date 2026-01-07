@@ -23,7 +23,6 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 	private _config = new SettablePromise<EWeLinkConfig>();
 	private _lastParams: PARAMS | null = null;
 	protected readonly _listeners = new Set<(data: PARAMS, isNew: boolean) => void>();
-	private _online: SettablePromise<boolean> = new SettablePromise();
 	public onChange: EventEmitter<void> = new EventEmitter();
 
 	public static createGetter<PARAMS extends object>(): () => EwelinkClusterProxy<PARAMS> {
@@ -61,19 +60,10 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 			})
 		);
 
-		if (config.device.itemData.online) {
-			this._online.set(true);
-		}
-
 		this._disposables.push(
 			config.periodicFetcher.subscribe((data) => {
 				if (!data) {
 					return;
-				}
-				if (data.itemData.online) {
-					this._online.set(true);
-				} else {
-					this._online = new SettablePromise();
 				}
 				for (const eventEmitter of this._listeners) {
 					this._lastParams = data.itemData.params as PARAMS;
@@ -134,9 +124,11 @@ export class EwelinkClusterProxy<PARAMS extends object> implements Disposable {
 		return async (args: A) => {
 			const mappedInput = mapper(args, this._lastParams);
 
-			await this._online.value;
-
 			const config = await this._config.value;
+			if (config.device.itemData.online === false) {
+				return;
+			}
+
 			this._lastParams = mappedInput;
 			await config.connection.setThingStatus({
 				id: config.device.itemData.deviceid,

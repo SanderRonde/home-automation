@@ -28,15 +28,16 @@ import type { IncludedIconNames } from '../../../client/dashboard/components/ico
 import type { BrandedRouteHandlerResponse, ServeOptions } from '../../lib/routes';
 import { SceneTriggerType, SceneConditionType } from '../../../../types/scene';
 import { createServeOptions, withRequestBody } from '../../lib/routes';
-import type { Device, DeviceEndpoint, DeviceSource } from './device';
 import type { DeviceGroup } from '../../../../types/group';
 import { applyPaletteToDevices } from './palette-executor';
+import type { Device, DeviceEndpoint } from './device';
 import type { AllModules, ModuleConfig } from '..';
 import { logTag } from '../../lib/logging/logger';
 import { Actions } from '@matter/main/clusters';
 import type { ClassEnum } from '../../lib/enum';
 import type { Database } from '../../lib/db';
 import { Color } from '../../lib/color';
+import { DeviceSource } from './device';
 import type { DeviceAPI } from './api';
 import { wait } from '../../lib/time';
 import type { HouseLayout } from '.';
@@ -564,6 +565,20 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 			},
 			'/listWithValues': async (_req, _server, { json }) => {
 				return json({ devices: await listDevicesWithValues(api, modules) });
+			},
+			'/reconnect/:deviceId': (req, _server, { json }) => {
+				const { deviceId } = req.params;
+
+				const storedDevices = api.getStoredDevices();
+				const device = storedDevices[deviceId];
+				if (!device) {
+					return json({ error: 'Device not found' }, { status: 404 });
+				}
+
+				if (device.source === DeviceSource.WLED.value) {
+					modules.wled.refresh();
+				}
+				return json({ success: true });
 			},
 			'/occupancy/:deviceId': async (req, _server, { json }) => {
 				const history = await api.occupancyTracker.getHistory(req.params.deviceId, 100);
@@ -1792,7 +1807,7 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 				name: storedDevice?.name ?? endpointResponse.name,
 				managementUrl: await device.getManagementUrl(),
 				position: storedDevice?.position,
-				status: 'online',
+				status: device.getDeviceStatus(),
 			};
 			responseDevices.push(responseDevice);
 		})

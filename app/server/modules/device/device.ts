@@ -79,6 +79,7 @@ export interface Device extends DeviceEndpoint {
 	getSource(): DeviceSource;
 	onChange: EventEmitter<void>;
 	getManagementUrl(): Promise<string | undefined>;
+	getDeviceStatus(): 'online' | 'offline';
 }
 
 export class DeviceSource extends ClassEnum<

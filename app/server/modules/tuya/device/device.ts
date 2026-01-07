@@ -22,6 +22,10 @@ export class TuyaDeviceEndpoint extends DeviceEndpoint {
 	public async getDeviceName(): Promise<string> {
 		return Promise.resolve(this.name);
 	}
+
+	public getDeviceStatus(): 'online' | 'offline' {
+		return 'online';
+	}
 }
 
 export abstract class TuyaDevice extends TuyaDeviceEndpoint implements Device {

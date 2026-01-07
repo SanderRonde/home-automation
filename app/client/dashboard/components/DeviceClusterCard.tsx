@@ -19,9 +19,18 @@ import {
 	Thermostat as ThermostatIcon,
 	PowerSettingsNew as PowerIcon,
 	CloudOff as CloudOffIcon,
+	Refresh as RefreshIcon,
 } from '@mui/icons-material';
+import {
+	Card,
+	CardActionArea,
+	Box,
+	Typography,
+	IconButton,
+	Chip,
+	CircularProgress,
+} from '@mui/material';
 import { DeviceClusterName, ThermostatMode } from '../../../server/modules/device/cluster';
-import { Card, CardActionArea, Box, Typography, IconButton, Chip } from '@mui/material';
 import { fadeInUpStaggered, staggerItem } from '../../lib/animations';
 import type { IncludedIconNames } from './icon';
 import type { HomeDetailView } from './Home';
@@ -79,59 +88,105 @@ interface DeviceClusterCardProps
 
 const DeviceClusterCardSkeleton = (props: DeviceClusterCardProps) => {
 	const isOffline = props.device.status === 'offline';
-	const cardContent = props.children ?? (
-		<Box
-			sx={{
-				display: 'flex',
-				alignItems: 'center',
-				gap: 2,
-			}}
-		>
+	const [isReconnecting, setIsReconnecting] = React.useState(false);
+
+	const handleReconnect = async () => {
+		if (isReconnecting) {
+			return;
+		}
+		setIsReconnecting(true);
+		try {
+			await apiPost('device', '/reconnect/:deviceId', { deviceId: props.device.uniqueId });
+			props.invalidate();
+		} finally {
+			setIsReconnecting(false);
+		}
+	};
+
+	const cardContent =
+		!props.children || isOffline ? (
 			<Box
 				sx={{
 					display: 'flex',
 					alignItems: 'center',
-					justifyContent: 'center',
-					background: 'rgba(0, 0, 0, 0.08)',
-					borderRadius: '50%',
-					width: 48,
-					height: 48,
-					fontSize: '1.5rem',
-					color: 'text.secondary',
-					opacity: isOffline ? 0.5 : 1,
+					gap: 2,
 				}}
 			>
-				<IconOrNull icon={isOffline ? 'CloudOff' : props.cluster.icon} />
-			</Box>
-			<Typography
-				variant="body1"
-				sx={{
-					fontWeight: 500,
-					flexGrow: 1,
-					opacity: isOffline ? 0.6 : 1,
-				}}
-			>
-				{props.device.name}
-			</Typography>
-			{isOffline && (
-				<Chip
-					icon={<CloudOffIcon />}
-					label="Offline"
-					size="small"
+				<Box
 					sx={{
-						opacity: 0.8,
-						'& .MuiChip-icon': {
-							fontSize: '1rem',
-						},
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						background: 'rgba(0, 0, 0, 0.08)',
+						borderRadius: '50%',
+						width: 48,
+						height: 48,
+						fontSize: '1.5rem',
+						color: 'text.secondary',
+						opacity: isOffline ? 0.5 : 1,
 					}}
-				/>
-			)}
-		</Box>
-	);
+				>
+					<IconOrNull icon={isOffline ? 'CloudOff' : props.cluster.icon} />
+				</Box>
+				<Typography
+					variant="body1"
+					sx={{
+						fontWeight: 500,
+						flexGrow: 1,
+						opacity: isOffline ? 0.6 : 1,
+					}}
+				>
+					{props.device.name}
+				</Typography>
+				{isOffline && (
+					<Box
+						sx={{
+							display: 'flex',
+							alignItems: 'center',
+							gap: 1,
+						}}
+					>
+						<Chip
+							icon={<CloudOffIcon />}
+							label="Offline"
+							size="small"
+							sx={{
+								opacity: 0.8,
+								'& .MuiChip-icon': {
+									fontSize: '1rem',
+								},
+							}}
+						/>
+						<IconButton
+							onClick={(e) => {
+								e.stopPropagation();
+								void handleReconnect();
+							}}
+							size="small"
+							disabled={isReconnecting}
+							sx={{
+								color: 'text.secondary',
+								'&:hover': {
+									backgroundColor: 'rgba(0, 0, 0, 0.08)',
+								},
+							}}
+						>
+							{isReconnecting ? (
+								<CircularProgress size={20} thickness={4} />
+							) : (
+								<RefreshIcon fontSize="small" />
+							)}
+						</IconButton>
+					</Box>
+				)}
+			</Box>
+		) : (
+			props.children
+		);
 
 	const isDraggable = !!props.onPointerMove;
 	const hasInteractiveChildren = props.hasInteractiveChildren ?? false;
-	const useCardActionArea = !isDraggable && !hasInteractiveChildren;
+	const useCardActionArea = !isDraggable && !hasInteractiveChildren && !isOffline;
 
 	return (
 		<motion.div
@@ -164,7 +219,15 @@ const DeviceClusterCardSkeleton = (props: DeviceClusterCardProps) => {
 				onPointerUp={props.onPointerUp}
 			>
 				{useCardActionArea ? (
-					<CardActionArea sx={{ p: 2, pointerEvents: isOffline ? 'none' : 'auto' }}>
+					<CardActionArea
+						sx={{
+							p: 2,
+							pointerEvents: isOffline ? 'none' : 'auto',
+							'& button': {
+								pointerEvents: 'auto',
+							},
+						}}
+					>
 						{cardContent}
 					</CardActionArea>
 				) : (
@@ -173,6 +236,9 @@ const DeviceClusterCardSkeleton = (props: DeviceClusterCardProps) => {
 							p: 2,
 							cursor: props.onPress && !isOffline ? 'pointer' : undefined,
 							pointerEvents: isOffline ? 'none' : 'auto',
+							'& button': {
+								pointerEvents: 'auto',
+							},
 						}}
 					>
 						{cardContent}

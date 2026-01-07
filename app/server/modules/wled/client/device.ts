@@ -48,4 +48,8 @@ export class WLEDDevice extends DeviceEndpoint implements Device {
 	public getManagementUrl(): Promise<string | undefined> {
 		return Promise.resolve(`http://${this._ip}`);
 	}
+
+	public getDeviceStatus(): 'online' | 'offline' {
+		return 'online';
+	}
 }

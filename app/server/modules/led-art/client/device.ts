@@ -48,6 +48,10 @@ export class LEDArtDevice extends DeviceEndpoint implements Device {
 		return Promise.resolve('LED Art Panel');
 	}
 
+	public getDeviceStatus(): 'online' | 'offline' {
+		return 'online';
+	}
+
 	public getManagementUrl(): Promise<string | undefined> {
 		return Promise.resolve(this._url);
 	}

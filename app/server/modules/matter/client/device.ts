@@ -102,6 +102,10 @@ export class MatterEndpoint extends DeviceEndpoint {
 	public getDeviceName(): Promise<string> {
 		return this.#name;
 	}
+
+	public getDeviceStatus(): 'online' | 'offline' {
+		return 'online';
+	}
 }
 
 export class MatterDevice extends MatterEndpoint implements Device {
