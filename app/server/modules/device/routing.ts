@@ -1209,11 +1209,18 @@ export type DeviceWebsocketClientMessage = {
 
 const getClusterState = async (
 	api: DeviceAPI,
-	_cluster: Cluster,
+	_cluster: Cluster | null,
+	clusterName: DeviceClusterName,
 	deviceId: string
 ): Promise<DashboardDeviceClusterWithState> => {
-	const clusterName = _cluster.getBaseCluster().clusterName;
 	if (clusterName === DeviceClusterName.ON_OFF) {
+		if (!_cluster) {
+			return {
+				name: clusterName,
+				icon: getClusterIconName(clusterName),
+				isOn: false,
+			};
+		}
 		const cluster = _cluster as DeviceOnOffCluster;
 		const isOn = await cluster.isOn.get();
 		return {
@@ -1223,6 +1230,13 @@ const getClusterState = async (
 		};
 	}
 	if (clusterName === DeviceClusterName.WINDOW_COVERING) {
+		if (!_cluster) {
+			return {
+				name: clusterName,
+				icon: getClusterIconName(clusterName),
+				targetPositionLiftPercentage: 0,
+			};
+		}
 		const cluster = _cluster as DeviceWindowCoveringCluster;
 		return {
 			name: clusterName,
@@ -1231,6 +1245,13 @@ const getClusterState = async (
 		};
 	}
 	if (clusterName === DeviceClusterName.POWER_SOURCE) {
+		if (!_cluster) {
+			return {
+				name: clusterName,
+				icon: getClusterIconName(clusterName),
+				batteryPercentage: 0,
+			};
+		}
 		const cluster = _cluster as DevicePowerSourceCluster;
 		const batteryLevel = await cluster.batteryChargeLevel.get();
 		if (batteryLevel !== null) {
@@ -1242,6 +1263,14 @@ const getClusterState = async (
 		}
 	}
 	if (clusterName === DeviceClusterName.OCCUPANCY_SENSING) {
+		if (!_cluster) {
+			return {
+				name: clusterName,
+				icon: getClusterIconName(clusterName),
+				occupied: false,
+				lastTriggered: undefined,
+			};
+		}
 		const cluster = _cluster as DeviceOccupancySensingCluster;
 		const occupied = await cluster.occupancy.get();
 		const lastEvent = await api.occupancyTracker.getLastTriggered(deviceId);
@@ -1253,6 +1282,13 @@ const getClusterState = async (
 		};
 	}
 	if (clusterName === DeviceClusterName.TEMPERATURE_MEASUREMENT) {
+		if (!_cluster) {
+			return {
+				name: clusterName,
+				icon: getClusterIconName(clusterName),
+				temperature: 20.0,
+			};
+		}
 		const cluster = _cluster as DeviceTemperatureMeasurementCluster;
 		const temperature = await cluster.temperature.get();
 		return {
@@ -1262,6 +1298,13 @@ const getClusterState = async (
 		};
 	}
 	if (clusterName === DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT) {
+		if (!_cluster) {
+			return {
+				name: clusterName,
+				icon: getClusterIconName(clusterName),
+				humidity: 50.0,
+			};
+		}
 		const cluster = _cluster as DeviceRelativeHumidityMeasurementCluster;
 		const humidity = await cluster.relativeHumidity.get();
 		return {
@@ -1271,6 +1314,13 @@ const getClusterState = async (
 		};
 	}
 	if (clusterName === DeviceClusterName.ILLUMINANCE_MEASUREMENT) {
+		if (!_cluster) {
+			return {
+				name: clusterName,
+				icon: getClusterIconName(clusterName),
+				illuminance: 0,
+			};
+		}
 		const cluster = _cluster as DeviceIlluminanceMeasurementCluster;
 		const illuminance = await cluster.illuminance.get();
 		return {
@@ -1280,6 +1330,14 @@ const getClusterState = async (
 		};
 	}
 	if (clusterName === DeviceClusterName.BOOLEAN_STATE) {
+		if (!_cluster) {
+			return {
+				name: clusterName,
+				icon: getClusterIconName(clusterName),
+				state: false,
+				lastChanged: undefined,
+			};
+		}
 		const cluster = _cluster as DeviceBooleanStateCluster<boolean>;
 		const state = await cluster.state.get();
 		const lastEvent = await api.booleanStateTracker.getLastChanged(deviceId);
@@ -1291,6 +1349,15 @@ const getClusterState = async (
 		};
 	}
 	if (clusterName === DeviceClusterName.SWITCH) {
+		if (!_cluster) {
+			return {
+				name: clusterName,
+				icon: getClusterIconName(clusterName),
+				label: '',
+				index: 0,
+				totalCount: 0,
+			};
+		}
 		const cluster = _cluster as DeviceSwitchCluster;
 		return {
 			name: clusterName,
@@ -1303,9 +1370,18 @@ const getClusterState = async (
 	if (
 		clusterName === DeviceClusterName.COLOR_CONTROL &&
 		(
-			_cluster as DeviceColorControlXYCluster | DeviceColorControlTemperatureCluster
-		).getClusterVariant() === 'xy'
+			_cluster as DeviceColorControlXYCluster | DeviceColorControlTemperatureCluster | null
+		)?.getClusterVariant() === 'xy'
 	) {
+		if (!_cluster) {
+			return {
+				name: clusterName,
+				icon: getClusterIconName(clusterName),
+				clusterVariant: 'xy',
+				color: { hue: 0, saturation: 0, value: 0 },
+				mergedClusters: {},
+			};
+		}
 		const cluster = _cluster as DeviceColorControlXYCluster;
 		const color = (await cluster.color.get()) ?? new Color(0, 0, 0);
 		const hsv = color.toHSV();
@@ -1320,9 +1396,19 @@ const getClusterState = async (
 	if (
 		clusterName === DeviceClusterName.COLOR_CONTROL &&
 		(
-			_cluster as DeviceColorControlXYCluster | DeviceColorControlTemperatureCluster
-		).getClusterVariant() === 'temperature'
+			_cluster as DeviceColorControlXYCluster | DeviceColorControlTemperatureCluster | null
+		)?.getClusterVariant() === 'temperature'
 	) {
+		if (!_cluster) {
+			return {
+				name: clusterName,
+				icon: getClusterIconName(clusterName),
+				clusterVariant: 'temperature',
+				colorTemperature: undefined,
+				minColorTemperature: undefined,
+				maxColorTemperature: undefined,
+			};
+		}
 		const cluster = _cluster as DeviceColorControlTemperatureCluster;
 		return {
 			name: clusterName,
@@ -1334,6 +1420,13 @@ const getClusterState = async (
 		};
 	}
 	if (clusterName === DeviceClusterName.LEVEL_CONTROL) {
+		if (!_cluster) {
+			return {
+				name: clusterName,
+				icon: getClusterIconName(clusterName),
+				currentLevel: 0,
+			};
+		}
 		const cluster = _cluster as DeviceLevelControlCluster;
 		const level = await cluster.currentLevel.get();
 		return {
@@ -1343,6 +1436,14 @@ const getClusterState = async (
 		};
 	}
 	if (clusterName === DeviceClusterName.ACTIONS) {
+		if (!_cluster) {
+			return {
+				name: clusterName,
+				icon: getClusterIconName(clusterName),
+				actions: [],
+				activeActionId: undefined,
+			};
+		}
 		const cluster = _cluster as DeviceActionsCluster;
 		const actionList = await cluster.actionList.get();
 		const activeAction = actionList.find((a) => a.state === Actions.ActionState.Active);
@@ -1354,6 +1455,18 @@ const getClusterState = async (
 		};
 	}
 	if (clusterName === DeviceClusterName.THERMOSTAT) {
+		if (!_cluster) {
+			return {
+				name: clusterName,
+				icon: getClusterIconName(clusterName),
+				currentTemperature: 20.0,
+				targetTemperature: 20.0,
+				mode: ThermostatMode.OFF,
+				isHeating: false,
+				minTemperature: 5.0,
+				maxTemperature: 30.0,
+			};
+		}
 		const cluster = _cluster as DeviceThermostatCluster;
 		return {
 			name: clusterName,
@@ -1367,6 +1480,14 @@ const getClusterState = async (
 		};
 	}
 	if (clusterName === DeviceClusterName.ELECTRICAL_ENERGY_MEASUREMENT) {
+		if (!_cluster) {
+			return {
+				name: clusterName,
+				icon: getClusterIconName(clusterName),
+				totalEnergy: '0.00',
+				period: undefined,
+			};
+		}
 		const cluster = _cluster as DeviceElectricalEnergyMeasurementCluster;
 		const totalEnergyMwh = await cluster.totalEnergy.get();
 		const period = await cluster.totalEnergyPeriod.get();
@@ -1383,6 +1504,13 @@ const getClusterState = async (
 		};
 	}
 	if (clusterName === DeviceClusterName.ELECTRICAL_POWER_MEASUREMENT) {
+		if (!_cluster) {
+			return {
+				name: clusterName,
+				icon: getClusterIconName(clusterName),
+				activePower: 0,
+			};
+		}
 		const cluster = _cluster as DeviceElectricalPowerMeasurementCluster;
 		const activePower = await cluster.activePower.get();
 		return {
@@ -1406,7 +1534,12 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 
 	const _getClusterState = async (cluster: Cluster, deviceId: string) => {
 		if (!clusterStateCache.has(cluster)) {
-			const clusterState = await getClusterState(api, cluster, deviceId);
+			const clusterState = await getClusterState(
+				api,
+				cluster,
+				cluster.getBaseCluster().clusterName,
+				deviceId
+			);
 			clusterStateCache.set(cluster, clusterState);
 		}
 		return clusterStateCache.get(cluster)!;
@@ -1428,7 +1561,11 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 
 		for (const { cluster, endpoint: clusterEndpoint } of endpoint.allClusters) {
 			allClusters.push({
-				cluster: await _getClusterState(cluster, deviceId),
+				cluster: await _getClusterState(
+					cluster,
+
+					deviceId
+				),
 				endpoint: clusterEndpoint,
 			});
 		}
@@ -1670,73 +1807,8 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 			const clusterNames = storedDevice.clusterNames ?? [];
 
 			// Create minimal cluster representations for offline devices
-			const offlineClusters: DashboardDeviceClusterWithState[] = clusterNames.map(
-				(clusterName) => {
-					const icon = getClusterIconName(clusterName);
-					// Create minimal cluster state based on cluster type
-					const baseCluster: DashboardDeviceClusterBase = {
-						name: clusterName,
-						icon,
-					};
-
-					// Add type-specific defaults for offline devices
-					switch (clusterName) {
-						case DeviceClusterName.ON_OFF:
-							return { ...baseCluster, isOn: false } as DashboardDeviceClusterOnOff;
-						case DeviceClusterName.WINDOW_COVERING:
-							return {
-								...baseCluster,
-								targetPositionLiftPercentage: 0,
-							} as DashboardDeviceClusterWindowCovering;
-						case DeviceClusterName.TEMPERATURE_MEASUREMENT:
-							return {
-								...baseCluster,
-								temperature: 0,
-							} as DashboardDeviceClusterTemperatureMeasurement;
-						case DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT:
-							return {
-								...baseCluster,
-								humidity: 0,
-							} as DashboardDeviceClusterRelativeHumidityMeasurement;
-						case DeviceClusterName.ILLUMINANCE_MEASUREMENT:
-							return {
-								...baseCluster,
-								illuminance: 0,
-							} as DashboardDeviceClusterIlluminanceMeasurement;
-						case DeviceClusterName.BOOLEAN_STATE:
-							return {
-								...baseCluster,
-								state: false,
-							} as DashboardDeviceClusterBooleanState;
-						case DeviceClusterName.LEVEL_CONTROL:
-							return {
-								...baseCluster,
-								currentLevel: 0,
-							} as DashboardDeviceClusterLevelControl;
-						case DeviceClusterName.THERMOSTAT:
-							return {
-								...baseCluster,
-								currentTemperature: 0,
-								targetTemperature: 0,
-								mode: ThermostatMode.OFF,
-								isHeating: false,
-								minTemperature: 0,
-								maxTemperature: 0,
-							} as DashboardDeviceClusterThermostat;
-						case DeviceClusterName.ELECTRICAL_POWER_MEASUREMENT:
-							return {
-								...baseCluster,
-								activePower: 0,
-							} as DashboardDeviceClusterElectricalPowerMeasurement;
-						case DeviceClusterName.ELECTRICAL_ENERGY_MEASUREMENT:
-							return {
-								...baseCluster,
-								totalEnergy: '0.00',
-							} as DashboardDeviceClusterElectricalEnergyMeasurement;
-						default:
-							return baseCluster as DashboardDeviceClusterWithState;
-					}
-				}
+			const offlineClusters: DashboardDeviceClusterWithState[] = await Promise.all(
+				clusterNames.map((clusterName) => getClusterState(api, null, clusterName, deviceId))
 			);
 
 			// Get source info from stored device or default to unknown
