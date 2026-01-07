@@ -49,6 +49,10 @@ export class HomeWizardDevice extends DeviceEndpoint implements Device {
 		return Promise.resolve(`http://${this.ip}`);
 	}
 
+	public getDeviceStatus(): 'online' | 'offline' {
+		return 'online';
+	}
+
 	public updateMeasurements(energyKwh: number, powerW: number): void {
 		this._energyCluster.updateEnergy(energyKwh);
 		this._powerCluster.updatePower(powerW);

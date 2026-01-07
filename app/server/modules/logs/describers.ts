@@ -285,9 +285,6 @@ const describers: Record<string, (body: unknown) => LogDescription[] | null> = {
 			},
 		];
 	}),
-	...createDescriber('temperature', '/schedule', 'POST', () => {
-		return [{ type: 'text', text: 'Updated temperature schedule' }];
-	}),
 
 	// ===== Wakelight Module =====
 	...createDescriber('wakelight', '/set', 'POST', (body) => {

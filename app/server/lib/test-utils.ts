@@ -150,6 +150,10 @@ export class MockDevice implements DeviceInterface {
 		return Promise.resolve(this._name);
 	}
 
+	public getDeviceStatus(): 'online' | 'offline' {
+		return 'online';
+	}
+
 	public setDeviceName(name: string): void {
 		this._name = name;
 	}
