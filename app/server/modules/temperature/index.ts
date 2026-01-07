@@ -297,6 +297,11 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 				continue;
 			}
 
+			// Skip offline devices - don't use their temperatures for steering
+			if (storedInfo?.status === 'offline') {
+				continue;
+			}
+
 			const clusters = device.getAllClustersByType(DeviceTemperatureMeasurementCluster);
 			for (const cluster of clusters) {
 				const temp = await cluster.temperature.get();
@@ -808,9 +813,11 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 					// Device module sensor
 					const deviceApi = await modules.device.api.value;
 					const devices = deviceApi.devices.current();
+					const storedDevices = deviceApi.getStoredDevices();
 					const device = devices[sensor.deviceId];
 
-					if (device) {
+					// Skip offline devices
+					if (device && storedDevices[sensor.deviceId]?.status !== 'offline') {
 						const temperatureClusters = device.getAllClustersByType(
 							DeviceTemperatureMeasurementCluster
 						);
@@ -852,12 +859,19 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		try {
 			const deviceApi = await modules.device.api.value;
 			const devices = deviceApi.devices.current();
+			const storedDevices = deviceApi.getStoredDevices();
 
 			// Iterate through all devices to find temperature sensors
 			for (const [deviceId, deviceValue] of Object.entries(devices)) {
 				if (!deviceValue) {
 					continue;
 				}
+
+				// Skip offline devices
+				if (storedDevices[deviceId]?.status === 'offline') {
+					continue;
+				}
+
 				const device = deviceValue;
 
 				try {
