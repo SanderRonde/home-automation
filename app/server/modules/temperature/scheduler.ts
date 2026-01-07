@@ -1,6 +1,10 @@
 import { ThermostatMode } from '../device/cluster';
 import { logTag } from '../../lib/logging/logger';
-import { Temperature } from './index';
+import {
+	Temperature,
+	CENTRAL_THERMOSTAT_HEATING_OFFSET,
+	CENTRAL_THERMOSTAT_OFF_OFFSET,
+} from './index';
 import type { AllModules } from '..';
 
 /**
@@ -71,10 +75,15 @@ export class TemperatureScheduler {
 		const roomsNeedingHeat = roomStatuses.filter((status) => status.needsHeating);
 		const needsHeating = roomsNeedingHeat.length > 0;
 
-		// Logic from requirements:
-		// When a single room should be heating, set thermostat to 30.
-		// When none should be heating, set thermostat to 15.
-		const targetCentralTemp = needsHeating ? 30 : 15;
+		// Get current central thermostat temperature
+		const currentStatus = await Temperature.getCentralThermostatStatus(this._modules);
+		const currentTemp = currentStatus?.currentTemperature ?? 20; // Fallback to 20°C
+
+		// Calculate dynamic target based on heating demand
+		// Heating: current + offset, Off: current - offset
+		const targetCentralTemp = needsHeating
+			? currentTemp + CENTRAL_THERMOSTAT_HEATING_OFFSET
+			: currentTemp - CENTRAL_THERMOSTAT_OFF_OFFSET;
 
 		// Record decision reason
 		let decisionReason = '';
@@ -85,9 +94,6 @@ export class TemperatureScheduler {
 			decisionReason = 'No rooms require heating';
 		}
 		Temperature.setLastDecision(decisionReason);
-
-		// Check current status to avoid unnecessary calls
-		const currentStatus = await Temperature.getCentralThermostatStatus(this._modules);
 
 		// Check if we need to update
 		const needsUpdate =

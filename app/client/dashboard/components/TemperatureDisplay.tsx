@@ -299,12 +299,7 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 			}
 			setUpdatingState(true);
 			try {
-				const response = await apiPost(
-					'temperature',
-					'/states/active',
-					{},
-					{ stateId }
-				);
+				const response = await apiPost('temperature', '/states/active', {}, { stateId });
 				if (response.ok) {
 					const data = await response.json();
 					if (data.success) {
@@ -589,7 +584,9 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 														label={state.name}
 														onClick={() => {
 															if (!isActive && !updatingState) {
-																void handleStateActivation(state.id);
+																void handleStateActivation(
+																	state.id
+																);
 															}
 														}}
 														variant={isActive ? 'filled' : 'outlined'}
@@ -597,7 +594,9 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 														size="small"
 														disabled={updatingState}
 														sx={{
-															cursor: isActive ? 'default' : 'pointer',
+															cursor: isActive
+																? 'default'
+																: 'pointer',
 															'&:hover': {
 																backgroundColor: isActive
 																	? undefined

@@ -37,6 +37,14 @@ interface HistoryEntry {
 	details: string;
 }
 
+// Central thermostat temperature offsets (relative to current temperature)
+export const CENTRAL_THERMOSTAT_HEATING_OFFSET = 2; // °C above current temperature
+export const CENTRAL_THERMOSTAT_OFF_OFFSET = 3; // °C below current temperature
+
+// TRV temperature targets (absolute values, unchanged)
+export const TRV_HEATING_TARGET = 30; // °C when heating needed
+export const TRV_OFF_TARGET = 15; // °C when heating not needed
+
 export const Temperature = new (class Temperature extends ModuleMeta {
 	public name = 'temperature';
 	private _db: ModuleConfig['db'] | null = null;
@@ -1123,7 +1131,7 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		roomName: string,
 		needsHeating: boolean
 	): Promise<void> {
-		const targetTemp = needsHeating ? 30 : 15;
+		const targetTemp = needsHeating ? TRV_HEATING_TARGET : TRV_OFF_TARGET;
 
 		try {
 			const deviceApi = await modules.device.api.value;

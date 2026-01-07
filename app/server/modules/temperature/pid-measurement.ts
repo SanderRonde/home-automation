@@ -1,7 +1,10 @@
 import type { PIDParameters, MeasurementSession } from './types';
 import { DeviceThermostatCluster } from '../device/cluster';
 import { logTag } from '../../lib/logging/logger';
-import { Temperature } from './index';
+import {
+	Temperature,
+	CENTRAL_THERMOSTAT_HEATING_OFFSET,
+} from './index';
 import type { AllModules } from '..';
 
 /**
@@ -96,8 +99,11 @@ export class PIDMeasurementManager {
 		// Set target room to full heat
 		await Temperature.setRoomTRVTargets(this._modules, roomName, true);
 
-		// Ensure central thermostat is on
-		await Temperature.setThermostatHardwareTarget(this._modules, 30);
+		// Ensure central thermostat is on - use dynamic temperature
+		const currentStatus = await Temperature.getCentralThermostatStatus(this._modules);
+		const currentTemp = currentStatus?.currentTemperature ?? 20;
+		const targetTemp = currentTemp + CENTRAL_THERMOSTAT_HEATING_OFFSET;
+		await Temperature.setThermostatHardwareTarget(this._modules, targetTemp);
 
 		logTag(
 			'temperature',
