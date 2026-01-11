@@ -550,9 +550,6 @@ export class SceneAPI {
 										`Returned room ${roomName} to schedule`
 									);
 								}
-								// Also clear scene-activated state
-								Temperature.activateState(null);
-								logTag('scene', 'green', 'Returned to time-based schedule');
 							} else if (mode === 'activateState') {
 								if (!stateId) {
 									logTag(
