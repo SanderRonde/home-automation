@@ -150,6 +150,7 @@ export async function authenticateURL(): Promise<string | null> {
 	if (client) {
 		const url = (await client.value).generateAuthUrl({
 			access_type: 'offline',
+			prompt: 'consent',
 			scope: SCOPES,
 		});
 		return url;
