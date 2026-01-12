@@ -531,6 +531,7 @@ interface ExpandedClusterIconsProps {
 		clusterName: DeviceClusterName,
 		roomDevices: DeviceListWithValuesResponse
 	) => Promise<void>;
+	onClusterIconOverride?: (clusterName: DeviceClusterName) => void;
 }
 
 const ExpandedClusterIcons = (props: ExpandedClusterIconsProps): JSX.Element => {

@@ -52,6 +52,7 @@ export interface DeviceInfo {
 	position?: { x: number; y: number };
 	clusterNames?: DeviceClusterName[];
 	source?: string; // DeviceSource value as string
+	customIcon?: IncludedIconNames;
 }
 
 export interface RoomInfo {
@@ -243,6 +244,7 @@ interface DashboardDeviceResponse extends DashboardDeviceEndpointResponse {
 	room?: string;
 	roomColor?: string;
 	roomIcon?: IncludedIconNames;
+	customIcon?: IncludedIconNames;
 	managementUrl?: string;
 	position?: { x: number; y: number };
 	status?: 'online' | 'offline';
@@ -676,11 +678,16 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 							y: z.number(),
 						})
 						.nullable(),
+					icon: z.string().optional().nullable(),
 				}),
 				(body, _req, _server, { json }) => {
-					const { deviceId, position } = body;
+					const { deviceId, position, icon } = body;
 
 					if (api.updateDevicePosition(deviceId, position)) {
+						// Update icon if provided
+						if (icon !== undefined) {
+							api.updateDeviceIcon(deviceId, icon as IncludedIconNames | null);
+						}
 						return json({ success: true });
 					}
 
@@ -724,6 +731,25 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 				(body, _req, _server, { json }) => {
 					api.updateRoomPolygon(body.roomName, body.polygon);
 					return json({ success: true });
+				}
+			),
+			'/cluster-icons': (_req, _server, { json }) => {
+				const overrides = api.getAllClusterIconOverrides();
+				return json({ overrides });
+			},
+			'/cluster-icons/:clusterName': withRequestBody(
+				z.object({
+					icon: z.string().nullable(),
+				}),
+				(body, req, _server, { json }) => {
+					const clusterName = req.params.clusterName as DeviceClusterName;
+					if (!Object.values(DeviceClusterName).includes(clusterName)) {
+						return json({ error: 'Invalid cluster name' }, { status: 400 });
+					}
+					if (api.updateClusterIcon(clusterName, body.icon as IncludedIconNames | null)) {
+						return json({ success: true });
+					}
+					return json({ error: 'Failed to update cluster icon' }, { status: 500 });
 				}
 			),
 			'/layout': (_req, _server, { json }) => {
@@ -1232,7 +1258,7 @@ const getClusterState = async (
 		if (!_cluster) {
 			return {
 				name: clusterName,
-				icon: getClusterIconName(clusterName),
+				icon: getClusterIconName(clusterName, api),
 				isOn: false,
 			};
 		}
@@ -1240,7 +1266,7 @@ const getClusterState = async (
 		const isOn = await cluster.isOn.get();
 		return {
 			name: clusterName,
-			icon: getClusterIconName(clusterName),
+			icon: getClusterIconName(clusterName, api),
 			isOn: isOn ?? false,
 		};
 	}
@@ -1248,14 +1274,14 @@ const getClusterState = async (
 		if (!_cluster) {
 			return {
 				name: clusterName,
-				icon: getClusterIconName(clusterName),
+				icon: getClusterIconName(clusterName, api),
 				targetPositionLiftPercentage: 0,
 			};
 		}
 		const cluster = _cluster as DeviceWindowCoveringCluster;
 		return {
 			name: clusterName,
-			icon: getClusterIconName(clusterName),
+			icon: getClusterIconName(clusterName, api),
 			targetPositionLiftPercentage: (await cluster.targetPositionLiftPercentage.get()) ?? 0,
 		};
 	}
@@ -1263,7 +1289,7 @@ const getClusterState = async (
 		if (!_cluster) {
 			return {
 				name: clusterName,
-				icon: getClusterIconName(clusterName),
+				icon: getClusterIconName(clusterName, api),
 				batteryPercentage: 0,
 			};
 		}
@@ -1272,7 +1298,7 @@ const getClusterState = async (
 		if (batteryLevel !== null) {
 			return {
 				name: clusterName,
-				icon: getClusterIconName(clusterName),
+				icon: getClusterIconName(clusterName, api),
 				batteryPercentage: batteryLevel,
 			};
 		}
@@ -1281,7 +1307,7 @@ const getClusterState = async (
 		if (!_cluster) {
 			return {
 				name: clusterName,
-				icon: getClusterIconName(clusterName),
+				icon: getClusterIconName(clusterName, api),
 				occupied: false,
 				lastTriggered: undefined,
 			};
@@ -1291,7 +1317,7 @@ const getClusterState = async (
 		const lastEvent = await api.occupancyTracker.getLastTriggered(deviceId);
 		return {
 			name: clusterName,
-			icon: getClusterIconName(clusterName),
+			icon: getClusterIconName(clusterName, api),
 			occupied: occupied ?? false,
 			lastTriggered: lastEvent?.timestamp,
 		};
@@ -1300,7 +1326,7 @@ const getClusterState = async (
 		if (!_cluster) {
 			return {
 				name: clusterName,
-				icon: getClusterIconName(clusterName),
+				icon: getClusterIconName(clusterName, api),
 				temperature: 20.0,
 			};
 		}
@@ -1308,7 +1334,7 @@ const getClusterState = async (
 		const temperature = await cluster.temperature.get();
 		return {
 			name: clusterName,
-			icon: getClusterIconName(clusterName),
+			icon: getClusterIconName(clusterName, api),
 			temperature: temperature ?? 20.0,
 		};
 	}
@@ -1316,7 +1342,7 @@ const getClusterState = async (
 		if (!_cluster) {
 			return {
 				name: clusterName,
-				icon: getClusterIconName(clusterName),
+				icon: getClusterIconName(clusterName, api),
 				humidity: 50.0,
 			};
 		}
@@ -1324,7 +1350,7 @@ const getClusterState = async (
 		const humidity = await cluster.relativeHumidity.get();
 		return {
 			name: clusterName,
-			icon: getClusterIconName(clusterName),
+			icon: getClusterIconName(clusterName, api),
 			humidity: humidity ?? 50.0,
 		};
 	}
@@ -1332,7 +1358,7 @@ const getClusterState = async (
 		if (!_cluster) {
 			return {
 				name: clusterName,
-				icon: getClusterIconName(clusterName),
+				icon: getClusterIconName(clusterName, api),
 				illuminance: 0,
 			};
 		}
@@ -1340,7 +1366,7 @@ const getClusterState = async (
 		const illuminance = await cluster.illuminance.get();
 		return {
 			name: clusterName,
-			icon: getClusterIconName(clusterName),
+			icon: getClusterIconName(clusterName, api),
 			illuminance,
 		};
 	}
@@ -1348,7 +1374,7 @@ const getClusterState = async (
 		if (!_cluster) {
 			return {
 				name: clusterName,
-				icon: getClusterIconName(clusterName),
+				icon: getClusterIconName(clusterName, api),
 				state: false,
 				lastChanged: undefined,
 			};
@@ -1358,7 +1384,7 @@ const getClusterState = async (
 		const lastEvent = await api.booleanStateTracker.getLastChanged(deviceId);
 		return {
 			name: clusterName,
-			icon: getClusterIconName(clusterName),
+			icon: getClusterIconName(clusterName, api),
 			state: state ?? false,
 			lastChanged: lastEvent?.timestamp,
 		};
@@ -1367,7 +1393,7 @@ const getClusterState = async (
 		if (!_cluster) {
 			return {
 				name: clusterName,
-				icon: getClusterIconName(clusterName),
+				icon: getClusterIconName(clusterName, api),
 				label: '',
 				index: 0,
 				totalCount: 0,
@@ -1376,7 +1402,7 @@ const getClusterState = async (
 		const cluster = _cluster as DeviceSwitchCluster;
 		return {
 			name: clusterName,
-			icon: getClusterIconName(clusterName),
+			icon: getClusterIconName(clusterName, api),
 			label: cluster.getLabel(),
 			index: cluster.getIndex(),
 			totalCount: cluster.getTotalCount(),
@@ -1391,7 +1417,7 @@ const getClusterState = async (
 		if (!_cluster) {
 			return {
 				name: clusterName,
-				icon: getClusterIconName(clusterName),
+				icon: getClusterIconName(clusterName, api),
 				clusterVariant: 'xy',
 				color: { hue: 0, saturation: 0, value: 0 },
 				mergedClusters: {},
@@ -1402,7 +1428,7 @@ const getClusterState = async (
 		const hsv = color.toHSV();
 		return {
 			name: clusterName,
-			icon: getClusterIconName(clusterName),
+			icon: getClusterIconName(clusterName, api),
 			clusterVariant: 'xy',
 			color: hsv,
 			mergedClusters: {},
@@ -1417,7 +1443,7 @@ const getClusterState = async (
 		if (!_cluster) {
 			return {
 				name: clusterName,
-				icon: getClusterIconName(clusterName),
+				icon: getClusterIconName(clusterName, api),
 				clusterVariant: 'temperature',
 				colorTemperature: undefined,
 				minColorTemperature: undefined,
@@ -1427,7 +1453,7 @@ const getClusterState = async (
 		const cluster = _cluster as DeviceColorControlTemperatureCluster;
 		return {
 			name: clusterName,
-			icon: getClusterIconName(clusterName),
+			icon: getClusterIconName(clusterName, api),
 			clusterVariant: 'temperature',
 			colorTemperature: await cluster.colorTemperature.get(),
 			minColorTemperature: await cluster.colorTemperatureMin.get(),
@@ -1438,7 +1464,7 @@ const getClusterState = async (
 		if (!_cluster) {
 			return {
 				name: clusterName,
-				icon: getClusterIconName(clusterName),
+				icon: getClusterIconName(clusterName, api),
 				currentLevel: 0,
 			};
 		}
@@ -1446,7 +1472,7 @@ const getClusterState = async (
 		const level = await cluster.currentLevel.get();
 		return {
 			name: clusterName,
-			icon: getClusterIconName(clusterName),
+			icon: getClusterIconName(clusterName, api),
 			currentLevel: level * 100, // Convert 0-1 to 0-100
 		};
 	}
@@ -1454,7 +1480,7 @@ const getClusterState = async (
 		if (!_cluster) {
 			return {
 				name: clusterName,
-				icon: getClusterIconName(clusterName),
+				icon: getClusterIconName(clusterName, api),
 				actions: [],
 				activeActionId: undefined,
 			};
@@ -1464,7 +1490,7 @@ const getClusterState = async (
 		const activeAction = actionList.find((a) => a.state === Actions.ActionState.Active);
 		return {
 			name: clusterName,
-			icon: getClusterIconName(clusterName),
+			icon: getClusterIconName(clusterName, api),
 			actions: actionList,
 			activeActionId: activeAction?.id,
 		};
@@ -1473,7 +1499,7 @@ const getClusterState = async (
 		if (!_cluster) {
 			return {
 				name: clusterName,
-				icon: getClusterIconName(clusterName),
+				icon: getClusterIconName(clusterName, api),
 				currentTemperature: 20.0,
 				targetTemperature: 20.0,
 				mode: ThermostatMode.OFF,
@@ -1485,7 +1511,7 @@ const getClusterState = async (
 		const cluster = _cluster as DeviceThermostatCluster;
 		return {
 			name: clusterName,
-			icon: getClusterIconName(clusterName),
+			icon: getClusterIconName(clusterName, api),
 			currentTemperature: (await cluster.currentTemperature.get()) ?? 20.0,
 			targetTemperature: (await cluster.targetTemperature.get()) ?? 20.0,
 			mode: (await cluster.mode.get()) ?? ThermostatMode.OFF,
@@ -1498,7 +1524,7 @@ const getClusterState = async (
 		if (!_cluster) {
 			return {
 				name: clusterName,
-				icon: getClusterIconName(clusterName),
+				icon: getClusterIconName(clusterName, api),
 				totalEnergy: '0.00',
 				period: undefined,
 			};
@@ -1513,7 +1539,7 @@ const getClusterState = async (
 
 		return {
 			name: clusterName,
-			icon: getClusterIconName(clusterName),
+			icon: getClusterIconName(clusterName, api),
 			totalEnergy,
 			period,
 		};
@@ -1522,7 +1548,7 @@ const getClusterState = async (
 		if (!_cluster) {
 			return {
 				name: clusterName,
-				icon: getClusterIconName(clusterName),
+				icon: getClusterIconName(clusterName, api),
 				activePower: 0,
 			};
 		}
@@ -1530,13 +1556,13 @@ const getClusterState = async (
 		const activePower = await cluster.activePower.get();
 		return {
 			name: clusterName,
-			icon: getClusterIconName(clusterName),
+			icon: getClusterIconName(clusterName, api),
 			activePower: activePower ?? 0,
 		};
 	}
 	return {
 		name: clusterName,
-		icon: getClusterIconName(clusterName),
+		icon: getClusterIconName(clusterName, api),
 	} as DashboardDeviceClusterWithState;
 };
 
@@ -1611,7 +1637,7 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 				) {
 					mergedClusters.push({
 						name: DeviceClusterName.COLOR_CONTROL,
-						icon: getClusterIconName(DeviceClusterName.COLOR_CONTROL),
+						icon: getClusterIconName(DeviceClusterName.COLOR_CONTROL, api),
 						clusterVariant: 'xy',
 						color: {
 							hue: clusters[DeviceClusterName.COLOR_CONTROL].color.hue,
@@ -1651,7 +1677,7 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 				) {
 					mergedClusters.push({
 						name: DeviceClusterName.ON_OFF,
-						icon: getClusterIconName(DeviceClusterName.ON_OFF),
+						icon: getClusterIconName(DeviceClusterName.ON_OFF, api),
 						isOn: clusters[DeviceClusterName.ON_OFF].isOn,
 						mergedClusters: {
 							[DeviceClusterName.ELECTRICAL_ENERGY_MEASUREMENT]: energyCluster,
@@ -1678,10 +1704,10 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 				if (hasSensor) {
 					// Use occupancy icon if present, otherwise temperature icon as primary
 					const primaryIcon = clusters[DeviceClusterName.OCCUPANCY_SENSING]
-						? getClusterIconName(DeviceClusterName.OCCUPANCY_SENSING)
+						? getClusterIconName(DeviceClusterName.OCCUPANCY_SENSING, api)
 						: clusters[DeviceClusterName.TEMPERATURE_MEASUREMENT]
-							? getClusterIconName(DeviceClusterName.TEMPERATURE_MEASUREMENT)
-							: getClusterIconName(DeviceClusterName.ILLUMINANCE_MEASUREMENT);
+							? getClusterIconName(DeviceClusterName.TEMPERATURE_MEASUREMENT, api)
+							: getClusterIconName(DeviceClusterName.ILLUMINANCE_MEASUREMENT, api);
 
 					mergedClusters.push({
 						name: DeviceClusterName.OCCUPANCY_SENSING,
@@ -1743,7 +1769,7 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 		if (sensorGroups.length > 1) {
 			const mergedSensorGroup: DashboardDeviceClusterSensorGroup = {
 				name: DeviceClusterName.OCCUPANCY_SENSING,
-				icon: getClusterIconName(DeviceClusterName.OCCUPANCY_SENSING),
+				icon: getClusterIconName(DeviceClusterName.OCCUPANCY_SENSING, api),
 				mergedClusters: {
 					[DeviceClusterName.OCCUPANCY_SENSING]: undefined,
 					[DeviceClusterName.TEMPERATURE_MEASUREMENT]: undefined,
@@ -1803,6 +1829,7 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 				room: room,
 				roomColor: roomInfo?.color,
 				roomIcon: roomInfo?.icon,
+				customIcon: storedDevice?.customIcon,
 				...endpointResponse,
 				name: storedDevice?.name ?? endpointResponse.name,
 				managementUrl: await device.getManagementUrl(),
@@ -1861,6 +1888,7 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 				room: room,
 				roomColor: roomInfo?.color,
 				roomIcon: roomInfo?.icon,
+				customIcon: storedDevice.customIcon,
 				position: storedDevice.position,
 				status: 'offline',
 			};
@@ -1873,7 +1901,19 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 
 export type DeviceListWithValuesResponse = Awaited<ReturnType<typeof listDevicesWithValues>>;
 
-function getClusterIconName(clusterName: DeviceClusterName): IncludedIconNames | undefined {
+function getClusterIconName(
+	clusterName: DeviceClusterName,
+	api?: DeviceAPI
+): IncludedIconNames | undefined {
+	// Check for override first
+	if (api) {
+		const override = api.getClusterIconOverride(clusterName);
+		if (override) {
+			return override;
+		}
+	}
+
+	// Fall back to default icon mapping
 	switch (clusterName) {
 		case DeviceClusterName.ON_OFF:
 			return 'Lightbulb';

@@ -45,7 +45,7 @@ let L: any;
 // Lazy load leaflet and react-leaflet
 const loadLeaflet = async () => {
 	if (!MapContainer) {
-		const leaflet = await import('leaflet');
+		const leaflet = (await import('leaflet')) as { default: typeof import('leaflet') };
 		L = leaflet.default;
 		// Fix for default marker icons in Leaflet with bundlers
 		delete (L.Icon.Default.prototype as { _getIconUrl?: unknown })._getIconUrl;

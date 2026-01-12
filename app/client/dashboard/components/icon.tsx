@@ -52,6 +52,7 @@ import {
 	Alarm,
 	AcUnit,
 	Whatshot,
+	Monitor,
 } from '@mui/icons-material';
 import type { SxProps } from '@mui/material';
 import React from 'react';
@@ -110,6 +111,7 @@ const iconsByKey = {
 	Alarm,
 	AcUnit,
 	Whatshot,
+	Monitor,
 };
 
 export type IncludedIconNames = keyof typeof iconsByKey;

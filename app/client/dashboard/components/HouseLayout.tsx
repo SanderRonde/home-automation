@@ -43,7 +43,9 @@ import type { KonvaEventObject } from 'konva/lib/Node';
 import { detectRooms } from '../lib/room-detection';
 import React, { useEffect, useState } from 'react';
 import { apiGet, apiPost } from '../../lib/fetch';
+import type { IncludedIconNames } from './icon';
 import { DrawMode } from '../types/layout';
+import { IconComponent } from './icon';
 import useImage from 'use-image';
 
 export const HouseLayout = (): JSX.Element => {
@@ -84,6 +86,7 @@ export const HouseLayout = (): JSX.Element => {
 	const [groups, setGroups] = useState<DeviceGroup[]>([]);
 	const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
 	const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+	const [selectedIcon, setSelectedIcon] = useState<IncludedIconNames | null>(null);
 	const [placementSnackbar, setPlacementSnackbar] = useState<{
 		open: boolean;
 		message: string;
@@ -298,12 +301,17 @@ export const HouseLayout = (): JSX.Element => {
 					{
 						deviceId: selectedDeviceId,
 						position,
+						icon: selectedIcon,
 					}
 				);
 
 				// Update local state
 				setDevices((prev) =>
-					prev.map((d) => (d.uniqueId === selectedDeviceId ? { ...d, position } : d))
+					prev.map((d) =>
+						d.uniqueId === selectedDeviceId
+							? { ...d, position, customIcon: selectedIcon || undefined }
+							: d
+					)
 				);
 
 				setPlacementSnackbar({
@@ -320,7 +328,7 @@ export const HouseLayout = (): JSX.Element => {
 				});
 			}
 		},
-		[selectedDeviceId]
+		[selectedDeviceId, selectedIcon]
 	);
 
 	// Handle group placement on canvas click
@@ -986,6 +994,9 @@ export const HouseLayout = (): JSX.Element => {
 							onChange={(_e, value) => {
 								setSelectedDeviceId(value?.value || null);
 								setSelectedGroupId(null);
+								// Set icon to device's custom icon if it exists
+								const device = devices.find((d) => d.uniqueId === value?.value);
+								setSelectedIcon(device?.customIcon || null);
 							}}
 							renderOption={(props, option) => (
 								<li {...props}>
@@ -1010,6 +1021,95 @@ export const HouseLayout = (): JSX.Element => {
 								/>
 							)}
 						/>
+						{selectedDeviceId && (
+							<Autocomplete
+								options={
+									[
+										'Lightbulb',
+										'Window',
+										'Tune',
+										'BatteryChargingFull',
+										'Group',
+										'Sensors',
+										'DeviceThermostat',
+										'WaterDrop',
+										'ToggleOn',
+										'ToggleOff',
+										'LightMode',
+										'Palette',
+										'Nightlight',
+										'WbSunny',
+										'Home',
+										'DirectionsRun',
+										'LocalMovies',
+										'MenuBook',
+										'Restaurant',
+										'Weekend',
+										'Work',
+										'FitnessCenter',
+										'Celebration',
+										'DarkMode',
+										'Star',
+										'Bed',
+										'Kitchen',
+										'Bathtub',
+										'Computer',
+										'Garage',
+										'Yard',
+										'Foundation',
+										'Roofing',
+										'Settings',
+										'Wc',
+										'Chair',
+										'Tv',
+										'DoorFront',
+										'Balcony',
+										'Pool',
+										'MeetingRoom',
+										'Shower',
+										'Deck',
+										'Cottage',
+										'CloudOff',
+										'BlindsClosed',
+										'Blinds',
+										'DirectionsCar',
+										'Login',
+										'ExitToApp',
+										'Alarm',
+										'AcUnit',
+										'Whatshot',
+										'Monitor',
+									] as IncludedIconNames[]
+								}
+								value={selectedIcon}
+								onChange={(_e, value) => {
+									setSelectedIcon(value);
+								}}
+								renderInput={(params) => (
+									<TextField
+										{...params}
+										label="Icon (optional)"
+										variant="outlined"
+										size="small"
+										sx={{ minWidth: 200 }}
+									/>
+								)}
+								renderOption={(props, option) => (
+									<li {...props}>
+										<Box
+											sx={{
+												display: 'flex',
+												alignItems: 'center',
+												gap: 1,
+											}}
+										>
+											<IconComponent iconName={option} />
+											<Typography>{option}</Typography>
+										</Box>
+									</li>
+								)}
+							/>
+						)}
 						<Typography variant="body2" sx={{ color: 'text.secondary' }}>
 							or
 						</Typography>

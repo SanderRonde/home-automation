@@ -16,6 +16,11 @@ export interface DeviceIconProps {
 
 // Get primary icon from device clusters
 const getDeviceIcon = (device: DeviceListWithValuesResponse[number]): IncludedIconNames | null => {
+	// Check for custom icon first
+	if (device.customIcon) {
+		return device.customIcon;
+	}
+
 	// For offline devices, show CloudOff icon
 	if (device.status === 'offline') {
 		return 'CloudOff';

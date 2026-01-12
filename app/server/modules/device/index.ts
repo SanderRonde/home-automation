@@ -5,6 +5,7 @@ import type { DeviceGroup } from '../../../../types/group';
 import type { Palette } from '../../../../types/palette';
 import { HOME_STATE } from '../home-detector/types.js';
 import type { Scene } from '../../../../types/scene';
+import type { DeviceClusterName } from './cluster';
 import type { AllModules, ModuleConfig } from '..';
 import { CronTracker } from './cron-tracker';
 import type { Database } from '../../lib/db';
@@ -41,6 +42,9 @@ export interface DeviceDB {
 	device_registry: Record<string, DeviceInfo>;
 	room_icons?: {
 		[room: string]: IncludedIconNames;
+	};
+	cluster_icons?: {
+		[clusterName in DeviceClusterName]?: IncludedIconNames;
 	};
 	room_polygons?: Record<string, Array<{ x: number; y: number }>>;
 	scenes?: Record<string, Scene>;

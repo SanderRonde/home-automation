@@ -456,9 +456,7 @@ export const TemperatureConfig = (): JSX.Element => {
 			);
 			if (response.ok) {
 				setTrvs((prev) =>
-					prev.map((trv) =>
-						trv.deviceId === deviceId ? { ...trv, disabled } : trv
-					)
+					prev.map((trv) => (trv.deviceId === deviceId ? { ...trv, disabled } : trv))
 				);
 			} else {
 				// Revert on error
@@ -688,7 +686,10 @@ export const TemperatureConfig = (): JSX.Element => {
 													<Typography variant="subtitle2">
 														{trv.name}
 													</Typography>
-													<Typography variant="caption" color="text.secondary">
+													<Typography
+														variant="caption"
+														color="text.secondary"
+													>
 														{trv.room || 'No room'} • {trv.deviceId}
 													</Typography>
 												</Box>
@@ -703,14 +704,21 @@ export const TemperatureConfig = (): JSX.Element => {
 													<Switch
 														checked={!trv.disabled}
 														onChange={(e) =>
-															handleToggleTRV(trv.deviceId, !e.target.checked)
+															handleToggleTRV(
+																trv.deviceId,
+																!e.target.checked
+															)
 														}
 														disabled={isSaving}
 														color="primary"
 													/>
 													<Typography
 														variant="body2"
-														color={trv.disabled ? 'text.secondary' : 'text.primary'}
+														color={
+															trv.disabled
+																? 'text.secondary'
+																: 'text.primary'
+														}
 													>
 														{trv.disabled ? 'Disabled' : 'Enabled'}
 													</Typography>

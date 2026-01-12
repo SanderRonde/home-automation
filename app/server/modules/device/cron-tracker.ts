@@ -78,7 +78,7 @@ export class CronTracker {
 							trigger.rangeKm
 						);
 						this._locationTriggerStates.set(stateKey, { wasInRange: isWithinRange });
-					} catch (error) {
+					} catch {
 						// If we can't determine initial state, default to false (not in range)
 						// This ensures we'll trigger when entering range
 						this._locationTriggerStates.set(stateKey, { wasInRange: false });

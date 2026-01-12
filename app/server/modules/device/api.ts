@@ -164,6 +164,56 @@ export class DeviceAPI {
 		return false;
 	}
 
+	public updateDeviceIcon(deviceId: string, icon: IncludedIconNames | null): boolean {
+		const knownDevices = this.getStoredDevices();
+
+		if (knownDevices[deviceId]) {
+			if (icon === null) {
+				delete knownDevices[deviceId].customIcon;
+			} else {
+				knownDevices[deviceId].customIcon = icon;
+			}
+
+			this._db.update((old) => ({
+				...old,
+				device_registry: knownDevices,
+			}));
+			return true;
+		}
+
+		return false;
+	}
+
+	public updateClusterIcon(
+		clusterName: DeviceClusterName,
+		icon: IncludedIconNames | null
+	): boolean {
+		const db = this._db.current();
+		const clusterIcons = db.cluster_icons || {};
+		if (icon) {
+			(clusterIcons as Record<DeviceClusterName, IncludedIconNames>)[clusterName] = icon;
+		} else {
+			delete (clusterIcons as Record<DeviceClusterName, IncludedIconNames>)[clusterName];
+		}
+		this._db.update((old) => ({
+			...old,
+			cluster_icons: clusterIcons,
+		}));
+		return true;
+	}
+
+	public getClusterIconOverride(clusterName: DeviceClusterName): IncludedIconNames | undefined {
+		const db = this._db.current();
+		return (db.cluster_icons as Record<DeviceClusterName, IncludedIconNames> | undefined)?.[
+			clusterName
+		];
+	}
+
+	public getAllClusterIconOverrides(): Record<DeviceClusterName, IncludedIconNames> {
+		const db = this._db.current();
+		return (db.cluster_icons || {}) as Record<DeviceClusterName, IncludedIconNames>;
+	}
+
 	public getRooms(knownDevices: Record<string, DeviceInfo>): Record<string, RoomInfo> {
 		const rooms: Record<string, RoomInfo> = {};
 		const roomIcons = this._db.current().room_icons || {};
