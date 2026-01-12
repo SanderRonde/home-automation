@@ -31,6 +31,7 @@ interface TemperatureDB {
 	activeStateId?: string | null; // Scene-activated state (null = use time-based default)
 	roomOvershoot?: Record<string, number>; // Per-room overshoot in °C (default: 0.5)
 	roomPIDParameters?: Record<string, import('./types').PIDParameters>;
+	disabledTRVs?: string[]; // Device IDs of disabled TRVs
 }
 
 interface HistoryEntry {
@@ -1002,6 +1003,103 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 	}
 
 	/**
+	 * Get set of disabled TRV device IDs
+	 */
+	public getDisabledTRVs(): Set<string> {
+		const data = this._db?.current() as TemperatureDB | undefined;
+		const disabled = data?.disabledTRVs ?? [];
+		return new Set(disabled);
+	}
+
+	/**
+	 * Check if a TRV is disabled
+	 */
+	public isTRVDisabled(deviceId: string): boolean {
+		return this.getDisabledTRVs().has(deviceId);
+	}
+
+	/**
+	 * Enable or disable a TRV
+	 */
+	public setTRVDisabled(deviceId: string, disabled: boolean): void {
+		if (!this._db) {
+			return;
+		}
+
+		const data = this._db.current() as TemperatureDB;
+		const disabledSet = new Set(data.disabledTRVs ?? []);
+
+		if (disabled) {
+			disabledSet.add(deviceId);
+			this.addHistoryEntry('TRV Disabled', `Disabled TRV ${deviceId}`);
+		} else {
+			disabledSet.delete(deviceId);
+			this.addHistoryEntry('TRV Enabled', `Enabled TRV ${deviceId}`);
+		}
+
+		this._db.update((old) => ({
+			...old,
+			disabledTRVs: Array.from(disabledSet),
+		}));
+	}
+
+	/**
+	 * Get list of all TRV devices with their disabled status
+	 * Excludes the central thermostat
+	 */
+	public async getAllTRVs(modules: AllModules): Promise<
+		Array<{
+			deviceId: string;
+			name: string;
+			room: string | undefined;
+			disabled: boolean;
+		}>
+	> {
+		const trvs: Array<{
+			deviceId: string;
+			name: string;
+			room: string | undefined;
+			disabled: boolean;
+		}> = [];
+
+		try {
+			const deviceApi = await modules.device.api.value;
+			const storedDevices = deviceApi.getStoredDevices();
+			const allDevices = deviceApi.devices.current();
+			const centralThermostatId = this.getThermostat();
+			const disabledSet = this.getDisabledTRVs();
+
+			for (const [deviceId, device] of Object.entries(allDevices)) {
+				// Skip the central thermostat - it's controlled separately
+				if (deviceId === centralThermostatId) {
+					continue;
+				}
+
+				const storedInfo = storedDevices[deviceId];
+				// Only include devices that are in a room
+				if (!storedInfo?.room) {
+					continue;
+				}
+
+				const thermostatClusters = device.getAllClustersByType(DeviceThermostatCluster);
+				if (thermostatClusters.length > 0) {
+					const name = await device.getDeviceName();
+					trvs.push({
+						deviceId,
+						name,
+						room: storedInfo.room,
+						disabled: disabledSet.has(deviceId),
+					});
+				}
+			}
+		} catch {
+			// Device module might not be available
+		}
+
+		return trvs;
+	}
+
+	/**
 	 * Get the status of the configured central thermostat
 	 */
 	public async getCentralThermostatStatus(devices: Record<string, Device>): Promise<{
@@ -1152,6 +1250,11 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 
 				const storedInfo = storedDevices[deviceId];
 				if (storedInfo?.room !== roomName) {
+					continue;
+				}
+
+				// Skip disabled TRVs
+				if (this.isTRVDisabled(deviceId)) {
 					continue;
 				}
 

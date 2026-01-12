@@ -104,6 +104,15 @@ export const TemperatureConfig = (): JSX.Element => {
 		temperature: number;
 	} | null>(null);
 	const [debugOpen, setDebugOpen] = useState(false);
+	const [trvs, setTrvs] = useState<
+		Array<{
+			deviceId: string;
+			name: string;
+			room: string | undefined;
+			disabled: boolean;
+		}>
+	>([]);
+	const [savingTRV, setSavingTRV] = useState<Record<string, boolean>>({});
 
 	const loadData = async () => {
 		setLoading(true);
@@ -115,6 +124,7 @@ export const TemperatureConfig = (): JSX.Element => {
 				statesResponse,
 				roomsResponse,
 				overshootsResponse,
+				trvsResponse,
 			] = await Promise.all([
 				apiGet('temperature', '/temperature-sensors', {}),
 				apiGet('temperature', '/inside-temperature-sensors', {}),
@@ -122,6 +132,7 @@ export const TemperatureConfig = (): JSX.Element => {
 				apiGet('temperature', '/states', {}),
 				apiGet('device', '/rooms', {}),
 				apiGet('temperature', '/rooms/overshoot', {}),
+				apiGet('temperature', '/trvs', {}),
 			]);
 
 			if (sensorsResponse.ok) {
@@ -181,6 +192,11 @@ export const TemperatureConfig = (): JSX.Element => {
 			if (overshootsResponse.ok) {
 				const overshootsData = await overshootsResponse.json();
 				setRoomOvershoots(overshootsData.overshoots || {});
+			}
+
+			if (trvsResponse.ok) {
+				const trvsData = await trvsResponse.json();
+				setTrvs(trvsData.trvs || []);
 			}
 		} catch (error) {
 			console.error('Failed to load temperature configuration:', error);
@@ -429,6 +445,46 @@ export const TemperatureConfig = (): JSX.Element => {
 		);
 	};
 
+	const handleToggleTRV = async (deviceId: string, disabled: boolean) => {
+		setSavingTRV((prev) => ({ ...prev, [deviceId]: true }));
+		try {
+			const response = await apiPost(
+				'temperature',
+				'/trv/:deviceId/disable',
+				{ deviceId },
+				{ disabled }
+			);
+			if (response.ok) {
+				setTrvs((prev) =>
+					prev.map((trv) =>
+						trv.deviceId === deviceId ? { ...trv, disabled } : trv
+					)
+				);
+			} else {
+				// Revert on error
+				setTrvs((prev) =>
+					prev.map((trv) =>
+						trv.deviceId === deviceId ? { ...trv, disabled: !disabled } : trv
+					)
+				);
+			}
+		} catch (error) {
+			console.error('Failed to update TRV status:', error);
+			// Revert on error
+			setTrvs((prev) =>
+				prev.map((trv) =>
+					trv.deviceId === deviceId ? { ...trv, disabled: !disabled } : trv
+				)
+			);
+		} finally {
+			setSavingTRV((prev) => {
+				const updated = { ...prev };
+				delete updated[deviceId];
+				return updated;
+			});
+		}
+	};
+
 	if (loading) {
 		return (
 			<Box
@@ -592,6 +648,78 @@ export const TemperatureConfig = (): JSX.Element => {
 									<FormControlLabel value="" control={<Radio />} label="None" />
 								</RadioGroup>
 							</FormControl>
+						</CardContent>
+					</Card>
+				)}
+
+				{/* TRV Control */}
+				{trvs.length > 0 && (
+					<Card>
+						<CardContent>
+							<Typography variant="h6" sx={{ mb: 2 }}>
+								TRV Control
+							</Typography>
+							<Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+								Enable or disable individual TRV devices. Disabled TRVs will not be
+								automatically controlled by the temperature system.
+							</Typography>
+							<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+								{trvs.map((trv) => {
+									const isSaving = savingTRV[trv.deviceId] ?? false;
+									return (
+										<Box
+											key={trv.deviceId}
+											sx={{
+												p: 2,
+												border: '1px solid',
+												borderColor: 'divider',
+												borderRadius: 2,
+												opacity: trv.disabled ? 0.6 : 1,
+											}}
+										>
+											<Box
+												sx={{
+													display: 'flex',
+													justifyContent: 'space-between',
+													alignItems: 'center',
+												}}
+											>
+												<Box sx={{ flexGrow: 1 }}>
+													<Typography variant="subtitle2">
+														{trv.name}
+													</Typography>
+													<Typography variant="caption" color="text.secondary">
+														{trv.room || 'No room'} • {trv.deviceId}
+													</Typography>
+												</Box>
+												<Box
+													sx={{
+														display: 'flex',
+														alignItems: 'center',
+														gap: 1,
+													}}
+												>
+													{isSaving && <CircularProgress size={20} />}
+													<Switch
+														checked={!trv.disabled}
+														onChange={(e) =>
+															handleToggleTRV(trv.deviceId, !e.target.checked)
+														}
+														disabled={isSaving}
+														color="primary"
+													/>
+													<Typography
+														variant="body2"
+														color={trv.disabled ? 'text.secondary' : 'text.primary'}
+													>
+														{trv.disabled ? 'Disabled' : 'Enabled'}
+													</Typography>
+												</Box>
+											</Box>
+										</Box>
+									);
+								})}
+							</Box>
 						</CardContent>
 					</Card>
 				)}

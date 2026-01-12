@@ -360,6 +360,18 @@ function _initRouting({ sqlDB, db, modules, wsPublish: _wsPublish }: ModuleConfi
 				const thermostats = await Temperature.getAvailableThermostats(modules);
 				return json({ success: true, thermostats });
 			},
+			'/trvs': async (_req, _server, { json }) => {
+				const trvs = await Temperature.getAllTRVs(modules);
+				return json({ success: true, trvs });
+			},
+			'/trv/:deviceId/disable': withRequestBody(
+				z.object({ disabled: z.boolean() }),
+				(body, req, _server, { json }) => {
+					const { deviceId } = req.params;
+					Temperature.setTRVDisabled(deviceId, body.disabled);
+					return json({ success: true });
+				}
+			),
 			'/central-thermostat': {
 				GET: async (_req, _server, { json }) => {
 					const deviceApi = await modules.device.api.value;
