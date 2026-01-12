@@ -25,8 +25,16 @@ function _initRouting() {
 					});
 				}
 
-				const events = await getEvents(calendar, 7);
-				return json({ success: true, events });
+				try {
+					const events = await getEvents(calendar, 7);
+					return json({ success: true, events });
+				} catch {
+					return json({
+						success: false,
+						error: 'Error getting events',
+						redirect: await authenticateURL(),
+					});
+				}
 			},
 		},
 		true
