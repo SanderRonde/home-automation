@@ -14,6 +14,7 @@ export enum SceneTriggerType {
 	NOBODY_HOME_TIMEOUT = 'nobody-home-timeout',
 	CRON = 'cron',
 	LOCATION_WITHIN_RANGE = 'location-within-range',
+	DELAY = 'delay',
 }
 
 export type SceneTrigger =
@@ -58,6 +59,10 @@ export type SceneTrigger =
 			targetId: string; // Target to check distance from (e.g., "home")
 			rangeKm: number;
 			enteredRange: boolean;
+	  }
+	| {
+			type: SceneTriggerType.DELAY;
+			seconds: number; // Wait time in seconds
 	  };
 
 export enum SceneConditionType {

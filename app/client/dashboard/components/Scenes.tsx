@@ -13,6 +13,7 @@ import {
 	Home as HomeIcon,
 	ExitToApp as ExitToAppIcon,
 	Webhook as WebhookIcon,
+	HourglassEmpty as HourglassEmptyIcon,
 } from '@mui/icons-material';
 import {
 	Box,
@@ -307,6 +308,22 @@ export const Scenes = (): JSX.Element => {
 					</Tooltip>
 				);
 			}
+
+			if (trigger.type === 'delay') {
+				return (
+					<Tooltip
+						title={`Delay ${trigger.seconds} second${trigger.seconds !== 1 ? 's' : ''}`}
+						key={index}
+					>
+						<HourglassEmptyIcon
+							sx={{
+								fontSize: 20,
+								color: 'text.secondary',
+							}}
+						/>
+					</Tooltip>
+				);
+			}
 			return null;
 		});
 	};
@@ -351,6 +368,8 @@ export const Scenes = (): JSX.Element => {
 				return 'Nobody home';
 			case SceneTriggerType.NOBODY_HOME_TIMEOUT:
 				return 'Nobody home timeout';
+			case SceneTriggerType.DELAY:
+				return execution.trigger_source || 'Delay';
 			default:
 				return execution.trigger_type;
 		}
@@ -377,6 +396,8 @@ export const Scenes = (): JSX.Element => {
 			case SceneTriggerType.NOBODY_HOME:
 			case SceneTriggerType.NOBODY_HOME_TIMEOUT:
 				return <ExitToAppIcon sx={{ fontSize: 20 }} />;
+			case SceneTriggerType.DELAY:
+				return <HourglassEmptyIcon sx={{ fontSize: 20 }} />;
 			default:
 				return <HistoryIcon sx={{ fontSize: 20 }} />;
 		}

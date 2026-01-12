@@ -388,6 +388,10 @@ const sceneTriggers = z
 					rangeKm: z.number(),
 					enteredRange: z.boolean(),
 				}),
+				z.object({
+					type: z.literal(SceneTriggerType.DELAY),
+					seconds: z.number().min(0).max(3600),
+				}),
 			]),
 			conditions: z
 				.array(

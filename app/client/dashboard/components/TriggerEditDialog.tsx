@@ -270,6 +270,9 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 	// Interval trigger state
 	const [intervalMinutes, setIntervalMinutes] = useState<number>(60);
 
+	// Delay trigger state
+	const [delaySeconds, setDelaySeconds] = useState<number>(5);
+
 	// Webhooks
 	const [webhooks, setWebhooks] = useState<Webhook[]>([]);
 
@@ -458,6 +461,8 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 				setTriggerWebhookName(trigger.webhookName);
 			} else if (trigger.type === SceneTriggerType.CRON) {
 				setIntervalMinutes(trigger.intervalMinutes);
+			} else if (trigger.type === SceneTriggerType.DELAY) {
+				setDelaySeconds(trigger.seconds);
 			} else if (trigger.type === SceneTriggerType.LOCATION_WITHIN_RANGE) {
 				setLocationDeviceId(trigger.deviceId);
 				setLocationTargetId(trigger.targetId);
@@ -783,6 +788,11 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 				type: SceneTriggerType.CRON,
 				intervalMinutes: intervalMinutes,
 			};
+		} else if (triggerType === SceneTriggerType.DELAY) {
+			trigger = {
+				type: SceneTriggerType.DELAY,
+				seconds: delaySeconds,
+			};
 		} else if (triggerType === SceneTriggerType.LOCATION_WITHIN_RANGE) {
 			const range = parseFloat(locationRangeKm);
 			const locationErrors: string[] = [];
@@ -916,6 +926,7 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 									Nobody Home Timeout
 								</ToggleButton>
 								<ToggleButton value={SceneTriggerType.CRON}>Interval</ToggleButton>
+								<ToggleButton value={SceneTriggerType.DELAY}>Delay</ToggleButton>
 								<ToggleButton value={SceneTriggerType.LOCATION_WITHIN_RANGE}>
 									Location
 								</ToggleButton>
@@ -1071,6 +1082,24 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 									}}
 									inputProps={{ min: 1 }}
 									helperText="Scene will trigger every X minutes"
+									fullWidth
+								/>
+							)}
+
+							{/* Delay trigger */}
+							{triggerType === SceneTriggerType.DELAY && (
+								<TextField
+									type="number"
+									label="Delay (seconds)"
+									value={delaySeconds}
+									onChange={(e) => {
+										const val = parseInt(e.target.value);
+										if (val >= 0) {
+											setDelaySeconds(val);
+										}
+									}}
+									inputProps={{ min: 0, max: 3600 }}
+									helperText="Wait this many seconds before executing the scene"
 									fullWidth
 								/>
 							)}
