@@ -175,7 +175,7 @@ describe('DeviceAPI', () => {
 
 	describe('getRooms', () => {
 		test('should return empty object when no rooms', () => {
-			const rooms = api.getRooms();
+			const rooms = api.getRooms(api.getStoredDevices());
 
 			expect(Object.keys(rooms)).toHaveLength(0);
 		});
@@ -192,7 +192,7 @@ describe('DeviceAPI', () => {
 			api.updateDeviceRoom('device1', 'Living Room');
 			api.updateDeviceRoom('device2', 'Bedroom');
 
-			const rooms = api.getRooms();
+			const rooms = api.getRooms(api.getStoredDevices());
 
 			expect(Object.keys(rooms)).toHaveLength(2);
 			expect(rooms['Living Room']).toBeDefined();
@@ -206,7 +206,7 @@ describe('DeviceAPI', () => {
 			api.setDevices([device], DeviceSource.MATTER);
 			api.updateDeviceRoom('device1', 'Kitchen');
 
-			const rooms = api.getRooms();
+			const rooms = api.getRooms(api.getStoredDevices());
 
 			expect(rooms['Kitchen'].color).toMatch(/^#[0-9A-F]{6}$/i);
 		});
@@ -216,7 +216,7 @@ describe('DeviceAPI', () => {
 			api.setDevices([device], DeviceSource.MATTER);
 			api.updateDeviceRoom('device1', 'Kitchen', 'Restaurant');
 
-			const rooms = api.getRooms();
+			const rooms = api.getRooms(api.getStoredDevices());
 
 			expect(rooms['Kitchen'].icon).toBe('Restaurant');
 		});
@@ -233,7 +233,7 @@ describe('DeviceAPI', () => {
 			api.updateDeviceRoom('device1', 'Living Room');
 			api.updateDeviceRoom('device2', 'Living Room');
 
-			const rooms = api.getRooms();
+			const rooms = api.getRooms(api.getStoredDevices());
 
 			expect(Object.keys(rooms)).toHaveLength(1);
 			expect(rooms['Living Room']).toBeDefined();

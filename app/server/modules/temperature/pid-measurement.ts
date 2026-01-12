@@ -1,10 +1,7 @@
+import { Temperature, CENTRAL_THERMOSTAT_HEATING_OFFSET } from './index';
 import type { PIDParameters, MeasurementSession } from './types';
 import { DeviceThermostatCluster } from '../device/cluster';
 import { logTag } from '../../lib/logging/logger';
-import {
-	Temperature,
-	CENTRAL_THERMOSTAT_HEATING_OFFSET,
-} from './index';
 import type { AllModules } from '..';
 
 /**
@@ -35,7 +32,10 @@ export class PIDMeasurementManager {
 		}
 
 		// Get current room temperature
-		const roomStatus = await Temperature.getRoomStatus(this._modules, roomName);
+		const deviceApi = await this._modules.device.api.value;
+		const storedDevices = deviceApi.getStoredDevices();
+		const allDevices = deviceApi.devices.current();
+		const roomStatus = await Temperature.getRoomStatus(allDevices, storedDevices, roomName);
 		if (roomStatus.currentTemperature <= 0) {
 			return {
 				success: false,
@@ -46,9 +46,6 @@ export class PIDMeasurementManager {
 		const startTemperature = roomStatus.currentTemperature;
 
 		// Check if room has TRV
-		const deviceApi = await this._modules.device.api.value;
-		const storedDevices = deviceApi.getStoredDevices();
-		const allDevices = deviceApi.devices.current();
 		const centralThermostatId = Temperature.getThermostat();
 
 		let hasTRV = false;
@@ -100,7 +97,9 @@ export class PIDMeasurementManager {
 		await Temperature.setRoomTRVTargets(this._modules, roomName, true);
 
 		// Ensure central thermostat is on - use dynamic temperature
-		const currentStatus = await Temperature.getCentralThermostatStatus(this._modules);
+		const currentStatus = await Temperature.getCentralThermostatStatus(
+			deviceApi.devices.current() ?? {}
+		);
 		const currentTemp = currentStatus?.currentTemperature ?? 20;
 		const targetTemp = currentTemp + CENTRAL_THERMOSTAT_HEATING_OFFSET;
 		await Temperature.setThermostatHardwareTarget(this._modules, targetTemp);
@@ -263,7 +262,10 @@ export class PIDMeasurementManager {
 		}
 
 		// Get current room temperature
-		const roomStatus = await Temperature.getRoomStatus(this._modules, roomName);
+		const deviceApi = await this._modules.device.api.value;
+		const storedDevices = deviceApi.getStoredDevices();
+		const allDevices = deviceApi.devices.current();
+		const roomStatus = await Temperature.getRoomStatus(allDevices, storedDevices, roomName);
 		const currentTemp = roomStatus.currentTemperature;
 
 		if (currentTemp <= 0) {
@@ -354,7 +356,7 @@ export class PIDMeasurementManager {
 	 */
 	private async _overrideOtherRooms(measuringRoom: string): Promise<void> {
 		const deviceApi = await this._modules.device.api.value;
-		const rooms = deviceApi.getRooms();
+		const rooms = deviceApi.getRooms(deviceApi.getStoredDevices());
 		const roomNames = Object.keys(rooms);
 
 		for (const roomName of roomNames) {

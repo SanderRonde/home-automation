@@ -713,7 +713,7 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 				return json({ success: true });
 			},
 			'/rooms': (_req, _server, { json }) => {
-				const rooms = api.getRooms();
+				const rooms = api.getRooms(api.getStoredDevices());
 				return json({ rooms });
 			},
 			'/rooms/updatePolygon': withRequestBody(
@@ -1544,7 +1544,7 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 	const deviceApi = await modules.device.api.value;
 	const devices = [...Object.values(await deviceApi.devices.get())];
 	const storedDevices = deviceApi.getStoredDevices();
-	const rooms = deviceApi.getRooms();
+	const rooms = deviceApi.getRooms(storedDevices);
 	const responseDevices: DashboardDeviceResponse[] = [];
 
 	const _getClusterState = async (cluster: Cluster, deviceId: string) => {

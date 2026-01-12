@@ -17,7 +17,9 @@ import {
 	Slider,
 	Chip,
 } from '@mui/material';
+import type { TemperatureWebsocketServerMessage } from '../../../server/modules/temperature/routing';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import useWebsocket from '../../shared/resilient-socket';
 import { apiGet, apiPost } from '../../lib/fetch';
 
 interface ThermostatData {
@@ -36,14 +38,6 @@ interface NextScheduleData {
 	targetTemperature?: number;
 	averageTargetTemperature?: number;
 	name?: string;
-}
-
-interface RoomStatus {
-	name: string;
-	currentTemperature: number;
-	targetTemperature: number;
-	isHeating: boolean;
-	overrideActive: boolean;
 }
 
 interface TemperatureDisplayProps {
@@ -69,95 +63,65 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 	const [allStates, setAllStates] = useState<Array<{ id: string; name: string }>>([]);
 	const [updatingState, setUpdatingState] = useState(false);
 
-	const loadData = useCallback(async () => {
-		try {
-			const [
-				tempResponse,
-				thermostatResponse,
-				scheduleResponse,
-				roomsResponse,
-				activeStateResponse,
-				statesResponse,
-			] = await Promise.all([
-				apiGet('temperature', '/inside-temperature', {}),
-				apiGet('temperature', '/central-thermostat', {}),
-				apiGet('temperature', '/schedule/next', {}),
-				apiGet('temperature', '/rooms', {}),
-				apiGet('temperature', '/states/active', {}),
-				apiGet('temperature', '/states', {}),
-			]);
+	// Helper function to update all state from WebSocket message
+	const updateFromWebSocketMessage = useCallback((message: TemperatureWebsocketServerMessage) => {
+		// Update inside temperature
+		setTemperature(message.insideTemperature);
 
-			if (tempResponse.ok) {
-				const data = await tempResponse.json();
-				setTemperature(data.temperature);
+		// Update thermostat data
+		if (message.centralThermostat) {
+			setThermostatData({
+				configured: true,
+				...message.centralThermostat,
+			});
+			// Update slider value if it's null or very close to the current target
+			// (meaning user hasn't manually changed it or has already committed)
+			const currentNewTarget = newTargetRef.current;
+			if (
+				currentNewTarget === null ||
+				Math.abs(currentNewTarget - message.centralThermostat.targetTemperature) < 0.1
+			) {
+				setNewTarget(message.centralThermostat.targetTemperature);
 			}
-
-			if (thermostatResponse.ok) {
-				const data = await thermostatResponse.json();
-				setThermostatData(data);
-				// Initialize slider with the configured global target
-				if (data.configured && data.targetTemperature !== undefined) {
-					setNewTarget(data.targetTemperature);
-				}
-			}
-
-			if (scheduleResponse.ok) {
-				const data = await scheduleResponse.json();
-				setNextSchedule(data);
-			}
-
-			if (roomsResponse.ok) {
-				const data = await roomsResponse.json();
-				if (data.rooms && data.rooms.length > 0) {
-					const avg =
-						data.rooms.reduce(
-							(acc: number, r: RoomStatus) => acc + r.targetTemperature,
-							0
-						) / data.rooms.length;
-					setAverageTarget(avg);
-				} else if (thermostatResponse.ok) {
-					// Fallback to global target if no rooms
-					const tData = await thermostatResponse.json();
-					if (tData.configured && 'targetTemperature' in tData) {
-						setAverageTarget(tData.targetTemperature);
-					}
-				}
-			}
-
-			if (activeStateResponse.ok) {
-				const data = await activeStateResponse.json();
-				setActiveState({
-					state: data.state,
-					activeStateId: data.activeStateId,
-				});
-			}
-
-			if (statesResponse.ok) {
-				const data = await statesResponse.json();
-				if (data.states && Array.isArray(data.states)) {
-					setAllStates(
-						data.states.map((s: { id: string; name: string }) => ({
-							id: s.id,
-							name: s.name,
-						}))
-					);
-				}
-			}
-		} catch (error) {
-			console.error('Failed to load temperature data:', error);
-		} finally {
-			setLoading(false);
+		} else {
+			setThermostatData({ configured: false });
 		}
+
+		// Update next schedule
+		setNextSchedule(message.nextSchedule);
+
+		// Update average target from rooms
+		if (message.rooms && message.rooms.length > 0) {
+			const avg =
+				message.rooms.reduce((acc: number, r) => acc + r.targetTemperature, 0) /
+				message.rooms.length;
+			setAverageTarget(avg);
+		} else if (message.centralThermostat) {
+			// Fallback to global target if no rooms
+			setAverageTarget(message.globalTarget);
+		}
+
+		// Update active state
+		setActiveState(message.activeState);
+
+		// Update all states
+		setAllStates(message.states);
+
+		// Mark as loaded once we receive first message
+		setLoading(false);
 	}, []);
 
-	useEffect(() => {
-		void loadData();
-		// Update temperature every 60 seconds
-		const interval = setInterval(() => {
-			void loadData();
-		}, 60000);
-		return () => clearInterval(interval);
-	}, [loadData]);
+	// Subscribe to temperature WebSocket updates
+	const newTargetRef = useRef<number | null>(null);
+	newTargetRef.current = newTarget;
+
+	useWebsocket<TemperatureWebsocketServerMessage, never>('/temperature/ws', {
+		onMessage: (message) => {
+			if (message.type === 'update') {
+				updateFromWebSocketMessage(message);
+			}
+		},
+	});
 
 	// Update time until next schedule every minute
 	useEffect(() => {
@@ -172,8 +136,8 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 			const diffMs = nextTime.getTime() - now.getTime();
 
 			if (diffMs <= 0) {
-				// Schedule has passed, reload data
-				void loadData();
+				// Schedule has passed, WebSocket will update automatically
+				setTimeUntilNext('');
 				return;
 			}
 
@@ -194,7 +158,7 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 		updateTimeUntilNext();
 		const interval = setInterval(updateTimeUntilNext, 60000);
 		return () => clearInterval(interval);
-	}, [nextSchedule, loadData]);
+	}, [nextSchedule]);
 
 	const formatNextScheduleTime = (): string => {
 		if (!nextSchedule?.hasNext || !nextSchedule.nextTriggerTime) {
@@ -225,15 +189,10 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 				{},
 				{ targetTemperature: targetTemp }
 			);
-			if (response.ok) {
-				const data = await response.json();
-				if (data.success) {
-					setThermostatData({
-						...data,
-						configured: true,
-					});
-				}
+			if (!response.ok) {
+				console.error('Failed to update target temperature');
 			}
+			// WebSocket will handle state updates automatically
 		} catch (error) {
 			console.error('Failed to update target temperature:', error);
 		} finally {

@@ -1,3 +1,4 @@
+import { createDeduplicatedTypedWSPublish } from '../../lib/deduplicated-ws-publish';
 import { createServeOptions, withRequestBody } from '../../lib/routes';
 import { ExternalWeatherTimePeriod } from '../kiosk/types';
 import type { TemperatureScheduleEntry } from './types';
@@ -5,11 +6,94 @@ import type { ServeOptions } from '../../lib/routes';
 import { get } from '../kiosk/temperature/external';
 import { LogObj } from '../../lib/logging/lob-obj';
 import { getController } from './temp-controller';
+import type { Device } from '../device/device';
+import type { DeviceAPI } from '../device/api';
 import type { ModuleConfig } from '..';
+import { Data } from '../../lib/data';
 import { Temperature } from './index';
 import * as z from 'zod';
 
-function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
+function _initRouting({ sqlDB, db, modules, wsPublish: _wsPublish }: ModuleConfig) {
+	// Create a deduplicated WebSocket publisher to avoid sending duplicate messages
+	const wsPublish =
+		createDeduplicatedTypedWSPublish<TemperatureWebsocketServerMessage>(_wsPublish);
+
+	const allTemperatureData = new Data<TemperatureWebsocketServerMessage | undefined>(undefined);
+	const updateAllTemperatureData = async (
+		deviceApi: DeviceAPI,
+		devices: Record<string, Device>
+	) => {
+		const storedDevices = deviceApi.getStoredDevices();
+		const globalTarget = Temperature.getGlobalTarget();
+		const insideTemperature = await Temperature.getInsideTemperature(devices, storedDevices);
+		const rooms = deviceApi.getRooms(storedDevices);
+		const roomsStatus = await Temperature.getAllRoomsStatus(devices, storedDevices, rooms);
+		const centralThermostat = await Temperature.getCentralThermostatStatus(devices);
+		const nextChange = Temperature.getNextScheduledChange();
+		const activeState = Temperature.getActiveState();
+		const activeStateId =
+			(db.current() as { activeStateId?: string | null }).activeStateId ?? null;
+		const states = Temperature.getStates();
+
+		let nextSchedule:
+			| {
+					hasNext: false;
+			  }
+			| {
+					hasNext: true;
+					nextTriggerTime: string;
+					targetTemperature: number;
+					averageTargetTemperature: number;
+					name: string;
+			  };
+
+		if (!nextChange) {
+			nextSchedule = { hasNext: false };
+		} else {
+			const { entry, nextTriggerTime } = nextChange;
+			const averageTargetTemperature = Temperature.getNextAverageTargetTemperature(rooms);
+			nextSchedule = {
+				hasNext: true,
+				nextTriggerTime: nextTriggerTime.toISOString(),
+				targetTemperature: entry.targetTemperature,
+				averageTargetTemperature,
+				name: entry.name,
+			};
+		}
+
+		allTemperatureData.set({
+			type: 'update',
+			insideTemperature,
+			globalTarget,
+			rooms: roomsStatus,
+			centralThermostat: centralThermostat
+				? {
+						...centralThermostat,
+						targetTemperature: globalTarget,
+						hardwareTargetTemperature: centralThermostat.targetTemperature,
+					}
+				: null,
+			nextSchedule,
+			activeState: {
+				state: activeState,
+				activeStateId,
+			},
+			states: states.map((s) => ({ id: s.id, name: s.name })),
+		});
+	};
+
+	void modules.device.api.value.then((deviceApi) => {
+		deviceApi.devices.subscribe(async (devices) => {
+			await updateAllTemperatureData(deviceApi, devices ?? {});
+		});
+	});
+
+	allTemperatureData.subscribe(async (data) => {
+		if (data) {
+			await wsPublish(data);
+		}
+	});
+
 	return createServeOptions(
 		{
 			'/report/:name/:temp': async (req, _server, { error, text }) => {
@@ -40,7 +124,12 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 				}
 			),
 			'/inside-temperature': async (_req, _server, { json }) => {
-				const temp = await Temperature.getInsideTemperature(modules);
+				const deviceApi = await modules.device.api.value;
+				const devices = deviceApi.devices.current();
+				const temp = await Temperature.getInsideTemperature(
+					devices ?? {},
+					deviceApi.getStoredDevices()
+				);
 				return json({ success: true, temperature: temp });
 			},
 			'/outside-temperature': async (_req, _server, { json }) => {
@@ -176,21 +265,33 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 				),
 			},
 			'/rooms': async (_req, _server, { json }) => {
-				const rooms = await Temperature.getAllRoomsStatus(modules);
+				const deviceApi = await modules.device.api.value;
+				const devices = deviceApi.devices.current();
+				const storedDevices = deviceApi.getStoredDevices();
+				const rooms = await Temperature.getAllRoomsStatus(
+					devices,
+					storedDevices,
+					deviceApi.getRooms(storedDevices)
+				);
 				return json({ success: true, rooms });
 			},
 			'/room/:roomName/target': withRequestBody(
 				z.object({ target: z.number() }),
-				(body, req, _server, { json }) => {
+				async (body, req, _server, { json }) => {
 					const { roomName } = req.params;
 					Temperature.setRoomOverride(roomName, body.target);
+
+					const deviceApi = await modules.device.api.value;
+					await updateAllTemperatureData(deviceApi, deviceApi.devices.current() ?? {});
 					return json({ success: true });
 				}
 			),
 			'/room/:roomName/clear': {
-				POST: (req, _server, { json }) => {
+				POST: async (req, _server, { json }) => {
 					const { roomName } = req.params;
 					Temperature.setRoomOverride(roomName, null);
+					const deviceApi = await modules.device.api.value;
+					await updateAllTemperatureData(deviceApi, deviceApi.devices.current() ?? {});
 					return json({ success: true });
 				},
 			},
@@ -261,7 +362,10 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 			},
 			'/central-thermostat': {
 				GET: async (_req, _server, { json }) => {
-					const status = await Temperature.getCentralThermostatStatus(modules);
+					const deviceApi = await modules.device.api.value;
+					const status = await Temperature.getCentralThermostatStatus(
+						deviceApi.devices.current() ?? {}
+					);
 					if (!status) {
 						return json({ success: true, configured: false });
 					}
@@ -283,7 +387,11 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 						// Set global override instead of hardware target
 						Temperature.setGlobalOverride(body.targetTemperature);
 
-						const status = await Temperature.getCentralThermostatStatus(modules);
+						const deviceApi = await modules.device.api.value;
+						const devices = deviceApi.devices.current() ?? {};
+						const status = await Temperature.getCentralThermostatStatus(devices);
+						// Publish WebSocket update
+						await updateAllTemperatureData(deviceApi, devices);
 						// Return updated logical target
 						return json({
 							success: true,
@@ -306,8 +414,11 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 						});
 					}
 					const { entry, nextTriggerTime } = nextChange;
+					const deviceApi = await modules.device.api.value;
+					const storedDevices = deviceApi.getStoredDevices();
+					const rooms = deviceApi.getRooms(storedDevices);
 					const averageTargetTemperature =
-						await Temperature.getNextAverageTargetTemperature(modules);
+						Temperature.getNextAverageTargetTemperature(rooms);
 					return json({
 						success: true as const,
 						hasNext: true as const,
@@ -355,8 +466,11 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 							})
 						),
 					}),
-					(body, _req, _server, { json }) => {
+					async (body, _req, _server, { json }) => {
 						Temperature.setStates(body.states);
+						const deviceApi = await modules.device.api.value;
+						const devices = deviceApi.devices.current() ?? {};
+						await updateAllTemperatureData(deviceApi, devices);
 						return json({ success: true, states: body.states });
 					}
 				),
@@ -388,17 +502,20 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 							)
 							.optional(),
 					}),
-					(body, req, _server, { json, error }) => {
+					async (body, req, _server, { json, error }) => {
 						const { stateId } = req.params;
 						const state = Temperature.getState(stateId);
 						if (!state) {
 							return error(`State not found: ${stateId}`, 404);
 						}
 						Temperature.updateState(stateId, body);
+						const deviceApi = await modules.device.api.value;
+						const devices = deviceApi.devices.current() ?? {};
+						await updateAllTemperatureData(deviceApi, devices);
 						return json({ success: true, state: Temperature.getState(stateId) });
 					}
 				),
-				DELETE: (req, _server, { json, error }) => {
+				DELETE: async (req, _server, { json, error }) => {
 					const { stateId } = req.params;
 					const states = Temperature.getStates();
 					const index = states.findIndex((s) => s.id === stateId);
@@ -407,6 +524,9 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 					}
 					const updatedStates = states.filter((s) => s.id !== stateId);
 					Temperature.setStates(updatedStates);
+					const deviceApi = await modules.device.api.value;
+					const devices = deviceApi.devices.current() ?? {};
+					await updateAllTemperatureData(deviceApi, devices);
 					return json({ success: true });
 				},
 			},
@@ -424,7 +544,7 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 					z.object({
 						stateId: z.string().nullable(),
 					}),
-					(body, _req, _server, { json, error }) => {
+					async (body, _req, _server, { json, error }) => {
 						if (body.stateId !== null) {
 							const state = Temperature.getState(body.stateId);
 							if (!state) {
@@ -432,12 +552,21 @@ function _initRouting({ sqlDB, db, modules }: ModuleConfig) {
 							}
 						}
 						Temperature.activateState(body.stateId);
+						const deviceApi = await modules.device.api.value;
+						const devices = deviceApi.devices.current() ?? {};
+						await updateAllTemperatureData(deviceApi, devices);
 						return json({ success: true, activeStateId: body.stateId });
 					}
 				),
 			},
 		},
-		true
+		true,
+		{
+			open: async (ws) => {
+				ws.send(JSON.stringify(await allTemperatureData.get()));
+			},
+			message: async () => {},
+		}
 	);
 }
 
@@ -445,3 +574,56 @@ export const initRouting = _initRouting as (config: ModuleConfig) => ServeOption
 
 export type TemperatureRoutes =
 	ReturnType<typeof _initRouting> extends ServeOptions<infer R> ? R : never;
+
+export type TemperatureWebsocketServerMessage = {
+	type: 'update';
+	insideTemperature: number;
+	globalTarget: number;
+	rooms: Array<{
+		name: string;
+		currentTemperature: number;
+		targetTemperature: number;
+		isHeating: boolean;
+		needsHeating: boolean;
+		overrideActive: boolean;
+		pidMeasurementActive?: boolean;
+		pidParametersAvailable?: boolean;
+	}>;
+	centralThermostat: {
+		deviceId: string;
+		currentTemperature: number;
+		targetTemperature: number;
+		hardwareTargetTemperature: number;
+		isHeating: boolean;
+		mode: string;
+	} | null;
+	nextSchedule:
+		| {
+				hasNext: false;
+		  }
+		| {
+				hasNext: true;
+				nextTriggerTime: string;
+				targetTemperature: number;
+				averageTargetTemperature: number;
+				name: string;
+		  };
+	activeState: {
+		state: {
+			id: string;
+			name: string;
+			timeRanges: Array<{
+				id: string;
+				name: string;
+				days: number[];
+				startTime: string;
+				endTime: string;
+				targetTemperature: number;
+				roomExceptions?: Record<string, number>;
+				enabled: boolean;
+			}>;
+		} | null;
+		activeStateId: string | null;
+	};
+	states: Array<{ id: string; name: string }>;
+};

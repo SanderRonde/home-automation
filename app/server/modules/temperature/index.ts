@@ -9,10 +9,12 @@ import type {
 	PIDParameters,
 	MeasurementSession,
 } from './types';
+import type { DeviceInfo, RoomInfo } from '../device/routing';
 import { PIDMeasurementManager } from './pid-measurement';
 import type { ModuleConfig, AllModules } from '..';
 import { logTag } from '../../lib/logging/logger';
 import { getController } from './temp-controller';
+import type { Device } from '../device/device';
 import { initScheduler } from './scheduler';
 import { initRouting } from './routing';
 import { ModuleMeta } from '../meta';
@@ -274,7 +276,8 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 	 *                                   heating AND the central thermostat is on.
 	 */
 	public async getRoomStatus(
-		modules: AllModules,
+		devices: Record<string, Device>,
+		storedDevices: Record<string, DeviceInfo>,
 		roomName: string,
 		centralThermostatHeating?: boolean
 	): Promise<{
@@ -291,14 +294,10 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		let currentTemperature = 0;
 
 		// Get current temperature for the room
-		const deviceApi = await modules.device.api.value;
-		const storedDevices = deviceApi.getStoredDevices();
-		const allDevices = deviceApi.devices.current();
-
 		const temps: number[] = [];
 
-		for (const deviceId in allDevices) {
-			const device = allDevices[deviceId];
+		for (const deviceId in devices) {
+			const device = devices[deviceId];
 			const storedInfo = storedDevices[deviceId];
 
 			if (storedInfo?.room !== roomName) {
@@ -331,7 +330,7 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		const centralThermostatId = this.getThermostat();
 		let hasTRV = false;
 
-		for (const deviceId in allDevices) {
+		for (const deviceId in devices) {
 			// Skip the central thermostat - it's controlled separately
 			if (deviceId === centralThermostatId) {
 				continue;
@@ -342,7 +341,7 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 				continue;
 			}
 
-			const device = allDevices[deviceId];
+			const device = devices[deviceId];
 			const thermostatClusters = device.getAllClustersByType(DeviceThermostatCluster);
 			if (thermostatClusters.length > 0) {
 				hasTRV = true;
@@ -411,7 +410,11 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 	/**
 	 * Get status for all configured rooms
 	 */
-	public async getAllRoomsStatus(modules: AllModules): Promise<
+	public async getAllRoomsStatus(
+		devices: Record<string, Device>,
+		storedDevices: Record<string, DeviceInfo>,
+		rooms: Record<string, RoomInfo>
+	): Promise<
 		Array<{
 			name: string;
 			currentTemperature: number;
@@ -423,16 +426,16 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 			pidParametersAvailable?: boolean;
 		}>
 	> {
-		const deviceApi = await modules.device.api.value;
-		const rooms = deviceApi.getRooms();
 		const roomNames = Object.keys(rooms);
 
 		// Get central thermostat status to determine if boiler is actually on
-		const centralStatus = await this.getCentralThermostatStatus(modules);
+		const centralStatus = await this.getCentralThermostatStatus(devices);
 		const centralThermostatHeating = centralStatus?.isHeating ?? false;
 
 		const statuses = await Promise.all(
-			roomNames.map((name) => this.getRoomStatus(modules, name, centralThermostatHeating))
+			roomNames.map((name) =>
+				this.getRoomStatus(devices, storedDevices, name, centralThermostatHeating)
+			)
 		);
 
 		return statuses;
@@ -441,8 +444,12 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 	/**
 	 * Get the average target temperature across all rooms (current)
 	 */
-	public async getAverageTargetTemperature(modules: AllModules): Promise<number> {
-		const statuses = await this.getAllRoomsStatus(modules);
+	public async getAverageTargetTemperature(
+		devices: Record<string, Device>,
+		storedDevices: Record<string, DeviceInfo>,
+		rooms: Record<string, RoomInfo>
+	): Promise<number> {
+		const statuses = await this.getAllRoomsStatus(devices, storedDevices, rooms);
 		if (statuses.length === 0) {
 			return 0;
 		}
@@ -454,15 +461,13 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 	/**
 	 * Get the average target temperature for the NEXT schedule
 	 */
-	public async getNextAverageTargetTemperature(modules: AllModules): Promise<number> {
+	public getNextAverageTargetTemperature(rooms: Record<string, RoomInfo>): number {
 		const nextChange = this.getNextScheduledChange();
 		if (!nextChange) {
 			return 0;
 		}
 
 		const { entry } = nextChange;
-		const deviceApi = await modules.device.api.value;
-		const rooms = deviceApi.getRooms();
 		const roomNames = Object.keys(rooms);
 
 		if (roomNames.length === 0) {
@@ -798,7 +803,10 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 	/**
 	 * Get inside temperature from configured sensors, with averaging support
 	 */
-	public async getInsideTemperature(modules: AllModules): Promise<number> {
+	public async getInsideTemperature(
+		devices: Record<string, Device>,
+		storedDevices: Record<string, DeviceInfo>
+	): Promise<number> {
 		const sensors = this.getInsideTemperatureSensors();
 
 		// Fallback to 'room' if no sensors configured
@@ -819,9 +827,6 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 					}
 				} else if (sensor.type === 'device' && sensor.deviceId) {
 					// Device module sensor
-					const deviceApi = await modules.device.api.value;
-					const devices = deviceApi.devices.current();
-					const storedDevices = deviceApi.getStoredDevices();
 					const device = devices[sensor.deviceId];
 
 					// Skip offline devices
@@ -999,7 +1004,7 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 	/**
 	 * Get the status of the configured central thermostat
 	 */
-	public async getCentralThermostatStatus(modules: AllModules): Promise<{
+	public async getCentralThermostatStatus(devices: Record<string, Device>): Promise<{
 		deviceId: string;
 		currentTemperature: number;
 		targetTemperature: number;
@@ -1012,8 +1017,6 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		}
 
 		try {
-			const deviceApi = await modules.device.api.value;
-			const devices = deviceApi.devices.current();
 			const device = devices[thermostatId];
 
 			if (!device) {

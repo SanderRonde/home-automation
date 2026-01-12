@@ -1,10 +1,10 @@
-import { ThermostatMode } from '../device/cluster';
-import { logTag } from '../../lib/logging/logger';
 import {
 	Temperature,
 	CENTRAL_THERMOSTAT_HEATING_OFFSET,
 	CENTRAL_THERMOSTAT_OFF_OFFSET,
 } from './index';
+import { ThermostatMode } from '../device/cluster';
+import { logTag } from '../../lib/logging/logger';
 import type { AllModules } from '..';
 
 /**
@@ -71,12 +71,19 @@ export class TemperatureScheduler {
 
 		// Check heating demand from all rooms
 		// Use needsHeating (not isHeating) since isHeating depends on central thermostat status
-		const roomStatuses = await Temperature.getAllRoomsStatus(this._modules);
+		const deviceApi = await this._modules.device.api.value;
+		const storedDevices = deviceApi.getStoredDevices();
+		const allDevices = deviceApi.devices.current();
+		const roomStatuses = await Temperature.getAllRoomsStatus(
+			allDevices,
+			storedDevices,
+			deviceApi.getRooms(storedDevices)
+		);
 		const roomsNeedingHeat = roomStatuses.filter((status) => status.needsHeating);
 		const needsHeating = roomsNeedingHeat.length > 0;
 
 		// Get current central thermostat temperature
-		const currentStatus = await Temperature.getCentralThermostatStatus(this._modules);
+		const currentStatus = await Temperature.getCentralThermostatStatus(allDevices);
 		const currentTemp = currentStatus?.currentTemperature ?? 20; // Fallback to 20°C
 
 		// Calculate dynamic target based on heating demand

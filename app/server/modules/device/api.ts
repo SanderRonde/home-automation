@@ -164,8 +164,7 @@ export class DeviceAPI {
 		return false;
 	}
 
-	public getRooms(): Record<string, RoomInfo> {
-		const knownDevices = this.getStoredDevices();
+	public getRooms(knownDevices: Record<string, DeviceInfo>): Record<string, RoomInfo> {
 		const rooms: Record<string, RoomInfo> = {};
 		const roomIcons = this._db.current().room_icons || {};
 		const roomPolygons = this._db.current().room_polygons || {};
