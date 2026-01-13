@@ -310,6 +310,10 @@ export class SceneAPI {
 					'green',
 					`Variable condition passed: "${condition.variableName}" is ${isTrue}`
 				);
+			} else if (condition.type === SceneConditionType.DELAY) {
+				logTag('scene', 'blue', `Waiting ${condition.seconds} seconds before continuing`);
+				await wait(condition.seconds * 1000);
+				logTag('scene', 'green', `Delay of ${condition.seconds} seconds completed`);
 			} else {
 				assertUnreachable(condition);
 			}
@@ -406,13 +410,6 @@ export class SceneAPI {
 						sceneTrigger.targetId === trigger.targetId &&
 						sceneTrigger.rangeKm === trigger.rangeKm;
 					triggerSource = `${trigger.deviceId} within ${trigger.rangeKm}km of ${trigger.targetId}`;
-				} else if (
-					trigger.type === SceneTriggerType.DELAY &&
-					sceneTrigger.type === SceneTriggerType.DELAY
-				) {
-					// Delay triggers always match and wait for the specified duration
-					triggerMatches = sceneTrigger.seconds === trigger.seconds;
-					triggerSource = `Delay ${trigger.seconds}s`;
 				}
 
 				if (!triggerMatches) {
@@ -427,16 +424,6 @@ export class SceneAPI {
 					: true;
 
 				if (conditionsPassed) {
-					// If this is a delay trigger, wait before executing the scene
-					if (trigger.type === SceneTriggerType.DELAY) {
-						logTag(
-							'scene',
-							'blue',
-							`Waiting ${trigger.seconds} seconds before executing scene "${scene.title}"`
-						);
-						await wait(trigger.seconds * 1000);
-					}
-
 					await this.triggerScene(scene.id, {
 						type: trigger.type,
 						source: triggerSource,

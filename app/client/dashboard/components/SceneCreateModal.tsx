@@ -477,8 +477,6 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 				label = 'Everybody left';
 			} else if (trigger.type === SceneTriggerType.NOBODY_HOME_TIMEOUT) {
 				label = 'Nobody arrived after timeout';
-			} else if (trigger.type === SceneTriggerType.DELAY) {
-				label = `Delay ${trigger.seconds} second${trigger.seconds !== 1 ? 's' : ''}`;
 			} else if (trigger.type === SceneTriggerType.LOCATION_WITHIN_RANGE) {
 				label = `${trigger.deviceId} is within ${trigger.rangeKm}km of ${trigger.targetId}`;
 			}
@@ -504,6 +502,8 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 					.join(', ');
 			} else if (condition.type === SceneConditionType.ANYONE_HOME) {
 				return condition.shouldBeHome ? 'Someone is home' : 'Everyone is away';
+			} else if (condition.type === SceneConditionType.DELAY) {
+				return `Wait ${condition.seconds} second${condition.seconds !== 1 ? 's' : ''}`;
 			}
 			return '';
 		},

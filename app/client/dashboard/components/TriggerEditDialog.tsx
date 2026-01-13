@@ -270,7 +270,7 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 	// Interval trigger state
 	const [intervalMinutes, setIntervalMinutes] = useState<number>(60);
 
-	// Delay trigger state
+	// Delay condition state
 	const [delaySeconds, setDelaySeconds] = useState<number>(5);
 
 	// Webhooks
@@ -461,8 +461,6 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 				setTriggerWebhookName(trigger.webhookName);
 			} else if (trigger.type === SceneTriggerType.CRON) {
 				setIntervalMinutes(trigger.intervalMinutes);
-			} else if (trigger.type === SceneTriggerType.DELAY) {
-				setDelaySeconds(trigger.seconds);
 			} else if (trigger.type === SceneTriggerType.LOCATION_WITHIN_RANGE) {
 				setLocationDeviceId(trigger.deviceId);
 				setLocationTargetId(trigger.targetId);
@@ -603,6 +601,11 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 				shouldBeTrue: conditionShouldBeTrue,
 				invert: conditionInvert || undefined,
 			};
+		} else if (conditionType === SceneConditionType.DELAY) {
+			newCondition = {
+				type: SceneConditionType.DELAY,
+				seconds: delaySeconds,
+			};
 		} else {
 			// TIME_WINDOW
 			const windows: Record<string, { start: string; end: string }> = {};
@@ -711,6 +714,8 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 		} else if (condition.type === SceneConditionType.VARIABLE) {
 			const invertText = condition.invert ? ' (inverted)' : '';
 			return `Variable "${condition.variableName}" is ${condition.shouldBeTrue ? 'TRUE' : 'FALSE'}${invertText}`;
+		} else if (condition.type === SceneConditionType.DELAY) {
+			return `Wait ${condition.seconds} second${condition.seconds !== 1 ? 's' : ''}`;
 		}
 		return '';
 	};
@@ -788,11 +793,6 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 				type: SceneTriggerType.CRON,
 				intervalMinutes: intervalMinutes,
 			};
-		} else if (triggerType === SceneTriggerType.DELAY) {
-			trigger = {
-				type: SceneTriggerType.DELAY,
-				seconds: delaySeconds,
-			};
 		} else if (triggerType === SceneTriggerType.LOCATION_WITHIN_RANGE) {
 			const range = parseFloat(locationRangeKm);
 			const locationErrors: string[] = [];
@@ -839,7 +839,9 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 			Object.values(timeWindowDays).some((enabled) => enabled)) ||
 		(conditionType === SceneConditionType.CUSTOM_JS &&
 			conditionCustomJsCode.trim().length > 0) ||
-		(conditionType === SceneConditionType.VARIABLE && conditionVariableName.trim().length > 0);
+		(conditionType === SceneConditionType.VARIABLE &&
+			conditionVariableName.trim().length > 0) ||
+		conditionType === SceneConditionType.DELAY;
 
 	return (
 		<LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -926,7 +928,6 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 									Nobody Home Timeout
 								</ToggleButton>
 								<ToggleButton value={SceneTriggerType.CRON}>Interval</ToggleButton>
-								<ToggleButton value={SceneTriggerType.DELAY}>Delay</ToggleButton>
 								<ToggleButton value={SceneTriggerType.LOCATION_WITHIN_RANGE}>
 									Location
 								</ToggleButton>
@@ -1082,24 +1083,6 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 									}}
 									inputProps={{ min: 1 }}
 									helperText="Scene will trigger every X minutes"
-									fullWidth
-								/>
-							)}
-
-							{/* Delay trigger */}
-							{triggerType === SceneTriggerType.DELAY && (
-								<TextField
-									type="number"
-									label="Delay (seconds)"
-									value={delaySeconds}
-									onChange={(e) => {
-										const val = parseInt(e.target.value);
-										if (val >= 0) {
-											setDelaySeconds(val);
-										}
-									}}
-									inputProps={{ min: 0, max: 3600 }}
-									helperText="Wait this many seconds before executing the scene"
 									fullWidth
 								/>
 							)}
@@ -1291,6 +1274,9 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 											</ToggleButton>
 											<ToggleButton value={SceneConditionType.VARIABLE}>
 												Variable
+											</ToggleButton>
+											<ToggleButton value={SceneConditionType.DELAY}>
+												Delay
 											</ToggleButton>
 										</ToggleButtonGroup>
 
@@ -1594,6 +1580,23 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 													label="Invert condition"
 												/>
 											</>
+										)}
+
+										{conditionType === SceneConditionType.DELAY && (
+											<TextField
+												type="number"
+												label="Delay (seconds)"
+												value={delaySeconds}
+												onChange={(e) => {
+													const val = parseInt(e.target.value);
+													if (val >= 0) {
+														setDelaySeconds(val);
+													}
+												}}
+												inputProps={{ min: 0, max: 3600 }}
+												helperText="Wait this many seconds after the trigger fires"
+												fullWidth
+											/>
 										)}
 
 										<Box
