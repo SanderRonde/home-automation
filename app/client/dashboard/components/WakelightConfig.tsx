@@ -269,10 +269,15 @@ export const WakelightConfig = (): JSX.Element => {
 								color="primary"
 								startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
 								onClick={saveConfig}
-								disabled={loading || deviceIds.length === 0}
+								disabled={loading}
 							>
 								Save Configuration
 							</Button>
+							{deviceIds.length === 0 && (
+								<Alert severity="info" sx={{ mt: 2 }}>
+									No devices selected — wakelight is disabled.
+								</Alert>
+							)}
 						</Box>
 					</Stack>
 				</CardContent>
