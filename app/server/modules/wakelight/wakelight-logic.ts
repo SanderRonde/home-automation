@@ -32,11 +32,7 @@ export class WakelightLogic {
 
 	public scheduleAlarm(minutesToAlarm: number): void {
 		// Clear existing alarm
-		if (this._alarmTimer !== null) {
-			clearTimeout(this._alarmTimer);
-			this._alarmTimer = null;
-		}
-		this.cancelWakelight();
+		this.clearAlarm();
 
 		// Get config
 		const wakelightConfig = this._db.current().config || {
@@ -44,7 +40,7 @@ export class WakelightLogic {
 			durationMinutes: 7,
 		};
 		if (wakelightConfig.deviceIds.length === 0) {
-			warning('No devices configured for wakelight');
+			logTag('wakelight', 'cyan', 'Wakelight disabled (no devices configured)');
 			return;
 		}
 
@@ -89,6 +85,15 @@ export class WakelightLogic {
 			}
 			this._alarmTimer = null;
 		}, timeUntilStart);
+	}
+
+	public clearAlarm(): void {
+		if (this._alarmTimer !== null) {
+			clearTimeout(this._alarmTimer);
+			this._alarmTimer = null;
+		}
+		this.cancelWakelight();
+		this.setAlarmState(null);
 	}
 
 	public async startWakelight(state: AlarmState): Promise<void> {

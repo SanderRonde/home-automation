@@ -18,8 +18,7 @@ function _initRouting(db: Database<WakelightDB>, logic: WakelightLogic) {
 			),
 			'/clear': {
 				POST: (_req, _server, { json }) => {
-					logic.cancelWakelight();
-					logic.setAlarmState(null);
+					logic.clearAlarm();
 					logTag('wakelight', 'cyan', 'Alarm cleared');
 					return json({ success: true });
 				},
@@ -62,6 +61,9 @@ function _initRouting(db: Database<WakelightDB>, logic: WakelightLogic) {
 									config: body,
 								};
 							});
+							if (body.deviceIds.length === 0) {
+								logic.clearAlarm();
+							}
 							logTag(
 								'wakelight',
 								'cyan',
