@@ -1684,8 +1684,7 @@ const ActionConfig = React.memo((props: ActionConfigProps) => {
 							{/* Device Exclusions for Groups */}
 							{isGroup &&
 								props.group &&
-								props.action.cluster &&
-								'excludeDeviceIds' in props.action && (
+								props.action.cluster && (
 									<Autocomplete
 										multiple
 										options={props.group.deviceIds
