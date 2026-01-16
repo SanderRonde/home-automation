@@ -1,10 +1,12 @@
 import type {
 	DashboardDeviceClusterWithState,
 	DashboardDeviceClusterOnOff,
+	DashboardDeviceClusterColorControlXY,
 	DeviceListWithValuesResponse,
 } from '../../../server/modules/device/routing';
 import {
 	Box,
+	Button,
 	Card,
 	CardActionArea,
 	Typography,
@@ -14,8 +16,12 @@ import {
 	Fab,
 	Portal,
 } from '@mui/material';
+import {
+	Map as MapIcon,
+	ViewList as ListIcon,
+	PowerSettingsNew as PowerIcon,
+} from '@mui/icons-material';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
-import { Map as MapIcon, ViewList as ListIcon } from '@mui/icons-material';
 import type { DeviceClusterCardBaseProps } from './DeviceClusterCard';
 import type { DeviceGroup } from '../../../../types/group';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -31,11 +37,202 @@ import { apiGet, apiPost } from '../../lib/fetch';
 import { EnergyDisplay } from './EnergyDisplay';
 import type { IncludedIconNames } from './icon';
 import { DeviceDetail } from './DeviceDetail';
+import { Wheel } from '@uiw/react-color';
 import { useDevices } from './Devices';
 import { IconComponent } from './icon';
 import React from 'react';
 
 type DeviceType = DeviceListWithValuesResponse[number];
+
+const COLOR_CONTROL_SWATCH_STORAGE_KEY = 'colorControlSavedSwatches';
+const DEFAULT_COLOR_SWATCHES = [
+	'#ff3b30',
+	'#ff9500',
+	'#ffcc00',
+	'#34c759',
+	'#00c7be',
+	'#32ade6',
+	'#0a84ff',
+	'#5856d6',
+	'#af52de',
+	'#ff2d55',
+	'#ffd7a8',
+	'#ffffff',
+];
+const DEFAULT_COLOR_SWATCH_SET = new Set(DEFAULT_COLOR_SWATCHES);
+
+const normalizeHexColor = (color: string): string | null => {
+	const trimmed = color.trim().toLowerCase();
+	if (!trimmed) {
+		return null;
+	}
+	const withoutHash = trimmed.startsWith('#') ? trimmed.slice(1) : trimmed;
+	let hex = withoutHash;
+	if (hex.length === 3) {
+		hex = hex
+			.split('')
+			.map((char) => `${char}${char}`)
+			.join('');
+	}
+	if (!/^[0-9a-f]{6}$/.test(hex)) {
+		return null;
+	}
+	return `#${hex}`;
+};
+
+const hexToRgb = (color: string): { r: number; g: number; b: number } | null => {
+	const normalized = normalizeHexColor(color);
+	if (!normalized) {
+		return null;
+	}
+	const hex = normalized.slice(1);
+	return {
+		r: parseInt(hex.slice(0, 2), 16),
+		g: parseInt(hex.slice(2, 4), 16),
+		b: parseInt(hex.slice(4, 6), 16),
+	};
+};
+
+const hexToHsv = (color: string): { h: number; s: number; v: number } | null => {
+	const rgb = hexToRgb(color);
+	if (!rgb) {
+		return null;
+	}
+	return rgbToHsv(rgb.r, rgb.g, rgb.b);
+};
+
+const rgbToHsv = (r: number, g: number, b: number): { h: number; s: number; v: number } => {
+	const rNorm = r / 255;
+	const gNorm = g / 255;
+	const bNorm = b / 255;
+	const max = Math.max(rNorm, gNorm, bNorm);
+	const min = Math.min(rNorm, gNorm, bNorm);
+	const delta = max - min;
+	let hue = 0;
+	if (delta !== 0) {
+		switch (max) {
+			case rNorm:
+				hue = ((gNorm - bNorm) / delta) % 6;
+				break;
+			case gNorm:
+				hue = (bNorm - rNorm) / delta + 2;
+				break;
+			default:
+				hue = (rNorm - gNorm) / delta + 4;
+				break;
+		}
+		hue *= 60;
+		if (hue < 0) {
+			hue += 360;
+		}
+	}
+	const saturation = max === 0 ? 0 : delta / max;
+	return {
+		h: Math.round(hue),
+		s: Math.round(saturation * 100),
+		v: Math.round(max * 100),
+	};
+};
+
+const hsvToHex = (h: number, s: number, v: number): string => {
+	const hNorm = h / 360;
+	const sNorm = s / 100;
+	const vNorm = v / 100;
+
+	const i = Math.floor(hNorm * 6);
+	const f = hNorm * 6 - i;
+	const p = vNorm * (1 - sNorm);
+	const q = vNorm * (1 - f * sNorm);
+	const t = vNorm * (1 - (1 - f) * sNorm);
+
+	let r: number, g: number, b: number;
+	switch (i % 6) {
+		case 0:
+			r = vNorm;
+			g = t;
+			b = p;
+			break;
+		case 1:
+			r = q;
+			g = vNorm;
+			b = p;
+			break;
+		case 2:
+			r = p;
+			g = vNorm;
+			b = t;
+			break;
+		case 3:
+			r = p;
+			g = q;
+			b = vNorm;
+			break;
+		case 4:
+			r = t;
+			g = p;
+			b = vNorm;
+			break;
+		default:
+			r = vNorm;
+			g = p;
+			b = q;
+			break;
+	}
+
+	const toHex = (n: number) => {
+		const hex = Math.round(n * 255).toString(16);
+		return hex.length === 1 ? `0${hex}` : hex;
+	};
+
+	return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+};
+
+const getColorSortKey = (color: string) => {
+	const rgb = hexToRgb(color);
+	if (!rgb) {
+		return { h: 0, s: 0, v: 0 };
+	}
+	return rgbToHsv(rgb.r, rgb.g, rgb.b);
+};
+
+const sortColorsByHue = (colors: string[]): string[] => {
+	const normalized = colors
+		.map((color) => normalizeHexColor(color))
+		.filter((color): color is string => !!color);
+	const unique = Array.from(new Set(normalized));
+	return unique.sort((a, b) => {
+		const aKey = getColorSortKey(a);
+		const bKey = getColorSortKey(b);
+		if (aKey.h !== bKey.h) {
+			return aKey.h - bKey.h;
+		}
+		if (aKey.s !== bKey.s) {
+			return bKey.s - aKey.s;
+		}
+		if (aKey.v !== bKey.v) {
+			return bKey.v - aKey.v;
+		}
+		return a.localeCompare(b);
+	});
+};
+
+const isColorControlXYCluster = (
+	cluster: DashboardDeviceClusterWithState
+): cluster is DashboardDeviceClusterColorControlXY =>
+	cluster.name === DeviceClusterName.COLOR_CONTROL && 'color' in cluster;
+
+const getInitialColorFromDevices = (devices: DeviceType[]): { hue: number; saturation: number } => {
+	for (const device of devices) {
+		const cluster = device.mergedAllClusters.find(isColorControlXYCluster);
+		if (cluster) {
+			return {
+				hue: cluster.color.hue,
+				saturation: cluster.color.saturation,
+			};
+		}
+	}
+	return { hue: 0, saturation: 100 };
+};
 
 interface RoomDevices {
 	room: string;
@@ -1030,9 +1227,76 @@ const RoomDetail = (props: RoomDetailProps) => {
 	);
 };
 
-const ColorControlRoomDetail = (props: RoomDetailProps): JSX.Element => {
+interface ColorControlSharedDetailProps {
+	devices: DeviceType[];
+	invalidate: () => void;
+}
+
+const ColorControlSharedDetail = (props: ColorControlSharedDetailProps): JSX.Element => {
+	const { invalidate } = props;
+	const colorControlEntries = React.useMemo(
+		() =>
+			props.devices
+				.map((device) => {
+					const cluster = device.mergedAllClusters.find(isColorControlXYCluster);
+					if (!cluster) {
+						return null;
+					}
+					return { device, cluster };
+				})
+				.filter(
+					(
+						entry
+					): entry is {
+						device: DeviceType;
+						cluster: DashboardDeviceClusterColorControlXY;
+					} => entry !== null
+				),
+		[props.devices]
+	);
+	const colorControlDeviceIds = React.useMemo(
+		() => colorControlEntries.map((entry) => entry.device.uniqueId),
+		[colorControlEntries]
+	);
+	const onOffEntries = React.useMemo(
+		() =>
+			colorControlEntries
+				.map((entry) => {
+					const onOffCluster = entry.cluster.mergedClusters[DeviceClusterName.ON_OFF];
+					if (!onOffCluster) {
+						return null;
+					}
+					return {
+						deviceId: entry.device.uniqueId,
+						isOn: onOffCluster.isOn,
+					};
+				})
+				.filter((entry): entry is { deviceId: string; isOn: boolean } => entry !== null),
+		[colorControlEntries]
+	);
+	const onOffState = React.useMemo(() => {
+		if (onOffEntries.length === 0) {
+			return 'unavailable';
+		}
+		const onCount = onOffEntries.filter((entry) => entry.isOn).length;
+		if (onCount === 0) {
+			return 'all-off';
+		}
+		if (onCount === onOffEntries.length) {
+			return 'all-on';
+		}
+		return 'mixed';
+	}, [onOffEntries]);
+
 	const [palettes, setPalettes] = React.useState<Palette[]>([]);
 	const [applyingPalette, setApplyingPalette] = React.useState<string | null>(null);
+	const [savedSwatches, setSavedSwatches] = React.useState<string[]>([]);
+	const [isTogglingAll, setIsTogglingAll] = React.useState(false);
+	const [isUpdatingColor, setIsUpdatingColor] = React.useState(false);
+	const initialColor = getInitialColorFromDevices(props.devices);
+	const [hue, setHue] = React.useState(initialColor.hue);
+	const [saturation, setSaturation] = React.useState(initialColor.saturation);
+	const colorCommitTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
 	React.useEffect(() => {
 		const loadPalettes = async () => {
@@ -1049,19 +1313,73 @@ const ColorControlRoomDetail = (props: RoomDetailProps): JSX.Element => {
 		void loadPalettes();
 	}, []);
 
+	React.useEffect(() => {
+		if (typeof localStorage === 'undefined') {
+			return;
+		}
+		const stored = localStorage.getItem(COLOR_CONTROL_SWATCH_STORAGE_KEY);
+		if (!stored) {
+			return;
+		}
+		try {
+			const parsed = JSON.parse(stored);
+			if (Array.isArray(parsed)) {
+				const normalized = sortColorsByHue(
+					parsed.filter((color) => typeof color === 'string')
+				).filter((color) => !DEFAULT_COLOR_SWATCH_SET.has(color));
+				setSavedSwatches(normalized);
+			}
+		} catch (error) {
+			console.error('Failed to load saved colors:', error);
+		}
+	}, []);
+
+	React.useEffect(() => {
+		return () => {
+			if (colorCommitTimeoutRef.current) {
+				clearTimeout(colorCommitTimeoutRef.current);
+			}
+		};
+	}, []);
+
+	const rememberColor = React.useCallback((color: string) => {
+		const normalized = normalizeHexColor(color);
+		if (!normalized || DEFAULT_COLOR_SWATCH_SET.has(normalized)) {
+			return;
+		}
+		setSavedSwatches((prev) => {
+			if (prev.includes(normalized)) {
+				return prev;
+			}
+			const next = sortColorsByHue([...prev, normalized]);
+			if (typeof localStorage !== 'undefined') {
+				localStorage.setItem(COLOR_CONTROL_SWATCH_STORAGE_KEY, JSON.stringify(next));
+			}
+			return next;
+		});
+	}, []);
+
+	const swatchColors = React.useMemo(
+		() => sortColorsByHue([...DEFAULT_COLOR_SWATCHES, ...savedSwatches]),
+		[savedSwatches]
+	);
+	const currentColor = React.useMemo(() => hsvToHex(hue, saturation, 100), [hue, saturation]);
+
 	const handleApplyPalette = async (paletteId: string) => {
+		if (colorControlDeviceIds.length === 0) {
+			return;
+		}
 		setApplyingPalette(paletteId);
 		try {
-			const deviceIds = props.devices.map((d) => d.uniqueId);
 			const response = await apiPost(
 				'device',
 				'/palettes/:paletteId/apply',
 				{ paletteId },
-				{ deviceIds }
+				{ deviceIds: colorControlDeviceIds }
 			);
 			if (response.ok) {
 				// Refresh devices to show new colors
-				props.invalidate();
+				invalidate();
 			}
 		} catch (error) {
 			console.error('Failed to apply palette:', error);
@@ -1070,8 +1388,206 @@ const ColorControlRoomDetail = (props: RoomDetailProps): JSX.Element => {
 		}
 	};
 
+	const handleToggleAll = async () => {
+		if (onOffEntries.length === 0) {
+			return;
+		}
+		const targetIsOn = onOffState !== 'all-on';
+		setIsTogglingAll(true);
+		try {
+			const response = await apiPost(
+				'device',
+				'/cluster/OnOff',
+				{},
+				{
+					deviceIds: onOffEntries.map((entry) => entry.deviceId),
+					isOn: targetIsOn,
+				}
+			);
+			if (response.ok) {
+				invalidate();
+			}
+		} catch (error) {
+			console.error('Failed to toggle devices:', error);
+		} finally {
+			setIsTogglingAll(false);
+		}
+	};
+
+	const handleApplyColor = React.useCallback(
+		async (nextHue: number, nextSaturation: number) => {
+			if (colorControlDeviceIds.length === 0) {
+				return;
+			}
+			setIsUpdatingColor(true);
+			try {
+				const response = await apiPost(
+					'device',
+					`/cluster/${DeviceClusterName.COLOR_CONTROL}`,
+					{},
+					{
+						deviceIds: colorControlDeviceIds,
+						hue: nextHue,
+						saturation: nextSaturation,
+						value: 100,
+					}
+				);
+				if (response.ok) {
+					rememberColor(hsvToHex(nextHue, nextSaturation, 100));
+					invalidate();
+				}
+			} catch (error) {
+				console.error('Failed to set color:', error);
+			} finally {
+				setIsUpdatingColor(false);
+			}
+		},
+		[colorControlDeviceIds, invalidate, rememberColor]
+	);
+
+	const handleColorChange = (newColor: { h: number; s: number; v: number }) => {
+		setHue(newColor.h);
+		setSaturation(newColor.s);
+		if (colorCommitTimeoutRef.current) {
+			clearTimeout(colorCommitTimeoutRef.current);
+		}
+		colorCommitTimeoutRef.current = setTimeout(() => {
+			void handleApplyColor(newColor.h, newColor.s);
+		}, 150);
+	};
+
+	const handleSwatchSelect = async (colorHex: string) => {
+		const hsv = hexToHsv(colorHex);
+		if (!hsv) {
+			return;
+		}
+		if (colorCommitTimeoutRef.current) {
+			clearTimeout(colorCommitTimeoutRef.current);
+			colorCommitTimeoutRef.current = null;
+		}
+		setHue(hsv.h);
+		setSaturation(hsv.s);
+		await handleApplyColor(hsv.h, hsv.s);
+	};
+
+	const onOffLabel = onOffState === 'all-on' ? 'On' : onOffState === 'all-off' ? 'Off' : 'Mixed';
+	const onOffChipColor =
+		onOffState === 'all-on' ? 'success' : onOffState === 'all-off' ? 'default' : 'warning';
+	const powerActionLabel = onOffState === 'all-on' ? 'Turn Off All' : 'Turn On All';
+	const isPowerControlAvailable = onOffState !== 'unavailable';
+
 	return (
 		<Box sx={{ p: { xs: 2, sm: 3 } }}>
+			{isPowerControlAvailable && (
+				<Box sx={{ mb: 3 }}>
+					<Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>
+						Power
+					</Typography>
+					<Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+						<Button
+							variant="contained"
+							startIcon={<PowerIcon />}
+							onClick={() => void handleToggleAll()}
+							disabled={isTogglingAll}
+						>
+							{powerActionLabel}
+						</Button>
+						<Chip
+							label={onOffLabel}
+							color={onOffChipColor}
+							variant="outlined"
+							sx={{ fontWeight: 600 }}
+						/>
+					</Box>
+				</Box>
+			)}
+
+			<Box sx={{ mb: 3 }}>
+				<Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>
+					Pick a Color
+				</Typography>
+				<Box sx={{ display: 'flex', gap: 3, alignItems: 'center', flexWrap: 'wrap' }}>
+					<Box
+						sx={{
+							borderRadius: '50%',
+							p: 1.5,
+							background: 'rgba(0,0,0,0.04)',
+							boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+						}}
+					>
+						<Wheel
+							color={{ h: hue, s: saturation, v: 100, a: 1 }}
+							onChange={(color) =>
+								handleColorChange({
+									h: color.hsv.h,
+									s: color.hsv.s,
+									v: color.hsv.v,
+								})
+							}
+							width={200}
+							height={200}
+						/>
+					</Box>
+					<Box
+						sx={{
+							display: 'flex',
+							flexWrap: 'wrap',
+							gap: 1,
+							maxWidth: 320,
+						}}
+					>
+						{swatchColors.map((color) => {
+							const normalized = normalizeHexColor(color) ?? color;
+							const isSelected = normalizeHexColor(currentColor) === normalized;
+							return (
+								<IconButton
+									key={color}
+									aria-label={`Select color ${color}`}
+									onClick={() => void handleSwatchSelect(color)}
+									disabled={isUpdatingColor}
+									sx={{
+										width: 36,
+										height: 36,
+										borderRadius: '50%',
+										backgroundColor: color,
+										border: '2px solid',
+										borderColor: isSelected ? 'primary.main' : 'divider',
+										boxShadow: isSelected
+											? '0 0 0 2px rgba(0,0,0,0.1)'
+											: 'none',
+										'&:hover': {
+											backgroundColor: color,
+										},
+									}}
+								/>
+							);
+						})}
+					</Box>
+				</Box>
+				<Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5 }}>
+					<Box
+						sx={{
+							width: 16,
+							height: 16,
+							borderRadius: '50%',
+							backgroundColor: currentColor,
+							border: '1px solid',
+							borderColor: 'divider',
+						}}
+					/>
+					<Typography
+						variant="caption"
+						sx={{
+							fontWeight: 600,
+							letterSpacing: '0.06em',
+						}}
+					>
+						{currentColor.toUpperCase()}
+					</Typography>
+					{isUpdatingColor && <CircularProgress size={14} />}
+				</Box>
+			</Box>
+
 			{/* Palette Selector */}
 			{palettes.length > 0 && (
 				<Box sx={{ mb: 3 }}>
@@ -1087,6 +1603,10 @@ const ColorControlRoomDetail = (props: RoomDetailProps): JSX.Element => {
 			)}
 		</Box>
 	);
+};
+
+const ColorControlRoomDetail = (props: RoomDetailProps): JSX.Element => {
+	return <ColorControlSharedDetail devices={props.devices} invalidate={props.invalidate} />;
 };
 
 interface RoomGroupedClusterDetailProps {
@@ -1476,60 +1996,5 @@ const GroupDetail = (props: GroupDetailProps): JSX.Element => {
 };
 
 const ColorControlGroupDetail = (props: GroupDetailProps): JSX.Element => {
-	const [palettes, setPalettes] = React.useState<Palette[]>([]);
-	const [applyingPalette, setApplyingPalette] = React.useState<string | null>(null);
-
-	React.useEffect(() => {
-		const loadPalettes = async () => {
-			try {
-				const response = await apiGet('device', '/palettes/list', {});
-				if (response.ok) {
-					const data = await response.json();
-					setPalettes(data.palettes);
-				}
-			} catch (error) {
-				console.error('Failed to load palettes:', error);
-			}
-		};
-		void loadPalettes();
-	}, []);
-
-	const handleApplyPalette = async (paletteId: string) => {
-		setApplyingPalette(paletteId);
-		try {
-			const deviceIds = props.devices.map((d) => d.uniqueId);
-			const response = await apiPost(
-				'device',
-				'/palettes/:paletteId/apply',
-				{ paletteId },
-				{ deviceIds }
-			);
-			if (response.ok) {
-				// Refresh devices to show new colors
-				props.invalidate();
-			}
-		} catch (error) {
-			console.error('Failed to apply palette:', error);
-		} finally {
-			setApplyingPalette(null);
-		}
-	};
-
-	return (
-		<Box sx={{ p: { xs: 2, sm: 3 } }}>
-			{/* Palette Selector */}
-			{palettes.length > 0 && (
-				<Box sx={{ mb: 3 }}>
-					<Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>
-						Color Palettes:
-					</Typography>
-					<PaletteSelector
-						palettes={palettes}
-						onSelect={handleApplyPalette}
-						selectedPaletteId={applyingPalette}
-					/>
-				</Box>
-			)}
-		</Box>
-	);
+	return <ColorControlSharedDetail devices={props.devices} invalidate={props.invalidate} />;
 };
