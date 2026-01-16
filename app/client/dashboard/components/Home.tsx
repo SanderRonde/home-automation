@@ -16,12 +16,12 @@ import {
 	Fab,
 	Portal,
 } from '@mui/material';
-import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import {
 	Map as MapIcon,
 	ViewList as ListIcon,
 	PowerSettingsNew as PowerIcon,
 } from '@mui/icons-material';
+import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import type { DeviceClusterCardBaseProps } from './DeviceClusterCard';
 import type { DeviceGroup } from '../../../../types/group';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -37,9 +37,9 @@ import { apiGet, apiPost } from '../../lib/fetch';
 import { EnergyDisplay } from './EnergyDisplay';
 import type { IncludedIconNames } from './icon';
 import { DeviceDetail } from './DeviceDetail';
+import { Wheel } from '@uiw/react-color';
 import { useDevices } from './Devices';
 import { IconComponent } from './icon';
-import { Wheel } from '@uiw/react-color';
 import React from 'react';
 
 type DeviceType = DeviceListWithValuesResponse[number];
@@ -101,11 +101,7 @@ const hexToHsv = (color: string): { h: number; s: number; v: number } | null => 
 	return rgbToHsv(rgb.r, rgb.g, rgb.b);
 };
 
-const rgbToHsv = (
-	r: number,
-	g: number,
-	b: number
-): { h: number; s: number; v: number } => {
+const rgbToHsv = (r: number, g: number, b: number): { h: number; s: number; v: number } => {
 	const rNorm = r / 255;
 	const gNorm = g / 255;
 	const bNorm = b / 255;
@@ -225,9 +221,7 @@ const isColorControlXYCluster = (
 ): cluster is DashboardDeviceClusterColorControlXY =>
 	cluster.name === DeviceClusterName.COLOR_CONTROL && 'color' in cluster;
 
-const getInitialColorFromDevices = (
-	devices: DeviceType[]
-): { hue: number; saturation: number } => {
+const getInitialColorFromDevices = (devices: DeviceType[]): { hue: number; saturation: number } => {
 	for (const device of devices) {
 		const cluster = device.mergedAllClusters.find(isColorControlXYCluster);
 		if (cluster) {
@@ -1239,6 +1233,7 @@ interface ColorControlSharedDetailProps {
 }
 
 const ColorControlSharedDetail = (props: ColorControlSharedDetailProps): JSX.Element => {
+	const { invalidate } = props;
 	const colorControlEntries = React.useMemo(
 		() =>
 			props.devices
@@ -1250,8 +1245,12 @@ const ColorControlSharedDetail = (props: ColorControlSharedDetailProps): JSX.Ele
 					return { device, cluster };
 				})
 				.filter(
-					(entry): entry is { device: DeviceType; cluster: DashboardDeviceClusterColorControlXY } =>
-						entry !== null
+					(
+						entry
+					): entry is {
+						device: DeviceType;
+						cluster: DashboardDeviceClusterColorControlXY;
+					} => entry !== null
 				),
 		[props.devices]
 	);
@@ -1272,9 +1271,7 @@ const ColorControlSharedDetail = (props: ColorControlSharedDetailProps): JSX.Ele
 						isOn: onOffCluster.isOn,
 					};
 				})
-				.filter(
-					(entry): entry is { deviceId: string; isOn: boolean } => entry !== null
-				),
+				.filter((entry): entry is { deviceId: string; isOn: boolean } => entry !== null),
 		[colorControlEntries]
 	);
 	const onOffState = React.useMemo(() => {
@@ -1382,7 +1379,7 @@ const ColorControlSharedDetail = (props: ColorControlSharedDetailProps): JSX.Ele
 			);
 			if (response.ok) {
 				// Refresh devices to show new colors
-				props.invalidate();
+				invalidate();
 			}
 		} catch (error) {
 			console.error('Failed to apply palette:', error);
@@ -1408,7 +1405,7 @@ const ColorControlSharedDetail = (props: ColorControlSharedDetailProps): JSX.Ele
 				}
 			);
 			if (response.ok) {
-				props.invalidate();
+				invalidate();
 			}
 		} catch (error) {
 			console.error('Failed to toggle devices:', error);
@@ -1437,7 +1434,7 @@ const ColorControlSharedDetail = (props: ColorControlSharedDetailProps): JSX.Ele
 				);
 				if (response.ok) {
 					rememberColor(hsvToHex(nextHue, nextSaturation, 100));
-					props.invalidate();
+					invalidate();
 				}
 			} catch (error) {
 				console.error('Failed to set color:', error);
@@ -1445,7 +1442,7 @@ const ColorControlSharedDetail = (props: ColorControlSharedDetailProps): JSX.Ele
 				setIsUpdatingColor(false);
 			}
 		},
-		[colorControlDeviceIds, props.invalidate, rememberColor]
+		[colorControlDeviceIds, invalidate, rememberColor]
 	);
 
 	const handleColorChange = (newColor: { h: number; s: number; v: number }) => {
@@ -1473,14 +1470,9 @@ const ColorControlSharedDetail = (props: ColorControlSharedDetailProps): JSX.Ele
 		await handleApplyColor(hsv.h, hsv.s);
 	};
 
-	const onOffLabel =
-		onOffState === 'all-on' ? 'On' : onOffState === 'all-off' ? 'Off' : 'Mixed';
+	const onOffLabel = onOffState === 'all-on' ? 'On' : onOffState === 'all-off' ? 'Off' : 'Mixed';
 	const onOffChipColor =
-		onOffState === 'all-on'
-			? 'success'
-			: onOffState === 'all-off'
-				? 'default'
-				: 'warning';
+		onOffState === 'all-on' ? 'success' : onOffState === 'all-off' ? 'default' : 'warning';
 	const powerActionLabel = onOffState === 'all-on' ? 'Turn Off All' : 'Turn On All';
 	const isPowerControlAvailable = onOffState !== 'unavailable';
 
@@ -1546,8 +1538,7 @@ const ColorControlSharedDetail = (props: ColorControlSharedDetailProps): JSX.Ele
 					>
 						{swatchColors.map((color) => {
 							const normalized = normalizeHexColor(color) ?? color;
-							const isSelected =
-								normalizeHexColor(currentColor) === normalized;
+							const isSelected = normalizeHexColor(currentColor) === normalized;
 							return (
 								<IconButton
 									key={color}
@@ -1561,7 +1552,9 @@ const ColorControlSharedDetail = (props: ColorControlSharedDetailProps): JSX.Ele
 										backgroundColor: color,
 										border: '2px solid',
 										borderColor: isSelected ? 'primary.main' : 'divider',
-										boxShadow: isSelected ? '0 0 0 2px rgba(0,0,0,0.1)' : 'none',
+										boxShadow: isSelected
+											? '0 0 0 2px rgba(0,0,0,0.1)'
+											: 'none',
 										'&:hover': {
 											backgroundColor: color,
 										},
