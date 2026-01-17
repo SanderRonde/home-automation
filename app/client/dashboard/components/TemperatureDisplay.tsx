@@ -532,7 +532,6 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 										)}
 									</Box>
 								)}
-
 							</Box>
 						)}
 					</Collapse>
