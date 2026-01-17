@@ -2211,12 +2211,31 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	// Handle group hold (navigate to group detail)
 	const handleGroupHold = React.useCallback(
 		(group: DeviceGroup) => {
+			const groupDevices = props.devices.filter((device) =>
+				group.deviceIds.includes(device.uniqueId)
+			);
+			const hasColorControl = groupDevices.some((device) =>
+				device.mergedAllClusters.some(
+					(cluster) =>
+						cluster.name === DeviceClusterName.COLOR_CONTROL && 'color' in cluster
+				)
+			);
+
+			if (hasColorControl) {
+				pushDetailView({
+					type: 'group',
+					groupId: group.id,
+					clustersName: DeviceClusterName.COLOR_CONTROL,
+				});
+				return;
+			}
+
 			pushDetailView({
 				type: 'group',
 				groupId: group.id,
 			});
 		},
-		[pushDetailView]
+		[pushDetailView, props.devices]
 	);
 
 	// Get groups that have positions set
