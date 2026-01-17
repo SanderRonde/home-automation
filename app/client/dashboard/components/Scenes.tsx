@@ -38,6 +38,39 @@ import { apiGet, apiPost } from '../../lib/fetch';
 import { useDevices } from './Devices';
 import { IconComponent } from './icon';
 
+const DEFAULT_SCENE_CATEGORY = 'Uncategorized';
+
+const getSceneCategory = (scene: Scene): string => {
+	const category = scene.category?.trim() ?? '';
+	return category.length > 0 ? category : DEFAULT_SCENE_CATEGORY;
+};
+
+const getSceneOrderValue = (scene: Scene): number => {
+	return typeof scene.order === 'number' ? scene.order : Number.POSITIVE_INFINITY;
+};
+
+const compareSceneCategories = (a: string, b: string): number => {
+	if (a === DEFAULT_SCENE_CATEGORY) {
+		return b === DEFAULT_SCENE_CATEGORY ? 0 : 1;
+	}
+	if (b === DEFAULT_SCENE_CATEGORY) {
+		return -1;
+	}
+	return a.localeCompare(b, undefined, { sensitivity: 'base' });
+};
+
+const compareScenes = (a: Scene, b: Scene): number => {
+	const orderDelta = getSceneOrderValue(a) - getSceneOrderValue(b);
+	if (orderDelta !== 0) {
+		return orderDelta;
+	}
+	const titleDelta = a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
+	if (titleDelta !== 0) {
+		return titleDelta;
+	}
+	return a.id.localeCompare(b.id, undefined, { sensitivity: 'base' });
+};
+
 export const Scenes = (): JSX.Element => {
 	const { devices, loading: devicesLoading } = useDevices();
 	const [currentTab, setCurrentTab] = useState(0);
@@ -405,6 +438,23 @@ export const Scenes = (): JSX.Element => {
 		return date.toLocaleString();
 	};
 
+	const groupedScenes = React.useMemo(() => {
+		const grouped = new Map<string, Scene[]>();
+		for (const scene of scenes) {
+			const category = getSceneCategory(scene);
+			if (!grouped.has(category)) {
+				grouped.set(category, []);
+			}
+			grouped.get(category)!.push(scene);
+		}
+		return Array.from(grouped.entries())
+			.sort(([a], [b]) => compareSceneCategories(a, b))
+			.map(([category, categoryScenes]) => ({
+				category,
+				scenes: categoryScenes.slice().sort(compareScenes),
+			}));
+	}, [scenes]);
+
 	if (loading || devicesLoading) {
 		return (
 			<Box
@@ -474,138 +524,189 @@ export const Scenes = (): JSX.Element => {
 						</CardContent>
 					</Card>
 				) : currentTab === 0 ? (
-					<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-						{scenes.map((scene) => {
-							return (
-								<Card key={scene.id} sx={{ borderRadius: 2, overflow: 'hidden' }}>
-									<CardContent>
-										<Box
-											sx={{
-												display: 'flex',
-												alignItems: 'center',
-												justifyContent: 'space-between',
-												gap: 2,
-											}}
-										>
-											{/* Scene info - clickable area */}
-											<Box
-												onClick={() => handleEditScene(scene)}
-												sx={{
-													display: 'flex',
-													alignItems: 'center',
-													gap: 2,
-													flex: 1,
-													minWidth: 0,
-													cursor: 'pointer',
-													borderRadius: 1,
-													p: 1,
-													ml: -1,
-													transition: 'background-color 0.2s',
-													'&:hover': {
-														backgroundColor: 'action.hover',
-													},
-												}}
+					<Box
+						data-testid="scenes-list"
+						sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}
+					>
+						{groupedScenes.map((group) => (
+							<Box
+								key={group.category}
+								sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+							>
+								<Box
+									sx={{
+										display: 'flex',
+										alignItems: 'center',
+										justifyContent: 'space-between',
+										gap: 1,
+									}}
+								>
+									<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+										{group.category}
+									</Typography>
+									<Chip
+										size="small"
+										label={`${group.scenes.length} scene${
+											group.scenes.length === 1 ? '' : 's'
+										}`}
+									/>
+								</Box>
+								<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+									{group.scenes.map((scene) => {
+										return (
+											<Card
+												key={scene.id}
+												data-testid="scene-card"
+												sx={{ borderRadius: 2, overflow: 'hidden' }}
 											>
-												<Box
-													sx={{
-														display: 'flex',
-														alignItems: 'center',
-														justifyContent: 'center',
-														width: 48,
-														height: 48,
-														borderRadius: 2,
-														backgroundColor: 'action.hover',
-														flexShrink: 0,
-													}}
-												>
-													<IconComponent
-														iconName={scene.icon}
-														sx={{ fontSize: 28 }}
-													/>
-												</Box>
-												<Box sx={{ flex: 1, minWidth: 0 }}>
+												<CardContent>
 													<Box
 														sx={{
 															display: 'flex',
 															alignItems: 'center',
-															gap: 1,
+															justifyContent: 'space-between',
+															gap: 2,
 														}}
 													>
-														<Typography
-															variant="h6"
-															sx={{ fontWeight: 500 }}
+														{/* Scene info - clickable area */}
+														<Box
+															onClick={() =>
+																handleEditScene(scene)
+															}
+															sx={{
+																display: 'flex',
+																alignItems: 'center',
+																gap: 2,
+																flex: 1,
+																minWidth: 0,
+																cursor: 'pointer',
+																borderRadius: 1,
+																p: 1,
+																ml: -1,
+																transition:
+																	'background-color 0.2s',
+																'&:hover': {
+																	backgroundColor:
+																		'action.hover',
+																},
+															}}
 														>
-															{scene.title}
-														</Typography>
-														{scene.showOnHome && (
-															<Tooltip title="Shown on Home">
-																<StarIcon
-																	sx={{
-																		fontSize: 20,
-																		color: 'warning.main',
-																	}}
+															<Box
+																sx={{
+																	display: 'flex',
+																	alignItems: 'center',
+																	justifyContent: 'center',
+																	width: 48,
+																	height: 48,
+																	borderRadius: 2,
+																	backgroundColor:
+																		'action.hover',
+																	flexShrink: 0,
+																}}
+															>
+																<IconComponent
+																	iconName={scene.icon}
+																	sx={{ fontSize: 28 }}
 																/>
-															</Tooltip>
-														)}
-														{getTriggerIcon(scene)}
-													</Box>
-													<SceneActionChips
-														actions={scene.actions}
-														devices={devices}
-														groups={groups}
-														palettes={palettes}
-														getDeviceById={getDeviceById}
-														getGroupById={getGroupById}
-													/>
-												</Box>
-											</Box>
+															</Box>
+															<Box sx={{ flex: 1, minWidth: 0 }}>
+																<Box
+																	sx={{
+																		display: 'flex',
+																		alignItems: 'center',
+																		gap: 1,
+																	}}
+																>
+																	<Typography
+																		variant="h6"
+																		sx={{ fontWeight: 500 }}
+																	>
+																		{scene.title}
+																	</Typography>
+																	{scene.showOnHome && (
+																		<Tooltip title="Shown on Home">
+																			<StarIcon
+																				sx={{
+																					fontSize: 20,
+																					color: 'warning.main',
+																				}}
+																			/>
+																		</Tooltip>
+																	)}
+																	{getTriggerIcon(scene)}
+																</Box>
+																<SceneActionChips
+																	actions={scene.actions}
+																	devices={devices}
+																	groups={groups}
+																	palettes={palettes}
+																	getDeviceById={getDeviceById}
+																	getGroupById={getGroupById}
+																/>
+															</Box>
+														</Box>
 
-											{/* Actions */}
-											<Box
-												sx={{
-													display: 'flex',
-													gap: 1,
-													flexShrink: 0,
-												}}
-											>
-												<IconButton
-													size="medium"
-													onClick={(e) => handleTriggerScene(scene.id, e)}
-													disabled={triggeringSceneId === scene.id}
-													sx={{
-														backgroundColor: 'primary.main',
-														color: 'primary.contrastText',
-														'&:hover': {
-															backgroundColor: 'primary.dark',
-														},
-														'&.Mui-disabled': {
-															backgroundColor:
-																'action.disabledBackground',
-														},
-													}}
-												>
-													{triggeringSceneId === scene.id ? (
-														<CircularProgress
-															size={24}
-															color="inherit"
-														/>
-													) : (
-														<PlayArrowIcon />
-													)}
-												</IconButton>
-												<IconButton
-													size="medium"
-													onClick={(e) => handleDeleteScene(scene.id, e)}
-													color="error"
-												>
-													<DeleteIcon />
-												</IconButton>
-											</Box>
-										</Box>
-									</CardContent>
-								</Card>
-							);
-						})}
+														{/* Actions */}
+														<Box
+															sx={{
+																display: 'flex',
+																gap: 1,
+																flexShrink: 0,
+															}}
+														>
+															<IconButton
+																size="medium"
+																onClick={(e) =>
+																	handleTriggerScene(
+																		scene.id,
+																		e
+																	)
+																}
+																disabled={triggeringSceneId === scene.id}
+																sx={{
+																	backgroundColor:
+																		'primary.main',
+																	color: 'primary.contrastText',
+																	'&:hover': {
+																		backgroundColor:
+																			'primary.dark',
+																	},
+																	'&.Mui-disabled': {
+																		backgroundColor:
+																			'action.disabledBackground',
+																	},
+																}}
+															>
+																{triggeringSceneId === scene.id ? (
+																	<CircularProgress
+																		size={24}
+																		color="inherit"
+																	/>
+																) : (
+																	<PlayArrowIcon />
+																)}
+															</IconButton>
+															<IconButton
+																size="medium"
+																onClick={(e) =>
+																	handleDeleteScene(
+																		scene.id,
+																		e
+																	)
+																}
+																color="error"
+															>
+																<DeleteIcon />
+															</IconButton>
+														</Box>
+													</Box>
+												</CardContent>
+											</Card>
+										);
+									})}
+								</Box>
+							</Box>
+						))}
 					</Box>
 				) : null}
 
