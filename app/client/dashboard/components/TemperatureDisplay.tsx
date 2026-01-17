@@ -4,7 +4,6 @@ import {
 	LocalFireDepartment as FireIcon,
 	Add as AddIcon,
 	Remove as RemoveIcon,
-	Schedule as ScheduleIcon,
 } from '@mui/icons-material';
 import {
 	Box,
@@ -32,14 +31,6 @@ interface ThermostatData {
 	mode?: string;
 }
 
-interface NextScheduleData {
-	hasNext: boolean;
-	nextTriggerTime?: string;
-	targetTemperature?: number;
-	averageTargetTemperature?: number;
-	name?: string;
-}
-
 interface TemperatureDisplayProps {
 	expanded: boolean;
 	onExpandedChange: (expanded: boolean) => void;
@@ -52,9 +43,8 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 	const [loading, setLoading] = useState(true);
 	const [newTarget, setNewTarget] = useState<number | null>(null);
 	const [updating, setUpdating] = useState(false);
-	const [nextSchedule, setNextSchedule] = useState<NextScheduleData | null>(null);
-	const [timeUntilNext, setTimeUntilNext] = useState<string>('');
 	const [averageTarget, setAverageTarget] = useState<number | null>(null);
+	const [targetControlsOpen, setTargetControlsOpen] = useState(false);
 
 	const [activeState, setActiveState] = useState<{
 		state: { id: string; name: string } | null;
@@ -86,9 +76,6 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 		} else {
 			setThermostatData({ configured: false });
 		}
-
-		// Update next schedule
-		setNextSchedule(message.nextSchedule);
 
 		// Update average target from rooms
 		if (message.rooms && message.rooms.length > 0) {
@@ -123,58 +110,15 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 		},
 	});
 
-	// Update time until next schedule every minute
-	useEffect(() => {
-		const updateTimeUntilNext = () => {
-			if (!nextSchedule?.hasNext || !nextSchedule.nextTriggerTime) {
-				setTimeUntilNext('');
-				return;
-			}
-
-			const nextTime = new Date(nextSchedule.nextTriggerTime);
-			const now = new Date();
-			const diffMs = nextTime.getTime() - now.getTime();
-
-			if (diffMs <= 0) {
-				// Schedule has passed, WebSocket will update automatically
-				setTimeUntilNext('');
-				return;
-			}
-
-			const diffMins = Math.floor(diffMs / 60000);
-			const diffHours = Math.floor(diffMins / 60);
-			const remainingMins = diffMins % 60;
-
-			if (diffHours > 24) {
-				const days = Math.floor(diffHours / 24);
-				setTimeUntilNext(`in ${days}d ${diffHours % 24}h`);
-			} else if (diffHours > 0) {
-				setTimeUntilNext(`in ${diffHours}h ${remainingMins}m`);
-			} else {
-				setTimeUntilNext(`in ${diffMins}m`);
-			}
-		};
-
-		updateTimeUntilNext();
-		const interval = setInterval(updateTimeUntilNext, 60000);
-		return () => clearInterval(interval);
-	}, [nextSchedule]);
-
-	const formatNextScheduleTime = (): string => {
-		if (!nextSchedule?.hasNext || !nextSchedule.nextTriggerTime) {
-			return '';
-		}
-		const nextTime = new Date(nextSchedule.nextTriggerTime);
-		return nextTime.toLocaleTimeString(undefined, {
-			hour: '2-digit',
-			minute: '2-digit',
-			hour12: false,
-		});
-	};
-
 	const handleToggle = () => {
 		props.onExpandedChange(!props.expanded);
 	};
+
+	useEffect(() => {
+		if (!props.expanded) {
+			setTargetControlsOpen(false);
+		}
+	}, [props.expanded]);
 
 	// Debounced temperature update
 	const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -411,28 +355,88 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 							>
 								{/* Target temperature controls - hidden in kiosk mode */}
 								{!props.kiosk && (
-									<>
-										<Typography
-											variant="caption"
+									<Box sx={{ mb: 1 }}>
+										<Box
 											sx={{
-												color: 'text.secondary',
-												mb: 1,
-												display: 'block',
+												display: 'flex',
+												alignItems: 'center',
+												gap: 1,
 											}}
 										>
-											Set target temperature
-										</Typography>
-										<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-											<IconButton
-												size="small"
-												onClick={() => void handleTargetChange(-0.5)}
-												disabled={
-													updating || newTarget === null || newTarget <= 5
-												}
+											<Typography
+												variant="caption"
+												sx={{
+													color: 'text.secondary',
+													display: 'block',
+												}}
 											>
-												<RemoveIcon />
-											</IconButton>
-											<Box sx={{ flexGrow: 1, px: 1 }}>
+												Target temperature
+											</Typography>
+											<Box
+												sx={{
+													display: 'flex',
+													alignItems: 'center',
+													gap: 0.5,
+													ml: 'auto',
+												}}
+											>
+												<IconButton
+													size="small"
+													onClick={() => void handleTargetChange(-0.5)}
+													disabled={
+														updating ||
+														newTarget === null ||
+														newTarget <= 5
+													}
+													sx={{ p: 0.5 }}
+												>
+													<RemoveIcon fontSize="small" />
+												</IconButton>
+												<Typography
+													variant="body2"
+													sx={{
+														fontWeight: 600,
+														minWidth: 40,
+														textAlign: 'center',
+													}}
+												>
+													{newTarget !== null ? `${newTarget}°` : '--°'}
+												</Typography>
+												<IconButton
+													size="small"
+													onClick={() => void handleTargetChange(0.5)}
+													disabled={
+														updating ||
+														newTarget === null ||
+														newTarget >= 30
+													}
+													sx={{ p: 0.5 }}
+												>
+													<AddIcon fontSize="small" />
+												</IconButton>
+												{updating && <CircularProgress size={14} />}
+												<IconButton
+													size="small"
+													onClick={() => {
+														setTargetControlsOpen(
+															(previous) => !previous
+														);
+													}}
+													sx={{
+														p: 0.5,
+														transition: 'transform 0.2s ease',
+														transform: targetControlsOpen
+															? 'rotate(180deg)'
+															: 'rotate(0deg)',
+													}}
+													aria-label="Toggle target temperature slider"
+												>
+													<ExpandMoreIcon fontSize="small" />
+												</IconButton>
+											</Box>
+										</Box>
+										<Collapse in={targetControlsOpen}>
+											<Box sx={{ mt: 1, px: 0.5 }}>
 												<Slider
 													value={newTarget ?? 20}
 													min={5}
@@ -442,67 +446,16 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 													disabled={updating}
 													valueLabelDisplay="auto"
 													valueLabelFormat={(v) => `${v}°`}
+													size="small"
 													sx={{
 														'& .MuiSlider-thumb': {
-															width: 20,
-															height: 20,
+															width: 18,
+															height: 18,
 														},
 													}}
 												/>
 											</Box>
-											<IconButton
-												size="small"
-												onClick={() => void handleTargetChange(0.5)}
-												disabled={
-													updating ||
-													newTarget === null ||
-													newTarget >= 30
-												}
-											>
-												<AddIcon />
-											</IconButton>
-											<Typography
-												variant="body1"
-												sx={{
-													fontWeight: 600,
-													minWidth: 45,
-													textAlign: 'right',
-												}}
-											>
-												{newTarget !== null ? `${newTarget}°` : '--°'}
-											</Typography>
-										</Box>
-										{updating && (
-											<Box
-												sx={{
-													display: 'flex',
-													justifyContent: 'center',
-													mt: 1,
-												}}
-											>
-												<CircularProgress size={16} />
-											</Box>
-										)}
-									</>
-								)}
-
-								{/* Active state indicator */}
-								{activeState?.activeStateId && activeState.state && (
-									<Box
-										sx={{
-											display: 'flex',
-											alignItems: 'center',
-											gap: 1,
-											mb: 1,
-											p: 1,
-											bgcolor: 'primary.50',
-											borderRadius: 1,
-										}}
-									>
-										<ScheduleIcon fontSize="small" color="primary" />
-										<Typography variant="caption" color="primary.main">
-											Active State: <strong>{activeState.state.name}</strong>
-										</Typography>
+										</Collapse>
 									</Box>
 								)}
 
@@ -580,55 +533,6 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 									</Box>
 								)}
 
-								{/* Next scheduled temperature */}
-								{nextSchedule?.hasNext && (
-									<Box
-										sx={{
-											mt: props.kiosk ? 0 : 2,
-											pt: props.kiosk ? 0 : 1,
-											borderTop: props.kiosk ? 'none' : '1px solid',
-											borderColor: 'divider',
-											display: 'flex',
-											alignItems: 'center',
-											gap: 1,
-										}}
-									>
-										<ScheduleIcon
-											sx={{ fontSize: 16, color: 'text.secondary' }}
-										/>
-										<Typography variant="caption" color="text.secondary">
-											Next:{' '}
-											<Box
-												component="span"
-												sx={{ fontWeight: 500, color: 'text.primary' }}
-											>
-												{nextSchedule.name}
-											</Box>
-											{' @ '}
-											<Box component="span" sx={{ color: 'text.primary' }}>
-												{formatNextScheduleTime()}
-											</Box>
-											{' → '}
-											<Box
-												component="span"
-												sx={{ fontWeight: 600, color: 'primary.main' }}
-											>
-												{nextSchedule.averageTargetTemperature
-													? formatTemp(
-															nextSchedule.averageTargetTemperature
-														)
-													: nextSchedule.targetTemperature}
-												°
-											</Box>
-											<Box
-												component="span"
-												sx={{ color: 'text.disabled', ml: 0.5 }}
-											>
-												({timeUntilNext})
-											</Box>
-										</Typography>
-									</Box>
-								)}
 							</Box>
 						)}
 					</Collapse>
