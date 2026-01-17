@@ -30,6 +30,7 @@ import type { RoomInfo } from './RoomAssignmentDialog';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import type { Data } from '../../../server/lib/data';
 import { detectRooms } from '../lib/room-detection';
+import { getPrimaryClusterForDevices } from '../lib/groups';
 import React, { useEffect, useState } from 'react';
 import { apiGet, apiPost } from '../../lib/fetch';
 import { Layer, Line, Stage } from 'react-konva';
@@ -2214,18 +2215,13 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 			const groupDevices = props.devices.filter((device) =>
 				group.deviceIds.includes(device.uniqueId)
 			);
-			const hasColorControl = groupDevices.some((device) =>
-				device.mergedAllClusters.some(
-					(cluster) =>
-						cluster.name === DeviceClusterName.COLOR_CONTROL && 'color' in cluster
-				)
-			);
+			const primaryCluster = getPrimaryClusterForDevices(groupDevices);
 
-			if (hasColorControl) {
+			if (primaryCluster.clusterName) {
 				pushDetailView({
 					type: 'group',
 					groupId: group.id,
-					clustersName: DeviceClusterName.COLOR_CONTROL,
+					clustersName: primaryCluster.clusterName,
 				});
 				return;
 			}

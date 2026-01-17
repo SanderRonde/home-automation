@@ -2,6 +2,7 @@ import type { DeviceListWithValuesResponse } from '../../../server/modules/devic
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import type { DeviceGroup } from '../../../../types/group';
 import { Box, IconButton } from '@mui/material';
+import { getPrimaryClusterForDevices } from '../lib/groups';
 import type { IncludedIconNames } from './icon';
 import { IconComponent } from './icon';
 import React from 'react';
@@ -60,7 +61,11 @@ export const GroupIcon = React.memo((props: GroupIconProps): JSX.Element | null 
 	const holdTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 	const didHoldRef = React.useRef(false);
 
-	const icon: IncludedIconNames = props.group.icon || 'Group';
+	const groupDevices = props.devices.filter((device) =>
+		props.group.deviceIds.includes(device.uniqueId)
+	);
+	const primaryCluster = getPrimaryClusterForDevices(groupDevices);
+	const icon: IncludedIconNames = primaryCluster.icon ?? props.group.icon ?? 'Group';
 	const isOn = isGroupOn(props.group, props.devices);
 	const canControl = hasControllableDevices(props.group, props.devices);
 
