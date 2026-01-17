@@ -21,6 +21,7 @@ import {
 } from '@mui/material';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import type { WallSegment, DoorSlot } from '../types/layout';
+import { getPrimaryClusterForDevices } from '../lib/groups';
 import type { DeviceGroup } from '../../../../types/group';
 import { useCreateData, useData } from '../lib/data-hooks';
 // @ts-expect-error - konva ESM/CommonJS type resolution issue
@@ -2211,12 +2212,26 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	// Handle group hold (navigate to group detail)
 	const handleGroupHold = React.useCallback(
 		(group: DeviceGroup) => {
+			const groupDevices = props.devices.filter((device) =>
+				group.deviceIds.includes(device.uniqueId)
+			);
+			const primaryCluster = getPrimaryClusterForDevices(groupDevices);
+
+			if (primaryCluster.clusterName) {
+				pushDetailView({
+					type: 'group',
+					groupId: group.id,
+					clustersName: primaryCluster.clusterName,
+				});
+				return;
+			}
+
 			pushDetailView({
 				type: 'group',
 				groupId: group.id,
 			});
 		},
-		[pushDetailView]
+		[pushDetailView, props.devices]
 	);
 
 	// Get groups that have positions set
