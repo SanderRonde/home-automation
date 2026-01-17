@@ -21,6 +21,7 @@ import {
 } from '@mui/material';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
 import type { WallSegment, DoorSlot } from '../types/layout';
+import { getPrimaryClusterForDevices } from '../lib/groups';
 import type { DeviceGroup } from '../../../../types/group';
 import { useCreateData, useData } from '../lib/data-hooks';
 // @ts-expect-error - konva ESM/CommonJS type resolution issue
@@ -30,7 +31,6 @@ import type { RoomInfo } from './RoomAssignmentDialog';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import type { Data } from '../../../server/lib/data';
 import { detectRooms } from '../lib/room-detection';
-import { getPrimaryClusterForDevices } from '../lib/groups';
 import React, { useEffect, useState } from 'react';
 import { apiGet, apiPost } from '../../lib/fetch';
 import { Layer, Line, Stage } from 'react-konva';

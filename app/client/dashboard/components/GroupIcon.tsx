@@ -1,8 +1,8 @@
 import type { DeviceListWithValuesResponse } from '../../../server/modules/device/routing';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
+import { getPrimaryClusterForDevices } from '../lib/groups';
 import type { DeviceGroup } from '../../../../types/group';
 import { Box, IconButton } from '@mui/material';
-import { getPrimaryClusterForDevices } from '../lib/groups';
 import type { IncludedIconNames } from './icon';
 import { IconComponent } from './icon';
 import React from 'react';

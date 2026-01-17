@@ -67,22 +67,19 @@ export const getPrimaryClusterForDevices = (
 				return name;
 			}
 		}
-		return list
-			.slice()
-			.sort((a, b) => a.clusterName.localeCompare(b.clusterName))[0]!.clusterName;
+		return list.slice().sort((a, b) => a.clusterName.localeCompare(b.clusterName))[0]
+			.clusterName;
 	};
 
 	const selectedName =
 		common.length > 0
 			? pickByPriority(common)
-			: entries
-					.slice()
-					.sort((a, b) => {
-						if (b.count !== a.count) {
-							return b.count - a.count;
-						}
-						return getPriorityIndex(a.clusterName) - getPriorityIndex(b.clusterName);
-					})[0]!.clusterName;
+			: entries.slice().sort((a, b) => {
+					if (b.count !== a.count) {
+						return b.count - a.count;
+					}
+					return getPriorityIndex(a.clusterName) - getPriorityIndex(b.clusterName);
+				})[0].clusterName;
 
 	return {
 		clusterName: selectedName,
