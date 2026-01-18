@@ -387,6 +387,19 @@ interface SceneQuickActionsProps {
 	vertical?: boolean;
 }
 
+const compareScenesByOrder = (a: Scene, b: Scene): number => {
+	const orderA = typeof a.order === 'number' ? a.order : Number.POSITIVE_INFINITY;
+	const orderB = typeof b.order === 'number' ? b.order : Number.POSITIVE_INFINITY;
+	if (orderA !== orderB) {
+		return orderA - orderB;
+	}
+	const titleDelta = a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
+	if (titleDelta !== 0) {
+		return titleDelta;
+	}
+	return a.id.localeCompare(b.id, undefined, { sensitivity: 'base' });
+};
+
 const SceneQuickActions = (props: SceneQuickActionsProps): JSX.Element | null => {
 	if (props.scenes.length === 0) {
 		return null;
@@ -464,7 +477,11 @@ export const Home = React.memo((props: HomeProps): React.ReactNode => {
 				if (response.ok) {
 					const data = await response.json();
 					// Only show scenes marked to show on home screen
-					setScenes(data.scenes.filter((scene: Scene) => scene.showOnHome === true));
+					const favoriteScenes = data.scenes.filter(
+						(scene: Scene) => scene.showOnHome === true
+					);
+					favoriteScenes.sort(compareScenesByOrder);
+					setScenes(favoriteScenes);
 				}
 			} catch (error) {
 				console.error('Failed to load scenes:', error);

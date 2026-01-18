@@ -236,6 +236,8 @@ export interface Scene {
 	actions: SceneDeviceAction[];
 	triggers?: SceneTriggerWithConditions[];
 	showOnHome?: boolean;
+	category?: string;
+	order?: number;
 }
 
 export interface SceneExecution {

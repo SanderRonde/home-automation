@@ -947,6 +947,8 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 					actions: sceneActions,
 					triggers: sceneTriggers,
 					showOnHome: z.boolean().optional(),
+					category: z.string().optional(),
+					order: z.number().optional(),
 				}),
 				(body, _req, _server, { json }) => {
 					const sceneId = api.sceneAPI.createScene(body);
@@ -960,6 +962,8 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 					actions: sceneActions,
 					triggers: sceneTriggers,
 					showOnHome: z.boolean().optional(),
+					category: z.string().optional(),
+					order: z.number().optional(),
 				}),
 				(body, req, _server, { json }) => {
 					const success = api.sceneAPI.updateScene(req.params.sceneId, body);

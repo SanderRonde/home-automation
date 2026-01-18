@@ -112,6 +112,8 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 	const [selectedIcon, setSelectedIcon] = useState<IncludedIconNames>(
 		props.existingScene?.icon ?? 'Star'
 	);
+	const [category, setCategory] = useState(props.existingScene?.category ?? '');
+	const [order, setOrder] = useState<number | undefined>(props.existingScene?.order);
 	const [actions, setActions] = useState<DeviceActionEntry[]>(
 		props.existingScene?.actions.map((action, index) => ({
 			...action,
@@ -396,6 +398,7 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 			return;
 		}
 
+		const trimmedCategory = category.trim();
 		const scene: Omit<Scene, 'id'> = {
 			title: title.trim(),
 			icon: selectedIcon,
@@ -407,6 +410,8 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 			),
 			triggers: triggers.length > 0 ? triggers : undefined,
 			showOnHome,
+			category: trimmedCategory.length > 0 ? trimmedCategory : undefined,
+			order,
 		};
 
 		props.onSave(scene);
@@ -613,6 +618,34 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 						renderOption={renderIconOption}
 						renderInput={renderIconInput}
 					/>
+
+					<Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+						<TextField
+							label="Category"
+							value={category}
+							onChange={(e) => setCategory(e.target.value)}
+							sx={{ flex: 1, minWidth: 220 }}
+						/>
+						<TextField
+							label="Order"
+							type="number"
+							value={order ?? ''}
+							onChange={(e) => {
+								const value = e.target.value;
+								if (value === '') {
+									setOrder(undefined);
+									return;
+								}
+								const parsed = Number(value);
+								if (!Number.isNaN(parsed)) {
+									setOrder(parsed);
+								}
+							}}
+							inputProps={{ step: 1 }}
+							helperText="Lower numbers appear first"
+							sx={{ width: { xs: '100%', sm: 180 } }}
+						/>
+					</Box>
 
 					{/* Device Actions */}
 					<Box>
