@@ -60,9 +60,10 @@ const compareSceneCategories = (a: string, b: string): number => {
 };
 
 const compareScenes = (a: Scene, b: Scene): number => {
-	const orderDelta = getSceneOrderValue(a) - getSceneOrderValue(b);
-	if (orderDelta !== 0) {
-		return orderDelta;
+	const orderA = getSceneOrderValue(a);
+	const orderB = getSceneOrderValue(b);
+	if (orderA !== orderB) {
+		return orderA - orderB;
 	}
 	const titleDelta = a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
 	if (titleDelta !== 0) {
