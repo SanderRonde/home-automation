@@ -570,9 +570,7 @@ export const Scenes = (): JSX.Element => {
 													>
 														{/* Scene info - clickable area */}
 														<Box
-															onClick={() =>
-																handleEditScene(scene)
-															}
+															onClick={() => handleEditScene(scene)}
 															sx={{
 																display: 'flex',
 																alignItems: 'center',
@@ -583,11 +581,9 @@ export const Scenes = (): JSX.Element => {
 																borderRadius: 1,
 																p: 1,
 																ml: -1,
-																transition:
-																	'background-color 0.2s',
+																transition: 'background-color 0.2s',
 																'&:hover': {
-																	backgroundColor:
-																		'action.hover',
+																	backgroundColor: 'action.hover',
 																},
 															}}
 														>
@@ -599,8 +595,7 @@ export const Scenes = (): JSX.Element => {
 																	width: 48,
 																	height: 48,
 																	borderRadius: 2,
-																	backgroundColor:
-																		'action.hover',
+																	backgroundColor: 'action.hover',
 																	flexShrink: 0,
 																}}
 															>
@@ -657,15 +652,13 @@ export const Scenes = (): JSX.Element => {
 															<IconButton
 																size="medium"
 																onClick={(e) =>
-																	handleTriggerScene(
-																		scene.id,
-																		e
-																	)
+																	handleTriggerScene(scene.id, e)
 																}
-																disabled={triggeringSceneId === scene.id}
+																disabled={
+																	triggeringSceneId === scene.id
+																}
 																sx={{
-																	backgroundColor:
-																		'primary.main',
+																	backgroundColor: 'primary.main',
 																	color: 'primary.contrastText',
 																	'&:hover': {
 																		backgroundColor:
@@ -689,10 +682,7 @@ export const Scenes = (): JSX.Element => {
 															<IconButton
 																size="medium"
 																onClick={(e) =>
-																	handleDeleteScene(
-																		scene.id,
-																		e
-																	)
+																	handleDeleteScene(scene.id, e)
 																}
 																color="error"
 															>
