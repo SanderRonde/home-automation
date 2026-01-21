@@ -1553,11 +1553,11 @@ const ActionConfig = React.memo((props: ActionConfigProps) => {
 		}
 
 		for (const clusterName in clusterMap) {
-			if (clusterMap[clusterName as keyof typeof clusterMap]!.length === devices.length) {
-				availableClusters[clusterName as keyof typeof clusterMap] = clusterMap[
-					clusterName as keyof typeof clusterMap
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				]![0] as any;
+			const key = clusterName as keyof typeof clusterMap;
+			const clusters = clusterMap[key];
+			if (clusters && clusters.length === devices.length) {
+				// @ts-ignore - TypeScript union type too complex
+				availableClusters[key] = clusters[0];
 			}
 		}
 	}

@@ -10,7 +10,35 @@ export class OccupancyTracker {
 	public constructor(
 		private readonly _sqlDB: SQL,
 		private readonly _sceneAPI: SceneAPI
-	) {}
+	) {
+		// Ensure the occupancy_events table exists
+		void this._migrateTable();
+	}
+
+	private async _migrateTable(): Promise<void> {
+		try {
+			// Check if table exists
+			const tableExists = await this._sqlDB<{ name: string }[]>`
+				SELECT name FROM sqlite_master WHERE type='table' AND name='occupancy_events'
+			`;
+			if (!tableExists.length) {
+				// Create table
+				await this._sqlDB`
+					CREATE TABLE occupancy_events (
+						id INTEGER PRIMARY KEY AUTOINCREMENT,
+						device_id TEXT NOT NULL,
+						occupied INTEGER NOT NULL,
+						timestamp INTEGER NOT NULL
+					)
+				`;
+				await this._sqlDB`
+					CREATE INDEX idx_occupancy_device_time ON occupancy_events(device_id, timestamp DESC)
+				`;
+			}
+		} catch (error) {
+			console.error('Failed to migrate occupancy_events table:', error);
+		}
+	}
 
 	public trackDevices(devices: DeviceInterface[]): void {
 		for (const device of devices) {

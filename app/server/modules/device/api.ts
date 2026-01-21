@@ -11,6 +11,7 @@ import { SwitchTracker } from './switch-tracker';
 import { PowerTracker } from './power-tracker';
 import type { Database } from '../../lib/db';
 import { PaletteAPI } from './palette-api';
+import { CO2Tracker } from './co2-tracker';
 import { SceneAPI } from './scene-api';
 import { GroupAPI } from './group-api';
 import { Data } from '../../lib/data';
@@ -25,6 +26,7 @@ export class DeviceAPI {
 	public readonly buttonPressTracker: SwitchTracker;
 	public readonly booleanStateTracker: BooleanStateTracker;
 	public readonly powerTracker: PowerTracker;
+	public readonly co2Tracker: CO2Tracker;
 	public readonly paletteAPI: PaletteAPI;
 	public readonly sceneAPI: SceneAPI;
 	public readonly groupAPI: GroupAPI;
@@ -55,6 +57,7 @@ export class DeviceAPI {
 		this.buttonPressTracker = new SwitchTracker(sqlDB, this.sceneAPI);
 		this.booleanStateTracker = new BooleanStateTracker(sqlDB);
 		this.powerTracker = new PowerTracker(sqlDB);
+		this.co2Tracker = new CO2Tracker(sqlDB);
 	}
 
 	public readonly devices = new Data<{
@@ -91,6 +94,7 @@ export class DeviceAPI {
 		this.buttonPressTracker.trackDevices(devices);
 		this.booleanStateTracker.trackDevices(devices);
 		this.powerTracker.trackDevices(devices);
+		this.co2Tracker.trackDevices(devices);
 	}
 
 	public updateDeviceName(deviceId: string, name: string): boolean {
