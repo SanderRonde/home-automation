@@ -2005,6 +2005,48 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 			mergedAllClusters = [...otherClusters, mergedSensorGroup];
 		}
 
+		// If we have multiple air quality groups, merge them into one
+		if (airQualityGroups.length > 1) {
+			const mergedAirQualityGroup: DashboardDeviceClusterAirQualityGroup = {
+				name: DeviceClusterName.AIR_QUALITY,
+				icon: getClusterIconName(DeviceClusterName.AIR_QUALITY, api),
+				mergedClusters: {
+					[DeviceClusterName.AIR_QUALITY]: undefined,
+					[DeviceClusterName.CARBON_DIOXIDE_CONCENTRATION_MEASUREMENT]: undefined,
+					[DeviceClusterName.PM_2_5_CONCENTRATION_MEASUREMENT]: undefined,
+				},
+			};
+
+			// Merge all air quality data from different groups
+			for (const group of airQualityGroups) {
+				if (group.mergedClusters[DeviceClusterName.AIR_QUALITY]) {
+					mergedAirQualityGroup.mergedClusters[DeviceClusterName.AIR_QUALITY] =
+						group.mergedClusters[DeviceClusterName.AIR_QUALITY];
+				}
+				if (
+					group.mergedClusters[DeviceClusterName.CARBON_DIOXIDE_CONCENTRATION_MEASUREMENT]
+				) {
+					mergedAirQualityGroup.mergedClusters[
+						DeviceClusterName.CARBON_DIOXIDE_CONCENTRATION_MEASUREMENT
+					] =
+						group.mergedClusters[
+							DeviceClusterName.CARBON_DIOXIDE_CONCENTRATION_MEASUREMENT
+						];
+				}
+				if (group.mergedClusters[DeviceClusterName.PM_2_5_CONCENTRATION_MEASUREMENT]) {
+					mergedAirQualityGroup.mergedClusters[
+						DeviceClusterName.PM_2_5_CONCENTRATION_MEASUREMENT
+					] = group.mergedClusters[DeviceClusterName.PM_2_5_CONCENTRATION_MEASUREMENT];
+				}
+			}
+
+			// Update otherClusters to include the merged group
+			const finalOtherClusters = mergedAllClusters.filter(
+				(c) => !(c.name === DeviceClusterName.AIR_QUALITY && 'mergedClusters' in c)
+			);
+			mergedAllClusters = [...finalOtherClusters, mergedAirQualityGroup];
+		}
+
 		return {
 			name: await endpoint.getDeviceName(),
 			childClusters: mergedClusters,
