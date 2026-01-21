@@ -464,22 +464,12 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 									<Box
 										sx={{
 											mt: props.kiosk ? 0 : 1,
-											mb: props.kiosk ? 0 : 1,
+											mb: props.kiosk ? 0 : 0,
 											pt: props.kiosk ? 0 : 1,
 											borderTop: props.kiosk ? 'none' : '1px solid',
 											borderColor: 'divider',
 										}}
 									>
-										<Typography
-											variant="caption"
-											sx={{
-												color: 'text.secondary',
-												mb: 1,
-												display: 'block',
-											}}
-										>
-											Temperature States
-										</Typography>
 										<Box
 											sx={{
 												display: 'flex',
