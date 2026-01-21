@@ -7,6 +7,9 @@ import {
 	LocalFireDepartment as FireIcon,
 	Close as CloseIcon,
 	Science as ScienceIcon,
+	Home as HomeIcon,
+	Add as AddIcon,
+	Remove as RemoveIcon,
 } from '@mui/icons-material';
 import {
 	Box,
@@ -24,6 +27,8 @@ import type { WallSegment, DoorSlot } from '../types/layout';
 import { getPrimaryClusterForDevices } from '../lib/groups';
 import type { DeviceGroup } from '../../../../types/group';
 import { useCreateData, useData } from '../lib/data-hooks';
+import type { TemperatureWebsocketServerMessage } from '../../../server/modules/temperature/routing';
+import useWebsocket from '../../shared/resilient-socket';
 // @ts-expect-error - konva ESM/CommonJS type resolution issue
 import type { Stage as StageType } from 'konva/lib/Stage';
 import type { RoomInfo } from './RoomAssignmentDialog';
@@ -1006,6 +1011,238 @@ const RoomOverlay = React.memo((props: RoomOverlayProps): JSX.Element => {
 	);
 });
 
+interface HouseTemperaturePopoverProps {
+	open: boolean;
+	anchorEl: HTMLElement | null;
+	onClose: () => void;
+	currentTemp: number;
+	targetTemp: number;
+	isHeating: boolean;
+	onSetTarget: (temp: number) => void;
+}
+
+const HouseTemperaturePopover = (props: HouseTemperaturePopoverProps) => {
+	const [sliderValue, setSliderValue] = useState(props.targetTemp);
+
+	React.useEffect(() => {
+		setSliderValue(props.targetTemp);
+	}, [props.targetTemp]);
+
+	const handleSliderChange = (_event: Event, value: number | number[]) => {
+		setSliderValue(value as number);
+	};
+
+	const handleSliderCommit = (_event: Event | React.SyntheticEvent, value: number | number[]) => {
+		props.onSetTarget(value as number);
+	};
+
+	const handleIncrement = () => {
+		const newValue = Math.min(30, sliderValue + 0.5);
+		setSliderValue(newValue);
+		props.onSetTarget(newValue);
+	};
+
+	const handleDecrement = () => {
+		const newValue = Math.max(5, sliderValue - 0.5);
+		setSliderValue(newValue);
+		props.onSetTarget(newValue);
+	};
+
+	return (
+		<Popover
+			open={props.open}
+			anchorEl={props.anchorEl}
+			onClose={props.onClose}
+			anchorOrigin={{
+				vertical: 'bottom',
+				horizontal: 'center',
+			}}
+			transformOrigin={{
+				vertical: 'top',
+				horizontal: 'center',
+			}}
+			PaperProps={{
+				sx: { p: 2, width: 280, borderRadius: 2 },
+			}}
+		>
+			<Box
+				sx={{
+					display: 'flex',
+					justifyContent: 'space-between',
+					alignItems: 'center',
+					mb: 2,
+				}}
+			>
+				<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+					<HomeIcon color="primary" />
+					<Typography variant="subtitle1" fontWeight="bold">
+						Whole House
+					</Typography>
+				</Box>
+				<IconButton size="small" onClick={props.onClose}>
+					<CloseIcon fontSize="small" />
+				</IconButton>
+			</Box>
+
+			<Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+				<Box>
+					<Typography variant="caption" color="text.secondary" display="block">
+						Current
+					</Typography>
+					<Typography variant="h6">{Math.round(props.currentTemp * 10) / 10}°C</Typography>
+				</Box>
+				<Box sx={{ textAlign: 'right' }}>
+					<Typography variant="caption" color="text.secondary" display="block">
+						Target
+					</Typography>
+					<Typography variant="h6" color="primary.main">
+						{sliderValue}°C
+					</Typography>
+				</Box>
+			</Box>
+
+			<Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+				<IconButton size="small" onClick={handleDecrement} disabled={sliderValue <= 5}>
+					<RemoveIcon />
+				</IconButton>
+				<Slider
+					value={sliderValue}
+					min={5}
+					max={30}
+					step={0.5}
+					onChange={handleSliderChange}
+					onChangeCommitted={handleSliderCommit}
+					valueLabelDisplay="auto"
+					sx={{ flexGrow: 1 }}
+				/>
+				<IconButton size="small" onClick={handleIncrement} disabled={sliderValue >= 30}>
+					<AddIcon />
+				</IconButton>
+			</Box>
+		</Popover>
+	);
+};
+
+interface HouseTemperatureBubbleProps {
+	centralThermostatData: Data<TemperatureWebsocketServerMessage['centralThermostat'] | null>;
+	wallsData: Data<WallSegment[]>;
+	stageTransformData: Data<{ x: number; y: number; scale: number }>;
+	temperatureExpanded: boolean;
+	onHouseClick: (
+		event: React.MouseEvent<HTMLElement>,
+		currentTemp: number,
+		targetTemp: number,
+		isHeating: boolean
+	) => void;
+}
+
+const HouseTemperatureBubble = React.memo(
+	(props: HouseTemperatureBubbleProps): React.ReactNode => {
+		const centralThermostat = useData(props.centralThermostatData);
+		const walls = useData(props.wallsData);
+		const stageTransform = useData(props.stageTransformData);
+
+		if (!props.temperatureExpanded || !centralThermostat) {
+			return null;
+		}
+
+		// Calculate position (same as outside temp but offset)
+		const position = React.useMemo(() => {
+			if (walls.length === 0) {
+				return { x: 60, y: 140 }; // Default below outside temp
+			}
+
+			const bbox = calculateBoundingBox(walls);
+			const centerX = (bbox.minX + bbox.maxX) / 2;
+			const centerY = (bbox.minY + bbox.maxY) / 2;
+			const padding = 25;
+
+			const distToTop = centerY - bbox.minY;
+			const distToBottom = bbox.maxY - centerY;
+			const distToLeft = centerX - bbox.minX;
+			const distToRight = bbox.maxX - centerX;
+
+			const minDist = Math.min(distToTop, distToBottom, distToLeft, distToRight);
+
+			let basePos;
+			if (minDist === distToTop) {
+				basePos = { x: centerX, y: bbox.minY - padding };
+			} else if (minDist === distToBottom) {
+				basePos = { x: centerX, y: bbox.maxY + padding };
+			} else if (minDist === distToLeft) {
+				basePos = { x: bbox.minX - padding, y: centerY };
+			} else {
+				basePos = { x: bbox.maxX + padding, y: centerY };
+			}
+
+			// Offset for house bubble (below outside temp bubble)
+			// Outside temp bubble is 64x64. We want this one below it.
+			// If it's on top/bottom, we stack vertically.
+			// If it's on left/right, we stack vertically too? Or horizontally?
+			// The prompt says "just below the outside-temperature bubble".
+			// So I'll add to Y.
+			return { x: basePos.x, y: basePos.y + 70 / stageTransform.scale };
+		}, [walls, stageTransform.scale]);
+
+		return (
+			<Box
+				onClick={(e) => {
+					e.stopPropagation();
+					props.onHouseClick(
+						e,
+						centralThermostat.currentTemperature,
+						centralThermostat.targetTemperature,
+						centralThermostat.isHeating
+					);
+				}}
+				sx={{
+					position: 'absolute',
+					left: position.x * stageTransform.scale + stageTransform.x - 30, // 60px width
+					top: position.y * stageTransform.scale + stageTransform.y - 26, // 52px height
+					width: 60,
+					height: 52,
+					borderRadius: 2,
+					backgroundColor: 'rgba(255, 255, 255, 0.95)',
+					display: 'flex',
+					flexDirection: 'column',
+					alignItems: 'center',
+					justifyContent: 'center',
+					boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+					pointerEvents: 'auto',
+					cursor: 'pointer',
+					transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+					animation: 'fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+					'&:hover': {
+						backgroundColor: '#ffffff',
+						transform: 'scale(1.05)',
+					},
+				}}
+			>
+				<Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+					<HomeIcon sx={{ fontSize: 16, color: 'primary.main' }} />
+					<Typography sx={{ fontSize: '15px', fontWeight: 600 }}>
+						{Math.round(centralThermostat.currentTemperature * 10) / 10}°
+					</Typography>
+					{centralThermostat.isHeating && (
+						<FireIcon
+							sx={{
+								fontSize: 14,
+								color: '#f97316',
+								animation: 'pulse 1.5s infinite',
+							}}
+						/>
+					)}
+				</Box>
+				<Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, opacity: 0.7 }}>
+					<Typography sx={{ fontSize: '11px' }}>
+						→ {centralThermostat.targetTemperature}°
+					</Typography>
+				</Box>
+			</Box>
+		);
+	}
+);
+
 interface OutsideTemperatureBubbleProps {
 	outsideTempData: Data<number | null>;
 	wallsData: Data<WallSegment[]>;
@@ -1357,6 +1594,24 @@ const Room = React.memo((props: RoomProps): JSX.Element => {
 
 export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 	const wallsData = useCreateData<WallSegment[]>([]);
+	const centralThermostatData = useCreateData<TemperatureWebsocketServerMessage['centralThermostat'] | null>(
+		null
+	);
+	const [houseTempPopoverAnchor, setHouseTempPopoverAnchor] = useState<HTMLElement | null>(null);
+	const [selectedHouseTemp, setSelectedHouseTemp] = useState<{
+		current: number;
+		target: number;
+		isHeating: boolean;
+	} | null>(null);
+
+	useWebsocket<TemperatureWebsocketServerMessage, never>('/temperature/ws', {
+		onMessage: (message) => {
+			if (message.type === 'update') {
+				centralThermostatData.set(message.centralThermostat);
+			}
+		},
+	});
+
 	const walls = useData(wallsData);
 	const [doors, setDoors] = useState<DoorSlot[]>([]);
 	const [roomMappings, setRoomMappings] = useState<Record<string, string>>({});
@@ -2291,6 +2546,35 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 		}
 	};
 
+	const handleHouseClick = React.useCallback(
+		(
+			event: React.MouseEvent<HTMLElement>,
+			currentTemp: number,
+			targetTemp: number,
+			isHeating: boolean
+		) => {
+			setHouseTempPopoverAnchor(event.currentTarget);
+			setSelectedHouseTemp({
+				current: currentTemp,
+				target: targetTemp,
+				isHeating,
+			});
+		},
+		[]
+	);
+
+	const handleSetHouseTarget = async (temp: number) => {
+		try {
+			await apiPost('temperature', '/central-thermostat', {}, { targetTemperature: temp });
+			// Update local state immediately for responsiveness
+			if (selectedHouseTemp) {
+				setSelectedHouseTemp({ ...selectedHouseTemp, target: temp });
+			}
+		} catch (error) {
+			console.error('Failed to set house target:', error);
+		}
+	};
+
 	return (
 		<Box
 			ref={containerRef}
@@ -2456,6 +2740,14 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 					handleGroupHold={handleGroupHold}
 				/>
 
+				<HouseTemperatureBubble
+					centralThermostatData={centralThermostatData}
+					wallsData={wallsData}
+					stageTransformData={stageTransformData}
+					temperatureExpanded={props.temperatureExpanded}
+					onHouseClick={handleHouseClick}
+				/>
+
 				<OutsideTemperatureBubble
 					outsideTempData={outsideTempData}
 					wallsData={wallsData}
@@ -2477,6 +2769,21 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 					isOverride={selectedRoomTemp.isOverride}
 					onSetTarget={handleSetRoomTarget}
 					onClearOverride={handleClearRoomOverride}
+				/>
+			)}
+
+			{selectedHouseTemp && (
+				<HouseTemperaturePopover
+					open={Boolean(houseTempPopoverAnchor)}
+					anchorEl={houseTempPopoverAnchor}
+					onClose={() => {
+						setHouseTempPopoverAnchor(null);
+						setSelectedHouseTemp(null);
+					}}
+					currentTemp={selectedHouseTemp.current}
+					targetTemp={selectedHouseTemp.target}
+					isHeating={selectedHouseTemp.isHeating}
+					onSetTarget={handleSetHouseTarget}
 				/>
 			)}
 		</Box>
