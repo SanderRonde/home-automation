@@ -30,6 +30,7 @@ import type { Palette } from '../../../../types/palette';
 import { fadeInUpStaggered } from '../../lib/animations';
 import { DeviceClusterCard } from './DeviceClusterCard';
 import { ClusterIconButton } from './ClusterIconButton';
+import { AirQualityDisplay } from './AirQualityDisplay';
 import type { Scene } from '../../../../types/scene';
 import { PaletteSelector } from './PaletteSelector';
 import { HomeLayoutView } from './HomeLayoutView';
@@ -828,13 +829,16 @@ export const Home = React.memo((props: HomeProps): React.ReactNode => {
 						width: props.kiosk ? '100%' : 'auto',
 					}}
 				>
-					<EnergyDisplay
-						expanded={energyExpanded}
-						onExpandedChange={(expanded) => {
-							setEnergyExpanded(expanded);
-							setTemperatureExpanded(false);
-						}}
-					/>
+					<Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
+						<EnergyDisplay
+							expanded={energyExpanded}
+							onExpandedChange={(expanded) => {
+								setEnergyExpanded(expanded);
+								setTemperatureExpanded(false);
+							}}
+						/>
+						<AirQualityDisplay />
+					</Box>
 					<TemperatureDisplay
 						expanded={temperatureExpanded}
 						onExpandedChange={(expanded) => {
