@@ -10,6 +10,8 @@ import {
 	DeviceActionsCluster,
 	DeviceElectricalPowerMeasurementCluster,
 	DeviceColorControlTemperatureCluster,
+	DeviceRelativeHumidityMeasurementCluster,
+	DeviceCarbonDioxideConcentrationMeasurementWithNumericAndLevelIndicationCluster,
 } from '../../device/cluster';
 import type {
 	ColorControl,
@@ -24,12 +26,20 @@ import type {
 	BooleanState,
 	ElectricalEnergyMeasurement,
 	ElectricalPowerMeasurement,
+	RelativeHumidityMeasurement,
+	CarbonDioxideConcentrationMeasurement,
+	Pm25ConcentrationMeasurement,
 } from '@matter/main/clusters';
 import {
 	DeviceSwitchCluster,
 	DeviceSwitchWithLongPressAndMultiPressCluster,
 	DeviceSwitchWithLongPressCluster,
 	DeviceSwitchWithMultiPressCluster,
+} from '../../device/cluster';
+import type {
+	Cluster,
+	DeviceGroupId,
+	DevicePm25ConcentrationMeasurementWithNumericAndLevelIndicationCluster,
 } from '../../device/cluster';
 import {
 	GroupId,
@@ -41,9 +51,10 @@ import {
 } from '@matter/types';
 import { DeviceElectricalEnergyMeasurementCluster } from '../../device/cluster';
 import type { PairedNode, Endpoint } from '@project-chip/matter.js/device';
-import type { Cluster, DeviceGroupId } from '../../device/cluster';
 import { DeviceColorControlXYCluster } from '../../device/cluster';
+import { ConcentrationMeasurement } from '@matter/main/clusters';
 import { DeviceBooleanStateCluster } from '../../device/cluster';
+import { DeviceAirQualityCluster } from '../../device/cluster';
 import type { Switch } from '@matter/types/clusters/switch';
 import { EventEmitter } from '../../../lib/event-emitter';
 import type { LevelControl } from '@matter/main/clusters';
@@ -52,6 +63,7 @@ import type { ClusterClientObj } from '@matter/protocol';
 import type { Observable, Observer } from '@matter/main';
 import type { WritableAttribute } from '@matter/types';
 import { DeviceStatus } from '../../device/cluster';
+import { AirQuality } from '@matter/main/clusters';
 import { CombinedData } from '../../../lib/data';
 import { MappedData } from '../../../lib/data';
 import { Color } from '../../../lib/color';
@@ -483,6 +495,131 @@ class MatterTemperatureMeasurementCluster
 	);
 }
 
+class MatterAirQualityCluster
+	extends ConfigurableCluster<AirQuality.Cluster>
+	implements DeviceAirQualityCluster
+{
+	public getBaseCluster(): typeof DeviceAirQualityCluster {
+		return DeviceAirQualityCluster;
+	}
+
+	public airQuality = this._proxy.attributeGetter(
+		'airQuality',
+		(value) => value ?? AirQuality.AirQualityEnum.Unknown
+	);
+}
+
+class MatterRelativeHumidityMeasurementCluster
+	extends ConfigurableCluster<RelativeHumidityMeasurement.Cluster>
+	implements DeviceRelativeHumidityMeasurementCluster
+{
+	public getBaseCluster(): typeof DeviceRelativeHumidityMeasurementCluster {
+		return DeviceRelativeHumidityMeasurementCluster;
+	}
+
+	public relativeHumidity = this._proxy.attributeGetter('measuredValue', (value) => {
+		if (typeof value !== 'number') {
+			return 0;
+		}
+		const percentage = value / 100;
+		return percentage / 100;
+	});
+}
+
+function convertConcentrationMeasurementToPpm(
+	measurement: number,
+	unit: ConcentrationMeasurement.MeasurementUnit
+): number | undefined {
+	// Convert all units to PPM
+	// For CO₂: molecular weight = 44.01 g/mol, molar volume at 25°C = 24.45 L/mol
+	const CO2_MOLECULAR_WEIGHT = 44.01; // g/mol
+	const MOLAR_VOLUME_STP = 24.45; // L/mol at 25°C, 1 atm
+
+	// Type assertion to handle all MeasurementUnit enum values
+	switch (unit) {
+		case ConcentrationMeasurement.MeasurementUnit.Ppm:
+			// Already in PPM
+			return measurement;
+		case ConcentrationMeasurement.MeasurementUnit.Ppb:
+			// Parts per Billion to PPM: 1 PPM = 1000 PPB
+			return measurement / 1000;
+		case ConcentrationMeasurement.MeasurementUnit.Ppt:
+			// Parts per Trillion to PPM: 1 PPM = 1,000,000 PPT
+			return measurement / 1_000_000;
+		case ConcentrationMeasurement.MeasurementUnit.Mgm3:
+			// Milligram per m³ to PPM: PPM = (mg/m³ × molar_volume) / molecular_weight
+			return (measurement * MOLAR_VOLUME_STP) / CO2_MOLECULAR_WEIGHT;
+		case ConcentrationMeasurement.MeasurementUnit.Ugm3:
+			// Microgram per m³ to PPM: convert to mg/m³ first, then to PPM
+			return ((measurement / 1000) * MOLAR_VOLUME_STP) / CO2_MOLECULAR_WEIGHT;
+		case ConcentrationMeasurement.MeasurementUnit.Ngm3:
+			// Nanogram per m³ to PPM: convert to mg/m³ first, then to PPM
+			return ((measurement / 1_000_000) * MOLAR_VOLUME_STP) / CO2_MOLECULAR_WEIGHT;
+		case ConcentrationMeasurement.MeasurementUnit.Pm3:
+			// Particles per m³ - not directly convertible to PPM without particle size/density
+			return undefined;
+		case ConcentrationMeasurement.MeasurementUnit.Bqm3:
+			// Becquerel per m³ - radioactivity unit, not directly convertible to PPM
+			return undefined;
+		default:
+			return undefined;
+	}
+}
+
+class MatterCarbonDioxideConcentrationMeasurementWithNumericAndLevelIndicationCluster
+	extends ConfigurableCluster<CarbonDioxideConcentrationMeasurement.Complete>
+	implements DeviceCarbonDioxideConcentrationMeasurementWithNumericAndLevelIndicationCluster
+{
+	public getBaseCluster(): typeof DeviceCarbonDioxideConcentrationMeasurementWithNumericAndLevelIndicationCluster {
+		return DeviceCarbonDioxideConcentrationMeasurementWithNumericAndLevelIndicationCluster;
+	}
+
+	public getClusterVariant(): 'numeric+levelIndication' {
+		return 'numeric+levelIndication';
+	}
+
+	private _measurementUnit = this._proxy.attributeGetter('measurementUnit');
+	private _measuredValue = this._proxy.attributeGetter('measuredValue');
+	public concentration = new MappedData(
+		new CombinedData([this._measuredValue, this._measurementUnit]),
+		([measurement, unit]) =>
+			typeof measurement === 'number' && unit !== undefined
+				? convertConcentrationMeasurementToPpm(measurement, unit)
+				: undefined
+	);
+	public level = this._proxy.attributeGetter(
+		'levelValue',
+		(value) => value ?? ConcentrationMeasurement.LevelValue.Unknown
+	);
+}
+
+class MatterPm25ConcentrationMeasurementWithNumericAndLevelIndicationCluster
+	extends ConfigurableCluster<Pm25ConcentrationMeasurement.Complete>
+	implements DevicePm25ConcentrationMeasurementWithNumericAndLevelIndicationCluster
+{
+	public getBaseCluster(): typeof DevicePm25ConcentrationMeasurementWithNumericAndLevelIndicationCluster {
+		return DeviceCarbonDioxideConcentrationMeasurementWithNumericAndLevelIndicationCluster;
+	}
+
+	public getClusterVariant(): 'numeric+levelIndication' {
+		return 'numeric+levelIndication';
+	}
+
+	private _measurementUnit = this._proxy.attributeGetter('measurementUnit');
+	private _measuredValue = this._proxy.attributeGetter('measuredValue');
+	public concentration = new MappedData(
+		new CombinedData([this._measuredValue, this._measurementUnit]),
+		([measurement, unit]) =>
+			typeof measurement === 'number' && unit !== undefined
+				? convertConcentrationMeasurementToPpm(measurement, unit)
+				: undefined
+	);
+	public level = this._proxy.attributeGetter(
+		'levelValue',
+		(value) => value ?? ConcentrationMeasurement.LevelValue.Unknown
+	);
+}
+
 class MatterGroupsCluster
 	extends ConfigurableCluster<Groups.Cluster>
 	implements DeviceGroupsCluster
@@ -847,6 +984,17 @@ export const MATTER_CLUSTERS = {
 		cluster: ClusterClientObj
 	): MatterIlluminanceMeasurementCluster =>
 		new MatterIlluminanceMeasurementCluster(node, endpoint, cluster),
+	[DeviceClusterName.AIR_QUALITY]: (
+		node: PairedNode,
+		endpoint: Endpoint,
+		cluster: ClusterClientObj
+	): MatterAirQualityCluster => new MatterAirQualityCluster(node, endpoint, cluster),
+	[DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT]: (
+		node: PairedNode,
+		endpoint: Endpoint,
+		cluster: ClusterClientObj
+	): MatterRelativeHumidityMeasurementCluster =>
+		new MatterRelativeHumidityMeasurementCluster(node, endpoint, cluster),
 	[DeviceClusterName.TEMPERATURE_MEASUREMENT]: (
 		node: PairedNode,
 		endpoint: Endpoint,
@@ -879,6 +1027,58 @@ export const MATTER_CLUSTERS = {
 			return null;
 		}
 		return new MatterElectricalEnergyCumulativePeriodicImportedMeasurementCluster(
+			node,
+			endpoint,
+			cluster
+		);
+	},
+	[DeviceClusterName.CARBON_DIOXIDE_CONCENTRATION_MEASUREMENT]: async (
+		node: PairedNode,
+		endpoint: Endpoint,
+		cluster: ClusterClientObj
+	): Promise<MatterCarbonDioxideConcentrationMeasurementWithNumericAndLevelIndicationCluster | null> => {
+		const featureMap = await (
+			cluster as unknown as ClusterClientObj<CarbonDioxideConcentrationMeasurement.Complete>
+		).attributes.featureMap.get();
+		if (!featureMap) {
+			console.error(
+				`Carbon dioxide concentration measurement cluster on endpoint ${endpoint.number} has no feature map`
+			);
+			return null;
+		}
+		if (!featureMap.numericMeasurement || !featureMap.levelIndication) {
+			console.error(
+				`Carbon dioxide concentration measurement cluster on endpoint ${endpoint.number} is not a numeric and level indication measurement cluster`
+			);
+			return null;
+		}
+		return new MatterCarbonDioxideConcentrationMeasurementWithNumericAndLevelIndicationCluster(
+			node,
+			endpoint,
+			cluster
+		);
+	},
+	[DeviceClusterName.PM_2_5_CONCENTRATION_MEASUREMENT]: async (
+		node: PairedNode,
+		endpoint: Endpoint,
+		cluster: ClusterClientObj
+	): Promise<MatterPm25ConcentrationMeasurementWithNumericAndLevelIndicationCluster | null> => {
+		const featureMap = await (
+			cluster as unknown as ClusterClientObj<Pm25ConcentrationMeasurement.Complete>
+		).attributes.featureMap.get();
+		if (!featureMap) {
+			console.error(
+				`PM 2.5 concentration measurement cluster on endpoint ${endpoint.number} has no feature map`
+			);
+			return null;
+		}
+		if (!featureMap.numericMeasurement || !featureMap.levelIndication) {
+			console.error(
+				`PM 2.5 concentration measurement cluster on endpoint ${endpoint.number} is not a numeric and level indication measurement cluster`
+			);
+			return null;
+		}
+		return new MatterPm25ConcentrationMeasurementWithNumericAndLevelIndicationCluster(
 			node,
 			endpoint,
 			cluster
@@ -958,4 +1158,6 @@ export const IGNORED_MATTER_CLUSTERS = [
 	'LocalizationConfiguration',
 	'TimeFormatLocalization',
 	'ThreadNetworkDiagnostics',
+	'IcdManagement',
+	'TimeSynchronization',
 ];

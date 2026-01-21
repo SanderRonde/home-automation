@@ -1,3 +1,4 @@
+import type { AirQuality, ConcentrationMeasurement } from '@matter/main/clusters';
 import type { EventEmitter } from '../../lib/event-emitter';
 import { type Actions } from '@matter/main/clusters';
 import type { Color } from '../../lib/color';
@@ -43,6 +44,9 @@ export enum DeviceClusterName {
 	ILLUMINANCE_MEASUREMENT = 'IlluminanceMeasurement',
 	COLOR_CONTROL = 'ColorControl',
 	ACTIONS = 'Actions',
+	AIR_QUALITY = 'AirQuality',
+	CARBON_DIOXIDE_CONCENTRATION_MEASUREMENT = 'CarbonDioxideConcentrationMeasurement',
+	PM_2_5_CONCENTRATION_MEASUREMENT = 'Pm25ConcentrationMeasurement',
 	THERMOSTAT = 'Thermostat',
 	ELECTRICAL_ENERGY_MEASUREMENT = 'ElectricalEnergyMeasurement',
 	ELECTRICAL_POWER_MEASUREMENT = 'ElectricalPowerMeasurement',
@@ -215,6 +219,38 @@ export abstract class DeviceActionsCluster extends Cluster {
 
 	public abstract actionList: Data<DeviceAction[]>;
 	public abstract executeAction(args: { actionId: number }): Promise<void>;
+}
+
+export abstract class DeviceAirQualityCluster extends Cluster {
+	public static clusterName = DeviceClusterName.AIR_QUALITY;
+
+	public abstract airQuality: Data<AirQuality.AirQualityEnum | undefined>;
+}
+
+export abstract class DeviceCarbonDioxideConcentrationMeasurementCluster extends Cluster {
+	public static clusterName = DeviceClusterName.CARBON_DIOXIDE_CONCENTRATION_MEASUREMENT;
+}
+
+export abstract class DeviceCarbonDioxideConcentrationMeasurementWithNumericAndLevelIndicationCluster extends DeviceCarbonDioxideConcentrationMeasurementCluster {
+	public abstract getClusterVariant(): 'numeric+levelIndication';
+
+	/** In parts per million */
+	public abstract concentration: Data<number | undefined>;
+
+	public abstract level: Data<ConcentrationMeasurement.LevelValue>;
+}
+
+export abstract class DevicePm25ConcentrationMeasurementCluster extends Cluster {
+	public static clusterName = DeviceClusterName.PM_2_5_CONCENTRATION_MEASUREMENT;
+}
+
+export abstract class DevicePm25ConcentrationMeasurementWithNumericAndLevelIndicationCluster extends DevicePm25ConcentrationMeasurementCluster {
+	public abstract getClusterVariant(): 'numeric+levelIndication';
+
+	/** In parts per million */
+	public abstract concentration: Data<number | undefined>;
+
+	public abstract level: Data<ConcentrationMeasurement.LevelValue>;
 }
 
 export enum ThermostatMode {
