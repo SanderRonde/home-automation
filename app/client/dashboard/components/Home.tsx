@@ -828,6 +828,13 @@ export const Home = React.memo((props: HomeProps): React.ReactNode => {
 						width: props.kiosk ? '100%' : 'auto',
 					}}
 				>
+					<EnergyDisplay
+						expanded={energyExpanded}
+						onExpandedChange={(expanded) => {
+							setEnergyExpanded(expanded);
+							setTemperatureExpanded(false);
+						}}
+					/>
 					<TemperatureDisplay
 						expanded={temperatureExpanded}
 						onExpandedChange={(expanded) => {
@@ -835,13 +842,6 @@ export const Home = React.memo((props: HomeProps): React.ReactNode => {
 							setEnergyExpanded(false);
 						}}
 						kiosk={props.kiosk}
-					/>
-					<EnergyDisplay
-						expanded={energyExpanded}
-						onExpandedChange={(expanded) => {
-							setEnergyExpanded(expanded);
-							setTemperatureExpanded(false);
-						}}
 					/>
 				</Box>
 				<HomeLayoutView
