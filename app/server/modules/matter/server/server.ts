@@ -11,8 +11,8 @@ import { Crypto, Environment, LogLevel, Logger, StandardCrypto } from '@matter/m
 import { ManualPairingCodeCodec, QrPairingCodeCodec } from '@matter/main/types';
 import type { NodeCommissioningOptions } from '@project-chip/matter.js';
 import { CommissioningController } from '@project-chip/matter.js';
+import { logReady, logTag } from '../../../lib/logging/logger';
 import type { CommissionableDevice } from '@matter/protocol';
-import { logTag } from '../../../lib/logging/logger';
 import { DB_FOLDER } from '../../../lib/constants';
 import type { EndpointNumber } from '@matter/main';
 import type { NodeId } from '@matter/main/types';
@@ -298,11 +298,17 @@ export class MatterServer extends Disposable {
 	}
 
 	async start(): Promise<void> {
+		logTag('matter', 'magenta', 'starting matter server');
 		await this.commissioningController.start();
 
+		logTag('matter', 'magenta', 'watching node ids');
 		await this._watchNodeIds(this.commissioningController.getCommissionedNodes());
 		await new Promise((resolve) => setTimeout(resolve, 5000));
-		await this.#updateDevices(this.listDevices());
+		logTag('matter', 'magenta', 'listing devices');
+		const devices = this.listDevices();
+		logTag('matter', 'magenta', 'updating devices');
+		await this.#updateDevices(devices);
+		logTag('matter', 'magenta', 'matter server started');
 	}
 
 	async discoverCommissionableDevices(
@@ -420,6 +426,7 @@ async function main() {
 	await controller.start();
 
 	if (process.argv.includes('--list-devices')) {
+		logReady();
 		const devices = controller.listDevices();
 		// eslint-disable-next-line no-console
 		console.log('devices:', devices);
