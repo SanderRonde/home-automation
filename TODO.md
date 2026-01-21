@@ -42,4 +42,4 @@
 - [ ] Local Tuya
 - [x] Smarter heating - when staying up late, keep heating
 - [x] Don't heat when not home - but do somehow pre-heat before getting home
-- [ ] Show air state on 2D view
+- [x] Show air state on 2D view
