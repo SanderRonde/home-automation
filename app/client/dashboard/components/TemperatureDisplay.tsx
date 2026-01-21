@@ -2,8 +2,6 @@ import {
 	DeviceThermostat as DeviceThermostatIcon,
 	ExpandMore as ExpandMoreIcon,
 	LocalFireDepartment as FireIcon,
-	Add as AddIcon,
-	Remove as RemoveIcon,
 } from '@mui/icons-material';
 import {
 	Box,
@@ -13,11 +11,10 @@ import {
 	CircularProgress,
 	IconButton,
 	Collapse,
-	Slider,
 	Chip,
 } from '@mui/material';
 import type { TemperatureWebsocketServerMessage } from '../../../server/modules/temperature/routing';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import useWebsocket from '../../shared/resilient-socket';
 import { apiGet, apiPost } from '../../lib/fetch';
 
@@ -42,9 +39,7 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 	const [thermostatData, setThermostatData] = useState<ThermostatData | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [newTarget, setNewTarget] = useState<number | null>(null);
-	const [updating, setUpdating] = useState(false);
 	const [averageTarget, setAverageTarget] = useState<number | null>(null);
-	const [targetControlsOpen, setTargetControlsOpen] = useState(false);
 
 	const [activeState, setActiveState] = useState<{
 		state: { id: string; name: string } | null;
@@ -112,80 +107,6 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 
 	const handleToggle = () => {
 		props.onExpandedChange(!props.expanded);
-	};
-
-	useEffect(() => {
-		if (!props.expanded) {
-			setTargetControlsOpen(false);
-		}
-	}, [props.expanded]);
-
-	// Debounced temperature update
-	const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const pendingTargetRef = useRef<number | null>(null);
-
-	const sendTemperatureUpdate = useCallback(async (targetTemp: number) => {
-		setUpdating(true);
-		try {
-			const response = await apiPost(
-				'temperature',
-				'/central-thermostat',
-				{},
-				{ targetTemperature: targetTemp }
-			);
-			if (!response.ok) {
-				console.error('Failed to update target temperature');
-			}
-			// WebSocket will handle state updates automatically
-		} catch (error) {
-			console.error('Failed to update target temperature:', error);
-		} finally {
-			setUpdating(false);
-		}
-	}, []);
-
-	const debouncedSetTemperature = useCallback(
-		(targetTemp: number) => {
-			pendingTargetRef.current = targetTemp;
-
-			if (debounceTimerRef.current) {
-				clearTimeout(debounceTimerRef.current);
-			}
-
-			debounceTimerRef.current = setTimeout(() => {
-				if (pendingTargetRef.current !== null) {
-					void sendTemperatureUpdate(pendingTargetRef.current);
-					pendingTargetRef.current = null;
-				}
-			}, 1000);
-		},
-		[sendTemperatureUpdate]
-	);
-
-	// Cleanup debounce timer on unmount
-	useEffect(() => {
-		return () => {
-			if (debounceTimerRef.current) {
-				clearTimeout(debounceTimerRef.current);
-			}
-		};
-	}, []);
-
-	const handleTargetChange = (delta: number) => {
-		if (newTarget === null) {
-			return;
-		}
-
-		const updatedTarget = Math.round((newTarget + delta) * 2) / 2; // Round to 0.5
-		const clampedTarget = Math.max(5, Math.min(30, updatedTarget));
-		setNewTarget(clampedTarget);
-		debouncedSetTemperature(clampedTarget);
-	};
-
-	const handleSliderChange = (_event: Event, value: number | number[]) => {
-		const targetValue = value as number;
-		setNewTarget(targetValue);
-		debouncedSetTemperature(targetValue);
 	};
 
 	const formatTemp = (temp: number | null | undefined): string => {
@@ -345,120 +266,7 @@ export const TemperatureDisplay = (props: TemperatureDisplayProps): JSX.Element 
 					{/* Expanded controls */}
 					<Collapse in={props.expanded && hasThermostat}>
 						{props.expanded && (
-							<Box
-								sx={{
-									mt: 2,
-									pt: 2,
-									borderTop: '1px solid',
-									borderColor: 'divider',
-								}}
-							>
-								{/* Target temperature controls - hidden in kiosk mode */}
-								{!props.kiosk && (
-									<Box sx={{ mb: 1 }}>
-										<Box
-											sx={{
-												display: 'flex',
-												alignItems: 'center',
-												gap: 1,
-											}}
-										>
-											<Typography
-												variant="caption"
-												sx={{
-													color: 'text.secondary',
-													display: 'block',
-												}}
-											>
-												Target temperature
-											</Typography>
-											<Box
-												sx={{
-													display: 'flex',
-													alignItems: 'center',
-													gap: 0.5,
-													ml: 'auto',
-												}}
-											>
-												<IconButton
-													size="small"
-													onClick={() => void handleTargetChange(-0.5)}
-													disabled={
-														updating ||
-														newTarget === null ||
-														newTarget <= 5
-													}
-													sx={{ p: 0.5 }}
-												>
-													<RemoveIcon fontSize="small" />
-												</IconButton>
-												<Typography
-													variant="body2"
-													sx={{
-														fontWeight: 600,
-														minWidth: 40,
-														textAlign: 'center',
-													}}
-												>
-													{newTarget !== null ? `${newTarget}°` : '--°'}
-												</Typography>
-												<IconButton
-													size="small"
-													onClick={() => void handleTargetChange(0.5)}
-													disabled={
-														updating ||
-														newTarget === null ||
-														newTarget >= 30
-													}
-													sx={{ p: 0.5 }}
-												>
-													<AddIcon fontSize="small" />
-												</IconButton>
-												{updating && <CircularProgress size={14} />}
-												<IconButton
-													size="small"
-													onClick={() => {
-														setTargetControlsOpen(
-															(previous) => !previous
-														);
-													}}
-													sx={{
-														p: 0.5,
-														transition: 'transform 0.2s ease',
-														transform: targetControlsOpen
-															? 'rotate(180deg)'
-															: 'rotate(0deg)',
-													}}
-													aria-label="Toggle target temperature slider"
-												>
-													<ExpandMoreIcon fontSize="small" />
-												</IconButton>
-											</Box>
-										</Box>
-										<Collapse in={targetControlsOpen}>
-											<Box sx={{ mt: 1, px: 0.5 }}>
-												<Slider
-													value={newTarget ?? 20}
-													min={5}
-													max={30}
-													step={0.5}
-													onChange={handleSliderChange}
-													disabled={updating}
-													valueLabelDisplay="auto"
-													valueLabelFormat={(v) => `${v}°`}
-													size="small"
-													sx={{
-														'& .MuiSlider-thumb': {
-															width: 18,
-															height: 18,
-														},
-													}}
-												/>
-											</Box>
-										</Collapse>
-									</Box>
-								)}
-
+							<Box>
 								{/* Temperature States Selector */}
 								{allStates.length > 0 && (
 									<Box
