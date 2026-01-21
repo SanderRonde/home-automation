@@ -7,7 +7,8 @@ import type {
 	DashboardDeviceClusterWindowCovering,
 	DashboardDeviceClusterColorControlXY,
 	DashboardDeviceClusterActions,
-	DashboardDeviceClusterSensorGroup,
+	DashboardDeviceClusterOccupancySensorGroup,
+	DashboardDeviceClusterAirQualityGroup,
 	DashboardDeviceClusterThermostat,
 	DeviceListWithValuesResponse,
 	DashboardDeviceClusterSwitch,
@@ -396,6 +397,10 @@ interface BooleanStateEvent {
 	timestamp: number;
 }
 
+interface ProcessedBooleanStateEvent extends BooleanStateEvent {
+	duration?: number; // Duration in ms for "door opened" events
+}
+
 interface BooleanStateDetailProps
 	extends DeviceDetailBaseProps<DashboardDeviceClusterBooleanState> {}
 
@@ -473,7 +478,54 @@ const BooleanStateDetail = (props: BooleanStateDetailProps): JSX.Element => {
 		});
 	};
 
-	const currentState = history.length > 0 ? history[0].state : props.cluster.state;
+	const formatDuration = (ms: number): string => {
+		const minutes = Math.round(ms / 60000);
+		if (minutes < 1) {
+			return 'less than a minute';
+		}
+		if (minutes === 1) {
+			return '1 minute';
+		}
+		if (minutes < 60) {
+			return `${minutes} minutes`;
+		}
+		const hours = Math.floor(minutes / 60);
+		const remainingMins = minutes % 60;
+		if (remainingMins === 0) {
+			return `${hours} hour${hours > 1 ? 's' : ''}`;
+		}
+		return `${hours}h ${remainingMins}m`;
+	};
+
+	// Process history to deduplicate consecutive same-state events and calculate open duration
+	const processedHistory = React.useMemo(() => {
+		const deduplicated: ProcessedBooleanStateEvent[] = [];
+		for (let i = 0; i < history.length; i++) {
+			const event = history[i];
+			// Skip if same state as previous (history is DESC order, so we're going backwards in time)
+			if (
+				deduplicated.length > 0 &&
+				deduplicated[deduplicated.length - 1].state === event.state
+			) {
+				continue;
+			}
+			// For "door opened" events, calculate duration until closed
+			let duration: number | undefined;
+			if (!event.state) {
+				// door opened (state=false)
+				// Find the most recent "door closed" event we've added (previous in array since DESC)
+				const closedEvent = deduplicated.find((e) => e.state === true);
+				if (closedEvent) {
+					duration = closedEvent.timestamp - event.timestamp;
+				}
+			}
+			deduplicated.push({ ...event, duration });
+		}
+		return deduplicated;
+	}, [history]);
+
+	const currentState =
+		processedHistory.length > 0 ? processedHistory[0].state : props.cluster.state;
 	const isOpen = !currentState;
 
 	return (
@@ -628,7 +680,7 @@ const BooleanStateDetail = (props: BooleanStateDetailProps): JSX.Element => {
 									>
 										History
 									</Typography>
-									{history.length === 0 ? (
+									{processedHistory.length === 0 ? (
 										<Typography color="text.secondary">
 											No history available
 										</Typography>
@@ -639,7 +691,7 @@ const BooleanStateDetail = (props: BooleanStateDetailProps): JSX.Element => {
 											animate="animate"
 										>
 											<List sx={{ py: 1 }}>
-												{history.map((event, index) => (
+												{processedHistory.map((event, index) => (
 													<motion.div key={index} variants={staggerItem}>
 														<ListItem
 															sx={{
@@ -664,7 +716,9 @@ const BooleanStateDetail = (props: BooleanStateDetailProps): JSX.Element => {
 																primary={
 																	event.state
 																		? 'Door Closed'
-																		: 'Door Opened'
+																		: event.duration
+																			? `Door Opened for ${formatDuration(event.duration)}`
+																			: 'Door Opened'
 																}
 																secondary={formatTimestamp(
 																	event.timestamp
@@ -1715,9 +1769,10 @@ const IlluminanceDetail = (props: IlluminanceDetailProps): JSX.Element => {
 	);
 };
 
-interface SensorGroupDetailProps extends DeviceDetailBaseProps<DashboardDeviceClusterSensorGroup> {}
+interface OccupancySensorGroupDetailProps
+	extends DeviceDetailBaseProps<DashboardDeviceClusterOccupancySensorGroup> {}
 
-const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
+const OccupancySensorGroupDetail = (props: OccupancySensorGroupDetailProps): JSX.Element => {
 	const [timeframe, setTimeframe] = useState<Timeframe>('24h');
 	const [loading, setLoading] = useState(false);
 	const roomColor = props.device.roomColor || '#555';
@@ -2349,6 +2404,482 @@ const SensorGroupDetail = (props: SensorGroupDetailProps): JSX.Element => {
 						</Card>
 					</motion.div>
 				)}
+			</Box>
+		</motion.div>
+	);
+};
+
+interface CO2Event {
+	concentration: number;
+	level: number;
+	timestamp: number;
+}
+
+interface AirQualityGroupDetailProps
+	extends DeviceDetailBaseProps<DashboardDeviceClusterAirQualityGroup> {}
+
+/**
+ * Get air quality level info
+ * AirQuality enum: Unknown=0, Good=1, Fair=2, Moderate=3, Poor=4, VeryPoor=5, ExtremelyPoor=6
+ * CO2/PM2.5 level: Unknown=0, Low=1, Medium=2, High=3, Critical=4
+ */
+const getAirQualityLevelInfo = (
+	airQuality?: number,
+	co2Level?: number,
+	pm25Level?: number
+): { label: string; color: string; description: string } => {
+	// Determine worst level from available sensors
+	let worstLevel = 0;
+
+	// Map AirQuality enum to a 0-4 scale
+	if (airQuality !== undefined && airQuality > 0) {
+		const mappedLevel = airQuality <= 1 ? 1 : airQuality <= 3 ? 2 : airQuality <= 4 ? 3 : 4;
+		worstLevel = Math.max(worstLevel, mappedLevel);
+	}
+
+	if (co2Level !== undefined && co2Level > 0) {
+		worstLevel = Math.max(worstLevel, co2Level);
+	}
+
+	if (pm25Level !== undefined && pm25Level > 0) {
+		worstLevel = Math.max(worstLevel, pm25Level);
+	}
+
+	switch (worstLevel) {
+		case 1:
+			return {
+				label: 'Good',
+				color: '#10b981',
+				description: 'Air quality is satisfactory',
+			};
+		case 2:
+			return {
+				label: 'Moderate',
+				color: '#f59e0b',
+				description: 'Air quality is acceptable',
+			};
+		case 3:
+			return {
+				label: 'Poor',
+				color: '#ef4444',
+				description: 'May cause discomfort for sensitive groups',
+			};
+		case 4:
+			return {
+				label: 'Critical',
+				color: '#7c2d12',
+				description: 'Everyone may experience health effects',
+			};
+		default:
+			return { label: 'Unknown', color: '#6b7280', description: 'No data available' };
+	}
+};
+
+const getCO2LevelLabel = (level: number): string => {
+	switch (level) {
+		case 1:
+			return 'Good';
+		case 2:
+			return 'Moderate';
+		case 3:
+			return 'Poor';
+		case 4:
+			return 'Critical';
+		default:
+			return 'Unknown';
+	}
+};
+
+const AirQualityGroupDetail = (props: AirQualityGroupDetailProps): JSX.Element => {
+	const [timeframe, setTimeframe] = useState<Timeframe>('24h');
+	const [loading, setLoading] = useState(false);
+	const [co2History, setCo2History] = useState<CO2Event[]>([]);
+	const roomColor = props.device.roomColor || '#555';
+
+	const airQuality = props.cluster.mergedClusters[DeviceClusterName.AIR_QUALITY];
+	const co2 =
+		props.cluster.mergedClusters[DeviceClusterName.CARBON_DIOXIDE_CONCENTRATION_MEASUREMENT];
+	const pm25 = props.cluster.mergedClusters[DeviceClusterName.PM_2_5_CONCENTRATION_MEASUREMENT];
+
+	const deviceId = props.device.uniqueId;
+	const hasCO2 = !!co2;
+
+	// Track previous value to detect changes
+	const prevCO2Ref = React.useRef(co2?.concentration);
+
+	const {
+		label: overallLabel,
+		color: overallColor,
+		description,
+	} = getAirQualityLevelInfo(airQuality?.airQuality, co2?.level, pm25?.level);
+
+	const fetchHistory = React.useCallback(async () => {
+		if (!hasCO2) {
+			return;
+		}
+
+		try {
+			setLoading(true);
+			const response = await apiGet('device', '/co2/:deviceId/:timeframe', {
+				deviceId: deviceId,
+				timeframe: TIMEFRAME_MS[timeframe].toString(),
+			});
+			if (response.ok) {
+				const data = await response.json();
+				setCo2History(data.history || []);
+			}
+		} catch (err) {
+			console.error('Failed to fetch CO2 history:', err);
+		} finally {
+			setLoading(false);
+		}
+	}, [deviceId, timeframe, hasCO2]);
+
+	useEffect(() => {
+		void fetchHistory();
+	}, [fetchHistory]);
+
+	// Refetch history when CO2 value changes significantly (>10 ppm)
+	React.useEffect(() => {
+		if (hasCO2 && co2?.concentration !== undefined) {
+			const co2Diff = Math.abs((prevCO2Ref.current ?? 0) - co2.concentration);
+			if (co2Diff >= 10) {
+				prevCO2Ref.current = co2.concentration;
+				void fetchHistory();
+			}
+		}
+	}, [co2?.concentration, hasCO2, fetchHistory]);
+
+	const co2ChartData = hasCO2
+		? {
+				labels: co2History
+					.slice()
+					.reverse()
+					.map((e) => {
+						const date = new Date(e.timestamp);
+						if (timeframe === '1h' || timeframe === '6h' || timeframe === '24h') {
+							return date.toLocaleTimeString('en-US', {
+								hour: '2-digit',
+								minute: '2-digit',
+							});
+						}
+						return date.toLocaleDateString('en-US', {
+							month: 'short',
+							day: 'numeric',
+							hour: '2-digit',
+						});
+					}),
+				datasets: [
+					{
+						label: 'CO2 (ppm)',
+						data: co2History
+							.slice()
+							.reverse()
+							.map((e) => e.concentration),
+						borderColor: 'rgb(59, 130, 246)',
+						backgroundColor: 'rgba(59, 130, 246, 0.1)',
+						tension: 0.4,
+						fill: true,
+					},
+				],
+			}
+		: null;
+
+	return (
+		<motion.div
+			variants={pageVariants}
+			initial="initial"
+			animate="animate"
+			exit="exit"
+			style={{ height: '100%' }}
+		>
+			<Box
+				sx={{
+					backgroundColor: roomColor,
+					py: 1.5,
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
+					position: 'relative',
+					boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+				}}
+			>
+				<IconButton style={{ position: 'absolute', left: 0 }} onClick={props.onExit}>
+					<ArrowBackIcon style={{ fill: '#2f2f2f' }} />
+				</IconButton>
+				<Typography
+					style={{ color: '#2f2f2f', fontWeight: 600, letterSpacing: '-0.02em' }}
+					variant="h6"
+				>
+					Air Quality
+				</Typography>
+			</Box>
+
+			<Box sx={{ p: { xs: 2, sm: 3 } }}>
+				{/* Summary Card */}
+				<motion.div variants={cardVariants}>
+					<Card
+						sx={{
+							mb: 2,
+							background: `linear-gradient(135deg, ${overallColor} 0%, ${overallColor}dd 100%)`,
+							color: 'white',
+							borderRadius: 3,
+						}}
+					>
+						<CardContent>
+							<Box
+								sx={{
+									display: 'flex',
+									flexDirection: 'column',
+									alignItems: 'center',
+									textAlign: 'center',
+									py: 2,
+								}}
+							>
+								<Typography variant="h3" sx={{ fontWeight: 'bold', mb: 1 }}>
+									{overallLabel}
+								</Typography>
+								<Typography variant="body1" sx={{ opacity: 0.9, mb: 2 }}>
+									{description}
+								</Typography>
+
+								{/* Individual Sensor Values */}
+								<Box
+									sx={{
+										display: 'flex',
+										gap: 3,
+										flexWrap: 'wrap',
+										justifyContent: 'center',
+									}}
+								>
+									{co2 && (
+										<Box sx={{ textAlign: 'center' }}>
+											<Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+												{co2.concentration !== undefined
+													? Math.round(co2.concentration)
+													: '--'}
+											</Typography>
+											<Typography variant="caption" sx={{ opacity: 0.8 }}>
+												CO2 (ppm)
+											</Typography>
+											<Chip
+												label={getCO2LevelLabel(co2.level)}
+												size="small"
+												sx={{
+													backgroundColor: 'rgba(255,255,255,0.2)',
+													color: 'white',
+													ml: 1,
+												}}
+											/>
+										</Box>
+									)}
+									{pm25 && (
+										<Box sx={{ textAlign: 'center' }}>
+											<Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+												{pm25.concentration !== undefined
+													? pm25.concentration.toFixed(1)
+													: '--'}
+											</Typography>
+											<Typography variant="caption" sx={{ opacity: 0.8 }}>
+												PM2.5 (µg/m³)
+											</Typography>
+											<Chip
+												label={getCO2LevelLabel(pm25.level)}
+												size="small"
+												sx={{
+													backgroundColor: 'rgba(255,255,255,0.2)',
+													color: 'white',
+													ml: 1,
+												}}
+											/>
+										</Box>
+									)}
+								</Box>
+							</Box>
+						</CardContent>
+					</Card>
+				</motion.div>
+
+				{/* Timeframe Selector */}
+				{hasCO2 && (
+					<motion.div variants={cardVariants}>
+						<ToggleButtonGroup
+							value={timeframe}
+							exclusive
+							onChange={(_e, newTimeframe) => {
+								if (newTimeframe) {
+									setTimeframe(newTimeframe as Timeframe);
+								}
+							}}
+							size="small"
+							fullWidth
+							sx={{ mb: 2 }}
+						>
+							<ToggleButton value="1h">1h</ToggleButton>
+							<ToggleButton value="6h">6h</ToggleButton>
+							<ToggleButton value="24h">24h</ToggleButton>
+							<ToggleButton value="1week">1 week</ToggleButton>
+						</ToggleButtonGroup>
+					</motion.div>
+				)}
+
+				{/* CO2 Chart */}
+				{hasCO2 && (
+					<motion.div variants={cardVariants}>
+						<Card sx={{ mb: 2, borderRadius: 3 }}>
+							<CardContent>
+								<Typography variant="h6" sx={{ mb: 2 }}>
+									CO2 History
+								</Typography>
+								{loading ? (
+									<Box
+										sx={{
+											display: 'flex',
+											justifyContent: 'center',
+											py: 4,
+										}}
+									>
+										<CircularProgress />
+									</Box>
+								) : co2ChartData && co2History.length > 0 ? (
+									<Box
+										sx={{
+											height: 250,
+											background:
+												'linear-gradient(180deg, transparent 0%, rgba(59, 130, 246, 0.05) 100%)',
+											borderRadius: 2,
+											p: 1,
+										}}
+									>
+										<Line
+											data={co2ChartData}
+											options={{
+												responsive: true,
+												maintainAspectRatio: false,
+												plugins: {
+													legend: {
+														display: false,
+													},
+													tooltip: {
+														mode: 'index',
+														intersect: false,
+													},
+												},
+												scales: {
+													x: {
+														display: true,
+														grid: {
+															display: false,
+														},
+														ticks: {
+															maxTicksLimit: 8,
+														},
+													},
+													y: {
+														display: true,
+														grid: {
+															color: 'rgba(0, 0, 0, 0.08)',
+														},
+														suggestedMin:
+															Math.min(
+																...co2History.map(
+																	(e) => e.concentration
+																)
+															) - 50,
+														suggestedMax:
+															Math.max(
+																...co2History.map(
+																	(e) => e.concentration
+																)
+															) + 50,
+													},
+												},
+												interaction: {
+													mode: 'nearest',
+													axis: 'x',
+													intersect: false,
+												},
+											}}
+										/>
+									</Box>
+								) : (
+									<Typography
+										variant="body2"
+										color="text.secondary"
+										sx={{ textAlign: 'center', py: 4 }}
+									>
+										No CO2 data available for this timeframe
+									</Typography>
+								)}
+							</CardContent>
+						</Card>
+					</motion.div>
+				)}
+
+				{/* CO2 Level Legend */}
+				<motion.div variants={cardVariants}>
+					<Card sx={{ borderRadius: 3 }}>
+						<CardContent>
+							<Typography variant="h6" sx={{ mb: 2 }}>
+								Air Quality Levels
+							</Typography>
+							<Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+								<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+									<Box
+										sx={{
+											width: 16,
+											height: 16,
+											borderRadius: 1,
+											backgroundColor: '#10b981',
+										}}
+									/>
+									<Typography variant="body2">
+										<strong>Good</strong> - CO2 &lt; 1000 ppm
+									</Typography>
+								</Box>
+								<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+									<Box
+										sx={{
+											width: 16,
+											height: 16,
+											borderRadius: 1,
+											backgroundColor: '#f59e0b',
+										}}
+									/>
+									<Typography variant="body2">
+										<strong>Moderate</strong> - CO2 1000-2000 ppm
+									</Typography>
+								</Box>
+								<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+									<Box
+										sx={{
+											width: 16,
+											height: 16,
+											borderRadius: 1,
+											backgroundColor: '#ef4444',
+										}}
+									/>
+									<Typography variant="body2">
+										<strong>Poor</strong> - CO2 2000-5000 ppm
+									</Typography>
+								</Box>
+								<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+									<Box
+										sx={{
+											width: 16,
+											height: 16,
+											borderRadius: 1,
+											backgroundColor: '#7c2d12',
+										}}
+									/>
+									<Typography variant="body2">
+										<strong>Critical</strong> - CO2 &gt; 5000 ppm
+									</Typography>
+								</Box>
+							</Box>
+						</CardContent>
+					</Card>
+				</motion.div>
 			</Box>
 		</motion.div>
 	);
@@ -3984,9 +4515,17 @@ export const DeviceDetail = (
 	if (props.cluster.name === DeviceClusterName.OCCUPANCY_SENSING) {
 		// Check if it's a sensor group or standalone occupancy sensor
 		if ('mergedClusters' in props.cluster) {
-			return <SensorGroupDetail {...props} cluster={props.cluster} />;
+			return <OccupancySensorGroupDetail {...props} cluster={props.cluster} />;
 		}
 		return <OccupancyDetail {...props} cluster={props.cluster} />;
+	}
+	if (props.cluster.name === DeviceClusterName.AIR_QUALITY) {
+		// Check if it's an air quality group
+		if ('mergedClusters' in props.cluster) {
+			return <AirQualityGroupDetail {...props} cluster={props.cluster} />;
+		}
+		// Standalone air quality sensor not yet supported
+		return null;
 	}
 	if (props.cluster.name === DeviceClusterName.BOOLEAN_STATE) {
 		return <BooleanStateDetail {...props} cluster={props.cluster} />;

@@ -36,11 +36,6 @@ import {
 	DeviceSwitchWithLongPressCluster,
 	DeviceSwitchWithMultiPressCluster,
 } from '../../device/cluster';
-import type {
-	Cluster,
-	DeviceGroupId,
-	DevicePm25ConcentrationMeasurementWithNumericAndLevelIndicationCluster,
-} from '../../device/cluster';
 import {
 	GroupId,
 	Status,
@@ -49,8 +44,10 @@ import {
 	type Command,
 	type Event,
 } from '@matter/types';
+import { DevicePm25ConcentrationMeasurementWithNumericAndLevelIndicationCluster } from '../../device/cluster';
 import { DeviceElectricalEnergyMeasurementCluster } from '../../device/cluster';
 import type { PairedNode, Endpoint } from '@project-chip/matter.js/device';
+import type { Cluster, DeviceGroupId } from '../../device/cluster';
 import { DeviceColorControlXYCluster } from '../../device/cluster';
 import { ConcentrationMeasurement } from '@matter/main/clusters';
 import { DeviceBooleanStateCluster } from '../../device/cluster';
@@ -598,7 +595,7 @@ class MatterPm25ConcentrationMeasurementWithNumericAndLevelIndicationCluster
 	implements DevicePm25ConcentrationMeasurementWithNumericAndLevelIndicationCluster
 {
 	public getBaseCluster(): typeof DevicePm25ConcentrationMeasurementWithNumericAndLevelIndicationCluster {
-		return DeviceCarbonDioxideConcentrationMeasurementWithNumericAndLevelIndicationCluster;
+		return DevicePm25ConcentrationMeasurementWithNumericAndLevelIndicationCluster;
 	}
 
 	public getClusterVariant(): 'numeric+levelIndication' {

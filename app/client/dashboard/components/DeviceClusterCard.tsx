@@ -9,9 +9,10 @@ import type {
 	DashboardDeviceClusterBooleanState,
 	DashboardDeviceClusterColorControlXY,
 	DashboardDeviceClusterActions,
-	DashboardDeviceClusterSensorGroup,
+	DashboardDeviceClusterOccupancySensorGroup,
 	DashboardDeviceClusterThermostat,
 	DashboardDeviceClusterSwitch,
+	DashboardDeviceClusterAirQualityGroup,
 	DeviceListWithValuesResponse,
 } from '../../../server/modules/device/routing';
 import {
@@ -1108,8 +1109,8 @@ const IlluminanceMeasurementCard = (
 	);
 };
 
-const SensorGroupCard = (
-	props: DeviceClusterCardBaseProps<DashboardDeviceClusterSensorGroup>
+const OccupancySensorGroupCard = (
+	props: DeviceClusterCardBaseProps<DashboardDeviceClusterOccupancySensorGroup>
 ): JSX.Element => {
 	const occupancy = props.cluster.mergedClusters[DeviceClusterName.OCCUPANCY_SENSING];
 	const temperature = props.cluster.mergedClusters[DeviceClusterName.TEMPERATURE_MEASUREMENT];
@@ -1268,6 +1269,181 @@ const SensorGroupCard = (
 							height: 12,
 							borderRadius: '50%',
 							backgroundColor: '#4caf50',
+							animation: 'pulse 2s infinite',
+							'@keyframes pulse': {
+								'0%, 100%': {
+									opacity: 1,
+								},
+								'50%': {
+									opacity: 0.5,
+								},
+							},
+						}}
+					/>
+				)}
+			</Box>
+		</DeviceClusterCardSkeleton>
+	);
+};
+
+/**
+ * Get air quality level label and color
+ * AirQuality enum: Unknown=0, Good=1, Fair=2, Moderate=3, Poor=4, VeryPoor=5, ExtremelyPoor=6
+ * CO2/PM2.5 level: Unknown=0, Low=1, Medium=2, High=3, Critical=4
+ */
+const getAirQualityInfo = (
+	airQuality?: number,
+	co2Level?: number,
+	pm25Level?: number
+): { label: string; color: string; indicatorColor: string; isAlert: boolean } => {
+	// Determine worst level from available sensors
+	let worstLevel = 0;
+
+	// Map AirQuality enum to a 0-4 scale
+	if (airQuality !== undefined && airQuality > 0) {
+		// Good=1 -> 1, Fair=2 -> 2, Moderate=3 -> 2, Poor=4 -> 3, VeryPoor=5 -> 4, ExtremelyPoor=6 -> 4
+		const mappedLevel = airQuality <= 1 ? 1 : airQuality <= 3 ? 2 : airQuality <= 4 ? 3 : 4;
+		worstLevel = Math.max(worstLevel, mappedLevel);
+	}
+
+	if (co2Level !== undefined && co2Level > 0) {
+		worstLevel = Math.max(worstLevel, co2Level);
+	}
+
+	if (pm25Level !== undefined && pm25Level > 0) {
+		worstLevel = Math.max(worstLevel, pm25Level);
+	}
+
+	switch (worstLevel) {
+		case 1:
+			return { label: 'Good', color: '#10b981', indicatorColor: '#34d399', isAlert: false };
+		case 2:
+			return {
+				label: 'Moderate',
+				color: '#f59e0b',
+				indicatorColor: '#fbbf24',
+				isAlert: false,
+			};
+		case 3:
+			return { label: 'Poor', color: '#ef4444', indicatorColor: '#f87171', isAlert: true };
+		case 4:
+			return {
+				label: 'Critical',
+				color: '#7c2d12',
+				indicatorColor: '#dc2626',
+				isAlert: true,
+			};
+		default:
+			return {
+				label: 'Unknown',
+				color: '#6b7280',
+				indicatorColor: '#9ca3af',
+				isAlert: false,
+			};
+	}
+};
+
+const AirQualityGroupCard = (
+	props: DeviceClusterCardBaseProps<DashboardDeviceClusterAirQualityGroup>
+): JSX.Element => {
+	const airQuality = props.cluster.mergedClusters[DeviceClusterName.AIR_QUALITY];
+	const co2 =
+		props.cluster.mergedClusters[DeviceClusterName.CARBON_DIOXIDE_CONCENTRATION_MEASUREMENT];
+	const pm25 = props.cluster.mergedClusters[DeviceClusterName.PM_2_5_CONCENTRATION_MEASUREMENT];
+
+	const { label, color, indicatorColor, isAlert } = getAirQualityInfo(
+		airQuality?.airQuality,
+		co2?.level,
+		pm25?.level
+	);
+
+	return (
+		<DeviceClusterCardSkeleton
+			{...props}
+			cardBackground={color}
+			onPress={() => {
+				props.pushDetailView({
+					type: 'device',
+					deviceId: props.device.uniqueId,
+					clusterName: props.cluster.name,
+				});
+			}}
+		>
+			<Box
+				sx={{
+					display: 'flex',
+					alignItems: 'center',
+					gap: 2,
+				}}
+			>
+				<Box
+					sx={{
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						background: 'rgba(255, 255, 255, 0.2)',
+						borderRadius: '50%',
+						width: 48,
+						height: 48,
+						fontSize: '1.5rem',
+						color: 'white',
+					}}
+				>
+					<IconOrNull icon={props.cluster.icon} />
+				</Box>
+				<Box sx={{ flexGrow: 1 }}>
+					<Typography
+						variant="body1"
+						sx={{
+							fontWeight: 500,
+							color: 'white',
+						}}
+					>
+						{props.device.name}
+					</Typography>
+					<Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.5 }}>
+						{co2?.concentration !== undefined && (
+							<Typography
+								variant="body2"
+								sx={{
+									color: 'white',
+									fontWeight: 'bold',
+								}}
+							>
+								{Math.round(co2.concentration)} ppm
+							</Typography>
+						)}
+						{pm25?.concentration !== undefined && (
+							<Typography
+								variant="body2"
+								sx={{
+									color: 'rgba(255, 255, 255, 0.9)',
+								}}
+							>
+								PM2.5: {pm25.concentration.toFixed(1)}
+							</Typography>
+						)}
+					</Box>
+					<Chip
+						label={label}
+						size="small"
+						sx={{
+							backgroundColor: 'rgba(255, 255, 255, 0.2)',
+							color: 'white',
+							fontWeight: 500,
+							fontSize: '0.7rem',
+							height: 20,
+							mt: 0.5,
+						}}
+					/>
+				</Box>
+				{isAlert && (
+					<Box
+						sx={{
+							width: 12,
+							height: 12,
+							borderRadius: '50%',
+							backgroundColor: indicatorColor,
 							animation: 'pulse 2s infinite',
 							'@keyframes pulse': {
 								'0%, 100%': {
@@ -1806,9 +1982,17 @@ export const DeviceClusterCard = (
 	if (regularProps.cluster.name === DeviceClusterName.OCCUPANCY_SENSING) {
 		// Check if it's a sensor group or standalone occupancy sensor
 		if ('mergedClusters' in regularProps.cluster) {
-			return <SensorGroupCard {...regularProps} cluster={regularProps.cluster} />;
+			return <OccupancySensorGroupCard {...regularProps} cluster={regularProps.cluster} />;
 		}
 		return <OccupancySensingCard {...regularProps} cluster={regularProps.cluster} />;
+	}
+	if (regularProps.cluster.name === DeviceClusterName.AIR_QUALITY) {
+		// Check if it's an air quality group or standalone air quality sensor
+		if ('mergedClusters' in regularProps.cluster) {
+			return <AirQualityGroupCard {...regularProps} cluster={regularProps.cluster} />;
+		}
+		// Standalone air quality sensor not yet supported
+		return null;
 	}
 	if (regularProps.cluster.name === DeviceClusterName.TEMPERATURE_MEASUREMENT) {
 		return <TemperatureMeasurementCard {...regularProps} cluster={regularProps.cluster} />;
@@ -1837,5 +2021,7 @@ export const DeviceClusterCard = (
 	if (regularProps.cluster.name === DeviceClusterName.SWITCH) {
 		return <SwitchCard {...regularProps} cluster={regularProps.cluster} />;
 	}
+	// CO2 and PM2.5 sensors are now grouped in AirQualityGroup
+	// Standalone handling is not needed
 	return null;
 };

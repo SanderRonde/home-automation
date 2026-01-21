@@ -44,6 +44,16 @@ export class BooleanStateTracker {
 
 	private async logEvent(deviceId: string, state: boolean): Promise<void> {
 		try {
+			// Check if last logged state is the same - prevent duplicates
+			const lastEvent = await this._sqlDB<Array<{ state: number }>>`
+				SELECT state FROM boolean_state_events 
+				WHERE device_id = ${deviceId}
+				ORDER BY timestamp DESC LIMIT 1
+			`;
+			if (lastEvent.length > 0 && (lastEvent[0].state === 1) === state) {
+				return; // Skip duplicate
+			}
+
 			await this._sqlDB`
 				INSERT INTO boolean_state_events (device_id, state, timestamp)
 				VALUES (${deviceId}, ${state ? 1 : 0}, ${Date.now()})
@@ -55,15 +65,15 @@ export class BooleanStateTracker {
 
 	public async getHistory(
 		deviceId: string,
-		limit = 100
+		days = 7
 	): Promise<Array<{ state: boolean; timestamp: number }>> {
 		try {
+			const since = Date.now() - days * 24 * 60 * 60 * 1000;
 			const results = await this._sqlDB<Array<{ state: number; timestamp: number }>>`
 				SELECT state, timestamp 
 				FROM boolean_state_events 
-				WHERE device_id = ${deviceId}
+				WHERE device_id = ${deviceId} AND timestamp >= ${since}
 				ORDER BY timestamp DESC
-				LIMIT ${limit}
 			`;
 			return results.map((r) => ({
 				state: r.state === 1,
@@ -77,16 +87,21 @@ export class BooleanStateTracker {
 
 	public async getLastChanged(deviceId: string): Promise<{ timestamp: number } | null> {
 		try {
+			// Find the timestamp of the last actual state change (where state differs from previous)
 			const results = await this._sqlDB<
 				{
 					timestamp: number;
 				}[]
 			>`
-				SELECT timestamp 
-				FROM boolean_state_events 
-				WHERE device_id = ${deviceId}
-				ORDER BY timestamp DESC
-				LIMIT 1
+				WITH ranked AS (
+					SELECT state, timestamp, 
+						   LAG(state) OVER (ORDER BY timestamp DESC) as prev_state
+					FROM boolean_state_events 
+					WHERE device_id = ${deviceId}
+				)
+				SELECT timestamp FROM ranked 
+				WHERE prev_state IS NULL OR state != prev_state
+				ORDER BY timestamp DESC LIMIT 1
 			`;
 			if (results.length > 0) {
 				return {
