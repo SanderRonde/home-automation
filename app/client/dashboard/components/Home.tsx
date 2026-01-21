@@ -30,6 +30,7 @@ import type { Palette } from '../../../../types/palette';
 import { fadeInUpStaggered } from '../../lib/animations';
 import { DeviceClusterCard } from './DeviceClusterCard';
 import { ClusterIconButton } from './ClusterIconButton';
+import { AirQualityDisplay } from './AirQualityDisplay';
 import type { Scene } from '../../../../types/scene';
 import { PaletteSelector } from './PaletteSelector';
 import { HomeLayoutView } from './HomeLayoutView';
@@ -835,6 +836,7 @@ export const Home = React.memo((props: HomeProps): React.ReactNode => {
 							setTemperatureExpanded(false);
 						}}
 					/>
+					<AirQualityDisplay />
 					<TemperatureDisplay
 						expanded={temperatureExpanded}
 						onExpandedChange={(expanded) => {
