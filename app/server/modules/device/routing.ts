@@ -442,6 +442,12 @@ const sceneTriggers = z
 					rangeKm: z.number(),
 					enteredRange: z.boolean(),
 				}),
+				z.object({
+					type: z.literal(SceneTriggerType.POWER_THRESHOLD),
+					deviceId: z.string(),
+					thresholdWatts: z.number().min(0),
+					direction: z.enum(['above', 'below']),
+				}),
 			]),
 			conditions: z
 				.array(

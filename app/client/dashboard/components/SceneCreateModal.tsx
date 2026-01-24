@@ -100,6 +100,9 @@ const SCENE_ICONS: Array<{ icon: IncludedIconNames; label: string }> = [
 	{ icon: 'AcUnit', label: 'Temperature Cold' },
 	{ icon: 'DeviceThermostat', label: 'Temperature Medium' },
 	{ icon: 'Whatshot', label: 'Temperature Hot' },
+	{ icon: 'Tv', label: 'TV' },
+	{ icon: 'Monitor', label: 'Monitor' },
+	{ icon: 'Computer', label: 'Computer' },
 ];
 
 export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.Element => {
@@ -451,42 +454,61 @@ export const SceneCreateModal = React.memo((props: SceneCreateModalProps): JSX.E
 	const getTriggerLabel = React.useCallback(
 		(triggerWithConditions: SceneTriggerWithConditions): string => {
 			const trigger = triggerWithConditions.trigger;
-			let label = '';
 
-			if (trigger.type === SceneTriggerType.OCCUPANCY) {
-				const device = props.devices.find((d) => d.uniqueId === trigger.deviceId);
-				const triggerType = trigger.occupied ? 'Occupancy detected' : 'Occupancy removed';
-				label = `${triggerType}: ${device?.name || trigger.deviceId}`;
-			} else if (trigger.type === SceneTriggerType.BUTTON_PRESS) {
-				const device = props.devices.find((d) => d.uniqueId === trigger.deviceId);
-				label = `Button pressed: ${device?.name || trigger.deviceId}`;
-				if (trigger.buttonIndex !== undefined) {
-					const switchCluster = device?.flatAllClusters.find(
-						(cluster): cluster is DashboardDeviceClusterSwitch =>
-							cluster.name === DeviceClusterName.SWITCH &&
-							cluster.index === trigger.buttonIndex
-					);
-					label += ` (${switchCluster?.label || `Button ${trigger.buttonIndex + 1}`})`;
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			const assertUnreachable = (_value: never): string => {
+				return 'Unknown trigger';
+			};
+
+			switch (trigger.type) {
+				case SceneTriggerType.OCCUPANCY: {
+					const device = props.devices.find((d) => d.uniqueId === trigger.deviceId);
+					const triggerType = trigger.occupied
+						? 'Occupancy detected'
+						: 'Occupancy removed';
+					return `${triggerType}: ${device?.name || trigger.deviceId}`;
 				}
-			} else if (trigger.type === SceneTriggerType.HOST_ARRIVAL) {
-				const host = hosts.find((h) => h.name === trigger.hostId);
-				label = `${host?.name || trigger.hostId} arrives home`;
-			} else if (trigger.type === SceneTriggerType.HOST_DEPARTURE) {
-				const host = hosts.find((h) => h.name === trigger.hostId);
-				label = `${host?.name || trigger.hostId} leaves home`;
-			} else if (trigger.type === SceneTriggerType.WEBHOOK) {
-				label = `Webhook ${trigger.webhookName} triggers`;
-			} else if (trigger.type === SceneTriggerType.ANYBODY_HOME) {
-				label = 'Anybody becomes home';
-			} else if (trigger.type === SceneTriggerType.NOBODY_HOME) {
-				label = 'Everybody left';
-			} else if (trigger.type === SceneTriggerType.NOBODY_HOME_TIMEOUT) {
-				label = 'Nobody arrived after timeout';
-			} else if (trigger.type === SceneTriggerType.LOCATION_WITHIN_RANGE) {
-				label = `${trigger.deviceId} is within ${trigger.rangeKm}km of ${trigger.targetId}`;
+				case SceneTriggerType.BUTTON_PRESS: {
+					const device = props.devices.find((d) => d.uniqueId === trigger.deviceId);
+					let label = `Button pressed: ${device?.name || trigger.deviceId}`;
+					if (trigger.buttonIndex !== undefined) {
+						const switchCluster = device?.flatAllClusters.find(
+							(cluster): cluster is DashboardDeviceClusterSwitch =>
+								cluster.name === DeviceClusterName.SWITCH &&
+								cluster.index === trigger.buttonIndex
+						);
+						label += ` (${switchCluster?.label || `Button ${trigger.buttonIndex + 1}`})`;
+					}
+					return label;
+				}
+				case SceneTriggerType.HOST_ARRIVAL: {
+					const host = hosts.find((h) => h.name === trigger.hostId);
+					return `${host?.name || trigger.hostId} arrives home`;
+				}
+				case SceneTriggerType.HOST_DEPARTURE: {
+					const host = hosts.find((h) => h.name === trigger.hostId);
+					return `${host?.name || trigger.hostId} leaves home`;
+				}
+				case SceneTriggerType.WEBHOOK:
+					return `Webhook ${trigger.webhookName} triggers`;
+				case SceneTriggerType.ANYBODY_HOME:
+					return 'Anybody becomes home';
+				case SceneTriggerType.NOBODY_HOME:
+					return 'Everybody left';
+				case SceneTriggerType.NOBODY_HOME_TIMEOUT:
+					return 'Nobody arrived after timeout';
+				case SceneTriggerType.CRON:
+					return `Every ${trigger.intervalMinutes} minute${trigger.intervalMinutes !== 1 ? 's' : ''}`;
+				case SceneTriggerType.LOCATION_WITHIN_RANGE:
+					return `${trigger.deviceId} is within ${trigger.rangeKm}km of ${trigger.targetId}`;
+				case SceneTriggerType.POWER_THRESHOLD: {
+					const device = props.devices.find((d) => d.uniqueId === trigger.deviceId);
+					const direction = trigger.direction === 'above' ? 'exceeds' : 'drops below';
+					return `Power ${direction} ${trigger.thresholdWatts}W: ${device?.name || trigger.deviceId}`;
+				}
+				default:
+					return assertUnreachable(trigger);
 			}
-
-			return label;
 		},
 		[props.devices, hosts]
 	);

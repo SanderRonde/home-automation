@@ -14,6 +14,7 @@ export enum SceneTriggerType {
 	NOBODY_HOME_TIMEOUT = 'nobody-home-timeout',
 	CRON = 'cron',
 	LOCATION_WITHIN_RANGE = 'location-within-range',
+	POWER_THRESHOLD = 'power-threshold',
 }
 
 export type SceneTrigger =
@@ -58,6 +59,12 @@ export type SceneTrigger =
 			targetId: string; // Target to check distance from (e.g., "home")
 			rangeKm: number;
 			enteredRange: boolean;
+	  }
+	| {
+			type: SceneTriggerType.POWER_THRESHOLD;
+			deviceId: string; // Device to monitor power from
+			thresholdWatts: number; // Power threshold in Watts
+			direction: 'above' | 'below'; // Trigger when going above or below threshold
 	  };
 
 export enum SceneConditionType {

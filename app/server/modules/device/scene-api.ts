@@ -410,6 +410,16 @@ export class SceneAPI {
 						sceneTrigger.targetId === trigger.targetId &&
 						sceneTrigger.rangeKm === trigger.rangeKm;
 					triggerSource = `${trigger.deviceId} within ${trigger.rangeKm}km of ${trigger.targetId}`;
+				} else if (
+					trigger.type === SceneTriggerType.POWER_THRESHOLD &&
+					sceneTrigger.type === SceneTriggerType.POWER_THRESHOLD
+				) {
+					// Power threshold triggers match if device, threshold, and direction all match
+					triggerMatches =
+						sceneTrigger.deviceId === trigger.deviceId &&
+						sceneTrigger.thresholdWatts === trigger.thresholdWatts &&
+						sceneTrigger.direction === trigger.direction;
+					triggerSource = `${trigger.deviceId}:${trigger.thresholdWatts}W:${trigger.direction}`;
 				}
 
 				if (!triggerMatches) {

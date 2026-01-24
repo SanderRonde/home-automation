@@ -321,6 +321,13 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 		}>
 	>([]);
 
+	// Power threshold trigger state
+	const [powerThresholdDeviceId, setPowerThresholdDeviceId] = useState<string>('');
+	const [powerThresholdWatts, setPowerThresholdWatts] = useState<string>('');
+	const [powerThresholdDirection, setPowerThresholdDirection] = useState<'above' | 'below'>(
+		'above'
+	);
+
 	// Time window state
 	type DayOfWeek =
 		| 'monday'
@@ -465,6 +472,10 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 				setLocationDeviceId(trigger.deviceId);
 				setLocationTargetId(trigger.targetId);
 				setLocationRangeKm(trigger.rangeKm.toString());
+			} else if (trigger.type === SceneTriggerType.POWER_THRESHOLD) {
+				setPowerThresholdDeviceId(trigger.deviceId);
+				setPowerThresholdWatts(trigger.thresholdWatts.toString());
+				setPowerThresholdDirection(trigger.direction);
 			}
 
 			setConditions(props.trigger.conditions || []);
@@ -479,6 +490,9 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 			setLocationDeviceId('');
 			setLocationTargetId('');
 			setLocationRangeKm('');
+			setPowerThresholdDeviceId('');
+			setPowerThresholdWatts('');
+			setPowerThresholdDirection('above');
 			setConditions([]);
 		}
 		setErrors([]);
@@ -534,6 +548,14 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 				}
 				return false;
 			})
+		);
+	}, [props.devices]);
+
+	const powerMeasurementDevices = React.useMemo(() => {
+		return props.devices.filter((device) =>
+			device.flatAllClusters.some(
+				(cluster) => cluster.name === DeviceClusterName.ELECTRICAL_POWER_MEASUREMENT
+			)
 		);
 	}, [props.devices]);
 
@@ -742,6 +764,14 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 			if (!triggerWebhookName) {
 				newErrors.push('Please select a webhook for the trigger');
 			}
+		} else if (triggerType === SceneTriggerType.POWER_THRESHOLD) {
+			if (!powerThresholdDeviceId) {
+				newErrors.push('Please select a device for the power threshold trigger');
+			}
+			const watts = parseFloat(powerThresholdWatts);
+			if (isNaN(watts) || watts < 0) {
+				newErrors.push('Please enter a valid threshold value (0 or greater)');
+			}
 		} else {
 			// ANYBODY_HOME, NOBODY_HOME, NOBODY_HOME_TIMEOUT require no extra fields
 		}
@@ -819,6 +849,14 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 				// Set a default trigger to avoid "used before assigned" error
 				trigger = { type: SceneTriggerType.NOBODY_HOME_TIMEOUT };
 			}
+		} else if (triggerType === SceneTriggerType.POWER_THRESHOLD) {
+			const watts = parseFloat(powerThresholdWatts);
+			trigger = {
+				type: SceneTriggerType.POWER_THRESHOLD,
+				deviceId: powerThresholdDeviceId,
+				thresholdWatts: watts,
+				direction: powerThresholdDirection,
+			};
 		} else {
 			trigger = { type: SceneTriggerType.NOBODY_HOME_TIMEOUT };
 		}
@@ -930,6 +968,9 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 								<ToggleButton value={SceneTriggerType.CRON}>Interval</ToggleButton>
 								<ToggleButton value={SceneTriggerType.LOCATION_WITHIN_RANGE}>
 									Location
+								</ToggleButton>
+								<ToggleButton value={SceneTriggerType.POWER_THRESHOLD}>
+									Power Usage
 								</ToggleButton>
 							</ToggleButtonGroup>
 
@@ -1150,6 +1191,64 @@ export const TriggerEditDialog = (props: TriggerEditDialogProps): JSX.Element =>
 										devices={locationDevicesFull}
 										targets={locationTargetsFull}
 									/>
+								</Box>
+							)}
+
+							{/* Power threshold trigger */}
+							{triggerType === SceneTriggerType.POWER_THRESHOLD && (
+								<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+									<Autocomplete
+										options={powerMeasurementDevices}
+										getOptionLabel={(option) => option.name}
+										value={
+											powerMeasurementDevices.find(
+												(d) => d.uniqueId === powerThresholdDeviceId
+											) ?? null
+										}
+										onChange={(_e, newValue) => {
+											setPowerThresholdDeviceId(newValue?.uniqueId ?? '');
+										}}
+										renderInput={(params) => (
+											<TextField
+												{...params}
+												label="Power Measurement Device"
+												required
+											/>
+										)}
+									/>
+									<TextField
+										label="Threshold (Watts)"
+										type="number"
+										value={powerThresholdWatts}
+										onChange={(e) => setPowerThresholdWatts(e.target.value)}
+										inputProps={{ step: '1', min: 0 }}
+										required
+										helperText="Power threshold in Watts"
+									/>
+									<FormControlLabel
+										control={
+											<Switch
+												checked={powerThresholdDirection === 'above'}
+												onChange={(e) =>
+													setPowerThresholdDirection(
+														e.target.checked ? 'above' : 'below'
+													)
+												}
+											/>
+										}
+										label={
+											powerThresholdDirection === 'above'
+												? 'Trigger when power goes ABOVE threshold'
+												: 'Trigger when power goes BELOW threshold'
+										}
+									/>
+									<Typography variant="caption" color="text.secondary">
+										Scene will trigger when power usage of the selected device{' '}
+										{powerThresholdDirection === 'above'
+											? 'exceeds'
+											: 'drops below'}{' '}
+										{powerThresholdWatts || 'X'}W
+									</Typography>
 								</Box>
 							)}
 						</Box>

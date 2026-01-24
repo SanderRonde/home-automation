@@ -1,5 +1,6 @@
 import type { IncludedIconNames } from '../../../client/dashboard/components/icon';
 import type { Device as DeviceInterface, DeviceSource } from './device';
+import { PowerThresholdTracker } from './power-threshold-tracker';
 import { BooleanStateTracker } from './boolean-state-tracker';
 import { TemperatureTracker } from './temperature-tracker';
 import { IlluminanceTracker } from './illuminance-tracker';
@@ -26,6 +27,7 @@ export class DeviceAPI {
 	public readonly buttonPressTracker: SwitchTracker;
 	public readonly booleanStateTracker: BooleanStateTracker;
 	public readonly powerTracker: PowerTracker;
+	public readonly powerThresholdTracker: PowerThresholdTracker;
 	public readonly co2Tracker: CO2Tracker;
 	public readonly paletteAPI: PaletteAPI;
 	public readonly sceneAPI: SceneAPI;
@@ -57,6 +59,7 @@ export class DeviceAPI {
 		this.buttonPressTracker = new SwitchTracker(sqlDB, this.sceneAPI);
 		this.booleanStateTracker = new BooleanStateTracker(sqlDB);
 		this.powerTracker = new PowerTracker(sqlDB);
+		this.powerThresholdTracker = new PowerThresholdTracker(this.sceneAPI);
 		this.co2Tracker = new CO2Tracker(sqlDB);
 	}
 
@@ -94,6 +97,7 @@ export class DeviceAPI {
 		this.buttonPressTracker.trackDevices(devices);
 		this.booleanStateTracker.trackDevices(devices);
 		this.powerTracker.trackDevices(devices);
+		this.powerThresholdTracker.trackDevices(devices);
 		this.co2Tracker.trackDevices(devices);
 	}
 
