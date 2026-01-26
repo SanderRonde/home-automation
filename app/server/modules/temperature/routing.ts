@@ -11,6 +11,7 @@ import type { DeviceAPI } from '../device/api';
 import type { ModuleConfig } from '..';
 import { Data } from '../../lib/data';
 import { Temperature } from './index';
+import { Logs } from '../logs';
 import * as z from 'zod';
 
 function _initRouting({ sqlDB, db, modules, wsPublish: _wsPublish }: ModuleConfig) {
@@ -447,9 +448,39 @@ function _initRouting({ sqlDB, db, modules, wsPublish: _wsPublish }: ModuleConfi
 				},
 			},
 			'/action-history': {
-				GET: (_req, _server, { json }) => {
-					const debug = Temperature.getDebugInfo();
-					return json({ success: true, history: debug.history });
+				GET: async (req, _server, { json }) => {
+					const url = new URL(req.url);
+					const sourceFilter = url.searchParams.get('source') ?? undefined;
+					try {
+						const activityLog = await Logs.activityLog.value;
+						const logs = await activityLog.getTemperatureStateLogs(1000, sourceFilter);
+						// Also include in-memory history for backward compatibility
+						const debug = Temperature.getDebugInfo();
+						return json({
+							success: true,
+							history: [
+								...logs.map((log) => ({
+									timestamp: log.timestamp,
+									action: log.action,
+									details: log.details,
+									source: log.source,
+									previousState: log.previous_state,
+									newState: log.new_state,
+								})),
+								// Include in-memory entries that might not be in DB yet
+								...debug.history.map((entry) => ({
+									timestamp: entry.timestamp,
+									action: entry.action,
+									details: entry.details,
+									source: entry.source ?? 'manual',
+								})),
+							].sort((a, b) => b.timestamp - a.timestamp),
+						});
+					} catch {
+						// Fallback to in-memory history if database fails
+						const debug = Temperature.getDebugInfo();
+						return json({ success: true, history: debug.history });
+					}
 				},
 			},
 			'/states': {

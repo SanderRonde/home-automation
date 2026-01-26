@@ -28,7 +28,7 @@ import {
 	AccordionDetails,
 } from '@mui/material';
 import type { LogDescription } from '../../../server/modules/logs/describers';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { IncludedIconNames } from './icon';
 import { hsvToHex } from './ColorPresets';
 import { apiGet } from '../../lib/fetch';
@@ -96,8 +96,11 @@ interface NotificationLogEntry extends BaseLogEntry {
 
 interface TemperatureLogEntry extends BaseLogEntry {
 	type: 'temperature';
+	source: string;
 	action: string;
 	details: string;
+	previousState?: string | null;
+	newState?: string | null;
 }
 
 type LogEntry =
@@ -143,6 +146,7 @@ export const Logs = (): JSX.Element => {
 		}
 		return initial;
 	});
+	const [enabledSources, setEnabledSources] = useState<Set<string>>(new Set());
 
 	// Load devices for enriching log descriptions
 	useEffect(() => {
@@ -348,17 +352,44 @@ export const Logs = (): JSX.Element => {
 			if (enabledTypes.temperature) {
 				const response = await apiGet('temperature', '/action-history', {});
 				if (response.ok) {
-					const data = await response.json();
+					const data = (await response.json()) as {
+						success: boolean;
+						history: Array<{
+							timestamp: number;
+							action: string;
+							details: string;
+							source?: string;
+							previousState?: string | null;
+							newState?: string | null;
+						}>;
+					};
+					const sources = new Set<string>();
 					for (let i = 0; i < data.history.length; i++) {
 						const entry = data.history[i];
+						const source = entry.source || 'manual';
+						sources.add(source);
 						allLogs.push({
 							id: `temp-${i}-${entry.timestamp}`,
 							timestamp: entry.timestamp,
 							type: 'temperature' as const,
+							source,
 							action: entry.action,
 							details: entry.details,
+							previousState: entry.previousState ?? null,
+							newState: entry.newState ?? null,
 						});
 					}
+					// Update enabled sources - merge with existing
+					setEnabledSources((prev) => {
+						if (prev.size === 0) {
+							return sources;
+						}
+						const newSources = new Set(prev);
+						for (const source of sources) {
+							newSources.add(source);
+						}
+						return newSources;
+					});
 				}
 			}
 
@@ -376,11 +407,35 @@ export const Logs = (): JSX.Element => {
 		void loadLogs();
 	}, [loadLogs]);
 
+	// Filter logs by enabled sources when sources change
+	const filteredLogs = useMemo(() => {
+		return logs.filter((log) => {
+			if (log.type === 'temperature') {
+				// If no sources are enabled, show all (initial state)
+				// Otherwise, only show logs from enabled sources
+				return enabledSources.size === 0 || enabledSources.has(log.source);
+			}
+			return true;
+		});
+	}, [logs, enabledSources]);
+
 	const handleTypeToggle = (type: LogType) => {
 		setEnabledTypes((prev) => ({
 			...prev,
 			[type]: !prev[type],
 		}));
+	};
+
+	const handleSourceToggle = (source: string) => {
+		setEnabledSources((prev) => {
+			const newSet = new Set(prev);
+			if (newSet.has(source)) {
+				newSet.delete(source);
+			} else {
+				newSet.add(source);
+			}
+			return newSet;
+		});
 	};
 
 	const formatTimestamp = (timestamp: number): string => {
@@ -446,7 +501,7 @@ export const Logs = (): JSX.Element => {
 					case 'notification':
 						return log.title;
 					case 'temperature':
-						return log.action;
+						return `${log.action} [${log.source}]`;
 					default:
 						return 'Unknown event';
 				}
@@ -483,7 +538,7 @@ export const Logs = (): JSX.Element => {
 			case 'notification':
 				return `${log.recipient_count} recipient${log.recipient_count !== 1 ? 's' : ''}`;
 			case 'temperature':
-				return log.details;
+				return `${log.source} - ${log.details}`;
 			default:
 				return null;
 		}
@@ -591,6 +646,82 @@ export const Logs = (): JSX.Element => {
 						{log.body}
 					</Typography>
 				);
+			case 'temperature':
+				return (
+					<Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+						<Typography variant="body2" color="text.secondary">
+							{log.details}
+						</Typography>
+						{(log.previousState || log.newState) && (
+							<Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+								{log.previousState && (
+									<Box>
+										<Typography
+											variant="caption"
+											fontWeight="bold"
+											color="text.secondary"
+										>
+											Previous State:
+										</Typography>
+										<Box
+											sx={{
+												bgcolor: 'action.hover',
+												p: 1,
+												borderRadius: 1,
+												fontFamily: 'monospace',
+												fontSize: '0.75rem',
+												overflow: 'auto',
+												maxHeight: 100,
+											}}
+										>
+											<pre style={{ margin: 0 }}>
+												{typeof log.previousState === 'string'
+													? JSON.stringify(
+															JSON.parse(log.previousState),
+															null,
+															2
+														)
+													: JSON.stringify(log.previousState, null, 2)}
+											</pre>
+										</Box>
+									</Box>
+								)}
+								{log.newState && (
+									<Box>
+										<Typography
+											variant="caption"
+											fontWeight="bold"
+											color="text.secondary"
+										>
+											New State:
+										</Typography>
+										<Box
+											sx={{
+												bgcolor: 'action.hover',
+												p: 1,
+												borderRadius: 1,
+												fontFamily: 'monospace',
+												fontSize: '0.75rem',
+												overflow: 'auto',
+												maxHeight: 100,
+											}}
+										>
+											<pre style={{ margin: 0 }}>
+												{typeof log.newState === 'string'
+													? JSON.stringify(
+															JSON.parse(log.newState),
+															null,
+															2
+														)
+													: JSON.stringify(log.newState, null, 2)}
+											</pre>
+										</Box>
+									</Box>
+								)}
+							</Box>
+						)}
+					</Box>
+				);
 			default:
 				return null;
 		}
@@ -604,6 +735,8 @@ export const Logs = (): JSX.Element => {
 				return true;
 			case 'notification':
 				return !!log.body;
+			case 'temperature':
+				return !!(log.previousState || log.newState);
 			default:
 				return false;
 		}
@@ -655,6 +788,38 @@ export const Logs = (): JSX.Element => {
 								/>
 							))}
 						</FormGroup>
+						{/* Source filters for temperature logs */}
+						{enabledTypes.temperature && enabledSources.size > 0 && (
+							<>
+								<Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
+									Temperature sources:
+								</Typography>
+								<FormGroup row sx={{ flexWrap: 'wrap', gap: 1 }}>
+									{Array.from(enabledSources)
+										.sort()
+										.map((source) => (
+											<FormControlLabel
+												key={source}
+												control={
+													<Checkbox
+														size="small"
+														checked={enabledSources.has(source)}
+														onChange={() => handleSourceToggle(source)}
+													/>
+												}
+												label={
+													<Typography
+														variant="body2"
+														sx={{ textTransform: 'capitalize' }}
+													>
+														{source.replace(/-/g, ' ')}
+													</Typography>
+												}
+											/>
+										))}
+								</FormGroup>
+							</>
+						)}
 					</CardContent>
 				</Card>
 
@@ -663,7 +828,7 @@ export const Logs = (): JSX.Element => {
 					<Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
 						<CircularProgress />
 					</Box>
-				) : logs.length === 0 ? (
+				) : filteredLogs.length === 0 ? (
 					<Card sx={{ borderRadius: 2 }}>
 						<CardContent>
 							<Typography variant="body2" color="text.secondary" textAlign="center">
@@ -673,7 +838,7 @@ export const Logs = (): JSX.Element => {
 					</Card>
 				) : (
 					<Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-						{logs.map((log) => {
+						{filteredLogs.map((log) => {
 							const details = renderLogDetails(log);
 							const showDetails = hasDetails(log);
 

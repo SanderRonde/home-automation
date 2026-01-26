@@ -18,6 +18,7 @@ import type { Device } from '../device/device';
 import { initScheduler } from './scheduler';
 import { initRouting } from './routing';
 import { ModuleMeta } from '../meta';
+import { Logs } from '../logs';
 
 export type { TemperatureScheduleEntry } from './types';
 
@@ -38,6 +39,7 @@ interface HistoryEntry {
 	timestamp: number;
 	action: string;
 	details: string;
+	source?: string;
 }
 
 // Central thermostat temperature offsets (relative to current temperature)
@@ -80,15 +82,45 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 	/**
 	 * Add an entry to the debug history
 	 */
-	public addHistoryEntry(action: string, details: string) {
+	public addHistoryEntry(action: string, details: string, source: string = 'manual') {
 		this._history.unshift({
 			timestamp: Date.now(),
 			action,
 			details,
+			source,
 		});
 		// Keep last X entries
 		if (this._history.length > MAX_ENTRIES) {
 			this._history = this._history.slice(0, MAX_ENTRIES);
+		}
+	}
+
+	/**
+	 * Log a temperature state change to both in-memory history and persistent database
+	 */
+	public async logStateChange(
+		source: string,
+		action: string,
+		details: string,
+		previousState: unknown = null,
+		newState: unknown = null
+	): Promise<void> {
+		// Add to in-memory history for backward compatibility
+		this.addHistoryEntry(action, details, source);
+
+		// Store in database for persistent logging
+		try {
+			const activityLog = await Logs.activityLog.value;
+			await activityLog.logTemperatureStateChange(
+				source,
+				action,
+				details,
+				previousState,
+				newState
+			);
+		} catch (error) {
+			// Don't let logging errors break the system
+			logTag('temperature', 'yellow', 'Failed to log temperature state change:', error);
 		}
 	}
 
@@ -112,7 +144,8 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 			'Test Mode',
 			enabled
 				? 'Test mode ENABLED - no real thermostat control'
-				: 'Test mode DISABLED - real thermostat control active'
+				: 'Test mode DISABLED - real thermostat control active',
+			'manual'
 		);
 	}
 
@@ -161,12 +194,17 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 	public setRoomOverride(roomName: string, temperature: number | null): void {
 		if (temperature === null) {
 			this._roomOverrides.delete(roomName);
-			this.addHistoryEntry('Clear Override', `Cleared override for room ${roomName}`);
+			this.addHistoryEntry(
+				'Clear Override',
+				`Cleared override for room ${roomName}`,
+				'manual'
+			);
 		} else {
 			this._roomOverrides.set(roomName, temperature);
 			this.addHistoryEntry(
 				'Set Override',
-				`Set override for room ${roomName} to ${temperature}°C`
+				`Set override for room ${roomName} to ${temperature}°C`,
+				'manual'
 			);
 		}
 	}
@@ -178,7 +216,8 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		this._globalOverride = temperature;
 		this.addHistoryEntry(
 			'Set Global Override',
-			temperature ? `Set global override to ${temperature}°C` : 'Cleared global override'
+			temperature ? `Set global override to ${temperature}°C` : 'Cleared global override',
+			'manual'
 		);
 	}
 
@@ -256,7 +295,8 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 			'Set Room Overshoot',
 			overshoot === null
 				? `Cleared overshoot for room ${roomName} (using default 0.5°C)`
-				: `Set overshoot for room ${roomName} to ${overshoot}°C`
+				: `Set overshoot for room ${roomName} to ${overshoot}°C`,
+			'manual'
 		);
 	}
 
@@ -568,7 +608,7 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 			...(old as TemperatureDB),
 			states,
 		}));
-		this.addHistoryEntry('Update States', 'Updated temperature states');
+		this.addHistoryEntry('Update States', 'Updated temperature states', 'manual');
 	}
 
 	/**
@@ -586,7 +626,7 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		const updatedStates = [...states];
 		updatedStates[index] = { ...updatedStates[index], ...updates };
 		this.setStates(updatedStates);
-		this.addHistoryEntry('Update State', `Updated state ${stateId}`);
+		this.addHistoryEntry('Update State', `Updated state ${stateId}`, 'manual');
 	}
 
 	/**
@@ -601,11 +641,11 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 			activeStateId: stateId,
 		}));
 		if (stateId === null) {
-			this.addHistoryEntry('State Activation', 'Returned to time-based schedule');
+			this.addHistoryEntry('State Activation', 'Returned to time-based schedule', 'scene');
 		} else {
 			const state = this.getState(stateId);
 			const stateName = state ? state.name : stateId;
-			this.addHistoryEntry('State Activation', `Activated state: ${stateName}`);
+			this.addHistoryEntry('State Activation', `Activated state: ${stateName}`, 'scene');
 		}
 	}
 
@@ -1032,10 +1072,10 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 
 		if (disabled) {
 			disabledSet.add(deviceId);
-			this.addHistoryEntry('TRV Disabled', `Disabled TRV ${deviceId}`);
+			this.addHistoryEntry('TRV Disabled', `Disabled TRV ${deviceId}`, 'manual');
 		} else {
 			disabledSet.delete(deviceId);
-			this.addHistoryEntry('TRV Enabled', `Enabled TRV ${deviceId}`);
+			this.addHistoryEntry('TRV Enabled', `Enabled TRV ${deviceId}`, 'manual');
 		}
 
 		this._db.update((old) => ({
@@ -1168,9 +1208,12 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 				'yellow',
 				`[TEST MODE] Would set central thermostat to ${targetTemperature}°C (manual mode)`
 			);
-			this.addHistoryEntry(
+			await this.logStateChange(
+				'thermostat-update',
 				'Thermostat Action (TEST)',
-				`Would set central thermostat to ${targetTemperature}°C (TEST MODE - not applied)`
+				`Would set central thermostat to ${targetTemperature}°C (TEST MODE - not applied)`,
+				null,
+				{ targetTemperature, mode: 'MANUAL', testMode: true }
 			);
 			return true;
 		}
@@ -1195,6 +1238,9 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 			}
 
 			const cluster = thermostatClusters[0];
+			const previousTarget = await cluster.targetTemperature.get();
+			const previousMode = await cluster.mode.get();
+
 			await cluster.setTargetTemperature(targetTemperature);
 			await cluster.setMode(ThermostatMode.MANUAL);
 
@@ -1203,9 +1249,12 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 				'green',
 				`Set central thermostat hardware target to ${targetTemperature}°C (manual mode)`
 			);
-			this.addHistoryEntry(
+			await this.logStateChange(
+				'thermostat-update',
 				'Thermostat Action',
-				`Set central thermostat to ${targetTemperature}°C`
+				`Set central thermostat to ${targetTemperature}°C`,
+				{ targetTemperature: previousTarget ?? null, mode: previousMode ?? null },
+				{ targetTemperature, mode: 'MANUAL' }
 			);
 			return true;
 		} catch (error) {
@@ -1215,9 +1264,12 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 				`Failed to set central thermostat hardware target: ${thermostatId}`,
 				error
 			);
-			this.addHistoryEntry(
+			await this.logStateChange(
+				'thermostat-update',
 				'Thermostat Error',
-				`Failed to set central thermostat: ${String(error)}`
+				`Failed to set central thermostat: ${String(error)}`,
+				null,
+				{ error: String(error) }
 			);
 			return false;
 		}
@@ -1274,12 +1326,48 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 									'yellow',
 									`[TEST MODE] Would set TRV ${storedInfo.name} in ${roomName} to ${targetTemp}°C`
 								);
+								await this.logStateChange(
+									'trv-update',
+									'TRV Update (TEST)',
+									`Would set TRV ${storedInfo.name} in ${roomName} to ${targetTemp}°C (TEST MODE - not applied)`,
+									{
+										deviceId,
+										deviceName: storedInfo.name,
+										room: roomName,
+										target: currentTarget ?? null,
+									},
+									{
+										deviceId,
+										deviceName: storedInfo.name,
+										room: roomName,
+										target: targetTemp,
+										testMode: true,
+									}
+								);
 							} else {
 								await cluster.setTargetTemperature(targetTemp);
 								logTag(
 									'temperature',
 									needsHeating ? 'green' : 'blue',
 									`Set TRV ${storedInfo.name} in ${roomName} to ${targetTemp}°C`
+								);
+								await this.logStateChange(
+									'trv-update',
+									'TRV Update',
+									`Set TRV ${storedInfo.name} in ${roomName} to ${targetTemp}°C (${needsHeating ? 'heating' : 'off'})`,
+									{
+										deviceId,
+										deviceName: storedInfo.name,
+										room: roomName,
+										target: currentTarget ?? null,
+									},
+									{
+										deviceId,
+										deviceName: storedInfo.name,
+										room: roomName,
+										target: targetTemp,
+										needsHeating,
+									}
 								);
 							}
 						}
@@ -1289,6 +1377,13 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 							'red',
 							`Failed to set TRV target for ${storedInfo.name}:`,
 							error
+						);
+						await this.logStateChange(
+							'trv-update',
+							'TRV Error',
+							`Failed to set TRV target for ${storedInfo.name}: ${String(error)}`,
+							{ deviceId, deviceName: storedInfo.name, room: roomName },
+							{ error: String(error) }
 						);
 					}
 				}
@@ -1325,7 +1420,8 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		if (result.success) {
 			this.addHistoryEntry(
 				'PID Measurement',
-				`Started measurement for ${roomName} to ${targetTemperature}°C`
+				`Started measurement for ${roomName} to ${targetTemperature}°C`,
+				'pid-measurement'
 			);
 		}
 		return result;
@@ -1340,7 +1436,11 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		}
 		const result = await this._pidManager.stopMeasurement(roomName);
 		if (result.success) {
-			this.addHistoryEntry('PID Measurement', `Stopped measurement for ${roomName}`);
+			this.addHistoryEntry(
+				'PID Measurement',
+				`Stopped measurement for ${roomName}`,
+				'pid-measurement'
+			);
 		}
 		return result;
 	}
@@ -1393,7 +1493,7 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 			return;
 		}
 		this._pidManager.clearPIDParameters(roomName);
-		this.addHistoryEntry('PID Parameters', `Cleared PID parameters for ${roomName}`);
+		this.addHistoryEntry('PID Parameters', `Cleared PID parameters for ${roomName}`, 'manual');
 	}
 
 	/**

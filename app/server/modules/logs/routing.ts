@@ -18,6 +18,17 @@ function _initRouting(_config: ModuleConfig, activityLog: ActivityLog) {
 					return json({ logs });
 				},
 			},
+			'/temperature-state-logs': {
+				GET: async (req, _server, { json }) => {
+					const url = new URL(req.url);
+					const sourceFilter = url.searchParams.get('source') ?? undefined;
+					const limit = url.searchParams.get('limit')
+						? parseInt(url.searchParams.get('limit')!, 10)
+						: 1000;
+					const logs = await activityLog.getTemperatureStateLogs(limit, sourceFilter);
+					return json({ logs });
+				},
+			},
 		},
 		true
 	);

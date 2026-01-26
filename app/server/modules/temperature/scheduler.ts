@@ -15,6 +15,8 @@ export class TemperatureScheduler {
 	private readonly _modules: AllModules;
 	private _intervalId: ReturnType<typeof setInterval> | null = null;
 	private _lastCheckMinute: number = -1;
+	private _lastScheduleEntryName: string | null = null;
+	private _lastHeatingDemand: Map<string, boolean> = new Map();
 
 	public constructor(modules: AllModules) {
 		this._modules = modules;
@@ -69,6 +71,22 @@ export class TemperatureScheduler {
 			return;
 		}
 
+		// Check for schedule entry changes
+		const currentSchedule = Temperature.getCurrentActiveSchedule();
+		const currentScheduleName = currentSchedule?.name ?? null;
+		if (currentScheduleName !== this._lastScheduleEntryName) {
+			const previousName = this._lastScheduleEntryName ?? 'None';
+			const newName = currentScheduleName ?? 'None';
+			await Temperature.logStateChange(
+				'schedule',
+				'Schedule Entry Change',
+				`Schedule changed from "${previousName}" to "${newName}"`,
+				{ scheduleName: previousName },
+				{ scheduleName: newName, targetTemperature: currentSchedule?.targetTemperature }
+			);
+			this._lastScheduleEntryName = currentScheduleName;
+		}
+
 		// Check heating demand from all rooms
 		// Use needsHeating (not isHeating) since isHeating depends on central thermostat status
 		const deviceApi = await this._modules.device.api.value;
@@ -81,6 +99,30 @@ export class TemperatureScheduler {
 		);
 		const roomsNeedingHeat = roomStatuses.filter((status) => status.needsHeating);
 		const needsHeating = roomsNeedingHeat.length > 0;
+
+		// Track heating demand changes per room
+		for (const roomStatus of roomStatuses) {
+			const lastDemand = this._lastHeatingDemand.get(roomStatus.name);
+			if (lastDemand !== undefined && lastDemand !== roomStatus.needsHeating) {
+				await Temperature.logStateChange(
+					'heating-demand',
+					roomStatus.needsHeating ? 'Heating Demand Started' : 'Heating Demand Stopped',
+					`Room "${roomStatus.name}" ${roomStatus.needsHeating ? 'now requires' : 'no longer requires'} heating (target: ${roomStatus.targetTemperature}°C, current: ${roomStatus.currentTemperature.toFixed(1)}°C)`,
+					{
+						room: roomStatus.name,
+						needsHeating: lastDemand,
+						target: roomStatus.targetTemperature,
+					},
+					{
+						room: roomStatus.name,
+						needsHeating: roomStatus.needsHeating,
+						target: roomStatus.targetTemperature,
+						current: roomStatus.currentTemperature,
+					}
+				);
+			}
+			this._lastHeatingDemand.set(roomStatus.name, roomStatus.needsHeating);
+		}
 
 		// Get current central thermostat temperature
 		const currentStatus = await Temperature.getCentralThermostatStatus(allDevices);
@@ -102,7 +144,7 @@ export class TemperatureScheduler {
 		}
 		Temperature.setLastDecision(decisionReason);
 
-		// Check if we need to update
+		// Check if we need to update thermostat target
 		const needsUpdate =
 			currentStatus?.targetTemperature !== targetCentralTemp ||
 			currentStatus.mode !== ThermostatMode.MANUAL;

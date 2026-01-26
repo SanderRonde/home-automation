@@ -26,6 +26,16 @@ export interface NotificationLogEntry {
 	recipient_count: number;
 }
 
+export interface TemperatureStateLogEntry {
+	id: number;
+	timestamp: number;
+	source: string;
+	action: string;
+	details: string;
+	previous_state: string | null;
+	new_state: string | null;
+}
+
 export class ActivityLog {
 	public constructor(private readonly _db: SQL) {}
 
@@ -73,6 +83,32 @@ export class ActivityLog {
 			// Add index for faster timestamp-based queries
 			await this._db`
 				CREATE INDEX idx_notification_logs_timestamp ON notification_logs(timestamp DESC)
+			`;
+		}
+
+		// Create temperature_state_logs table
+		const temperatureStateTableExists = await this._db<{ name: string }[]>`
+			SELECT name FROM sqlite_master WHERE type='table' AND name='temperature_state_logs'
+		`;
+
+		if (!temperatureStateTableExists.length) {
+			await this._db`
+				CREATE TABLE temperature_state_logs (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					timestamp INTEGER NOT NULL,
+					source TEXT NOT NULL,
+					action TEXT NOT NULL,
+					details TEXT,
+					previous_state TEXT,
+					new_state TEXT
+				)
+			`;
+			// Add indexes for faster queries
+			await this._db`
+				CREATE INDEX idx_temperature_state_logs_timestamp ON temperature_state_logs(timestamp DESC)
+			`;
+			await this._db`
+				CREATE INDEX idx_temperature_state_logs_source ON temperature_state_logs(source)
 			`;
 		}
 	}
@@ -158,6 +194,51 @@ export class ActivityLog {
 		return await this._db<NotificationLogEntry[]>`
 			SELECT id, timestamp, title, body, success, recipient_count
 			FROM notification_logs
+			ORDER BY timestamp DESC
+			LIMIT ${limit}
+		`;
+	}
+
+	public async logTemperatureStateChange(
+		source: string,
+		action: string,
+		details: string,
+		previousState: unknown = null,
+		newState: unknown = null
+	): Promise<void> {
+		const timestamp = Date.now();
+		const previousStateJson = previousState ? JSON.stringify(previousState) : null;
+		const newStateJson = newState ? JSON.stringify(newState) : null;
+
+		await this._db`
+			INSERT INTO temperature_state_logs (timestamp, source, action, details, previous_state, new_state)
+			VALUES (${timestamp}, ${source}, ${action}, ${details}, ${previousStateJson}, ${newStateJson})
+		`;
+
+		// Clean up old entries (keep last 10000)
+		await this._db`
+			DELETE FROM temperature_state_logs WHERE id NOT IN (
+				SELECT id FROM temperature_state_logs ORDER BY timestamp DESC LIMIT 10000
+			)
+		`;
+	}
+
+	public async getTemperatureStateLogs(
+		limit = 1000,
+		sourceFilter?: string
+	): Promise<TemperatureStateLogEntry[]> {
+		if (sourceFilter) {
+			return await this._db<TemperatureStateLogEntry[]>`
+				SELECT id, timestamp, source, action, details, previous_state, new_state
+				FROM temperature_state_logs
+				WHERE source = ${sourceFilter}
+				ORDER BY timestamp DESC
+				LIMIT ${limit}
+			`;
+		}
+		return await this._db<TemperatureStateLogEntry[]>`
+			SELECT id, timestamp, source, action, details, previous_state, new_state
+			FROM temperature_state_logs
 			ORDER BY timestamp DESC
 			LIMIT ${limit}
 		`;
