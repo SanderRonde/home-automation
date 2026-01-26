@@ -47,6 +47,7 @@ export const CENTRAL_THERMOSTAT_OFF_OFFSET = 3; // °C below current temperature
 // TRV temperature targets (absolute values, unchanged)
 export const TRV_HEATING_TARGET = 30; // °C when heating needed
 export const TRV_OFF_TARGET = 15; // °C when heating not needed
+const MAX_ENTRIES = 1000;
 
 export const Temperature = new (class Temperature extends ModuleMeta {
 	public name = 'temperature';
@@ -85,9 +86,9 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 			action,
 			details,
 		});
-		// Keep last 50 entries
-		if (this._history.length > 50) {
-			this._history = this._history.slice(0, 50);
+		// Keep last X entries
+		if (this._history.length > MAX_ENTRIES) {
+			this._history = this._history.slice(0, MAX_ENTRIES);
 		}
 	}
 
