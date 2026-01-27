@@ -210,6 +210,21 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 	}
 
 	/**
+	 * Clear all room overrides
+	 */
+	public clearAllRoomOverrides(): void {
+		const roomNames = Array.from(this._roomOverrides.keys());
+		this._roomOverrides.clear();
+		if (roomNames.length > 0) {
+			this.addHistoryEntry(
+				'Clear All Overrides',
+				`Cleared overrides for ${roomNames.length} room(s): ${roomNames.join(', ')}`,
+				'manual'
+			);
+		}
+	}
+
+	/**
 	 * Set a global manual temperature override
 	 */
 	public setGlobalOverride(temperature: number | null): void {
@@ -636,6 +651,8 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 		if (!this._db) {
 			return;
 		}
+		// Clear all room overrides when changing temperature state
+		this.clearAllRoomOverrides();
 		this._db.update((old) => ({
 			...(old as TemperatureDB),
 			activeStateId: stateId,
