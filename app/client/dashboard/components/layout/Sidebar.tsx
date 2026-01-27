@@ -16,6 +16,7 @@ import {
 	BoltRounded as BoltRoundedIcon,
 	History as HistoryIcon,
 	Backup as BackupIcon,
+	SettingsApplications as SettingsApplicationsIcon,
 } from '@mui/icons-material';
 import {
 	Drawer,
@@ -111,6 +112,7 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 				{ text: 'AI', icon: <SmartToyIcon />, id: SidebarTab.AI },
 				{ text: 'Logs', icon: <HistoryIcon />, id: SidebarTab.LOGS },
 				{ text: 'Backup', icon: <BackupIcon />, id: SidebarTab.BACKUP },
+				{ text: 'System', icon: <SettingsApplicationsIcon />, id: SidebarTab.SYSTEM },
 			],
 		},
 	];
@@ -192,4 +194,5 @@ export enum SidebarTab {
 	LOCATION = 'location',
 	LOGS = 'logs',
 	BACKUP = 'backup',
+	SYSTEM = 'system',
 }

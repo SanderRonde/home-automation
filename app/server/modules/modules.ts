@@ -9,6 +9,7 @@ import { Location } from './location';
 import { Webhook } from './webhook';
 import { EWeLink } from './ewelink';
 import { Secret } from './secret/';
+import { System } from './system';
 import { Matter } from './matter';
 import { Device } from './device';
 import { Backup } from './backup';
@@ -50,6 +51,7 @@ const getModuleObj = () => ({
 	device: Device,
 	matter: Matter,
 	secret: Secret,
+	system: System,
 	ewelink: EWeLink,
 	webhook: Webhook,
 	wakelight: Wakelight,

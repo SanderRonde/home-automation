@@ -11,6 +11,7 @@ import { NotFoundPage } from './components/NotFoundPage';
 import { HomeDetector } from './components/HomeDetector';
 import { BackupConfig } from './components/BackupConfig';
 import { OfflineProvider } from '../lib/offline-context';
+import { SystemAdmin } from './components/SystemAdmin';
 import { HouseLayout } from './components/HouseLayout';
 import { EnergyUsage } from './components/EnergyUsage';
 import { TuyaConfig } from './components/TuyaConfig';
@@ -156,6 +157,8 @@ function DashboardApp() {
 				return <Logs />;
 			case SidebarTab.BACKUP:
 				return <BackupConfig />;
+			case SidebarTab.SYSTEM:
+				return <SystemAdmin />;
 			default:
 				return <NotFoundPage onReturnToSettings={handleReturnToSettings} />;
 		}

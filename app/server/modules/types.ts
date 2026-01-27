@@ -14,6 +14,7 @@ import type { Location } from './location';
 import type { Webhook } from './webhook';
 import type { EWeLink } from './ewelink';
 import type { Secret } from './secret/';
+import type { System } from './system';
 import type { Matter } from './matter';
 import type { Device } from './device';
 import type { Backup } from './backup';
@@ -39,6 +40,7 @@ export type AllModules = {
 	device: typeof Device;
 	matter: typeof Matter;
 	secret: typeof Secret;
+	system: typeof System;
 	ewelink: typeof EWeLink;
 	webhook: typeof Webhook;
 	wakelight: typeof Wakelight;
