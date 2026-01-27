@@ -19,6 +19,7 @@ import type { NodeId } from '@matter/main/types';
 import { MatterDevice } from '../client/device';
 import { NodeJsBle } from '@matter/nodejs-ble';
 import { withFn } from '../../../lib/with';
+import { wait } from '../../../lib/time';
 import { Data } from '../../../lib/data';
 import { Ble } from '@matter/protocol';
 import '@matter/nodejs-ble';
@@ -116,6 +117,9 @@ export class MatterServer extends Disposable {
 			autoConnect: false, // Do not auto connect to the commissioned nodes
 			adminFabricLabel: 'home-automation',
 		});
+		process.on('SIGINT', () => {
+			return this.commissioningController.close();
+		});
 	}
 
 	private _nodes: PairedNode[] = [];
@@ -131,38 +135,61 @@ export class MatterServer extends Disposable {
 		}
 
 		const devices: Record<string, MatterDevice> = {};
+
+		// Update devices inbetween in case pairing takes a long time
+		const interval = setInterval(() => {
+			if (Object.keys(this.devices.current()).length !== Object.keys(devices).length) {
+				logTag('matter', 'magenta', 'updating devices (interval)');
+				this.devices.set(devices);
+			}
+		}, 1000 * 5);
+
 		for (const { node, endpoint, type } of deviceInfos) {
 			const id = `${node.nodeId}:${endpoint.number?.toString()}`;
+			await Promise.race([
+				(async () => {
+					const basicInfo = endpoint.getClusterClient(BasicInformationCluster);
+					const bridgedInfo = endpoint.getClusterClient(
+						BridgedDeviceBasicInformationCluster
+					);
+					const info = basicInfo ?? bridgedInfo;
 
-			const basicInfo = endpoint.getClusterClient(BasicInformationCluster);
-			const bridgedInfo = endpoint.getClusterClient(BridgedDeviceBasicInformationCluster);
-			const info = basicInfo ?? bridgedInfo;
+					const [uniqueId, uniqueIdBridged, serialNumber] = await Promise.all([
+						basicInfo?.attributes.uniqueId?.get?.(),
+						bridgedInfo?.attributes.uniqueId?.get?.(),
+						info?.attributes.serialNumber?.get?.(),
+					]);
 
-			const [uniqueId, uniqueIdBridged, serialNumber] = await Promise.all([
-				basicInfo?.attributes.uniqueId?.get?.(),
-				bridgedInfo?.attributes.uniqueId?.get?.(),
-				info?.attributes.serialNumber?.get?.(),
+					const deviceUniqueId =
+						uniqueId ??
+						uniqueIdBridged ??
+						serialNumber ??
+						`${node.nodeId}:${endpoint.number ?? 0}`;
+
+					// Try to find existing device by uniqueId (handles re-pairing with new nodeId)
+					const existingDevice = devicesByUniqueId.get(deviceUniqueId);
+					if (existingDevice) {
+						devices[id] = existingDevice;
+					} else {
+						devices[id] = await MatterDevice.createDevice(
+							node,
+							endpoint,
+							type,
+							uniqueId ?? uniqueIdBridged ?? serialNumber
+						);
+					}
+				})().then(
+					() => {
+						logTag('matter', 'magenta', 'device updated', id);
+					},
+					(error: unknown) => {
+						logTag('matter', 'red', 'error updating device', id, error);
+					}
+				),
+				wait(1000 * 60),
 			]);
-
-			const deviceUniqueId =
-				uniqueId ??
-				uniqueIdBridged ??
-				serialNumber ??
-				`${node.nodeId}:${endpoint.number ?? 0}`;
-
-			// Try to find existing device by uniqueId (handles re-pairing with new nodeId)
-			const existingDevice = devicesByUniqueId.get(deviceUniqueId);
-			if (existingDevice) {
-				devices[id] = existingDevice;
-			} else {
-				devices[id] = await MatterDevice.createDevice(
-					node,
-					endpoint,
-					type,
-					uniqueId ?? uniqueIdBridged ?? serialNumber
-				);
-			}
 		}
+		clearInterval(interval);
 		this.devices.set(devices);
 	}
 
