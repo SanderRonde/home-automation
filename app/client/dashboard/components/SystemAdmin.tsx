@@ -29,7 +29,6 @@ interface SystemConfig {
 		restartServer: string | null;
 		stopServer: string | null;
 		rebootSystem: string | null;
-		killChromium: string | null;
 	};
 }
 
@@ -95,7 +94,7 @@ export const SystemAdmin = (): JSX.Element => {
 			killChromium: {
 				title: 'Kill Chromium',
 				message:
-					'Are you sure you want to kill all Chromium processes? This will close the kiosk display.',
+					'Are you sure you want to kill all Chromium processes? This will close the kiosk display. The kiosk script will automatically restart Chromium.',
 			},
 		};
 
@@ -244,10 +243,6 @@ export const SystemAdmin = (): JSX.Element => {
 								label="Reboot System"
 								command={config?.commands.rebootSystem ?? null}
 							/>
-							<CommandStatus
-								label="Kill Chromium"
-								command={config?.commands.killChromium ?? null}
-							/>
 						</Paper>
 					</CardContent>
 				</Card>
@@ -326,7 +321,8 @@ export const SystemAdmin = (): JSX.Element => {
 							Kiosk / Display Controls
 						</Typography>
 						<Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-							Manage the kiosk display and Chromium browser processes.
+							Manage the kiosk display and Chromium browser processes. Kill Chromium
+							terminates all running Chromium processes (no configuration required).
 						</Typography>
 						<Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
 							<Button
@@ -340,7 +336,7 @@ export const SystemAdmin = (): JSX.Element => {
 									)
 								}
 								onClick={() => openConfirmDialog('killChromium')}
-								disabled={!config?.commands.killChromium || executing !== null}
+								disabled={executing !== null}
 							>
 								Kill Chromium
 							</Button>
@@ -375,7 +371,6 @@ export const SystemAdmin = (): JSX.Element => {
 											restartServer: 'systemctl restart home-automation',
 											stopServer: 'systemctl stop home-automation',
 											rebootSystem: 'sudo reboot',
-											killChromium: 'killall chromium || true',
 										},
 									},
 									null,
