@@ -29,8 +29,7 @@ export interface SystemCommands {
 	rebootSystem?: string;
 
 	/**
-	 * Command to kill chromium processes (for kiosk mode).
-	 * Example: "killall chromium" or path to kill-chromium.sh script
+	 * @deprecated No longer used. Kill chromium is now handled directly by the endpoint.
 	 */
 	killChromium?: string;
 }
@@ -54,7 +53,6 @@ export interface SystemConfigResponse {
 		restartServer: string | null;
 		stopServer: string | null;
 		rebootSystem: string | null;
-		killChromium: string | null;
 	};
 }
 

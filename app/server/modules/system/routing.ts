@@ -69,7 +69,6 @@ function _initRouting(config: ModuleConfig) {
 						restartServer: commands.restartServer || null,
 						stopServer: commands.stopServer || null,
 						rebootSystem: commands.rebootSystem || null,
-						killChromium: commands.killChromium || null,
 					},
 				};
 
@@ -159,28 +158,42 @@ function _initRouting(config: ModuleConfig) {
 
 			/**
 			 * Kill chromium processes (for kiosk mode screen management).
+			 * Replicates the logic from scripts/kill-chromium.sh
 			 */
 			'/kill-chromium': {
-				POST: async (_req, _server, { json, error }) => {
-					const data = db.current();
-					const command = data.commands?.killChromium;
+				POST: async (_req, _server, { json }) => {
+					logTag('SYSTEM', 'yellow', 'Starting chromium cleanup...');
 
-					if (!command) {
-						return error(
-							{
-								success: false,
-								message:
-									'Kill chromium command not configured. Please configure it in the system.json database file.',
-							},
-							400
-						);
-					}
+					try {
+						// Check if chromium is running using pgrep (same as the kill-chromium.sh script)
+						const checkResult = await $`pgrep -x chromium`.quiet().nothrow();
+						const isRunning = checkResult.exitCode === 0;
 
-					const result = await executeCommand(command, 'Kill chromium');
-					if (result.success) {
-						return json(result);
+						if (isRunning) {
+							logTag('SYSTEM', 'yellow', 'Chromium processes found, killing...');
+							// Kill chromium processes (same as the script)
+							await $`killall chromium`.quiet().nothrow();
+							logTag('SYSTEM', 'green', 'Chromium processes killed successfully');
+
+							return json({
+								success: true,
+								message: 'Chromium processes killed successfully',
+							});
+						} else {
+							logTag('SYSTEM', 'green', 'No chromium processes found');
+							return json({
+								success: true,
+								message: 'No chromium processes found',
+							});
+						}
+					} catch (error) {
+						const errorMessage = error instanceof Error ? error.message : String(error);
+						logTag('SYSTEM', 'red', 'Kill chromium failed:', errorMessage);
+						return json({
+							success: false,
+							message: `Kill chromium failed: ${errorMessage}`,
+						});
 					}
-					return error(result, 500);
 				},
 			},
 		},
