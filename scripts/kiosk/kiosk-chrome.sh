@@ -59,8 +59,8 @@ CHROME_FLAGS=(
     --start-fullscreen
     --disable-pinch
     --overscroll-history-navigation=0
-    --enable-gpu-rasterization
-    --ignore-gpu-blocklist
+    # Disable GPU acceleration to avoid GPU/driver-related renderer issues
+    --disable-gpu
     --disable-background-networking
     --disable-default-apps
     --disable-extensions

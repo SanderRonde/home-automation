@@ -34,7 +34,7 @@ export const Kiosk = (): JSX.Element => {
 	React.useEffect(() => {
 		const interval = setInterval(() => {
 			setTime(new Date());
-		}, 500);
+		}, 1000);
 		return () => clearInterval(interval);
 	}, []);
 
@@ -266,9 +266,9 @@ export const Kiosk = (): JSX.Element => {
 		return arr;
 	};
 
-	const allDayEvents = getFormattedAllDayEvents();
-	const timeSpacedEvents = getTimeSpacedEvents();
-	const weekDayEvents = getWeekDayEvents();
+	const allDayEvents = React.useMemo(() => getFormattedAllDayEvents(), [events]);
+	const timeSpacedEvents = React.useMemo(() => getTimeSpacedEvents(), [events]);
+	const weekDayEvents = React.useMemo(() => getWeekDayEvents(), [events]);
 
 	return (
 		<Box sx={{ px: { xs: 1, sm: 2, md: 4 } }}>
