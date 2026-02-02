@@ -1,8 +1,11 @@
 /* eslint-disable no-restricted-globals */
+import type { TuyaApiCallMeta } from './api-tracker';
+
 export interface TuyaContextOptions {
 	baseUrl: string;
 	accessKey: string;
 	secretKey: string;
+	onApiCall?: (meta: TuyaApiCallMeta) => void;
 }
 
 export interface TuyaRequestOptions {
@@ -20,6 +23,7 @@ export class TuyaContext {
 	private readonly baseUrl: string;
 	private readonly accessKey: string;
 	private readonly secretKey: string;
+	private readonly _onApiCall: ((meta: TuyaApiCallMeta) => void) | undefined;
 	private accessToken: string | null = null;
 	private tokenExpireTime: number = 0;
 
@@ -27,9 +31,13 @@ export class TuyaContext {
 		this.baseUrl = options.baseUrl;
 		this.accessKey = options.accessKey;
 		this.secretKey = options.secretKey;
+		this._onApiCall = options.onApiCall;
 	}
 
-	public async request<T>(options: TuyaRequestOptions): Promise<TuyaResponse<T>> {
+	public async request<T>(
+		options: TuyaRequestOptions,
+		meta?: TuyaApiCallMeta
+	): Promise<TuyaResponse<T>> {
 		// Refresh token if needed
 		if (!this.accessToken || Date.now() >= this.tokenExpireTime) {
 			await this.refreshToken();
@@ -104,10 +112,13 @@ export class TuyaContext {
 		// Handle token expiration (code 1010)
 		if ('code' in data && data.code === 1010) {
 			await this.refreshToken();
-			// Retry the request
-			return this.request<T>(options);
+			// Retry the request (do not double-log)
+			return this.request<T>(options, meta);
 		}
 
+		if (meta && this._onApiCall) {
+			this._onApiCall(meta);
+		}
 		return data as TuyaResponse<T>;
 	}
 

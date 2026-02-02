@@ -11,6 +11,7 @@ import {
 	CheckCircle as CheckCircleIcon,
 	Error as ErrorIcon,
 	History as HistoryIcon,
+	Api as ApiIcon,
 } from '@mui/icons-material';
 import {
 	Box,
@@ -43,7 +44,14 @@ interface DeviceInfo {
 }
 
 // Log type definitions
-type LogType = 'activity' | 'scene' | 'webhook' | 'homeDetection' | 'notification' | 'temperature';
+type LogType =
+	| 'activity'
+	| 'scene'
+	| 'webhook'
+	| 'homeDetection'
+	| 'notification'
+	| 'temperature'
+	| 'tuyaApi';
 
 interface BaseLogEntry {
 	id: string | number;
@@ -103,13 +111,21 @@ interface TemperatureLogEntry extends BaseLogEntry {
 	newState?: string | null;
 }
 
+interface TuyaApiLogEntry extends BaseLogEntry {
+	type: 'tuyaApi';
+	source: string;
+	endpoint: string;
+	device_id: string | null;
+}
+
 type LogEntry =
 	| ActivityLogEntry
 	| SceneLogEntry
 	| WebhookLogEntry
 	| HomeDetectionLogEntry
 	| NotificationLogEntry
-	| TemperatureLogEntry;
+	| TemperatureLogEntry
+	| TuyaApiLogEntry;
 
 const LOG_TYPE_CONFIG: Record<
 	LogType,
@@ -133,6 +149,11 @@ const LOG_TYPE_CONFIG: Record<
 		icon: <DeviceThermostatIcon />,
 		defaultEnabled: false,
 	},
+	tuyaApi: {
+		label: 'Tuya API',
+		icon: <ApiIcon />,
+		defaultEnabled: false,
+	},
 };
 
 export const Logs = (): JSX.Element => {
@@ -147,6 +168,8 @@ export const Logs = (): JSX.Element => {
 		return initial;
 	});
 	const [enabledSources, setEnabledSources] = useState<Set<string>>(new Set());
+	const [tuyaCountBySource, setTuyaCountBySource] = useState<Record<string, number>>({});
+	const [enabledTuyaSources, setEnabledTuyaSources] = useState<Set<string>>(new Set());
 
 	// Load devices for enriching log descriptions
 	useEffect(() => {
@@ -393,6 +416,47 @@ export const Logs = (): JSX.Element => {
 				}
 			}
 
+			// Load Tuya API call history if enabled
+			if (enabledTypes.tuyaApi) {
+				const response = await apiGet('logs', '/tuya-api-calls', {});
+				if (response.ok) {
+					const data = (await response.json()) as {
+						logs: Array<{
+							id: number;
+							timestamp: number;
+							source: string;
+							endpoint: string;
+							device_id: string | null;
+						}>;
+						countBySource: Record<string, number>;
+					};
+					setTuyaCountBySource(data.countBySource ?? {});
+					const tuyaSources = new Set<string>();
+					for (let i = 0; i < data.logs.length; i++) {
+						const entry = data.logs[i];
+						tuyaSources.add(entry.source);
+						allLogs.push({
+							id: `tuya-${entry.id}`,
+							timestamp: entry.timestamp,
+							type: 'tuyaApi' as const,
+							source: entry.source,
+							endpoint: entry.endpoint,
+							device_id: entry.device_id,
+						});
+					}
+					setEnabledTuyaSources((prev) => {
+						if (prev.size === 0) {
+							return tuyaSources;
+						}
+						const newSet = new Set(prev);
+						for (const s of tuyaSources) {
+							newSet.add(s);
+						}
+						return newSet;
+					});
+				}
+			}
+
 			// Sort by timestamp descending
 			allLogs.sort((a, b) => b.timestamp - a.timestamp);
 			setLogs(allLogs);
@@ -411,13 +475,14 @@ export const Logs = (): JSX.Element => {
 	const filteredLogs = useMemo(() => {
 		return logs.filter((log) => {
 			if (log.type === 'temperature') {
-				// If no sources are enabled, show all (initial state)
-				// Otherwise, only show logs from enabled sources
 				return enabledSources.size === 0 || enabledSources.has(log.source);
+			}
+			if (log.type === 'tuyaApi') {
+				return enabledTuyaSources.size === 0 || enabledTuyaSources.has(log.source);
 			}
 			return true;
 		});
-	}, [logs, enabledSources]);
+	}, [logs, enabledSources, enabledTuyaSources]);
 
 	const handleTypeToggle = (type: LogType) => {
 		setEnabledTypes((prev) => ({
@@ -428,6 +493,18 @@ export const Logs = (): JSX.Element => {
 
 	const handleSourceToggle = (source: string) => {
 		setEnabledSources((prev) => {
+			const newSet = new Set(prev);
+			if (newSet.has(source)) {
+				newSet.delete(source);
+			} else {
+				newSet.add(source);
+			}
+			return newSet;
+		});
+	};
+
+	const handleTuyaSourceToggle = (source: string) => {
+		setEnabledTuyaSources((prev) => {
 			const newSet = new Set(prev);
 			if (newSet.has(source)) {
 				newSet.delete(source);
@@ -479,6 +556,8 @@ export const Logs = (): JSX.Element => {
 				return <NotificationsIcon sx={{ fontSize: 20 }} />;
 			case 'temperature':
 				return <DeviceThermostatIcon sx={{ fontSize: 20 }} />;
+			case 'tuyaApi':
+				return <ApiIcon sx={{ fontSize: 20 }} />;
 			default:
 				return <HistoryIcon sx={{ fontSize: 20 }} />;
 		}
@@ -502,6 +581,8 @@ export const Logs = (): JSX.Element => {
 						return log.title;
 					case 'temperature':
 						return `${log.action} [${log.source}]`;
+					case 'tuyaApi':
+						return `${log.endpoint} [${log.source}]`;
 					default:
 						return 'Unknown event';
 				}
@@ -539,6 +620,8 @@ export const Logs = (): JSX.Element => {
 				return `${log.recipient_count} recipient${log.recipient_count !== 1 ? 's' : ''}`;
 			case 'temperature':
 				return `${log.source} - ${log.details}`;
+			case 'tuyaApi':
+				return log.device_id ? `device: ${log.device_id}` : log.source;
 			default:
 				return null;
 		}
@@ -558,6 +641,8 @@ export const Logs = (): JSX.Element => {
 				return 'info.main';
 			case 'temperature':
 				return 'error.main';
+			case 'tuyaApi':
+				return 'info.main';
 			default:
 				return 'text.secondary';
 		}
@@ -722,6 +807,8 @@ export const Logs = (): JSX.Element => {
 						)}
 					</Box>
 				);
+			case 'tuyaApi':
+				return renderTuyaApiDetails(log);
 			default:
 				return null;
 		}
@@ -737,10 +824,25 @@ export const Logs = (): JSX.Element => {
 				return !!log.body;
 			case 'temperature':
 				return !!(log.previousState || log.newState);
+			case 'tuyaApi':
+				return !!log.device_id;
 			default:
 				return false;
 		}
 	};
+
+	const renderTuyaApiDetails = (log: TuyaApiLogEntry): React.ReactNode => (
+		<Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+			<Typography variant="caption" color="text.secondary">
+				Source: {log.source} · Endpoint: {log.endpoint}
+			</Typography>
+			{log.device_id && (
+				<Typography variant="caption" color="text.secondary">
+					Device ID: {log.device_id}
+				</Typography>
+			)}
+		</Box>
+	);
 
 	return (
 		<Box sx={{ p: { xs: 2, sm: 3 } }}>
@@ -820,8 +922,76 @@ export const Logs = (): JSX.Element => {
 								</FormGroup>
 							</>
 						)}
+						{/* Source filters for Tuya API logs */}
+						{enabledTypes.tuyaApi && Object.keys(tuyaCountBySource).length > 0 && (
+							<>
+								<Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
+									Tuya API sources:
+								</Typography>
+								<FormGroup row sx={{ flexWrap: 'wrap', gap: 1 }}>
+									{Object.entries(tuyaCountBySource)
+										.sort(([a], [b]) => a.localeCompare(b))
+										.map(([source, count]) => (
+											<FormControlLabel
+												key={source}
+												control={
+													<Checkbox
+														size="small"
+														checked={
+															enabledTuyaSources.size === 0 ||
+															enabledTuyaSources.has(source)
+														}
+														onChange={() =>
+															handleTuyaSourceToggle(source)
+														}
+													/>
+												}
+												label={
+													<Typography variant="body2">
+														{source.replace(/-/g, ' ')} ({count})
+													</Typography>
+												}
+											/>
+										))}
+								</FormGroup>
+							</>
+						)}
 					</CardContent>
 				</Card>
+
+				{/* Tuya API summary card */}
+				{enabledTypes.tuyaApi && Object.keys(tuyaCountBySource).length > 0 && (
+					<Card sx={{ borderRadius: 2 }}>
+						<CardContent sx={{ py: 1.5 }}>
+							<Typography variant="subtitle2" sx={{ mb: 1 }}>
+								Tuya API call totals
+							</Typography>
+							<Box
+								sx={{
+									display: 'flex',
+									flexWrap: 'wrap',
+									gap: 2,
+									alignItems: 'center',
+								}}
+							>
+								<Typography variant="body2" fontWeight="bold">
+									Total:{' '}
+									{Object.values(tuyaCountBySource).reduce((a, b) => a + b, 0)}
+								</Typography>
+								{Object.entries(tuyaCountBySource)
+									.sort(([a], [b]) => a.localeCompare(b))
+									.map(([source, count]) => (
+										<Chip
+											key={source}
+											label={`${source}: ${count}`}
+											size="small"
+											variant="outlined"
+										/>
+									))}
+							</Box>
+						</CardContent>
+					</Card>
+				)}
 
 				{/* Logs List */}
 				{loading ? (

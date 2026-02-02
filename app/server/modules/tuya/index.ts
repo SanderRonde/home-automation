@@ -9,12 +9,16 @@ import { initRouting } from './routing';
 import { TuyaAPI } from './client/api';
 import { ModuleMeta } from '../meta';
 
+const DEFAULT_POLLING_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
+
 export interface TuyaDB {
 	credentials?: {
 		apiKey: string;
 		apiSecret: string;
 		apiRegion: string;
 		virtualDeviceId: string;
+		/** Polling interval in ms; default 15 minutes. Increase to reduce API usage. */
+		pollingIntervalMs?: number;
 	};
 }
 
@@ -30,12 +34,26 @@ export const Tuya = new (class Tuya extends ModuleMeta {
 				return;
 			}
 			if (data.credentials) {
+				const activityLog = await config.modules.logs.activityLog.value;
+				const onApiCall = (meta: {
+					source: string;
+					endpoint: string;
+					deviceId?: string | null;
+				}) =>
+					void activityLog.logTuyaApiCall(
+						meta.source,
+						meta.endpoint,
+						meta.deviceId ?? null
+					);
 				const tuyaContext = new TuyaContext({
 					baseUrl: `https://openapi.tuya${data.credentials.apiRegion}.com`,
 					accessKey: data.credentials.apiKey,
 					secretKey: data.credentials.apiSecret,
+					onApiCall,
 				});
 				const api = new TuyaAPI(tuyaContext);
+				api.pollingIntervalMs =
+					data.credentials.pollingIntervalMs ?? DEFAULT_POLLING_INTERVAL_MS;
 				try {
 					const userId = await api.getUserId(data.credentials.virtualDeviceId);
 					const devices = await api.getUserDevices(userId);

@@ -29,6 +29,20 @@ function _initRouting(_config: ModuleConfig, activityLog: ActivityLog) {
 					return json({ logs });
 				},
 			},
+			'/tuya-api-calls': {
+				GET: async (req, _server, { json }) => {
+					const url = new URL(req.url);
+					const sourceFilter = url.searchParams.get('source') ?? undefined;
+					const limit = url.searchParams.get('limit')
+						? parseInt(url.searchParams.get('limit')!, 10)
+						: 1000;
+					const [logs, countBySource] = await Promise.all([
+						activityLog.getTuyaApiLogs(limit, sourceFilter),
+						activityLog.getTuyaApiLogsCountBySource(),
+					]);
+					return json({ logs, countBySource });
+				},
+			},
 		},
 		true
 	);

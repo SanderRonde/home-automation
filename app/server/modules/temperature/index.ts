@@ -1258,6 +1258,16 @@ export const Temperature = new (class Temperature extends ModuleMeta {
 			const previousTarget = await cluster.targetTemperature.get();
 			const previousMode = await cluster.mode.get();
 
+			// Skip write if already at target temperature and in manual mode (reduces Tuya API calls)
+			if (previousTarget === targetTemperature && previousMode === ThermostatMode.MANUAL) {
+				logTag(
+					'temperature',
+					'blue',
+					`Central thermostat already at ${targetTemperature}°C - skipping write`
+				);
+				return true;
+			}
+
 			await cluster.setTargetTemperature(targetTemperature);
 			await cluster.setMode(ThermostatMode.MANUAL);
 

@@ -36,6 +36,14 @@ export interface TemperatureStateLogEntry {
 	new_state: string | null;
 }
 
+export interface TuyaApiLogEntry {
+	id: number;
+	timestamp: number;
+	source: string;
+	endpoint: string;
+	device_id: string | null;
+}
+
 export class ActivityLog {
 	public constructor(private readonly _db: SQL) {}
 
@@ -109,6 +117,29 @@ export class ActivityLog {
 			`;
 			await this._db`
 				CREATE INDEX idx_temperature_state_logs_source ON temperature_state_logs(source)
+			`;
+		}
+
+		// Create tuya_api_logs table
+		const tuyaApiTableExists = await this._db<{ name: string }[]>`
+			SELECT name FROM sqlite_master WHERE type='table' AND name='tuya_api_logs'
+		`;
+
+		if (!tuyaApiTableExists.length) {
+			await this._db`
+				CREATE TABLE tuya_api_logs (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					timestamp INTEGER NOT NULL,
+					source TEXT NOT NULL,
+					endpoint TEXT NOT NULL,
+					device_id TEXT
+				)
+			`;
+			await this._db`
+				CREATE INDEX idx_tuya_api_logs_timestamp ON tuya_api_logs(timestamp DESC)
+			`;
+			await this._db`
+				CREATE INDEX idx_tuya_api_logs_source ON tuya_api_logs(source)
 			`;
 		}
 	}
@@ -242,5 +273,53 @@ export class ActivityLog {
 			ORDER BY timestamp DESC
 			LIMIT ${limit}
 		`;
+	}
+
+	public async logTuyaApiCall(
+		source: string,
+		endpoint: string,
+		deviceId: string | null = null
+	): Promise<void> {
+		const timestamp = Date.now();
+		await this._db`
+			INSERT INTO tuya_api_logs (timestamp, source, endpoint, device_id)
+			VALUES (${timestamp}, ${source}, ${endpoint}, ${deviceId})
+		`;
+
+		// Clean up old entries (keep last 10000)
+		await this._db`
+			DELETE FROM tuya_api_logs WHERE id NOT IN (
+				SELECT id FROM tuya_api_logs ORDER BY timestamp DESC LIMIT 10000
+			)
+		`;
+	}
+
+	public async getTuyaApiLogs(limit = 1000, sourceFilter?: string): Promise<TuyaApiLogEntry[]> {
+		if (sourceFilter) {
+			return await this._db<TuyaApiLogEntry[]>`
+				SELECT id, timestamp, source, endpoint, device_id
+				FROM tuya_api_logs
+				WHERE source = ${sourceFilter}
+				ORDER BY timestamp DESC
+				LIMIT ${limit}
+			`;
+		}
+		return await this._db<TuyaApiLogEntry[]>`
+			SELECT id, timestamp, source, endpoint, device_id
+			FROM tuya_api_logs
+			ORDER BY timestamp DESC
+			LIMIT ${limit}
+		`;
+	}
+
+	public async getTuyaApiLogsCountBySource(): Promise<Record<string, number>> {
+		const rows = await this._db<{ source: string; count: number }[]>`
+			SELECT source, COUNT(*) as count
+			FROM tuya_api_logs
+			GROUP BY source
+		`;
+		return Object.fromEntries(
+			rows.map((r) => [r.source, typeof r.count === 'number' ? r.count : Number(r.count)])
+		);
 	}
 }

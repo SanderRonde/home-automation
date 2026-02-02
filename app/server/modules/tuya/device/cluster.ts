@@ -10,6 +10,7 @@ import type {
 } from '../client/api';
 import { DeviceThermostatCluster, ThermostatMode } from '../../device/cluster';
 import { EventEmitter } from '../../../lib/event-emitter';
+import { TUYA_API_SOURCE } from '../client/api-tracker';
 import { Data, MappedData } from '../../../lib/data';
 
 class TuyaClusterProxy<PARAMS extends Record<string, TuyaPropertyValue>> {
@@ -21,15 +22,13 @@ class TuyaClusterProxy<PARAMS extends Record<string, TuyaPropertyValue>> {
 		private readonly _api: TuyaAPI,
 		private readonly _deviceId: string
 	) {
-		const interval = setInterval(
-			async () => {
-				const data = await this._refreshData();
-				for (const listener of this._listeners) {
-					listener(data.properties as unknown as PARAMS | undefined, false);
-				}
-			},
-			5 * 60 * 1000
-		);
+		const intervalMs = this._api.pollingIntervalMs;
+		const interval = setInterval(async () => {
+			const data = await this._refreshData(TUYA_API_SOURCE.polling);
+			for (const listener of this._listeners) {
+				listener(data.properties as unknown as PARAMS | undefined, false);
+			}
+		}, intervalMs);
 		this._disposables.add(() => clearInterval(interval));
 	}
 
@@ -38,12 +37,11 @@ class TuyaClusterProxy<PARAMS extends Record<string, TuyaPropertyValue>> {
 		timestamp: number;
 	}> | null = null;
 
-	private async _refreshData() {
-		const lastData = await this._lastData;
-		if (lastData && Date.now() - lastData.timestamp < 5 * 1000) {
-			return lastData;
+	private async _refreshData(source: string = TUYA_API_SOURCE.onDemand) {
+		if (this._lastData && Date.now() - (await this._lastData).timestamp < 5 * 1000) {
+			return this._lastData;
 		}
-		return (this._lastData = this._api.getPropertiesByCode(this._deviceId).then(
+		return (this._lastData = this._api.getPropertiesByCode(this._deviceId, source).then(
 			(properties) => ({
 				properties,
 				timestamp: Date.now(),
