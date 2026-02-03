@@ -323,126 +323,128 @@ export class SceneAPI {
 	}
 
 	public async onTrigger(trigger: SceneTrigger, skipConditions = false): Promise<void> {
-		for (const scene of this.listScenes()) {
-			const triggers = scene.triggers;
-			if (!triggers || triggers.length === 0) {
-				continue;
-			}
-
-			// Check each trigger (OR logic - any trigger can fire the scene)
-			for (const triggerWithConditions of triggers) {
-				const sceneTrigger = triggerWithConditions.trigger;
-
-				// Check if trigger type matches
-				if (sceneTrigger.type !== trigger.type) {
-					continue;
+		await Promise.all(
+			this.listScenes().map(async (scene) => {
+				const triggers = scene.triggers;
+				if (!triggers || triggers.length === 0) {
+					return;
 				}
 
-				// Match based on trigger type
-				let triggerMatches = false;
-				let triggerSource: string | undefined;
-				if (
-					trigger.type === SceneTriggerType.OCCUPANCY &&
-					sceneTrigger.type === SceneTriggerType.OCCUPANCY
-				) {
-					triggerMatches =
-						sceneTrigger.deviceId === trigger.deviceId &&
-						sceneTrigger.occupied === trigger.occupied;
-					triggerSource = `${trigger.deviceId}:${trigger.occupied ? 'occupied' : 'cleared'}`;
-				} else if (
-					trigger.type === SceneTriggerType.BUTTON_PRESS &&
-					sceneTrigger.type === SceneTriggerType.BUTTON_PRESS
-				) {
-					triggerMatches =
-						sceneTrigger.deviceId === trigger.deviceId &&
-						sceneTrigger.buttonIndex === trigger.buttonIndex;
-					triggerSource = `${trigger.deviceId}:${trigger.buttonIndex}`;
-				} else if (
-					trigger.type === SceneTriggerType.HOST_ARRIVAL &&
-					sceneTrigger.type === SceneTriggerType.HOST_ARRIVAL
-				) {
-					triggerMatches = sceneTrigger.hostId === trigger.hostId;
-					triggerSource = trigger.hostId;
-				} else if (
-					trigger.type === SceneTriggerType.HOST_DEPARTURE &&
-					sceneTrigger.type === SceneTriggerType.HOST_DEPARTURE
-				) {
-					triggerMatches = sceneTrigger.hostId === trigger.hostId;
-					triggerSource = trigger.hostId;
-				} else if (
-					trigger.type === SceneTriggerType.WEBHOOK &&
-					sceneTrigger.type === SceneTriggerType.WEBHOOK
-				) {
-					triggerMatches = sceneTrigger.webhookName === trigger.webhookName;
-					triggerSource = trigger.webhookName;
-				} else if (
-					trigger.type === SceneTriggerType.ANYBODY_HOME &&
-					sceneTrigger.type === SceneTriggerType.ANYBODY_HOME
-				) {
-					triggerMatches = true;
-					triggerSource = undefined;
-				} else if (
-					trigger.type === SceneTriggerType.NOBODY_HOME &&
-					sceneTrigger.type === SceneTriggerType.NOBODY_HOME
-				) {
-					triggerMatches = true;
-					triggerSource = undefined;
-				} else if (
-					trigger.type === SceneTriggerType.NOBODY_HOME_TIMEOUT &&
-					sceneTrigger.type === SceneTriggerType.NOBODY_HOME_TIMEOUT
-				) {
-					triggerMatches = true;
-					triggerSource = undefined;
-				} else if (
-					trigger.type === SceneTriggerType.CRON &&
-					sceneTrigger.type === SceneTriggerType.CRON
-				) {
-					// For interval triggers, they match if they have the same interval
-					triggerMatches = sceneTrigger.intervalMinutes === trigger.intervalMinutes;
-					triggerSource = `Every ${trigger.intervalMinutes} min`;
-				} else if (
-					trigger.type === SceneTriggerType.LOCATION_WITHIN_RANGE &&
-					sceneTrigger.type === SceneTriggerType.LOCATION_WITHIN_RANGE
-				) {
-					// Location triggers match if device, target, and range all match
-					triggerMatches =
-						sceneTrigger.deviceId === trigger.deviceId &&
-						sceneTrigger.targetId === trigger.targetId &&
-						sceneTrigger.rangeKm === trigger.rangeKm;
-					triggerSource = `${trigger.deviceId} within ${trigger.rangeKm}km of ${trigger.targetId}`;
-				} else if (
-					trigger.type === SceneTriggerType.POWER_THRESHOLD &&
-					sceneTrigger.type === SceneTriggerType.POWER_THRESHOLD
-				) {
-					// Power threshold triggers match if device, threshold, and direction all match
-					triggerMatches =
-						sceneTrigger.deviceId === trigger.deviceId &&
-						sceneTrigger.thresholdWatts === trigger.thresholdWatts &&
-						sceneTrigger.direction === trigger.direction;
-					triggerSource = `${trigger.deviceId}:${trigger.thresholdWatts}W:${trigger.direction}`;
-				}
+				// Check each trigger (OR logic - any trigger can fire the scene)
+				for (const triggerWithConditions of triggers) {
+					const sceneTrigger = triggerWithConditions.trigger;
 
-				if (!triggerMatches) {
-					continue;
-				}
+					// Check if trigger type matches
+					if (sceneTrigger.type !== trigger.type) {
+						continue;
+					}
 
-				// Evaluate conditions (AND logic - all must pass)
-				// Skip conditions if explicitly told to (e.g., manual triggers with checkConditionsOnManual=false)
-				const shouldCheckConditions = !skipConditions;
-				const conditionsPassed = shouldCheckConditions
-					? await this._evaluateConditions(triggerWithConditions.conditions)
-					: true;
+					// Match based on trigger type
+					let triggerMatches = false;
+					let triggerSource: string | undefined;
+					if (
+						trigger.type === SceneTriggerType.OCCUPANCY &&
+						sceneTrigger.type === SceneTriggerType.OCCUPANCY
+					) {
+						triggerMatches =
+							sceneTrigger.deviceId === trigger.deviceId &&
+							sceneTrigger.occupied === trigger.occupied;
+						triggerSource = `${trigger.deviceId}:${trigger.occupied ? 'occupied' : 'cleared'}`;
+					} else if (
+						trigger.type === SceneTriggerType.BUTTON_PRESS &&
+						sceneTrigger.type === SceneTriggerType.BUTTON_PRESS
+					) {
+						triggerMatches =
+							sceneTrigger.deviceId === trigger.deviceId &&
+							sceneTrigger.buttonIndex === trigger.buttonIndex;
+						triggerSource = `${trigger.deviceId}:${trigger.buttonIndex}`;
+					} else if (
+						trigger.type === SceneTriggerType.HOST_ARRIVAL &&
+						sceneTrigger.type === SceneTriggerType.HOST_ARRIVAL
+					) {
+						triggerMatches = sceneTrigger.hostId === trigger.hostId;
+						triggerSource = trigger.hostId;
+					} else if (
+						trigger.type === SceneTriggerType.HOST_DEPARTURE &&
+						sceneTrigger.type === SceneTriggerType.HOST_DEPARTURE
+					) {
+						triggerMatches = sceneTrigger.hostId === trigger.hostId;
+						triggerSource = trigger.hostId;
+					} else if (
+						trigger.type === SceneTriggerType.WEBHOOK &&
+						sceneTrigger.type === SceneTriggerType.WEBHOOK
+					) {
+						triggerMatches = sceneTrigger.webhookName === trigger.webhookName;
+						triggerSource = trigger.webhookName;
+					} else if (
+						trigger.type === SceneTriggerType.ANYBODY_HOME &&
+						sceneTrigger.type === SceneTriggerType.ANYBODY_HOME
+					) {
+						triggerMatches = true;
+						triggerSource = undefined;
+					} else if (
+						trigger.type === SceneTriggerType.NOBODY_HOME &&
+						sceneTrigger.type === SceneTriggerType.NOBODY_HOME
+					) {
+						triggerMatches = true;
+						triggerSource = undefined;
+					} else if (
+						trigger.type === SceneTriggerType.NOBODY_HOME_TIMEOUT &&
+						sceneTrigger.type === SceneTriggerType.NOBODY_HOME_TIMEOUT
+					) {
+						triggerMatches = true;
+						triggerSource = undefined;
+					} else if (
+						trigger.type === SceneTriggerType.CRON &&
+						sceneTrigger.type === SceneTriggerType.CRON
+					) {
+						// For interval triggers, they match if they have the same interval
+						triggerMatches = sceneTrigger.intervalMinutes === trigger.intervalMinutes;
+						triggerSource = `Every ${trigger.intervalMinutes} min`;
+					} else if (
+						trigger.type === SceneTriggerType.LOCATION_WITHIN_RANGE &&
+						sceneTrigger.type === SceneTriggerType.LOCATION_WITHIN_RANGE
+					) {
+						// Location triggers match if device, target, and range all match
+						triggerMatches =
+							sceneTrigger.deviceId === trigger.deviceId &&
+							sceneTrigger.targetId === trigger.targetId &&
+							sceneTrigger.rangeKm === trigger.rangeKm;
+						triggerSource = `${trigger.deviceId} within ${trigger.rangeKm}km of ${trigger.targetId}`;
+					} else if (
+						trigger.type === SceneTriggerType.POWER_THRESHOLD &&
+						sceneTrigger.type === SceneTriggerType.POWER_THRESHOLD
+					) {
+						// Power threshold triggers match if device, threshold, and direction all match
+						triggerMatches =
+							sceneTrigger.deviceId === trigger.deviceId &&
+							sceneTrigger.thresholdWatts === trigger.thresholdWatts &&
+							sceneTrigger.direction === trigger.direction;
+						triggerSource = `${trigger.deviceId}:${trigger.thresholdWatts}W:${trigger.direction}`;
+					}
 
-				if (conditionsPassed) {
-					await this.triggerScene(scene.id, {
-						type: trigger.type,
-						source: triggerSource,
-					});
-					// Break after first matching trigger fires the scene
-					break;
+					if (!triggerMatches) {
+						continue;
+					}
+
+					// Evaluate conditions (AND logic - all must pass)
+					// Skip conditions if explicitly told to (e.g., manual triggers with checkConditionsOnManual=false)
+					const shouldCheckConditions = !skipConditions;
+					const conditionsPassed = shouldCheckConditions
+						? await this._evaluateConditions(triggerWithConditions.conditions)
+						: true;
+
+					if (conditionsPassed) {
+						await this.triggerScene(scene.id, {
+							type: trigger.type,
+							source: triggerSource,
+						});
+						// Break after first matching trigger fires the scene
+						break;
+					}
 				}
-			}
-		}
+			})
+		);
 	}
 
 	public async triggerScene(
