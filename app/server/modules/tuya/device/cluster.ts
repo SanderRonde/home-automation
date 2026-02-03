@@ -38,7 +38,7 @@ class TuyaClusterProxy<PARAMS extends Record<string, TuyaPropertyValue>> {
 	}> | null = null;
 
 	private async _refreshData(source: string = TUYA_API_SOURCE.onDemand) {
-		if (this._lastData && Date.now() - (await this._lastData).timestamp < 5 * 1000) {
+		if (this._lastData && Date.now() - (await this._lastData).timestamp < 5 * 60 * 1000) {
 			return this._lastData;
 		}
 		return (this._lastData = this._api.getPropertiesByCode(this._deviceId, source).then(
