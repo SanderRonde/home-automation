@@ -32,7 +32,7 @@ interface SystemConfig {
 	};
 }
 
-type CommandType = 'restart' | 'stop' | 'reboot' | 'killChromium';
+type CommandType = 'restart' | 'stop' | 'reboot' | 'killChromium' | 'restartMatter';
 
 export const SystemAdmin = (): JSX.Element => {
 	const [config, setConfig] = useState<SystemConfig | null>(null);
@@ -96,6 +96,11 @@ export const SystemAdmin = (): JSX.Element => {
 				message:
 					'Are you sure you want to kill all Chromium processes? This will close the kiosk display. The kiosk script will automatically restart Chromium.',
 			},
+			restartMatter: {
+				title: 'Restart Matter Server',
+				message:
+					'Are you sure you want to restart the Matter server? This will restart the Matter server and all commissioned devices.',
+			},
 		};
 
 		setConfirmDialog({
@@ -115,19 +120,23 @@ export const SystemAdmin = (): JSX.Element => {
 		setError(null);
 		setSuccess(null);
 
-		const endpoints: Record<CommandType, '/restart' | '/stop' | '/reboot' | '/kill-chromium'> =
-			{
-				restart: '/restart',
-				stop: '/stop',
-				reboot: '/reboot',
-				killChromium: '/kill-chromium',
-			};
+		const endpoints: Record<
+			CommandType,
+			'/restart' | '/stop' | '/reboot' | '/kill-chromium' | '/restart-matter'
+		> = {
+			restart: '/restart',
+			stop: '/stop',
+			reboot: '/reboot',
+			killChromium: '/kill-chromium',
+			restartMatter: '/restart-matter',
+		};
 
 		const successMessages: Record<CommandType, string> = {
 			restart: 'Server restart initiated. Please wait...',
 			stop: 'Server stop initiated.',
 			reboot: 'System reboot initiated. Please wait...',
 			killChromium: 'Chromium processes killed successfully.',
+			restartMatter: 'Matter server restarted successfully.',
 		};
 
 		try {
@@ -283,6 +292,21 @@ export const SystemAdmin = (): JSX.Element => {
 								disabled={!config?.commands.stopServer || executing !== null}
 							>
 								Stop Server
+							</Button>
+							<Button
+								variant="contained"
+								color="info"
+								startIcon={
+									executing === 'restartMatter' ? (
+										<CircularProgress size={20} color="inherit" />
+									) : (
+										<RestartAltIcon />
+									)
+								}
+								onClick={() => openConfirmDialog('restartMatter')}
+								disabled={executing !== null}
+							>
+								Restart Matter Server
 							</Button>
 						</Stack>
 					</CardContent>

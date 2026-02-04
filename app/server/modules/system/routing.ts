@@ -196,6 +196,20 @@ function _initRouting(config: ModuleConfig) {
 					}
 				},
 			},
+
+			/**
+			 * Restart the Matter server.
+			 */
+			'/restart-matter': {
+				POST: async (_req, _server, { json }) => {
+					// Restart but don't await
+					void (await config.modules.matter.server.value).restart();
+					return json({
+						success: true,
+						message: 'Matter server restarted successfully',
+					});
+				},
+			},
 		},
 		true // Require authentication
 	);

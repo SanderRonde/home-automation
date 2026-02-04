@@ -61,7 +61,7 @@ class Disposable {
 }
 
 export class MatterServer extends Disposable {
-	private readonly commissioningController: CommissioningController;
+	private commissioningController: CommissioningController | null = null;
 	private static consoleErrorFilterInstalled = false;
 	private static originalConsoleError: typeof console.error | null = null;
 
@@ -108,17 +108,8 @@ export class MatterServer extends Disposable {
 
 		environment.vars.set('storage.path', path.join(DB_FOLDER, 'matter'));
 
-		/** Create Matter Controller Node and bind it to the Environment. */
-		this.commissioningController = new CommissioningController({
-			environment: {
-				environment,
-				id: 'home-automation',
-			},
-			autoConnect: false, // Do not auto connect to the commissioned nodes
-			adminFabricLabel: 'home-automation',
-		});
 		process.on('SIGINT', () => {
-			return this.commissioningController.close();
+			return this.commissioningController?.close();
 		});
 	}
 
@@ -193,10 +184,11 @@ export class MatterServer extends Disposable {
 		this.devices.set(devices);
 	}
 
-	private async _watchNodeIds(nodeIds: NodeId[]): Promise<PairedNode[]> {
-		const nodes = await Promise.all(
-			nodeIds.map((nodeId) => this.commissioningController.getNode(nodeId))
-		);
+	private async _watchNodeIds(
+		controller: CommissioningController,
+		nodeIds: NodeId[]
+	): Promise<PairedNode[]> {
+		const nodes = await Promise.all(nodeIds.map((nodeId) => controller.getNode(nodeId)));
 		nodes.forEach((node) => {
 			if (!node.isConnected) {
 				node.connect();
@@ -325,11 +317,24 @@ export class MatterServer extends Disposable {
 	}
 
 	async start(): Promise<void> {
+		/** Create Matter Controller Node and bind it to the Environment. */
+		this.commissioningController = new CommissioningController({
+			environment: {
+				environment,
+				id: 'home-automation',
+			},
+			autoConnect: false, // Do not auto connect to the commissioned nodes
+			adminFabricLabel: 'home-automation',
+		});
+
 		logTag('matter', 'magenta', 'starting matter server');
 		await this.commissioningController.start();
 
 		logTag('matter', 'magenta', 'watching node ids');
-		await this._watchNodeIds(this.commissioningController.getCommissionedNodes());
+		await this._watchNodeIds(
+			this.commissioningController,
+			this.commissioningController.getCommissionedNodes()
+		);
 		await new Promise((resolve) => setTimeout(resolve, 5000));
 		logTag('matter', 'magenta', 'listing devices');
 		const devices = this.listDevices();
@@ -341,6 +346,9 @@ export class MatterServer extends Disposable {
 	async discoverCommissionableDevices(
 		callback: (device: CommissionableDevice) => void
 	): Promise<CommissionableDevice[]> {
+		if (!this.commissioningController) {
+			return [];
+		}
 		return this.commissioningController.discoverCommissionableDevices(
 			{},
 			{
@@ -352,6 +360,9 @@ export class MatterServer extends Disposable {
 	}
 
 	async commissionQrCode(pairingCode: string): Promise<PairedNode[]> {
+		if (!this.commissioningController) {
+			return [];
+		}
 		logTag('commissioning', 'magenta', 'commissioning device with QR code', pairingCode);
 		const pairingCodeCodec = QrPairingCodeCodec.decode(pairingCode)[0];
 		const setupPin = pairingCodeCodec.passcode;
@@ -371,6 +382,7 @@ export class MatterServer extends Disposable {
 		};
 
 		logTag('commissioning', 'magenta', 'bumping log level to INFO');
+		const controller = this.commissioningController;
 		Logger.level = LogLevel.INFO;
 		const nodeId = await withFn(
 			() => {
@@ -380,7 +392,7 @@ export class MatterServer extends Disposable {
 					'commissioning device with pairing code',
 					pairingCode
 				);
-				return this.commissioningController.commissionNode(options);
+				return controller.commissionNode(options);
 			},
 			() => {
 				logTag('commissioning', 'magenta', 'bumping log level back to ERROR');
@@ -389,10 +401,13 @@ export class MatterServer extends Disposable {
 		);
 
 		logTag('commissioning', 'magenta', 'watching node ids', nodeId);
-		return await this._watchNodeIds([nodeId]);
+		return await this._watchNodeIds(controller, [nodeId]);
 	}
 
 	async commissionManual(pairingCode: string): Promise<PairedNode[]> {
+		if (!this.commissioningController) {
+			return [];
+		}
 		logTag('commissioning', 'magenta', 'commissioning device with pairing code', pairingCode);
 		const pairingCodeCodec = ManualPairingCodeCodec.decode(pairingCode);
 		const shortDiscriminator = pairingCodeCodec.shortDiscriminator;
@@ -423,6 +438,7 @@ export class MatterServer extends Disposable {
 
 		logTag('commissioning', 'magenta', 'bumping log level to INFO');
 		Logger.level = LogLevel.INFO;
+		const controller = this.commissioningController;
 		const nodeId = await withFn(
 			() => {
 				logTag(
@@ -431,7 +447,7 @@ export class MatterServer extends Disposable {
 					'commissioning device with pairing code',
 					pairingCode
 				);
-				return this.commissioningController.commissionNode(options);
+				return controller.commissionNode(options);
 			},
 			() => {
 				logTag('commissioning', 'magenta', 'bumping log level back to ERROR');
@@ -440,11 +456,19 @@ export class MatterServer extends Disposable {
 		);
 
 		logTag('commissioning', 'magenta', 'watching node ids', nodeId);
-		return await this._watchNodeIds([nodeId]);
+		return await this._watchNodeIds(controller, [nodeId]);
 	}
 
 	async stop(): Promise<void> {
-		await this.commissioningController.close();
+		if (this.commissioningController) {
+			await this.commissioningController.close();
+			this.commissioningController = null;
+		}
+	}
+
+	async restart(): Promise<void> {
+		await this.stop();
+		await this.start();
 	}
 }
 
