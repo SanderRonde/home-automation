@@ -86,10 +86,14 @@ class TuyaClusterProxy<PARAMS extends Record<string, TuyaPropertyValue>> {
 		mapper?: (value: V) => PARAMS[P]['value']
 	) {
 		return async (value: V) => {
+			const mappedValue = mapper
+				? mapper(value)
+				: (value as unknown as TuyaPropertyValue['value']);
 			const result = await this._api.setProperty(
 				this._deviceId,
 				property,
-				mapper ? mapper(value) : (value as unknown as TuyaPropertyValue['value'])
+				mappedValue,
+				`${this._deviceId}-${property}-${mappedValue}`
 			);
 			if (!result) {
 				throw new Error(`Failed to set property ${property}`);
