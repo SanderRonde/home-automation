@@ -88,6 +88,10 @@ export abstract class EwelinkDevice extends EwelinkEndpoint implements Device, D
 	}
 
 	public getDeviceStatus(): 'online' | 'offline' {
+		if (this._eWeLinkConfig.device.itemData.deviceid === 'a480062a7c') {
+			// Bit hacky but this one is broken so always shows offline
+			return 'online';
+		}
 		return this._eWeLinkConfig.device.itemData.online ? 'online' : 'offline';
 	}
 
@@ -142,6 +146,14 @@ class EwelinkSmartSwitchDevice extends EwelinkDevice {
 			new EwelinkMultiOnOffCluster(eWeLinkConfig, 0),
 			// new EwelinkMultiOnOffCluster(eWeLinkConfig, 1),
 		]);
+	}
+}
+
+class EwelinkMicroDevice extends EwelinkDevice {
+	public static readonly modelName = 'Micro';
+
+	public constructor(eWeLinkConfig: EWeLinkConfig) {
+		super(eWeLinkConfig, [new EwelinkMultiOnOffCluster(eWeLinkConfig, 0)]);
 	}
 }
 
@@ -226,6 +238,7 @@ const DEVICES = [
 	EwelinkZBMiniDevice,
 	EwelinkMiniExtremeDevice,
 	EwelinkSmartSwitchDevice,
+	EwelinkMicroDevice,
 ] satisfies {
 	modelName: string;
 }[];
