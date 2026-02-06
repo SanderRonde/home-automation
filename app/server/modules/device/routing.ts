@@ -633,7 +633,7 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 			'/listWithValues': async (_req, _server, { json }) => {
 				return json({ devices: await listDevicesWithValues(api, modules) });
 			},
-			'/reconnect/:deviceId': (req, _server, { json }) => {
+			'/reconnect/:deviceId': async (req, _server, { json }) => {
 				const { deviceId } = req.params;
 
 				const storedDevices = api.getStoredDevices();
@@ -644,6 +644,14 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 
 				if (device.source === DeviceSource.WLED.value) {
 					modules.wled.refresh();
+				} else if (device.source === DeviceSource.MATTER.value) {
+					try {
+						const matterServer = await modules.matter.server.value;
+						await matterServer.reconnectDevice(deviceId);
+					} catch (error) {
+						const message = error instanceof Error ? error.message : 'Reconnect failed';
+						return json({ error: message }, { status: 500 });
+					}
 				}
 				return json({ success: true });
 			},

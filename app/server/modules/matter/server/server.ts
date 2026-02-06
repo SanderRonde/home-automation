@@ -13,6 +13,7 @@ import type { NodeCommissioningOptions } from '@project-chip/matter.js';
 import { CommissioningController } from '@project-chip/matter.js';
 import { logReady, logTag } from '../../../lib/logging/logger';
 import type { CommissionableDevice } from '@matter/protocol';
+import { NodeStates } from '@project-chip/matter.js/device';
 import { DB_FOLDER } from '../../../lib/constants';
 import type { EndpointNumber } from '@matter/main';
 import type { NodeId } from '@matter/main/types';
@@ -114,8 +115,27 @@ export class MatterServer extends Disposable {
 	}
 
 	private _nodes: PairedNode[] = [];
+	private _reconnectMap = new Map<string, NodeId>();
 
 	async #updateDevices(deviceInfos: MatterDeviceInfo[]) {
+		// #region agent log
+		// eslint-disable-next-line no-restricted-globals -- debug instrumentation
+		fetch('http://127.0.0.1:7244/ingest/79424a24-85e1-4d1d-8c1a-bb0cd37fbd73', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				location: 'server.ts:#updateDevices:entry',
+				message: 'updateDevices called',
+				data: {
+					deviceInfosCount: deviceInfos.length,
+					nodeIds: [...new Set(deviceInfos.map((d) => String(d.node.nodeId)))],
+				},
+				timestamp: Date.now(),
+				sessionId: 'debug-session',
+				hypothesisId: 'H2',
+			}),
+		}).catch(() => {});
+		// #endregion
 		const currentDevices = this.devices.current();
 
 		// Create a reverse lookup map: uniqueId (without "matter:" prefix) -> existing device
@@ -172,15 +192,64 @@ export class MatterServer extends Disposable {
 				})().then(
 					() => {
 						logTag('matter', 'magenta', 'device updated', id);
+						// #region agent log
+						// eslint-disable-next-line no-restricted-globals -- debug instrumentation
+						fetch('http://127.0.0.1:7244/ingest/79424a24-85e1-4d1d-8c1a-bb0cd37fbd73', {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify({
+								location: 'server.ts:#updateDevices:device-ok',
+								message: 'device updated',
+								data: { id, nodeId: String(node.nodeId) },
+								timestamp: Date.now(),
+								sessionId: 'debug-session',
+								hypothesisId: 'H2',
+							}),
+						}).catch(() => {});
+						// #endregion
 					},
 					(error: unknown) => {
 						logTag('matter', 'red', 'error updating device', id, error);
+						// #region agent log
+						// eslint-disable-next-line no-restricted-globals -- debug instrumentation
+						fetch('http://127.0.0.1:7244/ingest/79424a24-85e1-4d1d-8c1a-bb0cd37fbd73', {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify({
+								location: 'server.ts:#updateDevices:device-error',
+								message: 'error updating device',
+								data: { id, nodeId: String(node.nodeId), error: String(error) },
+								timestamp: Date.now(),
+								sessionId: 'debug-session',
+								hypothesisId: 'H2',
+							}),
+						}).catch(() => {});
+						// #endregion
 					}
 				),
 				wait(1000 * 60),
 			]);
+			const device = devices[id];
+			if (device) {
+				this._reconnectMap.set(device.getUniqueId(), node.nodeId);
+			}
 		}
 		clearInterval(interval);
+		// #region agent log
+		// eslint-disable-next-line no-restricted-globals -- debug instrumentation
+		fetch('http://127.0.0.1:7244/ingest/79424a24-85e1-4d1d-8c1a-bb0cd37fbd73', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				location: 'server.ts:#updateDevices:exit',
+				message: 'updateDevices done',
+				data: { finalDeviceCount: Object.keys(devices).length },
+				timestamp: Date.now(),
+				sessionId: 'debug-session',
+				hypothesisId: 'H2',
+			}),
+		}).catch(() => {});
+		// #endregion
 		this.devices.set(devices);
 	}
 
@@ -188,20 +257,86 @@ export class MatterServer extends Disposable {
 		controller: CommissioningController,
 		nodeIds: NodeId[]
 	): Promise<PairedNode[]> {
+		// #region agent log
+		// eslint-disable-next-line no-restricted-globals -- debug instrumentation
+		fetch('http://127.0.0.1:7244/ingest/79424a24-85e1-4d1d-8c1a-bb0cd37fbd73', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				location: 'server.ts:_watchNodeIds:entry',
+				message: 'watchNodeIds',
+				data: { nodeIds: nodeIds.map(String) },
+				timestamp: Date.now(),
+				sessionId: 'debug-session',
+				hypothesisId: 'H4',
+			}),
+		}).catch(() => {});
+		// #endregion
 		const nodes = await Promise.all(nodeIds.map((nodeId) => controller.getNode(nodeId)));
 		nodes.forEach((node) => {
 			if (!node.isConnected) {
+				// #region agent log
+				// eslint-disable-next-line no-restricted-globals -- debug instrumentation
+				fetch('http://127.0.0.1:7244/ingest/79424a24-85e1-4d1d-8c1a-bb0cd37fbd73', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						location: 'server.ts:_watchNodeIds:connect',
+						message: 'node.connect() called',
+						data: { nodeId: String(node.nodeId), isConnected: node.isConnected },
+						timestamp: Date.now(),
+						sessionId: 'debug-session',
+						hypothesisId: 'H4',
+					}),
+				}).catch(() => {});
+				// #endregion
 				node.connect();
 			}
 		});
+		// Wait for each node to be ready: prefer full remote init, with timeout so offline nodes don't block
+		const nodeReadyTimeoutMs = 45_000;
 		await Promise.all(
-			nodes.map((node) => (node.initialized ? Promise.resolve() : node.events.initialized))
+			nodes.map((node) =>
+				Promise.race([
+					node.remoteInitializationDone
+						? Promise.resolve()
+						: Promise.resolve(node.events.initializedFromRemote),
+					wait(nodeReadyTimeoutMs),
+				])
+			)
 		);
 
 		for (const node of nodes) {
 			node.events.structureChanged.on(this._onStructureChanged);
+			// #region agent log
+			const onStateChanged = (state: NodeStates) => {
+				// eslint-disable-next-line no-restricted-globals -- debug instrumentation
+				fetch('http://127.0.0.1:7244/ingest/79424a24-85e1-4d1d-8c1a-bb0cd37fbd73', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						location: 'server.ts:stateChanged',
+						message: 'node stateChanged',
+						data: {
+							nodeId: String(node.nodeId),
+							state: NodeStates[state] ?? state,
+							isConnected: node.isConnected,
+						},
+						timestamp: Date.now(),
+						sessionId: 'debug-session',
+						hypothesisId: 'H1',
+					}),
+				}).catch(() => {});
+				// Refresh device list when a node (re)connects so late or reconnected devices appear
+				if (state === NodeStates.Connected) {
+					void this.#updateDevices(this.listDevices());
+				}
+			};
+			node.events.stateChanged.on(onStateChanged);
+			// #endregion
 			this.pushDisposable(() => {
 				node.events.structureChanged.off(this._onStructureChanged);
+				node.events.stateChanged.off(onStateChanged);
 			});
 		}
 		this._nodes.push(...nodes);
@@ -209,6 +344,21 @@ export class MatterServer extends Disposable {
 	}
 
 	private readonly _onStructureChanged = () => {
+		// #region agent log
+		// eslint-disable-next-line no-restricted-globals -- debug instrumentation
+		fetch('http://127.0.0.1:7244/ingest/79424a24-85e1-4d1d-8c1a-bb0cd37fbd73', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				location: 'server.ts:_onStructureChanged',
+				message: 'structureChanged fired, refreshing devices',
+				data: {},
+				timestamp: Date.now(),
+				sessionId: 'debug-session',
+				hypothesisId: 'H3',
+			}),
+		}).catch(() => {});
+		// #endregion
 		void this.#updateDevices(this.listDevices());
 	};
 
@@ -311,9 +461,94 @@ export class MatterServer extends Disposable {
 	public listDevices(): MatterDeviceInfo[] {
 		const deviceInfos: MatterDeviceInfo[] = [];
 		for (const watchedNode of this._nodes) {
-			deviceInfos.push(...this._listNodeDevices(watchedNode));
+			try {
+				deviceInfos.push(...this._listNodeDevices(watchedNode));
+			} catch (error) {
+				logTag(
+					'matter',
+					'red',
+					'listDevices: skip node',
+					String(watchedNode.nodeId),
+					error
+				);
+			}
 		}
 		return deviceInfos;
+	}
+
+	async getCommissionedNodesInfo(): Promise<
+		{ nodeId: string; name: string; clusters: string[] }[]
+	> {
+		if (!this.commissioningController) {
+			return [];
+		}
+		const nodeIds = this.commissioningController.getCommissionedNodes();
+		const result: { nodeId: string; name: string; clusters: string[] }[] = [];
+		for (const nodeId of nodeIds) {
+			const nodeIdStr = String(nodeId);
+			const node = this._nodes.find((n) => n.nodeId === nodeId);
+			let name = `Node ${nodeIdStr}`;
+			const clusters: string[] = [];
+			if (node) {
+				try {
+					const root = node.getRootEndpoint();
+					const basicInfo = root?.getClusterClient(BasicInformationCluster);
+					const bridgedInfo = root?.getClusterClient(
+						BridgedDeviceBasicInformationCluster
+					);
+					const info = basicInfo ?? bridgedInfo;
+					const [nodeLabel, productLabel, productName, vendorName, serialNumber] =
+						await Promise.all([
+							info?.attributes.nodeLabel?.get?.(),
+							info?.attributes.productLabel?.get?.(),
+							info?.attributes.productName?.get?.(),
+							info?.attributes.vendorName?.get?.(),
+							info?.attributes.serialNumber?.get?.(),
+						]);
+					const trim = (s: unknown) =>
+						typeof s === 'string' && s.trim().length > 0 ? s.trim() : undefined;
+					const v = trim(vendorName);
+					const p = trim(productName);
+					const label =
+						trim(nodeLabel) ??
+						trim(productLabel) ??
+						p ??
+						(v && p ? `${v} ${p}` : v) ??
+						trim(serialNumber) ??
+						root?.name;
+					if (label) {
+						name = label;
+					}
+					if (root) {
+						const clients = root.getAllClusterClients?.() ?? [];
+						for (const client of clients) {
+							if (client?.name && typeof client.name === 'string') {
+								clusters.push(client.name);
+							}
+						}
+						clusters.sort((a, b) => a.localeCompare(b));
+					}
+				} catch {
+					// Keep Node ${nodeIdStr} and empty clusters
+				}
+			}
+			result.push({ nodeId: nodeIdStr, name, clusters });
+		}
+		return result;
+	}
+
+	async removeNode(nodeIdParam: string): Promise<void> {
+		if (!this.commissioningController) {
+			throw new Error('Matter controller not started');
+		}
+		const nodeIds = this.commissioningController.getCommissionedNodes();
+		const nodeId = nodeIds.find((id) => String(id) === nodeIdParam);
+		if (nodeId === undefined) {
+			throw new Error('Node not found');
+		}
+		await this.commissioningController.removeNode(nodeId);
+		this._nodes = this._nodes.filter((n) => n.nodeId !== nodeId);
+		await this.#updateDevices(this.listDevices());
 	}
 
 	async start(): Promise<void> {
@@ -400,7 +635,7 @@ export class MatterServer extends Disposable {
 			}
 		);
 
-		logTag('commissioning', 'magenta', 'watching node ids', nodeId);
+		logTag('commissioning', 'magenta', 'watching node ids', String(nodeId));
 		return await this._watchNodeIds(controller, [nodeId]);
 	}
 
@@ -455,8 +690,21 @@ export class MatterServer extends Disposable {
 			}
 		);
 
-		logTag('commissioning', 'magenta', 'watching node ids', nodeId);
+		logTag('commissioning', 'magenta', 'watching node ids', String(nodeId));
 		return await this._watchNodeIds(controller, [nodeId]);
+	}
+
+	async reconnectDevice(deviceId: string): Promise<void> {
+		const nodeId = this._reconnectMap.get(deviceId);
+		if (nodeId === undefined) {
+			throw new Error('Device not found');
+		}
+		if (!this.commissioningController) {
+			throw new Error('Matter controller not started');
+		}
+		const node = await this.commissioningController.getNode(nodeId);
+		logTag('matter', 'magenta', 'reconnecting device', deviceId, 'nodeId', String(nodeId));
+		node.connect();
 	}
 
 	async stop(): Promise<void> {

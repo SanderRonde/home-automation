@@ -44,10 +44,10 @@ import type {
 	DashboardWebsocketServerMessage,
 } from '../../../server/modules/dashboard/routing';
 import { RoomAssignmentDialog } from './RoomAssignmentDialog';
+import { apiGet, apiPost, apiDelete } from '../../lib/fetch';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import useWebsocket from '../../shared/resilient-socket';
 import { fadeInUpStaggered } from '../../lib/animations';
-import { apiPost, apiDelete } from '../../lib/fetch';
 import { QrScanner } from './QrScanner';
 import React, { useState } from 'react';
 import { IconComponent } from './icon';
@@ -669,8 +669,38 @@ export const Devices: React.FC = () => {
 	} | null>(null);
 	const [qrScannerOpen, setQrScannerOpen] = useState(false);
 	const [hasCamera, setHasCamera] = useState<boolean | null>(null);
+	const [commissionedNodes, setCommissionedNodes] = useState<
+		{ nodeId: string; name: string; clusters: string[] }[]
+	>([]);
+	const [nodesLoading, setNodesLoading] = useState(false);
+	const [unpairingNodeId, setUnpairingNodeId] = useState<string | null>(null);
+	const [unpairConfirmNode, setUnpairConfirmNode] = useState<{
+		nodeId: string;
+		name?: string;
+	} | null>(null);
 
 	const { devices, loading, refresh } = useDevices();
+
+	const fetchCommissionedNodes = React.useCallback(async () => {
+		setNodesLoading(true);
+		try {
+			const response = await apiGet('matter', '/nodes', {});
+			if (response.ok) {
+				const data = (await response.json()) as {
+					nodes: { nodeId: string; name: string; clusters: string[] }[];
+				};
+				setCommissionedNodes(data.nodes ?? []);
+			}
+		} catch {
+			// Ignore fetch errors
+		} finally {
+			setNodesLoading(false);
+		}
+	}, []);
+
+	React.useEffect(() => {
+		void fetchCommissionedNodes();
+	}, [fetchCommissionedNodes]);
 
 	const { sendMessage } = useWebsocket<
 		DashboardWebsocketServerMessage,
@@ -757,8 +787,9 @@ export const Devices: React.FC = () => {
 				});
 				setPairingCode('');
 
-				// Refresh the device list immediately and clear message after delay
+				// Refresh the device list and commissioned nodes
 				refresh(true);
+				void fetchCommissionedNodes();
 				setTimeout(() => setPairingMessage(null), 3000);
 			} catch (error) {
 				console.error('Failed to pair Matter device:', error);
@@ -773,7 +804,7 @@ export const Devices: React.FC = () => {
 				setPairingLoading(false);
 			}
 		},
-		[refresh]
+		[refresh, fetchCommissionedNodes]
 	);
 
 	const handlePair = React.useCallback(async () => {
@@ -900,6 +931,30 @@ export const Devices: React.FC = () => {
 		}
 	}, [deleteConfirmDevice, refresh]);
 
+	const handleConfirmUnpair = React.useCallback(async () => {
+		if (!unpairConfirmNode) {
+			return;
+		}
+		const { nodeId } = unpairConfirmNode;
+		setUnpairingNodeId(nodeId);
+		try {
+			const response = await apiDelete('matter', '/nodes/:nodeId', { nodeId });
+			if (response.ok) {
+				setUnpairConfirmNode(null);
+				void fetchCommissionedNodes();
+				refresh();
+			} else {
+				const error = (await response.json()) as { error?: string };
+				alert(`Unpair failed: ${error.error ?? 'Unknown error'}`);
+			}
+		} catch (error) {
+			console.error('Failed to unpair Matter node:', error);
+			alert('Unpair failed. Please try again.');
+		} finally {
+			setUnpairingNodeId(null);
+		}
+	}, [unpairConfirmNode, fetchCommissionedNodes, refresh]);
+
 	return (
 		<Box sx={{ p: { xs: 2, sm: 3 } }}>
 			<Grid container spacing={{ xs: 2, md: 3 }}>
@@ -969,6 +1024,106 @@ export const Devices: React.FC = () => {
 				{/* Right Column - Controls (on mobile, shown at bottom) */}
 				<Grid size={{ xs: 12, md: 4 }} sx={{ order: { xs: 2, md: 2 } }}>
 					<Stack spacing={3}>
+						{/* Matter commissioned devices */}
+						<Card>
+							<CardContent>
+								<Box
+									sx={{
+										display: 'flex',
+										alignItems: 'center',
+										justifyContent: 'space-between',
+										mb: 2,
+									}}
+								>
+									<Typography variant="h6">
+										Matter commissioned devices
+									</Typography>
+									{nodesLoading && <CircularProgress size={20} />}
+								</Box>
+								{nodesLoading ? (
+									<Box sx={{ py: 2 }}>
+										<Typography variant="body2" color="text.secondary">
+											Loading...
+										</Typography>
+									</Box>
+								) : commissionedNodes.length === 0 ? (
+									<Typography variant="body2" color="text.secondary">
+										No Matter devices paired yet.
+									</Typography>
+								) : (
+									<Stack spacing={1.5}>
+										{commissionedNodes.map((node) => (
+											<Box
+												key={node.nodeId}
+												sx={{
+													p: 1.5,
+													border: '1px solid',
+													borderColor: 'divider',
+													borderRadius: 1,
+												}}
+											>
+												<Box
+													sx={{
+														display: 'flex',
+														justifyContent: 'space-between',
+														alignItems: 'flex-start',
+														mb: node.clusters.length > 0 ? 1 : 0,
+													}}
+												>
+													<Typography
+														variant="body2"
+														sx={{ fontWeight: 500 }}
+													>
+														{node.name}
+													</Typography>
+													<Button
+														variant="outlined"
+														size="small"
+														color="error"
+														onClick={() =>
+															setUnpairConfirmNode({
+																nodeId: node.nodeId,
+																name: node.name,
+															})
+														}
+														disabled={unpairingNodeId === node.nodeId}
+													>
+														{unpairingNodeId === node.nodeId ? (
+															<CircularProgress
+																size={16}
+																color="inherit"
+															/>
+														) : (
+															'Unpair'
+														)}
+													</Button>
+												</Box>
+												{node.clusters.length > 0 && (
+													<Box
+														sx={{
+															display: 'flex',
+															flexWrap: 'wrap',
+															gap: 0.5,
+														}}
+													>
+														{node.clusters.map((cluster) => (
+															<Chip
+																key={cluster}
+																label={cluster}
+																size="small"
+																variant="outlined"
+																sx={{ fontSize: '0.7rem' }}
+															/>
+														))}
+													</Box>
+												)}
+											</Box>
+										))}
+									</Stack>
+								)}
+							</CardContent>
+						</Card>
+
 						{/* Pairing Section */}
 						<Card>
 							<CardContent>
@@ -1200,6 +1355,30 @@ export const Devices: React.FC = () => {
 					<Button onClick={() => setDeleteConfirmDevice(null)}>Cancel</Button>
 					<Button onClick={handleConfirmDelete} color="error" variant="contained">
 						Delete
+					</Button>
+				</DialogActions>
+			</Dialog>
+
+			{/* Unpair Matter node confirmation */}
+			<Dialog open={unpairConfirmNode !== null} onClose={() => setUnpairConfirmNode(null)}>
+				<DialogTitle>Unpair Matter device</DialogTitle>
+				<DialogContent>
+					<Typography>
+						Are you sure you want to unpair "
+						{(unpairConfirmNode?.name?.trim() ?? '') ||
+							`Node ${unpairConfirmNode?.nodeId}`}
+						"? The device will be removed from this controller.
+					</Typography>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={() => setUnpairConfirmNode(null)}>Cancel</Button>
+					<Button
+						onClick={handleConfirmUnpair}
+						color="error"
+						variant="contained"
+						disabled={unpairingNodeId !== null}
+					>
+						Unpair
 					</Button>
 				</DialogActions>
 			</Dialog>

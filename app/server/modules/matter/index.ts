@@ -2,6 +2,7 @@ import { SettablePromise } from '../../lib/settable-promise';
 import { DeviceSource } from '../device/device';
 import { MatterServer } from './server/server';
 import type { ModuleConfig } from '../modules';
+import { initRouting } from './routing';
 import { ModuleMeta } from '../meta';
 
 export const Matter = new (class Matter extends ModuleMeta {
@@ -28,7 +29,7 @@ export const Matter = new (class Matter extends ModuleMeta {
 		});
 
 		return {
-			serve: {},
+			serve: initRouting(config),
 		};
 	}
 })();

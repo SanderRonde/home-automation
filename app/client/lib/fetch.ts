@@ -10,6 +10,7 @@ import type { WebhookRoutes } from '../../server/modules/webhook/routing';
 import type { EwelinkRoutes } from '../../server/modules/ewelink/routing';
 import type { LedArtRoutes } from '../../server/modules/led-art/routing';
 import type { SystemRoutes } from '../../server/modules/system/routing';
+import type { MatterRoutes } from '../../server/modules/matter/routing';
 import type { DeviceRoutes } from '../../server/modules/device/routing';
 import type { BackupRoutes } from '../../server/modules/backup/routing';
 import type { KioskRoutes } from '../../server/modules/kiosk/routing';
@@ -230,6 +231,7 @@ export type RoutesForModules = {
 	kiosk: KioskRoutes;
 	ewelink: EwelinkRoutes;
 	logs: LogsRoutes;
+	matter: MatterRoutes;
 	tuya: TuyaRoutes;
 	location: LocationRoutes;
 	system: SystemRoutes;
