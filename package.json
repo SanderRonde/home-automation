@@ -11,8 +11,8 @@
 	},
 	"scripts": {
 		"postinstall": "patch-package",
-		"compile": "tsc -p app/tsconfig.json",
-		"watch": "tsc -w -p app/tsconfig.json",
+		"compile": "tsgo -p app/tsconfig.json",
+		"watch": "tsgo -w -p app/tsconfig.json",
 		"pretty": "pretty-quick",
 		"format-check": "prettier --check '**/*.{ts,tsx,json,html}'",
 		"format": "prettier --write '**/*.{ts,tsx,json,html}'",
@@ -30,7 +30,6 @@
 		"knip": "knip-bun"
 	},
 	"devDependencies": {
-		"oxlint": "^1.0.0",
 		"@babel/core": "^7.28.5",
 		"@babel/preset-react": "^7.28.5",
 		"@babel/preset-typescript": "^7.28.5",
@@ -48,8 +47,10 @@
 		"@types/react-dom": "^18.3.0",
 		"@types/web-push": "^3.6.4",
 		"@types/ws": "^8.18.1",
+		"@typescript/native-preview": "^7.0.0-dev.20260207.1",
 		"babel-plugin-react-compiler": "^1.0.0",
 		"knip": "^5.64.1",
+		"oxlint": "^1.0.0",
 		"playwright": "^1.56.0",
 		"prettier": "^3.2.5",
 		"prettier-plugin-sort-imports": "^1.8.5",
