@@ -164,11 +164,11 @@ export class TuyaThermostatCluster
 		}
 		if (data.mode.value === 'home') {
 			// Manual
-			return ThermostatMode.HEAT;
+			return ThermostatMode.MANUAL;
 		}
 		if (data.mode.value === 'away') {
 			// Manual
-			return ThermostatMode.COOL;
+			return ThermostatMode.MANUAL;
 		}
 		if (data.mode.value === 'temporary') {
 			return ThermostatMode.MANUAL;
