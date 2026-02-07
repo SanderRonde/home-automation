@@ -1,7 +1,6 @@
 import 'reflect-metadata';
 
 import {
-	Cluster,
 	DeviceOnOffCluster,
 	DeviceWindowCoveringCluster,
 	DeviceLevelControlCluster,
@@ -19,15 +18,15 @@ import {
 	DeviceColorControlTemperatureCluster,
 	DeviceActionsCluster,
 	DeviceThermostatCluster,
-	DeviceGroupId,
 	DeviceElectricalEnergyMeasurementCluster,
 	DeviceElectricalPowerMeasurementCluster,
 	DeviceColorControlXYCluster,
 } from './cluster';
-import { EventEmitter } from '../../lib/event-emitter';
+import type { EventEmitter } from '../../lib/event-emitter';
+import type { Cluster, DeviceGroupId } from './cluster';
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import { Color } from '../../lib/color';
-import { Data } from '../../lib/data';
+import type { Color } from '../../lib/color';
+import type { Data } from '../../lib/data';
 import * as z from 'zod';
 
 const typesForClasses = new Map<

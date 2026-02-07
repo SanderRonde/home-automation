@@ -37,7 +37,7 @@ This is a TypeScript home automation system using Bun runtime with a modular arc
 - **Smart Home**: Matter.js for device communication
 - **AI Integration**: ChatGPT with function calling + MCP (Model Context Protocol) support
 - **Communication**: WebSockets for real-time updates
-- **Linting**: ESLint with Google TypeScript Style (gts)
+- **Linting**: Oxlint
 - **Formatting**: Prettier with import sorting
 
 ## Running the Project
@@ -53,7 +53,7 @@ This is a TypeScript home automation system using Bun runtime with a modular arc
 **IMPORTANT**: When implementing a feature or making code changes, you MUST run `bun lint` to validate your changes before considering the task complete. This ensures:
 
 - TypeScript type checking passes
-- ESLint rules are followed
+- Oxlint rules are followed
 - Code quality standards are maintained
 
 Fix any linting errors before marking the implementation as complete.

@@ -202,7 +202,7 @@ function useWebsocket<IN, OUT>(
 	const openRef = React.useRef(open);
 	openRef.current = open;
 	const sendMessage = React.useCallback((message: OUT) => {
-		if (open) {
+		if (openRef.current) {
 			socket.current?.send(message);
 		} else {
 			queue.current.push(message);
