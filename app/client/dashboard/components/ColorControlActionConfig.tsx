@@ -238,7 +238,7 @@ export const ColorControlActionConfig = (props: ColorControlActionConfigProps): 
 						] && (
 							<Box>
 								<Typography variant="body2" gutterBottom>
-									Brightness: {props.action.action.value}%
+									Level: {props.action.action.value}%
 								</Typography>
 								<Slider
 									value={props.action.action.value}

@@ -102,5 +102,6 @@ ai/beat-detector/modes/realtime_test/public/files/
 temp/
 .venv
 switchbot.sock
+debug
 
 app/client/switch/antd.dark.css

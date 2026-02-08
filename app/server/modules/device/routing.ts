@@ -130,7 +130,9 @@ export type DashboardDeviceClusterSwitch = DashboardDeviceClusterBase & {
 
 export type DashboardDeviceClusterLevelControl = DashboardDeviceClusterBase & {
 	name: DeviceClusterName.LEVEL_CONTROL;
-	currentLevel: number; // 0-100
+	currentLevel: number; // 0-1
+	levelName: string;
+	step: number;
 };
 
 export type DashboardDeviceClusterActions = DashboardDeviceClusterBase & {
@@ -956,7 +958,7 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 			[validateClusterRoute('/cluster/LevelControl')]: withRequestBody(
 				z.object({
 					deviceIds: z.array(z.string()),
-					level: z.number().min(0).max(100),
+					level: z.number().min(0).max(1),
 				}),
 				async (body, _req, _server, res) =>
 					performActionForDeviceCluster(
@@ -966,7 +968,7 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 						DeviceLevelControlCluster,
 						async (cluster) => {
 							await cluster.setLevel({
-								level: body.level / 100, // Convert 0-100 to 0-1
+								level: body.level,
 							});
 						}
 					)
@@ -1548,14 +1550,20 @@ const getClusterState = async (
 				name: clusterName,
 				icon: getClusterIconName(clusterName, api),
 				currentLevel: 0,
+				levelName: '',
+				step: 1 / 100,
 			};
 		}
 		const cluster = _cluster as DeviceLevelControlCluster;
 		const level = await cluster.currentLevel.get();
+		const name = await cluster.name.get();
+		const step = await cluster.step.get();
 		return {
 			name: clusterName,
 			icon: getClusterIconName(clusterName, api),
-			currentLevel: level * 100, // Convert 0-1 to 0-100
+			currentLevel: level,
+			levelName: name,
+			step: step,
 		};
 	}
 	if (clusterName === DeviceClusterName.ACTIONS) {

@@ -1,5 +1,5 @@
 import type { IncludedIconNames } from '../../../client/dashboard/components/icon';
-import type { Device as DeviceInterface, DeviceSource } from './device';
+import { Device as DeviceInterface, DeviceSource } from './device';
 import { PowerThresholdTracker } from './power-threshold-tracker';
 import { BooleanStateTracker } from './boolean-state-tracker';
 import { TemperatureTracker } from './temperature-tracker';

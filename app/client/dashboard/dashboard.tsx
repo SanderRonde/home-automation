@@ -1,3 +1,4 @@
+import { AndroidControlConfig } from './components/AndroidControlConfig';
 import { TemperatureHistory } from './components/TemperatureHistory';
 import { TemperatureConfig } from './components/TemperatureConfig';
 import { LEDSourcesConfig } from './components/LEDSourcesConfig';
@@ -143,6 +144,8 @@ function DashboardApp() {
 				return <Notifications />;
 			case SidebarTab.DEVICES:
 				return <Devices />;
+			case SidebarTab.ANDROID_CONTROL:
+				return <AndroidControlConfig />;
 			case SidebarTab.EWELINK:
 				return <EweLinkConfig />;
 			case SidebarTab.TUYA:

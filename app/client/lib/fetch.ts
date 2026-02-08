@@ -1,3 +1,4 @@
+import type { AndroidControlRoutes } from '../../server/modules/android-control/routing';
 import type { HomeDetectorRoutes } from '../../server/modules/home-detector/routing';
 import type { NotificationRoutes } from '../../server/modules/notification/routing';
 import type { TemperatureRoutes } from '../../server/modules/temperature/routing';
@@ -233,6 +234,7 @@ export type RoutesForModules = {
 	logs: LogsRoutes;
 	matter: MatterRoutes;
 	tuya: TuyaRoutes;
+	'android-control': AndroidControlRoutes;
 	location: LocationRoutes;
 	system: SystemRoutes;
 	'led-art': LedArtRoutes;

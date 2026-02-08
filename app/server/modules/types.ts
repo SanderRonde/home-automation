@@ -1,6 +1,7 @@
 // Type definitions for modules - this file should not import from modules.ts
 // to avoid circular dependencies. Instead, we import each module type individually.
 
+import type { AndroidControl } from './android-control';
 import type { HomeDetector } from './home-detector';
 import type { Notification } from './notification';
 import type { Temperature } from './temperature';
@@ -30,6 +31,7 @@ import type { AI } from './ai';
 // Using type-only imports should prevent the circular dependency
 export type AllModules = {
 	ai: typeof AI;
+	androidControl: typeof AndroidControl;
 	bot: typeof Bot;
 	auth: typeof Auth;
 	logs: typeof Logs;

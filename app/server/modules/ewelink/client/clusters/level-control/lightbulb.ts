@@ -1,4 +1,5 @@
 import { EwelinkLevelControlCluster } from '../../cluster';
+import { EWeLinkConfig } from '../shared';
 
 type EwelinkLightPowerPowerParams = {
 	ltype?: string;
@@ -9,6 +10,10 @@ type EwelinkLightPowerPowerParams = {
 };
 
 export class EwelinkLevelControlClusterLightbulb extends EwelinkLevelControlCluster<EwelinkLightPowerPowerParams> {
+	public constructor(protected readonly _eWeLinkConfig: EWeLinkConfig) {
+		super(_eWeLinkConfig, 'Brightness');
+	}
+
 	public currentLevel = this.getProxy().attributeGetter((value) =>
 		value?.ltype ? value[value.ltype].br : 0
 	);

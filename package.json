@@ -61,6 +61,7 @@
 		"typescript": "^5.9.2"
 	},
 	"dependencies": {
+		"@devicefarmer/adbkit": "^3.3.8",
 		"@fseehawer/react-circular-slider": "^3.2.7",
 		"@matter/main": "^0.15.6",
 		"@matter/nodejs-ble": "^0.15.6",
@@ -89,6 +90,7 @@
 		"happy-dom": "^20.0.0",
 		"highlight.js": "^11.11.1",
 		"html5-qrcode": "^2.3.8",
+		"jimp": "^1.6.0",
 		"konva": "^10.0.8",
 		"leaflet": "^1.9.4",
 		"lit-html": "1.1.0",

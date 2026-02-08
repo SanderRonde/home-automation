@@ -4,7 +4,6 @@ import { CLIENT_FOLDER, ROOT } from '../../lib/constants';
 import { QrPairingCodeCodec } from '@matter/main/types';
 import { serveStatic } from '../../lib/serve-static';
 import type { ServeOptions } from '../../lib/routes';
-import { logDev } from '../../lib/logging/log-dev';
 import type { ModuleConfig } from '..';
 import path from 'path';
 
@@ -75,7 +74,6 @@ async function _initRouting({ modules, wsPublish }: ModuleConfig) {
 						} satisfies DashboardWebsocketServerMessage)
 					);
 					await matterClient.discoverCommissionableDevices((device) => {
-						logDev(device);
 						void wsPublish(
 							JSON.stringify({
 								type: 'commissionableDevices',

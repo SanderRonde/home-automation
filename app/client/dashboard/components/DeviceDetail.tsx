@@ -3521,7 +3521,7 @@ const OnOffDetail = (props: OnOffDetailProps): JSX.Element => {
 	const levelControlCluster = props.cluster.mergedClusters?.[DeviceClusterName.LEVEL_CONTROL];
 
 	const [isOn, setIsOn] = useState(props.cluster.isOn);
-	const [level, setLevel] = useState(levelControlCluster?.currentLevel ?? 100);
+	const [level, setLevel] = useState(levelControlCluster?.currentLevel ?? 1);
 	const [colorTemperature, setColorTemperature] = useState(
 		colorControlCluster && 'colorTemperature' in colorControlCluster
 			? (colorControlCluster.colorTemperature ?? 3000)
@@ -3587,7 +3587,8 @@ const OnOffDetail = (props: OnOffDetailProps): JSX.Element => {
 	};
 
 	const handleLevelChange = (_event: Event, newValue: number | number[]) => {
-		const newLevel = typeof newValue === 'number' ? newValue : newValue[0];
+		const newLevel =
+			(typeof newValue === 'number' ? newValue : newValue[0]) * levelControlCluster!.step;
 		setLevel(newLevel);
 
 		// Debounce API call
@@ -3762,14 +3763,15 @@ const OnOffDetail = (props: OnOffDetailProps): JSX.Element => {
 											opacity: 0.9,
 										}}
 									>
-										Brightness
+										{levelControlCluster.levelName[0].toUpperCase() +
+											levelControlCluster.levelName.slice(1)}
 									</Typography>
 									<Box sx={{ px: 1 }}>
 										<Slider
-											value={level}
+											value={level * (1 / levelControlCluster.step)}
 											onChange={handleLevelChange}
 											min={0}
-											max={100}
+											max={1 / levelControlCluster.step}
 											step={1}
 											disabled={isUpdating || !isOn}
 											sx={{
@@ -3788,7 +3790,7 @@ const OnOffDetail = (props: OnOffDetailProps): JSX.Element => {
 											}}
 										>
 											<Typography variant="caption" sx={{ opacity: 0.7 }}>
-												0%
+												0
 											</Typography>
 											<Typography
 												variant="h6"
@@ -3797,10 +3799,10 @@ const OnOffDetail = (props: OnOffDetailProps): JSX.Element => {
 													color: '#f59e0b',
 												}}
 											>
-												{Math.round(level)}%
+												{Math.round(level * (1 / levelControlCluster.step))}
 											</Typography>
 											<Typography variant="caption" sx={{ opacity: 0.7 }}>
-												100%
+												{1 / levelControlCluster.step}
 											</Typography>
 										</Box>
 									</Box>
@@ -4158,7 +4160,7 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 					hue: presetHue,
 					saturation: presetSat,
 					// Only send value if no LevelControl
-					...(hasLevelControl ? {} : { value: 100 }),
+					...(hasLevelControl ? {} : { value: 1 }),
 				}
 			);
 		} catch (error) {
@@ -4191,7 +4193,7 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 	};
 
 	// Use brightness for display (from LevelControl if available, otherwise from HSV value)
-	const displayBrightness = hasLevelControl ? brightness : value;
+	const displayBrightness = hasLevelControl ? brightness * 100 : value;
 	const currentColor = hsvToHex(hue, saturation, displayBrightness);
 
 	return (

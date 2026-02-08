@@ -92,6 +92,10 @@ export class LEDArtLevelControlCluster
 	// Does not exist, noop
 	public startupLevel = new Data(1.0);
 
+	public step = new Data(1 / 100);
+
+	public name = new Data('Brightness');
+
 	// Does not exist, noop
 	public setStartupLevel = (): Promise<void> => Promise.resolve();
 

@@ -513,7 +513,7 @@ const OnOffCard = (props: DeviceClusterCardBaseProps<DashboardDeviceClusterOnOff
 	const colorControlCluster = props.cluster.mergedClusters?.[DeviceClusterName.COLOR_CONTROL];
 	const levelControlCluster = props.cluster.mergedClusters?.[DeviceClusterName.LEVEL_CONTROL];
 
-	const currentLevel = levelControlCluster?.currentLevel ?? 100;
+	const currentLevel = levelControlCluster?.currentLevel ?? 1;
 
 	// Color-code based on color temperature, level control, or power usage
 	const getBackgroundColor = (): string => {
@@ -530,14 +530,14 @@ const OnOffCard = (props: DeviceClusterCardBaseProps<DashboardDeviceClusterOnOff
 			const { r, g, b } = kelvinToRgb(colorControlCluster.colorTemperature);
 			// Apply opacity based on level control if available
 			const opacity = levelControlCluster
-				? 0.3 + (currentLevel / 100) * 0.7 // Map 0-100 to 0.3-1.0
+				? 0.3 + currentLevel * 0.7 // Map 0-100 to 0.3-1.0
 				: 1.0;
 			return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 		}
 
 		// If level control exists but no color temperature, use opacity on default color
 		if (levelControlCluster) {
-			const opacity = 0.3 + (currentLevel / 100) * 0.7;
+			const opacity = 0.3 + currentLevel * 0.7;
 			return `rgba(151, 108, 0, ${opacity})`; // Gold color with opacity
 		}
 
@@ -1636,9 +1636,9 @@ const ColorControlXYCard = (
 	};
 
 	// Use brightness from LevelControl if available, otherwise use HSV value
-	const brightness =
-		props.cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL]?.currentLevel ??
-		props.cluster.color.value;
+	const brightness = props.cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL]?.currentLevel
+		? props.cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL]?.currentLevel * 100
+		: props.cluster.color.value;
 	const { color, r, g, b } = hsvToRgb(
 		props.cluster.color.hue,
 		props.cluster.color.saturation,

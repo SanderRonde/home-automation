@@ -3,6 +3,7 @@ import * as path from 'path';
 export const ROOT = path.join(__dirname, '../../../');
 export const CLIENT_FOLDER = path.join(ROOT, 'app/client');
 export const DB_FOLDER = path.join(ROOT, 'database');
+export const DEBUG_FOLDER = path.join(ROOT, 'debug');
 
 // Secret stuff
 export const SECRETS_FOLDER = path.join(ROOT, 'secrets');

@@ -401,6 +401,10 @@ class MatterLevelControlCluster
 		this._valueToFloat.bind(this)
 	);
 
+	public step = new Data(1 / 100);
+
+	public name = new Data('Brightness');
+
 	/**
 	 * Float from 0 to 1
 	 */

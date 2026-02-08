@@ -17,6 +17,7 @@ import {
 	History as HistoryIcon,
 	Backup as BackupIcon,
 	SettingsApplications as SettingsApplicationsIcon,
+	PhoneAndroid as PhoneAndroidIcon,
 } from '@mui/icons-material';
 import {
 	Drawer,
@@ -100,6 +101,11 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 			label: 'Devices',
 			items: [
 				{ text: 'Devices', icon: <DeviceHubIcon />, id: SidebarTab.DEVICES },
+				{
+					text: 'Android Control',
+					icon: <PhoneAndroidIcon />,
+					id: SidebarTab.ANDROID_CONTROL,
+				},
 				{ text: 'eWeLink', icon: <CloudIcon />, id: SidebarTab.EWELINK },
 				{ text: 'Tuya', icon: <CloudIcon />, id: SidebarTab.TUYA },
 				{ text: 'LED Sources', icon: <LightbulbIcon />, id: SidebarTab.LED_SOURCES },
@@ -185,6 +191,7 @@ export enum SidebarTab {
 	HOME_DETECTOR = 'home-detector',
 	WAKELIGHT = 'wakelight',
 	DEVICES = 'devices',
+	ANDROID_CONTROL = 'android-control',
 	EWELINK = 'ewelink',
 	TUYA = 'tuya',
 	LED_SOURCES = 'led-sources',

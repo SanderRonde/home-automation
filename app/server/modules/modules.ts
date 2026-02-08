@@ -1,3 +1,4 @@
+import { AndroidControl } from './android-control';
 import { HomeDetector } from './home-detector';
 import { Notification } from './notification';
 import { Temperature } from './temperature';
@@ -41,6 +42,7 @@ export interface ModuleConfig {
 
 const getModuleObj = () => ({
 	ai: AI,
+	androidControl: AndroidControl,
 	bot: Bot,
 	auth: Auth,
 	logs: Logs,

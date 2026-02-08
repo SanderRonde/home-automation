@@ -131,10 +131,14 @@ class DeviceLevelControlClusterSpec extends DeviceLevelControlCluster {
 		return DeviceLevelControlCluster;
 	}
 
+	@DescribeProperty(z.string())
+	public name!: Data<string>;
 	@DescribeProperty(z.number())
 	public currentLevel!: Data<number>;
 	@DescribeProperty(z.number())
 	public startupLevel!: Data<number>;
+	@DescribeProperty(z.number())
+	public step!: Data<number>;
 	@DescribeMethod(z.promise(z.void()), {
 		name: 'args',
 		type: z.object({

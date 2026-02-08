@@ -77,6 +77,11 @@ export abstract class DeviceLevelControlCluster extends Cluster {
 	public static clusterName = DeviceClusterName.LEVEL_CONTROL;
 
 	/**
+	 * Used on the frontend to display the name of the cluster.
+	 */
+	public abstract name: Data<string>;
+
+	/**
 	 * Float from 0 to 1
 	 */
 	public abstract currentLevel: Data<number>;
@@ -84,6 +89,10 @@ export abstract class DeviceLevelControlCluster extends Cluster {
 	 * Float from 0 to 1
 	 */
 	public abstract startupLevel: Data<number>;
+	/**
+	 * Step size. Float from 0 to 1
+	 */
+	public abstract step: Data<number>;
 	public abstract setLevel(args: { level: number; transitionTimeDs?: number }): Promise<void>;
 	public abstract setStartupLevel(args: {
 		level: number;

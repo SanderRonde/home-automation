@@ -4,20 +4,20 @@ repos:
       hooks:
           - id: black
             language_version: python3
-            files: ".*.py$"
+            files: '.*.py$'
             args:
-                - "-l 120"
+                - '-l 120'
     - repo: https://github.com/pre-commit/pre-commit-hooks
       rev: v2.4.0
       hooks:
           - id: flake8
             entry: python3
             name: flake8
-            files: ".*.py$"
+            files: '.*.py$'
             args:
-                - "-m"
-                - "flake8"
-                - "--config=.flake8"
+                - '-m'
+                - 'flake8'
+                - '--config=.flake8'
             language: python
             types: [python]
             require_serial: true
@@ -27,14 +27,15 @@ repos:
             name: pretty-quick
             entry: node_modules/.bin/pretty-quick
             language: node
-            files: ".*.(js|jsx|ts|tsx|json|md)$"
+            files: '.*.(js|jsx|ts|tsx|json|md)$'
             args:
-                - "--staged"
+                - '--staged'
           - id: prettier
             name: prettier
             entry: node_modules/.bin/prettier
             language: node
-            files: ".*.(js|jsx|ts|tsx|json|md)$"
+            files: '.*.(js|jsx|ts|tsx|json|md)$'
             args:
-                - "--config=.prettierrc"
-                - "-l"
+                - '--config=.prettierrc'
+                - '--experimental-cli'
+                - '-l'

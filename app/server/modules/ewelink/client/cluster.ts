@@ -194,14 +194,26 @@ export abstract class EwelinkLevelControlCluster<S extends object>
 	extends ConfigurableCluster<S>
 	implements DeviceLevelControlCluster
 {
+	public constructor(
+		protected readonly _eWeLinkConfig: EWeLinkConfig,
+		name: string
+	) {
+		super(_eWeLinkConfig);
+		this.name = new Data(name);
+	}
+
 	public getBaseCluster(): typeof DeviceLevelControlCluster {
 		return DeviceLevelControlCluster;
 	}
+
+	public name: Data<string>;
 
 	public abstract currentLevel: Data<number>;
 
 	// Does not exist, noop
 	public startupLevel = this.getProxy().attributeGetter(() => 1.0);
+
+	public step = new Data(1 / 100);
 
 	// Does not exist, noop
 	public setStartupLevel = (): Promise<void> => Promise.resolve();
