@@ -1,6 +1,7 @@
 import { AndroidControlLevelControlCluster, AndroidControlOnOffCluster } from '../cluster';
 import { Device as AdbDevice } from '@devicefarmer/adbkit';
 import { DEBUG_FOLDER } from '../../../../lib/constants';
+import { logTag } from '../../../../lib/logging/logger';
 import { DeviceEndpoint } from '../../../device/device';
 import { AndroidControlProfileClient } from './base';
 import { Cluster } from '../../../device/cluster';
@@ -114,9 +115,19 @@ export class CreateHomeFanClient extends AndroidControlProfileClient implements 
 
 	private async _refreshState(): Promise<Omit<FanState, 'step' | 'name'>> {
 		// Take a screenshot
-		const image = await Jimp.read(
-			await Bun.$`adb -s ${this._deviceId} exec-out screencap -p`.quiet().arrayBuffer()
-		);
+		let arrayBuffer: ArrayBuffer;
+		try {
+			arrayBuffer = await Bun.$`adb -s ${this._deviceId} exec-out screencap -p`
+				.quiet()
+				.arrayBuffer();
+		} catch (error) {
+			logTag('android-control', 'red', 'Failed to take screenshot:', error);
+			return {
+				level: 0,
+				isOn: false,
+			};
+		}
+		const image = await Jimp.read(arrayBuffer);
 		if (this._appConfig.debug) {
 			await mkdir(DEBUG_FOLDER, { recursive: true });
 			await image.write(`${path.join(DEBUG_FOLDER, 'create-home-fan-capture')}.png`);
