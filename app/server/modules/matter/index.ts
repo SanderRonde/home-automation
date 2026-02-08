@@ -1,6 +1,5 @@
 import { SettablePromise } from '../../lib/settable-promise';
-import { DeviceSource } from '../device/device';
-import { MatterServer } from './server/server';
+import type { MatterServer } from './server/server';
 import type { ModuleConfig } from '../modules';
 import { initRouting } from './routing';
 import { ModuleMeta } from '../meta';

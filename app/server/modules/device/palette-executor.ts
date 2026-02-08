@@ -3,6 +3,9 @@ import { DeviceColorControlXYCluster } from './cluster';
 import { logTag } from '../../lib/logging/logger';
 import { Color } from '../../lib/color';
 import type { Device } from './device';
+import { wait } from '../../lib/time';
+
+const DEVICE_ACTION_TIMEOUT_MS = 10000;
 
 /**
  * Convert hex color to HSV format
@@ -78,7 +81,14 @@ export async function applyPaletteToDevices(devices: Device[], palette: Palette)
 				return Color.fromHSV(hsv.hue, hsv.saturation, hsv.value);
 			});
 
-			await colorControlCluster.setColor({ colors });
+			await Promise.race([
+				colorControlCluster.setColor({ colors }),
+				wait(DEVICE_ACTION_TIMEOUT_MS).then(() => {
+					throw new Error(
+						`Device ${device.getUniqueId()} timed out after ${DEVICE_ACTION_TIMEOUT_MS}ms`
+					);
+				}),
+			]);
 			logTag(
 				'palette',
 				'green',

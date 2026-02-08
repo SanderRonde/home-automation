@@ -31,6 +31,9 @@ import type { SQL } from 'bun';
 
 const UPDATE_INTERVAL_SECONDS = 5;
 
+/** Max ms to wait for a single device during scene execution. Prevents one offline device from hanging the whole scene. */
+const DEVICE_ACTION_TIMEOUT_MS = 10000;
+
 const sandbox = (() => {
 	// eslint-disable-next-line @typescript-eslint/require-await
 	return async (code: string): Promise<unknown> => {
@@ -664,135 +667,156 @@ export class SceneAPI {
 						return success;
 					}
 
-					// Execute action on all devices
+					// Execute action on all devices. Each device has a timeout so one offline/unresponsive
+					// device cannot hang the entire scene.
 					const deviceResults = await Promise.all(
-						devices.map(async (device) => {
-							try {
-								if (sceneAction.cluster === DeviceClusterName.ON_OFF) {
-									const onOffClusters =
-										device.getAllClustersByType(DeviceOnOffCluster);
-									if (onOffClusters.length === 0) {
-										logTag(
-											'scene',
-											'yellow',
-											'OnOffCluster not found:',
-											device.getUniqueId()
-										);
-										return false;
-									}
-									for (const onOffCluster of onOffClusters) {
-										await onOffCluster.setOn(sceneAction.action.isOn);
-									}
-								} else if (
-									sceneAction.cluster === DeviceClusterName.WINDOW_COVERING
-								) {
-									const windowCoveringClusters = device.getAllClustersByType(
-										DeviceWindowCoveringCluster
-									);
-									if (windowCoveringClusters.length === 0) {
-										logTag(
-											'scene',
-											'yellow',
-											'WindowCoveringCluster not found:',
-											device.getUniqueId()
-										);
-										return false;
-									}
-									for (const windowCoveringCluster of windowCoveringClusters) {
-										await windowCoveringCluster.goToLiftPercentage({
-											percentage:
-												sceneAction.action.targetPositionLiftPercentage,
-										});
-									}
-								} else if (
-									sceneAction.cluster === DeviceClusterName.COLOR_CONTROL
-								) {
-									// Check if this is a palette action
-									if ('paletteId' in sceneAction.action) {
-										// Palette actions should only be used with groups
-										if (!sceneAction.groupId) {
-											logTag(
-												'scene',
-												'yellow',
-												'Palette action used without group'
+						devices.map((device) =>
+							Promise.race([
+								(async (): Promise<boolean> => {
+									try {
+										if (sceneAction.cluster === DeviceClusterName.ON_OFF) {
+											const onOffClusters =
+												device.getAllClustersByType(DeviceOnOffCluster);
+											if (onOffClusters.length === 0) {
+												logTag(
+													'scene',
+													'yellow',
+													'OnOffCluster not found:',
+													device.getUniqueId()
+												);
+												return false;
+											}
+											for (const onOffCluster of onOffClusters) {
+												await onOffCluster.setOn(sceneAction.action.isOn);
+											}
+										} else if (
+											sceneAction.cluster ===
+											DeviceClusterName.WINDOW_COVERING
+										) {
+											const windowCoveringClusters =
+												device.getAllClustersByType(
+													DeviceWindowCoveringCluster
+												);
+											if (windowCoveringClusters.length === 0) {
+												logTag(
+													'scene',
+													'yellow',
+													'WindowCoveringCluster not found:',
+													device.getUniqueId()
+												);
+												return false;
+											}
+											for (const windowCoveringCluster of windowCoveringClusters) {
+												await windowCoveringCluster.goToLiftPercentage({
+													percentage:
+														sceneAction.action
+															.targetPositionLiftPercentage,
+												});
+											}
+										} else if (
+											sceneAction.cluster === DeviceClusterName.COLOR_CONTROL
+										) {
+											// Check if this is a palette action
+											if ('paletteId' in sceneAction.action) {
+												// Palette actions should only be used with groups
+												if (!sceneAction.groupId) {
+													logTag(
+														'scene',
+														'yellow',
+														'Palette action used without group'
+													);
+													return false;
+												}
+												// Skip individual device processing for palette actions
+												// They are handled at the group level below
+												return true;
+											}
+
+											// Handle manual HSV color
+											const colorControlClusters =
+												device.getAllClustersByType(
+													DeviceColorControlXYCluster
+												);
+											if (colorControlClusters.length === 0) {
+												logTag(
+													'scene',
+													'yellow',
+													'ColorControlCluster not found:',
+													device.getUniqueId()
+												);
+												return false;
+											}
+											const color = Color.fromHSV(
+												sceneAction.action.hue / 360,
+												sceneAction.action.saturation / 100,
+												sceneAction.action.value / 100
 											);
-											return false;
+											for (const colorControlCluster of colorControlClusters) {
+												await colorControlCluster.setColor({
+													colors: [color],
+												});
+											}
+										} else if (
+											sceneAction.cluster === DeviceClusterName.LEVEL_CONTROL
+										) {
+											const levelControlClusters =
+												device.getAllClustersByType(
+													DeviceLevelControlCluster
+												);
+											if (levelControlClusters.length === 0) {
+												logTag(
+													'scene',
+													'yellow',
+													'LevelControlCluster not found:',
+													device.getUniqueId()
+												);
+												return false;
+											}
+
+											// Check if gradual level increase is requested
+											if (
+												sceneAction.action.durationSeconds &&
+												sceneAction.action.durationSeconds > 0
+											) {
+												// Use gradual level increase
+												await this._startGradualLevelIncrease(
+													device,
+													levelControlClusters,
+													sceneAction.action.level / 100,
+													sceneAction.action.durationSeconds
+												);
+											} else {
+												// Immediate level set
+												for (const levelControlCluster of levelControlClusters) {
+													await levelControlCluster.setLevel({
+														level: sceneAction.action.level / 100,
+													});
+												}
+											}
+										} else {
+											assertUnreachable(sceneAction);
 										}
-										// Skip individual device processing for palette actions
-										// They are handled at the group level below
 										return true;
-									}
-
-									// Handle manual HSV color
-									const colorControlClusters = device.getAllClustersByType(
-										DeviceColorControlXYCluster
-									);
-									if (colorControlClusters.length === 0) {
+									} catch (error) {
 										logTag(
 											'scene',
-											'yellow',
-											'ColorControlCluster not found:',
-											device.getUniqueId()
+											'red',
+											`Device control error for ${device.getUniqueId()}:`,
+											error
 										);
 										return false;
 									}
-									const color = Color.fromHSV(
-										sceneAction.action.hue / 360,
-										sceneAction.action.saturation / 100,
-										sceneAction.action.value / 100
+								})(),
+								wait(DEVICE_ACTION_TIMEOUT_MS).then(() => {
+									logTag(
+										'scene',
+										'yellow',
+										`Device ${device.getUniqueId()} timed out after ${DEVICE_ACTION_TIMEOUT_MS}ms (offline or unresponsive), continuing scene`
 									);
-									for (const colorControlCluster of colorControlClusters) {
-										await colorControlCluster.setColor({ colors: [color] });
-									}
-								} else if (
-									sceneAction.cluster === DeviceClusterName.LEVEL_CONTROL
-								) {
-									const levelControlClusters =
-										device.getAllClustersByType(DeviceLevelControlCluster);
-									if (levelControlClusters.length === 0) {
-										logTag(
-											'scene',
-											'yellow',
-											'LevelControlCluster not found:',
-											device.getUniqueId()
-										);
-										return false;
-									}
-
-									// Check if gradual level increase is requested
-									if (
-										sceneAction.action.durationSeconds &&
-										sceneAction.action.durationSeconds > 0
-									) {
-										// Use gradual level increase
-										await this._startGradualLevelIncrease(
-											device,
-											levelControlClusters,
-											sceneAction.action.level / 100,
-											sceneAction.action.durationSeconds
-										);
-									} else {
-										// Immediate level set
-										for (const levelControlCluster of levelControlClusters) {
-											await levelControlCluster.setLevel({
-												level: sceneAction.action.level / 100,
-											});
-										}
-									}
-								} else {
-									assertUnreachable(sceneAction);
-								}
-								return true;
-							} catch (error) {
-								logTag(
-									'scene',
-									'red',
-									`Device control error for ${device.getUniqueId()}:`,
-									error
-								);
-								return false;
-							}
-						})
+									return false;
+								}),
+							])
+						)
 					);
 
 					// For groups, we consider it successful if at least one device succeeded
