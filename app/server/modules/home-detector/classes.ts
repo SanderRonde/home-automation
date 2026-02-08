@@ -410,9 +410,12 @@ export class Detector {
 		// Update database
 		this._hostsDb.update((old) => ({
 			...old,
-			[name]: {
-				name,
-				ips,
+			hosts: {
+				...old.hosts,
+				[name]: {
+					name,
+					ips,
+				},
 			},
 		}));
 
