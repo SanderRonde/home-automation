@@ -68,6 +68,7 @@ const ICON_OPTIONS = [
 	'Shower',
 	'Deck',
 	'Cottage',
+	'Fan',
 ] satisfies IncludedIconNames[];
 
 export const RoomAssignmentDialog = React.memo<RoomAssignmentDialogProps>((props) => {

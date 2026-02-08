@@ -1081,6 +1081,7 @@ export const HouseLayout = (): JSX.Element => {
 										'Monitor',
 										'AccessTime',
 										'Inventory2',
+										'Fan',
 									] as IncludedIconNames[]
 								}
 								value={selectedIcon}

@@ -56,6 +56,7 @@ import {
 	AccessTime,
 	Inventory2,
 	Air,
+	ModeFanOff,
 } from '@mui/icons-material';
 import type { SxProps } from '@mui/material';
 import React from 'react';
@@ -118,6 +119,7 @@ const iconsByKey = {
 	AccessTime,
 	Inventory2,
 	Air,
+	Fan: ModeFanOff,
 };
 
 export type IncludedIconNames = keyof typeof iconsByKey;
