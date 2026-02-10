@@ -131,9 +131,12 @@ export class MatterServer extends Disposable {
 
 		// Update devices inbetween in case pairing takes a long time
 		const interval = setInterval(() => {
-			if (Object.keys(this.devices.current()).length !== Object.keys(devices).length) {
+			if (
+				Object.keys(currentDevices).length === 0 &&
+				Object.keys(this.devices.current()).length !== Object.keys(devices).length
+			) {
 				logTag('matter', 'magenta', 'updating devices (interval)');
-				this.devices.set(devices);
+				this.devices.set({ ...devices });
 			}
 		}, 1000 * 5);
 
@@ -187,7 +190,7 @@ export class MatterServer extends Disposable {
 			}
 		}
 		clearInterval(interval);
-		this.devices.set(devices);
+		this.devices.set({ ...devices });
 	}
 
 	private async _watchNodeIds(
