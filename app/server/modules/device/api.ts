@@ -313,6 +313,8 @@ export class DeviceAPI {
 				knownDevices[deviceId].status = 'offline';
 				// Don't update lastSeen for offline devices
 				// Keep clusterNames and source from when device was online
+			} else {
+				knownDevices[deviceId].status = 'online';
 			}
 		}
 
