@@ -1408,6 +1408,8 @@ export function useDevices(): {
 	>('/device/ws', {
 		onMessage: (message) => {
 			if (message.type === 'devices') {
+				window.__debug ??= {};
+				window.__debug.devices = message.devices;
 				// Sort devices first by source, then alphabetically by name
 				const sortedDevices = message.devices.sort((a, b) => {
 					if (a.source.name !== b.source.name) {
