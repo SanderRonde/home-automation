@@ -2,32 +2,8 @@ import { createServeOptions } from '../../lib/routes';
 import type { ServeOptions } from '../../lib/routes';
 import type { ModuleConfig } from '..';
 
-export type MatterRoutes = {
-	'/nodes': {
-		GET: (
-			req: unknown,
-			server: unknown,
-			ctx: {
-				json: (v: {
-					nodes: { nodeId: string; name: string; clusters: string[] }[];
-				}) => unknown;
-				error: (msg: string, code: number) => unknown;
-			}
-		) => Promise<unknown>;
-	};
-	'/nodes/:nodeId': {
-		DELETE: (
-			req: { params: { nodeId: string } },
-			server: unknown,
-			ctx: {
-				json: (v: { success: boolean }) => unknown;
-				error: (msg: string, code: number) => unknown;
-			}
-		) => Promise<unknown>;
-	};
-};
-
-function _initRouting(config: ModuleConfig): ServeOptions<MatterRoutes> {
+function _initRouting(_config: unknown) {
+	const config = _config as ModuleConfig;
 	return createServeOptions(
 		{
 			'/nodes': {
@@ -63,4 +39,7 @@ function _initRouting(config: ModuleConfig): ServeOptions<MatterRoutes> {
 	);
 }
 
-export const initRouting = _initRouting;
+export const initRouting = _initRouting as (config: ModuleConfig) => ServeOptions<MatterRoutes>;
+
+export type MatterRoutes =
+	ReturnType<typeof _initRouting> extends ServeOptions<infer R> ? R : never;
