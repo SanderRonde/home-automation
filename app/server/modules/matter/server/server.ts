@@ -118,24 +118,6 @@ export class MatterServer extends Disposable {
 	private _reconnectMap = new Map<string, NodeId>();
 
 	async #updateDevices(deviceInfos: MatterDeviceInfo[]) {
-		// #region agent log
-		// eslint-disable-next-line no-restricted-globals -- debug instrumentation
-		fetch('http://127.0.0.1:7244/ingest/79424a24-85e1-4d1d-8c1a-bb0cd37fbd73', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				location: 'server.ts:#updateDevices:entry',
-				message: 'updateDevices called',
-				data: {
-					deviceInfosCount: deviceInfos.length,
-					nodeIds: [...new Set(deviceInfos.map((d) => String(d.node.nodeId)))],
-				},
-				timestamp: Date.now(),
-				sessionId: 'debug-session',
-				hypothesisId: 'H2',
-			}),
-		}).catch(() => {});
-		// #endregion
 		const currentDevices = this.devices.current();
 
 		// Create a reverse lookup map: uniqueId (without "matter:" prefix) -> existing device
@@ -192,39 +174,9 @@ export class MatterServer extends Disposable {
 				})().then(
 					() => {
 						logTag('matter', 'magenta', 'device updated', id);
-						// #region agent log
-						// eslint-disable-next-line no-restricted-globals -- debug instrumentation
-						fetch('http://127.0.0.1:7244/ingest/79424a24-85e1-4d1d-8c1a-bb0cd37fbd73', {
-							method: 'POST',
-							headers: { 'Content-Type': 'application/json' },
-							body: JSON.stringify({
-								location: 'server.ts:#updateDevices:device-ok',
-								message: 'device updated',
-								data: { id, nodeId: String(node.nodeId) },
-								timestamp: Date.now(),
-								sessionId: 'debug-session',
-								hypothesisId: 'H2',
-							}),
-						}).catch(() => {});
-						// #endregion
 					},
 					(error: unknown) => {
 						logTag('matter', 'red', 'error updating device', id, error);
-						// #region agent log
-						// eslint-disable-next-line no-restricted-globals -- debug instrumentation
-						fetch('http://127.0.0.1:7244/ingest/79424a24-85e1-4d1d-8c1a-bb0cd37fbd73', {
-							method: 'POST',
-							headers: { 'Content-Type': 'application/json' },
-							body: JSON.stringify({
-								location: 'server.ts:#updateDevices:device-error',
-								message: 'error updating device',
-								data: { id, nodeId: String(node.nodeId), error: String(error) },
-								timestamp: Date.now(),
-								sessionId: 'debug-session',
-								hypothesisId: 'H2',
-							}),
-						}).catch(() => {});
-						// #endregion
 					}
 				),
 				wait(1000 * 60),
@@ -235,21 +187,6 @@ export class MatterServer extends Disposable {
 			}
 		}
 		clearInterval(interval);
-		// #region agent log
-		// eslint-disable-next-line no-restricted-globals -- debug instrumentation
-		fetch('http://127.0.0.1:7244/ingest/79424a24-85e1-4d1d-8c1a-bb0cd37fbd73', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				location: 'server.ts:#updateDevices:exit',
-				message: 'updateDevices done',
-				data: { finalDeviceCount: Object.keys(devices).length },
-				timestamp: Date.now(),
-				sessionId: 'debug-session',
-				hypothesisId: 'H2',
-			}),
-		}).catch(() => {});
-		// #endregion
 		this.devices.set(devices);
 	}
 
@@ -257,39 +194,9 @@ export class MatterServer extends Disposable {
 		controller: CommissioningController,
 		nodeIds: NodeId[]
 	): Promise<PairedNode[]> {
-		// #region agent log
-		// eslint-disable-next-line no-restricted-globals -- debug instrumentation
-		fetch('http://127.0.0.1:7244/ingest/79424a24-85e1-4d1d-8c1a-bb0cd37fbd73', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				location: 'server.ts:_watchNodeIds:entry',
-				message: 'watchNodeIds',
-				data: { nodeIds: nodeIds.map(String) },
-				timestamp: Date.now(),
-				sessionId: 'debug-session',
-				hypothesisId: 'H4',
-			}),
-		}).catch(() => {});
-		// #endregion
 		const nodes = await Promise.all(nodeIds.map((nodeId) => controller.getNode(nodeId)));
 		nodes.forEach((node) => {
 			if (!node.isConnected) {
-				// #region agent log
-				// eslint-disable-next-line no-restricted-globals -- debug instrumentation
-				fetch('http://127.0.0.1:7244/ingest/79424a24-85e1-4d1d-8c1a-bb0cd37fbd73', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						location: 'server.ts:_watchNodeIds:connect',
-						message: 'node.connect() called',
-						data: { nodeId: String(node.nodeId), isConnected: node.isConnected },
-						timestamp: Date.now(),
-						sessionId: 'debug-session',
-						hypothesisId: 'H4',
-					}),
-				}).catch(() => {});
-				// #endregion
 				node.connect();
 			}
 		});
@@ -308,25 +215,7 @@ export class MatterServer extends Disposable {
 
 		for (const node of nodes) {
 			node.events.structureChanged.on(this._onStructureChanged);
-			// #region agent log
 			const onStateChanged = (state: NodeStates) => {
-				// eslint-disable-next-line no-restricted-globals -- debug instrumentation
-				fetch('http://127.0.0.1:7244/ingest/79424a24-85e1-4d1d-8c1a-bb0cd37fbd73', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						location: 'server.ts:stateChanged',
-						message: 'node stateChanged',
-						data: {
-							nodeId: String(node.nodeId),
-							state: NodeStates[state] ?? state,
-							isConnected: node.isConnected,
-						},
-						timestamp: Date.now(),
-						sessionId: 'debug-session',
-						hypothesisId: 'H1',
-					}),
-				}).catch(() => {});
 				// Refresh device list when a node (re)connects so late or reconnected devices appear
 				if (state === NodeStates.Connected) {
 					void this.#updateDevices(this.listDevices());
@@ -344,21 +233,6 @@ export class MatterServer extends Disposable {
 	}
 
 	private readonly _onStructureChanged = () => {
-		// #region agent log
-		// eslint-disable-next-line no-restricted-globals -- debug instrumentation
-		fetch('http://127.0.0.1:7244/ingest/79424a24-85e1-4d1d-8c1a-bb0cd37fbd73', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				location: 'server.ts:_onStructureChanged',
-				message: 'structureChanged fired, refreshing devices',
-				data: {},
-				timestamp: Date.now(),
-				sessionId: 'debug-session',
-				hypothesisId: 'H3',
-			}),
-		}).catch(() => {});
-		// #endregion
 		void this.#updateDevices(this.listDevices());
 	};
 
