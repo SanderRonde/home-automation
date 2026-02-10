@@ -2494,18 +2494,54 @@ const AirQualityGroupDetail = (props: AirQualityGroupDetailProps): JSX.Element =
 	const [timeframe, setTimeframe] = useState<Timeframe>('24h');
 	const [loading, setLoading] = useState(false);
 	const [co2History, setCo2History] = useState<CO2Event[]>([]);
+	const [tempHistory, setTempHistory] = useState<TemperatureEvent[]>([]);
+	const [humidityHistory, setHumidityHistory] = useState<HumidityEvent[]>([]);
 	const roomColor = props.device.roomColor || '#555';
 
 	const airQuality = props.cluster.mergedClusters[DeviceClusterName.AIR_QUALITY];
 	const co2 =
 		props.cluster.mergedClusters[DeviceClusterName.CARBON_DIOXIDE_CONCENTRATION_MEASUREMENT];
 	const pm25 = props.cluster.mergedClusters[DeviceClusterName.PM_2_5_CONCENTRATION_MEASUREMENT];
+	const humidity = props.cluster.mergedClusters[DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT];
+	const temperature = props.cluster.mergedClusters[DeviceClusterName.TEMPERATURE_MEASUREMENT];
+	const illuminance = props.cluster.mergedClusters[DeviceClusterName.ILLUMINANCE_MEASUREMENT];
+	const onOff = props.cluster.mergedClusters[DeviceClusterName.ON_OFF];
 
 	const deviceId = props.device.uniqueId;
 	const hasCO2 = !!co2;
+	const hasTemperature = !!temperature;
+	const hasHumidity = !!humidity;
+
+	const [isOn, setIsOn] = useState(onOff?.isOn ?? false);
+	React.useEffect(() => {
+		setIsOn(onOff?.isOn ?? false);
+	}, [onOff?.isOn]);
+
+	const handleOnOffToggle = React.useCallback(
+		async (newIsOn: boolean) => {
+			setIsOn(newIsOn);
+			try {
+				await apiPost(
+					'device',
+					`/cluster/${DeviceClusterName.ON_OFF}`,
+					{},
+					{
+						deviceIds: [props.device.uniqueId],
+						isOn: newIsOn,
+					}
+				);
+			} catch (err) {
+				console.error('Failed to toggle device:', err);
+				setIsOn(!newIsOn);
+			}
+		},
+		[props.device.uniqueId]
+	);
 
 	// Track previous value to detect changes
 	const prevCO2Ref = React.useRef(co2?.concentration);
+	const prevTempRef = React.useRef(temperature?.temperature);
+	const prevHumidityRef = React.useRef(humidity?.humidity);
 
 	const {
 		label: overallLabel,
@@ -2513,27 +2549,53 @@ const AirQualityGroupDetail = (props: AirQualityGroupDetailProps): JSX.Element =
 		description,
 	} = getAirQualityLevelInfo(airQuality?.airQuality, co2?.level, pm25?.level);
 
+	const hasAnyHistory = hasCO2 || hasTemperature || hasHumidity;
+
 	const fetchHistory = React.useCallback(async () => {
-		if (!hasCO2) {
+		if (!hasAnyHistory) {
 			return;
 		}
 
 		try {
 			setLoading(true);
-			const response = await apiGet('device', '/co2/:deviceId/:timeframe', {
-				deviceId: deviceId,
-				timeframe: TIMEFRAME_MS[timeframe].toString(),
-			});
-			if (response.ok) {
-				const data = await response.json();
-				setCo2History(data.history || []);
+			const tf = TIMEFRAME_MS[timeframe].toString();
+
+			if (hasCO2) {
+				const response = await apiGet('device', '/co2/:deviceId/:timeframe', {
+					deviceId: deviceId,
+					timeframe: tf,
+				});
+				if (response.ok) {
+					const data = await response.json();
+					setCo2History(data.history || []);
+				}
+			}
+			if (hasTemperature) {
+				const response = await apiGet('device', '/temperature/:deviceId/:timeframe', {
+					deviceId: deviceId,
+					timeframe: tf,
+				});
+				if (response.ok) {
+					const data = await response.json();
+					setTempHistory(data.history || []);
+				}
+			}
+			if (hasHumidity) {
+				const response = await apiGet('device', '/humidity/:deviceId/:timeframe', {
+					deviceId: deviceId,
+					timeframe: tf,
+				});
+				if (response.ok) {
+					const data = await response.json();
+					setHumidityHistory(data.history || []);
+				}
 			}
 		} catch (err) {
-			console.error('Failed to fetch CO2 history:', err);
+			console.error('Failed to fetch history:', err);
 		} finally {
 			setLoading(false);
 		}
-	}, [deviceId, timeframe, hasCO2]);
+	}, [deviceId, timeframe, hasCO2, hasTemperature, hasHumidity, hasAnyHistory]);
 
 	useEffect(() => {
 		void fetchHistory();
@@ -2549,6 +2611,28 @@ const AirQualityGroupDetail = (props: AirQualityGroupDetailProps): JSX.Element =
 			}
 		}
 	}, [co2?.concentration, hasCO2, fetchHistory]);
+
+	// Refetch history when temperature or humidity changes significantly
+	React.useEffect(() => {
+		let shouldRefetch = false;
+		if (hasTemperature && temperature?.temperature !== undefined) {
+			const tempDiff = Math.abs((prevTempRef.current ?? 0) - temperature.temperature);
+			if (tempDiff >= 0.1) {
+				prevTempRef.current = temperature.temperature;
+				shouldRefetch = true;
+			}
+		}
+		if (hasHumidity && humidity?.humidity !== undefined) {
+			const humidityDiff = Math.abs((prevHumidityRef.current ?? 0) - humidity.humidity);
+			if (humidityDiff >= 0.01) {
+				prevHumidityRef.current = humidity.humidity;
+				shouldRefetch = true;
+			}
+		}
+		if (shouldRefetch) {
+			void fetchHistory();
+		}
+	}, [temperature?.temperature, humidity?.humidity, hasTemperature, hasHumidity, fetchHistory]);
 
 	const co2ChartData = hasCO2
 		? {
@@ -2584,6 +2668,67 @@ const AirQualityGroupDetail = (props: AirQualityGroupDetailProps): JSX.Element =
 				],
 			}
 		: null;
+
+	const formatChartLabel = (timestamp: number): string => {
+		const date = new Date(timestamp);
+		if (timeframe === '1h' || timeframe === '6h' || timeframe === '24h') {
+			return date.toLocaleTimeString('en-US', {
+				hour: '2-digit',
+				minute: '2-digit',
+			});
+		}
+		return date.toLocaleDateString('en-US', {
+			month: 'short',
+			day: 'numeric',
+			hour: '2-digit',
+		});
+	};
+
+	const tempChartData =
+		hasTemperature && tempHistory.length > 0
+			? {
+					labels: tempHistory
+						.slice()
+						.reverse()
+						.map((e) => formatChartLabel(e.timestamp)),
+					datasets: [
+						{
+							label: 'Temperature (°C)',
+							data: tempHistory
+								.slice()
+								.reverse()
+								.map((e) => e.temperature),
+							borderColor: 'rgb(234, 88, 12)',
+							backgroundColor: 'rgba(234, 88, 12, 0.1)',
+							tension: 0.4,
+							fill: true,
+						},
+					],
+				}
+			: null;
+
+	const humidityChartData =
+		hasHumidity && humidityHistory.length > 0
+			? {
+					labels: humidityHistory
+						.slice()
+						.reverse()
+						.map((e) => formatChartLabel(e.timestamp)),
+					datasets: [
+						{
+							label: 'Humidity (%)',
+							data: humidityHistory
+								.slice()
+								.reverse()
+								.map((e) => e.humidity * 100),
+							borderColor: 'rgb(16, 185, 129)',
+							backgroundColor: 'rgba(16, 185, 129, 0.1)',
+							tension: 0.4,
+							fill: true,
+						},
+					],
+				}
+			: null;
 
 	return (
 		<motion.div
@@ -2694,14 +2839,81 @@ const AirQualityGroupDetail = (props: AirQualityGroupDetailProps): JSX.Element =
 											/>
 										</Box>
 									)}
+									{humidity && (
+										<Box sx={{ textAlign: 'center' }}>
+											<Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+												{humidity.humidity !== undefined
+													? `${(humidity.humidity * 100).toFixed(0)}%`
+													: '--'}
+											</Typography>
+											<Typography variant="caption" sx={{ opacity: 0.8 }}>
+												Humidity
+											</Typography>
+										</Box>
+									)}
+									{temperature && (
+										<Box sx={{ textAlign: 'center' }}>
+											<Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+												{temperature.temperature !== undefined
+													? `${temperature.temperature.toFixed(1)}°C`
+													: '--'}
+											</Typography>
+											<Typography variant="caption" sx={{ opacity: 0.8 }}>
+												Temperature
+											</Typography>
+										</Box>
+									)}
+									{illuminance && (
+										<Box sx={{ textAlign: 'center' }}>
+											<Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+												{illuminance.illuminance !== undefined
+													? `${illuminance.illuminance.toFixed(0)} lux`
+													: '--'}
+											</Typography>
+											<Typography variant="caption" sx={{ opacity: 0.8 }}>
+												Illuminance
+											</Typography>
+										</Box>
+									)}
 								</Box>
 							</Box>
 						</CardContent>
 					</Card>
 				</motion.div>
 
+				{/* OnOff control */}
+				{onOff !== undefined && (
+					<motion.div variants={cardVariants}>
+						<Card sx={{ mb: 2, borderRadius: 3 }}>
+							<CardContent>
+								<Box
+									sx={{
+										display: 'flex',
+										alignItems: 'center',
+										justifyContent: 'space-between',
+									}}
+								>
+									<Typography variant="h6">Power</Typography>
+									<FormControlLabel
+										control={
+											<Switch
+												checked={isOn}
+												onChange={(_e, checked) => {
+													void handleOnOffToggle(checked);
+												}}
+												color="primary"
+											/>
+										}
+										label={isOn ? 'On' : 'Off'}
+									/>
+								</Box>
+							</CardContent>
+						</Card>
+					</motion.div>
+				)}
+
 				{/* Timeframe Selector */}
-				{hasCO2 && (
+				{hasAnyHistory && (
 					<motion.div variants={cardVariants}>
 						<ToggleButtonGroup
 							value={timeframe}
@@ -2809,6 +3021,152 @@ const AirQualityGroupDetail = (props: AirQualityGroupDetailProps): JSX.Element =
 										sx={{ textAlign: 'center', py: 4 }}
 									>
 										No CO2 data available for this timeframe
+									</Typography>
+								)}
+							</CardContent>
+						</Card>
+					</motion.div>
+				)}
+
+				{/* Temperature History */}
+				{hasTemperature && (
+					<motion.div variants={cardVariants}>
+						<Card sx={{ mb: 2, borderRadius: 3 }}>
+							<CardContent>
+								<Typography variant="h6" sx={{ mb: 2 }}>
+									Temperature History
+								</Typography>
+								{loading ? (
+									<Box
+										sx={{
+											display: 'flex',
+											justifyContent: 'center',
+											py: 4,
+										}}
+									>
+										<CircularProgress />
+									</Box>
+								) : tempChartData ? (
+									<Box
+										sx={{
+											height: 250,
+											background:
+												'linear-gradient(180deg, transparent 0%, rgba(234, 88, 12, 0.05) 100%)',
+											borderRadius: 2,
+											p: 1,
+										}}
+									>
+										<Line
+											data={tempChartData}
+											options={{
+												responsive: true,
+												maintainAspectRatio: false,
+												plugins: {
+													legend: { display: false },
+													tooltip: {
+														mode: 'index',
+														intersect: false,
+													},
+												},
+												scales: {
+													x: {
+														display: true,
+														grid: { display: false },
+														ticks: { maxTicksLimit: 8 },
+													},
+													y: {
+														display: true,
+														grid: { color: 'rgba(0, 0, 0, 0.08)' },
+													},
+												},
+												interaction: {
+													mode: 'nearest',
+													axis: 'x',
+													intersect: false,
+												},
+											}}
+										/>
+									</Box>
+								) : (
+									<Typography
+										variant="body2"
+										color="text.secondary"
+										sx={{ textAlign: 'center', py: 4 }}
+									>
+										No temperature data available for this timeframe
+									</Typography>
+								)}
+							</CardContent>
+						</Card>
+					</motion.div>
+				)}
+
+				{/* Humidity History */}
+				{hasHumidity && (
+					<motion.div variants={cardVariants}>
+						<Card sx={{ mb: 2, borderRadius: 3 }}>
+							<CardContent>
+								<Typography variant="h6" sx={{ mb: 2 }}>
+									Humidity History
+								</Typography>
+								{loading ? (
+									<Box
+										sx={{
+											display: 'flex',
+											justifyContent: 'center',
+											py: 4,
+										}}
+									>
+										<CircularProgress />
+									</Box>
+								) : humidityChartData ? (
+									<Box
+										sx={{
+											height: 250,
+											background:
+												'linear-gradient(180deg, transparent 0%, rgba(16, 185, 129, 0.05) 100%)',
+											borderRadius: 2,
+											p: 1,
+										}}
+									>
+										<Line
+											data={humidityChartData}
+											options={{
+												responsive: true,
+												maintainAspectRatio: false,
+												plugins: {
+													legend: { display: false },
+													tooltip: {
+														mode: 'index',
+														intersect: false,
+													},
+												},
+												scales: {
+													x: {
+														display: true,
+														grid: { display: false },
+														ticks: { maxTicksLimit: 8 },
+													},
+													y: {
+														display: true,
+														grid: { color: 'rgba(0, 0, 0, 0.08)' },
+													},
+												},
+												interaction: {
+													mode: 'nearest',
+													axis: 'x',
+													intersect: false,
+												},
+											}}
+										/>
+									</Box>
+								) : (
+									<Typography
+										variant="body2"
+										color="text.secondary"
+										sx={{ textAlign: 'center', py: 4 }}
+									>
+										No humidity data available for this timeframe
 									</Typography>
 								)}
 							</CardContent>

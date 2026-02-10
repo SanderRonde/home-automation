@@ -247,6 +247,10 @@ export type DashboardDeviceClusterAirQualityGroup = DashboardDeviceClusterBase &
 		[DeviceClusterName.AIR_QUALITY]?: DashboardDeviceClusterAirQuality;
 		[DeviceClusterName.CARBON_DIOXIDE_CONCENTRATION_MEASUREMENT]?: DashboardDeviceClusterCO2ConcentrationMeasurement;
 		[DeviceClusterName.PM_2_5_CONCENTRATION_MEASUREMENT]?: DashboardDeviceClusterPM25ConcentrationMeasurement;
+		[DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT]?: DashboardDeviceClusterRelativeHumidityMeasurement;
+		[DeviceClusterName.ILLUMINANCE_MEASUREMENT]?: DashboardDeviceClusterIlluminanceMeasurement;
+		[DeviceClusterName.ON_OFF]?: DashboardDeviceClusterOnOff;
+		[DeviceClusterName.TEMPERATURE_MEASUREMENT]?: DashboardDeviceClusterTemperatureMeasurement;
 	};
 };
 
@@ -1844,6 +1848,44 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 					delete clusters[DeviceClusterName.LEVEL_CONTROL];
 				}
 
+				// Merge air quality clusters (AirQuality, CO2, PM2.5, optionally RelativeHumidityMeasurement, IlluminanceMeasurement, and OnOff)
+				const hasAirQualitySensor =
+					clusters[DeviceClusterName.AIR_QUALITY] ||
+					clusters[DeviceClusterName.CARBON_DIOXIDE_CONCENTRATION_MEASUREMENT] ||
+					clusters[DeviceClusterName.PM_2_5_CONCENTRATION_MEASUREMENT];
+
+				if (hasAirQualitySensor) {
+					mergedClusters.push({
+						name: DeviceClusterName.AIR_QUALITY,
+						icon: getClusterIconName(DeviceClusterName.AIR_QUALITY, api),
+						mergedClusters: {
+							[DeviceClusterName.AIR_QUALITY]:
+								clusters[DeviceClusterName.AIR_QUALITY],
+							[DeviceClusterName.CARBON_DIOXIDE_CONCENTRATION_MEASUREMENT]:
+								clusters[
+									DeviceClusterName.CARBON_DIOXIDE_CONCENTRATION_MEASUREMENT
+								],
+							[DeviceClusterName.PM_2_5_CONCENTRATION_MEASUREMENT]:
+								clusters[DeviceClusterName.PM_2_5_CONCENTRATION_MEASUREMENT],
+							[DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT]:
+								clusters[DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT],
+							[DeviceClusterName.ILLUMINANCE_MEASUREMENT]:
+								clusters[DeviceClusterName.ILLUMINANCE_MEASUREMENT],
+							[DeviceClusterName.ON_OFF]: clusters[DeviceClusterName.ON_OFF],
+							[DeviceClusterName.TEMPERATURE_MEASUREMENT]:
+								clusters[DeviceClusterName.TEMPERATURE_MEASUREMENT],
+						},
+					} as DashboardDeviceClusterAirQualityGroup);
+					// Remove merged clusters so they don't appear separately
+					delete clusters[DeviceClusterName.AIR_QUALITY];
+					delete clusters[DeviceClusterName.CARBON_DIOXIDE_CONCENTRATION_MEASUREMENT];
+					delete clusters[DeviceClusterName.PM_2_5_CONCENTRATION_MEASUREMENT];
+					delete clusters[DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT];
+					delete clusters[DeviceClusterName.ILLUMINANCE_MEASUREMENT];
+					delete clusters[DeviceClusterName.ON_OFF];
+					delete clusters[DeviceClusterName.TEMPERATURE_MEASUREMENT];
+				}
+
 				// Merge sensor clusters (OccupancySensing, TemperatureMeasurement, RelativeHumidityMeasurement, IlluminanceMeasurement)
 				const hasSensor =
 					clusters[DeviceClusterName.OCCUPANCY_SENSING] ||
@@ -1878,33 +1920,6 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 					delete clusters[DeviceClusterName.TEMPERATURE_MEASUREMENT];
 					delete clusters[DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT];
 					delete clusters[DeviceClusterName.ILLUMINANCE_MEASUREMENT];
-				}
-
-				// Merge air quality clusters (AirQuality, CO2, PM2.5)
-				const hasAirQualitySensor =
-					clusters[DeviceClusterName.AIR_QUALITY] ||
-					clusters[DeviceClusterName.CARBON_DIOXIDE_CONCENTRATION_MEASUREMENT] ||
-					clusters[DeviceClusterName.PM_2_5_CONCENTRATION_MEASUREMENT];
-
-				if (hasAirQualitySensor) {
-					mergedClusters.push({
-						name: DeviceClusterName.AIR_QUALITY,
-						icon: getClusterIconName(DeviceClusterName.AIR_QUALITY, api),
-						mergedClusters: {
-							[DeviceClusterName.AIR_QUALITY]:
-								clusters[DeviceClusterName.AIR_QUALITY],
-							[DeviceClusterName.CARBON_DIOXIDE_CONCENTRATION_MEASUREMENT]:
-								clusters[
-									DeviceClusterName.CARBON_DIOXIDE_CONCENTRATION_MEASUREMENT
-								],
-							[DeviceClusterName.PM_2_5_CONCENTRATION_MEASUREMENT]:
-								clusters[DeviceClusterName.PM_2_5_CONCENTRATION_MEASUREMENT],
-						},
-					} as DashboardDeviceClusterAirQualityGroup);
-					// Remove merged clusters so they don't appear separately
-					delete clusters[DeviceClusterName.AIR_QUALITY];
-					delete clusters[DeviceClusterName.CARBON_DIOXIDE_CONCENTRATION_MEASUREMENT];
-					delete clusters[DeviceClusterName.PM_2_5_CONCENTRATION_MEASUREMENT];
 				}
 
 				// Add remaining non-merged clusters
@@ -1957,6 +1972,10 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 					[DeviceClusterName.AIR_QUALITY]: undefined,
 					[DeviceClusterName.CARBON_DIOXIDE_CONCENTRATION_MEASUREMENT]: undefined,
 					[DeviceClusterName.PM_2_5_CONCENTRATION_MEASUREMENT]: undefined,
+					[DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT]: undefined,
+					[DeviceClusterName.ILLUMINANCE_MEASUREMENT]: undefined,
+					[DeviceClusterName.ON_OFF]: undefined,
+					[DeviceClusterName.TEMPERATURE_MEASUREMENT]: undefined,
 				},
 			};
 
@@ -1980,6 +1999,25 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 					mergedAirQualityGroup.mergedClusters[
 						DeviceClusterName.PM_2_5_CONCENTRATION_MEASUREMENT
 					] = group.mergedClusters[DeviceClusterName.PM_2_5_CONCENTRATION_MEASUREMENT];
+				}
+				if (group.mergedClusters[DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT]) {
+					mergedAirQualityGroup.mergedClusters[
+						DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT
+					] = group.mergedClusters[DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT];
+				}
+				if (group.mergedClusters[DeviceClusterName.ILLUMINANCE_MEASUREMENT]) {
+					mergedAirQualityGroup.mergedClusters[
+						DeviceClusterName.ILLUMINANCE_MEASUREMENT
+					] = group.mergedClusters[DeviceClusterName.ILLUMINANCE_MEASUREMENT];
+				}
+				if (group.mergedClusters[DeviceClusterName.ON_OFF]) {
+					mergedAirQualityGroup.mergedClusters[DeviceClusterName.ON_OFF] =
+						group.mergedClusters[DeviceClusterName.ON_OFF];
+				}
+				if (group.mergedClusters[DeviceClusterName.TEMPERATURE_MEASUREMENT]) {
+					mergedAirQualityGroup.mergedClusters[
+						DeviceClusterName.TEMPERATURE_MEASUREMENT
+					] = group.mergedClusters[DeviceClusterName.TEMPERATURE_MEASUREMENT];
 				}
 			}
 
@@ -2036,6 +2074,10 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 					[DeviceClusterName.AIR_QUALITY]: undefined,
 					[DeviceClusterName.CARBON_DIOXIDE_CONCENTRATION_MEASUREMENT]: undefined,
 					[DeviceClusterName.PM_2_5_CONCENTRATION_MEASUREMENT]: undefined,
+					[DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT]: undefined,
+					[DeviceClusterName.ILLUMINANCE_MEASUREMENT]: undefined,
+					[DeviceClusterName.ON_OFF]: undefined,
+					[DeviceClusterName.TEMPERATURE_MEASUREMENT]: undefined,
 				},
 			};
 
@@ -2059,6 +2101,25 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 					mergedAirQualityGroup.mergedClusters[
 						DeviceClusterName.PM_2_5_CONCENTRATION_MEASUREMENT
 					] = group.mergedClusters[DeviceClusterName.PM_2_5_CONCENTRATION_MEASUREMENT];
+				}
+				if (group.mergedClusters[DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT]) {
+					mergedAirQualityGroup.mergedClusters[
+						DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT
+					] = group.mergedClusters[DeviceClusterName.RELATIVE_HUMIDITY_MEASUREMENT];
+				}
+				if (group.mergedClusters[DeviceClusterName.ILLUMINANCE_MEASUREMENT]) {
+					mergedAirQualityGroup.mergedClusters[
+						DeviceClusterName.ILLUMINANCE_MEASUREMENT
+					] = group.mergedClusters[DeviceClusterName.ILLUMINANCE_MEASUREMENT];
+				}
+				if (group.mergedClusters[DeviceClusterName.ON_OFF]) {
+					mergedAirQualityGroup.mergedClusters[DeviceClusterName.ON_OFF] =
+						group.mergedClusters[DeviceClusterName.ON_OFF];
+				}
+				if (group.mergedClusters[DeviceClusterName.TEMPERATURE_MEASUREMENT]) {
+					mergedAirQualityGroup.mergedClusters[
+						DeviceClusterName.TEMPERATURE_MEASUREMENT
+					] = group.mergedClusters[DeviceClusterName.TEMPERATURE_MEASUREMENT];
 				}
 			}
 
