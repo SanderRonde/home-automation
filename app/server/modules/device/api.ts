@@ -13,6 +13,8 @@ import { PowerTracker } from './power-tracker';
 import type { Database } from '../../lib/db';
 import { PaletteAPI } from './palette-api';
 import { CO2Tracker } from './co2-tracker';
+import { FridgeTracker } from './fridge-tracker';
+import { WasherTracker } from './washer-tracker';
 import { SceneAPI } from './scene-api';
 import { GroupAPI } from './group-api';
 import { Data } from '../../lib/data';
@@ -29,6 +31,8 @@ export class DeviceAPI {
 	public readonly powerTracker: PowerTracker;
 	public readonly powerThresholdTracker: PowerThresholdTracker;
 	public readonly co2Tracker: CO2Tracker;
+	public readonly fridgeTracker: FridgeTracker;
+	public readonly washerTracker: WasherTracker;
 	public readonly paletteAPI: PaletteAPI;
 	public readonly sceneAPI: SceneAPI;
 	public readonly groupAPI: GroupAPI;
@@ -61,6 +65,8 @@ export class DeviceAPI {
 		this.powerTracker = new PowerTracker(sqlDB);
 		this.powerThresholdTracker = new PowerThresholdTracker(this.sceneAPI);
 		this.co2Tracker = new CO2Tracker(sqlDB);
+		this.fridgeTracker = new FridgeTracker(sqlDB);
+		this.washerTracker = new WasherTracker(sqlDB);
 	}
 
 	public readonly devices = new Data<{
@@ -99,6 +105,8 @@ export class DeviceAPI {
 		this.powerTracker.trackDevices(devices);
 		this.powerThresholdTracker.trackDevices(devices);
 		this.co2Tracker.trackDevices(devices);
+		this.fridgeTracker.trackDevices(devices);
+		this.washerTracker.trackDevices(devices);
 	}
 
 	public updateDeviceName(deviceId: string, name: string): boolean {

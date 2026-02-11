@@ -2,6 +2,7 @@ import { AndroidControl } from './android-control';
 import { HomeDetector } from './home-detector';
 import { Notification } from './notification';
 import { Temperature } from './temperature';
+import { SmartThings } from './smartthings';
 import { HomeWizard } from './homewizard';
 import { Wakelight } from './wakelight';
 import { Dashboard } from './dashboard';
@@ -53,17 +54,18 @@ const getModuleObj = () => ({
 	device: Device,
 	matter: Matter,
 	secret: Secret,
+	backup: Backup,
 	system: System,
 	ewelink: EWeLink,
 	webhook: Webhook,
+	location: Location,
 	wakelight: Wakelight,
 	dashboard: Dashboard,
 	homewizard: HomeWizard,
 	temperature: Temperature,
+	smartthings: SmartThings,
 	homeDetector: HomeDetector,
-	location: Location,
 	notification: Notification,
-	backup: Backup,
 });
 
 let notified = false;

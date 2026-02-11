@@ -83,7 +83,14 @@ export interface Device extends DeviceEndpoint {
 }
 
 export class DeviceSource extends ClassEnum<
-	'matter' | 'ewelink' | 'wled' | 'led-art' | 'homewizard' | 'tuya' | 'android-control'
+	| 'matter'
+	| 'ewelink'
+	| 'wled'
+	| 'led-art'
+	| 'homewizard'
+	| 'tuya'
+	| 'android-control'
+	| 'smartthings'
 > {
 	public static readonly MATTER = new DeviceSource('matter');
 	public static readonly EWELINK = new DeviceSource('ewelink');
@@ -92,7 +99,7 @@ export class DeviceSource extends ClassEnum<
 	public static readonly HOMEWIZARD = new DeviceSource('homewizard');
 	public static readonly TUYA = new DeviceSource('tuya');
 	public static readonly ANDROID_CONTROL = new DeviceSource('android-control');
-
+	public static readonly SMARTTHINGS = new DeviceSource('smartthings');
 	public toEmoji(): string {
 		switch (this) {
 			case DeviceSource.MATTER:
@@ -109,6 +116,8 @@ export class DeviceSource extends ClassEnum<
 				return '🌐';
 			case DeviceSource.ANDROID_CONTROL:
 				return '📱';
+			case DeviceSource.SMARTTHINGS:
+				return '🤖';
 			default:
 				throw new Error('Invalid DeviceSource');
 		}

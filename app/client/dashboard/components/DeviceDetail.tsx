@@ -14,6 +14,8 @@ import type {
 	DashboardDeviceClusterSwitch,
 	DashboardDeviceClusterBooleanState,
 	DashboardDeviceClusterOnOff,
+	DashboardDeviceClusterFridge,
+	DashboardDeviceClusterWasher,
 } from '../../../server/modules/device/routing';
 import {
 	Chart as ChartJS,
@@ -4869,6 +4871,878 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 	);
 };
 
+interface FridgeEvent {
+	timestamp: number;
+	fridgeTempC: number | null;
+	freezerTempC: number | null;
+	freezerDoorOpen: boolean | null;
+	coolerDoorOpen: boolean | null;
+}
+
+interface FridgeDetailProps extends DeviceDetailBaseProps<DashboardDeviceClusterFridge> {}
+
+const FridgeDetail = (props: FridgeDetailProps): JSX.Element => {
+	const cluster = props.cluster;
+	const roomColor = props.device.roomColor || '#0ea5e9';
+	const freezerOpen = cluster.freezerDoorOpen;
+	const coolerOpen = cluster.coolerDoorOpen;
+	const [history, setHistory] = useState<FridgeEvent[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
+	const [timeframe, setTimeframe] = useState<Timeframe>('24h');
+	const deviceId = props.device.uniqueId;
+
+	const formatTemp = (temp: number | undefined): string =>
+		temp !== undefined ? `${temp.toFixed(1)}°C` : '—';
+
+	const fetchHistory = React.useCallback(async () => {
+		try {
+			setLoading(true);
+			setError(null);
+			const response = await apiGet('device', '/fridge/:deviceId/:timeframe', {
+				deviceId,
+				timeframe: TIMEFRAME_MS[timeframe].toString(),
+			});
+			if (!response.ok) {
+				throw new Error('Failed to fetch fridge history');
+			}
+			const data = await response.json();
+			setHistory(data.history || []);
+		} catch (err) {
+			setError('Failed to load temperature history');
+			console.error('Failed to fetch fridge history:', err);
+		} finally {
+			setLoading(false);
+		}
+	}, [deviceId, timeframe]);
+
+	useEffect(() => {
+		void fetchHistory();
+	}, [fetchHistory]);
+
+	const chartData = React.useMemo(() => {
+		const reversed = [...history].reverse();
+		const formatLabel = (ts: number): string => {
+			const date = new Date(ts);
+			if (timeframe === '1h' || timeframe === '6h') {
+				return date.toLocaleTimeString('en-US', {
+					hour: '2-digit',
+					minute: '2-digit',
+				});
+			}
+			if (timeframe === '24h') {
+				return date.toLocaleTimeString('en-US', {
+					hour: '2-digit',
+					minute: '2-digit',
+				});
+			}
+			return date.toLocaleDateString('en-US', {
+				month: 'short',
+				day: 'numeric',
+				hour: '2-digit',
+			});
+		};
+		return {
+			labels: reversed.map((e) => formatLabel(e.timestamp)),
+			datasets: [
+				{
+					label: 'Fridge (°C)',
+					data: reversed.map((e) => e.fridgeTempC),
+					borderColor: 'rgb(59, 130, 246)',
+					backgroundColor: 'rgba(59, 130, 246, 0.1)',
+					tension: 0.4,
+					fill: true,
+				},
+				{
+					label: 'Freezer (°C)',
+					data: reversed.map((e) => e.freezerTempC),
+					borderColor: 'rgb(14, 165, 233)',
+					backgroundColor: 'rgba(14, 165, 233, 0.1)',
+					tension: 0.4,
+					fill: true,
+				},
+			],
+		};
+	}, [history, timeframe]);
+
+	return (
+		<motion.div
+			variants={pageVariants}
+			initial="initial"
+			animate="animate"
+			exit="exit"
+			style={{ height: '100%' }}
+		>
+			<Box
+				sx={{
+					backgroundColor: roomColor,
+					py: 1.5,
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
+					position: 'relative',
+					boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+				}}
+			>
+				<IconButton style={{ position: 'absolute', left: 0 }} onClick={props.onExit}>
+					<ArrowBackIcon style={{ fill: '#fff' }} />
+				</IconButton>
+				<Typography
+					style={{ color: '#fff', fontWeight: 600, letterSpacing: '-0.02em' }}
+					variant="h6"
+				>
+					{props.device.name}
+				</Typography>
+			</Box>
+
+			<Box sx={{ p: { xs: 2, sm: 3 } }}>
+				<motion.div variants={cardVariants} initial="initial" animate="animate">
+					<Card
+						sx={{
+							mb: 3,
+							borderRadius: 3,
+							boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+							overflow: 'hidden',
+						}}
+					>
+						<CardContent>
+							<Typography variant="subtitle2" color="text.secondary" gutterBottom>
+								Fridge status
+							</Typography>
+							<Box
+								sx={{
+									display: 'flex',
+									justifyContent: 'center',
+									my: 3,
+									position: 'relative',
+									height: 220,
+								}}
+							>
+								{/* CSS/SVG Fridge visualization */}
+								<Box
+									component="svg"
+									viewBox="0 0 160 220"
+									sx={{
+										width: '100%',
+										maxWidth: 160,
+										height: 220,
+										filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.15))',
+									}}
+								>
+									<defs>
+										<linearGradient
+											id="fridgeBody"
+											x1="0%"
+											y1="0%"
+											x2="100%"
+											y2="0%"
+										>
+											<stop offset="0%" stopColor="#e5e7eb" />
+											<stop offset="50%" stopColor="#f9fafb" />
+											<stop offset="100%" stopColor="#e5e7eb" />
+										</linearGradient>
+										<linearGradient
+											id="fridgeCold"
+											x1="0%"
+											y1="0%"
+											x2="0%"
+											y2="100%"
+										>
+											<stop offset="0%" stopColor="#bfdbfe" />
+											<stop offset="100%" stopColor="#93c5fd" />
+										</linearGradient>
+									</defs>
+									{/* Main body */}
+									<rect
+										x="20"
+										y="10"
+										width="120"
+										height="200"
+										rx="8"
+										fill="url(#fridgeBody)"
+										stroke="#d1d5db"
+										strokeWidth="2"
+									/>
+									{/* Divider between freezer and cooler */}
+									<line
+										x1="20"
+										y1="100"
+										x2="140"
+										y2="100"
+										stroke="#9ca3af"
+										strokeWidth="2"
+									/>
+									{/* Freezer interior */}
+									<rect
+										x="28"
+										y="18"
+										width="44"
+										height="72"
+										rx="4"
+										fill="url(#fridgeCold)"
+										opacity={freezerOpen ? 0.6 : 1}
+									/>
+									{/* Cooler interior */}
+									<rect
+										x="28"
+										y="108"
+										width="44"
+										height="92"
+										rx="4"
+										fill="url(#fridgeCold)"
+										opacity={coolerOpen ? 0.6 : 1}
+									/>
+									{/* Freezer door - swings when open */}
+									<g
+										transform={
+											freezerOpen
+												? 'translate(72, 18) rotate(-25 22 36)'
+												: 'translate(0, 0)'
+										}
+									>
+										<rect
+											x="72"
+											y="18"
+											width="36"
+											height="72"
+											rx="4"
+											fill="url(#fridgeBody)"
+											stroke="#d1d5db"
+											strokeWidth="2"
+										/>
+										<rect
+											x="78"
+											y="28"
+											width="24"
+											height="52"
+											rx="2"
+											fill="#bfdbfe"
+											opacity="0.5"
+										/>
+									</g>
+									{/* Cooler door */}
+									<g
+										transform={
+											coolerOpen
+												? 'translate(72, 108) rotate(-25 22 46)'
+												: 'translate(0, 0)'
+										}
+									>
+										<rect
+											x="72"
+											y="108"
+											width="36"
+											height="92"
+											rx="4"
+											fill="url(#fridgeBody)"
+											stroke="#d1d5db"
+											strokeWidth="2"
+										/>
+										<rect
+											x="78"
+											y="118"
+											width="24"
+											height="72"
+											rx="2"
+											fill="#bfdbfe"
+											opacity="0.5"
+										/>
+									</g>
+								</Box>
+							</Box>
+
+							<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+								<Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+									<Card variant="outlined" sx={{ flex: 1, minWidth: 140 }}>
+										<CardContent>
+											<Typography variant="caption" color="text.secondary">
+												Freezer
+											</Typography>
+											<Typography variant="h6">
+												{formatTemp(cluster.freezerTempC)}
+											</Typography>
+											<Chip
+												label={freezerOpen ? 'Open' : 'Closed'}
+												size="small"
+												color={freezerOpen ? 'warning' : 'default'}
+												sx={{ mt: 1 }}
+											/>
+										</CardContent>
+									</Card>
+									<Card variant="outlined" sx={{ flex: 1, minWidth: 140 }}>
+										<CardContent>
+											<Typography variant="caption" color="text.secondary">
+												Cooler
+											</Typography>
+											<Typography variant="h6">
+												{formatTemp(cluster.fridgeTempC)}
+											</Typography>
+											<Chip
+												label={coolerOpen ? 'Open' : 'Closed'}
+												size="small"
+												color={coolerOpen ? 'warning' : 'default'}
+												sx={{ mt: 1 }}
+											/>
+										</CardContent>
+									</Card>
+								</Box>
+
+								{loading && (
+									<Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+										<CircularProgress size={32} />
+									</Box>
+								)}
+								{error && (
+									<Alert severity="error" sx={{ mt: 2 }}>
+										{error}
+									</Alert>
+								)}
+								{!loading && !error && (
+									<motion.div
+										variants={cardVariants}
+										initial="initial"
+										animate="animate"
+										transition={{ delay: 0.1 }}
+									>
+										<Card
+											sx={{
+												mt: 3,
+												borderRadius: 3,
+												boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+												background:
+													'linear-gradient(135deg, rgba(14, 165, 233, 0.08) 0%, rgba(59, 130, 246, 0.08) 100%)',
+												border: '1px solid rgba(14, 165, 233, 0.2)',
+											}}
+										>
+											<CardContent>
+												<Box
+													sx={{
+														display: 'flex',
+														justifyContent: 'space-between',
+														alignItems: 'center',
+														mb: 2,
+													}}
+												>
+													<Typography variant="h6">Temperature history</Typography>
+													<ToggleButtonGroup
+														value={timeframe}
+														exclusive
+														onChange={(_, value) => value && setTimeframe(value)}
+														size="small"
+													>
+														<ToggleButton value="1h">1h</ToggleButton>
+														<ToggleButton value="6h">6h</ToggleButton>
+														<ToggleButton value="24h">24h</ToggleButton>
+														<ToggleButton value="1week">1 week</ToggleButton>
+													</ToggleButtonGroup>
+												</Box>
+												{history.length === 0 ? (
+													<Typography color="text.secondary">
+														No history yet. Data is recorded every minute.
+													</Typography>
+												) : (
+													<Box sx={{ height: 240 }}>
+														<Line
+															data={chartData}
+															options={{
+																responsive: true,
+																maintainAspectRatio: false,
+																plugins: {
+																	legend: { position: 'top' },
+																},
+																scales: {
+																	y: {
+																		title: { display: true, text: '°C' },
+																	},
+																},
+															}}
+														/>
+													</Box>
+												)}
+											</CardContent>
+										</Card>
+									</motion.div>
+								)}
+							</Box>
+						</CardContent>
+					</Card>
+				</motion.div>
+			</Box>
+		</motion.div>
+	);
+};
+
+interface WasherEvent {
+	timestamp: number;
+	machineState: string | null;
+	done: boolean | null;
+	progressPercent: number | null;
+	phase: string | null;
+	remainingTimeMinutes: number | null;
+}
+
+interface WasherDetailProps extends DeviceDetailBaseProps<DashboardDeviceClusterWasher> {}
+
+const WasherDetail = (props: WasherDetailProps): JSX.Element => {
+	const cluster = props.cluster;
+	const roomColor = props.device.roomColor || '#3b82f6';
+	const isRunning = cluster.machineState === 'run' || cluster.operatingState === 'running';
+	const isPaused = cluster.machineState === 'pause' || cluster.operatingState === 'paused';
+	const isDone = cluster.done === true;
+
+	const [washerHistory, setWasherHistory] = useState<WasherEvent[]>([]);
+	const [washerHistoryLoading, setWasherHistoryLoading] = useState(true);
+	const [washerHistoryError, setWasherHistoryError] = useState<string | null>(null);
+	const [washerTimeframe, setWasherTimeframe] = useState<Timeframe>('24h');
+	const washerDeviceId = props.device.uniqueId;
+
+	const fetchWasherHistory = React.useCallback(async () => {
+		try {
+			setWasherHistoryLoading(true);
+			setWasherHistoryError(null);
+			const response = await apiGet('device', '/washer/:deviceId/:timeframe', {
+				deviceId: washerDeviceId,
+				timeframe: TIMEFRAME_MS[washerTimeframe].toString(),
+			});
+			if (!response.ok) {
+				throw new Error('Failed to fetch washer history');
+			}
+			const data = await response.json();
+			setWasherHistory(data.history || []);
+		} catch (err) {
+			setWasherHistoryError('Failed to load cycle history');
+			console.error('Failed to fetch washer history:', err);
+		} finally {
+			setWasherHistoryLoading(false);
+		}
+	}, [washerDeviceId, washerTimeframe]);
+
+	useEffect(() => {
+		void fetchWasherHistory();
+	}, [fetchWasherHistory]);
+
+	const washerChartData = React.useMemo(() => {
+		const reversed = [...washerHistory].reverse();
+		const formatLabel = (ts: number): string => {
+			const date = new Date(ts);
+			if (washerTimeframe === '1h' || washerTimeframe === '6h') {
+				return date.toLocaleTimeString('en-US', {
+					hour: '2-digit',
+					minute: '2-digit',
+				});
+			}
+			if (washerTimeframe === '24h') {
+				return date.toLocaleTimeString('en-US', {
+					hour: '2-digit',
+					minute: '2-digit',
+				});
+			}
+			return date.toLocaleDateString('en-US', {
+				month: 'short',
+				day: 'numeric',
+				hour: '2-digit',
+			});
+		};
+		return {
+			labels: reversed.map((e) => formatLabel(e.timestamp)),
+			datasets: [
+				{
+					label: 'Progress (%)',
+					data: reversed.map((e) => e.progressPercent ?? null),
+					borderColor: 'rgb(59, 130, 246)',
+					backgroundColor: 'rgba(59, 130, 246, 0.1)',
+					tension: 0.4,
+					fill: true,
+				},
+			],
+		};
+	}, [washerHistory, washerTimeframe]);
+
+	const getStateLabel = (): string => {
+		if (isDone) {
+			return 'Done';
+		}
+		if (isPaused) {
+			return 'Paused';
+		}
+		if (isRunning) {
+			return 'Running';
+		}
+		return 'Stopped';
+	};
+
+	const formatRemaining = (): string => {
+		if (cluster.remainingTimeStr) {
+			return cluster.remainingTimeStr;
+		}
+		if (cluster.remainingTimeMinutes !== undefined && cluster.remainingTimeMinutes !== null) {
+			const m = cluster.remainingTimeMinutes;
+			if (m >= 60) {
+				return `${Math.floor(m / 60)}h ${m % 60}m`;
+			}
+			return `${m} min`;
+		}
+		return '—';
+	};
+
+	const phaseLabel =
+		cluster.phase && cluster.phase !== 'none'
+			? cluster.phase.charAt(0).toUpperCase() + cluster.phase.slice(1)
+			: null;
+
+	return (
+		<motion.div
+			variants={pageVariants}
+			initial="initial"
+			animate="animate"
+			exit="exit"
+			style={{ height: '100%' }}
+		>
+			<Box
+				sx={{
+					backgroundColor: roomColor,
+					py: 1.5,
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
+					position: 'relative',
+					boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+				}}
+			>
+				<IconButton style={{ position: 'absolute', left: 0 }} onClick={props.onExit}>
+					<ArrowBackIcon style={{ fill: '#fff' }} />
+				</IconButton>
+				<Typography
+					style={{ color: '#fff', fontWeight: 600, letterSpacing: '-0.02em' }}
+					variant="h6"
+				>
+					{props.device.name}
+				</Typography>
+			</Box>
+
+			<Box sx={{ p: { xs: 2, sm: 3 } }}>
+				<motion.div variants={cardVariants} initial="initial" animate="animate">
+					<Card
+						sx={{
+							mb: 3,
+							borderRadius: 3,
+							boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+							overflow: 'hidden',
+						}}
+					>
+						<CardContent>
+							<Typography variant="subtitle2" color="text.secondary" gutterBottom>
+								Washing machine
+							</Typography>
+							<Box
+								sx={{
+									display: 'flex',
+									justifyContent: 'center',
+									my: 3,
+									position: 'relative',
+									height: 200,
+								}}
+							>
+								{/* CSS/SVG Washing machine visualization */}
+								<Box
+									component="svg"
+									viewBox="0 0 200 200"
+									sx={{
+										width: '100%',
+										maxWidth: 200,
+										height: 200,
+										filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.15))',
+									}}
+								>
+									<defs>
+										<linearGradient
+											id="washerBody"
+											x1="0%"
+											y1="0%"
+											x2="0%"
+											y2="100%"
+										>
+											<stop offset="0%" stopColor="#f3f4f6" />
+											<stop offset="100%" stopColor="#e5e7eb" />
+										</linearGradient>
+										<linearGradient
+											id="drumFill"
+											x1="0%"
+											y1="100%"
+											x2="0%"
+											y2="0%"
+										>
+											<stop offset="0%" stopColor="#93c5fd" />
+											<stop offset="100%" stopColor="#bfdbfe" />
+										</linearGradient>
+									</defs>
+									{/* Machine body */}
+									<rect
+										x="30"
+										y="20"
+										width="140"
+										height="160"
+										rx="12"
+										fill="url(#washerBody)"
+										stroke="#d1d5db"
+										strokeWidth="2"
+									/>
+									{/* Door outline */}
+									<circle
+										cx="100"
+										cy="100"
+										r="45"
+										fill="#f9fafb"
+										stroke="#9ca3af"
+										strokeWidth="3"
+									/>
+									{/* Drum - rotating when running */}
+									<motion.g
+										animate={{ rotate: isRunning ? 360 : 0 }}
+										transition={{
+											duration: 4,
+											repeat: isRunning ? Number.POSITIVE_INFINITY : 0,
+											ease: 'linear',
+										}}
+										style={{ transformOrigin: '100px 100px' }}
+									>
+										<circle
+											cx="100"
+											cy="100"
+											r="38"
+											fill="none"
+											stroke="#c4b5fd"
+											strokeWidth="4"
+											strokeDasharray="4 6"
+										/>
+										<circle
+											cx="100"
+											cy="100"
+											r="32"
+											fill="url(#drumFill)"
+											opacity={isRunning ? 0.7 : 0.4}
+										/>
+									</motion.g>
+									{/* Center cap */}
+									<circle
+										cx="100"
+										cy="100"
+										r="12"
+										fill="#e5e7eb"
+										stroke="#9ca3af"
+										strokeWidth="1"
+									/>
+								</Box>
+							</Box>
+
+							<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+								<Chip
+									label={getStateLabel()}
+									color={
+										isDone
+											? 'success'
+											: isRunning
+												? 'primary'
+												: isPaused
+													? 'warning'
+													: 'default'
+									}
+									sx={{ alignSelf: 'flex-start' }}
+								/>
+								{phaseLabel && (
+									<Typography variant="body1">
+										Phase: <strong>{phaseLabel}</strong>
+									</Typography>
+								)}
+								{cluster.cycle && (
+									<Typography variant="body2" color="text.secondary">
+										Cycle: {cluster.cycle}
+									</Typography>
+								)}
+								{(isRunning || isPaused) && (
+									<Box>
+										<Typography variant="caption" color="text.secondary">
+											Progress
+										</Typography>
+										<Box
+											sx={{
+												display: 'flex',
+												alignItems: 'center',
+												gap: 2,
+												mt: 0.5,
+											}}
+										>
+											<Box sx={{ flex: 1 }}>
+												<Slider
+													value={cluster.progressPercent ?? 0}
+													min={0}
+													max={100}
+													valueLabelDisplay="auto"
+													valueLabelFormat={(v) => `${v}%`}
+													sx={{ color: roomColor }}
+													disabled
+												/>
+											</Box>
+											<Typography variant="body2" fontWeight={600}>
+												{cluster.progressPercent ?? 0}%
+											</Typography>
+										</Box>
+									</Box>
+								)}
+								{(isRunning || isPaused) && formatRemaining() !== '—' && (
+									<Typography variant="body2">
+										Time remaining: <strong>{formatRemaining()}</strong>
+									</Typography>
+								)}
+								{cluster.completionTime && !isDone && (() => {
+									const parsed = new Date(cluster.completionTime);
+									const formatted = Number.isNaN(parsed.getTime())
+										? cluster.completionTime
+										: parsed.toLocaleString(undefined, {
+												month: 'short',
+												day: 'numeric',
+												hour: '2-digit',
+												minute: '2-digit',
+											});
+									return (
+										<Typography variant="body2" color="text.secondary">
+											Expected at {formatted}
+										</Typography>
+									);
+								})()}
+								{(cluster.detergentInitialCc !== undefined ||
+									cluster.softenerInitialCc !== undefined) && (
+									<Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+										{cluster.detergentInitialCc !== undefined && (
+											<Chip
+												size="small"
+												variant="outlined"
+												label={`Detergent: ${cluster.detergentRemainingCc ?? '—'} / ${cluster.detergentInitialCc} cc`}
+											/>
+										)}
+										{cluster.softenerInitialCc !== undefined && (
+											<Chip
+												size="small"
+												variant="outlined"
+												label={`Softener: ${cluster.softenerRemainingCc ?? '—'} / ${cluster.softenerInitialCc} cc`}
+											/>
+										)}
+									</Box>
+								)}
+								{cluster.scheduledPhases && cluster.scheduledPhases.length > 0 && (
+									<Box>
+										<Typography
+											variant="caption"
+											color="text.secondary"
+											display="block"
+											gutterBottom
+										>
+											Scheduled phases
+										</Typography>
+										<List dense disablePadding>
+											{cluster.scheduledPhases.map((p, i) => (
+												<ListItem key={i} disablePadding sx={{ py: 0.25 }}>
+													<ListItemText
+														primary={`${p.phaseName}: ${p.timeInMin} min`}
+														primaryTypographyProps={{
+															variant: 'body2',
+														}}
+													/>
+												</ListItem>
+											))}
+										</List>
+									</Box>
+								)}
+
+								{washerHistoryLoading && (
+									<Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+										<CircularProgress size={32} />
+									</Box>
+								)}
+								{washerHistoryError && (
+									<Alert severity="error" sx={{ mt: 2 }}>
+										{washerHistoryError}
+									</Alert>
+								)}
+								{!washerHistoryLoading && !washerHistoryError && (
+									<motion.div
+										variants={cardVariants}
+										initial="initial"
+										animate="animate"
+										transition={{ delay: 0.1 }}
+									>
+										<Card
+											sx={{
+												mt: 3,
+												borderRadius: 3,
+												boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+												background:
+													'linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(147, 197, 253, 0.08) 100%)',
+												border: '1px solid rgba(59, 130, 246, 0.2)',
+											}}
+										>
+											<CardContent>
+												<Box
+													sx={{
+														display: 'flex',
+														justifyContent: 'space-between',
+														alignItems: 'center',
+														mb: 2,
+													}}
+												>
+													<Typography variant="h6">Cycle history</Typography>
+													<ToggleButtonGroup
+														value={washerTimeframe}
+														exclusive
+														onChange={(_, value) =>
+															value && setWasherTimeframe(value)
+														}
+														size="small"
+													>
+														<ToggleButton value="1h">1h</ToggleButton>
+														<ToggleButton value="6h">6h</ToggleButton>
+														<ToggleButton value="24h">24h</ToggleButton>
+														<ToggleButton value="1week">1 week</ToggleButton>
+													</ToggleButtonGroup>
+												</Box>
+												{washerHistory.length === 0 ? (
+													<Typography color="text.secondary">
+														No history yet. Data is recorded every minute.
+													</Typography>
+												) : (
+													<Box sx={{ height: 240 }}>
+														<Line
+															data={washerChartData}
+															options={{
+																responsive: true,
+																maintainAspectRatio: false,
+																plugins: {
+																	legend: { position: 'top' },
+																},
+																scales: {
+																	y: {
+																		min: 0,
+																		max: 100,
+																		title: { display: true, text: 'Progress %' },
+																	},
+																},
+															}}
+														/>
+													</Box>
+												)}
+											</CardContent>
+										</Card>
+									</motion.div>
+								)}
+							</Box>
+						</CardContent>
+					</Card>
+				</motion.div>
+			</Box>
+		</motion.div>
+	);
+};
+
 export const DeviceDetail = (
 	props: DeviceDetailBaseProps<DashboardDeviceClusterWithState>
 ): JSX.Element | null => {
@@ -4919,6 +5793,12 @@ export const DeviceDetail = (
 	}
 	if (props.cluster.name === DeviceClusterName.ON_OFF) {
 		return <OnOffDetail {...props} cluster={props.cluster} />;
+	}
+	if (props.cluster.name === DeviceClusterName.FRIDGE) {
+		return <FridgeDetail {...props} cluster={props.cluster} />;
+	}
+	if (props.cluster.name === DeviceClusterName.WASHER) {
+		return <WasherDetail {...props} cluster={props.cluster} />;
 	}
 	return null;
 };

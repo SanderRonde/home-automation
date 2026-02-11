@@ -50,6 +50,8 @@ export enum DeviceClusterName {
 	THERMOSTAT = 'Thermostat',
 	ELECTRICAL_ENERGY_MEASUREMENT = 'ElectricalEnergyMeasurement',
 	ELECTRICAL_POWER_MEASUREMENT = 'ElectricalPowerMeasurement',
+	WASHER = 'Washer',
+	FRIDGE = 'Fridge',
 }
 
 export abstract class DeviceOnOffCluster extends Cluster {
@@ -306,4 +308,56 @@ export abstract class DeviceElectricalPowerMeasurementCluster extends Cluster {
 	public static clusterName = DeviceClusterName.ELECTRICAL_POWER_MEASUREMENT;
 
 	public abstract activePower: Data<number | undefined>; // in Watts
+}
+
+export abstract class DeviceWasherCluster extends Cluster {
+	public static clusterName = DeviceClusterName.WASHER;
+
+	/** "stop" | "run" | "pause" */
+	public abstract machineState: Data<'stop' | 'run' | 'pause' | undefined>;
+	/** "ready" | "running" | "paused" (Samsung) */
+	public abstract operatingState: Data<'ready' | 'running' | 'paused' | undefined>;
+	/** "none" or job name (Samsung) */
+	public abstract washerJobState: Data<'none' | string | undefined>;
+	/** Is the cycle done (idle, no job). */
+	public abstract done: Data<boolean | undefined>;
+	/** When the current/last run is scheduled to finish (ISO string). */
+	public abstract completionTime: Data<string | undefined>;
+	/** Remaining time in minutes (when running). */
+	public abstract remainingTimeMinutes: Data<number | undefined>;
+	/** Remaining time string e.g. "02:36". */
+	public abstract remainingTimeStr: Data<string | undefined>;
+	/** Detergent remaining (cc). */
+	public abstract detergentRemainingCc: Data<number | undefined>;
+	/** Detergent initial capacity (cc). */
+	public abstract detergentInitialCc: Data<number | undefined>;
+	/** Softener remaining (cc). */
+	public abstract softenerRemainingCc: Data<number | undefined>;
+	/** Softener initial capacity (cc). */
+	public abstract softenerInitialCc: Data<number | undefined>;
+	/** Current cycle/course e.g. "Table_02_Course_1C". */
+	public abstract cycle: Data<string | undefined>;
+	/** Cycle type e.g. "washingOnly". */
+	public abstract cycleType: Data<'washingOnly' | undefined>;
+	/** Phase: "wash" | "rinse" | "spin" | "none". */
+	public abstract phase: Data<'wash' | 'rinse' | 'spin' | 'none' | undefined>;
+	/** Progress 0–100 (%). */
+	public abstract progressPercent: Data<number | undefined>;
+	/** Scheduled phases with names and durations (min). */
+	public abstract scheduledPhases: Data<
+		Array<{ phaseName: string; timeInMin: number }> | undefined
+	>;
+}
+
+export abstract class DeviceFridgeCluster extends Cluster {
+	public static clusterName = DeviceClusterName.FRIDGE;
+
+	/** Freezer door open. */
+	public abstract freezerDoorOpen: Data<boolean | undefined>;
+	/** Fridge (cooler) door open. */
+	public abstract coolerDoorOpen: Data<boolean | undefined>;
+	/** Fridge (cooler) current temp °C. */
+	public abstract fridgeTempC: Data<number | undefined>;
+	/** Freezer current temp °C. */
+	public abstract freezerTempC: Data<number | undefined>;
 }

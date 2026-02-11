@@ -13,6 +13,8 @@ import type {
 	DashboardDeviceClusterThermostat,
 	DashboardDeviceClusterSwitch,
 	DashboardDeviceClusterAirQualityGroup,
+	DashboardDeviceClusterFridge,
+	DashboardDeviceClusterWasher,
 	DeviceListWithValuesResponse,
 } from '../../../server/modules/device/routing';
 import {
@@ -21,6 +23,8 @@ import {
 	PowerSettingsNew as PowerIcon,
 	CloudOff as CloudOffIcon,
 	Refresh as RefreshIcon,
+	Kitchen as KitchenIcon,
+	LocalLaundryService as LocalLaundryServiceIcon,
 } from '@mui/icons-material';
 import {
 	Card,
@@ -1890,6 +1894,232 @@ const ThermostatCard = (
 	);
 };
 
+const FridgeCard = (
+	props: DeviceClusterCardBaseProps<DashboardDeviceClusterFridge>
+): JSX.Element => {
+	const cluster = props.cluster;
+	const doorOpen = cluster.freezerDoorOpen || cluster.coolerDoorOpen;
+	const backgroundColor = doorOpen ? '#b45309' : '#0c4a6e';
+
+	const formatTemp = (temp: number | undefined): string =>
+		temp !== undefined ? `${temp.toFixed(1)}°C` : '—';
+
+	return (
+		<DeviceClusterCardSkeleton
+			{...props}
+			cardBackground={backgroundColor}
+			onPress={() => {
+				props.pushDetailView({
+					type: 'device',
+					deviceId: props.device.uniqueId,
+					clusterName: props.cluster.name,
+				});
+			}}
+		>
+			<Box
+				sx={{
+					display: 'flex',
+					alignItems: 'center',
+					gap: 2,
+				}}
+			>
+				<Box
+					sx={{
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						background: 'rgba(255, 255, 255, 0.2)',
+						borderRadius: '50%',
+						width: 48,
+						height: 48,
+						color: 'white',
+					}}
+				>
+					<KitchenIcon sx={{ fontSize: 28 }} />
+				</Box>
+				<Box sx={{ flexGrow: 1 }}>
+					<Typography
+						variant="body1"
+						sx={{
+							fontWeight: 500,
+							color: 'white',
+						}}
+					>
+						{props.device.name}
+					</Typography>
+					<Typography
+						variant="caption"
+						sx={{
+							color: 'rgba(255, 255, 255, 0.85)',
+							display: 'block',
+						}}
+					>
+						Doors: {doorOpen ? 'Open' : 'Closed'}
+					</Typography>
+					<Box
+						sx={{
+							display: 'flex',
+							gap: 1.5,
+							mt: 0.5,
+						}}
+					>
+						<Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.9)' }}>
+							Fridge {formatTemp(cluster.fridgeTempC)}
+						</Typography>
+						<Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.9)' }}>
+							Freezer {formatTemp(cluster.freezerTempC)}
+						</Typography>
+					</Box>
+				</Box>
+			</Box>
+		</DeviceClusterCardSkeleton>
+	);
+};
+
+const WasherCard = (
+	props: DeviceClusterCardBaseProps<DashboardDeviceClusterWasher>
+): JSX.Element => {
+	const cluster = props.cluster;
+	const isRunning = cluster.machineState === 'run' || cluster.operatingState === 'running';
+	const isPaused = cluster.machineState === 'pause' || cluster.operatingState === 'paused';
+	const isDone = cluster.done === true;
+
+	const getBackgroundColor = (): string => {
+		if (isDone) {
+			return '#064e3b';
+		}
+		if (isPaused) {
+			return '#78350f';
+		}
+		if (isRunning) {
+			return '#1e3a8a';
+		}
+		return '#374151';
+	};
+
+	const getStateLabel = (): string => {
+		if (isDone) {
+			return 'Done';
+		}
+		if (isPaused) {
+			return 'Paused';
+		}
+		if (isRunning) {
+			return 'Running';
+		}
+		return 'Stopped';
+	};
+
+	const formatRemaining = (): string => {
+		if (cluster.remainingTimeStr) {
+			return cluster.remainingTimeStr;
+		}
+		if (cluster.remainingTimeMinutes !== undefined && cluster.remainingTimeMinutes !== null) {
+			const m = cluster.remainingTimeMinutes;
+			if (m >= 60) {
+				return `${Math.floor(m / 60)}h ${m % 60}m`;
+			}
+			return `${m} min`;
+		}
+		return '';
+	};
+
+	const phaseLabel =
+		cluster.phase && cluster.phase !== 'none'
+			? cluster.phase.charAt(0).toUpperCase() + cluster.phase.slice(1)
+			: '';
+
+	return (
+		<DeviceClusterCardSkeleton
+			{...props}
+			cardBackground={getBackgroundColor()}
+			onPress={() => {
+				props.pushDetailView({
+					type: 'device',
+					deviceId: props.device.uniqueId,
+					clusterName: props.cluster.name,
+				});
+			}}
+		>
+			<Box
+				sx={{
+					display: 'flex',
+					alignItems: 'center',
+					gap: 2,
+				}}
+			>
+				<Box
+					sx={{
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						background: 'rgba(255, 255, 255, 0.2)',
+						borderRadius: '50%',
+						width: 48,
+						height: 48,
+						color: 'white',
+					}}
+				>
+					<LocalLaundryServiceIcon sx={{ fontSize: 28 }} />
+				</Box>
+				<Box sx={{ flexGrow: 1 }}>
+					<Typography
+						variant="body1"
+						sx={{
+							fontWeight: 500,
+							color: 'white',
+						}}
+					>
+						{props.device.name}
+					</Typography>
+					<Typography
+						variant="caption"
+						sx={{
+							color: 'rgba(255, 255, 255, 0.9)',
+							display: 'block',
+						}}
+					>
+						{getStateLabel()}
+						{phaseLabel ? ` • ${phaseLabel}` : ''}
+					</Typography>
+					{(isRunning || isPaused) && (
+						<Box
+							sx={{
+								display: 'flex',
+								alignItems: 'center',
+								gap: 1,
+								mt: 0.5,
+							}}
+						>
+							{cluster.progressPercent !== undefined && (
+								<Typography
+									variant="caption"
+									sx={{ color: 'rgba(255, 255, 255, 0.9)' }}
+								>
+									{cluster.progressPercent}%
+								</Typography>
+							)}
+							{formatRemaining() && (
+								<Typography
+									variant="caption"
+									sx={{ color: 'rgba(255, 255, 255, 0.9)' }}
+								>
+									{formatRemaining()} left
+								</Typography>
+							)}
+						</Box>
+					)}
+					{isDone && (
+						<Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.9)' }}>
+							Cycle complete
+						</Typography>
+					)}
+				</Box>
+			</Box>
+		</DeviceClusterCardSkeleton>
+	);
+};
+
 const ActionsCard = (
 	props: DeviceClusterCardBaseProps<DashboardDeviceClusterActions>
 ): JSX.Element => {
@@ -2020,6 +2250,12 @@ export const DeviceClusterCard = (
 	}
 	if (regularProps.cluster.name === DeviceClusterName.SWITCH) {
 		return <SwitchCard {...regularProps} cluster={regularProps.cluster} />;
+	}
+	if (regularProps.cluster.name === DeviceClusterName.FRIDGE) {
+		return <FridgeCard {...regularProps} cluster={regularProps.cluster} />;
+	}
+	if (regularProps.cluster.name === DeviceClusterName.WASHER) {
+		return <WasherCard {...regularProps} cluster={regularProps.cluster} />;
 	}
 	// CO2 and PM2.5 sensors are now grouped in AirQualityGroup
 	// Standalone handling is not needed

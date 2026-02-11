@@ -14,6 +14,8 @@ import type {
 	DeviceCarbonDioxideConcentrationMeasurementWithNumericAndLevelIndicationCluster,
 	DeviceAirQualityCluster,
 	DevicePm25ConcentrationMeasurementWithNumericAndLevelIndicationCluster,
+	DeviceWasherCluster,
+	DeviceFridgeCluster,
 } from './cluster';
 import {
 	DeviceOnOffCluster,
@@ -179,6 +181,34 @@ export type DashboardDeviceClusterOccupancySensorGroup = DashboardDeviceClusterB
 	};
 };
 
+export type DashboardDeviceClusterFridge = DashboardDeviceClusterBase & {
+	name: DeviceClusterName.FRIDGE;
+	freezerDoorOpen: boolean;
+	coolerDoorOpen: boolean;
+	fridgeTempC: number | undefined;
+	freezerTempC: number | undefined;
+};
+
+export type DashboardDeviceClusterWasher = DashboardDeviceClusterBase & {
+	name: DeviceClusterName.WASHER;
+	machineState: 'stop' | 'run' | 'pause' | undefined;
+	operatingState: 'ready' | 'running' | 'paused' | undefined;
+	washerJobState: 'none' | string | undefined;
+	done: boolean | undefined;
+	completionTime: string | undefined;
+	remainingTimeMinutes: number | undefined;
+	remainingTimeStr: string | undefined;
+	detergentRemainingCc: number | undefined;
+	detergentInitialCc: number | undefined;
+	softenerRemainingCc: number | undefined;
+	softenerInitialCc: number | undefined;
+	cycle: string | undefined;
+	cycleType: 'washingOnly' | undefined;
+	phase: 'wash' | 'rinse' | 'spin' | 'none' | undefined;
+	progressPercent: number | undefined;
+	scheduledPhases: Array<{ phaseName: string; timeInMin: number }> | undefined;
+};
+
 /** @deprecated Use DashboardDeviceClusterOccupancySensorGroup instead */
 export type DashboardDeviceClusterSensorGroup = DashboardDeviceClusterOccupancySensorGroup;
 
@@ -270,6 +300,8 @@ export type DashboardDeviceClusterWithState = DashboardDeviceClusterBase &
 		| DashboardDeviceClusterColorControlTemperature
 		| DashboardDeviceClusterActions
 		| DashboardDeviceClusterThermostat
+		| DashboardDeviceClusterFridge
+		| DashboardDeviceClusterWasher
 		| DashboardDeviceClusterOccupancySensorGroup
 		| DashboardDeviceClusterElectricalEnergyMeasurement
 		| DashboardDeviceClusterElectricalPowerMeasurement
@@ -680,6 +712,22 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 			'/temperature/:deviceId/:timeframe': async (req, _server, { json }) => {
 				const timeframe = parseInt(req.params.timeframe, 10);
 				const history = await api.temperatureTracker.getHistory(
+					req.params.deviceId,
+					timeframe
+				);
+				return json({ history });
+			},
+			'/fridge/:deviceId/:timeframe': async (req, _server, { json }) => {
+				const timeframe = parseInt(req.params.timeframe, 10);
+				const history = await api.fridgeTracker.getHistory(
+					req.params.deviceId,
+					timeframe
+				);
+				return json({ history });
+			},
+			'/washer/:deviceId/:timeframe': async (req, _server, { json }) => {
+				const timeframe = parseInt(req.params.timeframe, 10);
+				const history = await api.washerTracker.getHistory(
 					req.params.deviceId,
 					timeframe
 				);
@@ -1475,6 +1523,72 @@ const getClusterState = async (
 			icon: getClusterIconName(clusterName, api),
 			state: state ?? false,
 			lastChanged: lastEvent?.timestamp,
+		};
+	}
+	if (clusterName === DeviceClusterName.FRIDGE) {
+		if (!_cluster) {
+			return {
+				name: clusterName,
+				icon: getClusterIconName(clusterName, api),
+				freezerDoorOpen: false,
+				coolerDoorOpen: false,
+				fridgeTempC: undefined,
+				freezerTempC: undefined,
+			};
+		}
+		const cluster = _cluster as DeviceFridgeCluster;
+		return {
+			name: clusterName,
+			icon: getClusterIconName(clusterName, api),
+			freezerDoorOpen: (await cluster.freezerDoorOpen.get()) ?? false,
+			coolerDoorOpen: (await cluster.coolerDoorOpen.get()) ?? false,
+			fridgeTempC: await cluster.fridgeTempC.get(),
+			freezerTempC: await cluster.freezerTempC.get(),
+		};
+	}
+	if (clusterName === DeviceClusterName.WASHER) {
+		if (!_cluster) {
+			return {
+				name: clusterName,
+				icon: getClusterIconName(clusterName, api),
+				machineState: undefined,
+				operatingState: undefined,
+				washerJobState: undefined,
+				done: undefined,
+				completionTime: undefined,
+				remainingTimeMinutes: undefined,
+				remainingTimeStr: undefined,
+				detergentRemainingCc: undefined,
+				detergentInitialCc: undefined,
+				softenerRemainingCc: undefined,
+				softenerInitialCc: undefined,
+				cycle: undefined,
+				cycleType: undefined,
+				phase: undefined,
+				progressPercent: undefined,
+				scheduledPhases: undefined,
+			};
+		}
+		const cluster = _cluster as DeviceWasherCluster;
+		return {
+			name: clusterName,
+			icon: getClusterIconName(clusterName, api),
+			machineState: await cluster.machineState.get(),
+			operatingState: await cluster.operatingState.get(),
+			washerJobState: await cluster.washerJobState.get(),
+			done: await cluster.done.get(),
+			completionTime: await cluster.completionTime.get(),
+			remainingTimeMinutes: await cluster.remainingTimeMinutes.get(),
+			remainingTimeStr: await cluster.remainingTimeStr.get(),
+			detergentRemainingCc: await cluster.detergentRemainingCc.get(),
+			detergentInitialCc: await cluster.detergentInitialCc.get(),
+			softenerRemainingCc: await cluster.softenerRemainingCc.get(),
+			softenerInitialCc: await cluster.softenerInitialCc.get(),
+			cycle: await cluster.cycle.get(),
+			cycleType: await cluster.cycleType.get(),
+			phase: await cluster.phase.get(),
+			progressPercent: await cluster.progressPercent.get(),
+			scheduledPhases: await cluster.scheduledPhases.get(),
 		};
 	}
 	if (clusterName === DeviceClusterName.SWITCH) {

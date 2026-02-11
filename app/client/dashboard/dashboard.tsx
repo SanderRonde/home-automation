@@ -1,6 +1,7 @@
 import { AndroidControlConfig } from './components/AndroidControlConfig';
 import { TemperatureHistory } from './components/TemperatureHistory';
 import { TemperatureConfig } from './components/TemperatureConfig';
+import { SmartThingsConfig } from './components/SmartThingsConfig';
 import { LEDSourcesConfig } from './components/LEDSourcesConfig';
 import { WakelightConfig } from './components/WakelightConfig';
 import { Notifications } from './components/Notifications';
@@ -148,6 +149,8 @@ function DashboardApp() {
 				return <AndroidControlConfig />;
 			case SidebarTab.EWELINK:
 				return <EweLinkConfig />;
+			case SidebarTab.SMARTTHINGS:
+				return <SmartThingsConfig />;
 			case SidebarTab.TUYA:
 				return <TuyaConfig />;
 			case SidebarTab.LED_SOURCES:

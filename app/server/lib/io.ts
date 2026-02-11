@@ -13,6 +13,7 @@ interface Args {
 	'ignore-pressure'?: BoolArg;
 	'error-log-path'?: string;
 	'log-telegram-bot-commands'?: BoolArg;
+	'no-matter'?: BoolArg;
 
 	IO_DEBUG?: string;
 	debug?: BoolArg;
