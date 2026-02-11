@@ -9,11 +9,10 @@ export { AndroidControlProfileClient } from './base';
 export function getProfileClient(
 	profile: AndroidControlProfile,
 	deviceId: string,
-	device: Device | null,
 	appConfig: AppConfig
 ): AndroidControlProfileClient {
 	switch (profile) {
 		case AndroidControlProfile.CREATE_HOME_FAN:
-			return new CreateHomeFanClient(deviceId, device, appConfig);
+			return new CreateHomeFanClient(deviceId, appConfig);
 	}
 }

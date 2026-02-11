@@ -9,11 +9,9 @@ export abstract class AndroidControlProfileClient
 {
 	public readonly clusters: Cluster[] = [];
 	public readonly endpoints: DeviceEndpoint[] = [];
+	protected _connected: boolean = true;
 
-	public constructor(
-		protected readonly _deviceId: string,
-		protected readonly _device: Device | null
-	) {
+	public constructor(protected readonly _deviceId: string) {
 		super();
 	}
 
@@ -32,17 +30,19 @@ export abstract class AndroidControlProfileClient
 	}
 
 	public getDeviceStatus(): 'online' | 'offline' {
-		return this._device ? 'online' : 'offline';
+		return this._connected ? 'online' : 'offline';
 	}
 
-	public static async findDevice(id: string) {
+	public async findDevice() {
 		const adbClient = adb.createClient({});
 		const devices = (await adbClient.listDevices()) as Device[];
 		for (const device of devices) {
-			if (device.id === id) {
-				return device;
+			if (device.id === this._deviceId) {
+				this._connected = true;
+				return this._connected;
 			}
 		}
-		return null;
+		this._connected = false;
+		return this._connected;
 	}
 }

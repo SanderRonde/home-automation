@@ -1,5 +1,4 @@
 import { AndroidControlLevelControlCluster, AndroidControlOnOffCluster } from '../cluster';
-import { Device as AdbDevice } from '@devicefarmer/adbkit';
 import { DEBUG_FOLDER } from '../../../../lib/constants';
 import { logTag } from '../../../../lib/logging/logger';
 import { DeviceEndpoint } from '../../../device/device';
@@ -32,10 +31,9 @@ export class CreateHomeFanClient extends AndroidControlProfileClient implements 
 
 	public constructor(
 		_deviceId: string,
-		device: AdbDevice | null,
 		private readonly _appConfig: AppConfig
 	) {
-		super(_deviceId, device);
+		super(_deviceId);
 
 		const stateD: Data<FanState> = new Data({
 			isOn: false,
@@ -51,6 +49,12 @@ export class CreateHomeFanClient extends AndroidControlProfileClient implements 
 
 		// Keep track of "known" state
 		let currentState: FanState = stateD.current();
+
+		this.findDevice().then((connected) => {
+			if (!connected) {
+				logTag('android-control', 'red', 'Failed to find device:', this._deviceId);
+			}
+		});
 
 		const interval = setInterval(async () => {
 			const stateGetter = this._refreshState();
@@ -82,19 +86,19 @@ export class CreateHomeFanClient extends AndroidControlProfileClient implements 
 	}
 
 	private async _toggleOn() {
-		if (!this._device) {
+		if (!(await this.findDevice())) {
 			return;
 		}
 		await Bun.$`adb -s ${this._deviceId} shell input tap ${this._onOffXPosition} ${this._onOffYPosition}`.quiet();
 	}
 
 	private async _setLevel(level: number, state: FanState) {
-		if (!this._device) {
-			return;
-		}
 		if (!state.isOn) {
 			await this._toggleOn();
 			await wait(2000);
+		}
+		if (!(await this.findDevice())) {
+			return;
 		}
 		if (level === 0) {
 			await Bun.$`adb -s ${this._deviceId} shell input tap 130 1994`.quiet();
@@ -114,19 +118,17 @@ export class CreateHomeFanClient extends AndroidControlProfileClient implements 
 	}
 
 	private async _refreshState(): Promise<Omit<FanState, 'step' | 'name'>> {
-		// Take a screenshot
-		let arrayBuffer: ArrayBuffer;
-		try {
-			arrayBuffer = await Bun.$`adb -s ${this._deviceId} exec-out screencap -p`
-				.quiet()
-				.arrayBuffer();
-		} catch (error) {
-			logTag('android-control', 'red', 'Failed to take screenshot:', error);
+		if (!(await this.findDevice())) {
 			return {
 				level: 0,
 				isOn: false,
 			};
 		}
+
+		// Take a screenshot
+		const arrayBuffer = await Bun.$`adb -s ${this._deviceId} exec-out screencap -p`
+			.quiet()
+			.arrayBuffer();
 		const image = await Jimp.read(arrayBuffer);
 		if (this._appConfig.debug) {
 			await mkdir(DEBUG_FOLDER, { recursive: true });

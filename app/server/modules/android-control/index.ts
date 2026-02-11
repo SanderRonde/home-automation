@@ -1,5 +1,4 @@
 import { AndroidControlProfileClient, getProfileClient } from './client/devices/devices';
-import { logTag } from '../../lib/logging/logger';
 import { DeviceSource } from '../device/device';
 import type { AndroidControlDB } from './types';
 import type { Database } from '../../lib/db';
@@ -28,21 +27,9 @@ export const AndroidControl = new (class AndroidControl extends ModuleMeta {
 					newDevices[androidDevice.deviceId] = currentDevices[androidDevice.deviceId];
 					return;
 				}
-				const deviceClient = await AndroidControlProfileClient.findDevice(
-					androidDevice.deviceId
-				);
-				if (!deviceClient) {
-					logTag(
-						'android-control',
-						'red',
-						'Failed to find device:',
-						androidDevice.deviceId
-					);
-				}
 				newDevices[androidDevice.deviceId] = getProfileClient(
 					androidDevice.profile,
 					androidDevice.deviceId,
-					deviceClient,
 					_config.config
 				);
 			}
