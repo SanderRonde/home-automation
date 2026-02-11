@@ -5,7 +5,6 @@ import type { AndroidControl } from './android-control';
 import type { HomeDetector } from './home-detector';
 import type { Notification } from './notification';
 import type { Temperature } from './temperature';
-import type { LedArt } from './led-art/led-art';
 import type { HomeWizard } from './homewizard';
 // Note: We use a type-only import for Wakelight to avoid the cycle
 // This should work because we're only using it as a type, not a value
@@ -15,6 +14,7 @@ import type { Location } from './location';
 import type { Webhook } from './webhook';
 import type { EWeLink } from './ewelink';
 import type { Secret } from './secret/';
+import type { LedArt } from './led-art';
 import type { System } from './system';
 import type { Matter } from './matter';
 import type { Device } from './device';
