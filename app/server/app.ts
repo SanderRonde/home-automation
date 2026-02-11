@@ -31,6 +31,7 @@ interface PartialConfig {
 	debug?: boolean;
 	instant?: boolean;
 	logTelegramBotCommands?: boolean;
+	noMatter?: boolean;
 }
 
 type DeepRequired<T> = {
@@ -46,6 +47,27 @@ class WebServer {
 
 	public constructor(config: PartialConfig = {}) {
 		this._config = this._setConfigDefaults(config);
+
+		let shuttingDown = false;
+		process.on('SIGINT', () => {
+			if (shuttingDown) {
+				return;
+			}
+
+			shuttingDown = true;
+			let countdown = 3;
+			const interval = setInterval(() => {
+				// eslint-disable-next-line no-console
+				console.log(`Shutting down in ${countdown}...`);
+				countdown--;
+				if (countdown < 0) {
+					clearInterval(interval);
+					// Wait for Matter to finish
+					// eslint-disable-next-line n/no-process-exit
+					process.exit(0);
+				}
+			}, 1000);
+		});
 	}
 
 	private _setConfigDefaults(config: PartialConfig): AppConfig {
@@ -65,6 +87,7 @@ class WebServer {
 			debug: config.debug || false,
 			instant: config.instant || false,
 			logTelegramBotCommands: config.logTelegramBotCommands || false,
+			noMatter: config.noMatter || false,
 		};
 	}
 
@@ -297,6 +320,7 @@ if (hasArg('help', 'h')) {
 	logImmediate('-h, --help			Print this help message');
 	logImmediate('--http 		{port}		The HTTP port to use');
 	logImmediate('--https 	{port}		The HTTP port to use');
+	logImmediate('--no-matter 			Disable Matter server');
 	logImmediate('-v, --verbose			Log request-related data');
 	logImmediate('-vv, --veryverbose		Log even more request-related data');
 	logImmediate(
@@ -343,6 +367,7 @@ void new WebServer({
 	debug: hasArg('debug') || !!getArg('IO_DEBUG'),
 	instant: hasArg('instant', 'i'),
 	logTelegramBotCommands: hasArg('log-telegram-bot-commands'),
+	noMatter: hasArg('no-matter'),
 }).init();
 
 // Global error handlers to prevent crashes
@@ -354,24 +379,4 @@ process.on('unhandledRejection', (reason, promise) => {
 process.on('uncaughtException', (error) => {
 	console.error('Uncaught Exception:', error);
 	// Don't exit - log and continue
-});
-
-let shuttingDown = false;
-process.on('SIGINT', () => {
-	if (shuttingDown) {
-		return;
-	}
-	shuttingDown = true;
-	let countdown = 3;
-	const interval = setInterval(() => {
-		// eslint-disable-next-line no-console
-		console.log(`Shutting down in ${countdown}...`);
-		countdown--;
-		if (countdown < 0) {
-			clearInterval(interval);
-			// Wait for Matter to finish
-			// eslint-disable-next-line n/no-process-exit
-			process.exit(0);
-		}
-	}, 1000);
 });
