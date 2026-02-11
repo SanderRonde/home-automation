@@ -12,6 +12,7 @@ import type {
 	DashboardDeviceClusterOccupancySensorGroup,
 	DashboardDeviceClusterThermostat,
 	DashboardDeviceClusterSwitch,
+	DashboardDeviceClusterDoorLock,
 	DashboardDeviceClusterAirQualityGroup,
 	DashboardDeviceClusterFridge,
 	DashboardDeviceClusterWasher,
@@ -867,6 +868,74 @@ const SwitchCard = (
 						}}
 					>
 						Tap to view all button press history
+					</Typography>
+				</Box>
+			</Box>
+		</DeviceClusterCardSkeleton>
+	);
+};
+
+const LOCK_STATE_LABELS: Record<number, string> = {
+	0: 'Not fully locked',
+	1: 'Locked',
+	2: 'Unlocked',
+	3: 'Unlatched',
+};
+
+const DoorLockCard = (
+	props: DeviceClusterCardBaseProps<DashboardDeviceClusterDoorLock>
+): JSX.Element => {
+	const stateLabel = LOCK_STATE_LABELS[props.cluster.lockState] ?? 'Unknown';
+	return (
+		<DeviceClusterCardSkeleton
+			{...props}
+			cardBackground="#2f2f2f"
+			onPress={() => {
+				props.pushDetailView({
+					type: 'device',
+					deviceId: props.device.uniqueId,
+					clusterName: props.cluster.name,
+				});
+			}}
+		>
+			<Box
+				sx={{
+					display: 'flex',
+					alignItems: 'center',
+					gap: 2,
+				}}
+			>
+				<Box
+					sx={{
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						background: 'rgba(0, 0, 0, 0.08)',
+						borderRadius: '50%',
+						width: 48,
+						height: 48,
+						fontSize: '1.5rem',
+						color: 'text.secondary',
+					}}
+				>
+					<IconOrNull icon={props.cluster.icon} />
+				</Box>
+				<Box sx={{ flexGrow: 1 }}>
+					<Typography
+						variant="body1"
+						sx={{
+							fontWeight: 500,
+						}}
+					>
+						{props.device.name}
+					</Typography>
+					<Typography
+						variant="caption"
+						sx={{
+							color: 'text.secondary',
+						}}
+					>
+						{stateLabel}
 					</Typography>
 				</Box>
 			</Box>
@@ -2250,6 +2319,9 @@ export const DeviceClusterCard = (
 	}
 	if (regularProps.cluster.name === DeviceClusterName.SWITCH) {
 		return <SwitchCard {...regularProps} cluster={regularProps.cluster} />;
+	}
+	if (regularProps.cluster.name === DeviceClusterName.DOOR_LOCK) {
+		return <DoorLockCard {...regularProps} cluster={regularProps.cluster} />;
 	}
 	if (regularProps.cluster.name === DeviceClusterName.FRIDGE) {
 		return <FridgeCard {...regularProps} cluster={regularProps.cluster} />;

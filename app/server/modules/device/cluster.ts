@@ -52,6 +52,38 @@ export enum DeviceClusterName {
 	ELECTRICAL_POWER_MEASUREMENT = 'ElectricalPowerMeasurement',
 	WASHER = 'Washer',
 	FRIDGE = 'Fridge',
+	DOOR_LOCK = 'DoorLock',
+}
+
+/** Matter Door Lock cluster lock state (cluster 0x0101). */
+export enum LockState {
+	/** Lock state is not fully locked */
+	NotFullyLocked = 0,
+	/** Lock state is fully locked */
+	Locked = 1,
+	/** Lock state is fully unlocked */
+	Unlocked = 2,
+	/** Lock state is unlatched (door can be opened) */
+	Unlatched = 3,
+}
+
+export abstract class DeviceDoorLockCluster extends Cluster {
+	public static clusterName = DeviceClusterName.DOOR_LOCK;
+
+	/** Current lock state */
+	public abstract lockState: Data<LockState | undefined>;
+
+	/** Lock the door */
+	public abstract lockDoor(): Promise<void>;
+
+	/** Unlock the door */
+	public abstract unlockDoor(): Promise<void>;
+
+	/** Toggle between locked and unlocked */
+	public abstract toggle(): Promise<void>;
+
+	/** Unlatch the door (for locks that support it). Optional in implementations. */
+	public unlatchDoor?(): Promise<void>;
 }
 
 export abstract class DeviceOnOffCluster extends Cluster {

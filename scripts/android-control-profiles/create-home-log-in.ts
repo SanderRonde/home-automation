@@ -1,4 +1,5 @@
-import adb, { Device } from '@devicefarmer/adbkit';
+import type { Device } from '@devicefarmer/adbkit';
+import adb from '@devicefarmer/adbkit';
 
 import { exit, log, wait, adb$ } from './android-util';
 

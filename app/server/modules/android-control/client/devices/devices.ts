@@ -1,7 +1,7 @@
+import type { AndroidControlProfileClient } from './base';
 import { CreateHomeFanClient } from './create-home-fan';
-import { AndroidControlProfileClient } from './base';
 import { AndroidControlProfile } from '../../types';
-import { AppConfig } from '../../../../app';
+import type { AppConfig } from '../../../../app';
 
 export { AndroidControlProfileClient } from './base';
 

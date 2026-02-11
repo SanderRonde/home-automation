@@ -1,4 +1,5 @@
-import { AndroidControlProfileClient, getProfileClient } from './client/devices/devices';
+import type { AndroidControlProfileClient } from './client/devices/devices';
+import { getProfileClient } from './client/devices/devices';
 import { DeviceSource } from '../device/device';
 import type { AndroidControlDB } from './types';
 import type { Database } from '../../lib/db';

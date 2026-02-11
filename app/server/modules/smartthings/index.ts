@@ -1,7 +1,9 @@
-import { SmartApp, SmartAppContext } from '@smartthings/smartapp';
-import { Device, DeviceSource } from '../device/device';
+import type { SmartAppContext } from '@smartthings/smartapp';
 import { getSmartThingsDevice } from './client/device';
 import { logTag } from '../../lib/logging/logger';
+import { SmartApp } from '@smartthings/smartapp';
+import { DeviceSource } from '../device/device';
+import type { Device } from '../device/device';
 import type { Database } from '../../lib/db';
 import { initRouting } from './routing';
 import type { ModuleConfig } from '..';

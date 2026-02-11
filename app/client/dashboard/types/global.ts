@@ -1,4 +1,4 @@
-import { DeviceListWithValuesResponse } from '../../../server/modules/device/routing';
+import type { DeviceListWithValuesResponse } from '../../../server/modules/device/routing';
 
 declare global {
 	interface Window {

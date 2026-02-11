@@ -1,5 +1,5 @@
 import { EwelinkLevelControlCluster } from '../../cluster';
-import { EWeLinkConfig } from '../shared';
+import type { EWeLinkConfig } from '../shared';
 
 type EwelinkLightPowerPowerParams = {
 	ltype?: string;

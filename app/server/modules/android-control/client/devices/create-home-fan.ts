@@ -1,12 +1,12 @@
 import { AndroidControlLevelControlCluster, AndroidControlOnOffCluster } from '../cluster';
+import type { DeviceEndpoint } from '../../../device/device';
 import { DEBUG_FOLDER } from '../../../../lib/constants';
 import { logTag } from '../../../../lib/logging/logger';
-import { DeviceEndpoint } from '../../../device/device';
+import type { Cluster } from '../../../device/cluster';
 import { AndroidControlProfileClient } from './base';
-import { Cluster } from '../../../device/cluster';
+import type { AppConfig } from '../../../../app';
 import { wait } from '../../../../lib/time';
 import { Data } from '../../../../lib/data';
-import { AppConfig } from '../../../../app';
 import { intToRGBA, Jimp } from 'jimp';
 import { mkdir } from 'fs/promises';
 import path from 'path';

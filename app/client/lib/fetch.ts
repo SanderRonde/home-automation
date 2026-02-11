@@ -2,11 +2,11 @@ import type { AndroidControlRoutes } from '../../server/modules/android-control/
 import type { HomeDetectorRoutes } from '../../server/modules/home-detector/routing';
 import type { NotificationRoutes } from '../../server/modules/notification/routing';
 import type { TemperatureRoutes } from '../../server/modules/temperature/routing';
+import type { SmartThingsRoutes } from '../../server/modules/smartthings/routing';
 import type { HomeWizardRoutes } from '../../server/modules/homewizard/routing';
 import type { BrandedResponse, RouteBodyBrand } from '../../server/lib/routes';
 import type { WakelightRoutes } from '../../server/modules/wakelight/routing';
 import type { DashboardRoutes } from '../../server/modules/dashboard/routing';
-import { SmartThingsRoutes } from '../../server/modules/smartthings/routing';
 import type { LocationRoutes } from '../../server/modules/location/routing';
 import type { WebhookRoutes } from '../../server/modules/webhook/routing';
 import type { EwelinkRoutes } from '../../server/modules/ewelink/routing';
@@ -18,6 +18,7 @@ import type { BackupRoutes } from '../../server/modules/backup/routing';
 import type { KioskRoutes } from '../../server/modules/kiosk/routing';
 import type { WledRoutes } from '../../server/modules/wled/routing';
 import type { TuyaRoutes } from '../../server/modules/tuya/routing';
+import type { NukiRoutes } from '../../server/modules/nuki/routing';
 import type { LogsRoutes } from '../../server/modules/logs/routing';
 import type { AuthRoutes } from '../../server/modules/auth/routing';
 import type { BotRoutes } from '../../server/modules/bot/routing';
@@ -238,6 +239,7 @@ export type RoutesForModules = {
 	'android-control': AndroidControlRoutes;
 	location: LocationRoutes;
 	smartthings: SmartThingsRoutes;
+	nuki: NukiRoutes;
 	system: SystemRoutes;
 	'led-art': LedArtRoutes;
 	'home-detector': HomeDetectorRoutes;

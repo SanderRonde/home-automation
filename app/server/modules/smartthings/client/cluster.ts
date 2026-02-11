@@ -1,7 +1,7 @@
 import { DeviceFridgeCluster, DeviceWasherCluster } from '../../device/cluster';
 import { EventEmitter } from '../../../lib/event-emitter';
+import type { SmartApp } from '@smartthings/smartapp';
 import { Data, MappedData } from '../../../lib/data';
-import { SmartApp } from '@smartthings/smartapp';
 
 export type SmartAppContext = Awaited<ReturnType<InstanceType<typeof SmartApp>['withContext']>>;
 
@@ -43,7 +43,9 @@ export class SmartThingsWasherCluster extends DeviceWasherCluster {
 	 */
 	private mapDeviceToWasherStatus(device: SmartThingsDeviceData) {
 		const main = getComponent(device, 'main');
-		if (!main) throw new Error('Main component not found');
+		if (!main) {
+			throw new Error('Main component not found');
+		}
 
 		const std = getCapability(main, 'washerOperatingState');
 		const samsung = getCapability(main, 'samsungce.washerOperatingState');
@@ -61,8 +63,8 @@ export class SmartThingsWasherCluster extends DeviceWasherCluster {
 			getStatusValue<'none' | string>(samsung, 'washerJobState');
 		const done =
 			machineState === 'stop' &&
-			(washerJobState === 'none' || washerJobState == null) &&
-			(operatingState === 'ready' || operatingState == null);
+			(washerJobState === 'none' || washerJobState === null) &&
+			(operatingState === 'ready' || operatingState === null);
 
 		const completionTime = getStatusValue<string>(std, 'completionTime');
 		const remainingTime = getStatusValue<number>(samsung, 'remainingTime');
@@ -140,12 +142,16 @@ export class SmartThingsWasherCluster extends DeviceWasherCluster {
 
 	public static isInstance(initialData: SmartThingsDeviceData): boolean {
 		const main = getComponent(initialData, 'main');
-		if (!main) return false;
+		if (!main) {
+			return false;
+		}
 
 		const hasWasher =
 			getCapability(main, 'washerOperatingState') ??
 			getCapability(main, 'samsungce.washerOperatingState');
-		if (!hasWasher) return false;
+		if (!hasWasher) {
+			return false;
+		}
 
 		return true;
 	}
@@ -192,14 +198,14 @@ export class SmartThingsFridgeCluster extends DeviceFridgeCluster {
 			? getCapability(freezer, 'temperatureMeasurement')
 			: undefined;
 
-		const freezerDoorOpen = getStatusValue(freezerContact, 'contact') == 'open';
+		const freezerDoorOpen = getStatusValue(freezerContact, 'contact') === 'open';
 		const freezerTempC = getStatusValue(freezerTempCap, 'temperature') as number | null;
 
 		// Cooler (fridge) door and temp
 		const coolerContact = cooler ? getCapability(cooler, 'contactSensor') : undefined;
 		const coolerTempCap = cooler ? getCapability(cooler, 'temperatureMeasurement') : undefined;
 
-		const coolerDoorOpen = getStatusValue(coolerContact, 'contact') == 'open';
+		const coolerDoorOpen = getStatusValue(coolerContact, 'contact') === 'open';
 		const fridgeTempC = getStatusValue(coolerTempCap, 'temperature') as number | null;
 
 		return {

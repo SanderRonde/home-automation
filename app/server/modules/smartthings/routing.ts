@@ -1,7 +1,7 @@
 import { createServeOptions, withRequestBody, untypedRequestJson } from '../../lib/routes';
 import type { SmartAppContext, WebHookResponse } from '@smartthings/smartapp';
 import type { SmartThingsDB, createContextStore, createSmartApp } from '.';
-import { SmartThingsDeviceData } from './client/cluster';
+import type { SmartThingsDeviceData } from './client/cluster';
 import type { ServeOptions } from '../../lib/routes';
 import type { Database } from '../../lib/db';
 import type { ModuleConfig } from '..';

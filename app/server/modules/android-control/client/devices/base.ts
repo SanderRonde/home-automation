@@ -1,7 +1,9 @@
-import { DeviceEndpoint, Device as DeviceInterface, DeviceSource } from '../../../device/device';
+import type { Device as DeviceInterface } from '../../../device/device';
+import { DeviceEndpoint, DeviceSource } from '../../../device/device';
 import { EventEmitter } from '../../../../lib/event-emitter';
-import adb, { Device } from '@devicefarmer/adbkit';
-import { Cluster } from '../../../device/cluster';
+import type { Cluster } from '../../../device/cluster';
+import type { Device } from '@devicefarmer/adbkit';
+import adb from '@devicefarmer/adbkit';
 
 export abstract class AndroidControlProfileClient
 	extends DeviceEndpoint

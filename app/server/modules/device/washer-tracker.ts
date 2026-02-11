@@ -1,5 +1,5 @@
-import { DeviceWasherCluster } from './cluster';
 import type { Device as DeviceInterface } from './device';
+import { DeviceWasherCluster } from './cluster';
 import type { SQL } from 'bun';
 
 export interface WasherEvent {
@@ -103,10 +103,7 @@ export class WasherTracker {
 		}
 	}
 
-	public async getHistory(
-		deviceId: string,
-		timeframeMs?: number
-	): Promise<WasherEvent[]> {
+	public async getHistory(deviceId: string, timeframeMs?: number): Promise<WasherEvent[]> {
 		try {
 			const cutoffTime = timeframeMs ? Date.now() - timeframeMs : 0;
 			const results = await this._sqlDB<

@@ -27,6 +27,8 @@ import {
 	ThermostatMode,
 	DeviceColorControlXYCluster,
 	DeviceColorControlTemperatureCluster,
+	DeviceDoorLockCluster,
+	LockState,
 } from './cluster';
 import { createDeduplicatedTypedWSPublish } from '../../lib/deduplicated-ws-publish';
 import type { IncludedIconNames } from '../../../client/dashboard/components/icon';
@@ -209,6 +211,12 @@ export type DashboardDeviceClusterWasher = DashboardDeviceClusterBase & {
 	scheduledPhases: Array<{ phaseName: string; timeInMin: number }> | undefined;
 };
 
+export type DashboardDeviceClusterDoorLock = DashboardDeviceClusterBase & {
+	name: DeviceClusterName.DOOR_LOCK;
+	/** LockState enum: NotFullyLocked=0, Locked=1, Unlocked=2, Unlatched=3 */
+	lockState: number;
+};
+
 /** @deprecated Use DashboardDeviceClusterOccupancySensorGroup instead */
 export type DashboardDeviceClusterSensorGroup = DashboardDeviceClusterOccupancySensorGroup;
 
@@ -302,6 +310,7 @@ export type DashboardDeviceClusterWithState = DashboardDeviceClusterBase &
 		| DashboardDeviceClusterThermostat
 		| DashboardDeviceClusterFridge
 		| DashboardDeviceClusterWasher
+		| DashboardDeviceClusterDoorLock
 		| DashboardDeviceClusterOccupancySensorGroup
 		| DashboardDeviceClusterElectricalEnergyMeasurement
 		| DashboardDeviceClusterElectricalPowerMeasurement
@@ -719,18 +728,12 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 			},
 			'/fridge/:deviceId/:timeframe': async (req, _server, { json }) => {
 				const timeframe = parseInt(req.params.timeframe, 10);
-				const history = await api.fridgeTracker.getHistory(
-					req.params.deviceId,
-					timeframe
-				);
+				const history = await api.fridgeTracker.getHistory(req.params.deviceId, timeframe);
 				return json({ history });
 			},
 			'/washer/:deviceId/:timeframe': async (req, _server, { json }) => {
 				const timeframe = parseInt(req.params.timeframe, 10);
-				const history = await api.washerTracker.getHistory(
-					req.params.deviceId,
-					timeframe
-				);
+				const history = await api.washerTracker.getHistory(req.params.deviceId, timeframe);
 				return json({ history });
 			},
 			'/humidity/:deviceId/:timeframe': async (req, _server, { json }) => {
@@ -939,6 +942,39 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 								});
 								void cluster.setOn(body.isOn);
 								await onDone;
+							}
+						}
+					)
+			),
+			[validateClusterRoute('/cluster/DoorLock')]: withRequestBody(
+				z.object({
+					deviceIds: z.array(z.string()),
+					action: z.enum(['lock', 'unlock', 'toggle', 'unlatch']),
+				}),
+				async (body, _req, _server, res) =>
+					performActionForDeviceCluster(
+						api,
+						res,
+						body.deviceIds,
+						DeviceDoorLockCluster,
+						async (cluster) => {
+							switch (body.action) {
+								case 'lock':
+									await cluster.lockDoor();
+									break;
+								case 'unlock':
+									await cluster.unlockDoor();
+									break;
+								case 'toggle':
+									await cluster.toggle();
+									break;
+								case 'unlatch':
+									if (cluster.unlatchDoor) {
+										await cluster.unlatchDoor();
+									} else {
+										await cluster.unlockDoor();
+									}
+									break;
 							}
 						}
 					)
@@ -1404,6 +1440,22 @@ const getClusterState = async (
 			name: clusterName,
 			icon: getClusterIconName(clusterName, api),
 			isOn: isOn ?? false,
+		};
+	}
+	if (clusterName === DeviceClusterName.DOOR_LOCK) {
+		if (!_cluster) {
+			return {
+				name: clusterName,
+				icon: getClusterIconName(clusterName, api),
+				lockState: LockState.Unlocked,
+			};
+		}
+		const cluster = _cluster as DeviceDoorLockCluster;
+		const lockState = await cluster.lockState.get();
+		return {
+			name: clusterName,
+			icon: getClusterIconName(clusterName, api),
+			lockState: lockState ?? LockState.Unlocked,
 		};
 	}
 	if (clusterName === DeviceClusterName.WINDOW_COVERING) {
@@ -2359,6 +2411,8 @@ function getClusterIconName(
 	switch (clusterName) {
 		case DeviceClusterName.ON_OFF:
 			return 'Lightbulb';
+		case DeviceClusterName.DOOR_LOCK:
+			return 'Lock';
 		case DeviceClusterName.WINDOW_COVERING:
 			return 'Window';
 		case DeviceClusterName.LEVEL_CONTROL:

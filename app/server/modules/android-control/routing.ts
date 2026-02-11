@@ -1,9 +1,10 @@
 import { createServeOptions, withRequestBody } from '../../lib/routes';
-import adb, { Device as AndroidDevice } from '@devicefarmer/adbkit';
+import type { Device as AndroidDevice } from '@devicefarmer/adbkit';
 import type { ServeOptions } from '../../lib/routes';
 import { AndroidControlProfile } from './types';
 import type { AndroidControlDB } from './types';
 import type { Database } from '../../lib/db';
+import adb from '@devicefarmer/adbkit';
 import * as z from 'zod';
 
 const AndroidControlProfileSchema = z.enum<

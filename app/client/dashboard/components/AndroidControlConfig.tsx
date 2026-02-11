@@ -95,7 +95,9 @@ export const AndroidControlConfig = (): JSX.Element => {
 	}, [config, selectedProfile]);
 
 	const handleSave = async () => {
-		if (!config) return;
+		if (!config) {
+			return;
+		}
 		setSaveLoading(true);
 		setSaveSuccess(false);
 		setConfigError(null);
@@ -175,7 +177,7 @@ export const AndroidControlConfig = (): JSX.Element => {
 								onChange={(e) => setDeviceId(e.target.value)}
 								placeholder="e.g. emulator-5554"
 							/>
-							{configError != null && (
+							{configError !== null && (
 								<Alert severity="error" onClose={() => setConfigError(null)}>
 									{configError}
 								</Alert>
@@ -202,7 +204,7 @@ export const AndroidControlConfig = (): JSX.Element => {
 									Refresh
 								</Button>
 							</Box>
-							{adbError != null && <Alert severity="warning">{adbError}</Alert>}
+							{adbError !== null && <Alert severity="warning">{adbError}</Alert>}
 							{adbDevices.length === 0 && !adbLoading && (
 								<Typography color="text.secondary">
 									No devices listed. Run <code>adb devices</code> or start an

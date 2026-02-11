@@ -91,6 +91,7 @@ export class DeviceSource extends ClassEnum<
 	| 'tuya'
 	| 'android-control'
 	| 'smartthings'
+	| 'nuki'
 > {
 	public static readonly MATTER = new DeviceSource('matter');
 	public static readonly EWELINK = new DeviceSource('ewelink');
@@ -100,6 +101,7 @@ export class DeviceSource extends ClassEnum<
 	public static readonly TUYA = new DeviceSource('tuya');
 	public static readonly ANDROID_CONTROL = new DeviceSource('android-control');
 	public static readonly SMARTTHINGS = new DeviceSource('smartthings');
+	public static readonly NUKI = new DeviceSource('nuki');
 	public toEmoji(): string {
 		switch (this) {
 			case DeviceSource.MATTER:
@@ -118,6 +120,8 @@ export class DeviceSource extends ClassEnum<
 				return '📱';
 			case DeviceSource.SMARTTHINGS:
 				return '🤖';
+			case DeviceSource.NUKI:
+				return '🔐';
 			default:
 				throw new Error('Invalid DeviceSource');
 		}

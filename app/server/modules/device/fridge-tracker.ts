@@ -1,5 +1,5 @@
-import { DeviceFridgeCluster } from './cluster';
 import type { Device as DeviceInterface } from './device';
+import { DeviceFridgeCluster } from './cluster';
 import type { SQL } from 'bun';
 
 export interface FridgeEvent {
@@ -98,10 +98,7 @@ export class FridgeTracker {
 		}
 	}
 
-	public async getHistory(
-		deviceId: string,
-		timeframeMs?: number
-	): Promise<FridgeEvent[]> {
+	public async getHistory(deviceId: string, timeframeMs?: number): Promise<FridgeEvent[]> {
 		try {
 			const cutoffTime = timeframeMs ? Date.now() - timeframeMs : 0;
 			const results = await this._sqlDB<
@@ -123,7 +120,8 @@ export class FridgeTracker {
 				timestamp: row.timestamp,
 				fridgeTempC: row.fridge_temp_c,
 				freezerTempC: row.freezer_temp_c,
-				freezerDoorOpen: row.freezer_door_open === null ? null : row.freezer_door_open === 1,
+				freezerDoorOpen:
+					row.freezer_door_open === null ? null : row.freezer_door_open === 1,
 				coolerDoorOpen: row.cooler_door_open === null ? null : row.cooler_door_open === 1,
 			}));
 		} catch (error) {

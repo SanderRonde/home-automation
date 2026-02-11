@@ -22,10 +22,12 @@ export async function adb$(device: string, command: string): Promise<string> {
 }
 
 export function log(emoji: string, text0: unknown, ...text: unknown[]): void {
+	// eslint-disable-next-line no-console
 	console.log(emoji, ...[text0, ...text].map((t) => (typeof t === 'string' ? chalk.cyan(t) : t)));
 }
 
 export function exit(emoji: string, text0: unknown, ...text: unknown[]): never {
+	// eslint-disable-next-line no-console
 	console.log(emoji, ...[text0, ...text].map((t) => (typeof t === 'string' ? chalk.red(t) : t)));
 	process.exit(1);
 }

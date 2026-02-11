@@ -1,12 +1,9 @@
-import {
-	SmartAppContext,
-	SmartThingsDeviceData,
-	SmartThingsFridgeCluster,
-	SmartThingsWasherCluster,
-} from './cluster';
-import { Device, DeviceEndpoint, DeviceSource } from '../../device/device';
+import { SmartThingsFridgeCluster, SmartThingsWasherCluster } from './cluster';
+import type { SmartAppContext, SmartThingsDeviceData } from './cluster';
+import { DeviceEndpoint, DeviceSource } from '../../device/device';
 import { EventEmitter } from '../../../lib/event-emitter';
-import { Cluster } from '../../device/cluster';
+import type { Cluster } from '../../device/cluster';
+import type { Device } from '../../device/device';
 
 export abstract class SmartThingsDevice extends DeviceEndpoint implements Device {
 	public readonly onChange: EventEmitter<void> = new EventEmitter();

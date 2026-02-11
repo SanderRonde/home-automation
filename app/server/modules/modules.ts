@@ -18,6 +18,7 @@ import { Backup } from './backup';
 import { Kiosk } from './kiosk';
 import { WLed } from './wled';
 import { Tuya } from './tuya';
+import { Nuki } from './nuki';
 import { Logs } from './logs';
 import { Auth } from './auth';
 import { Bot } from './bot';
@@ -64,6 +65,7 @@ const getModuleObj = () => ({
 	homewizard: HomeWizard,
 	temperature: Temperature,
 	smartthings: SmartThings,
+	nuki: Nuki,
 	homeDetector: HomeDetector,
 	notification: Notification,
 });

@@ -14,6 +14,7 @@ import type {
 	DashboardDeviceClusterSwitch,
 	DashboardDeviceClusterBooleanState,
 	DashboardDeviceClusterOnOff,
+	DashboardDeviceClusterDoorLock,
 	DashboardDeviceClusterFridge,
 	DashboardDeviceClusterWasher,
 } from '../../../server/modules/device/routing';
@@ -3870,6 +3871,136 @@ const ActionsDetail = (props: ActionsDetailProps): JSX.Element => {
 	);
 };
 
+const LOCK_STATE_LABELS: Record<number, string> = {
+	0: 'Not fully locked',
+	1: 'Locked',
+	2: 'Unlocked',
+	3: 'Unlatched',
+};
+
+interface DoorLockDetailProps extends DeviceDetailBaseProps<DashboardDeviceClusterDoorLock> {}
+
+const DoorLockDetail = (props: DoorLockDetailProps): JSX.Element => {
+	const [lockState, setLockState] = useState(props.cluster.lockState);
+	const [isUpdating, setIsUpdating] = useState(false);
+
+	useEffect(() => {
+		setLockState(props.cluster.lockState);
+	}, [props.cluster.lockState]);
+
+	const handleAction = async (action: 'lock' | 'unlock' | 'toggle' | 'unlatch') => {
+		setIsUpdating(true);
+		try {
+			await apiPost(
+				'device',
+				`/cluster/${DeviceClusterName.DOOR_LOCK}`,
+				{},
+				{
+					deviceIds: [props.device.uniqueId],
+					action,
+				}
+			);
+			if (action === 'lock') {
+				setLockState(1);
+			}
+			if (action === 'unlock') {
+				setLockState(2);
+			}
+			if (action === 'unlatch') {
+				setLockState(3);
+			}
+			if (action === 'toggle') {
+				setLockState((s) => (s === 1 ? 2 : 1));
+			}
+		} catch (error) {
+			console.error('Door lock action failed:', error);
+		} finally {
+			setIsUpdating(false);
+		}
+	};
+
+	const roomColor = props.device.roomColor || '#555';
+	const stateLabel = LOCK_STATE_LABELS[lockState] ?? 'Unknown';
+
+	return (
+		<motion.div
+			variants={pageVariants}
+			initial="hidden"
+			animate="visible"
+			exit="exit"
+			style={{ width: '100%' }}
+		>
+			<Box sx={{ px: 2, py: 3 }}>
+				<Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+					<IconButton
+						aria-label="Back"
+						onClick={props.onExit}
+						sx={{ color: 'text.primary' }}
+					>
+						<ArrowBackIcon />
+					</IconButton>
+					<Typography variant="h6" sx={{ fontWeight: 600 }}>
+						{props.device.name}
+					</Typography>
+				</Box>
+				<Card sx={{ mb: 2 }}>
+					<CardContent>
+						<Typography
+							gutterBottom
+							sx={{
+								fontSize: '0.875rem',
+								fontWeight: 600,
+								color: 'text.secondary',
+								textTransform: 'uppercase',
+								letterSpacing: '0.05em',
+							}}
+						>
+							Lock state
+						</Typography>
+						<Typography variant="h5" sx={{ fontWeight: 600, color: roomColor }}>
+							{stateLabel}
+						</Typography>
+						<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
+							<Button
+								variant={lockState === 1 ? 'contained' : 'outlined'}
+								size="small"
+								onClick={() => void handleAction('lock')}
+								disabled={isUpdating}
+							>
+								Lock
+							</Button>
+							<Button
+								variant={lockState === 2 ? 'contained' : 'outlined'}
+								size="small"
+								onClick={() => void handleAction('unlock')}
+								disabled={isUpdating}
+							>
+								Unlock
+							</Button>
+							<Button
+								variant="outlined"
+								size="small"
+								onClick={() => void handleAction('toggle')}
+								disabled={isUpdating}
+							>
+								Toggle
+							</Button>
+							<Button
+								variant={lockState === 3 ? 'contained' : 'outlined'}
+								size="small"
+								onClick={() => void handleAction('unlatch')}
+								disabled={isUpdating}
+							>
+								Unlatch
+							</Button>
+						</Box>
+					</CardContent>
+				</Card>
+			</Box>
+		</motion.div>
+	);
+};
+
 interface OnOffDetailProps extends DeviceDetailBaseProps<DashboardDeviceClusterOnOff> {}
 
 const OnOffDetail = (props: OnOffDetailProps): JSX.Element => {
@@ -5223,22 +5354,29 @@ const FridgeDetail = (props: FridgeDetailProps): JSX.Element => {
 														mb: 2,
 													}}
 												>
-													<Typography variant="h6">Temperature history</Typography>
+													<Typography variant="h6">
+														Temperature history
+													</Typography>
 													<ToggleButtonGroup
 														value={timeframe}
 														exclusive
-														onChange={(_, value) => value && setTimeframe(value)}
+														onChange={(_, value) =>
+															value && setTimeframe(value)
+														}
 														size="small"
 													>
 														<ToggleButton value="1h">1h</ToggleButton>
 														<ToggleButton value="6h">6h</ToggleButton>
 														<ToggleButton value="24h">24h</ToggleButton>
-														<ToggleButton value="1week">1 week</ToggleButton>
+														<ToggleButton value="1week">
+															1 week
+														</ToggleButton>
 													</ToggleButtonGroup>
 												</Box>
 												{history.length === 0 ? (
 													<Typography color="text.secondary">
-														No history yet. Data is recorded every minute.
+														No history yet. Data is recorded every
+														minute.
 													</Typography>
 												) : (
 													<Box sx={{ height: 240 }}>
@@ -5252,7 +5390,10 @@ const FridgeDetail = (props: FridgeDetailProps): JSX.Element => {
 																},
 																scales: {
 																	y: {
-																		title: { display: true, text: '°C' },
+																		title: {
+																			display: true,
+																			text: '°C',
+																		},
 																	},
 																},
 															}}
@@ -5594,22 +5735,24 @@ const WasherDetail = (props: WasherDetailProps): JSX.Element => {
 										Time remaining: <strong>{formatRemaining()}</strong>
 									</Typography>
 								)}
-								{cluster.completionTime && !isDone && (() => {
-									const parsed = new Date(cluster.completionTime);
-									const formatted = Number.isNaN(parsed.getTime())
-										? cluster.completionTime
-										: parsed.toLocaleString(undefined, {
-												month: 'short',
-												day: 'numeric',
-												hour: '2-digit',
-												minute: '2-digit',
-											});
-									return (
-										<Typography variant="body2" color="text.secondary">
-											Expected at {formatted}
-										</Typography>
-									);
-								})()}
+								{cluster.completionTime &&
+									!isDone &&
+									(() => {
+										const parsed = new Date(cluster.completionTime);
+										const formatted = Number.isNaN(parsed.getTime())
+											? cluster.completionTime
+											: parsed.toLocaleString(undefined, {
+													month: 'short',
+													day: 'numeric',
+													hour: '2-digit',
+													minute: '2-digit',
+												});
+										return (
+											<Typography variant="body2" color="text.secondary">
+												Expected at {formatted}
+											</Typography>
+										);
+									})()}
 								{(cluster.detergentInitialCc !== undefined ||
 									cluster.softenerInitialCc !== undefined) && (
 									<Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
@@ -5690,7 +5833,9 @@ const WasherDetail = (props: WasherDetailProps): JSX.Element => {
 														mb: 2,
 													}}
 												>
-													<Typography variant="h6">Cycle history</Typography>
+													<Typography variant="h6">
+														Cycle history
+													</Typography>
 													<ToggleButtonGroup
 														value={washerTimeframe}
 														exclusive
@@ -5702,12 +5847,15 @@ const WasherDetail = (props: WasherDetailProps): JSX.Element => {
 														<ToggleButton value="1h">1h</ToggleButton>
 														<ToggleButton value="6h">6h</ToggleButton>
 														<ToggleButton value="24h">24h</ToggleButton>
-														<ToggleButton value="1week">1 week</ToggleButton>
+														<ToggleButton value="1week">
+															1 week
+														</ToggleButton>
 													</ToggleButtonGroup>
 												</Box>
 												{washerHistory.length === 0 ? (
 													<Typography color="text.secondary">
-														No history yet. Data is recorded every minute.
+														No history yet. Data is recorded every
+														minute.
 													</Typography>
 												) : (
 													<Box sx={{ height: 240 }}>
@@ -5723,7 +5871,10 @@ const WasherDetail = (props: WasherDetailProps): JSX.Element => {
 																	y: {
 																		min: 0,
 																		max: 100,
-																		title: { display: true, text: 'Progress %' },
+																		title: {
+																			display: true,
+																			text: 'Progress %',
+																		},
 																	},
 																},
 															}}
@@ -5793,6 +5944,9 @@ export const DeviceDetail = (
 	}
 	if (props.cluster.name === DeviceClusterName.ON_OFF) {
 		return <OnOffDetail {...props} cluster={props.cluster} />;
+	}
+	if (props.cluster.name === DeviceClusterName.DOOR_LOCK) {
+		return <DoorLockDetail {...props} cluster={props.cluster} />;
 	}
 	if (props.cluster.name === DeviceClusterName.FRIDGE) {
 		return <FridgeDetail {...props} cluster={props.cluster} />;

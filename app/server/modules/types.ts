@@ -22,6 +22,7 @@ import type { Backup } from './backup';
 import type { Kiosk } from './kiosk';
 import type { WLed } from './wled';
 import type { Tuya } from './tuya';
+import type { Nuki } from './nuki';
 import type { Logs } from './logs';
 import type { Auth } from './auth';
 import type { Bot } from './bot';
@@ -49,6 +50,7 @@ export type AllModules = {
 	dashboard: typeof Dashboard;
 	homewizard: typeof HomeWizard;
 	temperature: typeof Temperature;
+	nuki: typeof Nuki;
 	homeDetector: typeof HomeDetector;
 	location: typeof Location;
 	notification: typeof Notification;

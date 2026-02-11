@@ -17,6 +17,7 @@ import { SystemAdmin } from './components/SystemAdmin';
 import { HouseLayout } from './components/HouseLayout';
 import { EnergyUsage } from './components/EnergyUsage';
 import { TuyaConfig } from './components/TuyaConfig';
+import { NukiConfig } from './components/NukiConfig';
 import React, { useState, useEffect } from 'react';
 import { Webhooks } from './components/Webhooks';
 import { Palettes } from './components/Palettes';
@@ -153,6 +154,8 @@ function DashboardApp() {
 				return <SmartThingsConfig />;
 			case SidebarTab.TUYA:
 				return <TuyaConfig />;
+			case SidebarTab.NUKI:
+				return <NukiConfig />;
 			case SidebarTab.LED_SOURCES:
 				return <LEDSourcesConfig />;
 			case SidebarTab.AI:
