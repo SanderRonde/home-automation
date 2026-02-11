@@ -1,7 +1,7 @@
 import { createServeOptions, withRequestBody } from '../../lib/routes';
 import type { ServeOptions } from '../../lib/routes';
 import type { Database } from '../../lib/db';
-import type { LEDArtDB } from './led-art';
+import type { LEDArtDB } from '.';
 import * as z from 'zod';
 
 const LEDArtConfig = z.object({
