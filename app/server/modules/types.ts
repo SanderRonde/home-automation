@@ -11,6 +11,7 @@ import type { HomeWizard } from './homewizard';
 import type { Wakelight } from './wakelight';
 import type { Dashboard } from './dashboard';
 import type { Location } from './location';
+import type { BambuLab } from './bambulab';
 import type { Webhook } from './webhook';
 import type { EWeLink } from './ewelink';
 import type { Secret } from './secret/';
@@ -27,7 +28,6 @@ import type { Logs } from './logs';
 import type { Auth } from './auth';
 import type { Bot } from './bot';
 import type { AI } from './ai';
-import type { BambuLab } from './bambulab';
 
 // Define AllModules by importing each module type
 // Using type-only imports should prevent the circular dependency

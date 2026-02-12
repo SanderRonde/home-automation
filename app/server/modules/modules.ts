@@ -7,6 +7,7 @@ import { HomeWizard } from './homewizard';
 import { Wakelight } from './wakelight';
 import { Dashboard } from './dashboard';
 import { Location } from './location';
+import { BambuLab } from './bambulab';
 import { Webhook } from './webhook';
 import { EWeLink } from './ewelink';
 import { Secret } from './secret/';
@@ -23,7 +24,6 @@ import { Logs } from './logs';
 import { Auth } from './auth';
 import { Bot } from './bot';
 import { AI } from './ai';
-import { BambuLab } from './bambulab';
 
 import type { Database } from '../lib/db';
 import type { AppConfig } from '../app';

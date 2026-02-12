@@ -1,6 +1,9 @@
+import type { ServeOptions, BrandedRouteHandlerResponse } from '../../lib/routes';
 import { createServeOptions, withRequestBody } from '../../lib/routes';
 import type { Database } from '../../lib/db';
 import type { BambuLabDB } from './types';
+import type { BunRequest } from 'bun';
+import type { Server } from 'bun';
 import * as z from 'zod';
 
 const configSchema = z.object({
@@ -10,53 +13,64 @@ const configSchema = z.object({
 	enabled: z.boolean().optional(),
 });
 
-export const initRouting = (db: Database<BambuLabDB>) => {
-	return createServeOptions({
-		'/config': {
-			// Get current configuration (masked)
-			GET: async (req, server, { json }) => {
-				const data = db.current();
-				const config = data?.config;
+function initRouting(db: Database<BambuLabDB>) {
+	return createServeOptions(
+		{
+			'/config': {
+				// Get current configuration (masked)
+				GET: (_req: BunRequest, _server: Server, { json }: BrandedRouteHandlerResponse) => {
+					const data = db.current();
+					const config = data?.config;
 
-				if (!config) {
+					if (!config) {
+						return json({
+							hasConfig: false,
+						});
+					}
+
 					return json({
-						hasConfig: false,
+						hasConfig: true,
+						ip: config.ip,
+						serial: config.serial,
+						// Mask access code for security
+						accessCodeMasked: `${config.accessCode.substring(0, 4)}••••`,
+						enabled: config.enabled ?? true,
 					});
-				}
+				},
+			},
 
-				return json({
-					hasConfig: true,
-					ip: config.ip,
-					serial: config.serial,
-					// Mask access code for security
-					accessCodeMasked: `${config.accessCode.substring(0, 4)}••••`,
-					enabled: config.enabled ?? true,
-				});
+			'/config-save': {
+				POST: withRequestBody(configSchema, async (body, _req, _server, { json }) => {
+					await db.update((old) => ({
+						...old,
+						config: {
+							ip: body.ip,
+							serial: body.serial,
+							accessCode: body.accessCode,
+							enabled: body.enabled ?? true,
+						},
+					}));
+
+					return json({ success: true });
+				}),
+			},
+
+			'/status': {
+				// Get current printer status
+				GET: (_req: BunRequest, _server: Server, { json }: BrandedRouteHandlerResponse) => {
+					const data = db.current();
+					return json({
+						status: data?.lastStatus ?? null,
+						connected: data?.config?.enabled ?? false,
+					});
+				},
 			},
 		},
+		false
+	);
+}
 
-		'/config-save': withRequestBody(configSchema, async (body, req, server, { json }) => {
-			await db.setVal('config', {
-				ip: body.ip,
-				serial: body.serial,
-				accessCode: body.accessCode,
-				enabled: body.enabled ?? true,
-			});
+export { initRouting };
 
-			return json({ success: true });
-		}),
-
-		'/status': {
-			// Get current printer status
-			GET: async (req, server, { json }) => {
-				const data = db.current();
-				return json({
-					status: data?.lastStatus ?? null,
-					connected: data?.config?.enabled ?? false,
-				});
-			},
-		},
-	});
-};
-
-export type BambuLabRoutes = ReturnType<typeof initRouting>;
+export type BambuLabRoutes =
+	ReturnType<typeof initRouting> extends ServeOptions<infer R> ? R : never;

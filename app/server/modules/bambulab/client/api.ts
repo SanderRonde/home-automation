@@ -1,10 +1,17 @@
-import { PrinterController } from 'bambu-js';
-import type { P1SState } from 'bambu-js';
 import { logTag } from '../../../lib/logging/logger';
 import type { PrinterStatus } from '../types';
 
+type P1SReportState = {
+	gcode_state: string;
+	bed_temper?: number;
+	nozzle_temper?: number;
+	mc_percent?: number;
+	subtask_name?: string;
+};
+
 export class BambuLabAPI {
-	private _client: PrinterController<P1SState> | null = null;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	private _client: any | null = null;
 	private _lastStatus: PrinterStatus | null = null;
 	private _isConnecting = false;
 
@@ -23,6 +30,9 @@ export class BambuLabAPI {
 		this._isConnecting = true;
 
 		try {
+			// Dynamic import for ESM module
+			const { PrinterController } = await import('bambu-js');
+
 			// Note: P1P uses the same protocol as P1S
 			this._client = PrinterController.create({
 				model: 'P1S',
@@ -45,11 +55,11 @@ export class BambuLabAPI {
 				logTag('bambulab', 'yellow', 'Disconnected from printer');
 			});
 
-			this._client.on('error', (error) => {
+			this._client.on('error', (error: Error) => {
 				logTag('bambulab', 'red', 'Printer error:', error);
 			});
 
-			this._client.on('report', (state) => {
+			this._client.on('report', (state: { print: P1SReportState }) => {
 				void this._handleStateUpdate(state.print);
 			});
 
@@ -82,7 +92,7 @@ export class BambuLabAPI {
 		return this._client?.isConnected ?? false;
 	}
 
-	private async _handleStateUpdate(state: P1SState['ReportState']): Promise<void> {
+	private async _handleStateUpdate(state: P1SReportState): Promise<void> {
 		try {
 			// Extract relevant information from the state
 			const status: PrinterStatus = {
@@ -103,7 +113,7 @@ export class BambuLabAPI {
 		}
 	}
 
-	private _extractPrintState(state: P1SState['ReportState']): string {
+	private _extractPrintState(state: P1SReportState): string {
 		// Map the gcode_state to a human-readable state
 		const gcodeState = state.gcode_state;
 

@@ -138,8 +138,8 @@ export const BambuLabConfig = (): JSX.Element => {
 		<Box sx={{ p: 3, maxWidth: 800 }}>
 			<Stack spacing={3}>
 				<Alert severity="info">
-					Bambu Lab integration monitors your P1P/P1S 3D printer via MQTT. Configure
-					the printer's IP address, serial number, and access code below.
+					Bambu Lab integration monitors your P1P/P1S 3D printer via MQTT. Configure the
+					printer's IP address, serial number, and access code below.
 				</Alert>
 
 				{error && (
@@ -246,7 +246,11 @@ export const BambuLabConfig = (): JSX.Element => {
 					<Card>
 						<CardContent>
 							<Stack spacing={2}>
-								<Box display="flex" justifyContent="space-between" alignItems="center">
+								<Box
+									display="flex"
+									justifyContent="space-between"
+									alignItems="center"
+								>
 									<Typography variant="h6">Printer Status</Typography>
 									<Chip
 										label={status.connected ? 'Connected' : 'Disconnected'}
@@ -293,8 +297,8 @@ export const BambuLabConfig = (): JSX.Element => {
 									</Stack>
 								) : (
 									<Typography color="text.secondary">
-										No status data available. Ensure the printer is configured and
-										online.
+										No status data available. Ensure the printer is configured
+										and online.
 									</Typography>
 								)}
 							</Stack>
@@ -311,8 +315,8 @@ export const BambuLabConfig = (): JSX.Element => {
 								<ol>
 									<li>Enable LAN mode on your Bambu Lab printer</li>
 									<li>
-										Find the printer's IP address, serial number, and access code in
-										printer settings
+										Find the printer's IP address, serial number, and access
+										code in printer settings
 									</li>
 									<li>Enter the configuration details above</li>
 									<li>Click "Save Configuration" to start monitoring</li>

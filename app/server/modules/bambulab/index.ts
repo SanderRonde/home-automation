@@ -1,10 +1,10 @@
-import { ModuleMeta } from '../meta';
-import type { ModuleConfig } from '..';
-import type { Database } from '../../lib/db';
-import { initRouting } from './routing';
-import { BambuLabAPI } from './client/api';
-import { logTag } from '../../lib/logging/logger';
 import type { BambuLabDB, BambuLabConfig } from './types';
+import { logTag } from '../../lib/logging/logger';
+import type { Database } from '../../lib/db';
+import { BambuLabAPI } from './client/api';
+import { initRouting } from './routing';
+import type { ModuleConfig } from '..';
+import { ModuleMeta } from '../meta';
 
 export const BambuLab = new (class BambuLab extends ModuleMeta {
 	public name = 'bambulab';
@@ -55,7 +55,10 @@ export const BambuLab = new (class BambuLab extends ModuleMeta {
 				async (status) => {
 					// Callback for status updates
 					const db = moduleConfig.db as Database<BambuLabDB>;
-					await db.setVal('lastStatus', status);
+					await db.update((old) => ({
+						...old,
+						lastStatus: status,
+					}));
 
 					// Publish to WebSocket
 					await moduleConfig.wsPublish(

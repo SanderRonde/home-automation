@@ -8,6 +8,7 @@ import type { BrandedResponse, RouteBodyBrand } from '../../server/lib/routes';
 import type { WakelightRoutes } from '../../server/modules/wakelight/routing';
 import type { DashboardRoutes } from '../../server/modules/dashboard/routing';
 import type { LocationRoutes } from '../../server/modules/location/routing';
+import type { BambuLabRoutes } from '../../server/modules/bambulab/routing';
 import type { WebhookRoutes } from '../../server/modules/webhook/routing';
 import type { EwelinkRoutes } from '../../server/modules/ewelink/routing';
 import type { LedArtRoutes } from '../../server/modules/led-art/routing';
@@ -240,6 +241,7 @@ export type RoutesForModules = {
 	location: LocationRoutes;
 	smartthings: SmartThingsRoutes;
 	nuki: NukiRoutes;
+	bambulab: BambuLabRoutes;
 	system: SystemRoutes;
 	'led-art': LedArtRoutes;
 	'home-detector': HomeDetectorRoutes;
