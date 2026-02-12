@@ -27,6 +27,7 @@ import type { Logs } from './logs';
 import type { Auth } from './auth';
 import type { Bot } from './bot';
 import type { AI } from './ai';
+import type { BambuLab } from './bambulab';
 
 // Define AllModules by importing each module type
 // Using type-only imports should prevent the circular dependency
@@ -55,6 +56,7 @@ export type AllModules = {
 	location: typeof Location;
 	notification: typeof Notification;
 	backup: typeof Backup;
+	bambulab: typeof BambuLab;
 };
 
 // Re-export ModuleConfig from modules (this should be safe as it doesn't depend on AllModules)

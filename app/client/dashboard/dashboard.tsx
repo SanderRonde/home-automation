@@ -18,6 +18,7 @@ import { HouseLayout } from './components/HouseLayout';
 import { EnergyUsage } from './components/EnergyUsage';
 import { TuyaConfig } from './components/TuyaConfig';
 import { NukiConfig } from './components/NukiConfig';
+import { BambuLabConfig } from './components/BambuLabConfig';
 import React, { useState, useEffect } from 'react';
 import { Webhooks } from './components/Webhooks';
 import { Palettes } from './components/Palettes';
@@ -156,6 +157,8 @@ function DashboardApp() {
 				return <TuyaConfig />;
 			case SidebarTab.NUKI:
 				return <NukiConfig />;
+			case SidebarTab.BAMBULAB:
+				return <BambuLabConfig />;
 			case SidebarTab.LED_SOURCES:
 				return <LEDSourcesConfig />;
 			case SidebarTab.AI:

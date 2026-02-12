@@ -23,6 +23,7 @@ import { Logs } from './logs';
 import { Auth } from './auth';
 import { Bot } from './bot';
 import { AI } from './ai';
+import { BambuLab } from './bambulab';
 
 import type { Database } from '../lib/db';
 import type { AppConfig } from '../app';
@@ -68,6 +69,7 @@ const getModuleObj = () => ({
 	nuki: Nuki,
 	homeDetector: HomeDetector,
 	notification: Notification,
+	bambulab: BambuLab,
 });
 
 let notified = false;

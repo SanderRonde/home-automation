@@ -19,6 +19,7 @@ import {
 	SettingsApplications as SettingsApplicationsIcon,
 	PhoneAndroid as PhoneAndroidIcon,
 	Lock as LockIcon,
+	Print as PrintIcon,
 } from '@mui/icons-material';
 import {
 	Drawer,
@@ -111,6 +112,7 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 				{ text: 'SmartThings', icon: <CloudIcon />, id: SidebarTab.SMARTTHINGS },
 				{ text: 'Tuya', icon: <CloudIcon />, id: SidebarTab.TUYA },
 				{ text: 'Nuki', icon: <LockIcon />, id: SidebarTab.NUKI },
+				{ text: 'Bambu Lab', icon: <PrintIcon />, id: SidebarTab.BAMBULAB },
 				{ text: 'LED Sources', icon: <LightbulbIcon />, id: SidebarTab.LED_SOURCES },
 			],
 		},
@@ -199,6 +201,7 @@ export enum SidebarTab {
 	SMARTTHINGS = 'smartthings',
 	TUYA = 'tuya',
 	NUKI = 'nuki',
+	BAMBULAB = 'bambulab',
 	LED_SOURCES = 'led-sources',
 	AI = 'ai',
 	NOTIFICATIONS = 'notifications',
