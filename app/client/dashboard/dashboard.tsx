@@ -4,6 +4,7 @@ import { TemperatureConfig } from './components/TemperatureConfig';
 import { SmartThingsConfig } from './components/SmartThingsConfig';
 import { LEDSourcesConfig } from './components/LEDSourcesConfig';
 import { WakelightConfig } from './components/WakelightConfig';
+import { BambuLabConfig } from './components/BambuLabConfig';
 import { Notifications } from './components/Notifications';
 import { LocationPanel } from './components/LocationPanel';
 import { EweLinkConfig } from './components/EweLinkConfig';
@@ -156,6 +157,8 @@ function DashboardApp() {
 				return <TuyaConfig />;
 			case SidebarTab.NUKI:
 				return <NukiConfig />;
+			case SidebarTab.BAMBULAB:
+				return <BambuLabConfig />;
 			case SidebarTab.LED_SOURCES:
 				return <LEDSourcesConfig />;
 			case SidebarTab.AI:

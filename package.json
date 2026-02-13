@@ -75,6 +75,7 @@
 		"@types/leaflet": "^1.9.21",
 		"@uiw/react-color": "^2.9.0",
 		"adm-zip": "^0.5.16",
+		"bambu-js": "^3.0.1",
 		"chalk": "^2.4.2",
 		"chart.js": "^4.5.1",
 		"cie-rgb-color-converter": "^1.0.6",
