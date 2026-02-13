@@ -1,17 +1,34 @@
 import { logTag } from '../../../lib/logging/logger';
 import type { PrinterStatus } from '../types';
 
-type P1SReportState = {
+/**
+ * Subset of P1S printer state that we use for monitoring
+ * Based on bambu-js P1SState interface
+ */
+interface P1SReportState {
 	gcode_state: string;
 	bed_temper?: number;
 	nozzle_temper?: number;
 	mc_percent?: number;
 	subtask_name?: string;
-};
+}
+
+/**
+ * Type-safe wrapper for bambu-js PrinterController
+ * Using dynamic import to avoid ESM/CommonJS issues
+ */
+interface BambuPrinterClient {
+	connect(): Promise<void>;
+	disconnect(): Promise<void>;
+	on(event: 'connect', listener: () => void): void;
+	on(event: 'disconnect', listener: () => void): void;
+	on(event: 'error', listener: (error: Error) => void): void;
+	on(event: 'report', listener: (state: { print: P1SReportState }) => void): void;
+	isConnected: boolean;
+}
 
 export class BambuLabAPI {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	private _client: any | null = null;
+	private _client: BambuPrinterClient | null = null;
 	private _lastStatus: PrinterStatus | null = null;
 	private _isConnecting = false;
 
@@ -44,7 +61,7 @@ export class BambuLabAPI {
 					autoReconnect: true,
 					reconnectDelay: 5000,
 				},
-			});
+			}) as BambuPrinterClient;
 
 			// Set up event listeners
 			this._client.on('connect', () => {
