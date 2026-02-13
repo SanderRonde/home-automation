@@ -17,12 +17,14 @@ import {
 } from '@mui/material';
 import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew';
 import DesktopWindowsIcon from '@mui/icons-material/DesktopWindows';
+import DescriptionIcon from '@mui/icons-material/Description';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import React, { useState, useEffect, useRef } from 'react';
 import ReplayIcon from '@mui/icons-material/Replay';
 import CancelIcon from '@mui/icons-material/Cancel';
-import React, { useState, useEffect } from 'react';
 import { apiGet, apiPost } from '../../lib/fetch';
+import { parseAnsiLine } from '../lib/ansi';
 
 interface SystemConfig {
 	commands: {
@@ -30,6 +32,7 @@ interface SystemConfig {
 		stopServer: string | null;
 		rebootSystem: string | null;
 	};
+	logFilePath: string | null;
 }
 
 type CommandType = 'restart' | 'stop' | 'reboot' | 'killChromium' | 'restartMatter';
@@ -51,10 +54,82 @@ export const SystemAdmin = (): JSX.Element => {
 		title: '',
 		message: '',
 	});
+	const [logs, setLogs] = useState<string[]>([]);
+	const [logsConnected, setLogsConnected] = useState<boolean>(false);
+	const [logsError, setLogsError] = useState<string | null>(null);
+	const logsScrollRef = useRef<HTMLDivElement | null>(null);
 
 	useEffect(() => {
 		void loadConfig();
 	}, []);
+
+	// WebSocket connection for streaming logs
+	useEffect(() => {
+		if (!config?.logFilePath) {
+			setLogs([]);
+			setLogsError(null);
+			setLogsConnected(false);
+			return;
+		}
+
+		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+		const ws = new WebSocket(`${protocol}//${window.location.host}/system/ws`);
+
+		ws.onopen = () => {
+			setLogsConnected(true);
+			setLogsError(null);
+		};
+
+		ws.onmessage = (event) => {
+			try {
+				const message = JSON.parse(event.data) as {
+					type?: string;
+					lines?: string[];
+				};
+				if (
+					typeof message === 'object' &&
+					message !== null &&
+					message.type === 'log_lines' &&
+					Array.isArray(message.lines)
+				) {
+					setLogs((prev) => {
+						// If this is the first batch (initial tail), replace; otherwise append
+						const isInitial = prev.length === 0;
+						return isInitial ? message.lines! : [...prev, ...message.lines!];
+					});
+				}
+			} catch (err) {
+				console.error('Failed to parse WebSocket log message:', err);
+			}
+		};
+
+		ws.onerror = () => {
+			setLogsError('WebSocket connection error');
+			setLogsConnected(false);
+		};
+
+		ws.onclose = () => {
+			setLogsConnected(false);
+			// Attempt to reconnect after a delay
+			setTimeout(() => {
+				if (config?.logFilePath) {
+					// Reconnect by recreating the effect
+					setLogsError('Reconnecting...');
+				}
+			}, 3000);
+		};
+
+		return () => {
+			ws.close();
+		};
+	}, [config?.logFilePath]);
+
+	useEffect(() => {
+		const el = logsScrollRef.current;
+		if (el) {
+			el.scrollTop = el.scrollHeight;
+		}
+	}, [logs]);
 
 	const loadConfig = async () => {
 		setLoading(true);
@@ -256,6 +331,91 @@ export const SystemAdmin = (): JSX.Element => {
 					</CardContent>
 				</Card>
 
+				{/* Server Logs Card */}
+				<Card>
+					<CardContent>
+						<Typography variant="h6" gutterBottom>
+							Server Logs
+						</Typography>
+						{config?.logFilePath ? (
+							<>
+								<Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+									<DescriptionIcon fontSize="small" color="action" />
+									<Typography
+										variant="body2"
+										color="text.secondary"
+										fontFamily="monospace"
+										component="span"
+									>
+										{config.logFilePath}
+									</Typography>
+									<Chip
+										label={logsConnected ? 'Streaming' : 'Disconnected'}
+										size="small"
+										color={logsConnected ? 'success' : 'default'}
+										variant="outlined"
+									/>
+								</Box>
+								{logsError && (
+									<Alert
+										severity="error"
+										sx={{ mb: 2 }}
+										onClose={() => setLogsError(null)}
+									>
+										{logsError}
+									</Alert>
+								)}
+								<Paper
+									ref={logsScrollRef}
+									variant="outlined"
+									sx={{
+										p: 2,
+										backgroundColor: 'grey.900',
+										fontFamily: 'monospace',
+										fontSize: '0.8rem',
+										maxHeight: 400,
+										overflow: 'auto',
+									}}
+								>
+									<pre
+										style={{
+											margin: 0,
+											whiteSpace: 'pre-wrap',
+											wordBreak: 'break-all',
+										}}
+									>
+										{logs.length > 0
+											? logs.map((line, lineIdx) => (
+													<div key={lineIdx}>
+														{parseAnsiLine(line).map((seg, segIdx) => (
+															<span
+																key={segIdx}
+																style={{
+																	color: seg.color,
+																	fontWeight: seg.fontWeight,
+																}}
+															>
+																{seg.text}
+															</span>
+														))}
+													</div>
+												))
+											: logsConnected
+												? 'Waiting for logs...'
+												: 'No log lines'}
+									</pre>
+								</Paper>
+							</>
+						) : (
+							<Typography variant="body2" color="text.secondary">
+								To view server logs here, set <code>logFilePath</code> in{' '}
+								<code>database/system.json</code> on the server (see Configuration
+								Help below).
+							</Typography>
+						)}
+					</CardContent>
+				</Card>
+
 				{/* Server Controls Card */}
 				<Card>
 					<CardContent>
@@ -396,6 +556,7 @@ export const SystemAdmin = (): JSX.Element => {
 											stopServer: 'systemctl stop home-automation',
 											rebootSystem: 'sudo reboot',
 										},
+										logFilePath: '/var/log/home-automation/server.log',
 									},
 									null,
 									2

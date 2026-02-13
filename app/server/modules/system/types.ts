@@ -43,6 +43,12 @@ export interface SystemDB {
 	 * These can only be configured by editing the database file directly.
 	 */
 	commands?: SystemCommands;
+
+	/**
+	 * Path to the log file to tail and display in the System Administration panel.
+	 * Configure by editing database/system.json directly.
+	 */
+	logFilePath?: string;
 }
 
 /**
@@ -54,6 +60,7 @@ export interface SystemConfigResponse {
 		stopServer: string | null;
 		rebootSystem: string | null;
 	};
+	logFilePath: string | null;
 }
 
 /**
@@ -63,4 +70,14 @@ export interface CommandExecutionResponse {
 	success: boolean;
 	message: string;
 	output?: string;
+}
+
+/**
+ * Response type for the logs/tail endpoint.
+ */
+export interface LogTailResponse {
+	success: boolean;
+	logFilePath: string | null;
+	lines: string[];
+	error?: string;
 }
