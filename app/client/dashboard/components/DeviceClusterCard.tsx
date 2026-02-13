@@ -16,6 +16,7 @@ import type {
 	DashboardDeviceClusterAirQualityGroup,
 	DashboardDeviceClusterFridge,
 	DashboardDeviceClusterWasher,
+	DashboardDeviceClusterThreeDPrinter,
 	DeviceListWithValuesResponse,
 } from '../../../server/modules/device/routing';
 import {
@@ -26,6 +27,8 @@ import {
 	Refresh as RefreshIcon,
 	Kitchen as KitchenIcon,
 	LocalLaundryService as LocalLaundryServiceIcon,
+	Lightbulb as LightbulbIcon,
+	ThreeDRotation as ThreeDRotationIcon,
 } from '@mui/icons-material';
 import {
 	Card,
@@ -35,6 +38,7 @@ import {
 	IconButton,
 	Chip,
 	CircularProgress,
+	LinearProgress,
 } from '@mui/material';
 import { DeviceClusterName, ThermostatMode } from '../../../server/modules/device/cluster';
 import { fadeInUpStaggered, staggerItem } from '../../lib/animations';
@@ -2189,6 +2193,177 @@ const WasherCard = (
 	);
 };
 
+const formatRemainingTimeMinutes = (minutes: number | undefined): string => {
+	if (minutes === undefined || minutes === null) {
+		return '—';
+	}
+	const h = Math.floor(minutes / 60);
+	const m = Math.floor(minutes % 60);
+	return h > 0 ? `${h}h ${m}m` : `${m}m`;
+};
+
+const ThreeDPrinterCard = (
+	props: DeviceClusterCardBaseProps<DashboardDeviceClusterThreeDPrinter>
+): JSX.Element => {
+	const cluster = props.cluster;
+	const lightCluster = props.device.flatAllClusters.find(
+		(c) => c.name === DeviceClusterName.ON_OFF
+	) as DashboardDeviceClusterOnOff | undefined;
+	const isLightOn = lightCluster?.isOn ?? false;
+
+	const getBackgroundColor = (): string => {
+		switch (cluster.printState) {
+			case 'printing':
+				return '#1e3a8a';
+			case 'paused':
+				return '#78350f';
+			case 'finished':
+				return '#064e3b';
+			case 'failed':
+				return '#7f1d1d';
+			case 'idle':
+			default:
+				return '#374151';
+		}
+	};
+
+	const getStateLabel = (): string => {
+		switch (cluster.printState) {
+			case 'printing':
+				return 'Printing';
+			case 'paused':
+				return 'Paused';
+			case 'finished':
+				return 'Finished';
+			case 'failed':
+				return 'Failed';
+			case 'idle':
+			default:
+				return 'Idle';
+		}
+	};
+
+	const progressPercent =
+		cluster.progress !== undefined ? Math.round(cluster.progress * 100) : undefined;
+
+	return (
+		<DeviceClusterCardSkeleton
+			{...props}
+			cardBackground={getBackgroundColor()}
+			hasInteractiveChildren
+			onPress={() => {
+				props.pushDetailView({
+					type: 'device',
+					deviceId: props.device.uniqueId,
+					clusterName: props.cluster.name,
+				});
+			}}
+		>
+			<Box
+				sx={{
+					display: 'flex',
+					alignItems: 'center',
+					gap: 2,
+				}}
+			>
+				<Box
+					sx={{
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						background: 'rgba(255, 255, 255, 0.2)',
+						borderRadius: '50%',
+						width: 48,
+						height: 48,
+						color: 'white',
+					}}
+				>
+					<ThreeDRotationIcon sx={{ fontSize: 28 }} />
+				</Box>
+				<Box sx={{ flexGrow: 1, minWidth: 0 }}>
+					<Typography
+						variant="body1"
+						sx={{
+							fontWeight: 500,
+							color: 'white',
+						}}
+					>
+						{props.device.name}
+					</Typography>
+					<Typography
+						variant="caption"
+						sx={{
+							color: 'rgba(255, 255, 255, 0.9)',
+							display: 'block',
+						}}
+					>
+						{getStateLabel()}
+					</Typography>
+					{(cluster.printState === 'printing' || cluster.printState === 'paused') && (
+						<Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+							{progressPercent !== undefined && (
+								<Typography
+									variant="caption"
+									sx={{ color: 'rgba(255, 255, 255, 0.9)' }}
+								>
+									{progressPercent}%
+								</Typography>
+							)}
+							{cluster.remainingTimeMinutes !== undefined &&
+								cluster.remainingTimeMinutes !== null && (
+									<Typography
+										variant="caption"
+										sx={{ color: 'rgba(255, 255, 255, 0.9)' }}
+									>
+										{formatRemainingTimeMinutes(cluster.remainingTimeMinutes)}{' '}
+										left
+									</Typography>
+								)}
+						</Box>
+					)}
+					{cluster.printState === 'printing' && progressPercent !== undefined && (
+						<LinearProgress
+							variant="determinate"
+							value={progressPercent}
+							sx={{
+								mt: 0.5,
+								height: 4,
+								borderRadius: 2,
+								backgroundColor: 'rgba(255,255,255,0.3)',
+								'& .MuiLinearProgress-bar': {
+									backgroundColor: 'white',
+								},
+							}}
+						/>
+					)}
+				</Box>
+				<IconButton
+					onClick={async (e) => {
+						e.stopPropagation();
+						await apiPost(
+							'device',
+							'/cluster/OnOff',
+							{},
+							{
+								deviceIds: [props.device.uniqueId],
+								isOn: !isLightOn,
+							}
+						);
+						props.invalidate();
+					}}
+					size="small"
+					sx={{
+						color: isLightOn ? '#fef08a' : 'rgba(255, 255, 255, 0.5)',
+						'&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.12)' },
+					}}
+				>
+					<LightbulbIcon fontSize="small" />
+				</IconButton>
+			</Box>
+		</DeviceClusterCardSkeleton>
+	);
+};
+
 const ActionsCard = (
 	props: DeviceClusterCardBaseProps<DashboardDeviceClusterActions>
 ): JSX.Element => {
@@ -2328,6 +2503,9 @@ export const DeviceClusterCard = (
 	}
 	if (regularProps.cluster.name === DeviceClusterName.WASHER) {
 		return <WasherCard {...regularProps} cluster={regularProps.cluster} />;
+	}
+	if (regularProps.cluster.name === DeviceClusterName.THREE_D_PRINTER) {
+		return <ThreeDPrinterCard {...regularProps} cluster={regularProps.cluster} />;
 	}
 	// CO2 and PM2.5 sensors are now grouped in AirQualityGroup
 	// Standalone handling is not needed

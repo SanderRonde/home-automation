@@ -62,6 +62,11 @@ export async function buildDashboard(): Promise<void> {
 			Bun.file(path.join(BUILD_FOLDER, 'dashboard/manifest.json')),
 			Bun.file(path.join(CLIENT_FOLDER, 'dashboard/manifest.json'))
 		);
+		const staticSrc = path.join(CLIENT_FOLDER, 'dashboard/static');
+		const staticDest = path.join(BUILD_FOLDER, 'dashboard/static');
+		if (await fs.pathExists(staticSrc)) {
+			await fs.copy(staticSrc, staticDest);
+		}
 
 		// Create a manifest of built files for the server to reference
 		const manifest: Record<string, string> = {};

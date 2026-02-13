@@ -16,6 +16,7 @@ import type {
 	DevicePm25ConcentrationMeasurementWithNumericAndLevelIndicationCluster,
 	DeviceWasherCluster,
 	DeviceFridgeCluster,
+	DeviceThreeDPrinterCluster,
 } from './cluster';
 import {
 	DeviceOnOffCluster,
@@ -38,6 +39,7 @@ import { createServeOptions, withRequestBody } from '../../lib/routes';
 import type { DeviceGroup } from '../../../../types/group';
 import { applyPaletteToDevices } from './palette-executor';
 import type { Device, DeviceEndpoint } from './device';
+import type { PrintState } from '../bambulab/types';
 import type { AllModules, ModuleConfig } from '..';
 import { logTag } from '../../lib/logging/logger';
 import { Actions } from '@matter/main/clusters';
@@ -171,6 +173,39 @@ export type DashboardDeviceClusterColorControlTemperature = DashboardDeviceClust
 	colorTemperature: number | undefined;
 	minColorTemperature: number | undefined;
 	maxColorTemperature: number | undefined;
+};
+
+export type DashboardDeviceClusterThreeDPrinter = DashboardDeviceClusterBase & {
+	name: DeviceClusterName.THREE_D_PRINTER;
+	printState: PrintState | undefined;
+	bedTemperature: number | undefined;
+	nozzleTemperature: number | undefined;
+	bedTargetTemperature: number | undefined;
+	nozzleTargetTemperature: number | undefined;
+	currentLayer: number | undefined;
+	totalLayers: number | undefined;
+	remainingTimeMinutes: number | undefined;
+	progress: number | undefined;
+	currentFile: string | undefined;
+	usedTray: number | undefined;
+	videoStreamUrl: string | undefined;
+	ams:
+		| {
+				temp: number;
+				humidity: number;
+				trays: (
+					| {
+							empty: true;
+					  }
+					| {
+							empty: false;
+							color: string;
+							type: string;
+							remaining: number;
+					  }
+				)[];
+		  }
+		| undefined;
 };
 
 export type DashboardDeviceClusterOccupancySensorGroup = DashboardDeviceClusterBase & {
@@ -309,6 +344,7 @@ export type DashboardDeviceClusterWithState = DashboardDeviceClusterBase &
 		| DashboardDeviceClusterActions
 		| DashboardDeviceClusterThermostat
 		| DashboardDeviceClusterFridge
+		| DashboardDeviceClusterThreeDPrinter
 		| DashboardDeviceClusterWasher
 		| DashboardDeviceClusterDoorLock
 		| DashboardDeviceClusterOccupancySensorGroup
@@ -1424,7 +1460,8 @@ const getClusterState = async (
 	api: DeviceAPI,
 	_cluster: Cluster | null,
 	clusterName: DeviceClusterName,
-	deviceId: string
+	deviceId: string,
+	modules?: AllModules
 ): Promise<DashboardDeviceClusterWithState> => {
 	if (clusterName === DeviceClusterName.ON_OFF) {
 		if (!_cluster) {
@@ -1596,6 +1633,46 @@ const getClusterState = async (
 			coolerDoorOpen: (await cluster.coolerDoorOpen.get()) ?? false,
 			fridgeTempC: await cluster.fridgeTempC.get(),
 			freezerTempC: await cluster.freezerTempC.get(),
+		};
+	}
+	if (clusterName === DeviceClusterName.THREE_D_PRINTER) {
+		const videoStreamUrl = modules?.bambulab?.getVideoStreamUrl?.();
+		if (!_cluster) {
+			return {
+				name: clusterName,
+				icon: getClusterIconName(clusterName, api),
+				printState: undefined,
+				bedTemperature: undefined,
+				nozzleTemperature: undefined,
+				bedTargetTemperature: undefined,
+				nozzleTargetTemperature: undefined,
+				currentLayer: undefined,
+				totalLayers: undefined,
+				remainingTimeMinutes: undefined,
+				progress: undefined,
+				currentFile: undefined,
+				usedTray: undefined,
+				videoStreamUrl,
+				ams: undefined,
+			};
+		}
+		const cluster = _cluster as DeviceThreeDPrinterCluster;
+		return {
+			name: clusterName,
+			icon: getClusterIconName(clusterName, api),
+			printState: await cluster.printState.get(),
+			bedTemperature: await cluster.bedTemperature.get(),
+			nozzleTemperature: await cluster.nozzleTemperature.get(),
+			bedTargetTemperature: await cluster.bedTargetTemperature.get(),
+			nozzleTargetTemperature: await cluster.nozzleTargetTemperature.get(),
+			currentLayer: await cluster.currentLayer.get(),
+			totalLayers: await cluster.totalLayers.get(),
+			remainingTimeMinutes: await cluster.remainingTimeMinutes.get(),
+			progress: await cluster.progress.get(),
+			currentFile: await cluster.currentFile.get(),
+			usedTray: await cluster.usedTray.get(),
+			videoStreamUrl,
+			ams: await cluster.ams.get(),
 		};
 	}
 	if (clusterName === DeviceClusterName.WASHER) {
@@ -1899,7 +1976,8 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 				api,
 				cluster,
 				cluster.getBaseCluster().clusterName,
-				deviceId
+				deviceId,
+				modules
 			);
 			clusterStateCache.set(cluster, clusterState);
 		}
@@ -2344,7 +2422,9 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 
 			// Create minimal cluster representations for offline devices
 			const offlineClusters: DashboardDeviceClusterWithState[] = await Promise.all(
-				clusterNames.map((clusterName) => getClusterState(api, null, clusterName, deviceId))
+				clusterNames.map((clusterName) =>
+					getClusterState(api, null, clusterName, deviceId, modules)
+				)
 			);
 
 			// Get source info from stored device or default to unknown

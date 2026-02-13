@@ -43,3 +43,4 @@
 - [x] Smarter heating - when staying up late, keep heating
 - [x] Don't heat when not home - but do somehow pre-heat before getting home
 - [x] Show air state on 2D view
+- [ ] Turn off P1P light

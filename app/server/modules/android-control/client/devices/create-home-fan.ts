@@ -128,7 +128,14 @@ export class CreateHomeFanClient extends AndroidControlProfileClient implements 
 		// Take a screenshot
 		const arrayBuffer = await Bun.$`adb -s ${this._deviceId} exec-out screencap -p`
 			.quiet()
+			.nothrow()
 			.arrayBuffer();
+		if (!arrayBuffer) {
+			return {
+				level: 0,
+				isOn: false,
+			};
+		}
 		const image = await Jimp.read(arrayBuffer);
 		if (this._appConfig.debug) {
 			await mkdir(DEBUG_FOLDER, { recursive: true });

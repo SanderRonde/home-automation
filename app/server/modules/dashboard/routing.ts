@@ -55,6 +55,11 @@ async function _initRouting({ modules, wsPublish }: ModuleConfig) {
 							path.join(CLIENT_FOLDER, 'dashboard'),
 							'app/client/dashboard'
 						)),
+						// Also serve static at /static/ so image paths work when app is at /
+						...(await serveStatic(
+							path.join(CLIENT_FOLDER, 'dashboard/static'),
+							'static'
+						)),
 					}),
 		},
 		true,

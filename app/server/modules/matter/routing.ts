@@ -39,7 +39,7 @@ function _initRouting(_config: unknown) {
 	);
 }
 
-export const initRouting = _initRouting as (config: ModuleConfig) => ServeOptions<MatterRoutes>;
+export const initRouting = _initRouting as (config: unknown) => ServeOptions<MatterRoutes>;
 
 export type MatterRoutes =
 	ReturnType<typeof _initRouting> extends ServeOptions<infer R> ? R : never;

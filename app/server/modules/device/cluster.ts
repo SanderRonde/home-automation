@@ -3,6 +3,7 @@ import type { EventEmitter } from '../../lib/event-emitter';
 import { type Actions } from '@matter/main/clusters';
 import type { Color } from '../../lib/color';
 
+import type { PrintState } from '../bambulab/types';
 import type { Data } from '../../lib/data';
 
 export type DeviceGroupId = number & {
@@ -53,6 +54,7 @@ export enum DeviceClusterName {
 	WASHER = 'Washer',
 	FRIDGE = 'Fridge',
 	DOOR_LOCK = 'DoorLock',
+	THREE_D_PRINTER = '3DPrinter',
 }
 
 /** Matter Door Lock cluster lock state (cluster 0x0101). */
@@ -184,6 +186,43 @@ export abstract class DeviceRelativeHumidityMeasurementCluster extends Cluster {
 	 * Relative humidity as a float from 0 to 1
 	 */
 	public abstract relativeHumidity: Data<number | undefined>;
+}
+
+export abstract class DeviceThreeDPrinterCluster extends Cluster {
+	public static clusterName = DeviceClusterName.THREE_D_PRINTER;
+
+	public abstract printState: Data<PrintState | undefined>;
+	public abstract bedTemperature: Data<number | undefined>;
+	public abstract nozzleTemperature: Data<number | undefined>;
+	public abstract bedTargetTemperature: Data<number | undefined>;
+	public abstract nozzleTargetTemperature: Data<number | undefined>;
+	public abstract currentLayer: Data<number | undefined>;
+	public abstract totalLayers: Data<number | undefined>;
+	public abstract remainingTimeMinutes: Data<number | undefined>;
+	/** Progress as a float */
+	public abstract progress: Data<number | undefined>;
+	public abstract currentFile: Data<string | undefined>;
+	public abstract usedTray: Data<number | undefined>;
+	public abstract ams: Data<
+		| {
+				/** Temperature in Celsius */
+				temp: number;
+				/** Humidity as a float */
+				humidity: number;
+				trays: (
+					| {
+							empty: true;
+					  }
+					| {
+							empty: false;
+							color: string;
+							type: string;
+							remaining: number;
+					  }
+				)[];
+		  }
+		| undefined
+	>;
 }
 
 export abstract class DeviceBooleanStateCluster<S extends boolean> extends Cluster {

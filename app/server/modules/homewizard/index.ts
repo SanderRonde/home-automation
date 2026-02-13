@@ -174,12 +174,6 @@ export const HomeWizard = new (class HomeWizard extends ModuleMeta {
 			this._startPolling();
 		});
 
-		// Start polling if already configured
-		const currentConfig = db.current();
-		if (currentConfig?.ip && currentConfig?.token) {
-			this._startPolling();
-		}
-
 		return {
 			serve: initRouting(db),
 		};

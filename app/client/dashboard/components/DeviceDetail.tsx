@@ -17,6 +17,7 @@ import type {
 	DashboardDeviceClusterDoorLock,
 	DashboardDeviceClusterFridge,
 	DashboardDeviceClusterWasher,
+	DashboardDeviceClusterThreeDPrinter,
 } from '../../../server/modules/device/routing';
 import {
 	Chart as ChartJS,
@@ -50,6 +51,8 @@ import {
 	Alert,
 	Link,
 	Button,
+	LinearProgress,
+	Dialog,
 } from '@mui/material';
 import {
 	pageVariants,
@@ -64,9 +67,12 @@ import { WindowCoveringVisualization } from './WindowCoveringVisualization';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import CircularSlider from '@fseehawer/react-circular-slider';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import React, { useState, useEffect, useRef } from 'react';
+import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { DeviceActionsCard } from './DeviceActionsCard';
+import CloseIcon from '@mui/icons-material/Close';
 import { apiGet, apiPost } from '../../lib/fetch';
 import { ColorPresets } from './ColorPresets';
 import { Wheel } from '@uiw/react-color';
@@ -5894,6 +5900,740 @@ const WasherDetail = (props: WasherDetailProps): JSX.Element => {
 	);
 };
 
+interface ThreeDPrinterDetailProps
+	extends DeviceDetailBaseProps<DashboardDeviceClusterThreeDPrinter> {}
+
+const formatRemainingTime = (minutes: number | undefined): string => {
+	if (minutes === undefined || minutes === null) {
+		return '—';
+	}
+	const h = Math.floor(minutes / 60);
+	const m = Math.floor(minutes % 60);
+	return h > 0 ? `${h}h ${m}m` : `${m}m`;
+};
+
+const getPrintStateLabel = (state: string | undefined): string => {
+	switch (state) {
+		case 'printing':
+			return 'Printing';
+		case 'paused':
+			return 'Paused';
+		case 'finished':
+			return 'Finished';
+		case 'failed':
+			return 'Failed';
+		case 'idle':
+		default:
+			return 'Idle';
+	}
+};
+
+const getPrintStateColor = (
+	state: string | undefined
+): 'primary' | 'warning' | 'success' | 'error' | 'default' => {
+	switch (state) {
+		case 'printing':
+			return 'primary';
+		case 'paused':
+			return 'warning';
+		case 'finished':
+			return 'success';
+		case 'failed':
+			return 'error';
+		default:
+			return 'default';
+	}
+};
+
+function normalizeHex(color: string): string {
+	return color.startsWith('#') ? color : `#${color}`;
+}
+
+/** Relative luminance 0–1; use to pick contrasting text (e.g. > 0.45 → dark text). */
+function hexLuminance(hex: string): number {
+	const h = hex.replace(/^#/, '');
+	if (h.length !== 6) {
+		return 0;
+	}
+	const r = Number.parseInt(h.slice(0, 2), 16) / 255;
+	const g = Number.parseInt(h.slice(2, 4), 16) / 255;
+	const b = Number.parseInt(h.slice(4, 6), 16) / 255;
+	const [rs, gs, bs] = [r, g, b].map((c) => (c <= 0.03928 ? c / 12.92 : (c + 0.055) / 1.055));
+	return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+}
+
+const ThreeDPrinterDetail = (props: ThreeDPrinterDetailProps): JSX.Element => {
+	const cluster = props.cluster;
+	const roomColor = props.device.roomColor || '#555';
+	const lightCluster = props.device.flatAllClusters.find(
+		(c) => c.name === DeviceClusterName.ON_OFF
+	) as DashboardDeviceClusterOnOff | undefined;
+	const isLightOn = lightCluster?.isOn ?? false;
+	const [videoFullscreen, setVideoFullscreen] = useState(false);
+
+	const currentFileName =
+		cluster.currentFile !== undefined && cluster.currentFile !== null
+			? (cluster.currentFile.split(/[/\\]/).pop() ?? cluster.currentFile)
+			: undefined;
+
+	const progressPercent =
+		cluster.progress !== undefined ? Math.round(cluster.progress * 100) : undefined;
+
+	return (
+		<motion.div
+			variants={pageVariants}
+			initial="initial"
+			animate="animate"
+			exit="exit"
+			style={{ height: '100%' }}
+		>
+			<Box
+				sx={{
+					backgroundColor: roomColor,
+					py: 1.5,
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
+					position: 'relative',
+					boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+				}}
+			>
+				<IconButton style={{ position: 'absolute', left: 0 }} onClick={props.onExit}>
+					<ArrowBackIcon style={{ fill: '#2f2f2f' }} />
+				</IconButton>
+				<Typography
+					style={{ color: '#2f2f2f', fontWeight: 600, letterSpacing: '-0.02em' }}
+					variant="h6"
+				>
+					3D Printer
+				</Typography>
+			</Box>
+
+			<Box sx={{ p: { xs: 2, sm: 3 } }}>
+				{/* Card 1: Printer visualization (SVG) with temperatures and light */}
+				<motion.div variants={cardVariants} initial="initial" animate="animate">
+					<Card
+						sx={{
+							mb: 3,
+							borderRadius: 3,
+							boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+							background: 'linear-gradient(135deg, #2a2a2a 0%, #353535 100%)',
+							overflow: 'visible',
+						}}
+					>
+						<CardContent>
+							<Box sx={{ position: 'relative', width: '100%', pt: 2, pb: 2 }}>
+								<Box
+									sx={{
+										width: '100%',
+										maxWidth: 640,
+										mx: 'auto',
+										position: 'relative',
+										boxShadow: isLightOn
+											? '0 0 40px 12px rgba(254, 240, 138, 0.45)'
+											: undefined,
+										borderRadius: 2,
+									}}
+								>
+									{/* Base image defines size; AMS image overlaid on top portion */}
+									<img
+										src="/dashboard/static/icons/p1p_base.png"
+										alt="Printer"
+										style={{
+											width: '100%',
+											display: 'block',
+											verticalAlign: 'top',
+										}}
+									/>
+									<img
+										src="/dashboard/static/icons/p1p_ams.png"
+										alt="AMS"
+										style={{
+											position: 'absolute',
+											top: 0,
+											left: 0,
+											width: '100%',
+											height: '24%',
+											objectFit: 'cover',
+											objectPosition: 'top',
+											pointerEvents: 'none',
+										}}
+									/>
+									{/* AMS overlay: four bays with filament color, fill %, readable text */}
+									{cluster.ams && (
+										<Box
+											sx={{
+												position: 'absolute',
+												top: 0,
+												left: 0,
+												right: 0,
+												height: '24%',
+												display: 'flex',
+												gap: 0.5,
+												p: 0.5,
+												boxSizing: 'border-box',
+											}}
+										>
+											{[0, 1, 2, 3].map((i) => {
+												const tray = cluster.ams!.trays[i];
+												const empty = tray?.empty ?? true;
+												const color =
+													tray && !tray.empty
+														? normalizeHex(tray.color)
+														: '#2a2a2a';
+												const remaining =
+													tray && !tray.empty && tray.remaining >= 0
+														? tray.remaining
+														: -1;
+												const isActive = cluster.usedTray === i;
+												const useDarkText =
+													!empty && hexLuminance(color) > 0.45;
+												const textColor = useDarkText ? '#111' : '#fff';
+												return (
+													<Box
+														key={i}
+														sx={{
+															flex: 1,
+															position: 'relative',
+															borderRadius: 1,
+															overflow: 'hidden',
+															backgroundColor: '#1a1a1a',
+															border: isActive
+																? '2px solid #fef08a'
+																: '1px solid rgba(255,255,255,0.15)',
+															boxShadow: isActive
+																? '0 0 12px rgba(254,240,138,0.5)'
+																: undefined,
+														}}
+													>
+														{/* Filament fill from bottom by remaining % */}
+														{!empty && (
+															<Box
+																sx={{
+																	position: 'absolute',
+																	left: 0,
+																	right: 0,
+																	bottom: 0,
+																	height:
+																		remaining >= 0
+																			? `${remaining}%`
+																			: '100%',
+																	backgroundColor: color,
+																	opacity:
+																		remaining === -1 ? 0.6 : 1,
+																}}
+															/>
+														)}
+														{/* Readable text overlay: pill background + luminance-based color */}
+														<Box
+															sx={{
+																position: 'absolute',
+																inset: 0,
+																display: 'flex',
+																flexDirection: 'column',
+																alignItems: 'center',
+																justifyContent: 'center',
+																textAlign: 'center',
+																px: 0.25,
+															}}
+														>
+															<Box
+																sx={{
+																	backgroundColor:
+																		'rgba(0,0,0,0.5)',
+																	px: 0.75,
+																	py: 0.25,
+																	borderRadius: 1,
+																}}
+															>
+																<Typography
+																	variant="caption"
+																	sx={{
+																		color: textColor,
+																		fontWeight: 700,
+																		lineHeight: 1.2,
+																	}}
+																>
+																	A{i + 1}
+																</Typography>
+																{empty ? (
+																	<Typography
+																		variant="caption"
+																		sx={{
+																			color: textColor,
+																			fontSize: '0.65rem',
+																			opacity: 0.9,
+																		}}
+																	>
+																		Empty
+																	</Typography>
+																) : (
+																	tray &&
+																	!tray.empty && (
+																		<div
+																			style={{
+																				display: 'flex',
+																				flexDirection:
+																					'column',
+																				alignItems:
+																					'center',
+																				justifyContent:
+																					'center',
+																			}}
+																		>
+																			<Typography
+																				variant="caption"
+																				sx={{
+																					color: textColor,
+																					fontSize:
+																						'0.65rem',
+																					fontWeight: 600,
+																				}}
+																			>
+																				{tray.type}
+																			</Typography>
+																			<Typography
+																				variant="caption"
+																				sx={{
+																					color: textColor,
+																					fontSize:
+																						'0.65rem',
+																				}}
+																			>
+																				{remaining >= 0
+																					? `${remaining}%`
+																					: '?%'}
+																			</Typography>
+																		</div>
+																	)
+																)}
+															</Box>
+														</Box>
+													</Box>
+												);
+											})}
+										</Box>
+									)}
+									{/* Printer overlays: bed temp (bottom), nozzle temp (top-center of printer) */}
+									<Box
+										sx={{
+											position: 'absolute',
+											bottom: '8%',
+											left: '10%',
+											right: '10%',
+											textAlign: 'center',
+										}}
+									>
+										<Typography
+											variant="caption"
+											sx={{
+												color: '#333',
+												fontWeight: 700,
+												backgroundColor: 'rgba(232,232,232,0.9)',
+												px: 1,
+												py: 0.5,
+												borderRadius: 1,
+												whiteSpace: 'nowrap',
+											}}
+										>
+											🌡️ Bed:{' '}
+											{cluster.bedTemperature !== undefined &&
+											cluster.bedTemperature !== null
+												? Number(cluster.bedTemperature).toFixed(1)
+												: '—'}{' '}
+											/{' '}
+											{cluster.bedTargetTemperature !== undefined &&
+											cluster.bedTargetTemperature !== null
+												? Number(cluster.bedTargetTemperature).toFixed(1)
+												: '—'}{' '}
+											°C
+										</Typography>
+									</Box>
+									<Box
+										sx={{
+											position: 'absolute',
+											top: '32%',
+											left: '50%',
+											transform: 'translateX(-50%)',
+											textAlign: 'center',
+										}}
+									>
+										<Typography
+											variant="caption"
+											sx={{
+												color: '#fff',
+												fontWeight: 700,
+												backgroundColor: 'rgba(0,0,0,0.65)',
+												px: 1,
+												py: 0.5,
+												borderRadius: 1,
+												textShadow: '0 0 2px #000',
+												whiteSpace: 'nowrap',
+											}}
+										>
+											🔥 Nozzle:{' '}
+											{cluster.nozzleTemperature !== undefined &&
+											cluster.nozzleTemperature !== null
+												? Number(cluster.nozzleTemperature).toFixed(1)
+												: '—'}{' '}
+											/{' '}
+											{cluster.nozzleTargetTemperature !== undefined &&
+											cluster.nozzleTargetTemperature !== null
+												? Number(cluster.nozzleTargetTemperature).toFixed(1)
+												: '—'}{' '}
+											°C
+										</Typography>
+									</Box>
+									{/* Progress and layers at center (between bed and nozzle) */}
+									<Box
+										sx={{
+											position: 'absolute',
+											top: '50%',
+											left: '50%',
+											transform: 'translate(-50%, -50%)',
+											textAlign: 'center',
+										}}
+									>
+										<Typography
+											variant="caption"
+											sx={{
+												color: '#fff',
+												fontWeight: 700,
+												backgroundColor: 'rgba(0,0,0,0.7)',
+												px: 1.5,
+												py: 0.75,
+												borderRadius: 1,
+												textShadow: '0 0 2px #000',
+												whiteSpace: 'nowrap',
+											}}
+										>
+											{progressPercent !== undefined
+												? `${progressPercent}%`
+												: '—'}
+											{cluster.currentLayer !== undefined &&
+												cluster.currentLayer !== null &&
+												cluster.totalLayers !== undefined &&
+												cluster.totalLayers !== null && (
+													<>
+														{' '}
+														· Layer {cluster.currentLayer}/
+														{cluster.totalLayers}
+													</>
+												)}
+										</Typography>
+									</Box>
+								</Box>
+								<Box
+									sx={{
+										display: 'flex',
+										justifyContent: 'center',
+										mt: 1,
+									}}
+								>
+									<IconButton
+										onClick={async () => {
+											await apiPost(
+												'device',
+												'/cluster/OnOff',
+												{},
+												{
+													deviceIds: [props.device.uniqueId],
+													isOn: !isLightOn,
+												}
+											);
+										}}
+										sx={{
+											color: isLightOn ? '#fef08a' : 'rgba(255,255,255,0.5)',
+										}}
+										title={isLightOn ? 'Chamber light on' : 'Chamber light off'}
+									>
+										<LightbulbIcon />
+									</IconButton>
+								</Box>
+							</Box>
+						</CardContent>
+					</Card>
+				</motion.div>
+
+				{/* Card 2: Print status */}
+				<motion.div variants={cardVariants} initial="initial" animate="animate">
+					<Card
+						sx={{
+							mb: 3,
+							borderRadius: 3,
+							boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+							background: 'linear-gradient(135deg, #2a2a2a 0%, #353535 100%)',
+						}}
+					>
+						<CardContent>
+							<Typography variant="subtitle2" color="text.secondary" gutterBottom>
+								Print status
+							</Typography>
+							<Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+								<Chip
+									label={getPrintStateLabel(cluster.printState)}
+									color={getPrintStateColor(cluster.printState)}
+									sx={{ alignSelf: 'flex-start' }}
+								/>
+								{currentFileName && (
+									<Typography variant="body2">
+										File: <strong>{currentFileName}</strong>
+									</Typography>
+								)}
+								{progressPercent !== undefined && (
+									<Box>
+										<Typography variant="caption" color="text.secondary">
+											Progress
+										</Typography>
+										<Typography variant="body2">
+											{progressPercent}%
+											{cluster.currentLayer !== undefined &&
+											cluster.currentLayer !== null &&
+											cluster.totalLayers !== undefined &&
+											cluster.totalLayers !== null
+												? ` (layer ${cluster.currentLayer}/${cluster.totalLayers})`
+												: ''}
+										</Typography>
+										<LinearProgress
+											variant="determinate"
+											value={progressPercent}
+											sx={{ mt: 0.5, height: 8, borderRadius: 1 }}
+										/>
+									</Box>
+								)}
+								{cluster.remainingTimeMinutes !== undefined &&
+									cluster.remainingTimeMinutes !== null && (
+										<Typography variant="body2">
+											Remaining:{' '}
+											<strong>
+												{formatRemainingTime(cluster.remainingTimeMinutes)}
+											</strong>
+										</Typography>
+									)}
+							</Box>
+						</CardContent>
+					</Card>
+				</motion.div>
+
+				{/* Card 3: AMS (before video stream) */}
+				{cluster.ams && (
+					<motion.div variants={cardVariants} initial="initial" animate="animate">
+						<Card
+							sx={{
+								mb: 3,
+								borderRadius: 3,
+								boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+								background: 'linear-gradient(135deg, #2a2a2a 0%, #353535 100%)',
+							}}
+						>
+							<CardContent>
+								<Typography variant="subtitle2" color="text.secondary" gutterBottom>
+									AMS (Automatic Material System)
+								</Typography>
+								<Typography variant="body2" sx={{ mb: 2 }}>
+									Temp:{' '}
+									{typeof cluster.ams.temp === 'number'
+										? Number(cluster.ams.temp).toFixed(2)
+										: cluster.ams.temp}
+									°C · Humidity: {Math.round(cluster.ams.humidity * 100)}%
+								</Typography>
+								<Box
+									sx={{
+										display: 'grid',
+										gridTemplateColumns: {
+											xs: 'repeat(2, 1fr)',
+											sm: 'repeat(4, 1fr)',
+										},
+										gap: 1.5,
+									}}
+								>
+									{cluster.ams.trays.map((tray, index) => {
+										const isActive = cluster.usedTray === index;
+										const bgColor = tray.empty
+											? 'rgba(255,255,255,0.06)'
+											: normalizeHex(tray.color);
+										const useDarkText =
+											!tray.empty &&
+											hexLuminance(normalizeHex(tray.color).slice(0, -2)) >
+												0.45;
+										const trayTextColor = tray.empty
+											? undefined
+											: useDarkText
+												? '#111'
+												: '#fff';
+										if (tray.empty) {
+											return (
+												<Card
+													key={index}
+													sx={{
+														p: 1.5,
+														backgroundColor: bgColor,
+														borderRadius: 2,
+														border: '1px solid rgba(255,255,255,0.1)',
+													}}
+												>
+													<Typography
+														variant="caption"
+														color="text.secondary"
+													>
+														A{index + 1}
+													</Typography>
+													<Typography
+														variant="body2"
+														color="text.secondary"
+													>
+														Empty
+													</Typography>
+												</Card>
+											);
+										}
+										return (
+											<Card
+												key={index}
+												sx={{
+													p: 1.5,
+													borderRadius: 2,
+													backgroundColor: bgColor,
+													color: trayTextColor,
+													border: isActive
+														? '2px solid #fef08a'
+														: '1px solid rgba(255,255,255,0.2)',
+													boxShadow: isActive
+														? '0 0 12px rgba(254,240,138,0.5)'
+														: undefined,
+												}}
+											>
+												<Box
+													sx={{
+														display: 'flex',
+														alignItems: 'center',
+														justifyContent: 'space-between',
+														mb: 0.5,
+													}}
+												>
+													<Typography
+														variant="caption"
+														sx={{ opacity: 0.9, color: trayTextColor }}
+													>
+														A{index + 1}
+													</Typography>
+													{isActive && (
+														<VisibilityIcon
+															sx={{
+																fontSize: 16,
+																opacity: 0.9,
+																color: trayTextColor,
+															}}
+														/>
+													)}
+												</Box>
+												<Typography
+													variant="body2"
+													fontWeight={600}
+													sx={{ color: trayTextColor }}
+												>
+													{tray.type}
+												</Typography>
+												<Typography
+													variant="caption"
+													sx={{ opacity: 0.9, color: trayTextColor }}
+												>
+													{tray.remaining >= 0
+														? `${tray.remaining}% left`
+														: 'Uncalibrated'}
+												</Typography>
+											</Card>
+										);
+									})}
+								</Box>
+							</CardContent>
+						</Card>
+					</motion.div>
+				)}
+
+				{/* Card 4: Video stream (below AMS) */}
+				{cluster.videoStreamUrl && cluster.videoStreamUrl.trim() !== '' && (
+					<motion.div variants={cardVariants} initial="initial" animate="animate">
+						<Card
+							sx={{
+								mb: 3,
+								borderRadius: 3,
+								boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+								overflow: 'hidden',
+								cursor: 'pointer',
+								'&:hover': { boxShadow: '0 6px 24px rgba(0,0,0,0.15)' },
+							}}
+							onClick={() => setVideoFullscreen(true)}
+						>
+							<Box
+								sx={{
+									position: 'relative',
+									width: '100%',
+									paddingTop: '56.25%',
+									backgroundColor: '#111',
+								}}
+							>
+								<iframe
+									title="Printer camera stream"
+									src={cluster.videoStreamUrl}
+									style={{
+										position: 'absolute',
+										top: 0,
+										left: 0,
+										width: '100%',
+										height: '100%',
+										border: 'none',
+									}}
+								/>
+							</Box>
+							<CardContent sx={{ py: 1 }}>
+								<Typography variant="caption" color="text.secondary">
+									Tap to open fullscreen
+								</Typography>
+							</CardContent>
+						</Card>
+					</motion.div>
+				)}
+
+				<Dialog
+					fullScreen
+					open={videoFullscreen}
+					onClose={() => setVideoFullscreen(false)}
+					PaperProps={{
+						sx: { backgroundColor: '#000' },
+					}}
+				>
+					<IconButton
+						sx={{
+							position: 'absolute',
+							top: 8,
+							right: 8,
+							zIndex: 1,
+							color: 'white',
+							backgroundColor: 'rgba(0,0,0,0.5)',
+							'&:hover': { backgroundColor: 'rgba(0,0,0,0.7)' },
+						}}
+						onClick={() => setVideoFullscreen(false)}
+					>
+						<CloseIcon />
+					</IconButton>
+					{cluster.videoStreamUrl && (
+						<iframe
+							title="Printer camera stream (fullscreen)"
+							src={cluster.videoStreamUrl}
+							style={{
+								width: '100%',
+								height: '100%',
+								border: 'none',
+							}}
+						/>
+					)}
+				</Dialog>
+			</Box>
+		</motion.div>
+	);
+};
+
 export const DeviceDetail = (
 	props: DeviceDetailBaseProps<DashboardDeviceClusterWithState>
 ): JSX.Element | null => {
@@ -5953,6 +6693,9 @@ export const DeviceDetail = (
 	}
 	if (props.cluster.name === DeviceClusterName.WASHER) {
 		return <WasherDetail {...props} cluster={props.cluster} />;
+	}
+	if (props.cluster.name === DeviceClusterName.THREE_D_PRINTER) {
+		return <ThreeDPrinterDetail {...props} cluster={props.cluster} />;
 	}
 	return null;
 };

@@ -11,6 +11,7 @@ import type { HomeWizard } from './homewizard';
 import type { Wakelight } from './wakelight';
 import type { Dashboard } from './dashboard';
 import type { Location } from './location';
+import type { BambuLab } from './bambulab';
 import type { Webhook } from './webhook';
 import type { EWeLink } from './ewelink';
 import type { Secret } from './secret/';
@@ -55,6 +56,7 @@ export type AllModules = {
 	location: typeof Location;
 	notification: typeof Notification;
 	backup: typeof Backup;
+	bambulab: typeof BambuLab;
 };
 
 // Re-export ModuleConfig from modules (this should be safe as it doesn't depend on AllModules)
