@@ -876,7 +876,7 @@ const SwitchCard = (
 };
 
 const LOCK_STATE_LABELS: Record<number, string> = {
-	0: 'Not fully locked',
+	0: 'Unlocked',
 	1: 'Locked',
 	2: 'Unlocked',
 	3: 'Unlatched',
