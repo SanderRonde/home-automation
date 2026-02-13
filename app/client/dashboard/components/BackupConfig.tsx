@@ -54,6 +54,7 @@ interface BackupConfig {
 export const BackupConfig = (): JSX.Element => {
 	const [backups, setBackups] = useState<readonly BackupMetadata[]>([]);
 	const [config, setConfig] = useState<BackupConfig | null>(null);
+	const [loadingBackups, setLoadingBackups] = useState<boolean>(true);
 	const [loading, setLoading] = useState<boolean>(false);
 	const [error, setError] = useState<string | null>(null);
 	const [success, setSuccess] = useState<string | null>(null);
@@ -79,6 +80,7 @@ export const BackupConfig = (): JSX.Element => {
 	}, []);
 
 	const loadBackups = async () => {
+		setLoadingBackups(true);
 		try {
 			const response = await apiGet('backup', '/list', {});
 			if (response.ok) {
@@ -87,6 +89,8 @@ export const BackupConfig = (): JSX.Element => {
 			}
 		} catch (err) {
 			console.error('Failed to load backups:', err);
+		} finally {
+			setLoadingBackups(false);
 		}
 	};
 
@@ -361,7 +365,13 @@ export const BackupConfig = (): JSX.Element => {
 									</TableRow>
 								</TableHead>
 								<TableBody>
-									{backups.length === 0 ? (
+									{loadingBackups ? (
+										<TableRow>
+											<TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+												<CircularProgress />
+											</TableCell>
+										</TableRow>
+									) : backups.length === 0 ? (
 										<TableRow>
 											<TableCell colSpan={6} align="center">
 												No backups found
