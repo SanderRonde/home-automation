@@ -106,7 +106,6 @@ export const Nuki = new (class Nuki extends ModuleMeta {
 
 	public init(config: ModuleConfig): { serve: ReturnType<typeof initRouting> } {
 		const db = config.db as Database<NukiDB>;
-		void this.fetchAndRegisterDevices(config);
 		db.subscribe(() => {
 			void this.fetchAndRegisterDevices(config);
 		});
