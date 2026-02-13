@@ -1,9 +1,14 @@
+import type { SettablePromise } from '../../lib/settable-promise';
 import { createServeOptions } from '../../lib/routes';
 import type { ServeOptions } from '../../lib/routes';
-import type { ModuleConfig } from '..';
+import type { MatterServer } from './server/server';
+
+interface MatterRoutingConfig {
+	modules: { matter: { server: SettablePromise<MatterServer> } };
+}
 
 function _initRouting(_config: unknown) {
-	const config = _config as ModuleConfig;
+	const config = _config as MatterRoutingConfig;
 	return createServeOptions(
 		{
 			'/nodes': {
@@ -39,7 +44,7 @@ function _initRouting(_config: unknown) {
 	);
 }
 
-export const initRouting = _initRouting as (config: unknown) => ServeOptions<MatterRoutes>;
+export const initRouting = _initRouting as (config: unknown) => ServeOptions<unknown>;
 
 export type MatterRoutes =
 	ReturnType<typeof _initRouting> extends ServeOptions<infer R> ? R : never;

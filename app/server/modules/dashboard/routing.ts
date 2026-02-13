@@ -1,5 +1,6 @@
 import { createServeOptions, staticResponse } from '../../lib/routes';
 import dashboardHtml from '../../../client/dashboard/index.html';
+import type { CommissionableDevice } from '@matter/protocol';
 import { CLIENT_FOLDER, ROOT } from '../../lib/constants';
 import { QrPairingCodeCodec } from '@matter/main/types';
 import { serveStatic } from '../../lib/serve-static';
@@ -78,17 +79,19 @@ async function _initRouting({ modules, wsPublish }: ModuleConfig) {
 							type: 'startDiscovery',
 						} satisfies DashboardWebsocketServerMessage)
 					);
-					await matterClient.discoverCommissionableDevices((device) => {
-						void wsPublish(
-							JSON.stringify({
-								type: 'commissionableDevices',
-								device: {
-									id: device.deviceIdentifier,
-									discriminator: (device as unknown as { SD: number }).SD,
-								},
-							} satisfies DashboardWebsocketServerMessage)
-						);
-					});
+					await matterClient.discoverCommissionableDevices(
+						(device: CommissionableDevice) => {
+							void wsPublish(
+								JSON.stringify({
+									type: 'commissionableDevices',
+									device: {
+										id: device.deviceIdentifier,
+										discriminator: (device as unknown as { SD: number }).SD,
+									},
+								} satisfies DashboardWebsocketServerMessage)
+							);
+						}
+					);
 					activeDiscoveries.delete(discoveryId);
 					if (activeDiscoveries.size === 0) {
 						await wsPublish(

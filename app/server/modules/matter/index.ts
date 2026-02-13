@@ -1,4 +1,5 @@
 import { SettablePromise } from '../../lib/settable-promise';
+import type { ServeOptions } from '../../lib/routes';
 import { DeviceSource } from '../device/device';
 import { MatterServer } from './server/server';
 import type { ModuleConfig } from '../modules';
@@ -10,7 +11,7 @@ export const Matter = new (class Matter extends ModuleMeta {
 
 	public server = new SettablePromise<MatterServer>();
 
-	public init(config: ModuleConfig) {
+	public init(config: ModuleConfig): { serve: ServeOptions<unknown> } {
 		const matterServer = new MatterServer();
 		this.server.set(matterServer);
 		if (!config.config.noMatter) {
