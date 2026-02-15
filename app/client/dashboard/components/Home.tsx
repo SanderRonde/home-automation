@@ -845,7 +845,7 @@ export const Home = React.memo((props: HomeProps): React.ReactNode => {
 								setTemperatureExpanded(false);
 							}}
 						/>
-						<AirQualityDisplay />
+						<AirQualityDisplay pushDetailView={pushDetailView} />
 					</Box>
 				</Box>
 				<HomeLayoutView
