@@ -23,13 +23,9 @@ export interface SystemCommands {
 	stopServer?: string;
 
 	/**
-	 * Command to reboot the system.
-	 * Example: "sudo reboot"
-	 */
-	rebootSystem?: string;
-
-	/**
-	 * @deprecated No longer used. Kill chromium is now handled directly by the endpoint.
+	 * Command to kill Chromium processes (e.g. for kiosk mode).
+	 * When set, the endpoint runs this command; when unset, it kills only the current user's Chromium.
+	 * Example: "sudo /path/to/scripts/kill-chromium.sh"
 	 */
 	killChromium?: string;
 }
@@ -58,7 +54,7 @@ export interface SystemConfigResponse {
 	commands: {
 		restartServer: string | null;
 		stopServer: string | null;
-		rebootSystem: string | null;
+		killChromium: string | null;
 	};
 	logFilePath: string | null;
 }

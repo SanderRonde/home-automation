@@ -21,7 +21,6 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import React, { useState, useEffect, useRef } from 'react';
-import ReplayIcon from '@mui/icons-material/Replay';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { apiGet, apiPost } from '../../lib/fetch';
 import { parseAnsiLine } from '../lib/ansi';
@@ -30,12 +29,12 @@ interface SystemConfig {
 	commands: {
 		restartServer: string | null;
 		stopServer: string | null;
-		rebootSystem: string | null;
+		killChromium: string | null;
 	};
 	logFilePath: string | null;
 }
 
-type CommandType = 'restart' | 'stop' | 'reboot' | 'killChromium' | 'restartMatter';
+type CommandType = 'restart' | 'stop' | 'killChromium' | 'restartMatter';
 
 export const SystemAdmin = (): JSX.Element => {
 	const [config, setConfig] = useState<SystemConfig | null>(null);
@@ -161,11 +160,6 @@ export const SystemAdmin = (): JSX.Element => {
 				message:
 					'Are you sure you want to stop the server? You will lose access to the dashboard until the server is manually started again.',
 			},
-			reboot: {
-				title: 'Reboot System',
-				message:
-					'Are you sure you want to reboot the entire system? All services will be temporarily unavailable.',
-			},
 			killChromium: {
 				title: 'Kill Chromium',
 				message:
@@ -197,11 +191,10 @@ export const SystemAdmin = (): JSX.Element => {
 
 		const endpoints: Record<
 			CommandType,
-			'/restart' | '/stop' | '/reboot' | '/kill-chromium' | '/restart-matter'
+			'/restart' | '/stop' | '/kill-chromium' | '/restart-matter'
 		> = {
 			restart: '/restart',
 			stop: '/stop',
-			reboot: '/reboot',
 			killChromium: '/kill-chromium',
 			restartMatter: '/restart-matter',
 		};
@@ -209,7 +202,6 @@ export const SystemAdmin = (): JSX.Element => {
 		const successMessages: Record<CommandType, string> = {
 			restart: 'Server restart initiated. Please wait...',
 			stop: 'Server stop initiated.',
-			reboot: 'System reboot initiated. Please wait...',
 			killChromium: 'Chromium processes killed successfully.',
 			restartMatter: 'Matter server restarted successfully.',
 		};
@@ -226,8 +218,8 @@ export const SystemAdmin = (): JSX.Element => {
 				setError(errorData.message || `Failed to execute ${type} command`);
 			}
 		} catch (err) {
-			// For restart/stop/reboot, we might lose connection which is expected
-			if (type === 'restart' || type === 'stop' || type === 'reboot') {
+			// For restart/stop, we might lose connection which is expected
+			if (type === 'restart' || type === 'stop') {
 				setSuccess(successMessages[type]);
 				setTimeout(() => setSuccess(null), 5000);
 			} else {
@@ -324,8 +316,8 @@ export const SystemAdmin = (): JSX.Element => {
 								command={config?.commands.stopServer ?? null}
 							/>
 							<CommandStatus
-								label="Reboot System"
-								command={config?.commands.rebootSystem ?? null}
+								label="Kill Chromium"
+								command={config?.commands.killChromium ?? null}
 							/>
 						</Paper>
 					</CardContent>
@@ -472,32 +464,6 @@ export const SystemAdmin = (): JSX.Element => {
 					</CardContent>
 				</Card>
 
-				{/* System Controls Card */}
-				<Card>
-					<CardContent>
-						<Typography variant="h6" gutterBottom>
-							System Controls
-						</Typography>
-						<Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-							<Button
-								variant="contained"
-								color="error"
-								startIcon={
-									executing === 'reboot' ? (
-										<CircularProgress size={20} color="inherit" />
-									) : (
-										<ReplayIcon />
-									)
-								}
-								onClick={() => openConfirmDialog('reboot')}
-								disabled={!config?.commands.rebootSystem || executing !== null}
-							>
-								Reboot System
-							</Button>
-						</Stack>
-					</CardContent>
-				</Card>
-
 				{/* Kiosk Controls Card */}
 				<Card>
 					<CardContent>
@@ -506,7 +472,9 @@ export const SystemAdmin = (): JSX.Element => {
 						</Typography>
 						<Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
 							Manage the kiosk display and Chromium browser processes. Kill Chromium
-							terminates all running Chromium processes (no configuration required).
+							terminates Chromium: if a command is configured in{' '}
+							<code>database/system.json</code> (e.g. sudo script), it runs that;
+							otherwise it kills only the current user&apos;s Chromium.
 						</Typography>
 						<Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
 							<Button
@@ -554,7 +522,7 @@ export const SystemAdmin = (): JSX.Element => {
 										commands: {
 											restartServer: 'systemctl restart home-automation',
 											stopServer: 'systemctl stop home-automation',
-											rebootSystem: 'sudo reboot',
+											killChromium: 'sudo /path/to/scripts/kill-chromium.sh',
 										},
 										logFilePath: '/var/log/home-automation/server.log',
 									},

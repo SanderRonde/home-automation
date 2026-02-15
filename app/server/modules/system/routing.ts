@@ -192,12 +192,12 @@ function _initRouting(config: ModuleConfig) {
 			const errorMessage = error instanceof Error ? error.message : String(error);
 			logTag('SYSTEM', 'red', `${commandName} failed: ${errorMessage}`);
 
-			// For stop/restart/reboot commands, the process might exit before returning
+			// For stop/restart/kill-chromium commands, the process might exit before returning
 			// This is expected behavior, so we still return success
 			if (
 				commandName === 'Stop server' ||
 				commandName === 'Restart server' ||
-				commandName === 'Reboot system'
+				commandName === 'Kill chromium'
 			) {
 				return {
 					success: true,
@@ -226,7 +226,7 @@ function _initRouting(config: ModuleConfig) {
 					commands: {
 						restartServer: commands.restartServer || null,
 						stopServer: commands.stopServer || null,
-						rebootSystem: commands.rebootSystem || null,
+						killChromium: commands.killChromium || null,
 					},
 					logFilePath: data.logFilePath || null,
 				};
@@ -370,62 +370,40 @@ function _initRouting(config: ModuleConfig) {
 			},
 
 			/**
-			 * Reboot the system.
-			 */
-			'/reboot': {
-				POST: async (_req, _server, { json, error }) => {
-					const data = db.current();
-					const command = data.commands?.rebootSystem;
-
-					if (!command) {
-						return error(
-							{
-								success: false,
-								message:
-									'Reboot command not configured. Please configure it in the system.json database file.',
-							},
-							400
-						);
-					}
-
-					const result = await executeCommand(command, 'Reboot system');
-					if (result.success) {
-						return json(result);
-					}
-					return error(result, 500);
-				},
-			},
-
-			/**
 			 * Kill chromium processes (for kiosk mode screen management).
-			 * Replicates the logic from scripts/kill-chromium.sh
+			 * If commands.killChromium is set in the database, runs that command (e.g. sudo script).
+			 * Otherwise runs pgrep/killall in-process (current user only).
 			 */
 			'/kill-chromium': {
 				POST: async (_req, _server, { json }) => {
-					logTag('SYSTEM', 'yellow', 'Starting chromium cleanup...');
+					const data = db.current();
+					const command = data.commands?.killChromium?.trim();
 
+					if (command) {
+						const result = await executeCommand(command, 'Kill chromium');
+						return json(result);
+					}
+
+					// Fallback: in-process kill (current user only)
+					logTag('SYSTEM', 'yellow', 'Starting chromium cleanup (in-process)...');
 					try {
-						// Check if chromium is running using pgrep (same as the kill-chromium.sh script)
 						const checkResult = await $`pgrep -x chromium`.quiet().nothrow();
 						const isRunning = checkResult.exitCode === 0;
 
 						if (isRunning) {
 							logTag('SYSTEM', 'yellow', 'Chromium processes found, killing...');
-							// Kill chromium processes (same as the script)
 							await $`killall chromium`.quiet().nothrow();
 							logTag('SYSTEM', 'green', 'Chromium processes killed successfully');
-
 							return json({
 								success: true,
 								message: 'Chromium processes killed successfully',
 							});
-						} else {
-							logTag('SYSTEM', 'green', 'No chromium processes found');
-							return json({
-								success: true,
-								message: 'No chromium processes found',
-							});
 						}
+						logTag('SYSTEM', 'green', 'No chromium processes found');
+						return json({
+							success: true,
+							message: 'No chromium processes found',
+						});
 					} catch (error) {
 						const errorMessage = error instanceof Error ? error.message : String(error);
 						logTag('SYSTEM', 'red', 'Kill chromium failed:', errorMessage);
