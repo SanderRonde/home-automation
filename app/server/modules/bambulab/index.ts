@@ -77,7 +77,6 @@ export const BambuLab = new (class BambuLab extends ModuleMeta {
 			});
 
 			await this._api.connect();
-			logTag('bambulab', 'green', `Connected to printer at ${printerConfig.ip}`);
 		} catch (error) {
 			logTag('bambulab', 'red', 'Failed to connect to printer:', error);
 			this._api = null;
