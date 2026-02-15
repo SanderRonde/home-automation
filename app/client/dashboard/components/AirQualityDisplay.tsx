@@ -2,9 +2,10 @@ import type {
 	DashboardDeviceClusterAirQualityGroup,
 	CO2LevelValue,
 } from '../../../server/modules/device/routing';
+import { Box, Card, CardActionArea, CardContent, Typography } from '@mui/material';
 import { DeviceClusterName } from '../../../server/modules/device/cluster';
-import { Box, Card, CardContent, Typography } from '@mui/material';
 import { Air as AirIcon } from '@mui/icons-material';
+import type { HomeDetailView } from './Home';
 import { useDevices } from './Devices';
 import React from 'react';
 
@@ -29,7 +30,11 @@ const getAirQualityInfo = (
 	}
 };
 
-export const AirQualityDisplay = (): JSX.Element | null => {
+interface AirQualityDisplayProps {
+	pushDetailView: (view: HomeDetailView) => void;
+}
+
+export const AirQualityDisplay = (props: AirQualityDisplayProps): JSX.Element | null => {
 	const { devices } = useDevices();
 
 	// Find the air quality data from devices
@@ -47,6 +52,8 @@ export const AirQualityDisplay = (): JSX.Element | null => {
 							concentration: co2Cluster.concentration,
 							level: co2Cluster.level,
 							deviceName: device.name,
+							deviceId: device.uniqueId,
+							clusterName: cluster.name,
 						};
 					}
 				}
@@ -62,6 +69,14 @@ export const AirQualityDisplay = (): JSX.Element | null => {
 
 	const { label, iconColor } = getAirQualityInfo(airQualityData.level);
 
+	const handleClick = React.useCallback(() => {
+		props.pushDetailView({
+			type: 'device',
+			deviceId: airQualityData.deviceId,
+			clusterName: airQualityData.clusterName,
+		});
+	}, [props, airQualityData.deviceId, airQualityData.clusterName]);
+
 	return (
 		<Box>
 			<Card
@@ -71,42 +86,48 @@ export const AirQualityDisplay = (): JSX.Element | null => {
 					minWidth: 120,
 					boxShadow: 3,
 					transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+					'&:hover': {
+						boxShadow: 6,
+						transform: 'translateY(-2px)',
+					},
 				}}
 			>
-				<CardContent
-					sx={{
-						display: 'flex',
-						alignItems: 'center',
-						gap: 1,
-						py: { xs: 1, sm: 1.5 },
-						px: { xs: 1.5, sm: 2 },
-						'&:last-child': {
-							pb: { xs: 1, sm: 1.5 },
-						},
-					}}
-				>
-					<AirIcon
+				<CardActionArea onClick={handleClick}>
+					<CardContent
 						sx={{
-							fontSize: { xs: 24, sm: 28 },
-							color: iconColor,
+							display: 'flex',
+							alignItems: 'center',
+							gap: 1,
+							py: { xs: 1, sm: 1.5 },
+							px: { xs: 1.5, sm: 2 },
+							'&:last-child': {
+								pb: { xs: 1, sm: 1.5 },
+							},
 						}}
-					/>
-					<Box sx={{ display: 'flex', flexDirection: 'column' }}>
-						<Typography variant="h6" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
-							{Math.round(airQualityData.concentration)} ppm
-						</Typography>
-						<Typography
-							variant="caption"
+					>
+						<AirIcon
 							sx={{
+								fontSize: { xs: 24, sm: 28 },
 								color: iconColor,
-								fontWeight: 500,
-								lineHeight: 1,
 							}}
-						>
-							{label}
-						</Typography>
-					</Box>
-				</CardContent>
+						/>
+						<Box sx={{ display: 'flex', flexDirection: 'column' }}>
+							<Typography variant="h6" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
+								{Math.round(airQualityData.concentration)} ppm
+							</Typography>
+							<Typography
+								variant="caption"
+								sx={{
+									color: iconColor,
+									fontWeight: 500,
+									lineHeight: 1,
+								}}
+							>
+								{label}
+							</Typography>
+						</Box>
+					</CardContent>
+				</CardActionArea>
 			</Card>
 		</Box>
 	);
