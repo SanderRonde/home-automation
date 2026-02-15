@@ -8,6 +8,7 @@ import type { BrandedResponse, RouteBodyBrand } from '../../server/lib/routes';
 import type { WakelightRoutes } from '../../server/modules/wakelight/routing';
 import type { DashboardRoutes } from '../../server/modules/dashboard/routing';
 import type { LocationRoutes } from '../../server/modules/location/routing';
+import type { FilamentRoutes } from '../../server/modules/filament/routing';
 import type { BambuLabRoutes } from '../../server/modules/bambulab/routing';
 import type { WebhookRoutes } from '../../server/modules/webhook/routing';
 import type { EwelinkRoutes } from '../../server/modules/ewelink/routing';
@@ -252,6 +253,7 @@ export type RoutesForModules = {
 	webhook: WebhookRoutes;
 	wled: WledRoutes;
 	homewizard: HomeWizardRoutes;
+	filament: FilamentRoutes;
 };
 
 export type ReturnTypeForApi<

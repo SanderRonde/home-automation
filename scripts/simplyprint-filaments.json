@@ -1,0 +1,104 @@
+[
+	{
+		"name": "Black Gold",
+		"brandMaterial": "SUNLU PLA Silk PLA+ Dual-Color",
+		"maxWeight": 1000,
+		"percentage": 90
+	},
+	{ "name": "Beige", "brandMaterial": "Bambu Lab PLA Basic", "maxWeight": 1000, "percentage": 5 },
+	{ "name": "Red", "brandMaterial": "Polyterra PLA Basic", "maxWeight": 1000, "percentage": 80 },
+	{
+		"name": "Green / Blue",
+		"brandMaterial": "Polyterra PLA Basic",
+		"maxWeight": 1000,
+		"percentage": 10
+	},
+	{
+		"name": "Cyan / White",
+		"brandMaterial": "Polyterra PLA Basic",
+		"maxWeight": 1000,
+		"percentage": 30
+	},
+	{
+		"name": "Yellow",
+		"brandMaterial": "Bambu Lab PLA Basic",
+		"maxWeight": 1000,
+		"percentage": 100
+	},
+	{
+		"name": "Cyan",
+		"brandMaterial": "Bambu Lab PLA Basic",
+		"maxWeight": 1000,
+		"percentage": 100
+	},
+	{
+		"name": "Transparent",
+		"brandMaterial": "Unknown PLA Basic",
+		"maxWeight": 1000,
+		"percentage": 5
+	},
+	{
+		"name": "Blue",
+		"brandMaterial": "Polyterra PLA Basic",
+		"maxWeight": 1000,
+		"percentage": 100
+	},
+	{
+		"name": "Orange / black",
+		"brandMaterial": "Polyterra PLA Basic",
+		"maxWeight": 1000,
+		"percentage": 80
+	},
+	{
+		"name": "Jade White",
+		"brandMaterial": "Bambu Lab PLA Basic",
+		"maxWeight": 1000,
+		"percentage": 100
+	},
+	{
+		"name": "Purple",
+		"brandMaterial": "Bambu Lab PLA Basic",
+		"maxWeight": 1000,
+		"percentage": 100
+	},
+	{
+		"name": "Orange",
+		"brandMaterial": "Polyterra Matte PLA",
+		"maxWeight": 1000,
+		"percentage": 20
+	},
+	{ "name": "Black", "brandMaterial": "real PLA Basic", "maxWeight": 500, "percentage": 50 },
+	{ "name": "Grey", "brandMaterial": "Unknown PLA Basic", "maxWeight": 1000, "percentage": 50 },
+	{
+		"name": "Cocoa Brown",
+		"brandMaterial": "Bambu Lab PLA Basic",
+		"maxWeight": 1000,
+		"percentage": 80
+	},
+	{
+		"name": "Maroon Red",
+		"brandMaterial": "Bambu Lab PLA Basic",
+		"maxWeight": 1000,
+		"percentage": 100
+	},
+	{
+		"name": "Indigo Purple",
+		"brandMaterial": "Bambu Lab PLA Basic",
+		"maxWeight": 1000,
+		"percentage": 100
+	},
+	{ "name": "Red", "brandMaterial": "real PLA", "maxWeight": 500, "percentage": 40 },
+	{ "name": "Black", "brandMaterial": "Basicfil ABS", "maxWeight": 500, "percentage": 100 },
+	{
+		"name": "Alpine Green Sparkle",
+		"brandMaterial": "Bambu Lab PLA Sparkle",
+		"maxWeight": 1000,
+		"percentage": 100
+	},
+	{
+		"name": "Bambu Green",
+		"brandMaterial": "Bambu Lab PLA Basic",
+		"maxWeight": 1000,
+		"percentage": 50
+	}
+]

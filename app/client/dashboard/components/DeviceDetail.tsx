@@ -20,19 +20,6 @@ import type {
 	DashboardDeviceClusterThreeDPrinter,
 } from '../../../server/modules/device/routing';
 import {
-	Chart as ChartJS,
-	CategoryScale,
-	LinearScale,
-	PointElement,
-	LineElement,
-	Title,
-	Tooltip,
-	Legend,
-	Filler,
-	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-	// @ts-ignore - chart.js is an ESM module, Bun handles it at runtime
-} from 'chart.js';
-import {
 	Box,
 	Card,
 	CardContent,
@@ -53,7 +40,24 @@ import {
 	Button,
 	LinearProgress,
 	Dialog,
+	DialogTitle,
+	DialogContent,
+	DialogActions,
+	ListItemButton,
 } from '@mui/material';
+import {
+	Chart as ChartJS,
+	CategoryScale,
+	LinearScale,
+	PointElement,
+	LineElement,
+	Title,
+	Tooltip,
+	Legend,
+	Filler,
+	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+	// @ts-ignore - chart.js is an ESM module, Bun handles it at runtime
+} from 'chart.js';
 import {
 	pageVariants,
 	cardVariants,
@@ -65,15 +69,20 @@ import {
 import { DeviceClusterName, ThermostatMode } from '../../../server/modules/device/cluster';
 import { WindowCoveringVisualization } from './WindowCoveringVisualization';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import { FilamentModal, SpoolFormDialog } from './FilamentModal';
+import type { FilamentSpool } from '../../../../types/filament';
 import CircularSlider from '@fseehawer/react-circular-slider';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-import React, { useState, useEffect, useRef } from 'react';
+import Inventory2Icon from '@mui/icons-material/Inventory2';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { DeviceActionsCard } from './DeviceActionsCard';
 import CloseIcon from '@mui/icons-material/Close';
 import { apiGet, apiPost } from '../../lib/fetch';
+import EditIcon from '@mui/icons-material/Edit';
+import AddIcon from '@mui/icons-material/Add';
 import { ColorPresets } from './ColorPresets';
 import { Wheel } from '@uiw/react-color';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -5964,12 +5973,74 @@ function hexLuminance(hex: string): number {
 
 const ThreeDPrinterDetail = (props: ThreeDPrinterDetailProps): JSX.Element => {
 	const cluster = props.cluster;
+	const deviceId = props.device.uniqueId;
 	const roomColor = props.device.roomColor || '#555';
 	const lightCluster = props.device.flatAllClusters.find(
 		(c) => c.name === DeviceClusterName.ON_OFF
 	) as DashboardDeviceClusterOnOff | undefined;
 	const isLightOn = lightCluster?.isOn ?? false;
 	const [videoFullscreen, setVideoFullscreen] = useState(false);
+	const [assignmentSlot, setAssignmentSlot] = useState<number | null>(null);
+	const [pickerSpools, setPickerSpools] = useState<FilamentSpool[]>([]);
+	const [pickerLoading, setPickerLoading] = useState(false);
+	const [pickerFormOpen, setPickerFormOpen] = useState(false);
+	const [pickerFormSpool, setPickerFormSpool] = useState<FilamentSpool | undefined>(undefined);
+	const [pickerFormSaving, setPickerFormSaving] = useState(false);
+	const [filamentModalOpen, setFilamentModalOpen] = useState(false);
+
+	const loadPickerSpools = useCallback(async () => {
+		setPickerLoading(true);
+		try {
+			const response = await apiGet('filament', '/spools/list', {});
+			if (response.ok) {
+				const data = await response.json();
+				const d = data as { spools?: FilamentSpool[] } | undefined;
+				setPickerSpools(d?.spools ?? []);
+			} else {
+				setPickerSpools([]);
+			}
+		} catch {
+			setPickerSpools([]);
+		} finally {
+			setPickerLoading(false);
+		}
+	}, []);
+
+	useEffect(() => {
+		if (assignmentSlot !== null) {
+			void loadPickerSpools();
+		}
+	}, [assignmentSlot, loadPickerSpools]);
+
+	const handleAssignFilament = (filamentId: string): void => {
+		if (assignmentSlot === null) {
+			return;
+		}
+		void apiPost(
+			'filament',
+			'/assignments/:deviceId/:slotIndex/assign',
+			{ deviceId, slotIndex: String(assignmentSlot) },
+			{ filamentId }
+		).then((response) => {
+			if (response.ok) {
+				setAssignmentSlot(null);
+			}
+		});
+	};
+
+	const handleUnassignSlot = (): void => {
+		if (assignmentSlot === null) {
+			return;
+		}
+		void apiPost('filament', '/assignments/:deviceId/:slotIndex/unassign', {
+			deviceId,
+			slotIndex: String(assignmentSlot),
+		}).then((response) => {
+			if (response.ok) {
+				setAssignmentSlot(null);
+			}
+		});
+	};
 
 	const currentFileName =
 		cluster.currentFile !== undefined && cluster.currentFile !== null
@@ -6021,14 +6092,24 @@ const ThreeDPrinterDetail = (props: ThreeDPrinterDetailProps): JSX.Element => {
 							overflow: 'visible',
 						}}
 					>
-						<CardContent>
-							<Box sx={{ position: 'relative', width: '100%', pt: 2, pb: 2 }}>
+						<CardContent sx={{ pr: 3 }}>
+							<Box sx={{ pt: 2, pb: 2 }}>
+								<Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+									<Button
+										variant="outlined"
+										size="small"
+										startIcon={<Inventory2Icon />}
+										onClick={() => setFilamentModalOpen(true)}
+									>
+										Filament inventory
+									</Button>
+								</Box>
 								<Box
 									sx={{
+										position: 'relative',
 										width: '100%',
 										maxWidth: 640,
 										mx: 'auto',
-										position: 'relative',
 										boxShadow: isLightOn
 											? '0 0 40px 12px rgba(254, 240, 138, 0.45)'
 											: undefined,
@@ -6086,12 +6167,24 @@ const ThreeDPrinterDetail = (props: ThreeDPrinterDetailProps): JSX.Element => {
 														? tray.remaining
 														: -1;
 												const isActive = cluster.usedTray === i;
+												const assignedFilamentOverlay =
+													!empty && tray && 'assignedFilament' in tray
+														? (
+																tray as {
+																	assignedFilament?: FilamentSpool;
+																}
+															).assignedFilament
+														: undefined;
 												const useDarkText =
 													!empty && hexLuminance(color) > 0.45;
 												const textColor = useDarkText ? '#111' : '#fff';
 												return (
 													<Box
 														key={i}
+														onClick={() => setAssignmentSlot(i)}
+														role="button"
+														aria-label={`Assign filament to slot A${i + 1}`}
+														title={`Assign filament to slot A${i + 1}`}
 														sx={{
 															flex: 1,
 															position: 'relative',
@@ -6104,6 +6197,7 @@ const ThreeDPrinterDetail = (props: ThreeDPrinterDetailProps): JSX.Element => {
 															boxShadow: isActive
 																? '0 0 12px rgba(254,240,138,0.5)'
 																: undefined,
+															cursor: 'pointer',
 														}}
 													>
 														{/* Filament fill from bottom by remaining % */}
@@ -6139,8 +6233,9 @@ const ThreeDPrinterDetail = (props: ThreeDPrinterDetailProps): JSX.Element => {
 														>
 															<Box
 																sx={{
-																	backgroundColor:
-																		'rgba(0,0,0,0.5)',
+																	backgroundColor: empty
+																		? 'rgba(0,0,0,0.6)'
+																		: 'rgba(0,0,0,0.5)',
 																	px: 0.75,
 																	py: 0.25,
 																	borderRadius: 1,
@@ -6161,8 +6256,9 @@ const ThreeDPrinterDetail = (props: ThreeDPrinterDetailProps): JSX.Element => {
 																		variant="caption"
 																		sx={{
 																			color: textColor,
-																			fontSize: '0.65rem',
-																			opacity: 0.9,
+																			fontSize: '0.7rem',
+																			fontWeight: 600,
+																			opacity: 1,
 																		}}
 																	>
 																		Empty
@@ -6204,6 +6300,19 @@ const ThreeDPrinterDetail = (props: ThreeDPrinterDetailProps): JSX.Element => {
 																					? `${remaining}%`
 																					: '?%'}
 																			</Typography>
+																			{assignedFilamentOverlay && (
+																				<Typography
+																					variant="caption"
+																					sx={{
+																						color: textColor,
+																						fontSize:
+																							'0.6rem',
+																						opacity: 0.9,
+																					}}
+																				>
+																					Tracked
+																				</Typography>
+																			)}
 																		</div>
 																	)
 																)}
@@ -6461,15 +6570,23 @@ const ThreeDPrinterDetail = (props: ThreeDPrinterDetailProps): JSX.Element => {
 											: useDarkText
 												? '#111'
 												: '#fff';
+										const assignedFilament =
+											!tray.empty && 'assignedFilament' in tray
+												? (tray as { assignedFilament?: FilamentSpool })
+														.assignedFilament
+												: undefined;
 										if (tray.empty) {
 											return (
 												<Card
 													key={index}
+													onClick={() => setAssignmentSlot(index)}
 													sx={{
 														p: 1.5,
 														backgroundColor: bgColor,
 														borderRadius: 2,
 														border: '1px solid rgba(255,255,255,0.1)',
+														borderStyle: 'dashed',
+														cursor: 'pointer',
 													}}
 												>
 													<Typography
@@ -6481,8 +6598,15 @@ const ThreeDPrinterDetail = (props: ThreeDPrinterDetailProps): JSX.Element => {
 													<Typography
 														variant="body2"
 														color="text.secondary"
+														fontWeight={500}
 													>
 														Empty
+													</Typography>
+													<Typography
+														variant="caption"
+														color="text.secondary"
+													>
+														Assign filament
 													</Typography>
 												</Card>
 											);
@@ -6490,6 +6614,7 @@ const ThreeDPrinterDetail = (props: ThreeDPrinterDetailProps): JSX.Element => {
 										return (
 											<Card
 												key={index}
+												onClick={() => setAssignmentSlot(index)}
 												sx={{
 													p: 1.5,
 													borderRadius: 2,
@@ -6501,6 +6626,7 @@ const ThreeDPrinterDetail = (props: ThreeDPrinterDetailProps): JSX.Element => {
 													boxShadow: isActive
 														? '0 0 12px rgba(254,240,138,0.5)'
 														: undefined,
+													cursor: 'pointer',
 												}}
 											>
 												<Box
@@ -6541,6 +6667,8 @@ const ThreeDPrinterDetail = (props: ThreeDPrinterDetailProps): JSX.Element => {
 													{tray.remaining >= 0
 														? `${tray.remaining}% left`
 														: 'Uncalibrated'}
+													{assignedFilament ? ' · Tracked' : ''}
+													{' · Assign/change'}
 												</Typography>
 											</Card>
 										);
@@ -6629,6 +6757,121 @@ const ThreeDPrinterDetail = (props: ThreeDPrinterDetailProps): JSX.Element => {
 						/>
 					)}
 				</Dialog>
+
+				<Dialog
+					open={assignmentSlot !== null}
+					onClose={() => setAssignmentSlot(null)}
+					maxWidth="xs"
+					fullWidth
+				>
+					<DialogTitle>
+						Assign filament to slot A{assignmentSlot !== null ? assignmentSlot + 1 : ''}
+					</DialogTitle>
+					<DialogContent>
+						{pickerLoading ? (
+							<Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+								<CircularProgress />
+							</Box>
+						) : (
+							<Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+								<Button
+									variant="outlined"
+									startIcon={<AddIcon />}
+									onClick={() => {
+										setPickerFormSpool(undefined);
+										setPickerFormOpen(true);
+									}}
+									sx={{ alignSelf: 'flex-start' }}
+								>
+									Add filament
+								</Button>
+								<List sx={{ pt: 0 }}>
+									{assignmentSlot !== null &&
+										cluster.ams?.trays[assignmentSlot] &&
+										!cluster.ams.trays[assignmentSlot].empty &&
+										'assignedFilament' in cluster.ams.trays[assignmentSlot] &&
+										(
+											cluster.ams.trays[assignmentSlot] as {
+												assignedFilament?: FilamentSpool;
+											}
+										).assignedFilament && (
+											<ListItemButton onClick={handleUnassignSlot}>
+												<ListItemText
+													primary="Clear assignment"
+													secondary="Remove tracked filament from this slot"
+												/>
+											</ListItemButton>
+										)}
+									{pickerSpools.map((spool) => (
+										<ListItemButton
+											key={spool.id}
+											onClick={() => handleAssignFilament(spool.id)}
+											sx={{ pr: 6 }}
+										>
+											<Box
+												sx={{
+													width: 24,
+													height: 24,
+													borderRadius: 1,
+													backgroundColor: spool.color,
+													mr: 1.5,
+													flexShrink: 0,
+													border: '1px solid',
+													borderColor: 'divider',
+												}}
+											/>
+											<ListItemText
+												primary={`${spool.type}${spool.specialProperties ? ` (${spool.specialProperties})` : ''}`}
+												secondary={`${spool.currentWeight}g / ${spool.maxWeight}g · ${spool.percentage.toFixed(0)}%`}
+											/>
+											<IconButton
+												size="small"
+												aria-label="Edit spool"
+												onClick={(e) => {
+													e.stopPropagation();
+													setPickerFormSpool(spool);
+													setPickerFormOpen(true);
+												}}
+												sx={{ position: 'absolute', right: 8 }}
+											>
+												<EditIcon fontSize="small" />
+											</IconButton>
+										</ListItemButton>
+									))}
+								</List>
+							</Box>
+						)}
+						{pickerSpools.length === 0 && !pickerLoading && (
+							<Typography color="text.secondary" sx={{ py: 2 }}>
+								No filament in inventory. Add one above or open Filament Inventory.
+							</Typography>
+						)}
+					</DialogContent>
+					<DialogActions>
+						<Button onClick={() => setAssignmentSlot(null)}>Cancel</Button>
+					</DialogActions>
+				</Dialog>
+
+				<SpoolFormDialog
+					open={pickerFormOpen}
+					onClose={() => {
+						setPickerFormOpen(false);
+						setPickerFormSpool(undefined);
+					}}
+					existingSpool={pickerFormSpool}
+					onSaved={() => {
+						setPickerFormOpen(false);
+						setPickerFormSpool(undefined);
+						void loadPickerSpools();
+					}}
+					saving={pickerFormSaving}
+					setSaving={setPickerFormSaving}
+				/>
+
+				<FilamentModal
+					open={filamentModalOpen}
+					onClose={() => setFilamentModalOpen(false)}
+				/>
 			</Box>
 		</motion.div>
 	);

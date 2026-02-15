@@ -20,6 +20,7 @@ import {
 	PhoneAndroid as PhoneAndroidIcon,
 	Lock as LockIcon,
 	Print as PrintIcon,
+	Inventory2 as Inventory2Icon,
 } from '@mui/icons-material';
 import {
 	Drawer,
@@ -113,6 +114,11 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 				{ text: 'Tuya', icon: <CloudIcon />, id: SidebarTab.TUYA },
 				{ text: 'Nuki', icon: <LockIcon />, id: SidebarTab.NUKI },
 				{ text: 'Bambu Lab', icon: <PrintIcon />, id: SidebarTab.BAMBULAB },
+				{
+					text: 'Filament Inventory',
+					icon: <Inventory2Icon />,
+					id: SidebarTab.FILAMENT,
+				},
 				{ text: 'LED Sources', icon: <LightbulbIcon />, id: SidebarTab.LED_SOURCES },
 			],
 		},
@@ -202,6 +208,7 @@ export enum SidebarTab {
 	TUYA = 'tuya',
 	NUKI = 'nuki',
 	BAMBULAB = 'bambulab',
+	FILAMENT = 'filament',
 	LED_SOURCES = 'led-sources',
 	AI = 'ai',
 	NOTIFICATIONS = 'notifications',

@@ -7,6 +7,7 @@ import { HomeWizard } from './homewizard';
 import { Wakelight } from './wakelight';
 import { Dashboard } from './dashboard';
 import { Location } from './location';
+import { Filament } from './filament';
 import { BambuLab } from './bambulab';
 import { Webhook } from './webhook';
 import { EWeLink } from './ewelink';
@@ -70,6 +71,7 @@ const getModuleObj = () => ({
 	homeDetector: HomeDetector,
 	notification: Notification,
 	bambulab: BambuLab,
+	filament: Filament,
 });
 
 let notified = false;

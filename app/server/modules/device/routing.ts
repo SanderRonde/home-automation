@@ -36,6 +36,7 @@ import type { IncludedIconNames } from '../../../client/dashboard/components/ico
 import type { BrandedRouteHandlerResponse, ServeOptions } from '../../lib/routes';
 import { SceneTriggerType, SceneConditionType } from '../../../../types/scene';
 import { createServeOptions, withRequestBody } from '../../lib/routes';
+import type { FilamentSpool } from '../../../../types/filament';
 import type { DeviceGroup } from '../../../../types/group';
 import { applyPaletteToDevices } from './palette-executor';
 import type { Device, DeviceEndpoint } from './device';
@@ -202,6 +203,7 @@ export type DashboardDeviceClusterThreeDPrinter = DashboardDeviceClusterBase & {
 							color: string;
 							type: string;
 							remaining: number;
+							assignedFilament?: FilamentSpool;
 					  }
 				)[];
 		  }
@@ -1657,6 +1659,28 @@ const getClusterState = async (
 			};
 		}
 		const cluster = _cluster as DeviceThreeDPrinterCluster;
+		const amsRaw = await cluster.ams.get();
+		let ams = amsRaw;
+		if (amsRaw?.trays && modules?.filament) {
+			const filamentAPI = await modules.filament.api.value;
+			const assignments = filamentAPI.getAssignments(deviceId);
+			ams = {
+				...amsRaw,
+				trays: amsRaw.trays.map((tray, index) => {
+					if (tray.empty) {
+						return tray;
+					}
+					const assignment = assignments.find((a) => a.slotIndex === index);
+					const spool = assignment?.filamentId
+						? filamentAPI.getSpool(assignment.filamentId)
+						: undefined;
+					return {
+						...tray,
+						...(spool && { assignedFilament: spool }),
+					};
+				}),
+			};
+		}
 		return {
 			name: clusterName,
 			icon: getClusterIconName(clusterName, api),
@@ -1672,7 +1696,7 @@ const getClusterState = async (
 			currentFile: await cluster.currentFile.get(),
 			usedTray: await cluster.usedTray.get(),
 			videoStreamUrl,
-			ams: await cluster.ams.get(),
+			ams,
 		};
 	}
 	if (clusterName === DeviceClusterName.WASHER) {

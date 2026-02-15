@@ -7,6 +7,7 @@ import { WakelightConfig } from './components/WakelightConfig';
 import { BambuLabConfig } from './components/BambuLabConfig';
 import { Notifications } from './components/Notifications';
 import { LocationPanel } from './components/LocationPanel';
+import { FilamentModal } from './components/FilamentModal';
 import { EweLinkConfig } from './components/EweLinkConfig';
 import { AppLayout } from './components/layout/AppLayout';
 import { SidebarTab } from './components/layout/Sidebar';
@@ -159,6 +160,8 @@ function DashboardApp() {
 				return <NukiConfig />;
 			case SidebarTab.BAMBULAB:
 				return <BambuLabConfig />;
+			case SidebarTab.FILAMENT:
+				return <FilamentModal open={true} onClose={() => setCurrentTab(SidebarTab.HOME)} />;
 			case SidebarTab.LED_SOURCES:
 				return <LEDSourcesConfig />;
 			case SidebarTab.AI:

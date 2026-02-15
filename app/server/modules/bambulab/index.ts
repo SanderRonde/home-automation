@@ -1,3 +1,4 @@
+import { DeviceClusterName, type DeviceThreeDPrinterCluster } from '../device/cluster';
 import type { BambuLabDB, BambuLabConfig } from './types';
 import { BambuLabP1PDevice } from './client/device';
 import { logTag } from '../../lib/logging/logger';
@@ -75,6 +76,38 @@ export const BambuLab = new (class BambuLab extends ModuleMeta {
 					})
 				);
 			});
+
+			// Sync AMS tray remaining percentage to filament module
+			const deviceId = device.getUniqueId();
+			const printerCluster = device.clusters.find(
+				(c) => c.getBaseCluster().clusterName === DeviceClusterName.THREE_D_PRINTER
+			) as DeviceThreeDPrinterCluster | undefined;
+			if (printerCluster?.ams) {
+				printerCluster.ams.subscribe((amsData) => {
+					if (!amsData?.trays) {
+						return;
+					}
+					const trays = amsData.trays;
+					void moduleConfig.modules.filament.api.value.then((filamentAPI) => {
+						trays.forEach((tray, index) => {
+							if (tray.empty || ('remaining' in tray && tray.remaining === -1)) {
+								return;
+							}
+							const remaining = 'remaining' in tray ? tray.remaining : undefined;
+							if (remaining === undefined) {
+								return;
+							}
+							const assignment = filamentAPI.getAssignment(deviceId, index);
+							if (assignment?.filamentId) {
+								filamentAPI.updateFilamentPercentage(
+									assignment.filamentId,
+									remaining
+								);
+							}
+						});
+					});
+				});
+			}
 
 			await this._api.connect();
 		} catch (error) {
