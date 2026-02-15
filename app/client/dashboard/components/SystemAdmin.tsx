@@ -153,7 +153,7 @@ export const SystemAdmin = (): JSX.Element => {
 			restart: {
 				title: 'Restart Server',
 				message:
-					'Are you sure you want to restart the server? You will be temporarily disconnected.',
+					'The server will run git pull, then restart. You will be temporarily disconnected. Continue?',
 			},
 			stop: {
 				title: 'Stop Server',

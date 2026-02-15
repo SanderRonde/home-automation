@@ -317,6 +317,7 @@ function _initRouting(config: ModuleConfig) {
 
 			/**
 			 * Restart the server.
+			 * Runs git pull in the project root first; on failure returns error and does not restart.
 			 */
 			'/restart': {
 				POST: async (_req, _server, { json, error }) => {
@@ -331,6 +332,36 @@ function _initRouting(config: ModuleConfig) {
 									'Restart command not configured. Please configure it in the system.json database file.',
 							},
 							400
+						);
+					}
+
+					logTag('SYSTEM', 'yellow', 'Running git pull before restart...');
+					try {
+						const gitResult = await $`git pull`.cwd(process.cwd()).quiet();
+						const output = gitResult.text().trim();
+						if (output) {
+							logTag('SYSTEM', 'green', 'git pull output:', output);
+						}
+					} catch (gitError) {
+						const errMessage =
+							gitError instanceof Error ? gitError.message : String(gitError);
+						let errOutput: string | undefined;
+						if (
+							gitError &&
+							typeof gitError === 'object' &&
+							'stderr' in gitError &&
+							typeof (gitError as { stderr: unknown }).stderr === 'string'
+						) {
+							errOutput = (gitError as { stderr: string }).stderr.trim();
+						}
+						logTag('SYSTEM', 'red', 'git pull failed:', errMessage);
+						return error(
+							{
+								success: false,
+								message: `git pull failed: ${errMessage}`,
+								output: errOutput,
+							},
+							500
 						);
 					}
 
