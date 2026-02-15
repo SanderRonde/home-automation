@@ -62,20 +62,23 @@ export const AirQualityDisplay = (props: AirQualityDisplayProps): JSX.Element | 
 		return null;
 	}, [devices]);
 
+	const handleClick = React.useCallback(() => {
+		if (!airQualityData) {
+			return;
+		}
+		props.pushDetailView({
+			type: 'device',
+			deviceId: airQualityData.deviceId,
+			clusterName: airQualityData.clusterName,
+		});
+	}, [props, airQualityData]);
+
 	// Don't render if no air quality data
 	if (!airQualityData) {
 		return null;
 	}
 
 	const { label, iconColor } = getAirQualityInfo(airQualityData.level);
-
-	const handleClick = React.useCallback(() => {
-		props.pushDetailView({
-			type: 'device',
-			deviceId: airQualityData.deviceId,
-			clusterName: airQualityData.clusterName,
-		});
-	}, [props, airQualityData.deviceId, airQualityData.clusterName]);
 
 	return (
 		<Box>
