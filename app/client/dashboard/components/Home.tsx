@@ -33,6 +33,7 @@ import { ClusterIconButton } from './ClusterIconButton';
 import { AirQualityDisplay } from './AirQualityDisplay';
 import type { Scene } from '../../../../types/scene';
 import { PaletteSelector } from './PaletteSelector';
+import { PrinterDisplay } from './PrinterDisplay';
 import { HomeLayoutView } from './HomeLayoutView';
 import { apiGet, apiPost } from '../../lib/fetch';
 import { EnergyDisplay } from './EnergyDisplay';
@@ -846,6 +847,7 @@ export const Home = React.memo((props: HomeProps): React.ReactNode => {
 							}}
 						/>
 						<AirQualityDisplay pushDetailView={pushDetailView} />
+						<PrinterDisplay pushDetailView={pushDetailView} />
 					</Box>
 				</Box>
 				<HomeLayoutView
@@ -895,6 +897,8 @@ export const Home = React.memo((props: HomeProps): React.ReactNode => {
 					triggeringSceneId={triggeringSceneId}
 					onTrigger={handleTriggerScene}
 				/>
+
+				<PrinterDisplay pushDetailView={pushDetailView} />
 
 				{/* Group Cards */}
 				{homePageGroups.map((groupData, index) => {

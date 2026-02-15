@@ -44,4 +44,4 @@
 - [x] Don't heat when not home - but do somehow pre-heat before getting home
 - [x] Show air state on 2D view
 - [x] Turn off P1P light
-- [ ] 3D filament manager
+- [x] 3D filament manager
