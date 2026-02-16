@@ -140,6 +140,7 @@ export class MatterServer extends Disposable {
 			}
 		}, 1000 * 5);
 
+		const uniqueIdsForNodeId = new Map<string, string>();
 		for (const { node, endpoint, type } of deviceInfos) {
 			const id = `${node.nodeId}:${endpoint.number?.toString()}`;
 			await Promise.race([
@@ -156,27 +157,30 @@ export class MatterServer extends Disposable {
 						info?.attributes.serialNumber?.get?.(),
 					]);
 
+					const overrideUniqueId = uniqueId ?? uniqueIdBridged ?? serialNumber;
 					const deviceUniqueId =
-						uniqueId ??
-						uniqueIdBridged ??
-						serialNumber ??
-						`${node.nodeId}:${endpoint.number ?? 0}`;
+						overrideUniqueId ??
+						`${uniqueIdsForNodeId.get(String(node.nodeId)) ?? node.nodeId}:${endpoint.number ?? 0}`;
+					if (overrideUniqueId) {
+						uniqueIdsForNodeId.set(String(node.nodeId), overrideUniqueId);
+					}
 
 					// Try to find existing device by uniqueId (handles re-pairing with new nodeId)
 					const existingDevice = devicesByUniqueId.get(deviceUniqueId);
 					if (existingDevice) {
-						devices[id] = existingDevice;
+						devices[deviceUniqueId] = existingDevice;
 					} else {
-						devices[id] = await MatterDevice.createDevice(
+						devices[deviceUniqueId] = await MatterDevice.createDevice(
 							node,
 							endpoint,
 							type,
 							uniqueId ?? uniqueIdBridged ?? serialNumber
 						);
 					}
+					return deviceUniqueId;
 				})().then(
-					() => {
-						logTag('matter', 'magenta', 'device updated', id);
+					(deviceUniqueId: string) => {
+						logTag('matter', 'magenta', 'device updated', deviceUniqueId);
 					},
 					(error: unknown) => {
 						logTag('matter', 'red', 'error updating device', id, error);
