@@ -831,6 +831,9 @@ export const Home = React.memo((props: HomeProps): React.ReactNode => {
 					}}
 				>
 					<Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
+						<PrinterDisplay pushDetailView={pushDetailView} />
+					</Box>
+					<Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
 						<TemperatureDisplay
 							expanded={temperatureExpanded}
 							onExpandedChange={(expanded) => {
@@ -839,7 +842,6 @@ export const Home = React.memo((props: HomeProps): React.ReactNode => {
 							}}
 							kiosk={props.kiosk}
 						/>
-						<PrinterDisplay pushDetailView={pushDetailView} />
 					</Box>
 					<Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
 						<EnergyDisplay

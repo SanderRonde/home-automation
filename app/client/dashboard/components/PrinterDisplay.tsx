@@ -77,10 +77,13 @@ export const PrinterDisplay = (props: PrinterDisplayProps): JSX.Element | null =
 							gap: hasProgress ? 1 : 0,
 							py: { xs: 1, sm: 1.5 },
 							px: hasProgress ? { xs: 1.5, sm: 2 } : { xs: 1, sm: 1.5 },
-							minHeight: { xs: '40px', sm: '58px' },
+							minHeight: '58px',
+							minWidth: '58px',
 							'&:last-child': {
 								pb: { xs: 1, sm: 1.5 },
 							},
+							flexDirection: 'row',
+							justifyContent: 'center',
 						}}
 					>
 						<PrintIcon
