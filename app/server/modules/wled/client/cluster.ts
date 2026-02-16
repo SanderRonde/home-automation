@@ -150,6 +150,12 @@ export class WLEDColorControlCluster
 	});
 
 	public setColor = async ({ colors }: { colors: Color[] }): Promise<void> => {
+		// Don't set color if the device is off - setEffect(0) would turn it on,
+		// causing a flash when a scene has both a ColorControl and OnOff=false action
+		if (!this.client.state.on) {
+			return;
+		}
+
 		if (!this.client.state.segments || colors.length === 1) {
 			await this.client.setEffect(0);
 			await this.client.setColor([colors[0].r, colors[0].g, colors[0].b]);
