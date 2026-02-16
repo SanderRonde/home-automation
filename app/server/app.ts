@@ -63,7 +63,8 @@ class WebServer {
 				if (countdown < 0) {
 					clearInterval(interval);
 					// Wait for Matter to finish
-					// eslint-disable-next-line n/no-process-exit
+					// eslint-disable-next-line no-console eslint-disable-next-line n/no-process-exit
+					console.log('Shutting down...');
 					process.exit(0);
 				}
 			}, 1000);
