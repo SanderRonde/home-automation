@@ -86,7 +86,6 @@ export class PowerTracker {
 
 	public async getHistory(
 		deviceId: string,
-		limit = 1000,
 		timeframeMs?: number
 	): Promise<Array<{ activePower: number; timestamp: number }>> {
 		try {
@@ -97,7 +96,6 @@ export class PowerTracker {
 				WHERE device_id = ${deviceId}
 				AND timestamp >= ${cutoffTime}
 				ORDER BY timestamp DESC
-				LIMIT ${limit}
 			`;
 			return results.map((r) => ({
 				activePower: r.active_power,
@@ -110,7 +108,6 @@ export class PowerTracker {
 	}
 
 	public async getAllDevicesHistory(
-		limit = 1000,
 		timeframeMs?: number
 	): Promise<Array<{ deviceId: string; activePower: number; timestamp: number }>> {
 		try {
@@ -122,7 +119,6 @@ export class PowerTracker {
 				FROM power_events 
 				WHERE timestamp >= ${cutoffTime}
 				ORDER BY timestamp DESC
-				LIMIT ${limit}
 			`;
 			return results.map((r) => ({
 				deviceId: r.device_id,

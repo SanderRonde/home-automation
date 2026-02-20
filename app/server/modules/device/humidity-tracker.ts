@@ -91,7 +91,6 @@ export class HumidityTracker {
 
 	public async getHistory(
 		deviceId: string,
-		limit = 100,
 		timeframeMs?: number
 	): Promise<Array<{ humidity: number; timestamp: number }>> {
 		try {
@@ -102,7 +101,6 @@ export class HumidityTracker {
 				WHERE device_id = ${deviceId}
 				AND timestamp >= ${cutoffTime}
 				ORDER BY timestamp DESC
-				LIMIT ${limit}
 			`;
 			return results;
 		} catch (error) {

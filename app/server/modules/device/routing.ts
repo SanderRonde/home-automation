@@ -778,7 +778,6 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 				const timeframe = parseInt(req.params.timeframe, 10);
 				const history = await api.humidityTracker.getHistory(
 					req.params.deviceId,
-					1000,
 					timeframe
 				);
 				return json({ history });
@@ -787,23 +786,18 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 				const timeframe = parseInt(req.params.timeframe, 10);
 				const history = await api.illuminanceTracker.getHistory(
 					req.params.deviceId,
-					1000,
 					timeframe
 				);
 				return json({ history });
 			},
 			'/power/:deviceId/:timeframe': async (req, _server, { json }) => {
 				const timeframe = parseInt(req.params.timeframe, 10);
-				const history = await api.powerTracker.getHistory(
-					req.params.deviceId,
-					1000,
-					timeframe
-				);
+				const history = await api.powerTracker.getHistory(req.params.deviceId, timeframe);
 				return json({ history });
 			},
 			'/power/all/:timeframe': async (req, _server, { json }) => {
 				const timeframe = parseInt(req.params.timeframe, 10);
-				const history = await api.powerTracker.getAllDevicesHistory(1000, timeframe);
+				const history = await api.powerTracker.getAllDevicesHistory(timeframe);
 				return json({ history });
 			},
 			'/co2/:deviceId/:timeframe': async (req, _server, { json }) => {
