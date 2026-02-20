@@ -95,7 +95,6 @@ export class IlluminanceTracker {
 
 	public async getHistory(
 		deviceId: string,
-		limit = 100,
 		timeframeMs?: number
 	): Promise<Array<{ illuminance: number; timestamp: number }>> {
 		try {
@@ -106,7 +105,6 @@ export class IlluminanceTracker {
 				WHERE device_id = ${deviceId}
 				AND timestamp >= ${cutoffTime}
 				ORDER BY timestamp DESC
-				LIMIT ${limit}
 			`;
 			return results;
 		} catch (error) {
