@@ -37,10 +37,12 @@ import type { KonvaEventObject } from 'konva/lib/Node';
 import type { Data } from '../../../server/lib/data';
 import { detectRooms } from '../lib/room-detection';
 import React, { useEffect, useState } from 'react';
+import { kelvinToRgb } from './DeviceClusterCard';
 import { apiGet, apiPost } from '../../lib/fetch';
 import { Layer, Line, Stage } from 'react-konva';
 import type { IncludedIconNames } from './icon';
 import type { HomeDetailView } from './Home';
+import { hsvToHex } from './ColorPresets';
 import { DeviceIcon } from './DeviceIcon';
 import { GroupIcon } from './GroupIcon';
 import { IconComponent } from './icon';
@@ -1374,6 +1376,7 @@ const _OutsideTemperatureBubble = React.memo(
 interface DeviceIconsOverlayProps {
 	devices: DeviceListWithValuesResponse;
 	stageTransform: { x: number; y: number; scale: number };
+	roomPolygons: { mappedRoomName: string; polygon: { x: number; y: number }[] }[];
 	focusedRoomNameData: Data<string | null>;
 	zoomThreshold: number;
 	temperatureExpanded: boolean;
@@ -1383,30 +1386,185 @@ interface DeviceIconsOverlayProps {
 	handleDeviceHold: (device: DeviceListWithValuesResponse[number]) => void;
 }
 
+const kelvinToHex = (kelvin: number): string => {
+	const { r, g, b } = kelvinToRgb(kelvin);
+	const toHex = (n: number) => n.toString(16).padStart(2, '0');
+	return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+};
+
+// Returns glow color and intensity (0-1) for light-emitting devices that are on.
+// Returns null for non-light devices or devices that are off.
+const getDeviceLightGlow = (
+	device: DeviceListWithValuesResponse[number]
+): { color: string; intensity: number } | null => {
+	// Single pass: collect all relevant cluster data
+	let colorXyCluster: Extract<
+		(typeof device.mergedAllClusters)[number],
+		{ name: DeviceClusterName.COLOR_CONTROL; clusterVariant: 'xy' }
+	> | null = null;
+	let colorTempKelvin: number | null = null;
+	let standaloneOnOff: boolean | undefined;
+	let standaloneLevel: number | undefined;
+	let hasColorControl = false;
+
+	for (const cluster of device.mergedAllClusters) {
+		if (cluster.name === DeviceClusterName.COLOR_CONTROL) {
+			hasColorControl = true;
+			if (cluster.clusterVariant === 'xy') {
+				colorXyCluster = cluster;
+			} else if (cluster.clusterVariant === 'temperature') {
+				colorTempKelvin = cluster.colorTemperature ?? 3000;
+			}
+		} else if (cluster.name === DeviceClusterName.ON_OFF) {
+			standaloneOnOff = cluster.isOn ?? undefined;
+		} else if (cluster.name === DeviceClusterName.LEVEL_CONTROL) {
+			standaloneLevel = cluster.currentLevel;
+		}
+	}
+
+	// Colored light (xy variant): ON_OFF and LEVEL_CONTROL nested inside mergedClusters
+	if (colorXyCluster) {
+		const onOff = colorXyCluster.mergedClusters[DeviceClusterName.ON_OFF];
+		if (onOff?.isOn === false) {
+			return null;
+		}
+		const levelCluster = colorXyCluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL];
+		const intensity = levelCluster
+			? levelCluster.currentLevel
+			: colorXyCluster.color.value / 100;
+		const color = hsvToHex(colorXyCluster.color.hue, colorXyCluster.color.saturation, 100);
+		return { color, intensity };
+	}
+
+	// Tunable white light (temperature variant): ON_OFF/LEVEL_CONTROL are standalone siblings
+	if (colorTempKelvin !== null) {
+		if (standaloneOnOff === false) {
+			return null;
+		}
+		const intensity = standaloneLevel ?? 0.8;
+		const color = kelvinToHex(colorTempKelvin);
+		return { color, intensity };
+	}
+
+	// Dimmable white light: LEVEL_CONTROL present but no COLOR_CONTROL
+	if (!hasColorControl && standaloneLevel !== undefined) {
+		if (standaloneOnOff === false) {
+			return null;
+		}
+		return { color: '#ffeebb', intensity: standaloneLevel };
+	}
+
+	return null;
+};
+
 const DeviceIconsOverlay = React.memo((props: DeviceIconsOverlayProps): JSX.Element | null => {
 	const focusedRoomName = useData(props.focusedRoomNameData);
 	const isDragging = useData(props.isDraggingData);
 
-	// Hide when temperature or energy mode is active
+	const showDevices =
+		props.stageTransform.scale >= props.zoomThreshold || focusedRoomName !== null;
+	const visibleDevices =
+		focusedRoomName !== null
+			? props.devices.filter((d) => d.room === focusedRoomName)
+			: props.devices;
+	const { scale, x: tx, y: ty } = props.stageTransform;
+
+	// Room polygon in screen coords for clip-path (so glow doesn't go through walls)
+	const roomPolygonMap = React.useMemo(() => {
+		const map = new Map<string, { x: number; y: number }[]>();
+		for (const r of props.roomPolygons) {
+			const points = r.polygon.map((p) => ({
+				x: p.x * scale + tx,
+				y: p.y * scale + ty,
+			}));
+			map.set(r.mappedRoomName, points);
+		}
+		return map;
+	}, [props.roomPolygons, scale, tx, ty]);
+
+	// Devices with glow, grouped by room (for room-clipped layers)
+	const glowsByRoom = React.useMemo(() => {
+		const byRoom = new Map<
+			string | null,
+			{ device: (typeof visibleDevices)[number]; color: string; intensity: number }[]
+		>();
+		for (const device of visibleDevices) {
+			const g = getDeviceLightGlow(device);
+			if (!g) {
+				continue;
+			}
+			const room = device.room ?? null;
+			let list = byRoom.get(room);
+			if (!list) {
+				list = [];
+				byRoom.set(room, list);
+			}
+			list.push({ device, color: g.color, intensity: g.intensity });
+		}
+		return byRoom;
+	}, [visibleDevices]);
+
 	if (props.temperatureExpanded || props.energyExpanded) {
 		return null;
 	}
-
-	// Check if we should show devices (zoomed in enough or have a focused room)
-	const showDevices =
-		props.stageTransform.scale >= props.zoomThreshold || focusedRoomName !== null;
-
 	if (!showDevices) {
 		return null;
 	}
 
-	// Filter devices based on focused room if set
-	const visibleDevices = focusedRoomName
-		? props.devices.filter((d) => d.room === focusedRoomName)
-		: props.devices;
+	const minGlowSize = 80;
+	const maxGlowSize = 160;
 
 	return (
 		<>
+			{/* Room-clipped glow layers: one per room so glow doesn't bleed through walls */}
+			{Array.from(glowsByRoom.entries()).map(([roomName, glows]) => {
+				if (glows.length === 0) {
+					return null;
+				}
+				const polygon = roomName ? roomPolygonMap.get(roomName) : null;
+				const clipPath =
+					polygon && polygon.length >= 3
+						? `polygon(${polygon.map((p) => `${p.x}px ${p.y}px`).join(', ')})`
+						: undefined;
+
+				return (
+					<Box
+						key={`glow-layer-${roomName ?? 'no-room'}`}
+						sx={{
+							position: 'absolute',
+							left: 0,
+							top: 0,
+							width: '100%',
+							height: '100%',
+							pointerEvents: 'none',
+							...(clipPath && { clipPath }),
+						}}
+					>
+						{glows.map(({ device, color, intensity }) => {
+							const pos = device.position!;
+							const screenX = pos.x * scale + tx;
+							const screenY = pos.y * scale + ty;
+							const glowSize = minGlowSize + (maxGlowSize - minGlowSize) * intensity;
+							const opacity = 0.3 + 0.65 * intensity;
+							return (
+								<Box
+									key={`glow-${device.uniqueId}`}
+									sx={{
+										position: 'absolute',
+										left: screenX - glowSize / 2,
+										top: screenY - glowSize / 2,
+										width: glowSize,
+										height: glowSize,
+										borderRadius: '50%',
+										background: `radial-gradient(circle at center, ${color} 0%, ${color}99 28%, ${color}40 45%, transparent 62%)`,
+										opacity,
+									}}
+								/>
+							);
+						})}
+					</Box>
+				);
+			})}
 			{visibleDevices.map((device) => (
 				<DeviceIcon
 					key={`device-icon-${device.uniqueId}`}
@@ -2718,6 +2876,10 @@ export const HomeLayoutView = (props: HomeLayoutViewProps): JSX.Element => {
 				<DeviceIconsOverlay
 					devices={devicesWithPositions}
 					stageTransform={stageTransform}
+					roomPolygons={roomsWithClusters.map((r) => ({
+						mappedRoomName: r.mappedRoomName,
+						polygon: r.room.polygon,
+					}))}
 					focusedRoomNameData={focusedRoomNameData}
 					zoomThreshold={DEVICE_VISIBILITY_ZOOM_THRESHOLD}
 					temperatureExpanded={props.temperatureExpanded}

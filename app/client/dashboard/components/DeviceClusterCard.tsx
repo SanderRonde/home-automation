@@ -467,7 +467,7 @@ const GroupedWindowCoveringCard = (props: GroupedWindowCoveringCardProps): JSX.E
 
 // Convert Kelvin color temperature to RGB using a more accurate algorithm
 // Based on the Planckian locus approximation
-const kelvinToRgb = (kelvin: number): { r: number; g: number; b: number } => {
+export const kelvinToRgb = (kelvin: number): { r: number; g: number; b: number } => {
 	// Clamp to typical range
 	const temp = Math.max(2000, Math.min(6500, kelvin));
 	const temp100 = temp / 100;
