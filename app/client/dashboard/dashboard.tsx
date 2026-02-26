@@ -2,6 +2,7 @@ import { AndroidControlConfig } from './components/AndroidControlConfig';
 import { TemperatureHistory } from './components/TemperatureHistory';
 import { TemperatureConfig } from './components/TemperatureConfig';
 import { SmartThingsConfig } from './components/SmartThingsConfig';
+import { MatterlikeConfig } from './components/MatterlikeConfig';
 import { LEDSourcesConfig } from './components/LEDSourcesConfig';
 import { WakelightConfig } from './components/WakelightConfig';
 import { BambuLabConfig } from './components/BambuLabConfig';
@@ -164,6 +165,8 @@ function DashboardApp() {
 				return <FilamentModal open={true} onClose={() => setCurrentTab(SidebarTab.HOME)} />;
 			case SidebarTab.LED_SOURCES:
 				return <LEDSourcesConfig />;
+			case SidebarTab.MATTERLIKE:
+				return <MatterlikeConfig />;
 			case SidebarTab.AI:
 				return <AIConfig />;
 			case SidebarTab.TEMPERATURE:

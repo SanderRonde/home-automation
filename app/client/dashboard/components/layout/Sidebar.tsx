@@ -120,6 +120,7 @@ export const Sidebar = (props: SidebarProps): JSX.Element => {
 					id: SidebarTab.FILAMENT,
 				},
 				{ text: 'LED Sources', icon: <LightbulbIcon />, id: SidebarTab.LED_SOURCES },
+				{ text: 'Matter-like', icon: <DeviceHubIcon />, id: SidebarTab.MATTERLIKE },
 			],
 		},
 		{
@@ -210,6 +211,7 @@ export enum SidebarTab {
 	BAMBULAB = 'bambulab',
 	FILAMENT = 'filament',
 	LED_SOURCES = 'led-sources',
+	MATTERLIKE = 'matterlike',
 	AI = 'ai',
 	NOTIFICATIONS = 'notifications',
 	TEMPERATURE = 'temperature',

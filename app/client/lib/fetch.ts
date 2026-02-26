@@ -3,6 +3,7 @@ import type { HomeDetectorRoutes } from '../../server/modules/home-detector/rout
 import type { NotificationRoutes } from '../../server/modules/notification/routing';
 import type { TemperatureRoutes } from '../../server/modules/temperature/routing';
 import type { SmartThingsRoutes } from '../../server/modules/smartthings/routing';
+import type { MatterlikeRoutes } from '../../server/modules/matterlike/routing';
 import type { HomeWizardRoutes } from '../../server/modules/homewizard/routing';
 import type { BrandedResponse, RouteBodyBrand } from '../../server/lib/routes';
 import type { WakelightRoutes } from '../../server/modules/wakelight/routing';
@@ -245,6 +246,7 @@ export type RoutesForModules = {
 	bambulab: BambuLabRoutes;
 	system: SystemRoutes;
 	'led-art': LedArtRoutes;
+	matterlike: MatterlikeRoutes;
 	'home-detector': HomeDetectorRoutes;
 	ai: AIRoutes;
 	notification: NotificationRoutes;

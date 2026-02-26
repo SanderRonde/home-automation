@@ -3,6 +3,7 @@ import { HomeDetector } from './home-detector';
 import { Notification } from './notification';
 import { Temperature } from './temperature';
 import { SmartThings } from './smartthings';
+import { Matterlike } from './matterlike';
 import { HomeWizard } from './homewizard';
 import { Wakelight } from './wakelight';
 import { Dashboard } from './dashboard';
@@ -68,6 +69,7 @@ const getModuleObj = () => ({
 	temperature: Temperature,
 	smartthings: SmartThings,
 	nuki: Nuki,
+	matterlike: Matterlike,
 	homeDetector: HomeDetector,
 	notification: Notification,
 	bambulab: BambuLab,

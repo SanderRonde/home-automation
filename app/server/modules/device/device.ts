@@ -93,6 +93,7 @@ export class DeviceSource extends ClassEnum<
 	| 'smartthings'
 	| 'nuki'
 	| 'bambulab'
+	| 'matter-like'
 > {
 	public static readonly MATTER = new DeviceSource('matter');
 	public static readonly EWELINK = new DeviceSource('ewelink');
@@ -104,6 +105,7 @@ export class DeviceSource extends ClassEnum<
 	public static readonly SMARTTHINGS = new DeviceSource('smartthings');
 	public static readonly NUKI = new DeviceSource('nuki');
 	public static readonly BAMBU_LAB = new DeviceSource('bambulab');
+	public static readonly MATTER_LIKE = new DeviceSource('matter-like');
 	public toEmoji(): string {
 		switch (this) {
 			case DeviceSource.MATTER:
@@ -126,6 +128,8 @@ export class DeviceSource extends ClassEnum<
 				return '🔐';
 			case DeviceSource.BAMBU_LAB:
 				return '🐼';
+			case DeviceSource.MATTER_LIKE:
+				return '🧩';
 			default:
 				throw new Error('Invalid DeviceSource');
 		}
