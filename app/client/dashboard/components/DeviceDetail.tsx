@@ -527,14 +527,19 @@ const BooleanStateDetail = (props: BooleanStateDetailProps): JSX.Element => {
 			) {
 				continue;
 			}
-			// For "door opened" events, calculate duration until closed
+			// For "door opened" events, calculate duration until the next close in time
 			let duration: number | undefined;
 			if (!event.state) {
-				// door opened (state=false)
-				// Find the most recent "door closed" event we've added (previous in array since DESC)
-				const closedEvent = deduplicated.find((e) => e.state === true);
-				if (closedEvent) {
-					duration = closedEvent.timestamp - event.timestamp;
+				// door opened (state=false): find the closed event that immediately followed this open
+				// (History is DESC, so deduplicated has newer events first; we need the earliest close after this open)
+				const closedAfterOpen = deduplicated
+					.filter((e) => e.state === true && e.timestamp > event.timestamp)
+					.reduce<ProcessedBooleanStateEvent | null>(
+						(best, e) => (!best || e.timestamp < best.timestamp ? e : best),
+						null
+					);
+				if (closedAfterOpen) {
+					duration = closedAfterOpen.timestamp - event.timestamp;
 				}
 			}
 			deduplicated.push({ ...event, duration });
