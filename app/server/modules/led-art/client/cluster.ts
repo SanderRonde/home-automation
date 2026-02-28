@@ -126,6 +126,15 @@ export class LEDArtColorControlCluster
 			}
 		}
 
+		// Color list
+		if (currentEffect === 'MultiColorRadialEffect') {
+			const params = effects.effect_parameters[currentEffect];
+			if (params?.colors?.type === 'color_list') {
+				const colorList = params.colors.value as RGBColor[];
+				return new Color(colorList[0].r, colorList[0].g, colorList[0].b);
+			}
+		}
+
 		// Default color if no color effect is active
 		return new Color(0, 0, 0);
 	});
