@@ -171,23 +171,28 @@ export const DeviceIcon = React.memo((props: DeviceIconProps): JSX.Element | nul
 						? 'rgba(158, 158, 158, 0.3)'
 						: isOn
 							? '#ffffff'
-							: 'rgba(255, 255, 255, 0.6)',
+							: '#222', // invert: dark bg when off
 					color: isOffline
 						? 'rgba(0, 0, 0, 0.4)'
 						: isOn
 							? '#2a2a2a'
-							: 'rgba(0, 0, 0, 0.5)',
+							: '#fff', // invert: white icon when off
 					fontSize: `${scaledSize * 0.5}px`,
 					boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
 					opacity: isOffline ? 0.6 : 1,
-					transition: 'background-color 0.2s ease, transform 0.1s ease',
+					transition: 'background-color 0.2s ease, color 0.2s ease, transform 0.1s ease',
 					pointerEvents: isOffline ? 'none' : 'auto',
 					'&:hover': {
 						backgroundColor: isOffline
 							? 'rgba(158, 158, 158, 0.3)'
 							: isOn
 								? '#f0f0f0'
-								: 'rgba(255, 255, 255, 0.8)',
+								: '#444', // slightly lighter bg when off + hover
+						color: isOffline
+							? 'rgba(0, 0, 0, 0.4)'
+							: isOn
+								? '#111'
+								: '#fff',
 						transform: isOffline ? 'none' : 'scale(1.1)',
 					},
 					'&:active': {
