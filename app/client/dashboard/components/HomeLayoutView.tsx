@@ -1470,19 +1470,6 @@ const DeviceIconsOverlay = React.memo((props: DeviceIconsOverlayProps): JSX.Elem
 			: props.devices;
 	const { scale, x: tx, y: ty } = props.stageTransform;
 
-	// Room polygon in screen coords for clip-path (so glow doesn't go through walls)
-	const roomPolygonMap = React.useMemo(() => {
-		const map = new Map<string, { x: number; y: number }[]>();
-		for (const r of props.roomPolygons) {
-			const points = r.polygon.map((p) => ({
-				x: p.x * scale + tx,
-				y: p.y * scale + ty,
-			}));
-			map.set(r.mappedRoomName, points);
-		}
-		return map;
-	}, [props.roomPolygons, scale, tx, ty]);
-
 	// Devices with glow, grouped by room (for room-clipped layers)
 	const glowsByRoom = React.useMemo(() => {
 		const byRoom = new Map<
@@ -1524,11 +1511,6 @@ const DeviceIconsOverlay = React.memo((props: DeviceIconsOverlayProps): JSX.Elem
 				if (glows.length === 0) {
 					return null;
 				}
-				const polygon = roomName ? roomPolygonMap.get(roomName) : null;
-				const clipPath =
-					polygon && polygon.length >= 3
-						? `polygon(${polygon.map((p) => `${p.x}px ${p.y}px`).join(', ')})`
-						: undefined;
 
 				return (
 					<Box
@@ -1540,7 +1522,6 @@ const DeviceIconsOverlay = React.memo((props: DeviceIconsOverlayProps): JSX.Elem
 							width: '100%',
 							height: '100%',
 							pointerEvents: 'none',
-							...(clipPath && { clipPath }),
 						}}
 					>
 						{glows.map(({ device, colors, intensity }) => {
