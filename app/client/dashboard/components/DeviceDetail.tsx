@@ -4461,12 +4461,19 @@ interface ColorControlDetailProps
 	extends DeviceDetailBaseProps<DashboardDeviceClusterColorControlXY> {}
 
 const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
-	const [hue, setHue] = useState(props.cluster.color.hue);
-	const [saturation, setSaturation] = useState(props.cluster.color.saturation);
-	const [value, setValue] = useState(props.cluster.color.value);
+	const initialColors =
+		props.cluster.colors.length > 0
+			? props.cluster.colors
+			: [{ hue: 0, saturation: 100, value: 100 }];
+	const [colorStates, setColorStates] =
+		useState<{ hue: number; saturation: number; value: number }[]>(initialColors);
+	const [selectedColorIndex, setSelectedColorIndex] = useState(0);
+	const hue = colorStates[selectedColorIndex]?.hue ?? 0;
+	const saturation = colorStates[selectedColorIndex]?.saturation ?? 0;
+	const value = colorStates[selectedColorIndex]?.value ?? 0;
 	const [brightness, setBrightness] = useState(
 		props.cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL]?.currentLevel ??
-			props.cluster.color.value
+			(initialColors[0]?.value ?? 100) / 100
 	);
 	const [isOn, setIsOn] = useState(
 		props.cluster.mergedClusters[DeviceClusterName.ON_OFF]?.isOn ?? true
@@ -4479,6 +4486,7 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 	const hasLevelControl =
 		props.cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL] !== undefined;
 	const actionsCluster = props.cluster.mergedClusters[DeviceClusterName.ACTIONS];
+	const hasMultipleColors = props.cluster.colors.length > 1;
 
 	// Cleanup timeout on unmount
 	useEffect(() => {
@@ -4550,12 +4558,15 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 	};
 
 	const handleColorChange = (newColor: { h: number; s: number; v: number }) => {
-		setHue(newColor.h);
-		setSaturation(newColor.s);
-		// Only update value if no LevelControl available
-		if (!hasLevelControl) {
-			setValue(newColor.v);
-		}
+		setColorStates((prev) => {
+			const updated = [...prev];
+			updated[selectedColorIndex] = {
+				hue: newColor.h,
+				saturation: newColor.s,
+				value: hasLevelControl ? (prev[selectedColorIndex]?.value ?? 100) : newColor.v,
+			};
+			return updated;
+		});
 
 		// Debounce the API call
 		if (colorCommitTimeoutRef.current) {
@@ -4569,16 +4580,19 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 	const handleColorCommit = async () => {
 		setIsUpdating(true);
 		try {
+			const currentState = colorStates[selectedColorIndex];
 			await apiPost(
 				'device',
 				`/cluster/${DeviceClusterName.COLOR_CONTROL}`,
 				{},
 				{
 					deviceIds: [props.device.uniqueId],
-					hue,
-					saturation,
+					hue: currentState?.hue ?? hue,
+					saturation: currentState?.saturation ?? saturation,
 					// Only send value if no LevelControl available
-					...(hasLevelControl ? {} : { value }),
+					...(hasLevelControl ? {} : { value: currentState?.value ?? value }),
+					// Send colorIndex when device has multiple colors
+					...(hasMultipleColors ? { colorIndex: selectedColorIndex } : {}),
 				}
 			);
 		} catch (error) {
@@ -4654,12 +4668,15 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 	};
 
 	const handlePresetColor = async (presetHue: number, presetSat: number) => {
-		setHue(presetHue);
-		setSaturation(presetSat);
-		// Only update value if no LevelControl
-		if (!hasLevelControl) {
-			setValue(100);
-		}
+		setColorStates((prev) => {
+			const updated = [...prev];
+			updated[selectedColorIndex] = {
+				hue: presetHue,
+				saturation: presetSat,
+				value: hasLevelControl ? (prev[selectedColorIndex]?.value ?? 100) : 100,
+			};
+			return updated;
+		});
 		setIsUpdating(true);
 		try {
 			await apiPost(
@@ -4671,7 +4688,9 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 					hue: presetHue,
 					saturation: presetSat,
 					// Only send value if no LevelControl
-					...(hasLevelControl ? {} : { value: 1 }),
+					...(hasLevelControl ? {} : { value: 100 }),
+					// Send colorIndex when device has multiple colors
+					...(hasMultipleColors ? { colorIndex: selectedColorIndex } : {}),
 				}
 			);
 		} catch (error) {
@@ -4706,6 +4725,18 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 	// Use brightness for display (from LevelControl if available, otherwise from HSV value)
 	const displayBrightness = hasLevelControl ? brightness * 100 : value;
 	const currentColor = hsvToHex(hue, saturation, displayBrightness);
+	// All colors for preview (use displayBrightness for selected, raw value for others)
+	const allPreviewColors = colorStates.map((cs, i) =>
+		hsvToHex(
+			cs.hue,
+			cs.saturation,
+			i === selectedColorIndex
+				? displayBrightness
+				: hasLevelControl
+					? brightness * 100
+					: cs.value
+		)
+	);
 
 	return (
 		<motion.div
@@ -4833,6 +4864,67 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 								)}
 							</Box>
 
+							{/* Color selector chips (only for multi-color devices) */}
+							{hasMultipleColors && (
+								<motion.div
+									initial={{ opacity: 0, y: -8 }}
+									animate={{ opacity: 1, y: 0 }}
+									transition={{ delay: 0.15, ...smoothSpring }}
+								>
+									<Box
+										sx={{
+											display: 'flex',
+											justifyContent: 'center',
+											gap: 1.5,
+											mt: 2,
+											mb: 1,
+										}}
+									>
+										{colorStates.map((cs, i) => {
+											const chipColor = hsvToHex(
+												cs.hue,
+												cs.saturation,
+												hasLevelControl ? brightness * 100 : cs.value
+											);
+											const isActive = i === selectedColorIndex;
+											return (
+												<Box
+													key={i}
+													onClick={() => setSelectedColorIndex(i)}
+													sx={{
+														width: isActive ? 36 : 28,
+														height: isActive ? 36 : 28,
+														borderRadius: '50%',
+														backgroundColor: chipColor,
+														border: '3px solid',
+														borderColor: isActive
+															? 'primary.main'
+															: 'rgba(255,255,255,0.3)',
+														boxShadow: isActive
+															? `0 0 0 2px rgba(255,255,255,0.2), 0 4px 12px ${chipColor}88`
+															: '0 2px 4px rgba(0,0,0,0.3)',
+														cursor: 'pointer',
+														transition: 'all 0.2s ease',
+														flexShrink: 0,
+													}}
+												/>
+											);
+										})}
+									</Box>
+									<Box sx={{ textAlign: 'center', mb: 1 }}>
+										<Typography
+											variant="caption"
+											sx={{
+												color: 'rgba(255,255,255,0.6)',
+												fontSize: '0.75rem',
+											}}
+										>
+											Color {selectedColorIndex + 1} of {colorStates.length}
+										</Typography>
+									</Box>
+								</motion.div>
+							)}
+
 							{/* Color wheel */}
 							<motion.div
 								initial={{ scale: 0.9, opacity: 0 }}
@@ -4950,60 +5042,118 @@ const ColorControlDetail = (props: ColorControlDetailProps): JSX.Element => {
 								animate={{ opacity: 1, scale: 1 }}
 								transition={{ delay: 0.4, ...smoothSpring }}
 							>
-								<Card
-									sx={{
-										height: 100,
-										display: 'flex',
-										flexDirection: 'column',
-										alignItems: 'center',
-										justifyContent: 'center',
-										borderRadius: 3,
-										boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-										overflow: 'hidden',
-										position: 'relative',
-										'&::before': {
-											content: '""',
-											position: 'absolute',
-											inset: 0,
-											background: `linear-gradient(135deg, ${currentColor} 0%, ${currentColor}dd 100%)`,
-											transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-										},
-									}}
-								>
+								{allPreviewColors.length > 1 ? (
 									<Box
 										sx={{
-											position: 'relative',
-											zIndex: 1,
-											textAlign: 'center',
+											display: 'flex',
+											borderRadius: 3,
+											overflow: 'hidden',
+											height: 100,
+											boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
 										}}
 									>
-										<Typography
-											sx={{
-												color: 'white',
-												fontSize: '1rem',
-												fontWeight: 600,
-												letterSpacing: '0.1em',
-												textShadow: '0 2px 8px rgba(0,0,0,0.4)',
-												mb: 0.5,
-											}}
-										>
-											PREVIEW
-										</Typography>
-										<Typography
-											sx={{
-												color: 'white',
-												fontSize: '0.875rem',
-												fontWeight: 500,
-												letterSpacing: '0.05em',
-												textShadow: '0 1px 4px rgba(0,0,0,0.4)',
-												opacity: 0.95,
-												fontFamily: 'monospace',
-											}}
-										>
-											{currentColor.toUpperCase()}
-										</Typography>
+										{allPreviewColors.map((c, i) => (
+											<Box
+												key={i}
+												onClick={() => setSelectedColorIndex(i)}
+												sx={{
+													flex: 1,
+													background: `linear-gradient(135deg, ${c} 0%, ${c}dd 100%)`,
+													display: 'flex',
+													flexDirection: 'column',
+													alignItems: 'center',
+													justifyContent: 'center',
+													gap: 0.5,
+													cursor: 'pointer',
+													transition: 'all 0.3s ease',
+													outline:
+														i === selectedColorIndex
+															? '3px solid rgba(255,255,255,0.6)'
+															: 'none',
+													outlineOffset: '-3px',
+												}}
+											>
+												<Typography
+													sx={{
+														color: 'white',
+														fontSize: '0.65rem',
+														fontWeight: 600,
+														letterSpacing: '0.08em',
+														textShadow: '0 1px 4px rgba(0,0,0,0.5)',
+													}}
+												>
+													COLOR {i + 1}
+												</Typography>
+												<Typography
+													sx={{
+														color: 'white',
+														fontSize: '0.75rem',
+														fontWeight: 500,
+														textShadow: '0 1px 4px rgba(0,0,0,0.4)',
+														fontFamily: 'monospace',
+													}}
+												>
+													{c.toUpperCase()}
+												</Typography>
+											</Box>
+										))}
 									</Box>
-								</Card>
+								) : (
+									<Card
+										sx={{
+											height: 100,
+											display: 'flex',
+											flexDirection: 'column',
+											alignItems: 'center',
+											justifyContent: 'center',
+											borderRadius: 3,
+											boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+											overflow: 'hidden',
+											position: 'relative',
+											'&::before': {
+												content: '""',
+												position: 'absolute',
+												inset: 0,
+												background: `linear-gradient(135deg, ${currentColor} 0%, ${currentColor}dd 100%)`,
+												transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+											},
+										}}
+									>
+										<Box
+											sx={{
+												position: 'relative',
+												zIndex: 1,
+												textAlign: 'center',
+											}}
+										>
+											<Typography
+												sx={{
+													color: 'white',
+													fontSize: '1rem',
+													fontWeight: 600,
+													letterSpacing: '0.1em',
+													textShadow: '0 2px 8px rgba(0,0,0,0.4)',
+													mb: 0.5,
+												}}
+											>
+												PREVIEW
+											</Typography>
+											<Typography
+												sx={{
+													color: 'white',
+													fontSize: '0.875rem',
+													fontWeight: 500,
+													letterSpacing: '0.05em',
+													textShadow: '0 1px 4px rgba(0,0,0,0.4)',
+													opacity: 0.95,
+													fontFamily: 'monospace',
+												}}
+											>
+												{currentColor.toUpperCase()}
+											</Typography>
+										</Box>
+									</Card>
+								)}
 							</motion.div>
 						</CardContent>
 					</Card>

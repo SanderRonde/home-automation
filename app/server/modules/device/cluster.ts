@@ -284,7 +284,7 @@ export abstract class DeviceColorControlXYCluster extends Cluster {
 	public static clusterName = DeviceClusterName.COLOR_CONTROL;
 	public abstract getClusterVariant(): 'xy';
 
-	public abstract color: Data<Color | undefined>;
+	public abstract colors: Data<Color[]>;
 	public abstract setColor(args: { colors: Color[]; overDurationMs?: number }): Promise<void>;
 	public abstract getSegmentCount(): number;
 }

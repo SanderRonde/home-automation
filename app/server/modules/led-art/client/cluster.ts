@@ -114,7 +114,7 @@ export class LEDArtColorControlCluster
 		return 'xy';
 	}
 
-	public color = new LEDArtMapper(this, this.client.effects, (effects) => {
+	public colors = new LEDArtMapper(this, this.client.effects, (effects) => {
 		const currentEffect = effects.current_effect;
 
 		// Try to extract color from SingleColorEffect
@@ -122,7 +122,7 @@ export class LEDArtColorControlCluster
 			const params = effects.effect_parameters[currentEffect];
 			if (params?.color?.type === 'color') {
 				const colorValue = params.color.value as RGBColor;
-				return new Color(colorValue.r, colorValue.g, colorValue.b);
+				return [new Color(colorValue.r, colorValue.g, colorValue.b)];
 			}
 		}
 
@@ -131,12 +131,12 @@ export class LEDArtColorControlCluster
 			const params = effects.effect_parameters[currentEffect];
 			if (params?.colors?.type === 'color_list') {
 				const colorList = params.colors.value as RGBColor[];
-				return new Color(colorList[0].r, colorList[0].g, colorList[0].b);
+				return colorList.map((color) => new Color(color.r, color.g, color.b));
 			}
 		}
 
 		// Default color if no color effect is active
-		return new Color(0, 0, 0);
+		return [];
 	});
 
 	public setColor = async (args: { colors: Color[]; overDurationMs?: number }): Promise<void> => {

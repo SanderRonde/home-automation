@@ -229,7 +229,7 @@ export class WakelightLogic {
 								DeviceColorControlXYCluster
 							);
 							if (colorControlCluster) {
-								const currentColor = await colorControlCluster.color.get();
+								const currentColor = (await colorControlCluster.colors.get())[0];
 								if (currentColor) {
 									// Keep current hue/saturation but update brightness
 									const hsv = currentColor.toHSV();

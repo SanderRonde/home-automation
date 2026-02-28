@@ -1392,11 +1392,11 @@ const kelvinToHex = (kelvin: number): string => {
 	return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 };
 
-// Returns glow color and intensity (0-1) for light-emitting devices that are on.
+// Returns glow colors and intensity (0-1) for light-emitting devices that are on.
 // Returns null for non-light devices or devices that are off.
 const getDeviceLightGlow = (
 	device: DeviceListWithValuesResponse[number]
-): { color: string; intensity: number } | null => {
+): { colors: string[]; intensity: number } | null => {
 	// Single pass: collect all relevant cluster data
 	let colorXyCluster: Extract<
 		(typeof device.mergedAllClusters)[number],
@@ -1429,11 +1429,13 @@ const getDeviceLightGlow = (
 			return null;
 		}
 		const levelCluster = colorXyCluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL];
-		const intensity = levelCluster
-			? levelCluster.currentLevel
-			: colorXyCluster.color.value / 100;
-		const color = hsvToHex(colorXyCluster.color.hue, colorXyCluster.color.saturation, 100);
-		return { color, intensity };
+		const firstColor = colorXyCluster.colors[0];
+		const intensity = levelCluster ? levelCluster.currentLevel : (firstColor?.value ?? 0) / 100;
+		const colors =
+			colorXyCluster.colors.length > 0
+				? colorXyCluster.colors.map((c) => hsvToHex(c.hue, c.saturation, 100))
+				: ['#ffffff'];
+		return { colors, intensity };
 	}
 
 	// Tunable white light (temperature variant): ON_OFF/LEVEL_CONTROL are standalone siblings
@@ -1442,8 +1444,7 @@ const getDeviceLightGlow = (
 			return null;
 		}
 		const intensity = standaloneLevel ?? 0.8;
-		const color = kelvinToHex(colorTempKelvin);
-		return { color, intensity };
+		return { colors: [kelvinToHex(colorTempKelvin)], intensity };
 	}
 
 	// Dimmable white light: LEVEL_CONTROL present but no COLOR_CONTROL
@@ -1451,7 +1452,7 @@ const getDeviceLightGlow = (
 		if (standaloneOnOff === false) {
 			return null;
 		}
-		return { color: '#ffeebb', intensity: standaloneLevel };
+		return { colors: ['#ffeebb'], intensity: standaloneLevel };
 	}
 
 	return null;
@@ -1486,7 +1487,7 @@ const DeviceIconsOverlay = React.memo((props: DeviceIconsOverlayProps): JSX.Elem
 	const glowsByRoom = React.useMemo(() => {
 		const byRoom = new Map<
 			string | null,
-			{ device: (typeof visibleDevices)[number]; color: string; intensity: number }[]
+			{ device: (typeof visibleDevices)[number]; colors: string[]; intensity: number }[]
 		>();
 		for (const device of visibleDevices) {
 			const g = getDeviceLightGlow(device);
@@ -1499,7 +1500,7 @@ const DeviceIconsOverlay = React.memo((props: DeviceIconsOverlayProps): JSX.Elem
 				list = [];
 				byRoom.set(room, list);
 			}
-			list.push({ device, color: g.color, intensity: g.intensity });
+			list.push({ device, colors: g.colors, intensity: g.intensity });
 		}
 		return byRoom;
 	}, [visibleDevices]);
@@ -1542,11 +1543,27 @@ const DeviceIconsOverlay = React.memo((props: DeviceIconsOverlayProps): JSX.Elem
 							...(clipPath && { clipPath }),
 						}}
 					>
-						{glows.map(({ device, color, intensity }) => {
+						{glows.map(({ device, colors, intensity }) => {
 							const pos = device.position!;
 							const screenX = pos.x * scale + tx;
 							const screenY = pos.y * scale + ty;
-							const fillPercent = Math.min(1, Math.max(0, intensity)) * 100;
+							const fillDeg = Math.min(1, Math.max(0, intensity)) * 360;
+							// Build conic gradient: divide the filled arc equally among all colors
+							const colorCount = colors.length;
+							let gradient: string;
+							if (colorCount <= 1) {
+								const c = colors[0] ?? '#ffffff';
+								gradient = `conic-gradient(from -90deg, ${c} 0deg, ${c} ${fillDeg}deg, ${trackColor} ${fillDeg}deg, ${trackColor} 360deg)`;
+							} else {
+								const segDeg = fillDeg / colorCount;
+								const stops = colors.flatMap((c, i) => {
+									const start = i * segDeg;
+									const end = (i + 1) * segDeg;
+									return [`${c} ${start}deg`, `${c} ${end}deg`];
+								});
+								stops.push(`${trackColor} ${fillDeg}deg`, `${trackColor} 360deg`);
+								gradient = `conic-gradient(from -90deg, ${stops.join(', ')})`;
+							}
 							return (
 								<Box
 									key={`glow-${device.uniqueId}`}
@@ -1557,7 +1574,7 @@ const DeviceIconsOverlay = React.memo((props: DeviceIconsOverlayProps): JSX.Elem
 										width: circleSize,
 										height: circleSize,
 										borderRadius: '50%',
-										background: `conic-gradient(from -90deg, ${color} 0deg, ${color} ${fillPercent * 3.6}deg, ${trackColor} ${fillPercent * 3.6}deg, ${trackColor} 360deg)`,
+										background: gradient,
 										// Mask to a ring so center stays transparent and device icon is visible
 										WebkitMaskImage: `radial-gradient(circle, transparent ${circleSize / 2 - ringThickness}px, black ${circleSize / 2}px)`,
 										maskImage: `radial-gradient(circle, transparent ${circleSize / 2 - ringThickness}px, black ${circleSize / 2}px)`,

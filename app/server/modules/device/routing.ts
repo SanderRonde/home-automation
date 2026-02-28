@@ -156,11 +156,11 @@ export type DashboardDeviceClusterActions = DashboardDeviceClusterBase & {
 export type DashboardDeviceClusterColorControlXY = DashboardDeviceClusterBase & {
 	name: DeviceClusterName.COLOR_CONTROL;
 	clusterVariant: 'xy';
-	color: {
+	colors: {
 		hue: number;
 		saturation: number;
-		value: number; // Only used if no LevelControl available
-	};
+		value: number;
+	}[];
 	mergedClusters: {
 		[DeviceClusterName.ON_OFF]?: DashboardDeviceClusterOnOff;
 		[DeviceClusterName.LEVEL_CONTROL]?: DashboardDeviceClusterLevelControl;
@@ -1036,6 +1036,7 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 						hue: z.number().min(0).max(360),
 						saturation: z.number().min(0).max(100),
 						value: z.number().min(0).max(100).optional(),
+						colorIndex: z.number().int().min(0).optional(),
 					}),
 					z.object({
 						deviceIds: z.array(z.string()),
@@ -1050,14 +1051,22 @@ function _initRouting({ db, modules, wsPublish: _wsPublish }: ModuleConfig, api:
 							body.deviceIds,
 							DeviceColorControlXYCluster,
 							async (cluster) => {
-								const color = Color.fromHSV(
+								const newColor = Color.fromHSV(
 									body.hue / 360,
 									body.saturation / 100,
 									(body.value ?? 100) / 100
 								);
-								await cluster.setColor({
-									colors: [color],
-								});
+								if (body.colorIndex !== undefined) {
+									const currentColors = await cluster.colors.get();
+									const updatedColors = [...currentColors];
+									while (updatedColors.length <= body.colorIndex) {
+										updatedColors.push(new Color(0, 0, 0));
+									}
+									updatedColors[body.colorIndex] = newColor;
+									await cluster.setColor({ colors: updatedColors });
+								} else {
+									await cluster.setColor({ colors: [newColor] });
+								}
 							}
 						);
 					} else {
@@ -1768,18 +1777,17 @@ const getClusterState = async (
 				name: clusterName,
 				icon: getClusterIconName(clusterName, api),
 				clusterVariant: 'xy',
-				color: { hue: 0, saturation: 0, value: 0 },
+				colors: [],
 				mergedClusters: {},
 			};
 		}
 		const cluster = _cluster as DeviceColorControlXYCluster;
-		const color = (await cluster.color.get()) ?? new Color(0, 0, 0);
-		const hsv = color.toHSV();
+		const colors = await cluster.colors.get();
 		return {
 			name: clusterName,
 			icon: getClusterIconName(clusterName, api),
 			clusterVariant: 'xy',
-			color: hsv,
+			colors: colors.map((color) => color.toHSV()),
 			mergedClusters: {},
 		};
 	}
@@ -2055,11 +2063,7 @@ async function listDevicesWithValues(api: DeviceAPI, modules: AllModules) {
 						name: DeviceClusterName.COLOR_CONTROL,
 						icon: getClusterIconName(DeviceClusterName.COLOR_CONTROL, api),
 						clusterVariant: 'xy',
-						color: {
-							hue: clusters[DeviceClusterName.COLOR_CONTROL].color.hue,
-							saturation: clusters[DeviceClusterName.COLOR_CONTROL].color.saturation,
-							value: clusters[DeviceClusterName.COLOR_CONTROL].color.value,
-						},
+						colors: clusters[DeviceClusterName.COLOR_CONTROL].colors,
 						mergedClusters: {
 							[DeviceClusterName.ON_OFF]: clusters[DeviceClusterName.ON_OFF],
 							[DeviceClusterName.LEVEL_CONTROL]:

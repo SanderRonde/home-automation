@@ -221,19 +221,18 @@ const sortColorsByHue = (colors: string[]): string[] => {
 const isColorControlXYCluster = (
 	cluster: DashboardDeviceClusterWithState
 ): cluster is DashboardDeviceClusterColorControlXY =>
-	cluster.name === DeviceClusterName.COLOR_CONTROL && 'color' in cluster;
+	cluster.name === DeviceClusterName.COLOR_CONTROL && 'colors' in cluster;
 
-const getInitialColorFromDevices = (devices: DeviceType[]): { hue: number; saturation: number } => {
+const getInitialColorsFromDevices = (
+	devices: DeviceType[]
+): { hue: number; saturation: number }[] => {
 	for (const device of devices) {
 		const cluster = device.mergedAllClusters.find(isColorControlXYCluster);
-		if (cluster) {
-			return {
-				hue: cluster.color.hue,
-				saturation: cluster.color.saturation,
-			};
+		if (cluster && cluster.colors.length > 0) {
+			return cluster.colors.map((c) => ({ hue: c.hue, saturation: c.saturation }));
 		}
 	}
-	return { hue: 0, saturation: 100 };
+	return [{ hue: 0, saturation: 100 }];
 };
 
 interface RoomDevices {
@@ -1322,9 +1321,17 @@ const ColorControlSharedDetail = (props: ColorControlSharedDetailProps): JSX.Ele
 	const [savedSwatches, setSavedSwatches] = React.useState<string[]>([]);
 	const [isTogglingAll, setIsTogglingAll] = React.useState(false);
 	const [isUpdatingColor, setIsUpdatingColor] = React.useState(false);
-	const initialColor = getInitialColorFromDevices(props.devices);
-	const [hue, setHue] = React.useState(initialColor.hue);
-	const [saturation, setSaturation] = React.useState(initialColor.saturation);
+	const initialColors = getInitialColorsFromDevices(props.devices);
+	const [colorStates, setColorStates] =
+		React.useState<{ hue: number; saturation: number }[]>(initialColors);
+	const [selectedColorIndex, setSelectedColorIndex] = React.useState(0);
+	const hue = colorStates[selectedColorIndex]?.hue ?? 0;
+	const saturation = colorStates[selectedColorIndex]?.saturation ?? 0;
+	const maxColorCount = React.useMemo(
+		() => Math.max(...colorControlEntries.map((e) => e.cluster.colors.length), 1),
+		[colorControlEntries]
+	);
+	const hasMultipleColors = maxColorCount > 1;
 	const colorCommitTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
 	React.useEffect(() => {
@@ -1393,6 +1400,10 @@ const ColorControlSharedDetail = (props: ColorControlSharedDetailProps): JSX.Ele
 		[savedSwatches]
 	);
 	const currentColor = React.useMemo(() => hsvToHex(hue, saturation, 100), [hue, saturation]);
+	const allCurrentColors = React.useMemo(
+		() => colorStates.map((cs) => hsvToHex(cs.hue, cs.saturation, 100)),
+		[colorStates]
+	);
 
 	const handleApplyPalette = async (paletteId: string) => {
 		if (colorControlDeviceIds.length === 0) {
@@ -1444,7 +1455,7 @@ const ColorControlSharedDetail = (props: ColorControlSharedDetailProps): JSX.Ele
 	};
 
 	const handleApplyColor = React.useCallback(
-		async (nextHue: number, nextSaturation: number) => {
+		async (nextHue: number, nextSaturation: number, colorIdx: number) => {
 			if (colorControlDeviceIds.length === 0) {
 				return;
 			}
@@ -1459,6 +1470,8 @@ const ColorControlSharedDetail = (props: ColorControlSharedDetailProps): JSX.Ele
 						hue: nextHue,
 						saturation: nextSaturation,
 						value: 100,
+						// Send colorIndex when there are multiple colors
+						...(hasMultipleColors ? { colorIndex: colorIdx } : {}),
 					}
 				);
 				if (response.ok) {
@@ -1471,17 +1484,21 @@ const ColorControlSharedDetail = (props: ColorControlSharedDetailProps): JSX.Ele
 				setIsUpdatingColor(false);
 			}
 		},
-		[colorControlDeviceIds, invalidate, rememberColor]
+		[colorControlDeviceIds, hasMultipleColors, invalidate, rememberColor]
 	);
 
 	const handleColorChange = (newColor: { h: number; s: number; v: number }) => {
-		setHue(newColor.h);
-		setSaturation(newColor.s);
+		const idx = selectedColorIndex;
+		setColorStates((prev) => {
+			const updated = [...prev];
+			updated[idx] = { hue: newColor.h, saturation: newColor.s };
+			return updated;
+		});
 		if (colorCommitTimeoutRef.current) {
 			clearTimeout(colorCommitTimeoutRef.current);
 		}
 		colorCommitTimeoutRef.current = setTimeout(() => {
-			void handleApplyColor(newColor.h, newColor.s);
+			void handleApplyColor(newColor.h, newColor.s, idx);
 		}, 150);
 	};
 
@@ -1494,9 +1511,13 @@ const ColorControlSharedDetail = (props: ColorControlSharedDetailProps): JSX.Ele
 			clearTimeout(colorCommitTimeoutRef.current);
 			colorCommitTimeoutRef.current = null;
 		}
-		setHue(hsv.h);
-		setSaturation(hsv.s);
-		await handleApplyColor(hsv.h, hsv.s);
+		const idx = selectedColorIndex;
+		setColorStates((prev) => {
+			const updated = [...prev];
+			updated[idx] = { hue: hsv.h, saturation: hsv.s };
+			return updated;
+		});
+		await handleApplyColor(hsv.h, hsv.s, idx);
 	};
 
 	const onOffLabel = onOffState === 'all-on' ? 'On' : onOffState === 'all-off' ? 'Off' : 'Mixed';
@@ -1535,6 +1556,48 @@ const ColorControlSharedDetail = (props: ColorControlSharedDetailProps): JSX.Ele
 				<Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>
 					Pick a Color
 				</Typography>
+
+				{/* Color selector chips - only visible when device supports multiple colors */}
+				{hasMultipleColors && (
+					<Box
+						sx={{
+							display: 'flex',
+							alignItems: 'center',
+							gap: 1.5,
+							mb: 2,
+							flexWrap: 'wrap',
+						}}
+					>
+						{Array.from({ length: maxColorCount }, (_, i) => {
+							const chipColor = allCurrentColors[i] ?? '#888888';
+							const isActive = i === selectedColorIndex;
+							return (
+								<Box
+									key={i}
+									onClick={() => setSelectedColorIndex(i)}
+									sx={{
+										width: isActive ? 32 : 24,
+										height: isActive ? 32 : 24,
+										borderRadius: '50%',
+										backgroundColor: chipColor,
+										border: '2px solid',
+										borderColor: isActive ? 'primary.main' : 'divider',
+										boxShadow: isActive
+											? `0 0 0 2px rgba(0,0,0,0.08), 0 2px 8px ${chipColor}66`
+											: 'none',
+										cursor: 'pointer',
+										transition: 'all 0.18s ease',
+										flexShrink: 0,
+									}}
+								/>
+							);
+						})}
+						<Typography variant="caption" sx={{ color: 'text.secondary', ml: 0.5 }}>
+							Color {selectedColorIndex + 1} of {maxColorCount}
+						</Typography>
+					</Box>
+				)}
+
 				<Box sx={{ display: 'flex', gap: 3, alignItems: 'center', flexWrap: 'wrap' }}>
 					<Box
 						sx={{
@@ -1593,26 +1656,66 @@ const ColorControlSharedDetail = (props: ColorControlSharedDetailProps): JSX.Ele
 						})}
 					</Box>
 				</Box>
-				<Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5 }}>
-					<Box
-						sx={{
-							width: 16,
-							height: 16,
-							borderRadius: '50%',
-							backgroundColor: currentColor,
-							border: '1px solid',
-							borderColor: 'divider',
-						}}
-					/>
-					<Typography
-						variant="caption"
-						sx={{
-							fontWeight: 600,
-							letterSpacing: '0.06em',
-						}}
-					>
-						{currentColor.toUpperCase()}
-					</Typography>
+				<Box
+					sx={{
+						display: 'flex',
+						alignItems: 'center',
+						gap: 1,
+						mt: 1.5,
+						flexWrap: 'wrap',
+					}}
+				>
+					{allCurrentColors.length > 1 ? (
+						allCurrentColors.map((c, i) => (
+							<Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+								<Box
+									sx={{
+										width: 14,
+										height: 14,
+										borderRadius: '50%',
+										backgroundColor: c,
+										border: '1px solid',
+										borderColor: 'divider',
+									}}
+								/>
+								<Typography
+									variant="caption"
+									sx={{
+										fontWeight: i === selectedColorIndex ? 700 : 400,
+										letterSpacing: '0.06em',
+										color:
+											i === selectedColorIndex
+												? 'text.primary'
+												: 'text.secondary',
+									}}
+								>
+									{c.toUpperCase()}
+								</Typography>
+							</Box>
+						))
+					) : (
+						<>
+							<Box
+								sx={{
+									width: 16,
+									height: 16,
+									borderRadius: '50%',
+									backgroundColor: currentColor,
+									border: '1px solid',
+									borderColor: 'divider',
+								}}
+							/>
+							<Typography
+								variant="caption"
+								sx={{
+									fontWeight: 600,
+									letterSpacing: '0.06em',
+								}}
+							>
+								{currentColor.toUpperCase()}
+							</Typography>
+						</>
+					)}
 					{isUpdatingColor && <CircularProgress size={14} />}
 				</Box>
 			</Box>

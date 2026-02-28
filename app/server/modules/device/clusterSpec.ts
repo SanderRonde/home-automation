@@ -389,16 +389,15 @@ class DeviceColorControlXYClusterSpec extends DeviceColorControlXYCluster {
 	public getClusterVariant!: () => 'xy';
 
 	@DescribeProperty(
-		z.union([
-			z.undefined(),
+		z.array(
 			z.object({
 				color: z.number(),
 				saturation: z.number(),
 				value: z.number(),
-			}),
-		])
+			})
+		)
 	)
-	public color!: Data<Color | undefined>;
+	public colors!: Data<Color[]>;
 	@DescribeMethod(z.promise(z.void()), {
 		name: 'args',
 		type: z.object({

@@ -141,12 +141,12 @@ export class WLEDColorControlCluster
 		return 'xy';
 	}
 
-	public color = new WLEDMapper(this, this.proxy.state, (state) => {
+	public colors = new WLEDMapper(this, this.proxy.state, (state) => {
 		const color = state.segments?.[0]?.colors?.[0];
 		if (!color) {
-			return new Color(0, 0, 0);
+			return [];
 		}
-		return new Color(color[0], color[1], color[2]);
+		return [new Color(color[0], color[1], color[2])];
 	});
 
 	public setColor = async ({ colors }: { colors: Color[] }): Promise<void> => {

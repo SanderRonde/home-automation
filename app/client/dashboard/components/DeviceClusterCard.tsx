@@ -1713,21 +1713,36 @@ const ColorControlXYCard = (
 	};
 
 	// Use brightness from LevelControl if available, otherwise use HSV value
-	const brightness = props.cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL]?.currentLevel
-		? props.cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL]?.currentLevel * 100
-		: props.cluster.color.value;
-	const { color, r, g, b } = hsvToRgb(
-		props.cluster.color.hue,
-		props.cluster.color.saturation,
+	const levelBrightness =
+		props.cluster.mergedClusters[DeviceClusterName.LEVEL_CONTROL]?.currentLevel;
+	const brightness = levelBrightness
+		? levelBrightness * 100
+		: (props.cluster.colors[0]?.value ?? 0);
+	const {
+		color: firstColor,
+		r,
+		g,
+		b,
+	} = hsvToRgb(
+		props.cluster.colors[0]?.hue ?? 0,
+		props.cluster.colors[0]?.saturation ?? 0,
 		brightness
 	);
+
+	// Build card background: single color or gradient for multi-color devices
+	const allColors = props.cluster.colors.map(
+		(c) =>
+			hsvToRgb(c.hue, c.saturation, levelBrightness ? levelBrightness * 100 : c.value).color
+	);
+	const cardColor =
+		allColors.length > 1 ? `linear-gradient(135deg, ${allColors.join(', ')})` : firstColor;
 
 	// Check if device is on or off
 	const onOffCluster = props.cluster.mergedClusters[DeviceClusterName.ON_OFF];
 	const isDeviceOn = !onOffCluster || onOffCluster.isOn;
 	const hasOnOff = !!onOffCluster;
 
-	// Calculate luminance and determine text color
+	// Calculate luminance and determine text color (based on first color)
 	const luminance = getLuminance(r, g, b);
 	const isLightBackground = isDeviceOn && luminance > 0.5;
 	const textColor = isLightBackground ? 'rgba(0, 0, 0, 0.87)' : 'white';
@@ -1755,7 +1770,7 @@ const ColorControlXYCard = (
 	return (
 		<DeviceClusterCardSkeleton
 			{...props}
-			cardBackground={isDeviceOn ? color : '#2f2f2f'}
+			cardBackground={isDeviceOn ? cardColor : '#2f2f2f'}
 			hasInteractiveChildren={hasOnOff}
 			onPress={() => {
 				props.pushDetailView({
@@ -2481,7 +2496,7 @@ export const DeviceClusterCard = (
 		return <BooleanStateCard {...regularProps} cluster={regularProps.cluster} />;
 	}
 	if (regularProps.cluster.name === DeviceClusterName.COLOR_CONTROL) {
-		if ('color' in regularProps.cluster) {
+		if ('colors' in regularProps.cluster) {
 			return <ColorControlXYCard {...regularProps} cluster={regularProps.cluster} />;
 		}
 		// No separate card for color temperature

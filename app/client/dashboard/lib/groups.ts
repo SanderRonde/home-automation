@@ -35,7 +35,7 @@ export const getPrimaryClusterForDevices = (
 	for (const device of devices) {
 		const seen = new Set<DeviceClusterName>();
 		for (const cluster of device.mergedAllClusters) {
-			if (cluster.name === DeviceClusterName.COLOR_CONTROL && !('color' in cluster)) {
+			if (cluster.name === DeviceClusterName.COLOR_CONTROL && !('colors' in cluster)) {
 				continue;
 			}
 			if (seen.has(cluster.name)) {
