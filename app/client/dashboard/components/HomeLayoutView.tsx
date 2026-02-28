@@ -1511,8 +1511,10 @@ const DeviceIconsOverlay = React.memo((props: DeviceIconsOverlayProps): JSX.Elem
 		return null;
 	}
 
-	const minGlowSize = 80;
-	const maxGlowSize = 160;
+	const circleSize = 56;
+	const ringThickness = 5;
+	// Conic gradient starts from top (-90deg); filled portion = intensity, rest = dim track
+	const trackColor = 'rgba(128, 128, 128, 0.35)';
 
 	return (
 		<>
@@ -1544,20 +1546,21 @@ const DeviceIconsOverlay = React.memo((props: DeviceIconsOverlayProps): JSX.Elem
 							const pos = device.position!;
 							const screenX = pos.x * scale + tx;
 							const screenY = pos.y * scale + ty;
-							const glowSize = minGlowSize + (maxGlowSize - minGlowSize) * intensity;
-							const opacity = 0.3 + 0.65 * intensity;
+							const fillPercent = Math.min(1, Math.max(0, intensity)) * 100;
 							return (
 								<Box
 									key={`glow-${device.uniqueId}`}
 									sx={{
 										position: 'absolute',
-										left: screenX - glowSize / 2,
-										top: screenY - glowSize / 2,
-										width: glowSize,
-										height: glowSize,
+										left: screenX - circleSize / 2,
+										top: screenY - circleSize / 2,
+										width: circleSize,
+										height: circleSize,
 										borderRadius: '50%',
-										background: `radial-gradient(circle at center, ${color} 0%, ${color}99 28%, ${color}40 45%, transparent 62%)`,
-										opacity,
+										background: `conic-gradient(from -90deg, ${color} 0deg, ${color} ${fillPercent * 3.6}deg, ${trackColor} ${fillPercent * 3.6}deg, ${trackColor} 360deg)`,
+										// Mask to a ring so center stays transparent and device icon is visible
+										WebkitMaskImage: `radial-gradient(circle, transparent ${circleSize / 2 - ringThickness}px, black ${circleSize / 2}px)`,
+										maskImage: `radial-gradient(circle, transparent ${circleSize / 2 - ringThickness}px, black ${circleSize / 2}px)`,
 									}}
 								/>
 							);
