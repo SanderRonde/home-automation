@@ -167,16 +167,8 @@ export const DeviceIcon = React.memo((props: DeviceIconProps): JSX.Element | nul
 				sx={{
 					width: scaledSize,
 					height: scaledSize,
-					backgroundColor: isOffline
-						? 'rgba(158, 158, 158, 0.3)'
-						: isOn
-							? '#ffffff'
-							: '#222', // invert: dark bg when off
-					color: isOffline
-						? 'rgba(0, 0, 0, 0.4)'
-						: isOn
-							? '#2a2a2a'
-							: '#fff', // invert: white icon when off
+					backgroundColor: isOffline ? 'rgba(0, 0, 0, 0.25)' : isOn ? '#ffffff' : '#333', // invert: dark bg when off (softer than #222)
+					color: isOffline ? 'rgba(255, 255, 255, 0.5)' : isOn ? '#2a2a2a' : '#fff', // invert: white icon when off
 					fontSize: `${scaledSize * 0.5}px`,
 					boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
 					opacity: isOffline ? 0.6 : 1,
@@ -184,15 +176,11 @@ export const DeviceIcon = React.memo((props: DeviceIconProps): JSX.Element | nul
 					pointerEvents: isOffline ? 'none' : 'auto',
 					'&:hover': {
 						backgroundColor: isOffline
-							? 'rgba(158, 158, 158, 0.3)'
+							? 'rgba(0, 0, 0, 0.25)'
 							: isOn
 								? '#f0f0f0'
-								: '#444', // slightly lighter bg when off + hover
-						color: isOffline
-							? 'rgba(0, 0, 0, 0.4)'
-							: isOn
-								? '#111'
-								: '#fff',
+								: '#555', // slightly lighter bg when off + hover
+						color: isOffline ? 'rgba(255, 255, 255, 0.5)' : isOn ? '#111' : '#fff',
 						transform: isOffline ? 'none' : 'scale(1.1)',
 					},
 					'&:active': {

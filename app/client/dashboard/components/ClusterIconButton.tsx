@@ -8,6 +8,7 @@ import React from 'react';
 interface ClusterIconButtonSkeletonProps extends ClusterIconButtonProps {
 	onPress: (() => void) | undefined;
 	enabled: boolean;
+	offline: boolean;
 	clusterIcon: JSX.Element | null;
 }
 
@@ -22,6 +23,9 @@ const ClusterIconButtonSkeleton = (props: ClusterIconButtonSkeletonProps) => {
 			onPointerDown={(e) => {
 				e.stopPropagation();
 				e.preventDefault();
+				if (props.offline) {
+					return;
+				}
 				const timer = setTimeout(() => {
 					// Handle long press
 					props.onLongPress();
@@ -40,13 +44,32 @@ const ClusterIconButtonSkeleton = (props: ClusterIconButtonSkeletonProps) => {
 				document.addEventListener('pointerup', handlePointerUp);
 			}}
 			sx={{
-				backgroundColor: props.enabled ? '#ffffff' : 'rgba(255, 255, 255, 0.2)',
+				backgroundColor: props.offline
+					? 'rgba(0, 0, 0, 0.25)'
+					: props.enabled
+						? '#ffffff'
+						: '#333',
 				width: 48,
 				height: 48,
 				fontSize: '1.5rem',
-				color: props.enabled ? '#2a2a2a' : 'rgba(0, 0, 0, 0.5)',
+				color: props.offline
+					? 'rgba(255, 255, 255, 0.5)'
+					: props.enabled
+						? '#2a2a2a'
+						: '#fff',
+				opacity: props.offline ? 0.6 : 1,
+				pointerEvents: props.offline ? 'none' : 'auto',
 				'&:hover': {
-					backgroundColor: props.enabled ? '#f0f0f0' : 'rgba(255, 255, 255, 0.4)',
+					backgroundColor: props.offline
+						? 'rgba(0, 0, 0, 0.25)'
+						: props.enabled
+							? '#f0f0f0'
+							: '#555',
+					color: props.offline
+						? 'rgba(255, 255, 255, 0.5)'
+						: props.enabled
+							? '#111'
+							: '#fff',
 				},
 			}}
 		>
@@ -66,10 +89,12 @@ const WindowCoveringIconButton = (props: ClusterIconButtonProps) => {
 	const icon = props.devices
 		.flatMap((d) => d.mergedAllClusters)
 		.filter((c) => c.name === props.clusterName)[0]?.icon;
+	const offline = devices.length > 0 && devices.every((d) => d.status === 'offline');
 	return (
 		<ClusterIconButtonSkeleton
 			{...props}
 			enabled={anyEnabled}
+			offline={offline}
 			clusterIcon={icon ? <IconComponent iconName={icon} /> : null}
 			onPress={async () => {
 				// Toggle all
@@ -129,10 +154,12 @@ const OnOffIconButton = (props: ClusterIconButtonProps) => {
 		}
 	}
 
+	const offline = devices.length > 0 && devices.every((d) => d.status === 'offline');
 	return (
 		<ClusterIconButtonSkeleton
 			{...props}
 			enabled={anyEnabled}
+			offline={offline}
 			clusterIcon={icon}
 			onPress={async () => {
 				await apiPost(
@@ -191,10 +218,12 @@ const ColorControlIconButton = (props: ClusterIconButtonProps) => {
 		}
 	}
 
+	const offline = devices.length > 0 && devices.every((d) => d.status === 'offline');
 	return (
 		<ClusterIconButtonSkeleton
 			{...props}
 			enabled={anyEnabled}
+			offline={offline}
 			clusterIcon={icon}
 			onPress={props.onLongPress}
 		/>
